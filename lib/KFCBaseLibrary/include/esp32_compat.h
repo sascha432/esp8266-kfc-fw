@@ -14,6 +14,7 @@
 #endif
 
 #include <esp_timer.h>
+#include <esp_err.h>
 
 #ifndef ARDUINO_ESP32_RELEASE
 #include <esp_arduino_version.h>
@@ -21,6 +22,17 @@
 #endif
 
 #define isFlashInterfacePin(p) false
+
+// TODO
+enum rst_reason {
+    REASON_DEFAULT_RST      = 0,    /* normal startup by power on */
+    REASON_WDT_RST          = 1,    /* hardware watch dog reset */
+    REASON_EXCEPTION_RST    = 2,    /* exception reset, GPIO status won’t change */
+    REASON_SOFT_WDT_RST     = 3,    /* software watch dog reset, GPIO status won’t change */
+    REASON_SOFT_RESTART     = 4,    /* software restart ,system_restart , GPIO status won’t change */
+    REASON_DEEP_SLEEP_AWAKE = 5,    /* wake up from deep-sleep */
+    REASON_EXT_SYS_RST      = 6     /* external system reset */
+};
 
 struct rst_info {
     uint32_t reason;
@@ -244,6 +256,12 @@ inline void panic() {
     }
 }
 
+using BoolCB = std::function<void(bool)>;
+using TrivialCB = std::function<void()>;
+
+void settimeofday_cb(const BoolCB &cb);
+void settimeofday_cb(const TrivialCB &cb);
+
 extern "C" {
 
     // emulation of callback
@@ -263,5 +281,9 @@ inline uint32_t crc32(const void *buf, size_t len, uint32_t crc = ~0)
 #define UART0    0
 #define UART1    1
 #define UART_NO -1
+
+#define SPI_FLASH_RESULT_OK ESP_OK
+
+using SpiFlashOpResult = esp_err_t;
 
 #endif

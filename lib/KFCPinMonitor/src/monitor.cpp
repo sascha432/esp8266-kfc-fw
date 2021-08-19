@@ -546,7 +546,7 @@ namespace PinMonitor {
                 auto debounce = pinPtr->getDebounce();
                 if (debounce) {
                     auto pinNum = pinPtr->getPin();
-                    _event(pinNum, debounce->debounce(GPI & _BV(pinNum), 0, time, now), now);
+                    _event(pinNum, debounce->debounce(GPIO::read() & _BV(pinNum), 0, time, now), now);
                 }
             }
         #endif

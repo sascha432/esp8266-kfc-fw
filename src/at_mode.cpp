@@ -1235,37 +1235,37 @@ static bool _writeAndVerifyFlash(uint32_t address, uint8_t *data, size_t size, u
 
 static uintptr_t translateAddress(String str) {
     str.trim('_');
-    if (str.equalsIgnoreCase(F("text")) || str.equalsIgnoreCase(F("irom0_text_start"))) {
-        return (uintptr_t)&_irom0_text_start;
-    }
-    else if (str.equalsIgnoreCase(F("irom0_text_end"))) {
-        return (uintptr_t)&_irom0_text_start;
-    }
-    else if (str.startsWithIgnoreCase(F("heap"))) {
-        return (uintptr_t)&_heap_start;
-    }
-    else if (str.startsWithIgnoreCase(F("fs_s")) || str.equalsIgnoreCase(F("fs"))) {
-        return (uintptr_t)&_FS_start;
-    }
-    else if (str.startsWithIgnoreCase(F("fs_e"))) {
-        return (uintptr_t)&_FS_end;
-    }
-    else if (str.startsWithIgnoreCase(F("kfc"))) {
-        return (uintptr_t)&_KFCFW_start;
-    }
-    else if (str.startsWithIgnoreCase(F("kfcfw_e")) || str.startsWithIgnoreCase(F("kfc_e"))) {
-        return (uintptr_t)&_KFCFW_end;
-    }
-    else if (str.startsWithIgnoreCase(F("savecrash"))) {
-        return (uintptr_t)&_SAVECRASH_start;
-    }
-    else if (str.startsWithIgnoreCase(F("savcecrash_e"))) {
-        return (uintptr_t)&_SAVECRASH_end;
-    }
-    else if (str.startsWithIgnoreCase(F("ee"))) {
-        return (uintptr_t)&_EEPROM_start;
-    }
     #if !ESP32
+        if (str.equalsIgnoreCase(F("text")) || str.equalsIgnoreCase(F("irom0_text_start"))) {
+            return (uintptr_t)&_irom0_text_start;
+        }
+        else if (str.equalsIgnoreCase(F("irom0_text_end"))) {
+            return (uintptr_t)&_irom0_text_start;
+        }
+        else if (str.startsWithIgnoreCase(F("heap"))) {
+            return (uintptr_t)&_heap_start;
+        }
+        else if (str.startsWithIgnoreCase(F("fs_s")) || str.equalsIgnoreCase(F("fs"))) {
+            return (uintptr_t)&_FS_start;
+        }
+        else if (str.startsWithIgnoreCase(F("fs_e"))) {
+            return (uintptr_t)&_FS_end;
+        }
+        else if (str.startsWithIgnoreCase(F("kfc"))) {
+            return (uintptr_t)&_KFCFW_start;
+        }
+        else if (str.startsWithIgnoreCase(F("kfcfw_e")) || str.startsWithIgnoreCase(F("kfc_e"))) {
+            return (uintptr_t)&_KFCFW_end;
+        }
+        else if (str.startsWithIgnoreCase(F("savecrash"))) {
+            return (uintptr_t)&_SAVECRASH_start;
+        }
+        else if (str.startsWithIgnoreCase(F("savcecrash_e"))) {
+            return (uintptr_t)&_SAVECRASH_end;
+        }
+        else if (str.startsWithIgnoreCase(F("ee"))) {
+            return (uintptr_t)&_EEPROM_start;
+        }
         else if (str.equalsIgnoreCase(F("gpi"))) {
             return (uintptr_t)&GPI;
         }

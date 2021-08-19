@@ -7,19 +7,34 @@
 #include <Arduino_compat.h>
 #include <stl_ext/array.h>
 #include <stl_ext/type_traits.h>
+#if ESP8266
 #include <interrupts.h>
+#endif
 #include "interrupt_event.h"
 
 namespace PinMonitor {
 
-    struct GPIOInterruptLock {
-        GPIOInterruptLock() {
-            ETS_GPIO_INTR_DISABLE();
-        }
-        ~GPIOInterruptLock() {
-            ETS_GPIO_INTR_ENABLE();
-        }
+    #if ESP8266
+
+        struct GPIOInterruptLock {
+            GPIOInterruptLock() {
+                ETS_GPIO_INTR_DISABLE();
+            }
+            ~GPIOInterruptLock() {
+                ETS_GPIO_INTR_ENABLE();
+            }
+        };
+
+    #elif ESP32
+
+        struct GPIOInterruptLock {
+            GPIOInterruptLock() {
+            }
+            ~GPIOInterruptLock() {
+            }
     };
+
+    #endif
 
 // custom interrupt handler, requires least amount of IRAM
 #if PIN_MONITOR_USE_GPIO_INTERRUPT || PIN_MONITOR_USE_POLLING

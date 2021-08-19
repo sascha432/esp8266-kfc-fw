@@ -16,7 +16,6 @@
 using KFCConfigurationClasses::System;
 
 #include "at_mode.h"
-#include "esp_settimeofday_cb.h"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NOW, "NOW", "<update>", "Display current time or update NTP");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");

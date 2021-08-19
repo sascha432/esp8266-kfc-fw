@@ -23,6 +23,8 @@ extern "C" {
 
 }
 
+#if ESP8266
+
 static void ets_printf_P(const char *str, ...) {
     char destStr[160];
     char *c = destStr;
@@ -34,6 +36,12 @@ static void ets_printf_P(const char *str, ...) {
         ets_uart_putc1(*(c++));
     }
 }
+
+#elif ESP32
+
+#define ets_printf_P ::printf
+
+#endif
 
 #define SAVECRASH_EXCEPTION_FMT                     "epc1=0x%08x epc2=0x%08x epc3=0x%08x excvaddr=0x%08x depc=0x%08x"
 #define SAVECRASH_EXCEPTION_ARGS(rst_info)          rst_info.exccause, rst_info.epc1, rst_info.epc2, rst_info.epc3, rst_info.excvaddr, rst_info.depc
@@ -157,7 +165,7 @@ namespace SaveCrash {
 
     void Data::printReason(Print &output) const
     {
-        output.print(ResetDetector::getResetReason(_info.reason))
+        output.print(ResetDetector::getResetReason(_info.reason));
         output.printf_P(PSTR(" (%u)"), _info.exccause);
     }
 

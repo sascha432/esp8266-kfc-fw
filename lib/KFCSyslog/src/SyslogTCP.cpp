@@ -5,7 +5,6 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <misc.h>
-#include <memory.h>
 #include "SyslogParameter.h"
 #include "Syslog.h"
 #include "SyslogTCP.h"

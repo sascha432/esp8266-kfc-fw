@@ -5,7 +5,9 @@
 #include "JsonConfigReader.h"
 #include <Buffer.h>
 #include <JsonTools.h>
+#if ESP8266
 #include <interrupts.h>
+#endif
 #include "misc.h"
 #include "DumpBinary.h"
 

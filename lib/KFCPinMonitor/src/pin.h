@@ -9,6 +9,46 @@
 
 namespace PinMonitor {
 
+    #if ESP8266
+
+        struct GPIO16 {
+            using type = uint16_t;
+            static uint16_t read() {
+                return GPI;
+            }
+        };
+
+        struct GPIO32 {
+            using type = uint32_t;
+            static uint32_t read() {
+                return GPI | ((GP16I & 0x01) ? 1 << 16 : 0);
+            }
+        };
+
+        using GPIO = GPIO16;
+
+    #elif ESP32
+
+        #include <soc/soc.h>
+
+        struct GPIO32 {
+            using type = uint32_t;
+            static uint32_t read() {
+                return ::GPIO.in;
+            }
+        };
+
+        struct GPIO64 {
+            using type = uint64_t;
+            static uint64_t read() {
+                return (::GPIO.in | (static_cast<uint64_t>(::GPIO.in1.data) << 32));
+            }
+        };
+
+        using GPIO = GPIO32;
+
+    #endif
+
     // --------------------------------------------------------------------
     // PinMonitor::Pin
     // --------------------------------------------------------------------

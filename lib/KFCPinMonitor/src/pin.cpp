@@ -5,7 +5,9 @@
 #include <Arduino_compat.h>
 #include "pin_monitor.h"
 #include "pin.h"
-#include "Schedule.h"
+#if ESP8266
+#include <Schedule.h>
+#endif
 #include "interrupt_impl.h"
 #include "rotary_encoder.h"
 #include "monitor.h"
@@ -21,9 +23,9 @@ using namespace PinMonitor;
 #if PIN_MONITOR_USE_GPIO_INTERRUPT == 0 || PIN_MONITOR_USE_POLLING == 1
 
 #if PIN_MONITOR_USE_POLLING == 1
-    void HardwarePin::callback(void *arg, uint32_t _GPI, uint32_t mask)
+    void HardwarePin::callback(void *arg, GPIO::type _GPI, uint32_t mask)
 #else
-    #define _GPI GPI
+    #define _GPI GPIO::read()
     #define mask _BV(pinPtr->getPin())
     void IRAM_ATTR HardwarePin::callback(void *arg)
 #endif

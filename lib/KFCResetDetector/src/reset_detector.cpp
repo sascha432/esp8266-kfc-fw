@@ -12,6 +12,20 @@
 #if IOT_SWITCH
 #include "../src/plugins/switch/switch_def.h"
 #endif
+#if ESP32
+#include <esp32-hal.h>
+#include <esp32-hal-uart.h>
+#if CONFIG_IDF_TARGET_ESP32
+#define RX_PIN 3
+#define TX_PIN 1
+#elif CONFIG_IDF_TARGET_ESP32S2
+#define RX_PIN 44
+#define TX_PIN 43
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define RX_PIN 20
+#define TX_PIN 21
+#endif
+#endif
 
 #undef __LDBG_printf
 #if DEBUG_RESET_DETECTOR
@@ -48,11 +62,15 @@ extern "C" {
 void ResetDetector::end()
 {
     __LDBG_printf("rd::end(), _uart=%p", _uart);
-
     if (_uart) {
         __LDBG_printf("\r\n");
-        uart_flush(_uart);
-        uart_uninit(_uart);
+        #if ESP32
+            uartFlush(_uart);
+            uartEnd(_uart, RX_PIN, TX_PIN);
+        #elif ESP8266
+            uart_flush(_uart);
+            uart_uninit(_uart);
+        #endif
         _uart = nullptr;
     }
 }
@@ -63,8 +81,13 @@ void ResetDetector::begin(HardwareSerial *serial, int baud)
 
     if (_uart) {
         __LDBG_printf("\r\n");
-        uart_flush(_uart);
-        uart_uninit(_uart);
+        #if ESP32
+            uartFlush(_uart);
+            uartEnd(_uart, RX_PIN, TX_PIN);
+        #elif ESP8266
+            uart_flush(_uart);
+            uart_uninit(_uart);
+        #endif
         _uart = nullptr;
         __LDBG_printf("_uart=%p", _uart);
     }
@@ -85,7 +108,11 @@ void ResetDetector::begin()
             end();
         }
     #endif
+    #if ESP32
+        _uart = uartBegin(0, 115200, SERIAL_8N1, RX_PIN, TX_PIN, 256, false, 112);
+    #elif ESP8266
         _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
+    #endif
     #if DEBUG_RESET_DETECTOR
         __LDBG_printf("rd::begin() has been called, old_uart=%p _uart=%p", oldUart, _uart);
     #endif

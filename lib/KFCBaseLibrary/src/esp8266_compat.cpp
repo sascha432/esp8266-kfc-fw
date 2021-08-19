@@ -10,7 +10,7 @@
 
 #if ARDUINO_ESP8266_MAJOR == 2 && ARDUINO_ESP8266_MINOR == 6
 
-    #include "esp_settimeofday_cb.h"
+    #warning not supported anymore
 
 #endif
 

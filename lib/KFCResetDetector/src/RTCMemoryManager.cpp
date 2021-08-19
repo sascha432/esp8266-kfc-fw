@@ -33,8 +33,10 @@
 #include "debug_helper_disable.h"
 #endif
 
-#include "user_interface.h"
-#include "coredecls.h"
+#if ESP8266
+#include <user_interface.h>
+#include <coredecls.h>
+#endif
 
 #if ENABLE_DEEP_SLEEP
 namespace DeepSleep {
@@ -49,69 +51,69 @@ RTCMemoryManager::RtcTimer RTCMemoryManager::_rtcTimer;
 
 namespace RTCMemoryManagerNS {
 
-#if defined(ESP8266)
+    #if ESP8266
 
-#if DEBUG_RTC_MEMORY_MANAGER
+        #if DEBUG_RTC_MEMORY_MANAGER
 
-    bool system_rtc_mem_read(uint8_t ofs, void *data, uint16_t len) {
-        if (!((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0)) {
-            __DBG_panic("system_rtc_mem_read ofs=%u len=%d %d-%d", ofs, len, ofs*4, ofs*4+len);
+            bool system_rtc_mem_read(uint8_t ofs, void *data, uint16_t len) {
+                if (!((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0)) {
+                    __DBG_panic("system_rtc_mem_read ofs=%u len=%d %d-%d", ofs, len, ofs*4, ofs*4+len);
+                }
+                auto result = ::system_rtc_mem_read(ofs, data, len);
+                // __DBG_printf("rtc_read result=%u ofs=%u length=%u data=%p", result, ofs, len, data);
+                // PrintString str;
+                // DumpBinary dumper(str);
+                // dumper.setPerLine(len);
+                // dumper.setGroupBytes(4);
+                // dumper.dump(data, len);
+                // __DBG_printf("rtc_read result=%u ofs=%u length=%u data=%s", result, ofs, len, str.c_str());
+                return result;
+            }
+
+            bool system_rtc_mem_write(uint8_t ofs, const void *data, uint16_t len) {
+                if (!((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0)) {
+                    __DBG_panic("system_rtc_mem_write ofs=%u len=%d %d-%d", ofs, len, ofs*4, ofs*4+len);
+                }
+                auto result = ::system_rtc_mem_write(ofs, data, len);
+                // __DBG_printf("rtc_write result=%u ofs=%u length=%u data=%p", result, ofs, len, data);
+                // PrintString str;
+                // DumpBinary dumper(str);
+                // dumper.setPerLine(len);
+                // dumper.setGroupBytes(4);
+                // dumper.dump(data, len);
+                // __DBG_printf("rtc_write result=%u ofs=%u length=%u data=%s", result, ofs, len, str.c_str());
+                return result;
+            }
+
+        #else
+
+            inline static bool system_rtc_mem_read(uint8_t ofs, void *data, uint16_t len) {
+                __DBG_assert_printf(((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0), "read OOB ofs=%d len=%d", ofs, len);
+                return ::system_rtc_mem_read(ofs, data, len);
+            }
+
+            inline static bool system_rtc_mem_write(uint8_t ofs, const void *data, uint16_t len) {
+                __DBG_assert_printf(((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0), "write OOB ofs=%d len=%d", ofs, len);
+                return ::system_rtc_mem_write(ofs, data, len);
+            }
+
+        #endif
+
+    #elif ESP32
+
+        RTC_NOINIT_ATTR uint8_t rtcMemoryBlock[RTCMemoryManager::kMemorySize];
+
+        bool system_rtc_mem_read(size_t ofs, void *data, size_t len) {
+            memcpy(data, rtcMemoryBlock + ofs * RTCMemoryManager::kBlockSize, len);
+            return true;
         }
-        auto result = ::system_rtc_mem_read(ofs, data, len);
-        // __DBG_printf("rtc_read result=%u ofs=%u length=%u data=%p", result, ofs, len, data);
-        // PrintString str;
-        // DumpBinary dumper(str);
-        // dumper.setPerLine(len);
-        // dumper.setGroupBytes(4);
-        // dumper.dump(data, len);
-        // __DBG_printf("rtc_read result=%u ofs=%u length=%u data=%s", result, ofs, len, str.c_str());
-        return result;
-    }
 
-    bool system_rtc_mem_write(uint8_t ofs, const void *data, uint16_t len) {
-        if (!((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0)) {
-            __DBG_panic("system_rtc_mem_write ofs=%u len=%d %d-%d", ofs, len, ofs*4, ofs*4+len);
+        bool system_rtc_mem_write(size_t ofs, void *data, size_t len) {
+            memcpy(rtcMemoryBlock + ofs * RTCMemoryManager::kBlockSize, data, len);
+            return true;
         }
-        auto result = ::system_rtc_mem_write(ofs, data, len);
-        // __DBG_printf("rtc_write result=%u ofs=%u length=%u data=%p", result, ofs, len, data);
-        // PrintString str;
-        // DumpBinary dumper(str);
-        // dumper.setPerLine(len);
-        // dumper.setGroupBytes(4);
-        // dumper.dump(data, len);
-        // __DBG_printf("rtc_write result=%u ofs=%u length=%u data=%s", result, ofs, len, str.c_str());
-        return result;
-    }
 
-#else
-
-    inline static bool system_rtc_mem_read(uint8_t ofs, void *data, uint16_t len) {
-        __DBG_assert_printf(((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0), "read OOB ofs=%d len=%d", ofs, len);
-        return ::system_rtc_mem_read(ofs, data, len);
-    }
-
-    inline static bool system_rtc_mem_write(uint8_t ofs, const void *data, uint16_t len) {
-        __DBG_assert_printf(((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0), "write OOB ofs=%d len=%d", ofs, len);
-        return ::system_rtc_mem_write(ofs, data, len);
-    }
-
-#endif
-
-#elif defined(ESP32)
-
-RTC_NOINIT_ATTR uint8_t RTCMemoryManager_allocated_block[RTCMemoryManager::__memorySize];
-
-    bool system_rtc_mem_read(size_t ofs, void *data, size_t len) {
-        memcpy(data, RTCMemoryManager_allocated_block + ofs * RTCMemoryManager::kBlockSize, len);
-        return true;
-    }
-
-    bool system_rtc_mem_write(size_t ofs, void *data, size_t len) {
-        memcpy(RTCMemoryManager_allocated_block + ofs * RTCMemoryManager::kBlockSize, data, len);
-        return true;
-    }
-
-#endif
+    #endif
 
 }
 
@@ -134,15 +136,15 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
     uint8_t *buf = nullptr;
 
     while (_readHeader(header)) {
-#if defined(ESP32)
-        // we can use the RTC memory directly
-        memPtr = reinterpret_cast<uint32_t *>(RTCMemoryManager_allocated_block + offset);
-        uint16_t crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc));
-        if (crc != header.crc) {
-            __LDBG_printf("CRC mismatch %04x != %04x, length %d", crc, header.crc, header.length);
-            return nullptr;
-        }
-#else
+// #if defined(ESP32)
+//         // we can use the RTC memory directly
+//         memPtr = reinterpret_cast<uint32_t *>(rtcMemoryBlock + offset);
+//         uint16_t crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc));
+//         if (crc != header.crc) {
+//             __LDBG_printf("CRC mismatch %04x != %04x, length %d", crc, header.crc, header.length);
+//             return nullptr;
+//         }
+// #else
         auto minSize = header.crc_length() + extraSize;
         auto size = minSize;
         if (kBlockSize > 1) {
@@ -171,7 +173,7 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
             __LDBG_printf("CRC mismatch %04x != %04x, size=%u crclen=%u", crc, header.crc, header.length, header.crc_length());
             break;
         }
-#endif
+// #endif
         __LDBG_printf("read: address=%u[%u-%u] length=%u crc=0x%04x", header.start_address(), kBaseAddress, kLastAddress, header.length, header.crc);
         return buf;
     }
@@ -344,14 +346,15 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
     return RTCMemoryManagerNS::system_rtc_mem_write(header.start_address(), reinterpret_cast<uint32_t *>(memPtr), header.length);
 }
 
-	bool RTCMemoryManager::clear() {
-#if defined(ESP8266)
+bool RTCMemoryManager::clear() {
+// #if defined(ESP8266)
 
     // clear 16 blocks including header
     static constexpr auto kNumBlocks = 16;
     static constexpr auto kAddress = (kMemorySize - (kNumBlocks * kBlockSize)) / kBlockSize;
     uint32_t data[kNumBlocks];
-    memset(data, 0xff, sizeof(data));
+    std::fill_n(data, kNumBlocks, 0xffffffffU);
+    // memset(data, 0xff, sizeof(data));
     __LDBG_printf("clear: address=%u[%u-%u] length=%u", kBaseAddress + kAddress, kBaseAddress, kLastAddress, sizeof(data));
     if (!RTCMemoryManagerNS::system_rtc_mem_write(kBaseAddress + kAddress, &data, sizeof(data))) {
         return false;
@@ -359,13 +362,13 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
 
     return write(RTCMemoryId::NONE, nullptr, 0);
 
-#elif defined(ESP32)
+// #elif defined(ESP32)
 
-    // clear entire block
-    memset(RTCMemoryManager_allocated_block, 0xff, sizeof(RTCMemoryManager_allocated_block));
-    return true;
+//     // clear entire block
+//     memset(rtcMemoryBlock, 0xff, sizeof(rtcMemoryBlock));
+//     return true;
 
-#endif
+// #endif
 }
 
 #if DEBUG

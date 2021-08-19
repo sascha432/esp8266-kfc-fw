@@ -117,7 +117,7 @@ public:
             inline __attribute__((always_inline)) void finalize(void *hash)
             {
                 static_assert(_Len == kHashSize, "invalid size");
-                mbedtls_sha256_finish_ret(&_context, reinterpret_cast<char *>(hash));
+                mbedtls_sha256_finish_ret(&_context, reinterpret_cast<uint8_t *>(hash));
             }
 
         private:

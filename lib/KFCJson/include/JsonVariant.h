@@ -145,14 +145,22 @@ protected:
         return snprintf_P(nullptr, 0, PSTR("%d"), value);
     }
     size_t _length(uint64_t value) const {
-        char buffer[24];
-        auto str = ulltoa(value, buffer, sizeof(buffer), 10);
-        return str ? &buffer[sizeof(buffer) - 1] - str : 0;
+        char buffer[std::numeric_limits<decltype(value)>::digits10 + 2];
+        #if ESP8266
+            auto str = ulltoa(value, buffer, sizeof(buffer), 10);
+            return str ? &buffer[sizeof(buffer) - 1] - str : 0;
+        #else
+            return snprintf_P(buffer, sizeof(buffer), PSTR("%llu"), value);
+        #endif
     }
     size_t _length(int64_t value) const {
-        char buffer[24];
-        auto str = lltoa(value, buffer, sizeof(buffer), 10);
-        return str ? &buffer[sizeof(buffer) - 1] - str : 0;
+        char buffer[std::numeric_limits<decltype(value)>::digits10 + 2];
+        #if ESP8266
+            auto str = lltoa(value, buffer, sizeof(buffer), 10);
+            return str ? &buffer[sizeof(buffer) - 1] - str : 0;
+        #else
+            return snprintf_P(buffer, sizeof(buffer), PSTR("%lld"), value);
+        #endif
     }
     size_t _length(double value) const {
         return printTrimmedDouble(nullptr, value);

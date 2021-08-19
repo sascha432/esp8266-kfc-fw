@@ -210,7 +210,9 @@ void DebugContext::pause(uint32_t timeout)
             break;
         }
         delay(300);
-        ESP.wdtFeed();
+        #if ESP8266
+            ESP.wdtFeed();
+        #endif
     }
 }
 

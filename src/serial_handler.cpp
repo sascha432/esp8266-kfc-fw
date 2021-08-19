@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <utility>
 #include <HardwareSerial.h>
+#if ESP8266
 #include <interrupts.h>
+#endif
 #include "serial_handler.h"
 
 #if DEBUG_SERIAL_HANDLER

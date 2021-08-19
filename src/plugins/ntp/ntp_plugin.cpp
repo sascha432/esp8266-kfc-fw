@@ -21,6 +21,7 @@
 #include <coredecls.h>
 #elif defined(ESP32)
 #include <lwip/apps/sntp.h>
+#include "esp_settimeofday_cb.h"
 #endif
 
 #if DEBUG_NTP_CLIENT

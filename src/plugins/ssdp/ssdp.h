@@ -4,11 +4,11 @@
 
 #pragma once
 
+#if IOT_SSDP_SUPPORT
+
 #ifndef DEBUG_SSDP
 #    define DEBUG_SSDP 0
 #endif
-
-#if IOT_SSDP_SUPPORT
 
 #include <Arduino_compat.h>
 #include <ESP8266SSDP.h>

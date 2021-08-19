@@ -7,7 +7,6 @@
 
 #if defined(ESP32)
 #include <WiFi.h>
-#include <KFCFS.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiType.h>

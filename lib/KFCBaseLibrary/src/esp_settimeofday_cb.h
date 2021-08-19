@@ -20,26 +20,45 @@
 
 #include <LoopFunctions.h>
 
-extern "C" {
+using BoolCB = std::function<void(bool)>;
+using TrivialCB = std::function<void()>;
 
-static void (*_settimeofday_cb)(void) = nullptr;
+// static void (*_settimeofday_cb)(void) = nullptr;
+static TrivialCB _settimeofday_cb = nullptr;
 
-void settimeofday_cb (void (*cb)(void))
+void settimeofday_cb(const BoolCB &cb)
+{
+    auto callback = cb;
+    _settimeofday_cb = [callback]() {
+        callback(true);
+    };
+}
+
+void settimeofday_cb(const TrivialCB &cb)
 {
     _settimeofday_cb = cb;
 }
 
-int __real_settimeofday(const struct timeval* tv, const struct timezone* tz);
+extern "C" {
 
-int __wrap_settimeofday(const struct timeval* tv, const struct timezone* tz)
-{
-    // call original function first and invoke callback if set
-    int result = __real_settimeofday(tv, tz);
-    if (_settimeofday_cb) {
-        LoopFunctions::callOnce(_settimeofday_cb);
+    void settimeofday_cb (void (*cb)(void))
+    {
+        _settimeofday_cb = [cb]() {
+            cb();
+        };
     }
-    return result;
-}
+
+    int __real_settimeofday(const struct timeval* tv, const struct timezone* tz);
+
+    int __wrap_settimeofday(const struct timeval* tv, const struct timezone* tz)
+    {
+        // call original function first and invoke callback if set
+        int result = __real_settimeofday(tv, tz);
+        if (_settimeofday_cb) {
+            LoopFunctions::callOnce(_settimeofday_cb);
+        }
+        return result;
+    }
 
 }
 

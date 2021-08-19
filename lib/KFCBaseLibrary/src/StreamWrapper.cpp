@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <NullStream.h>
+#if ESP8266
 #include <interrupts.h>
+#endif
 #include "StreamWrapper.h"
 
 extern NullStream NullSerial;

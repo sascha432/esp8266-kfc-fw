@@ -34,26 +34,34 @@ JsonNumber::JsonNumber(int32_t value) : JsonString()
 
 JsonNumber::JsonNumber(uint64_t value) : JsonString()
 {
-    char buffer[24];
-    char *str = ulltoa(value, buffer, sizeof(buffer), 10);
-    if (!str) {
-        _init(emptyString.c_str(), 0);
-    }
-    else {
-        _init(str, &buffer[sizeof(buffer) - 1] - str);
-    }
+    char buffer[std::numeric_limits<decltype(value)>::digits10 + 2];
+    #if ESP8266
+        char *str = ulltoa(value, buffer, sizeof(buffer), 10);
+        if (!str) {
+            _init(emptyString.c_str(), 0);
+        }
+        else {
+            _init(str, &buffer[sizeof(buffer) - 1] - str);
+        }
+    #else
+        _init(buffer, snprintf_P(buffer, sizeof(buffer), PSTR("%llu"), value));
+    #endif
 }
 
 JsonNumber::JsonNumber(int64_t value) : JsonString()
 {
-    char buffer[24];
-    char *str = lltoa(value, buffer, sizeof(buffer), 10);
-    if (!str) {
-        _init(emptyString.c_str(), 0);
-    }
-    else {
-        _init(str, &buffer[sizeof(buffer) - 1] - str);
-    }
+    char buffer[std::numeric_limits<decltype(value)>::digits10 + 2];
+    #if ESP8266
+        char *str = lltoa(value, buffer, sizeof(buffer), 10);
+        if (!str) {
+            _init(emptyString.c_str(), 0);
+        }
+        else {
+            _init(str, &buffer[sizeof(buffer) - 1] - str);
+        }
+    #else
+        _init(buffer, snprintf_P(buffer, sizeof(buffer), PSTR("%lld"), value));
+    #endif
 }
 
 bool JsonNumber::validate()

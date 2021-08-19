@@ -6,16 +6,18 @@
 
 #include "web_server.h"
 #include <EventScheduler.h>
-#include "coredecls.h"
+#if ESP8266
+#    include "coredecls.h"
+#endif
 
 #ifndef DEBUG_WEB_SERVER_ACTION
-#define DEBUG_WEB_SERVER_ACTION                     0
+#    define DEBUG_WEB_SERVER_ACTION 0
 #endif
 
 #if DEBUG_WEB_SERVER_ACTION
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 namespace WebServer {
@@ -317,4 +319,6 @@ namespace WebServer {
 
 }
 
-#include <debug_helper_disable.h>
+#if DEBUG_WEB_SERVER_ACTION
+#    include <debug_helper_disable.h>
+#endif

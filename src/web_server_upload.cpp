@@ -7,7 +7,9 @@
 #include "logger.h"
 #include "templates.h"
 #include "web_server.h"
-#include "Updater.h"
+#if ESP8266
+#include <Updater.h>
+#endif
 #include "../src/plugins/plugins.h"
 
 #if DEBUG_WEB_SERVER_ACTION
@@ -17,6 +19,10 @@
 #endif
 
 #define U_ATMEGA 254
+
+#if ESP32
+#define U_FS U_SPIFFS
+#endif
 
 using KFCConfigurationClasses::System;
 

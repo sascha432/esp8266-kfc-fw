@@ -260,4 +260,8 @@ inline uint32_t crc32(const void *buf, size_t len, uint32_t crc = ~0)
     return crc32_le(crc, reinterpret_cast<const uint8_t *>(buf), len);
 }
 
+#define UART0    0
+#define UART1    1
+#define UART_NO -1
+
 #endif

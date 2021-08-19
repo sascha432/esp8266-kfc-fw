@@ -7,11 +7,10 @@
 #include "Buffer.h"
 #if USE_LITTLEFS
 #include <LittleFS.h>
-#if ESP32
-#include <FSImpl.h>
-#endif
-#elif HAVE_BUFFER_STREAM_FS
+#else
 #include <FS.h>
+#endif
+#if HAVE_BUFFER_STREAM_FS
 #include <FSImpl.h>
 #endif
 
@@ -115,6 +114,49 @@ inline void BufferStream::reset()
     _length = 0;
     _position = 0;
 }
+
+inline int BufferStream::available()
+{
+    return _available();
+}
+
+inline int BufferStream::read()
+{
+    if (_available()) {
+        return _buffer[_position++];
+    }
+    return -1;
+}
+
+inline int BufferStream::peek()
+{
+    if (_available()) {
+        return _buffer[_position];
+    }
+    return -1;
+}
+
+inline size_t BufferStream::readBytes(uint8_t *buffer, size_t length)
+{
+    size_t len;
+    if ((len = _available()) != 0) {
+        len = std::min(len, length);
+        memcpy(buffer, &_buffer[_position], len);
+        _position += len;
+        return len;
+    }
+    return 0;
+}
+
+inline void BufferStream::removeAndShrink(size_t index, size_t count, size_t minFree)
+{
+    remove(index, count);
+    if (_length + minFree < _size) {
+        shrink(_length);
+    }
+}
+
+#if HAVE_BUFFER_STREAM_FS
 
 class BufferStreamFS;
 
@@ -287,49 +329,6 @@ protected:
 protected:
     FileBufferStreamVector *_streams;
 };
-
-inline int BufferStream::available()
-{
-    return _available();
-}
-
-inline int BufferStream::read()
-{
-    if (_available()) {
-        return _buffer[_position++];
-    }
-    return -1;
-}
-
-inline int BufferStream::peek()
-{
-    if (_available()) {
-        return _buffer[_position];
-    }
-    return -1;
-}
-
-inline size_t BufferStream::readBytes(uint8_t *buffer, size_t length)
-{
-    size_t len;
-    if ((len = _available()) != 0) {
-        len = std::min(len, length);
-        memcpy(buffer, &_buffer[_position], len);
-        _position += len;
-        return len;
-    }
-    return 0;
-}
-
-inline void BufferStream::removeAndShrink(size_t index, size_t count, size_t minFree)
-{
-    remove(index, count);
-    if (_length + minFree < _size) {
-        shrink(_length);
-    }
-}
-
-#if HAVE_BUFFER_STREAM_FS
 
 extern BufferStreamFS BSFS;
 

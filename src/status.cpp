@@ -6,10 +6,16 @@
 #include <PrintHtmlEntitiesString.h>
 #include "status.h"
 #include "kfc_fw_config.h"
+#if ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiAP.h>
 #include "LwipDhcpServer.h"
 #include <user_interface.h>
+#endif
+#if ESP32
+#include <WiFiSTA.h>
+#include <esp_interface.h>
+#endif
 
 void WiFi_get_address(Print &out)
 {
@@ -59,7 +65,7 @@ void WiFi_get_status(Print &out)
     if (mode & WIFI_STA) {
 
         out.printf_P(PSTR(HTML_S(strong) "Station:" HTML_E(strong) HTML_S(br)));
-#if defined(ESP8266)
+    #if defined(ESP8266)
         switch (wifi_station_get_connect_status()) {
             case STATION_GOT_IP:
                 out.printf_P(PSTR("Connected, signal strength %d dBm, channel %u, mode %s"), WiFi.RSSI(), WiFi.channel(), KFCFWConfiguration::getWiFiPhyModeStr(wifi_get_phy_mode()));
@@ -93,7 +99,7 @@ void WiFi_get_status(Print &out)
             if (KFCConfigurationClasses::System::Flags::getConfig().is_station_mode_dhcp_enabled) {
                 out.print(F(HTML_S(br) "DHCP client running"));
             }
-#elif defined(ESP32)
+    #elif defined(ESP32)
             if (WiFi.isConnected()) {
                 out.printf_P(PSTR("Connected, signal strength %d dBm, channel %u, TX power %s"), WiFi.RSSI(), WiFi.channel(), WiFi_get_tx_power().c_str());
 
@@ -121,9 +127,9 @@ void WiFi_get_status(Print &out)
                 }
             }
 
-// #else
-#error Platform not supported
-#endif
+    #else
+        #error Platform not supported
+    #endif
 
             out.printf_P(PSTR(HTML_S(br) "IP Address/Network %s / %s " HTML_S(br) "Gateway %s DNS %s, %s"),
                 WiFi.localIP().toString().c_str(),
@@ -259,7 +265,7 @@ void WiFi_get_status(Print &out)
 
     }
 #else
-#error Platform not supported
+    #error Platform not supported
 #endif
 
     if (resetDetector.hasWakeUpDetected() && config._wifiFirstConnectionTime) {
@@ -280,16 +286,16 @@ void WiFi_Station_SSID(Print &out)
 
 void WiFi_SoftAP_SSID(Print &out)
 {
-#if defined(ESP32)
-    wifi_config_t _config;
-    wifi_ap_config_t &config = _config.ap;
-    if (esp_wifi_get_config(ESP_IF_WIFI_AP, &_config) == ESP_OK) {
-#elif defined(ESP8266)
-    softap_config config;
-    if (wifi_softap_get_config(&config)) {
-#else
-#error Platform not supported
-#endif
+    #if defined(ESP32)
+        wifi_config_t _config;
+        wifi_ap_config_t &config = _config.ap;
+        if (esp_wifi_get_config(wifi_interface_t::WIFI_IF_STA, &_config) == ESP_OK) {
+    #elif defined(ESP8266)
+        softap_config config;
+        if (wifi_softap_get_config(&config)) {
+    #else
+    #error Platform not supported
+    #endif
         out.printf_P(PSTR("%*.*s"), config.ssid_len, config.ssid_len, config.ssid);
         if (config.ssid_hidden) {
             out.print(F(" (" HTML_S(i) "HIDDEN" HTML_E(i) ")"));

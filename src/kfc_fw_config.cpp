@@ -378,14 +378,14 @@ void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPM
 void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
 {
     switch(event) {
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED/* SYSTEM_EVENT_STA_CONNECTED*/: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED: {
                 WiFiEventStationModeConnected dst;
                 dst.ssid = reinterpret_cast<const char *>(info.wifi_sta_connected.ssid);
                 MEMNCPY_S(dst.bssid, info.wifi_sta_connected.bssid);
                 dst.channel = info.wifi_sta_connected.channel;
                 config._onWiFiConnectCb(dst);
             } break;
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED /*SYSTEM_EVENT_STA_DISCONNECTED*/: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED: {
                 WiFiEventStationModeDisconnected dst;
                 dst.ssid = reinterpret_cast<const char *>(info.wifi_sta_disconnected.ssid);
                 MEMNCPY_S(dst.bssid, info.wifi_sta_disconnected.bssid);
@@ -393,27 +393,27 @@ void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
                 config._onWiFiDisconnectCb(dst);
             } break;
 #if DEBUG
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP6/* SYSTEM_EVENT_GOT_IP6*/: {
-                debug_printf_P(PSTR("_nWiFiEvent(SYSTEM_EVENT_GOT_IP6, addr=%04X:%04X:%04X:%04X)\n"), info.got_ip6.ip6_info.ip.addr[0], info.got_ip6.ip6_info.ip.addr[1], info.got_ip6.ip6_info.ip.addr[2], info.got_ip6.ip6_info.ip.addr[3]);
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP6: {
+                __DBG_printf("ARDUINO_EVENT_WIFI_STA_GOT_IP6 addr=%04X:%04X:%04X:%04X", info.got_ip6.ip6_info.ip.addr[0], info.got_ip6.ip6_info.ip.addr[1], info.got_ip6.ip6_info.ip.addr[2], info.got_ip6.ip6_info.ip.addr[3]);
             } break;
 #endif
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP/* SYSTEM_EVENT_STA_GOT_IP*/: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP: {
                 WiFiEventStationModeGotIP dst;
                 dst.ip = info.got_ip.ip_info.ip.addr;
                 dst.gw = info.got_ip.ip_info.gw.addr;
                 dst.mask = info.got_ip.ip_info.netmask.addr;
                 config._onWiFiGotIPCb(dst);
             } break;
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_LOST_IP/* SYSTEM_EVENT_STA_LOST_IP*/: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_LOST_IP: {
                 config._onWiFiOnDHCPTimeoutCb();
             } break;
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED/* SYSTEM_EVENT_AP_STACONNECTED*/: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STACONNECTED: {
                 WiFiEventSoftAPModeStationConnected dst;
                 dst.aid = info.wifi_ap_staconnected.aid;
                 MEMNCPY_S(dst.mac, info.wifi_ap_staconnected.mac);
                 config._softAPModeStationConnectedCb(dst);
             } break;
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED/* SYSTEM_EVENT_AP_STADISCONNECTED*/: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STADISCONNECTED: {
                 WiFiEventSoftAPModeStationDisconnected dst;
                 dst.aid = info.wifi_ap_stadisconnected.aid;
                 MEMNCPY_S(dst.mac, info.wifi_ap_stadisconnected.mac);
@@ -574,16 +574,15 @@ static void __softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDi
 void KFCFWConfiguration::_setupWiFiCallbacks()
 {
 #if defined(ESP32)
-
-    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_STA_CONNECTED);
-    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED);
-    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_STA_GOT_IP);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
 #if DEBUG
-    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_GOT_IP6);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP6);
 #endif
-    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_STA_LOST_IP);
-    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_AP_STACONNECTED);
-    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::SYSTEM_EVENT_AP_STADISCONNECTED);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_LOST_IP);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STACONNECTED);
+    WiFi.onEvent(_onWiFiEvent, WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STADISCONNECTED);
 
 #elif USE_WIFI_SET_EVENT_HANDLER_CB
 
@@ -936,12 +935,16 @@ void KFCFWConfiguration::write()
 
 void KFCFWConfiguration::printDiag(Print &output, const String &prefix)
 {
-    station_config wifiConfig;
-    wifi_station_get_config_default(&wifiConfig);
-    output.printf_P(PSTR("%s default ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s\n"), prefix.c_str(), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode_default()));
-    wifi_station_get_config(&wifiConfig);
-    output.printf_P(PSTR("%s config ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s\n"), prefix.c_str(), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode()));
-    output.printf_P(PSTR("%s sleep=%s phy=%s channel=%u AP_id=%u auto_connect=%u reconnect=%u\n"), prefix.c_str(), KFCFWConfiguration::getSleepTypeStr(wifi_get_sleep_type()), KFCFWConfiguration::getWiFiPhyModeStr(wifi_get_phy_mode()), wifi_get_channel(), wifi_station_get_current_ap_id(), wifi_station_get_auto_connect(), wifi_station_get_reconnect_policy());
+    #if ESP8266
+        station_config wifiConfig;
+        wifi_station_get_config_default(&wifiConfig);
+        output.printf_P(PSTR("%s default ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s\n"), prefix.c_str(), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode_default()));
+        wifi_station_get_config(&wifiConfig);
+        output.printf_P(PSTR("%s config ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s\n"), prefix.c_str(), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode()));
+        output.printf_P(PSTR("%s sleep=%s phy=%s channel=%u AP_id=%u auto_connect=%u reconnect=%u\n"), prefix.c_str(), KFCFWConfiguration::getSleepTypeStr(wifi_get_sleep_type()), KFCFWConfiguration::getWiFiPhyModeStr(wifi_get_phy_mode()), wifi_get_channel(), wifi_station_get_current_ap_id(), wifi_station_get_auto_connect(), wifi_station_get_reconnect_policy());
+    #elif ESP32
+        WiFi.printDiag(output);
+    #endif
 }
 
 bool KFCFWConfiguration::resolveZeroConf(const String &name, const String &hostname, uint16_t port, MDNSResolver::ResolvedCallback callback) const
@@ -1387,16 +1390,16 @@ bool KFCFWConfiguration::connectWiFi()
             }
 
             dhcps_lease_t lease;
-            lease.enable = flags.softAPDHCPDEnabled;
-            lease.start_ip.addr = softAp._dhcpStart;
-            lease.end_ip.addr = softAp._dhcpEnd;
+            lease.enable = flags.is_softap_dhcpd_enabled;
+            lease.start_ip.addr = softAp.dhcp_start;
+            lease.end_ip.addr = softAp.dhcp_end;
 
             if (tcpip_adapter_dhcps_option(TCPIP_ADAPTER_OP_SET, TCPIP_ADAPTER_REQUESTED_IP_ADDRESS, &lease, sizeof(lease)) != ESP_OK) {
                 String message = F("Failed to configure DHCP server");
                 setLastError(message);
                 Logger_error(message);
             }
-            else if (flags.softAPDHCPDEnabled && tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP) != ESP_OK) {
+            else if (flags.is_softap_dhcpd_enabled && tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP) != ESP_OK) {
                 String message = F("Failed to start DHCP server");
                 setLastError(message);
                 Logger_error(message);

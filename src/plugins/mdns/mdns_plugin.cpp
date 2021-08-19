@@ -102,6 +102,14 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
     }
 }
 
+#elif ESP32
+
+void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
+{
+}
+
+#warning TODO
+
 #endif
 
 #if MDNS_NETBIOS_SUPPORT
@@ -123,11 +131,15 @@ void MDNSPlugin::_startQueries()
 {
     // start all queries in the queue
     __LDBG_printf("zerconf queries=%u", _queries.size());
-    for(const auto &query: _queries) {
-        if (query->getState() == MDNSResolver::Query::StateType::NONE) {
-            query->begin();
+    #if ESP32
+        #warning TODO
+    #else
+        for(const auto &query: _queries) {
+            if (query->getState() == MDNSResolver::Query::StateType::NONE) {
+                query->begin();
+            }
         }
-    }
+    #endif
 }
 
 bool MDNSPlugin::isEnabled()
@@ -160,19 +172,23 @@ void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
     auto wasEmpty = _queries.empty();
     __LDBG_printf("query=%p running=%u queries=%u", query, _isRunning(), _queries.size());
 
-    _queries.emplace_back(query);
-    if (!isEnabled()) {
-        //TODO this might fail if wifi is down
-        if (wasEmpty) {
-            __LDBG_printf("MDNS disabled, calling begin");
-            MDNS.begin(System::Device::getName());
-            LoopFunctions::add(loop);
+    #if ESP32
+        #warning TODO
+    #else
+        _queries.emplace_back(query);
+        if (!isEnabled()) {
+            //TODO this might fail if wifi is down
+            if (wasEmpty) {
+                __LDBG_printf("MDNS disabled, calling begin");
+                MDNS.begin(System::Device::getName());
+                LoopFunctions::add(loop);
+            }
+            query->begin();
         }
-        query->begin();
-    }
-    else if (_isRunning()) {
-        query->begin();
-    }
+        else if (_isRunning()) {
+            query->begin();
+        }
+    #endif
 }
 
 MDNSResolver::Query *MDNSPlugin::findQuery(void *query) const
@@ -248,11 +264,15 @@ void MDNSPlugin::_loop()
     #if ESP8266
         MDNS.update();
     #endif
-    if (!_queries.empty()) {
-        for(auto &query: _queries) {
-            query->checkTimeout();
+    #if ESP32
+        #warning TODO
+    #else
+        if (!_queries.empty()) {
+            for(auto &query: _queries) {
+                query->checkTimeout();
+            }
         }
-    }
+    #endif
 }
 
 void MDNSPlugin::getStatus(Print &output)

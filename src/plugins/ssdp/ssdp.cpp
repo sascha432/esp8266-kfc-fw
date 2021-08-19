@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if IOT_SSDP_SUPPORT
+
 #include "ssdp.h"
 #include "templates.h"
 #include "WiFiCallbacks.h"
@@ -117,3 +119,5 @@ void SSDPPlugin::getStatus(Print &output)
         output.print(FSPGM(Disabled));
     }
 }
+
+#endif

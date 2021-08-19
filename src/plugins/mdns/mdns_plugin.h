@@ -118,16 +118,15 @@ public:
     virtual void shutdown() override;
     virtual void getStatus(Print &output) override;
 
-#if ESP8266
     virtual void createMenu() override {
         if (isEnabled()) {
             bootstrapMenu.addMenuItem(F("MDNS Discovery"), F("mdns-discovery.html"), navMenu.util);
         }
     }
     static void mdnsDiscoveryHandler(AsyncWebServerRequest *request);
-    void serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
-
-#endif
+    #if ESP8266
+        void serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
+    #endif
 
 #if AT_MODE_SUPPORTED
     virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;

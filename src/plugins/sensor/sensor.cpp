@@ -335,8 +335,16 @@ void SensorPlugin::getStatus(Print &output)
 
 void SensorPlugin::atModeHelpGenerator()
 {
-    for(const auto sensor: _sensors) {
-        sensor->atModeHelpGenerator();
+    if (isEnabled()) {
+        for(const auto sensor: _sensors) {
+            size_t size;
+            auto help = sensor->atModeCommandHelp(size);
+            if (help) {
+                for(size_t i = 0; i < size; i++) {
+                    at_mode_add_help(help[i], getName_P());
+                }
+            }
+        }
     }
 }
 

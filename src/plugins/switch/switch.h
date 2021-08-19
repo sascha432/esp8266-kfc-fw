@@ -189,12 +189,12 @@ public:
 private:
     void _publishState(int8_t channel = -1);
 
-#if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
-    Event::Timer _updateTimer;
-#endif
-#if IOT_SWITCH_STORE_STATES_FS
-    Event::Timer _delayedWrite;
-#endif
+    #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
+        Event::Timer _updateTimer;
+    #endif
+    #if IOT_SWITCH_STORE_STATES_FS
+        Event::Timer _delayedWrite;
+    #endif
 
 private:
     void _setChannel(uint8_t channel, bool state);

@@ -136,10 +136,10 @@ public:
 
     virtual void dump(Print &output) override;
 
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+    #if AT_MODE_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+        virtual bool atModeHandler(AtModeArgs &args) override;
+    #endif
 
 public:
     void _setOutputMode(OutputTypeEnum_t outputMode = CYCLE, int delay = -1);

@@ -160,10 +160,10 @@ public:
     // a copy, std:swap() or std::move() must be used
     AddCustomSensorCallback &getAddCustomSensorsCallback();
 
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+    #if AT_MODE_SUPPORTED
+        virtual void atModeHelpGenerator() override;
+        virtual bool atModeHandler(AtModeArgs &args) override;
+    #endif
 
 protected:
     template<class _Sensor, typename... _Args>
@@ -177,9 +177,7 @@ public:
 private:
     bool _hasConfigureForm() const;
     void _timerEvent();
-
     size_t _count() const;
-
     void _sortSensors();
 
     SensorVector _sensors;

@@ -152,7 +152,9 @@ namespace MQTT {
         virtual void shutdown() {}
 
     #if AT_MODE_SUPPORTED
-        virtual void atModeHelpGenerator() {
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const {
+            size = 0;
+            return nullptr;
         }
         virtual bool atModeHandler(AtModeArgs &args) {
             return false;

@@ -445,13 +445,15 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWCAL, "HLWCAL", "<u=voltage/i=current/p=
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWMODE, "HLWMODE", "<u=voltage/i=current/c=cycle>[,<delay in ms>", "Set voltage or current mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(HLWCFG, "HLWCFG", "<params,params,...>", "Configure sensor inputs", "Display configuration");
 
-void Sensor_HLW8012::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr Sensor_HLW8012::atModeCommandHelp(size_t &size) const
 {
-    Sensor_HLW80xx::atModeHelpGenerator();
-    auto name = SensorPlugin::getInstance().getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWCFG), name);
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(HLWCAL),
+        PROGMEM_AT_MODE_HELP_COMMAND(HLWMODE),
+        PROGMEM_AT_MODE_HELP_COMMAND(HLWCFG),
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 static void print_sensor_input_settings(Stream &serial, Sensor_HLW8012::SensorInput &input, bool newLine)

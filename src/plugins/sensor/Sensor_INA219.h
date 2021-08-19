@@ -82,10 +82,10 @@ public:
     virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) override;
     virtual void reconfigure(PGM_P source) override;
 
-#if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+    #if AT_MODE_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+        virtual bool atModeHandler(AtModeArgs &args) override;
+    #endif
 
 public:
     Adafruit_INA219 &getSensor();

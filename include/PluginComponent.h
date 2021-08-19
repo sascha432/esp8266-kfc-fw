@@ -19,8 +19,11 @@ class AsyncWebServerRequest;
 class WebTemplate;
 class AtModeArgs;
 class KFCFWConfiguration;
-using ATModeCommandHelpArray = const struct ATModeCommandHelp_t *[];
-using ATModeCommandHelpArrayPtr = const struct ATModeCommandHelp_t **;
+
+struct ATModeCommandHelp_t;
+
+using ATModeCommandHelpArray = const ATModeCommandHelp_t *[];
+using ATModeCommandHelpArrayPtr = const ATModeCommandHelp_t **;
 
 namespace FormUI {
     namespace Form {
@@ -95,7 +98,6 @@ namespace PluginComponents {
         // Plugins
         // highest priority for plugins
         MAX = 0,
-        // HASS,
         HTTP2SERIAL,
         MQTT,
         // default
@@ -178,9 +180,7 @@ namespace PluginComponents {
 
     class Dependencies {
     public:
-        Dependencies()
-        {}
-
+        Dependencies() {}
         ~Dependencies() {
             destroy();
         }
@@ -222,7 +222,12 @@ namespace PluginComponents {
 
 }
 
-class PluginComponent : PluginComponents::Component {
+class PluginComponentAtModeHelpInterface {
+public:
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const = 0;
+};
+
+class PluginComponent : public PluginComponents::Component, public PluginComponentAtModeHelpInterface {
 public:
 
     using Dependencies = PluginComponents::Dependencies;
@@ -440,9 +445,9 @@ public:
 #if AT_MODE_SUPPORTED
     // returns array ATModeCommandHelp_t[size] or nullptr for no help
     virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
-    // do not override if atModeCommandHelp exists
-    virtual void atModeHelpGenerator();
     virtual bool atModeHandler(AtModeArgs &args);
+
+    virtual void atModeHelpGenerator();
 #endif
 
 public:

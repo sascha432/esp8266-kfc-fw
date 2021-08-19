@@ -207,7 +207,7 @@ public:
     virtual void shutdown() override;
 
 #if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override;
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 

@@ -29,11 +29,11 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "network",          // reconfigure_dependencies
     PluginComponent::PriorityType::MQTT,
     PluginComponent::RTCMemoryId::NONE,
-#if MQTT_AUTO_DISCOVERY
-    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
-#else
-    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
-#endif
+    #if MQTT_AUTO_DISCOVERY
+        static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+    #else
+        static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    #endif
     false,              // allow_safe_mode
     true,               // setup_after_deep_sleep
     true,               // has_get_status
@@ -64,14 +64,14 @@ void Plugin::reconfigure(const String &source)
 void Plugin::shutdown()
 {
     __LDBG_println();
-#if MQTT_SET_LAST_WILL_MODE == 0
-    auto client = Client::getClient();
-    if (client) {
-        // send last will manually and give system some time to push out the tcp buffer
-        client->disconnect(false);
-        delay(100);
-    }
-#endif
+    #if MQTT_SET_LAST_WILL_MODE == 0
+        auto client = Client::getClient();
+        if (client) {
+            // send last will manually and give system some time to push out the tcp buffer
+            client->disconnect(false);
+            delay(100);
+        }
+    #endif
     // crashing sometimes
     // MQTT::Client::deleteInstance();
 }
@@ -93,15 +93,25 @@ void Plugin::getStatus(Print &output)
 
 #include "at_mode.h"
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<connect|disconnect|set|topics|autodiscovery|list>", "Manage MQTT\n"
-    "\n"
-    "    connect or con                              Connect to server\n"
-    "    disconnect or dis[,<true|false>]            Disconnect from server and enalbe/disable auto reconnect\n"
+#define COMMANDS "con|dis|set|top|auto|list"
+
+enum class Command {
+    INVALID = -1,
+    CONNECT,
+    DISCONNECT,
+    SET,
+    TOPICS,
+    AUTO_DISCOVERY,
+    LIST
+};
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<" COMMANDS ">", "Manage MQTT\n"
+    "    con[nect]                                   Connect to server\n"
+    "    dis[connect][,<true|false>]                 Disconnect from server and enalbe/disable auto reconnect\n"
     "    set,<enable,disable>                        Enable or disable MQTT\n"
-    "    topics or top                               List subscribed topics\n"
-    "    autodiscovery or auto[,restart][,force]     Publish auto discovery\n"
-    "    list[,<full|crc>]                           List auto discovery\n"
-    "\n",
+    "    top[ics]                                    List subscribed topics\n"
+    "    auto[discovery][,restart][,force]           Publish auto discovery\n"
+    "    list[,<full|crc>]                           List auto discovery\n",
     "Display MQTT status"
 );
 
@@ -124,11 +134,10 @@ bool Plugin::atModeHandler(AtModeArgs &args)
         }
         else if (args.requireArgs(1, 3)) {
             auto &client = *clientPtr;
-            auto actionsStr = PSTR("connect|con|disconnect|dis|set|topics|top|autodiscovery|auto|list");
-            auto action = stringlist_find_P_P(actionsStr, args.get(0), '|');
+            auto actionsStr = PSTR(COMMANDS);
+            auto action = static_cast<Command>(stringlist_find_P_P(actionsStr, args.get(0), '|'));
             switch(action) {
-                case 0: // connext
-                case 1: // con
+                case Command::CONNECT:
                     if (Plugins::MqttClient::isEnabled()) {
                         args.printf_P(PSTR("connecting to %s"), client.connectionStatusString().c_str());
                         client.setAutoReconnect();
@@ -138,8 +147,7 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                         args.print(F("disabled or not configured"));
                     }
                     break;
-                case 2: // disconnect
-                case 3: // dis
+                case Command::DISCONNECT:
                     if (args.isTrue(1)) {
                         client.setAutoReconnect();
                     }
@@ -149,7 +157,7 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                     client.disconnect(false);
                     args.print(F("disconnected"));
                     break;
-                case 4: // set
+                case Command::SET:
                     if  (args.isTrue(1)) {
                         System::Flags::getWriteableConfig().is_mqtt_enabled = true;
                         config.write();
@@ -163,14 +171,12 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                         args.print(F("disconnected and disabled"));
                     }
                     break;
-                case 5: // topics
-                case 6: // top
+                case Command::TOPICS:
                     for(const auto &topic: client.getTopics()) {
                         args.printf_P(PSTR("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getName());
                     }
                     break;
-                case 7: // autodiscovery
-                case 8: { // auto
+                case Command::AUTO_DISCOVERY: {
                         MQTT::RunFlags flags = MQTT::RunFlags::NONE;
                         if (args.has(F("force"))) {
                             flags = MQTT::RunFlags::FORCE;
@@ -195,7 +201,7 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                             args.print(F("auto discovery not available"));
                         }
                     } break;
-                case 9: {
+                case Command::LIST: {
                         auto &stream = args.getStream();
                         if (args.equalsIgnoreCase(1, F("crc"))) {
                             auto list = client.getAutoDiscoveryList(FormatType::JSON);

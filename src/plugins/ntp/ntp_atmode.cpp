@@ -21,11 +21,14 @@ using KFCConfigurationClasses::System;
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NOW, "NOW", "<update>", "Display current time or update NTP");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");
 
-void NTPPlugin::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr NTPPlugin::atModeCommandHelp(size_t &size) const
 {
-    auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(NOW), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(TZ), name);
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(NOW),
+        PROGMEM_AT_MODE_HELP_COMMAND(TZ)
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool NTPPlugin::atModeHandler(AtModeArgs &args)

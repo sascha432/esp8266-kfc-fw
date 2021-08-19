@@ -306,12 +306,15 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWXD, "HLWXD", "<count/0-4>", "Display ex
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWDUMP, "HLWDUMP", "<0=off/1...=seconds/2=cycle>", "Dump sensor data");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWPLOT, "HLWPLOT", "<ClientID>,<U/I/P/0=disable>[,<1/true=convert units>]", "Request data for plotting live graph");
 
-void Sensor_HLW80xx::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr Sensor_HLW80xx::atModeCommandHelp(size_t &size) const
 {
-    auto name = SensorPlugin::getInstance().getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWXD), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HLWPLOT), name);
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(HLWXD),
+        PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP),
+        PROGMEM_AT_MODE_HELP_COMMAND(HLWPLOT)
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)

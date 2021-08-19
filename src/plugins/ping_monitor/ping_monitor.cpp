@@ -88,7 +88,6 @@ public:
 
 #if AT_MODE_SUPPORTED
     virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-    // virtual void atModeHelpGenerator() override;
     virtual bool atModeHandler(AtModeArgs &args) override;
 
 private:

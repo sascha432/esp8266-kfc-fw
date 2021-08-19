@@ -9,17 +9,17 @@
 #include "PluginComponent.h"
 
 #ifndef DEBUG_PLUGINS
-#define DEBUG_PLUGINS                                 0
+#    define DEBUG_PLUGINS 0
 #endif
 
 #if ENABLE_DEEP_SLEEP
-#ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
-#define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME          7500
-#endif
+#    ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
+#        define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME 7500
+#    endif
 #else
-#ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
-#define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME          0
-#endif
+#    ifndef PLUGIN_DEEP_SLEEP_DELAYED_START_TIME
+#        define PLUGIN_DEEP_SLEEP_DELAYED_START_TIME 0
+#    endif
 #endif
 
 namespace PluginComponents {

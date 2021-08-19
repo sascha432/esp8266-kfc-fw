@@ -278,7 +278,7 @@ public:
     virtual bool hasAtMode() const override {
         return true;
     }
-    virtual void atModeHelpGenerator() override;
+    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
     virtual bool atModeHandler(AtModeArgs &args) override;
 
 };
@@ -307,12 +307,18 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDDF, "SSDDF", "<url>", "Download font");
 void SSD1306Plugin::atModeHelpGenerator()
 {
     auto name = getName_P();
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDST), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDXY), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDW), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDRF), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(SSDDF), name);
+
+ATModeCommandHelpArrayPtr SSD1306Plugin::atModeCommandHelp(size_t &size) const
+{
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(SSDCLR),
+        PROGMEM_AT_MODE_HELP_COMMAND(SSDST),
+        PROGMEM_AT_MODE_HELP_COMMAND(SSDXY),
+        PROGMEM_AT_MODE_HELP_COMMAND(SSDW),
+        PROGMEM_AT_MODE_HELP_COMMAND(SSDRF)
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool SSD1306Plugin::atModeHandler(AtModeArgs &args)

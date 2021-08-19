@@ -33,20 +33,20 @@
 #define AT_MODE_MAX_ARGUMENTS                   64
 #endif
 
-typedef struct ATModeCommandHelp_t {
+struct ATModeCommandHelp_t {
     PGM_P command;
     PGM_P arguments;
     PGM_P help;
     PGM_P helpQueryMode;
     PGM_P commandPrefix;
-} ATModeCommandHelp_t;
+};
 
 class ATModeCommandHelpData {
 public:
     ATModeCommandHelpData(PGM_P command, PGM_P arguments, PGM_P help) : _data({command, arguments, help, nullptr, nullptr})  {}
     ATModeCommandHelpData(PGM_P command, PGM_P arguments, PGM_P help, PGM_P helpQueryMode) : _data({command, arguments, help, helpQueryMode, nullptr})  {}
     ATModeCommandHelpData(PGM_P command, PGM_P arguments, PGM_P help, PGM_P helpQueryMode, PGM_P commandPrefix) : _data({command, arguments, help, helpQueryMode, commandPrefix})  {}
-    const struct ATModeCommandHelp_t _data;
+    const ATModeCommandHelp_t _data;
 };
 
 class ATModeCommandHelp {

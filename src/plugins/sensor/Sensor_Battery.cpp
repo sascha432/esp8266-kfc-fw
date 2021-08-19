@@ -479,16 +479,19 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCTAB, "BCTAB", "<from>,<to-voltage>[,<tru
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BREC, "BREC", "[<host=192.168.0.3>,<port=19523>,<type>]", "Enable sensor data recording");
 #endif
 
-void Sensor_Battery::atModeHelpGenerator()
+ATModeCommandHelpArrayPtr Sensor_Battery::atModeCommandHelp(size_t &size) const
 {
-    auto name = SensorPlugin::getInstance().getName_P();
-#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCAP), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BCTAB), name);
-#endif
-#if IOT_SENSOR_HAVE_BATTERY_RECORDER
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(BREC), name);
-#endif
+    static ATModeCommandHelpArray tmp PROGMEM = {
+    #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+        PROGMEM_AT_MODE_HELP_COMMAND(BCAP),
+        PROGMEM_AT_MODE_HELP_COMMAND(BCTAB),
+    #endif
+    #if IOT_SENSOR_HAVE_BATTERY_RECORDER
+        PROGMEM_AT_MODE_HELP_COMMAND(BREC),
+    #endif
+    };
+    size = sizeof(tmp) / sizeof(tmp[0]);
+    return tmp;
 }
 
 bool Sensor_Battery::atModeHandler(AtModeArgs &args)

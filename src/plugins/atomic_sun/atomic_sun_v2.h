@@ -230,9 +230,6 @@ public:
     }
 
 #if AT_MODE_SUPPORTED
-    virtual void atModeHelpGenerator() override {
-        _atModeHelpGenerator(getName_P());
-    }
     virtual bool atModeHandler(AtModeArgs &args) override {
         return _atModeHandler(args, *this, kMaxLevel);
     }

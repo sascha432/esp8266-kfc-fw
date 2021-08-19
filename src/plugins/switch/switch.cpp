@@ -115,17 +115,17 @@ void SwitchPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
 void SwitchPlugin::shutdown()
 {
     WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTED, this);
-#if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
-    _updateTimer.remove();
-#endif
-#if IOT_SWITCH_STORE_STATES_FS
-    if (_delayedWrite) {
-        // stop timer
-        _delayedWrite.remove();
-        // write states
-        _writeStatesNow();
-    }
-#endif
+    #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
+        _updateTimer.remove();
+    #endif
+    #if IOT_SWITCH_STORE_STATES_FS
+        if (_delayedWrite) {
+            // stop timer
+            _delayedWrite.remove();
+            // write states
+            _writeStatesNow();
+        }
+    #endif
     MQTT::Client::unregisterComponent(this);
 }
 
@@ -315,17 +315,17 @@ void SwitchPlugin::_rtcMemLoadState()
         _statesInitialized = true;
         _states = states;
         for (uint8_t i = 0; i < _pins.size(); i++) {
-#if DEBUG_IOT_SWITCH
-            ::printf(PSTR("_rtcMemLoadState: pin=%u state=%u\n"), _pins[i], _states[i]);
-#endif
+            #if DEBUG_IOT_SWITCH
+                ::printf(PSTR("_rtcMemLoadState: pin=%u state=%u\n"), _pins[i], _states[i]);
+            #endif
             digitalWrite(_pins[i], _channelPinValue(_states[i]));
             pinMode(_pins[i], OUTPUT);
         }
     }
     else {
-#if DEBUG_IOT_SWITCH
-        ::printf(PSTR("_rtcMemLoadState: failed to read states from RTC memory\n"));
-#endif
+        #if DEBUG_IOT_SWITCH
+            ::printf(PSTR("_rtcMemLoadState: failed to read states from RTC memory\n"));
+        #endif
         // __LDBG_printf("failed to read states from RTC memory");
     }
 }
@@ -334,6 +334,7 @@ void SwitchPlugin_rtcMemLoadState()
 {
     SwitchPlugin::_rtcMemLoadState();
 }
+
 #endif
 
 void SwitchPlugin::_setChannel(uint8_t channel, bool state)
@@ -380,15 +381,15 @@ void SwitchPlugin::_readStates()
 void SwitchPlugin::_writeStatesDelayed()
 {
     __LDBG_printf("states=%s", _states.toString().c_str());
-#if IOT_SWITCH_STORE_STATES_RTC_MEM
-    _rtcMemStoreState();
-#endif
-#if IOT_SWITCH_STORE_STATES_FS
-    _Timer(_delayedWrite).add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](Event::CallbackTimerPtr) {
-        __LDBG_printf("delayed write states=%s", _states.toString().c_str());
-        _writeStatesNow();
-    });
-#endif
+    #if IOT_SWITCH_STORE_STATES_RTC_MEM
+        _rtcMemStoreState();
+    #endif
+    #if IOT_SWITCH_STORE_STATES_FS
+        _Timer(_delayedWrite).add(IOT_SWITCH_STORE_STATES_WRITE_DELAY, false, [this](Event::CallbackTimerPtr) {
+            __LDBG_printf("delayed write states=%s", _states.toString().c_str());
+            _writeStatesNow();
+        });
+    #endif
 }
 
 void SwitchPlugin::_writeStatesNow()

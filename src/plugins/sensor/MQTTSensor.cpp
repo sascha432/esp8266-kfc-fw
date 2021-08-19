@@ -32,11 +32,11 @@ Sensor::~Sensor()
 {
     __LDBG_printf("dtor this=%p", this);
     shutdown();
-#if DEBUG
-    if (hasClient() && client().isComponentRegistered(this)) {
-        __DBG_panic("component=%p type=%d is still registered", this, getType());
-    }
-#endif
+    #if DEBUG
+        if (hasClient() && client().isComponentRegistered(this)) {
+            __DBG_panic("component=%p type=%d is still registered", this, getType());
+        }
+    #endif
 }
 
 void Sensor::onConnect()

@@ -47,7 +47,9 @@ enum class ValidatePointerType {
     P_PROGMEM = 0x04,
     P_ALIGNED = 0x08,
     P_NULL = 0x10,
+    P_NOSTRING = 0x20,
     P_HS = P_HEAP|P_STACK,
+    P_HSU = P_HEAP|P_STACK|P_NOSTRING,
     P_HP = P_HEAP|P_PROGMEM,
     P_HPS = P_HEAP|P_STACK|P_PROGMEM,
     P_NPS = P_STACK|P_PROGMEM,
@@ -73,6 +75,7 @@ inline _Ta *__validatePointer(const _Ta *ptr, ValidatePointerType type, const ch
 }
 
 #define VP_HS                            ValidatePointerType::P_HS
+#define VP_HSU                           ValidatePointerType::P_HSU
 #define VP_HP                            ValidatePointerType::P_HP
 #define VP_HPS                           ValidatePointerType::P_HPS
 #define VP_PS                            ValidatePointerType::P_PS

@@ -1385,7 +1385,7 @@ namespace SaveCrash {
         auto &cmd = request->arg(F("cmd"));
         if (request->argExists(cmd)) {
             if (cmd == F("clear")) {
-                fs.clear(SPIFlash::ClearStorageType::REMOVE_MAGIC);
+                fs.clear(SPIFlash::ClearStorageType::ERASE);
                 response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
             }
             else {

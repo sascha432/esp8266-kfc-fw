@@ -27,6 +27,12 @@
 #include "Sensor_Motion.h"
 #include "Sensor_AmbientLight.h"
 
+#if DEBUG_IOT_SENSOR
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 #ifndef IOT_SENSOR_NAMES_LM75A
 #    define IOT_SENSOR_NAMES_LM75A "LM75A Temperature"
 #endif
@@ -239,6 +245,18 @@ inline size_t SensorPlugin::_count() const
     });
 }
 
+inline void SensorPlugin::getValues(WebUINS::Events &array)
+{
+    for(const auto sensor: _sensors) {
+        sensor->getValues(array, false);
+    }
+}
+
+inline void SensorPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
+    __LDBG_printf("setValue(%s)", id.c_str());
+}
+
 inline void SensorPlugin::setAddCustomSensorsCallback(AddCustomSensorCallback callback)
 {
     _addCustomSensors = callback;
@@ -248,3 +266,48 @@ inline SensorPlugin::AddCustomSensorCallback &SensorPlugin::getAddCustomSensorsC
 {
     return _addCustomSensors;
 }
+
+inline void SensorPlugin::_sortSensors()
+{
+    std::sort(_sensors.begin(), _sensors.end(), [](const MQTT::SensorPtr a, const MQTT::SensorPtr b) {
+         return b->getOrderId() >= a->getOrderId();
+    });
+}
+
+inline void SensorPlugin::shutdown()
+{
+    _timer.remove();
+    for(const auto sensor: _sensors) {
+        __LDBG_printf("type=%u", sensor->getType());
+        sensor->shutdown();
+        delete sensor;
+    }
+    _sensors.clear();
+}
+
+inline void SensorPlugin::reconfigure(const String &source)
+{
+    _sortSensors();
+    for(const auto sensor: _sensors) {
+        sensor->reconfigure(source.c_str());
+    }
+}
+
+inline void SensorPlugin::timerEvent(Event::CallbackTimerPtr timer)
+{
+    getInstance()._timerEvent();
+}
+
+inline bool SensorPlugin::_hasConfigureForm() const
+{
+    for(const auto sensor: _sensors) {
+        if (sensor->hasForm()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+#if DEBUG_IOT_SENSOR
+#include <debug_helper_disable.h>
+#endif

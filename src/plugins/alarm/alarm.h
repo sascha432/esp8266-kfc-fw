@@ -11,6 +11,12 @@
 #include "kfc_fw_config.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 
+#if DEBUG_ALARM_FORM
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 #ifndef DEBUG_ALARM_FORM
 #   define DEBUG_ALARM_FORM 0
 #endif
@@ -76,6 +82,8 @@ private:
     void _timerCallback(Event::CallbackTimerPtr timer);
     void _publishState();
 
+    static AlarmPlugin &getInstance();
+
     inline static String _formatTopic(const __FlashStringHelper *topic) {
         return MQTT::Client::formatTopic(String(FSPGM(alarm)), topic);
     }
@@ -97,3 +105,64 @@ private:
     bool _alarmState;
     int32_t _color;
 };
+
+
+inline void AlarmPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
+{
+    _installAlarms(*_timer);
+    #if NTP_HAVE_CALLBACKS
+        addTimeUpdatedCallback(ntpCallback);
+    #endif
+    MQTT::Client::registerComponent(this);
+}
+
+inline void AlarmPlugin::onConnect()
+{
+    subscribe(_formatTopic(FSPGM(_set)));
+    subscribe(_formatTopic(F("/rgb/set")));
+    _publishState();
+}
+
+inline void AlarmPlugin::reconfigure(const String &source)
+{
+    _removeAlarms();
+    _installAlarms(*_timer);
+}
+
+inline void AlarmPlugin::shutdown()
+{
+    MQTT::Client::unregisterComponent(this);
+    _removeAlarms();
+}
+
+inline void AlarmPlugin::resetAlarm()
+{
+    __LDBG_printf("state=%u", getInstance()._alarmState);
+    getInstance()._alarmState = false;
+    getInstance()._publishState();
+}
+
+inline void AlarmPlugin::setCallback(CallbackType callback)
+{
+    getInstance()._callback = callback;
+}
+
+inline bool AlarmPlugin::getAlarmState()
+{
+    return getInstance()._alarmState;
+}
+
+inline void AlarmPlugin::ntpCallback(time_t now)
+{
+    __LDBG_printf("time=%u", (int)now);
+    getInstance()._ntpCallback(now);
+}
+
+inline void AlarmPlugin::timerCallback(Event::CallbackTimerPtr timer)
+{
+    getInstance()._timerCallback(timer);
+}
+
+#if DEBUG_ALARM_FORM
+#include <debug_helper_disable.h>
+#endif

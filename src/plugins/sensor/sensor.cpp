@@ -49,18 +49,6 @@ SensorPlugin::SensorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Sensor
     REGISTER_PLUGIN(this, "SensorPlugin");
 }
 
-void SensorPlugin::getValues(WebUINS::Events &array)
-{
-    for(const auto sensor: _sensors) {
-        sensor->getValues(array, false);
-    }
-}
-
-void SensorPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
-{
-    __LDBG_printf("setValue(%s)", id.c_str());
-}
-
 void SensorPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     config.initTwoWire();
@@ -188,22 +176,9 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
 
 }
 
-void SensorPlugin::reconfigure(const String &source)
-{
-    _sortSensors();
-    for(const auto sensor: _sensors) {
-        sensor->reconfigure(source.c_str());
-    }
-}
-
 SensorPlugin &SensorPlugin::getInstance()
 {
     return plugin;
-}
-
-void SensorPlugin::timerEvent(Event::CallbackTimerPtr timer)
-{
-    plugin._timerEvent();
 }
 
 // low priority timer executed in main loop()
@@ -229,34 +204,6 @@ void SensorPlugin::_timerEvent()
             sensor->timerEvent(nullptr, true);
         }
     }
-}
-
-void SensorPlugin::_sortSensors()
-{
-    std::sort(_sensors.begin(), _sensors.end(), [](const MQTT::SensorPtr a, const MQTT::SensorPtr b) {
-         return b->getOrderId() >= a->getOrderId();
-    });
-}
-
-void SensorPlugin::shutdown()
-{
-    _timer.remove();
-    for(const auto sensor: _sensors) {
-        __LDBG_printf("type=%u", sensor->getType());
-        sensor->shutdown();
-        delete sensor;
-    }
-    _sensors.clear();
-}
-
-bool SensorPlugin::_hasConfigureForm() const
-{
-    for(const auto sensor: _sensors) {
-        if (sensor->hasForm()) {
-            return true;
-        }
-    }
-    return false;
 }
 
 void SensorPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
@@ -335,7 +282,7 @@ void SensorPlugin::getStatus(Print &output)
 
 void SensorPlugin::atModeHelpGenerator()
 {
-    if (isEnabled()) {
+    if (isEnabled() && !_sensors.empty()) {
         for(const auto sensor: _sensors) {
             size_t size;
             auto help = sensor->atModeCommandHelp(size);

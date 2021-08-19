@@ -51,28 +51,6 @@ AlarmPlugin::AlarmPlugin() :
     REGISTER_PLUGIN(this, "AlarmPlugin");
 }
 
-void AlarmPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
-{
-    _installAlarms(*_timer);
-#if NTP_HAVE_CALLBACKS
-    addTimeUpdatedCallback(ntpCallback);
-#endif
-    MQTT::Client::registerComponent(this);
-}
-
-void AlarmPlugin::reconfigure(const String &source)
-{
-    _removeAlarms();
-    _installAlarms(*_timer);
-}
-
-void AlarmPlugin::shutdown()
-{
-   _debug_println();
-     MQTT::Client::unregisterComponent(this);
-    _removeAlarms();
-}
-
 MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
@@ -87,13 +65,6 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
             break;
     }
     return discovery;
-}
-
-void AlarmPlugin::onConnect()
-{
-    subscribe(_formatTopic(FSPGM(_set)));
-    subscribe(_formatTopic(F("/rgb/set")));
-    _publishState();
 }
 
 void AlarmPlugin::onMessage(const char *topic, const char *payload, size_t len)
@@ -140,18 +111,18 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
         auto &cfg = Alarm::getWriteableConfig();
         auto now = time(nullptr) + 30;
         Alarm::updateTimestamps(localtime(&now), cfg);
-#if DEBUG_ALARM_FORM
-        Alarm::dump(DEBUG_OUTPUT, cfg);
-#endif
+        #if DEBUG_ALARM_FORM
+            Alarm::dump(DEBUG_OUTPUT, cfg);
+        #endif
     }
     else if (isCreateFormCallbackType(type)) {
 
         auto &cfg = Alarm::getWriteableConfig();
 
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 10, ae, ah, am, md, wd
-#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
-            , mt
-#endif
+            #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
+                , mt
+            #endif
         );
 
         for(uint8_t i = 0; i < Alarm::MAX_ALARMS; i++) {
@@ -161,11 +132,11 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addObjectGetterSetter(F_VAR(ae, i), alarm, alarm.get_bits_is_enabled, alarm.set_bits_is_enabled);
             form.addObjectGetterSetter(F_VAR(ah, i), alarm.time, alarm.time.get_bits_hour, alarm.time.set_bits_hour);
             form.addObjectGetterSetter(F_VAR(am, i), alarm.time, alarm.time.get_bits_minute, alarm.time.set_bits_minute);
-#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
-            form.addObjectGetterSetter(F_VAR(mt, i), alarm.mode, alarm.get_int_mode, alarm.set_int_mode);
-#else
-            alarm.mode = SingleAlarmType::cast_int_mode(ModeType::BOTH);
-#endif
+            #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
+                form.addObjectGetterSetter(F_VAR(mt, i), alarm.mode, alarm.get_int_mode, alarm.set_int_mode);
+            #else
+                alarm.mode = SingleAlarmType::cast_int_mode(ModeType::BOTH);
+            #endif
 
             form.addObjectGetterSetter(F_VAR(md, i), alarm, alarm.get_bits_max_duration, alarm.set_bits_max_duration);
             form.addObjectGetterSetter(F_VAR(wd, i), alarm.time, alarm.time.get_bits_weekdays, alarm.time.set_bits_weekdays);
@@ -187,34 +158,6 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         form.finalize();
     }
-}
-
-void AlarmPlugin::resetAlarm()
-{
-    __LDBG_printf("state=%u", plugin._alarmState);
-    plugin._alarmState = false;
-    plugin._publishState();
-}
-
-void AlarmPlugin::setCallback(CallbackType callback)
-{
-    plugin._callback = callback;
-}
-
-bool AlarmPlugin::getAlarmState()
-{
-    return plugin._alarmState;
-}
-
-void AlarmPlugin::ntpCallback(time_t now)
-{
-    __LDBG_printf("time=%u", (int)now);
-    plugin._ntpCallback(now);
-}
-
-void AlarmPlugin::timerCallback(Event::CallbackTimerPtr timer)
-{
-    plugin._timerCallback(timer);
 }
 
 void AlarmPlugin::_installAlarms(Event::CallbackTimerPtr timer)
@@ -361,3 +304,8 @@ void AlarmPlugin::_publishState()
         publish(_formatTopic(F("/rgb/state")), true, PrintString(F("%06x"), _color));
     }
 }
+
+AlarmPlugin &AlarmPlugin::getInstance()
+ {
+     return plugin;
+ }

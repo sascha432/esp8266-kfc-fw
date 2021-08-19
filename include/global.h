@@ -20,7 +20,8 @@
 
 #elif defined(ESP32)
 
-#   include <core_version.h>
+// #   include <core_version.h>
+#    include <esp_arduino_version.h>
 
 #endif
 

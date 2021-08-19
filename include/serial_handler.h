@@ -72,6 +72,9 @@ namespace SerialHandler {
         virtual int available();
         virtual int read();
         virtual int peek();
+        #if ESP32
+            virtual void flush() {}
+        #endif
 
     // Print
     public:

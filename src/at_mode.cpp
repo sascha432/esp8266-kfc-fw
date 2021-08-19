@@ -1265,12 +1265,14 @@ static uintptr_t translateAddress(String str) {
     else if (str.startsWithIgnoreCase(F("ee"))) {
         return (uintptr_t)&_EEPROM_start;
     }
-    else if (str.equalsIgnoreCase(F("gpi"))) {
-        return (uintptr_t)&GPI;
-    }
-    else if (str.startsWithIgnoreCase(F("gpo"))) {
-        return (uintptr_t)&GPO;
-    }
+    #if !ESP32
+        else if (str.equalsIgnoreCase(F("gpi"))) {
+            return (uintptr_t)&GPI;
+        }
+        else if (str.startsWithIgnoreCase(F("gpo"))) {
+            return (uintptr_t)&GPO;
+        }
+    #endif
     return (uintptr_t)~0;
 }
 

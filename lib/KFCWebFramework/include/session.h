@@ -91,52 +91,111 @@ public:
 
 #elif ESP32
 
-#include "az_iot/c-utility/inc/azure_c_shared_utility/sha.h"
+#if ESP_ARDUINO_VERSION_MAJOR >= 2
 
-namespace Session {
+    #include <mbedtls/sha256.h>
 
-    class SHA256
-    {
-    public:
-        static constexpr size_t kHashSize = SHA256HashSize;
+    namespace Session {
 
-    public:
-        SHA256();
-
-        static constexpr size_t hashSize() {
-            return kHashSize;
-        }
-
-        void reset();
-        void update(const void *data, size_t len);
-
-        template<size_t _Len>
-        inline __attribute__((always_inline)) void finalize(void *hash)
+        class SHA256
         {
-            static_assert(_Len == kHashSize, "invalid size");
-            SHA256Result(&_context, hash);
+        public:
+            static constexpr size_t kHashSize = 32;
+
+        public:
+            SHA256();
+            ~SHA256();
+
+            static constexpr size_t hashSize() {
+                return kHashSize;
+            }
+
+            void reset();
+            void update(const void *data, size_t len);
+
+            template<size_t _Len>
+            inline __attribute__((always_inline)) void finalize(void *hash)
+            {
+                static_assert(_Len == kHashSize, "invalid size");
+                mbedtls_sha256_finish_ret(&_context, reinterpret_cast<char *>(hash));
+            }
+
+        private:
+            mbedtls_sha256_context _context;
+        };
+
+        inline SHA256::SHA256()
+        {
+            reset();
         }
 
-    private:
-        SHA256Context _context;
-    };
+        inline SHA256::~SHA256()
+        {
+            mbedtls_sha256_free(&_context);
+        }
 
-    inline SHA256::SHA256()
-    {
-        reset();
+        inline __attribute__((always_inline)) void SHA256::reset()
+        {
+            mbedtls_sha256_starts_ret(&_context, 0);
+        }
+
+        inline __attribute__((always_inline)) void SHA256::update(const void *data, size_t len)
+        {
+            mbedtls_sha256_update_ret(&_context, reinterpret_cast<const uint8_t *>(data), len);
+        }
+
     }
 
-    inline __attribute__((always_inline)) void SHA256::reset()
-    {
-        SHA256Reset(&_context);
+#else
+
+    #include "az_iot/c-utility/inc/azure_c_shared_utility/sha.h"
+
+    namespace Session {
+
+        class SHA256
+        {
+        public:
+            static constexpr size_t kHashSize = SHA256HashSize;
+
+        public:
+            SHA256();
+
+            static constexpr size_t hashSize() {
+                return kHashSize;
+            }
+
+            void reset();
+            void update(const void *data, size_t len);
+
+            template<size_t _Len>
+            inline __attribute__((always_inline)) void finalize(void *hash)
+            {
+                static_assert(_Len == kHashSize, "invalid size");
+                SHA256Result(&_context, hash);
+            }
+
+        private:
+            SHA256Context _context;
+        };
+
+        inline SHA256::SHA256()
+        {
+            reset();
+        }
+
+        inline __attribute__((always_inline)) void SHA256::reset()
+        {
+            SHA256Reset(&_context);
+        }
+
+        inline __attribute__((always_inline)) void SHA256::update(const void *data, size_t len)
+        {
+            SHA256Input(&_context, reinterpret_cast<const uint8_t *>(data), len);
+        }
+
     }
 
-    inline __attribute__((always_inline)) void SHA256::update(const void *data, size_t len)
-    {
-        SHA256Input(&_context, reinterpret_cast<const uint8_t *>(data), len);
-    }
-
-}
+#endif
 
 class SessionHash : public Session::SHA256
 {

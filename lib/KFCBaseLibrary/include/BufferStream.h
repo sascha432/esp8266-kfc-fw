@@ -7,6 +7,9 @@
 #include "Buffer.h"
 #if USE_LITTLEFS
 #include <LittleFS.h>
+#if ESP32
+#include <FSImpl.h>
+#endif
 #elif HAVE_BUFFER_STREAM_FS
 #include <FS.h>
 #include <FSImpl.h>

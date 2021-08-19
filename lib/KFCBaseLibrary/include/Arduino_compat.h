@@ -100,15 +100,25 @@ class __FlashStringHelper;
 #include <global.h>
 #include <WiFi.h>
 #include <FS.h>
+#include <LittleFS.h>
 
 #include "esp32_compat.h"
 
 class __FlashStringHelper;
 
+#if USE_LITTLEFS
+#include <LittleFS.h>
+#define KFCFS                                           LittleFS
+#define KFCFS_MAX_FILE_LEN                              31
+#define KFCFS_MAX_PATH_LEN                              127
+#else
+#include <FS.h>
 #define KFCFS                                           SPIFFS
 #define KFCFS_MAX_FILE_LEN                              31
 // includes directory slashes and filename
 #define KFCFS_MAX_PATH_LEN                              KFCFS_MAX_FILE_LEN
+#endif
+
 
 #define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
 #define FSPGM(name, ...)                                reinterpret_cast<const __FlashStringHelper *>(SPGM(name))

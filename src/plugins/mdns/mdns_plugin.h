@@ -38,7 +38,7 @@ public:
     using MDNSResponder = esp8266::MDNSImplementation::MDNSResponder;
 
 #elif ESP32
-    using MDNSResponder = MDNSResponder;
+    using MDNSResponder = ::MDNSResponder;
 #endif
 
     class ServiceInfo {

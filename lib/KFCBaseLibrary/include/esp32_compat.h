@@ -200,21 +200,21 @@ using Dir = fs::Dir;
 
 // typedef fs::Dir Dir;
 
-typedef struct {
-    size_t totalBytes;
-    size_t usedBytes;
-    int blockSize;
-    int maxOpenFiles;
-    int maxPathLength;
-    int pageSize;
-} FSInfo;
+// typedef struct {
+//     size_t totalBytes;
+//     size_t usedBytes;
+//     int blockSize;
+//     int maxOpenFiles;
+//     int maxPathLength;
+//     int pageSize;
+// } FSInfo;
 
 
-//TODO change to KFCFS.info()
-#define SPIFFS_info(info) \
-    memset(&info, 0, sizeof(info)); \
-    info.totalBytes = SPIFFS.totalBytes(); \
-    info.usedBytes = SPIFFS.usedBytes();
+// //TODO change to KFCFS.info()
+// #define SPIFFS_info(info) \
+//     memset(&info, 0, sizeof(info)); \
+//     info.totalBytes = SPIFFS.totalBytes(); \
+//     info.usedBytes = SPIFFS.usedBytes();
 
 
 inline void ets_timer_arm_new(ETSTimer *timer, uint32_t tmout, bool repeat, bool millis) {

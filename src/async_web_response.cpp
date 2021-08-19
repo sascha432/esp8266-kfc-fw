@@ -234,15 +234,15 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
 
 #if ESP32
 
-size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
-{
-    auto &json = getJsonObject();
-    if (!json.size()) {
-        auto &rows = json.addArray('l');
-        return AsyncJsonResponse::_fillBuffer(data, len);
-    }
-    return 0;
-}
+// size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
+// {
+//     auto &json = getJsonObject();
+//     if (!json.size()) {
+//         auto &rows = json.addArray('l');
+//         return AsyncJsonResponse::_fillBuffer(data, len);
+//     }
+//     return 0;
+// }
 
 #else
 

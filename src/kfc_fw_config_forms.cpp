@@ -73,21 +73,30 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
                 channelItems.push_back(i, i);
             }
 
-            FormUI::Container::List encryptionItems(
-                ENC_TYPE_NONE, F("Open / No encryption"),
-                ENC_TYPE_WEP, F("WEP"),
-                ENC_TYPE_TKIP, F("WPA TKIP"),
-                ENC_TYPE_CCMP, F("WPA CCMP"),
-                ENC_TYPE_AUTO, FSPGM(Auto)
-            );
-//ESP32
-// <option value="0" %APENC_0%>Open</option>
-// <option value="1" %APENC_1%>WEP</option>
-// <option value="2" %APENC_2%>WPA/PSK</option>
-// <option value="3" %APENC_3%>WPA2/PSK</option>
-// <option value="4" %APENC_4%>WPA/WPA2/PSK</option>
-// <option value="5" %APENC_5%>WPA2 Enterprise</option>
+            #if ESP8266
 
+                FormUI::Container::List encryptionItems(
+                    ENC_TYPE_NONE, F("Open / No encryption"),
+                    ENC_TYPE_WEP, F("WEP"),
+                    ENC_TYPE_TKIP, F("WPA TKIP"),
+                    ENC_TYPE_CCMP, F("WPA CCMP"),
+                    ENC_TYPE_AUTO, FSPGM(Auto)
+                );
+
+            #elif ESP32
+
+                FormUI::Container::List encryptionItems(
+                    WIFI_CIPHER_TYPE_NONE, F("Open / No encryption"),
+                    WIFI_CIPHER_TYPE_WEP40, F("WEP40"),
+                    WIFI_CIPHER_TYPE_WEP104, F("WEP104"),
+                    WIFI_CIPHER_TYPE_TKIP, F("TKIP"),
+                    WIFI_CIPHER_TYPE_CCMP, F("CCMP"),
+                    WIFI_CIPHER_TYPE_TKIP_CCMP, F("TKIP CCMP")
+                );
+
+            #else
+                #error missing
+            #endif
 
             auto &ui = form.createWebUI();
 

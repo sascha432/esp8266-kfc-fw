@@ -164,7 +164,7 @@ bool ListDir::showHiddenFiles() const
 
 inline bool ListDir::rewind()
 {
-    _listings = KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read);
+    _listings = KFCFS.open(FSPGM(fs_mapping_listings), fs::FileOpenMode::read);
     _listing = Listing();
     _isDir = false;
 #if ESP8266

@@ -22,6 +22,7 @@ using namespace FormUI;
 
 const char *WebUI::Config::encodeHtmlEntities(const char *cStr, Mode mode)
 {
+    __DBG_validatePointer(cStr, VP_HPS);
     uint8_t byte = pgm_read_byte(cStr);
     if (byte == 0xff) { // marker for html
         __LDBG_assert_printf(F("marker deprecated") == nullptr, "marker deprecated");

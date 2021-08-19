@@ -11,8 +11,14 @@
 #include <Arduino_compat.h>
 #include <vector>
 
+#if DEBUG_SERIAL_HANDLER
+#    define __DSW(fmt, ...) ::printf(PSTR("SW:" fmt "\n"), ##__VA_ARGS__);
+#else
+#    define __DSW(...) ;
+#endif
+
 #ifndef HAVE_MYSERIAL_AND_DEBUGSERIAL
-#define HAVE_MYSERIAL_AND_DEBUGSERIAL 1
+#    define HAVE_MYSERIAL_AND_DEBUGSERIAL 1
 #endif
 
 class StreamCacheVector {
@@ -100,3 +106,101 @@ private:
     bool _freeStreams;
     Stream *_input;
 };
+
+inline StreamCacheVector::StreamCacheVector(uint16_t size) : _size(size)
+{
+}
+
+inline void StreamCacheVector::add(String line)
+{
+    if (_lines.size() < _size) {
+        line.trim();
+        if (line.length()) {
+            _lines.push_back(line);
+        }
+    }
+}
+
+inline void StreamCacheVector::dump(Stream &output)
+{
+    for(String line: _lines) {
+        line.trim();
+        if (line.length()) {
+            output.println(line);
+            delay(10);
+        }
+    }
+}
+
+inline StreamWrapper::StreamWrapper(Stream *output, Stream *input) : _streams(new StreamWrapperVector()), _freeStreams(true), _input(input)
+{
+    add(output);
+}
+
+inline StreamWrapper::StreamWrapper(StreamWrapperVector *streams, Stream *input) : _streams(streams), _freeStreams(false), _input(input)
+{
+}
+
+inline StreamWrapper::StreamWrapper(Stream *stream) : StreamWrapper(stream, stream)
+{
+}
+
+
+inline StreamWrapper::~StreamWrapper()
+{
+    if (_freeStreams) {
+        delete _streams;
+    }
+}
+
+inline void StreamWrapper::setInput(Stream *input)
+{
+    _input = input;
+}
+
+inline Stream *StreamWrapper::getInput()
+{
+    return _input;
+}
+
+inline int StreamWrapper::available()
+{
+    return _input->available();
+}
+
+inline int StreamWrapper::read()
+{
+    return _input->read();
+}
+
+inline int StreamWrapper::peek()
+{
+    return _input->peek();
+}
+
+inline size_t StreamWrapper::readBytes(char *buffer, size_t length)
+{
+    return _input->readBytes(buffer, length);
+}
+
+inline size_t StreamWrapper::write(uint8_t data)
+{
+    bool canYield = can_yield();
+    for(const auto stream: *_streams) {
+        if (stream->write(data) != 1 && canYield) {
+            delay(1);
+            // __DSW("stream=%p write %u/%u", stream, 0, 1);
+            stream->write(data);
+        }
+    }
+    return sizeof(data);
+}
+
+inline void StreamWrapper::flush()
+{
+    for(const auto stream: *_streams) {
+        if (stream != &Serial0 && stream != &Serial1) {
+            stream->flush();
+        }
+    }
+}

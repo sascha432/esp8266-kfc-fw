@@ -10,7 +10,13 @@
 #include <DataProviderInterface.h>
 
 #ifndef DEBUG_SSI_PROXY_STREAM
-#   define DEBUG_SSI_PROXY_STREAM 0
+#   define DEBUG_SSI_PROXY_STREAM 1
+#endif
+
+#if !DEBUG_SSI_PROXY_STREAM
+#    pragma push_macro("__DBG_validatePointer")
+#    undef __DBG_validatePointer
+#    define __DBG_validatePointer(ptr, ...) ptr
 #endif
 
 class SSIProxyStream : public Stream {
@@ -22,21 +28,20 @@ public:
         _length(0),
         _provider(provider)
     {
-    #if DEBUG_SSI_PROXY_STREAM
-        _ramUsage = ESP.getFreeHeap();
-    #endif
+        #if DEBUG_SSI_PROXY_STREAM
+            _ramUsage = ESP.getFreeHeap();
+        #endif
     }
 
     ~SSIProxyStream()
     {
-    #if DEBUG_SSI_PROXY_STREAM
-        debug_printf(PSTR("ram=%u\n"), _ramUsage);
-    #endif
+        #if DEBUG_SSI_PROXY_STREAM
+            __DBG_printf("ram=%u", _ramUsage);
+        #endif
     }
 
-
     operator bool() const {
-        return (bool)_file;
+        return _file;
     }
 
     virtual int available() override;
@@ -44,7 +49,7 @@ public:
     virtual int peek() override;
 
     virtual size_t readBytes(char *buffer, size_t length) {
-        return read((uint8_t *)buffer, length);
+        return read(reinterpret_cast<uint8_t *>(buffer), length);
     }
 
     int read(uint8_t *buffer, size_t length);
@@ -71,9 +76,9 @@ public:
         _file.close();
     }
 
-#if defined(ESP32)
-    virtual void flush() {}
-#endif
+    #if defined(ESP32)
+        virtual void flush() {}
+    #endif
 
 private:
     size_t _copy(uint8_t *buffer, size_t length);
@@ -89,33 +94,43 @@ private:
 
 private:
     struct {
-        typedef uint8_t *pointer;
+        using pointer = uint8_t *;
+
         const SSIProxyStream &_p;
+
         pointer start() const {
             return position ? position : _p._buffer.begin();
         }
+
         ptrdiff_t to_offset(pointer ptr) const {
             return ptr - _p._buffer.begin();
         }
+
         pointer from_offset(ptrdiff_t offset) const {
             return _p._buffer.begin() + ((offset < 0) ? 0 : offset);
         }
+
         size_t template_length() const {
             return _p._length - start_length;
         }
+
         const char *template_name() const {
             return name.c_str();
         }
+
         bool in_buffer(pointer ptr) const {
             return ptr >= _p._buffer.begin() && ptr < _p._buffer.end();
         }
+
         size_t name_len() const {
             return marker != -1 ? (_p._buffer.end() - from_offset(marker)) : 0;
         }
+
         void eof() {
             marker = -1;
             position = _p._buffer.end();
         }
+
         char delim;
         ptrdiff_t marker;
         pointer position;
@@ -129,9 +144,13 @@ private:
     size_t _position;
     size_t _length;
     DataProviderInterface &_provider;
-#if DEBUG_SSI_PROXY_STREAM
-    uint32_t _ramUsage;
-#endif
+    #if DEBUG_SSI_PROXY_STREAM
+        uint32_t _ramUsage;
+    #endif
 };
 
 #include "SSIProxyStream.hpp"
+
+#if !DEBUG_SSI_PROXY_STREAM
+#    pragma push_pop("__DBG_validatePointer")
+#endif

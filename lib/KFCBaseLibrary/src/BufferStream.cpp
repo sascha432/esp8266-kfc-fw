@@ -6,11 +6,6 @@
 
 #include <debug_helper_enable.h>
 
-int BufferStream::available()
-{
-    return _available();
-}
-
 bool BufferStream::seek(long pos, SeekMode mode)
 {
     switch(mode) {
@@ -36,34 +31,6 @@ bool BufferStream::seek(long pos, SeekMode mode)
     return true;
 }
 
-int BufferStream::read()
-{
-    if (_available()) {
-        return _buffer[_position++];
-    }
-    return -1;
-}
-
-int BufferStream::peek()
-{
-    if (_available()) {
-        return _buffer[_position];
-    }
-    return -1;
-}
-
-size_t BufferStream::readBytes(uint8_t *buffer, size_t length)
-{
-    size_t len;
-    if ((len = _available()) != 0) {
-        len = std::min(len, length);
-        memcpy(buffer, &_buffer[_position], len);
-        _position += len;
-        return len;
-    }
-    return 0;
-}
-
 void BufferStream::remove(size_t index, size_t count)
 {
     if (!count || index >= _length) {
@@ -83,31 +50,9 @@ void BufferStream::remove(size_t index, size_t count)
     Buffer::_remove(index, count);
 }
 
-void BufferStream::removeAndShrink(size_t index, size_t count, size_t minFree)
-{
-    remove(index, count);
-    if (_length + minFree < _size) {
-        shrink(_length);
-    }
-}
-
-
 #if HAVE_BUFFER_STREAM_FS
 
 BufferStreamFS BSFS;
-
-const char *FileBufferStreamImpl::name() const
-{
-    if (!_stream) {
-        return emptyString.c_str();
-    }
-    auto iterator = BSFS._find(_stream);
-    if (iterator == BSFS._streams->end()) {
-        return emptyString.c_str();
-    }
-    return iterator->getFilename();
-}
-
 
 File BufferStreamFS::open(const char *filename, const char *mode)
 {
@@ -200,26 +145,6 @@ File BufferStreamFS::open(const char *filename, const char *mode)
     // fs::FileOpenMode::append
 }
 
-bool BufferStreamFS::exists(const char *path)
-{
-    if (!_streams) {
-        return false;
-    }
-    auto iterator = _find(path);
-    return (iterator != _streams->end());
-}
-
-bool BufferStreamFS::remove(const char* path)
-{
-    __LDBG_printf("path=%s", path);
-    if (!_streams) {
-        return false;
-    }
-    auto size = _streams->size();
-    _streams->erase(std::remove(_streams->begin(), _streams->end(), path), _streams->end());
-    return size != _streams->size();
-}
-
 bool BufferStreamFS::rename(const char* pathFrom, const char* pathTo)
 {
     __LDBG_printf("from=%s to=%s", pathFrom, pathTo);
@@ -236,16 +161,6 @@ bool BufferStreamFS::rename(const char* pathFrom, const char* pathTo)
 
     iterator->rename(pathTo);
     return true;
-}
-
-BufferStreamFS::FileBufferStreamVector::iterator BufferStreamFS::_find(const char *path)
-{
-    return std::find(_streams->begin(), _streams->end(), path);
-}
-
-BufferStreamFS::FileBufferStreamVector::iterator BufferStreamFS::_find(const BufferStreamPtr &ptr)
-{
-    return std::find(_streams->begin(), _streams->end(), ptr);
 }
 
 #endif

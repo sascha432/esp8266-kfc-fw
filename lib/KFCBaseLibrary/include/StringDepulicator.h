@@ -7,16 +7,22 @@
 #include "Buffer.h"
 
 #ifndef DEBUG_STRING_DEDUPLICATOR
-#define DEBUG_STRING_DEDUPLICATOR               0
+#    define DEBUG_STRING_DEDUPLICATOR 1
+#endif
+
+#if !DEBUG_STRING_DEDUPLICATOR
+#    pragma push_macro("__DBG_validatePointer")
+#    undef __DBG_validatePointer
+#    define __DBG_validatePointer(ptr, ...) ptr
 #endif
 
 #if defined(ESP8266)
 // PROGMEM strings are detected by address and skipped
-#define safe_strcmp(a, b)                       strcmp(a, b)
-#define safe_strlen(a)                          strlen(a)
+#    define safe_strcmp(a, b) strcmp(a, b)
+#    define safe_strlen(a)    strlen(a)
 #else
-#define safe_strcmp(a, b)                       strcmp_P(a, b)
-#define safe_strlen(a)                          strlen_P(a)
+#    define safe_strcmp(a, b) strcmp_P(a, b)
+#    define safe_strlen(a)    strlen_P(a)
 #endif
 
 class StringDeduplicator;
@@ -41,9 +47,9 @@ public:
     // returns nullptr if there is no space left
     const char *addString(const char *str, size_t len);
 
-#if DEBUG_STRING_DEDUPLICATOR
-    void dump(Print &output) const;
-#endif
+    #if DEBUG_STRING_DEDUPLICATOR
+        void dump(Print &output) const;
+    #endif
 };
 
 class StringBufferPool {
@@ -60,9 +66,9 @@ public:
     const char *findStr(const char *str, size_t len) const;
     const char *addString(const char *str, size_t len);
 
-#if DEBUG_STRING_DEDUPLICATOR
-    void dump(Print &output) const;
-#endif
+    #if DEBUG_STRING_DEDUPLICATOR
+        void dump(Print &output) const;
+    #endif
 
 private:
     friend StringDeduplicator;
@@ -73,11 +79,11 @@ private:
 
 class StringDeduplicator {
 public:
-#if DEBUG_STRING_DEDUPLICATOR
-    StringDeduplicator() : _dupesCount(0), _fpDupesCount(0), _fpStrCount(0) {}
-#else
-    StringDeduplicator() {}
-#endif
+    #if DEBUG_STRING_DEDUPLICATOR
+        StringDeduplicator() : _dupesCount(0), _fpDupesCount(0), _fpStrCount(0) {}
+    #else
+        StringDeduplicator() {}
+    #endif
 
     ~StringDeduplicator() {
         clear();
@@ -98,18 +104,22 @@ public:
     // clear buffer and release memory
     void clear();
 
-#if DEBUG_STRING_DEDUPLICATOR
-    void dump(Print &output) const;
-#endif
+    #if DEBUG_STRING_DEDUPLICATOR
+        void dump(Print &output) const;
+    #endif
 
 private:
     StringBufferPool _strings;
-#if DEBUG_STRING_DEDUPLICATOR
-    size_t _dupesCount;
-    size_t _fpDupesCount;
-    size_t _fpStrCount;
-    std::vector<const char *> _fpStrings;
-#endif
+    #if DEBUG_STRING_DEDUPLICATOR
+        size_t _dupesCount;
+        size_t _fpDupesCount;
+        size_t _fpStrCount;
+        std::vector<const char *> _fpStrings;
+    #endif
 };
 
 #include "StringDepulicator.hpp"
+
+#if !DEBUG_STRING_DEDUPLICATOR
+#    pragma pop_macro("__DBG_validatePointer")
+#endif

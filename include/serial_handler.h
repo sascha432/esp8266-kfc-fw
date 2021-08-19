@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_SERIAL_HANDLER
-#define DEBUG_SERIAL_HANDLER                                0
+#    define DEBUG_SERIAL_HANDLER 0
 #endif
 
 #include <Arduino.h>
@@ -21,7 +21,7 @@
 #include <cbuf.h>
 
 #ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX
-#define SERIAL_HANDLER_INPUT_BUFFER_MAX 512
+#    define SERIAL_HANDLER_INPUT_BUFFER_MAX 512
 #endif
 
 namespace SerialHandler {

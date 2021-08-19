@@ -7,50 +7,19 @@
 #include <DumpBinary.h>
 
 #if DEBUG_SSI_PROXY_STREAM
-#include "debug_helper_enable.h"
+#    include "debug_helper_enable.h"
 #else
-#include "debug_helper_disable.h"
+#    include "debug_helper_disable.h"
 #endif
 
-int SSIProxyStream::available()
-{
-    if (!_file) {
-        return false;
-    }
-    else if (_position < _buffer.length()) {
-        return true;
-    }
-    return _file.available();
-}
-
-int SSIProxyStream::read()
-{
-    auto data = peek();
-    if (data != -1) {
-        _position++;
-        _template.position--;
-    }
-    return data;
-}
-
-int SSIProxyStream::peek()
-{
-    int data;
-    if (_position >= _buffer.length()) {
-        _readBuffer();
-    }
-    if (_position < _buffer.length()) {
-        data = _buffer.get()[_position];
-        return data;
-    }
-    else {
-        close();
-        return -1;
-    }
-}
+#if !DEBUG_SSI_PROXY_STREAM
+#    undef __DBG_validatePointer
+#    define __DBG_validatePointer(ptr, ...) ptr
+#endif
 
 size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
 {
+    __DBG_validatePointer(buffer, VP_HPS);
     __LDBG_assert(_template.marker == -1);
     if (length > _available()) {
         length = _available();
@@ -68,11 +37,30 @@ size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
 size_t SSIProxyStream::_readBuffer(bool templateCheck)
 {
     // __LDBG_printf("templateCheck=%u", templateCheck);
-    uint8_t buf[512];
+    #define POISON_CHECK DEBUG_SSI_PROXY_STREAM
+    #if POISON_CHECK
+        constexpr size_t bufferSizePosionCheck = 32;
+        size_t bufferSize = 512 + (bufferSizePosionCheck * 2);
+    #else
+        constexpr size_t bufferSize = 512;
+    #endif
+    auto bufferPtr = std::unique_ptr<uint32_t[]>(new uint32_t[bufferSize / sizeof(uint32_t)]);
+    auto buf = reinterpret_cast<uint8_t *>(bufferPtr.get());
+    if (!buf) {
+        __DBG_printf_E("allocation failed size=%u", bufferSize);
+        return 0;
+    }
+    #if POISON_CHECK
+        std::fill_n(bufferPtr.get(), bufferSize / sizeof(uint32_t), 0xccccccccU);
+        auto bufBegin = buf;
+        auto bufEnd = buf + bufferSize - bufferSizePosionCheck;
+        buf += bufferSizePosionCheck;
+        bufferSize -= bufferSizePosionCheck * 2;
+    #endif
 
     size_t len = 0;
     if (_provider) {
-        len = _provider.fillBuffer(buf, sizeof(buf));
+        len = _provider.fillBuffer(buf, bufferSize);
         if (len <= 0) {
             _provider.end();
             __LDBG_printf("template %c%s%c end @ %d length=%d", _template.delim, _template.template_name(), _template.delim, _length, _template.template_length());
@@ -84,7 +72,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
         }
     }
     if (len == 0 && _file && _file.available()) {
-        len = _file.readBytes((char *)buf, sizeof(buf));
+        len = _file.readBytes(reinterpret_cast<char *>(buf), bufferSize);
         if (len <= 0) {
             __LDBG_printf("stream reached EOF @ %d, result=%d", _length, len);
             close();
@@ -166,17 +154,17 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
 
                         // get position inside the file after the template name without %
                         size_t filePos = _file.position() - (_buffer.end() - name.end) + 1;
-#if HAVE_DEBUG_ASSERT && _WIN32
-                        if (name.begin) {
-                            // verify position
-                            auto savePos = _file.position();
-                            _file.seek(filePos - name.len() - 1, SeekSet);
-                            uint8_t tmp[128];
-                            auto len = _file.readBytes(tmp, sizeof(tmp));
-                            __LDBG_assert(memcmp(tmp, name.begin, name.len()) == 0);
-                            _file.seek(savePos, SeekSet);
-                        }
-#endif
+                        #if HAVE_DEBUG_ASSERT && _WIN32
+                            if (name.begin) {
+                                // verify position
+                                auto savePos = _file.position();
+                                _file.seek(filePos - name.len() - 1, SeekSet);
+                                uint8_t tmp[128];
+                                auto len = _file.readBytes(tmp, sizeof(tmp));
+                                __LDBG_assert(memcmp(tmp, name.begin, name.len()) == 0);
+                                _file.seek(savePos, SeekSet);
+                            }
+                        #endif
                         // check if data provider can resolve the name
                         if (_provider.begin(_template.name)) {
                             _template.start_length = _length;
@@ -214,8 +202,21 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
             __LDBG_assert(_template.marker == -1);
         }
     }
-#if DEBUG_SSI_PROXY_STREAM
-    _ramUsage = std::min(ESP.getFreeHeap(), _ramUsage);
-#endif
+    #if POISON_CHECK
+        for(size_t i = 0; i < bufferSizePosionCheck; i++) {
+            if (bufBegin[i] != 0xcc) {
+                __DBG_printf("buffer overrun @bufbegin[%u]", i);
+                break;
+            }
+            if (bufEnd[i] != 0xcc) {
+                __DBG_printf("buffer overrun @bufbegin[%u]", i);
+                break;
+            }
+        }
+    #endif
+    #undef POISON_CHECK
+    #if DEBUG_SSI_PROXY_STREAM
+        _ramUsage = std::min(ESP.getFreeHeap(), _ramUsage);
+    #endif
     return len;
 }

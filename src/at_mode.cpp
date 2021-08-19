@@ -1382,15 +1382,22 @@ void at_mode_serial_handle_event(String &commandString)
         KFCFWConfiguration::milliseconds time(args.toMillis(0));
         RFMode mode = (RFMode)args.toInt(1, RF_DEFAULT);
 
-        //+dslp=15000,4
-        args.print(F("Entering deep sleep... time=%ums deep_sleep_max=%.0fms mode=%u"), time.count(), (ESP.deepSleepMax() / 1000.0), mode);
+        #if ESP32
 
-        #if ENABLE_DEEP_SLEEP
-            deepSleepParams.enterDeepSleep(time, mode);
+            #warning TODO
+
         #else
-            ESP.deepSleep(time.count() * 1000ULL, mode);
-            ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
-            ESP.deepSleep(0, mode);
+            //+dslp=15000,4
+
+            args.print(F("Entering deep sleep... time=%ums deep_sleep_max=%.0fms mode=%u"), time.count(), (ESP.deepSleepMax() / 1000.0), mode);
+
+            #if ENABLE_DEEP_SLEEP
+                deepSleepParams.enterDeepSleep(time, mode);
+            #else
+                ESP.deepSleep(time.count() * 1000ULL, mode);
+                ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
+                ESP.deepSleep(0, mode);
+            #endif
         #endif
     }
     else
@@ -1405,59 +1412,61 @@ void at_mode_serial_handle_event(String &commandString)
         }
         at_mode_generate_help(output, &findItems);
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO))) {
+    #if ESP8266
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO))) {
 /*
 +dumpio=0x700,0x7ff
 +dumpio=0x1200,0x1300
 +dumpio=GPI
 */
-        static constexpr auto kIOBase = 0x60000000U; // std::addressof(ESP8266_REG(0));
-        uintptr_t addr = translateAddress(args.toString(0));
-        if (addr == ~0U) {
-            addr = args.toNumber(0, kIOBase);
-        }
-        if (addr < kIOBase) {
-            addr += kIOBase;
-        }
-        uintptr_t toAddr = args.toNumber(1, sizeof(uint32_t));
-        if (toAddr == 0) {
-            toAddr = sizeof(uint32_t);
-        }
-        if (toAddr < addr) {
-            toAddr += addr;
-        }
-        addr &= 0xffff;
-        toAddr &= 0xffff;
-        if (addr & 0x3)  {
-            args.print(F("address=0x%08x not aligned"), addr);
-        }
-        else {
-            while(addr < toAddr) {
-                auto data = ESP8266_REG(addr);
-                uint8_t len;
-                switch(toAddr - addr) {
-                    case 1:
-                        data &= 0xff;
-                        len = 2;
-                        break;
-                    case 2:
-                        data &= 0xffff;
-                        len = 4;
-                        break;
-                    case 3:
-                        data &= 0xffffff;
-                        len = 6;
-                        break;
-                    default:
-                        len = 8;
-                        break;
+            static constexpr auto kIOBase = 0x60000000U; // std::addressof(ESP8266_REG(0));
+            uintptr_t addr = translateAddress(args.toString(0));
+            if (addr == ~0U) {
+                addr = args.toNumber(0, kIOBase);
+            }
+            if (addr < kIOBase) {
+                addr += kIOBase;
+            }
+            uintptr_t toAddr = args.toNumber(1, sizeof(uint32_t));
+            if (toAddr == 0) {
+                toAddr = sizeof(uint32_t);
+            }
+            if (toAddr < addr) {
+                toAddr += addr;
+            }
+            addr &= 0xffff;
+            toAddr &= 0xffff;
+            if (addr & 0x3)  {
+                args.print(F("address=0x%08x not aligned"), addr);
+            }
+            else {
+                while(addr < toAddr) {
+                    auto data = ESP8266_REG(addr);
+                    uint8_t len;
+                    switch(toAddr - addr) {
+                        case 1:
+                            data &= 0xff;
+                            len = 2;
+                            break;
+                        case 2:
+                            data &= 0xffff;
+                            len = 4;
+                            break;
+                        case 3:
+                            data &= 0xffffff;
+                            len = 6;
+                            break;
+                        default:
+                            len = 8;
+                            break;
+                    }
+                    Serial.printf_P(PSTR("address=0x%0*.*x data=0x%0*.*x %u %d %s\n"), len, len, addr + kIOBase, len, len, data, data, data, BitsToStr<32, false>(data).c_str() + ((8 - len) * 4));
+                    addr += sizeof(uint32_t);
+                    delay(1);
                 }
-                Serial.printf_P(PSTR("address=0x%0*.*x data=0x%0*.*x %u %d %s\n"), len, len, addr + kIOBase, len, len, data, data, data, BitsToStr<32, false>(data).c_str() + ((8 - len) * 4));
-                addr += sizeof(uint32_t);
-                delay(1);
             }
         }
-    }
+#endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPF))) {
         static constexpr size_t kFlashBufferSize = 32;
         uintptr_t addr = translateAddress(args.toString(0));
@@ -1714,11 +1723,13 @@ void at_mode_serial_handle_event(String &commandString)
             args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS + 4096);
             args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
             args.print(F("HEAP: 0x%08x-0x%08x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
-            args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32)&flashModeStr, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32)&flashModeStr);
+            args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&flashModeStr, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&flashModeStr);
             args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
-            args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
-            args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
-            args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
+            #if ESP8266
+                args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
+                args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
+                args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
+            #endif
             args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
             args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
             auto version = System::Device::getConfig().config_version;
@@ -2003,11 +2014,15 @@ void at_mode_serial_handle_event(String &commandString)
                 WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModehandler);
             }
             else if (arg0.startsWithIgnoreCase(F("clear"))) {
-                station_config wifiConfig;
-                auto result = wifi_station_set_config(&wifiConfig);
-                args.print(F("clearing default config from flash... %s"), result ? PSTR("success") : PSTR("failure"));
-                config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
-                config.printDiag(args.getStream(), F("+WIFI: "));
+                #if ESP8266
+                    station_config wifiConfig;
+                    auto result = wifi_station_set_config(&wifiConfig);
+                    args.print(F("clearing default config from flash... %s"), result ? PSTR("success") : PSTR("failure"));
+                    config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
+                    config.printDiag(args.getStream(), F("+WIFI: "));
+                #else
+                #warning TODO
+                #endif
             }
             else if (arg0.startsWithIgnoreCase(F("diag"))) {
                 config.printDiag(args.getStream(), F("+WIFI: "));
@@ -2225,45 +2240,51 @@ void at_mode_serial_handle_event(String &commandString)
         if (args.requireArgs(2, 7)) {
             auto pin = args.toUint8(0);
             if (args.equalsIgnoreCase(1, F("waveform"))) {
-                if (pin > 16) {
-                    args.print(F("%u does not support waveform"), pin);
-                }
-                else {
-                    uint32_t timeHighUS = args.toInt(2, ~0U);
-                    uint32_t timeLowUS = args.toInt(3, ~0U);
-                    uint32_t runTimeUS = args.toInt(4, 0);
-                    uint32_t increment = args.toInt(5, 0);
-                    auto delayTime = args.toUint32(6);
-                    if (timeHighUS == ~0U || timeLowUS == ~0U) {
-                        digitalWrite(pin, LOW);
-                        stopWaveform(pin);
-                        pinMode(pin, INPUT);
-                        args.print(F("usage: <pin>,waveform,<high-time cycles>,<low-time cycles>[,<run-time cycles|0=unlimited>,<increment>,<delay ms>]"));
+                #if ESP8266
+                    if (pin > 16) {
+                        args.print(F("%u does not support waveform"), pin);
                     }
                     else {
-                        digitalWrite(pin, LOW);
-                        pinMode(pin, OUTPUT);
-                        if (increment) {
-                            args.print(F("pin=%u high=%u low=%u runtime=%u increment=%u delay=%u"), pin, timeHighUS, timeLowUS, runTimeUS, increment, delayTime);
-                            uint32_t start = 0;
-                            _Scheduler.add(Event::milliseconds(delayTime), true, [args, delayTime, pin, timeHighUS, timeLowUS, runTimeUS, increment, start](Event::CallbackTimerPtr timer) mutable {
-                                start += increment;
-                                if (start >= timeHighUS) {
-                                    start = timeHighUS;
-                                    timer->disarm();
-                                }
-                                startWaveformClockCycles(pin, start, timeLowUS, runTimeUS);
-                                if (delayTime > 20) {
-                                    args.print(F("pin=%u high=%u low=%u runtime=%u"), pin, start, timeLowUS, runTimeUS);
-                                }
-                            }, Event::PriorityType::TIMER);
+                        uint32_t timeHighUS = args.toInt(2, ~0U);
+                        uint32_t timeLowUS = args.toInt(3, ~0U);
+                        uint32_t runTimeUS = args.toInt(4, 0);
+                        uint32_t increment = args.toInt(5, 0);
+                        auto delayTime = args.toUint32(6);
+                        if (timeHighUS == ~0U || timeLowUS == ~0U) {
+                            digitalWrite(pin, LOW);
+                            #if ESP8266
+                                stopWaveform(pin);
+                            #endif
+                            pinMode(pin, INPUT);
+                            args.print(F("usage: <pin>,waveform,<high-time cycles>,<low-time cycles>[,<run-time cycles|0=unlimited>,<increment>,<delay ms>]"));
+                        }
+                        else {
+                            digitalWrite(pin, LOW);
+                            pinMode(pin, OUTPUT);
+                            if (increment) {
+                                args.print(F("pin=%u high=%u low=%u runtime=%u increment=%u delay=%u"), pin, timeHighUS, timeLowUS, runTimeUS, increment, delayTime);
+                                uint32_t start = 0;
+                                _Scheduler.add(Event::milliseconds(delayTime), true, [args, delayTime, pin, timeHighUS, timeLowUS, runTimeUS, increment, start](Event::CallbackTimerPtr timer) mutable {
+                                    start += increment;
+                                    if (start >= timeHighUS) {
+                                        start = timeHighUS;
+                                        timer->disarm();
+                                    }
+                                    startWaveformClockCycles(pin, start, timeLowUS, runTimeUS);
+                                    if (delayTime > 20) {
+                                        args.print(F("pin=%u high=%u low=%u runtime=%u"), pin, start, timeLowUS, runTimeUS);
+                                    }
+                                }, Event::PriorityType::TIMER);
 
-                        } else {
-                            args.print(F("pin=%u high=%u low=%u runtime=%u"), pin, timeHighUS, timeLowUS, runTimeUS);
-                            startWaveformClockCycles(pin, timeHighUS, timeLowUS, runTimeUS);
+                            } else {
+                                args.print(F("pin=%u high=%u low=%u runtime=%u"), pin, timeHighUS, timeLowUS, runTimeUS);
+                                startWaveformClockCycles(pin, timeHighUS, timeLowUS, runTimeUS);
+                            }
                         }
                     }
-                }
+                #else
+                    args.print(F("ESP32 does not support waveform"));
+                #endif
             }
             else if (args.equalsIgnoreCase(1, F("input"))) {
                 digitalWrite(pin, LOW);
@@ -2272,8 +2293,13 @@ void at_mode_serial_handle_event(String &commandString)
             }
             else if (args.equalsIgnoreCase(1, F("input_pullup"))) {
                 digitalWrite(pin, LOW);
-                pinMode(pin, pin == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-                args.print(F("set pin=%u to %s"), pin, pin == 16 ? PSTR("INPUT_PULLDOWN_16") : PSTR("INPUT_PULLUP"));
+                #if ESP8266
+                    pinMode(pin, pin == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+                    args.print(F("set pin=%u to %s"), pin, pin == 16 ? PSTR("INPUT_PULLDOWN_16") : PSTR("INPUT_PULLUP"));
+                #else
+                    pinMode(pin, INPUT_PULLUP);
+                    args.print(F("set pin=%u to %s"), pin, PSTR("INPUT_PULLUP"));
+                #endif
             }
             else {
 
@@ -2446,48 +2472,50 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     #endif
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM))) {
-        if (args.requireArgs(1, 4)) {
-            uintptr_t start = translateAddress(args.toString(0));
-            if (start == ~0U) {
-                start = args.toNumber(0, 0U);
-            }
-            auto len = args.toNumber(1, 32U);
-            bool insecure = args.isTrue(2, false);
-            bool flashRead = args.isTrue(3, true);
-            if (!insecure && ((start < UMM_MALLOC_CFG_HEAP_ADDR || start >= 0x3FFFFFFFUL) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_IROM0_TEXT_END_ADDRESS))) {
-                args.print(F("address=0x%08x not HEAP (%08x-%08x) or FLASH (%08x-%08x), use unsecure mode"), start, UMM_MALLOC_CFG_HEAP_ADDR, 0x3FFFFFFFUL, SECTION_FLASH_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS - 1);
-            }
-            else if (start & 0x3) {
-                args.print(F("address=%0x08x not aligned"), start);
-            }
-            else if (start == 0) {
-                args.print(F("address missing"));
-            }
-            else if (len == 0) {
-                args.print(F("length missing"));
-            }
-            else {
-                auto end = start + len;
-                args.print(F("start=0x%08x end=0x%08x length=%u"), start, end, end - start);
-                uint8_t buf[32];
-                std::fill_n(buf, sizeof(buf), 0xff);
-                while(start < end) {
-                    auto len = std::min<size_t>(sizeof(buf), end - start);
-                    if (flashRead && start >= SECTION_FLASH_START_ADDRESS && start < SECTION_FLASH_END_ADDRESS) {
-                        if (!ESP.flashRead(start - SECTION_FLASH_START_ADDRESS, buf, len)) {
-                            break;
+    #if ESP8266
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPM))) {
+            if (args.requireArgs(1, 4)) {
+                uintptr_t start = translateAddress(args.toString(0));
+                if (start == ~0U) {
+                    start = args.toNumber(0, 0U);
+                }
+                auto len = args.toNumber(1, 32U);
+                bool insecure = args.isTrue(2, false);
+                bool flashRead = args.isTrue(3, true);
+                if (!insecure && ((start < UMM_MALLOC_CFG_HEAP_ADDR || start >= 0x3FFFFFFFUL) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_IROM0_TEXT_END_ADDRESS))) {
+                    args.print(F("address=0x%08x not HEAP (%08x-%08x) or FLASH (%08x-%08x), use unsecure mode"), start, UMM_MALLOC_CFG_HEAP_ADDR, 0x3FFFFFFFUL, SECTION_FLASH_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS - 1);
+                }
+                else if (start & 0x3) {
+                    args.print(F("address=%0x08x not aligned"), start);
+                }
+                else if (start == 0) {
+                    args.print(F("address missing"));
+                }
+                else if (len == 0) {
+                    args.print(F("length missing"));
+                }
+                else {
+                    auto end = start + len;
+                    args.print(F("start=0x%08x end=0x%08x length=%u"), start, end, end - start);
+                    uint8_t buf[32];
+                    std::fill_n(buf, sizeof(buf), 0xff);
+                    while(start < end) {
+                        auto len = std::min<size_t>(sizeof(buf), end - start);
+                        if (flashRead && start >= SECTION_FLASH_START_ADDRESS && start < SECTION_FLASH_END_ADDRESS) {
+                            if (!ESP.flashRead(start - SECTION_FLASH_START_ADDRESS, buf, len)) {
+                                break;
+                            }
                         }
+                        else {
+                            memcpy_P(buf, (const void *)start, len);
+                        }
+                        DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, len, start).dump(buf, len);
+                        start += len;
                     }
-                    else {
-                        memcpy_P(buf, (const void *)start, len);
-                    }
-                    DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, len, start).dump(buf, len);
-                    start += len;
                 }
             }
         }
-    }
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPFS))) {
         at_mode_dump_fs_info(output);
     }
@@ -2611,9 +2639,13 @@ void at_mode_serial_handle_event(String &commandString)
             for(;;) {}
         }
         else if (args.equalsIgnoreCase(0, F("hwdt"))) {
-            ESP.wdtDisable();
-            args.print(F("starting a loop to trigger the hardware WDT"));
-            for(;;) {}
+            #if ESP8266
+                ESP.wdtDisable();
+                args.print(F("starting a loop to trigger the hardware WDT"));
+                for(;;) {}
+            #else
+                args.print(F("not supported"));
+            #endif
         }
         else if (args.equalsIgnoreCase(0, F("alloc"))) {
             uint32_t address = 0;

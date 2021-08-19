@@ -252,7 +252,6 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
         LoopFunctions::callOnce([event]() {
             WiFiCallbacks::callEvent(WiFiCallbacks::EventType::DISCONNECTED, (void *)&event);
         });
-
         if (event.reason == WIFI_DISCONNECT_REASON_AUTH_EXPIRE) {
             config.reconfigureWiFi(F("Authentication expired, reconfiguring WiFi adapter"));
         }
@@ -269,10 +268,11 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
 
     // work around for ESP32 losing the connection and not reconnecting automatically
     static Event::Timer _reconnectTimer;
-    if (!_reconnectTimer.active()) {
+    if (!_reconnectTimer) {
+        #warning TODO
         _Timer(_reconnectTimer).add(60000, true, [this](Event::CallbackTimerPtr timer) {
             if (_wifiConnected) {
-                timer->detach();
+                timer->disarm();
             }
             else {
                 BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
@@ -299,22 +299,22 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 
     PrintString msg = System::Flags::getConfig().is_station_mode_dhcp_enabled ? F("DHCP") : F("Static configuration");
     msg.print(F(": IP/Net "));
-    if (event.ip.isSet()) {
+    if (IPAddress_isValid(event.ip)) {
         event.ip.printTo(msg);
-        if (event.mask.isSet()) {
+        if (IPAddress_isValid(event.mask)) {
             msg.print('/');
             event.mask.printTo(msg);
         }
     }
-    if (event.gw.isSet()) {
+    if (IPAddress_isValid(event.gw)) {
         msg.print(F(" GW "));
         event.gw.printTo(msg);
     }
     msg.print(F(" DNS: "));
-    if (WiFi.dnsIP(0).isSet()) {
+    if (IPAddress_isValid(WiFi.dnsIP(0))) {
         WiFi.dnsIP(0).printTo(msg);
     }
-    if (WiFi.dnsIP(1).isSet()) {
+    if (IPAddress_isValid(WiFi.dnsIP(1))) {
         msg.print('/');
         WiFi.dnsIP(1).printTo(msg);
     }
@@ -378,45 +378,45 @@ void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPM
 void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
 {
     switch(event) {
-        case WiFiEvent_t::SYSTEM_EVENT_STA_CONNECTED: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED/* SYSTEM_EVENT_STA_CONNECTED*/: {
                 WiFiEventStationModeConnected dst;
-                dst.ssid = reinterpret_cast<const char *>(info.connected.ssid);
-                MEMNCPY_S(dst.bssid, info.connected.bssid);
-                dst.channel = info.connected.channel;
+                dst.ssid = reinterpret_cast<const char *>(info.wifi_sta_connected.ssid);
+                MEMNCPY_S(dst.bssid, info.wifi_sta_connected.bssid);
+                dst.channel = info.wifi_sta_connected.channel;
                 config._onWiFiConnectCb(dst);
             } break;
-        case WiFiEvent_t::SYSTEM_EVENT_STA_DISCONNECTED: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED /*SYSTEM_EVENT_STA_DISCONNECTED*/: {
                 WiFiEventStationModeDisconnected dst;
-                dst.ssid = reinterpret_cast<const char *>(info.disconnected.ssid);
-                MEMNCPY_S(dst.bssid, info.disconnected.bssid);
-                dst.reason = (WiFiDisconnectReason)info.disconnected.reason;
+                dst.ssid = reinterpret_cast<const char *>(info.wifi_sta_disconnected.ssid);
+                MEMNCPY_S(dst.bssid, info.wifi_sta_disconnected.bssid);
+                dst.reason = (WiFiDisconnectReason)info.wifi_sta_disconnected.reason;
                 config._onWiFiDisconnectCb(dst);
             } break;
 #if DEBUG
-        case WiFiEvent_t::SYSTEM_EVENT_GOT_IP6: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP6/* SYSTEM_EVENT_GOT_IP6*/: {
                 debug_printf_P(PSTR("_nWiFiEvent(SYSTEM_EVENT_GOT_IP6, addr=%04X:%04X:%04X:%04X)\n"), info.got_ip6.ip6_info.ip.addr[0], info.got_ip6.ip6_info.ip.addr[1], info.got_ip6.ip6_info.ip.addr[2], info.got_ip6.ip6_info.ip.addr[3]);
             } break;
 #endif
-        case WiFiEvent_t::SYSTEM_EVENT_STA_GOT_IP: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP/* SYSTEM_EVENT_STA_GOT_IP*/: {
                 WiFiEventStationModeGotIP dst;
                 dst.ip = info.got_ip.ip_info.ip.addr;
                 dst.gw = info.got_ip.ip_info.gw.addr;
                 dst.mask = info.got_ip.ip_info.netmask.addr;
                 config._onWiFiGotIPCb(dst);
             } break;
-        case WiFiEvent_t::SYSTEM_EVENT_STA_LOST_IP: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_LOST_IP/* SYSTEM_EVENT_STA_LOST_IP*/: {
                 config._onWiFiOnDHCPTimeoutCb();
             } break;
-        case WiFiEvent_t::SYSTEM_EVENT_AP_STACONNECTED: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED/* SYSTEM_EVENT_AP_STACONNECTED*/: {
                 WiFiEventSoftAPModeStationConnected dst;
-                dst.aid = info.sta_connected.aid;
-                MEMNCPY_S(dst.mac, info.sta_connected.mac);
+                dst.aid = info.wifi_ap_staconnected.aid;
+                MEMNCPY_S(dst.mac, info.wifi_ap_staconnected.mac);
                 config._softAPModeStationConnectedCb(dst);
             } break;
-        case WiFiEvent_t::SYSTEM_EVENT_AP_STADISCONNECTED: {
+        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED/* SYSTEM_EVENT_AP_STADISCONNECTED*/: {
                 WiFiEventSoftAPModeStationDisconnected dst;
-                dst.aid = info.sta_connected.aid;
-                MEMNCPY_S(dst.mac, info.sta_connected.mac);
+                dst.aid = info.wifi_ap_stadisconnected.aid;
+                MEMNCPY_S(dst.mac, info.wifi_ap_stadisconnected.mac);
                 config._softAPModeStationDisconnectedCb(dst);
             } break;
         default:

@@ -15,6 +15,11 @@
 
 #include <esp_timer.h>
 
+#ifndef ARDUINO_ESP32_RELEASE
+#include <esp_arduino_version.h>
+#define ARDUINO_ESP32_RELEASE _STRINGIFY(ESP_ARDUINO_VERSION_MAJOR) "." _STRINGIFY(ESP_ARDUINO_VERSION_MINOR) "." _STRINGIFY(ESP_ARDUINO_VERSION_PATCH)
+#endif
+
 #define isFlashInterfacePin(p) false
 
 struct rst_info {
@@ -52,6 +57,8 @@ inline bool wifi_get_country(wifi_country_t *country) {
 
 #include <esp_wifi_types.h>
 
+using WiFiMode = wifi_mode_t;
+
 typedef wifi_err_reason_t WiFiDisconnectReason;
 
 enum RFMode {
@@ -61,6 +68,8 @@ enum RFMode {
 #ifndef WL_MAC_ADDR_LENGTH
 #   define WL_MAC_ADDR_LENGTH 6
 #endif
+
+#define WIFI_DISCONNECT_REASON_AUTH_EXPIRE WIFI_REASON_AUTH_EXPIRE
 
 typedef struct {
     String ssid;
@@ -224,6 +233,8 @@ inline void ets_timer_arm_new(ETSTimer *timer, uint32_t tmout, bool repeat, bool
         ets_timer_arm_us(timer, tmout, repeat);
     }
 }
+
+#define PWMRANGE 1023
 
 void analogWrite(uint8_t pin, uint16_t value);
 

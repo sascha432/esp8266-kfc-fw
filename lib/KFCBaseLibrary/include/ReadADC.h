@@ -444,3 +444,72 @@ inline void ADCManager::ReadTimer::readTimerCallback(Event::CallbackTimerPtr tim
     }
     adc->_readTimer->timerCallback(*adc, timer);
 }
+
+inline ADCManager::~ADCManager()
+{
+    LoopFunctions::remove(loop);
+    if (_readTimer) {
+        delete _readTimer;
+    }
+}
+
+inline uint32_t ADCManager::_canRead() const
+{
+    // if (!can_yield()) {
+    //     return 0;
+    // }
+    uint64_t diff = micros64() - _lastUpdated;
+    if (diff > std::numeric_limits<uint32_t>::max()) {
+        return std::numeric_limits<uint32_t>::max();
+    }
+    return diff;
+}
+
+inline bool ADCManager::canRead() const
+{
+    return _canRead() >= _nextDelay;
+}
+
+inline uint16_t ADCManager::readValue(uint32_t &lastUpdate)
+{
+    auto diff = _canRead();
+    if (diff < _nextDelay) {
+        lastUpdate = (uint32_t)_lastUpdated;
+        return _value;
+    }
+    _updateTimestamp();
+    lastUpdate = (uint32_t)_lastUpdated;
+    return (_value = __readAndNormalizeADCValue());
+}
+
+inline uint16_t ADCManager::readValue(uint64_t &lastUpdate)
+{
+    auto diff = _canRead();
+    if (diff < _nextDelay) {
+        lastUpdate = _lastUpdated;
+        return _value;
+    }
+    _updateTimestamp();
+    lastUpdate = _lastUpdated;
+    return (_value = __readAndNormalizeADCValue());
+}
+
+inline uint16_t ADCManager::readValue()
+{
+    auto diff = _canRead();
+    if (diff < _nextDelay) {
+        return _value;
+    }
+    _updateTimestamp();
+    return (_value = __readAndNormalizeADCValue());
+}
+
+inline uint32_t ADCManager::getLastUpdate() const
+{
+    return (uint32_t)_lastUpdated;
+}
+
+inline void ADCManager::cancelAverageRequest(uint32_t queueId)
+{
+    _queue.erase(std::remove(_queue.begin(), _queue.end(), queueId), _queue.end());
+}

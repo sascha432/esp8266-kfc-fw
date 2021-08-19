@@ -101,15 +101,6 @@ ADCManager::ADCManager() :
 {
 }
 
-ADCManager::~ADCManager()
-{
-    LoopFunctions::remove(loop);
-    if (_readTimer) {
-        delete _readTimer;
-    }
-}
-
-
 ADCManager *ADCManager::hasInstance()
 {
     return adc;
@@ -186,23 +177,6 @@ uint16_t ADCManager::__readAndNormalizeADCValue()
     return value;
 }
 
-uint32_t ADCManager::_canRead() const
-{
-    // if (!can_yield()) {
-    //     return 0;
-    // }
-    uint64_t diff = micros64() - _lastUpdated;
-    if (diff > std::numeric_limits<uint32_t>::max()) {
-        return std::numeric_limits<uint32_t>::max();
-    }
-    return diff;
-}
-
-bool ADCManager::canRead() const
-{
-    return _canRead() >= _nextDelay;
-}
-
 void ADCManager::_updateTimestamp()
 {
     auto tmp = micros64();
@@ -230,16 +204,6 @@ void ADCManager::_updateTimestamp()
     }
 }
 
-uint16_t ADCManager::readValue()
-{
-    auto diff = _canRead();
-    if (diff < _nextDelay) {
-        return _value;
-    }
-    _updateTimestamp();
-    return (_value = __readAndNormalizeADCValue());
-}
-
 uint16_t ADCManager::readValueWait(uint16_t maxWaitMicros, uint16_t maxAgeMicros, uint32_t *lastUpdate)
 {
     uint64_t diff = (micros64() - _lastUpdated);
@@ -259,35 +223,6 @@ uint16_t ADCManager::readValueWait(uint16_t maxWaitMicros, uint16_t maxAgeMicros
     return (_value = __readAndNormalizeADCValue());
 }
 
-uint16_t ADCManager::readValue(uint32_t &lastUpdate)
-{
-    auto diff = _canRead();
-    if (diff < _nextDelay) {
-        lastUpdate = (uint32_t)_lastUpdated;
-        return _value;
-    }
-    _updateTimestamp();
-    lastUpdate = (uint32_t)_lastUpdated;
-    return (_value = __readAndNormalizeADCValue());
-}
-
-uint16_t ADCManager::readValue(uint64_t &lastUpdate)
-{
-    auto diff = _canRead();
-    if (diff < _nextDelay) {
-        lastUpdate = _lastUpdated;
-        return _value;
-    }
-    _updateTimestamp();
-    lastUpdate = _lastUpdated;
-    return (_value = __readAndNormalizeADCValue());
-}
-
-uint32_t ADCManager::getLastUpdate() const
-{
-    return (uint32_t)_lastUpdated;
-}
-
 bool ADCManager::requestAverage(uint8_t numSamples, uint32_t readIntervalMicros, Callback callback, uint32_t queueId)
 {
     __LDBG_printf("numSamples=%u read_interval=%u callback=%p", numSamples, readIntervalMicros, lambda_target(callback));
@@ -302,7 +237,3 @@ bool ADCManager::requestAverage(uint8_t numSamples, uint32_t readIntervalMicros,
     return true;
 }
 
-void ADCManager::cancelAverageRequest(uint32_t queueId)
-{
-    _queue.erase(std::remove(_queue.begin(), _queue.end(), queueId), _queue.end());
-}

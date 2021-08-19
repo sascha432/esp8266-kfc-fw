@@ -23,7 +23,7 @@
 #include "../src/plugins/sensor/Sensor_HLW80xx.h"
 #endif
 
-#if (!defined(IOT_DIMMER_MODULE) || !IOT_DIMMER_MODULE) && (!defined(IOT_ATOMIC_SUN_V2) || !IOT_ATOMIC_SUN_V2)
+#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2
 #error requires IOT_ALARM_PLUGIN_ENABLED=1 or IOT_ATOMIC_SUN_V2=1
 #endif
 

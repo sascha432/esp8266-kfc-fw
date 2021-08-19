@@ -476,13 +476,16 @@ void at_mode_help_commands()
 }
 
 static void new_ATModeHelpVector_atModeCommandHelp()
-{
-#if DEBUG
-    if (atModeCommandHelp) {
-        __DBG_panic("atModeCommandHelp=%p", atModeCommandHelp);
-    }
-#endif
+    {
+    #if DEBUG
+        if (atModeCommandHelp) {
+            __DBG_panic("atModeCommandHelp=%p", atModeCommandHelp);
+        }
+    #endif
     atModeCommandHelp = new ATModeHelpVector();
+    if (!atModeCommandHelp) {
+        __DBG_printf_E("memory allocation failed");
+    }
 }
 
 void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
@@ -490,6 +493,10 @@ void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
     __LDBG_printf("find=%s", findText ? implode(',', *findText).c_str() : PSTR("nullptr"));
 
     new_ATModeHelpVector_atModeCommandHelp();
+    if (!atModeCommandHelp) {
+        return;
+    }
+return;//TODO remove
 
     // call handler to gather help for all commands
     at_mode_help_commands();
@@ -506,12 +513,13 @@ void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
     }
 }
 
-String at_mode_print_command_string(Stream &output, char separator)
+void at_mode_print_command_string(Stream &output, char separator)
 {
-    String commands;
-    StreamString nullStream;
-
     new_ATModeHelpVector_atModeCommandHelp();
+    if (!atModeCommandHelp) {
+        return;
+    }
+return;//TODO remove
 
     // call handler to gather help for all commands
     at_mode_help_commands();
@@ -534,8 +542,6 @@ String at_mode_print_command_string(Stream &output, char separator)
 
     delete atModeCommandHelp;
     atModeCommandHelp = nullptr;
-
-    return commands;
 }
 
 
@@ -1701,9 +1707,9 @@ void at_mode_serial_handle_event(String &commandString)
             }
 
             args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
-            args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS);
-            args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS);
-            args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS);
+            args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS + 4096);
+            args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS + 4096);
+            args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS + 4096);
             args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
             args.print(F("HEAP: 0x%08x-0x%08x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
             args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32)&flashModeStr, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32)&flashModeStr);
@@ -2346,7 +2352,10 @@ void at_mode_serial_handle_event(String &commandString)
                 if (client) {
                     at_mode_adc_delete_object();
                     atModeADC = new AtModeADCWebSocket();
-                    if (reinterpret_cast<AtModeADCWebSocket *>(atModeADC)->init(interval, duration, packetSize, client)) {
+                    if (!atModeADC) {
+                        __DBG_printf_E("memory allocation failed");
+                    }
+                    else if (reinterpret_cast<AtModeADCWebSocket *>(atModeADC)->init(interval, duration, packetSize, client)) {
                         args.print(F("Sending ADC readings to client=%p for %.2f seconds, interval=%.3f milliseconds, packet size=%u"), client, duration / 1000.0, interval / 1000.0, packetSize);
                     }
                     else {
@@ -2372,7 +2381,10 @@ void at_mode_serial_handle_event(String &commandString)
 
                 at_mode_adc_delete_object();
                 atModeADC = new AtModeADC();
-                if (atModeADC->init(period, multiplier, unit, readDelay)) {
+                if (!atModeADC) {
+                    __DBG_printf_E("memory allocation failed");
+                }
+                else if (atModeADC->init(period, multiplier, unit, readDelay)) {
 
                     args.print(F("ADC display interval %ums"), interval);
                     auto &stream = args.getStream();

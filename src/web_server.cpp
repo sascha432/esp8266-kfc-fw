@@ -220,6 +220,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         PrintHtmlEntitiesString str;
         WebTemplate::printSystemTime(time(nullptr), str);
         response = new AsyncBasicResponse(200, FSPGM(mime_text_html), std::move(str));
+        if (!response) {
+            __DBG_printf_E("memory allocation failed");
+        }
         headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
@@ -242,6 +245,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         }
         headers.addNoCache();
         response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
+        if (!response) {
+            __DBG_printf_E("memory allocation failed");
+        }
         headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
@@ -312,6 +318,9 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         }
         headers.addNoCache(true);
         response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
+        if (!response) {
+            __DBG_printf_E("memory allocation failed");
+        }
         headers.setResponseHeaders(response);
     }
     #if MDNS_PLUGIN
@@ -426,6 +435,9 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
     if (mapping.exists()) {
         if (!webTemplate) {
             webTemplate = new WebTemplate(isAuthenticated(request) ? WebTemplate::AuthType::AUTH : WebTemplate::AuthType::NO_AUTH);
+            if (!webTemplate) {
+                __DBG_printf_E("memory allocation failed");
+            }
         }
         if (!webTemplate->isAuthenticationSet()) {
             __DBG_printf("not authenticated %s", path.c_str());
@@ -433,6 +445,9 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
         auto response = new AsyncTemplateResponse(FSPGM(mime_text_html), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
+        if (!response) {
+            __DBG_printf_E("memory allocation failed");
+        }
         if (code) {
             response->setCode(code);
         }
@@ -450,6 +465,9 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
 void Plugin::message(AsyncWebServerRequest *request, MessageType type, const String &message, const String &title, HttpHeaders &headers)
 {
     auto webTemplate = new MessageTemplate(message, title, isAuthenticated(request));
+    if (!webTemplate) {
+        __DBG_printf_E("memory allocation failed");
+    }
     switch(type) {
         case MessageType::DANGER:
             webTemplate->setTitleClass(F("text-white bg-danger"));
@@ -489,6 +507,9 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
         }
         else {
             webTemplate = new NotFoundTemplate(httpCode, message);
+        }
+        if (!webTemplate) {
+            __DBG_printf_E("memory allocation failed");
         }
         webTemplate->setAuthenticated(isAuthenticated(request));
         if (sendFileResponse(httpCode, F("/.message.html"), request, headers, webTemplate)) {
@@ -547,6 +568,9 @@ void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
     String &jsonStr = json.toString();
     // __DBG_printf("_handlerWebUI %u", jsonStr.length());
     auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), std::move(jsonStr)); //TODO use stream or fillbuffer
+    if (!response) {
+        __DBG_printf_E("memory allocation failed");
+    }
     headers.addNoCache();
     headers.setResponseHeaders(response);
     _logRequest(request, response);
@@ -572,6 +596,9 @@ void Plugin::_addRestHandler(RestHandler &&handler)
             // add AsyncRestWebHandler to web server
             // the object gets destroyed with the web server and requires to keep the list off callbacks separated
             auto restHandler = new AsyncRestWebHandler();
+            if (!restHandler) {
+                __DBG_printf_E("memory allocation failed");
+            }
             __LDBG_printf("handler=%p", restHandler);
             _server->addHandler(restHandler);
         }
@@ -595,9 +622,15 @@ void Plugin::_handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHea
     auto size = std::max(1024 * 64, (int)request->arg(FSPGM(size, "size")).toInt());
     if (zip) {
         response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
+        if (!response) {
+            __DBG_printf_E("memory allocation failed");
+        }
         headers.add<HttpDispositionHeader>(F("speedtest.zip"));
     } else {
         response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
+        if (!response) {
+            __DBG_printf_E("memory allocation failed");
+        }
     }
     _logRequest(request, response);
     request->send(response);
@@ -822,7 +855,7 @@ void Plugin::begin(bool restart)
     auto cfg = System::WebServer::getConfig();
     _server.reset(new AsyncWebServerEx(cfg.getPort()));
     if (!_server) { // out of memory?
-        __DBG_printf("AsyncWebServerEx: failed to create object");
+        __DBG_printf_E("memory allocation failed");
         return;
     }
 
@@ -832,6 +865,9 @@ void Plugin::begin(bool restart)
 
     if (System::Flags::getConfig().is_log_login_failures_enabled) {
         _loginFailures.reset(new FailureCounterContainer());
+        if (!_loginFailures) {
+            __DBG_printf_E("memory allocation failed");
+        }
         if (_loginFailures) {
             _loginFailures->readFromFS();
         }
@@ -1300,6 +1336,7 @@ AsyncWebServerEx *Plugin::getWebServerObject()
 
 bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri)
 {
+    __DBG_validatePointer(handler, VP_HSU);
     __LDBG_assert_printf(!!plugin._server, "_server is nullptr");
     if (!plugin._server) {
         return false;
@@ -1311,11 +1348,15 @@ bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri
 
 AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerFunction onRequest)
 {
+    __DBG_validatePointer(uri, VP_HS);
     __LDBG_assert_printf(!!plugin._server, "_server is nullptr");
     if (!plugin._server) {
         return nullptr;
     }
     auto handler = new AsyncCallbackWebHandler();
+    if (!handler) {
+        __DBG_printf_E("memory allocation failed");
+    }
     __LDBG_printf("handler=%p uri=%s", handler, uri.c_str());
     handler->setUri(uri);
     handler->onRequest(onRequest);

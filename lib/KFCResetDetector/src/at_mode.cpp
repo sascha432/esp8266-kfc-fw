@@ -17,33 +17,12 @@
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(RD, "RD", "Reset detector clear counter", "Display information");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SAVECRASH, "SAVECRASH", "<" LIST_SAVE_CASH_COMMANDS ">[,<number>|<clear-type=erase,shrink,magic,version>]", "Manage SaveCrash");
 
-/*
-
-// display info
-+RD?
-// clear counter
-+RD
-
-// clear all crash logs
-+SAVECRASH=clear
-// list crash logs
-+SAVECRASH=list
-// display first crash log
-+SAVECRASH=print,1
-
-
-
-
-+panic
-+savecrash=info
-+savecrash=list
-+savecrash=print,1
-
-*/
-
 ATModeCommandHelpArrayPtr ResetDetectorPlugin::atModeCommandHelp(size_t &size) const
 {
-    static ATModeCommandHelpArray tmp PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND(RD), PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASH) };
+    static ATModeCommandHelpArray tmp PROGMEM = {
+        PROGMEM_AT_MODE_HELP_COMMAND(RD),
+        PROGMEM_AT_MODE_HELP_COMMAND(SAVECRASH)
+    };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }

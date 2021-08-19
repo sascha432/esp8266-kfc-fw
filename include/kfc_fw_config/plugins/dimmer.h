@@ -74,11 +74,15 @@ namespace KFCConfigurationClasses {
                         float _fadetime() const {
                             return on_fadetime;
                         }
-                    #else
+                    #elif IOT_DIMMER_MODULE
                         CREATE_FLOAT_FIELD(on_fadetime, 1.0, 300.0, 7.5);
                         CREATE_FLOAT_FIELD(off_fadetime, 1.0, 300.0, 7.5);
                         float _fadetime() const {
                             return lp_fadetime;
+                        }
+                    #else
+                        float _fadetime() const {
+                            return 0;
                         }
                     #endif
 

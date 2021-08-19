@@ -1,12 +1,18 @@
 
 #include "SafeRead.h"
 
+// set to 1 to disable additional pointer validation
+#if 0
+#    undef __DBG_validatePointer
+#    define __DBG_validatePointer(ptr, ...) ptr
+#endif
+
 static uint8_t *buffer = nullptr;
 static size_t pos;
 static size_t buffer_size;
 
-
-static void __check_buffer() {
+static void __check_buffer()
+{
     if (!buffer) {
         size_t size = 1024 * 2;
         pos = 0;
@@ -21,7 +27,9 @@ static void __check_buffer() {
     }
 }
 
-bool is_safe_ptr(const uint8_t *ptr) {
+bool is_safe_ptr(const uint8_t *ptr)
+{
+    __DBG_validatePointer(ptr, VP_HPS);
 #if _MSC_VER
     return true;
 #else
@@ -30,13 +38,16 @@ bool is_safe_ptr(const uint8_t *ptr) {
 #endif
 }
 
-bool is_safe_ptr(const void *ptr) {
-    return is_safe_ptr((const uint8_t *)ptr);
+bool is_safe_ptr(const void *ptr)
+{
+    return is_safe_ptr(reinterpret_cast<const uint8_t *>(ptr));
 }
 
 
 size_t safe_read(uint8_t *buffer, const uint8_t *data, size_t len, uint16_t stop)
 {
+    __DBG_validatePointer(data, VP_HPS);
+    __DBG_validatePointer(buffer, VP_HPS);
     auto dst = buffer;
     auto src = data;
     auto flag = true;
@@ -57,6 +68,7 @@ size_t safe_read(uint8_t *buffer, const uint8_t *data, size_t len, uint16_t stop
 
 const char *safe_read(const char *ptr, size_t len)
 {
+    __DBG_validatePointer(ptr, VP_HPS);
 #if _MSC_VER
     return ptr;
 #else
@@ -76,6 +88,7 @@ const char *safe_read(const char *ptr, size_t len)
 
 const char *safe_read(const char *ptr)
 {
+    __DBG_validatePointer(ptr, VP_HPS);
 #if _MSC_VER
     return ptr;
 #else
@@ -95,6 +108,7 @@ const char *safe_read(const char *ptr)
 
 uint32_t safe_read(const uint32_t *ptr)
 {
+    __DBG_validatePointer(ptr, VP_HPS);
 #if _MSC_VER
     return *ptr;
 #else
@@ -106,6 +120,7 @@ uint32_t safe_read(const uint32_t *ptr)
 
 uintptr_t safe_read_uintptr(const uintptr_t *ptr)
 {
+    __DBG_validatePointer(ptr, VP_HPS);
 #if _MSC_VER
     return *ptr;
 #else

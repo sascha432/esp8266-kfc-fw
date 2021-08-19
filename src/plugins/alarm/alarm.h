@@ -10,6 +10,7 @@
 #include "plugins_menu.h"
 #include "kfc_fw_config.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
+#include "../src/plugins/ntp/ntp_plugin.h"
 
 #if DEBUG_ALARM_FORM
 #include <debug_helper_enable.h>

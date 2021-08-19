@@ -18,6 +18,9 @@
 
 bool AtModeArgs::isCommand(const ATModeCommandHelp_t *help) const
 {
+    __DBG_validatePointer(help, VP_HPS);
+    __DBG_validatePointer(help->commandPrefix, VP_NHPS);
+    __DBG_validatePointer(help->command, VP_HPS);
     if (help->commandPrefix && pgm_read_byte(help->commandPrefix)) { // check if not nullptr or empty string
         // check prefix and rest of the command
         return _command.startsWithIgnoreCase(FPSTR(help->commandPrefix)) && _command.equalsIgnoreCase(FPSTR(help->command), strlen_P(help->commandPrefix));

@@ -7,7 +7,6 @@
 #include <ESPAsyncWebServer.h>
 #include <EventScheduler.h>
 #include "../include/templates.h"
-#include "../src/plugins/ntp/ntp_plugin.h"
 #include "plugins.h"
 #include "alarm.h"
 #include "Utility/ProgMemHelper.h"

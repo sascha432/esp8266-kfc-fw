@@ -116,6 +116,7 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
         auto bufPtr = std::unique_ptr<uint8_t[]>(new uint8_t[outLen + headLen]);
         auto buf = bufPtr.get();
         if (!buf) {
+            __DBG_printf_E("memory allocation failed");
             return 0;
         }
 
@@ -777,6 +778,9 @@ AsyncFillBufferCallbackResponse::AsyncFillBufferCallbackResponse(const Callback 
     _finished(false),
     _async(new bool())
 {
+    if (!_async) {
+        __DBG_printf_E("memory allocation failed");
+    }
     _code = 200;
     _contentType = FSPGM(mime_text_html);
     *_async = true; // mark this as alive

@@ -723,6 +723,10 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
     // plugin status
     else if (name == F("PLUGIN_STATUS")) {
         auto stream = std::shared_ptr<PluginStatusStream>(new PluginStatusStream());
+        if (!stream) {
+            __DBG_printf_E("memory allocation failed");
+            return false;
+        }
         provider.setFillBuffer([stream](uint8_t *buffer, size_t size) {
             return stream->readBytes(buffer, size);
         });
@@ -748,6 +752,10 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
             }
         case FillBufferMethod::BUFFER_STREAM: {
                 auto stream = std::shared_ptr<BufferStream>(new BufferStream(std::move(value)));
+                if (!stream) {
+                    __DBG_printf_E("memory allocation failed");
+                    return false;
+                }
                 provider.setFillBuffer([stream](uint8_t *buffer, size_t size) {
                     return stream->readBytes(buffer, size);
                 });

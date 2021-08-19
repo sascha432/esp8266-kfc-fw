@@ -37,8 +37,8 @@ size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
 size_t SSIProxyStream::_readBuffer(bool templateCheck)
 {
     // __LDBG_printf("templateCheck=%u", templateCheck);
-    #define POISON_CHECK DEBUG_SSI_PROXY_STREAM
-    #if POISON_CHECK
+    #define DEBUG_SSI_PROXY_STREAM_POISON_CHECK DEBUG_SSI_PROXY_STREAM
+    #if DEBUG_SSI_PROXY_STREAM_POISON_CHECK
         constexpr size_t bufferSizePosionCheck = 32;
         size_t bufferSize = 512 + (bufferSizePosionCheck * 2);
     #else
@@ -50,7 +50,7 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
         __DBG_printf_E("allocation failed size=%u", bufferSize);
         return 0;
     }
-    #if POISON_CHECK
+    #if DEBUG_SSI_PROXY_STREAM_POISON_CHECK
         std::fill_n(bufferPtr.get(), bufferSize / sizeof(uint32_t), 0xccccccccU);
         auto bufBegin = buf;
         auto bufEnd = buf + bufferSize - bufferSizePosionCheck;
@@ -202,19 +202,19 @@ size_t SSIProxyStream::_readBuffer(bool templateCheck)
             __LDBG_assert(_template.marker == -1);
         }
     }
-    #if POISON_CHECK
+    #if DEBUG_SSI_PROXY_STREAM_POISON_CHECK
         for(size_t i = 0; i < bufferSizePosionCheck; i++) {
             if (bufBegin[i] != 0xcc) {
-                __DBG_printf("buffer overrun @bufbegin[%u]", i);
+                __DBG_printf_E("buffer overrun @bufBegin[%u]", i);
                 break;
             }
             if (bufEnd[i] != 0xcc) {
-                __DBG_printf("buffer overrun @bufbegin[%u]", i);
+                __DBG_printf_E("buffer overrun @bufEnd[%u]", i);
                 break;
             }
         }
     #endif
-    #undef POISON_CHECK
+    #undef DEBUG_SSI_PROXY_STREAM_POISON_CHECK
     #if DEBUG_SSI_PROXY_STREAM
         _ramUsage = std::min(ESP.getFreeHeap(), _ramUsage);
     #endif

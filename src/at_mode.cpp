@@ -1408,7 +1408,8 @@ void at_mode_serial_handle_event(String &commandString)
 
         #if ESP32
 
-            #warning TODO
+            args.print(F("Entering deep sleep... time=%ums"), time.count());
+            ESP.deepSleep(time.count() * 1000ULL);
 
         #else
             //+dslp=15000,4
@@ -2044,11 +2045,9 @@ void at_mode_serial_handle_event(String &commandString)
                     station_config wifiConfig;
                     auto result = wifi_station_set_config(&wifiConfig);
                     args.print(F("clearing default config from flash... %s"), result ? PSTR("success") : PSTR("failure"));
-                    config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
-                    config.printDiag(args.getStream(), F("+WIFI: "));
-                #else
-                #warning TODO
                 #endif
+                config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
+                config.printDiag(args.getStream(), F("+WIFI: "));
             }
             else if (arg0.startsWithIgnoreCase(F("diag"))) {
                 config.printDiag(args.getStream(), F("+WIFI: "));

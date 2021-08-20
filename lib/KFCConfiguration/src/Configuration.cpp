@@ -97,11 +97,13 @@ Configuration::WriteResultType Configuration::write()
 
     // get header
     if (!ESP.flashRead(address, header, sizeof(header))) {
-        __DBG_printf("cannot read header offset=%u address=%u aligned=%u", ConfigurationHelper::getOffsetFromFlashAddress(address), address, (address % sizeof(uint32_t)) == 0);
-        return WriteResultType::READING_HEADER_FAILED;
+        __DBG_printf("cannot read header offset=%u address=0x%08x aligned=%u", ConfigurationHelper::getOffsetFromFlashAddress(address), address, (address % sizeof(uint32_t)) == 0);
+        header = Header();
+        // return WriteResultType::READING_HEADER_FAILED;
     }
 
     if (header) {
+        __DBG_printf("copying existing copy");
         // check dirty data for changes
         bool dirty = false;
         for (auto &parameter : _params) {
@@ -201,7 +203,7 @@ Configuration::WriteResultType Configuration::write()
                 return WriteResultType::OUT_OF_MEMORY;
             }
             if (!ESP.flashRead(address, data.get(), kHeaderOffset)) {
-                __DBG_printf("failed to read flash (preoffset data, address=%u size=%u)", address, kHeaderOffset);
+                __DBG_printf("failed to read flash (preoffset data, address=0x%08x size=%u)", address, kHeaderOffset);
                 return WriteResultType::FLASH_READ_ERROR;
             }
         }
@@ -229,13 +231,13 @@ Configuration::WriteResultType Configuration::write()
         address += kHeaderOffset;
 
         if (!ESP.flashWrite(address, header, sizeof(header))) {
-            __DBG_printf("failed to write configuration (write header, address=%u, size=%u, aligned=%u)", address, sizeof(header), (address % sizeof(uint32_t)) == 0);
+            __DBG_printf("failed to write configuration (write header, address=0x%08x, size=%u, aligned=%u)", address, sizeof(header), (address % sizeof(uint32_t)) == 0);
             return WriteResultType::FLASH_WRITE_ERROR;
         }
         // params and data
         address += sizeof(header);
         if (!ESP.flashWrite(address, buffer.get(), buffer.length())) {
-            __DBG_printf("failed to write configuration (write buffer, address=%u, size=%u)", address, buffer.length());
+            __DBG_printf("failed to write configuration (write buffer, address=0x%08x, size=%u)", address, buffer.length());
             return WriteResultType::FLASH_WRITE_ERROR;
         }
 

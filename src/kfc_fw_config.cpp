@@ -261,25 +261,9 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
     else {
         //_onWiFiDisconnectCb 202 = AUTH_FAIL
         if (event.reason == 202) {
-            _debug_println(F("force WiFi.begin()"));
+            __DBG_printf_E("force WiFi.begin()");
             WiFi.begin();
         }
-    }
-
-    // work around for ESP32 losing the connection and not reconnecting automatically
-    static Event::Timer _reconnectTimer;
-    if (!_reconnectTimer) {
-        #warning TODO
-        _Timer(_reconnectTimer).add(60000, true, [this](Event::CallbackTimerPtr timer) {
-            if (_wifiConnected) {
-                timer->disarm();
-            }
-            else {
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
-                _debug_println(F("force WiFi reconnect"));
-                reconfigureWiFi(); // reconfigure wifi, WiFi.begin() does not seem to work
-            }
-        });
     }
 #endif
 }

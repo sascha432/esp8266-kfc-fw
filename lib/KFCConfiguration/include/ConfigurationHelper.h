@@ -8,74 +8,76 @@
 #include <EEPROM.h>
 
 #ifndef DEBUG_CONFIGURATION
-#define DEBUG_CONFIGURATION                                         0
+#    define DEBUG_CONFIGURATION 1
 #endif
 
 #ifndef DEBUG_CONFIGURATION_GETHANDLE
-#define DEBUG_CONFIGURATION_GETHANDLE                               0
+#    define DEBUG_CONFIGURATION_GETHANDLE 0
 #endif
 
 #if DEBUG_CONFIGURATION
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #ifndef CONFIG_MAGIC_DWORD
-#define CONFIG_MAGIC_DWORD                                          0xfef312f7
+#    define CONFIG_MAGIC_DWORD 0xfef312f7
 #endif
 
-#define CONFIG_GET_HANDLE(name)                                     __get_constexpr_getHandle(_STRINGIFY(name))
-#define CONFIG_GET_HANDLE_STR(name)                                 __get_constexpr_getHandle(name)
-#define _H(name)                                                    CONFIG_GET_HANDLE(name)
-#define _HS(name)                                                   __get_constexpr_getHandle(name)
+#define CONFIG_GET_HANDLE(name)     __get_constexpr_getHandle(_STRINGIFY(name))
+#define CONFIG_GET_HANDLE_STR(name) __get_constexpr_getHandle(name)
+#define _H(name)                    CONFIG_GET_HANDLE(name)
+#define _HS(name)                   __get_constexpr_getHandle(name)
 
 #if DEBUG_CONFIGURATION_GETHANDLE
 
-#define _H_GET(name)                                                get<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
-#define _H_W_GET(name)                                              getWriteable<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET))
-#define _H_SET(name, value)                                         set<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), value)
-#define _H_STR(name)                                                getString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
-#define _H_W_STR(name, max_len)                                     getWriteableString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET), max_len)
-#define _H_SET_STR(name, value)                                     setString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), value)
-#define _H_GET_IP(name)                                             get<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
-#define _H_W_GET_IP(name)                                           getWriteable<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET))
-#define _H_SET_IP(name, value)                                      set<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), (uint32_t)value)
+#    define _H_GET(name)            get<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
+#    define _H_W_GET(name)          getWriteable<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET))
+#    define _H_SET(name, value)     set<decltype(name)>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), value)
+#    define _H_STR(name)            getString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
+#    define _H_W_STR(name, max_len) getWriteableString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET), max_len)
+#    define _H_SET_STR(name, value) setString(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), value)
+#    define _H_GET_IP(name)         get<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_GET))
+#    define _H_W_GET_IP(name)       getWriteable<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_W_GET))
+#    define _H_SET_IP(name, value)  set<uint32_t>(__DBG__registerHandleName(PSTR(_STRINGIFY(name)), __DBG__TYPE_SET), (uint32_t)value)
 
 #else
 
-#define _H_GET(name)                                                get<decltype(name)>(_H(name))
-#define _H_W_GET(name)                                              getWriteable<decltype(name)>(_H(name))
-#define _H_SET(name, value)                                         set<decltype(name)>(_H(name), value)
-#define _H_STR(name)                                                getString(_H(name))
-#define _H_W_STR(name, max_len)                                     getWriteableString(_H(name), max_len)
-#define _H_SET_STR(name, value)                                     setString(_H(name), value)
-#define _H_GET_IP(name)                                             get<uint32_t>(_H(name))
-#define _H_W_GET_IP(name)                                           getWriteable<uint32_t>(_H(name))
-#define _H_SET_IP(name, value)                                      set<uint32_t>(_H(name), (uint32_t)value)
+#    define _H_GET(name)            get<decltype(name)>(_H(name))
+#    define _H_W_GET(name)          getWriteable<decltype(name)>(_H(name))
+#    define _H_SET(name, value)     set<decltype(name)>(_H(name), value)
+#    define _H_STR(name)            getString(_H(name))
+#    define _H_W_STR(name, max_len) getWriteableString(_H(name), max_len)
+#    define _H_SET_STR(name, value) setString(_H(name), value)
+#    define _H_GET_IP(name)         get<uint32_t>(_H(name))
+#    define _H_W_GET_IP(name)       getWriteable<uint32_t>(_H(name))
+#    define _H_SET_IP(name, value)  set<uint32_t>(_H(name), (uint32_t)value)
 
 #endif
 
 #if DEBUG_CONFIGURATION_GETHANDLE
 
 // log usage to file, 0 = disable
-#ifndef DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL
-#define DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL                  5   // minutes
-#endif
+#    ifndef DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL
+#        define DEBUG_CONFIGURATION_GETHANDLE_LOG_INTERVAL 5 // minutes
+#    endif
 
 // store all configuration handle names for debugging. needs a lot RAM
-#define __DBG__registerHandleName(name, type)                       ConfigurationHelper::registerHandleName(name, type)
-#define __DBG__checkIfHandleExists(type, handle)                    if (!ConfigurationHelper::registerHandleExists(handle)) { __DBG_printf("handle=%04x no name registered, type=%s", handle, PSTR(type)); }
+#    define __DBG__registerHandleName(name, type) ConfigurationHelper::registerHandleName(name, type)
+#    define __DBG__checkIfHandleExists(type, handle)                                     \
+        if (!ConfigurationHelper::registerHandleExists(handle)) {                        \
+            __DBG_printf("handle=%04x no name registered, type=%s", handle, PSTR(type)); \
+        }
 
 #else
 
-#define __DBG__registerHandleName(...)
-#define __DBG__checkIfHandleExists(...)
+#    define __DBG__registerHandleName(...)
+#    define __DBG__checkIfHandleExists(...)
 
 #endif
 
-#define __get_constexpr_getHandle(name)                             constexpr_crc16_update(name, constexpr_strlen(name))
-
+#define __get_constexpr_getHandle(name) constexpr_crc16_update(name, constexpr_strlen(name))
 
 class Configuration;
 class ConfigurationParameter;
@@ -132,13 +134,12 @@ namespace ConfigurationHelper {
 
     const char *getHandleName(HandleType crc);
 
-
 #endif
 
 }
 
 #if DEBUG_CONFIGURATION_GETHANDLE
-#include "DebugHandle.h"
+#    include "DebugHandle.h"
 #endif
 
 #include <debug_helper_disable.h>

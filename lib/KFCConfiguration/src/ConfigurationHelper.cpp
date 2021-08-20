@@ -14,16 +14,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-// #if defined(ESP32)
-// PROGMEM_STRING_DEF(EEPROM_partition_name, "eeprom");
-// #endif
-
 #if defined(ESP8266) || defined(_MSC_VER)
 #include "spi_flash.h"
-#endif
-
-#ifdef NO_GLOBAL_EEPROM
-EEPROMClass EEPROM((SECTION_EEPROM_START_ADDRESS) / SPI_FLASH_SEC_SIZE);
 #endif
 
 namespace ConfigurationHelper {

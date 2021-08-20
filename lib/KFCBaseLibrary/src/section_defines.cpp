@@ -4,15 +4,17 @@
 
 #include "section_defines.h"
 
+// linker address emulation for partitions
+
 #if ESP32
 
 #include <Arduino_compat.h>
 #include <esp_partition.h>
 
 struct PartitionAddress {
-    uint32_t _start;
-    uint32_t _end;
-    PartitionAddress(uint32_t start, uint32_t end) : _start(start), _end(end) {}
+    uint32_t *_start;
+    uint32_t *_end;
+    PartitionAddress(uint32_t start, uint32_t end) : _start((uint32_t *)start), _end((uint32_t *)end) {}
 };
 
 PartitionAddress get_partition_address_start(const char *label)
@@ -21,7 +23,8 @@ PartitionAddress get_partition_address_start(const char *label)
     if (!part) {
         __DBG_panic("data partition label=%s not found", label);
     }
-    return PartitionAddress(part->address + SECTION_FLASH_START_ADDRESS, part->address + part->size + SECTION_FLASH_START_ADDRESS - 1);
+    __DBG_printf_E("partition name=%s address=%08x end=%08x", part->address, (part->address + part->size - 1));
+    return PartitionAddress(part->address + SECTION_FLASH_START_ADDRESS, part->address + part->size + (SECTION_FLASH_START_ADDRESS - 1));
 }
 
 // uint32_t &_irom0_text_start;
@@ -34,10 +37,10 @@ PartitionAddress get_partition_address_start(const char *label)
 static auto P_SAVECRASH_start = get_partition_address_start("savecrash");
 static auto P_EEPROM_start = get_partition_address_start("eeprom");
 
-uint32_t &_SAVECRASH_start = P_SAVECRASH_start._start;
-uint32_t &_SAVECRASH_end = P_SAVECRASH_start._end;
-uint32_t &_EEPROM_start = P_EEPROM_start._start;
-uint32_t &_EEPROM_end = P_EEPROM_start._end;
+uint32_t &_SAVECRASH_start = *P_SAVECRASH_start._start;
+uint32_t &_SAVECRASH_end = *P_SAVECRASH_start._end;
+uint32_t &_EEPROM_start = *P_EEPROM_start._start;
+uint32_t &_EEPROM_end = *P_EEPROM_start._end;
 
 #endif
 

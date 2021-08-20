@@ -370,7 +370,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
-#if DEBUG && ESP8266
+#if DEBUG
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
 #endif
 #if DEBUG_CONFIGURATION_GETHANDLE
@@ -822,7 +822,31 @@ void at_mode_print_prefix(Stream &output, const char *command)
     output.printf_P(PSTR("+%s: "), command);
 }
 
-#if DEBUG && ESP8266
+#if DEBUG && ESP32
+
+void at_mode_list_ets_timers(Print &output)
+{
+    for(const auto timer: ETSTimerEx::_timers) {
+        void *callback = nullptr;
+        for(const auto timer: __Scheduler.__getTimers()) {
+            if (&timer->_etsTimer == reinterpret_cast<void *>(timer)) {
+                callback = lambda_target(timer->_callback);
+                break;
+            }
+        }
+        output.printf_P(PSTR("ETSTimerEx=%p running=%p locked=%p callback=%p\n"),
+            timer,
+            timer->isRunning(),
+            timer->isLocked(),
+            callback);
+    }
+    #if DEBUG_EVENT_SCHEDULER
+        output.println(F("Event::Scheduler"));
+        __Scheduler.__list(false);
+    #endif
+}
+
+#elif DEBUG && ESP8266
 
 extern ETSTimer *timer_list;
 
@@ -859,10 +883,10 @@ void at_mode_list_ets_timers(Print &output)
 
         cur = cur->timer_next;
     }
-#if DEBUG_EVENT_SCHEDULER
-    output.println(F("Event::Scheduler"));
-    __Scheduler.__list(false);
-#endif
+    #if DEBUG_EVENT_SCHEDULER
+        output.println(F("Event::Scheduler"));
+        __Scheduler.__list(false);
+    #endif
 }
 
 #endif
@@ -2456,7 +2480,7 @@ void at_mode_serial_handle_event(String &commandString)
             config.dump(output);
         }
     }
-    #if DEBUG && ESP8266
+    #if DEBUG
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
             at_mode_list_ets_timers(output);
         }

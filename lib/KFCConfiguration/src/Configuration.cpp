@@ -97,7 +97,7 @@ Configuration::WriteResultType Configuration::write()
 
     // get header
     if (!ESP.flashRead(address, header, sizeof(header))) {
-        __DBG_printf("cannot read header offset=%u", ConfigurationHelper::getOffsetFromFlashAddress(address));
+        __DBG_printf("cannot read header offset=%u address=%u aligned=%u", ConfigurationHelper::getOffsetFromFlashAddress(address), address, (address % sizeof(uint32_t)) == 0);
         return WriteResultType::READING_HEADER_FAILED;
     }
 
@@ -229,7 +229,7 @@ Configuration::WriteResultType Configuration::write()
         address += kHeaderOffset;
 
         if (!ESP.flashWrite(address, header, sizeof(header))) {
-            __DBG_printf("failed to write configuration (write header, address=%u, size=%u)", address, sizeof(header));
+            __DBG_printf("failed to write configuration (write header, address=%u, size=%u, aligned=%u)", address, sizeof(header), (address % sizeof(uint32_t)) == 0);
             return WriteResultType::FLASH_WRITE_ERROR;
         }
         // params and data

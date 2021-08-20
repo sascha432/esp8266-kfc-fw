@@ -6,9 +6,10 @@
 #include <Arduino_compat.h>
 #include "OSTimer.h"
 
-void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(void *arg)
-{
-}
+#if ESP32
+#undef __DBG_panic
+#define __DBG_panic __DBG_printf
+#endif
 
 void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)
 {
@@ -16,6 +17,7 @@ void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)
     if (!timer.lock()) {
         return;
     }
+    __DBG_printf("timer run name=%s", timer._etsTimer._name);
     timer.run();
     OSTimer::unlock(timer);
 }

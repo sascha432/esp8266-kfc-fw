@@ -2,163 +2,15 @@
   Author: sascha_lammers@gmx.de
 */
 
-#include "OSTimer.h"
-#include "Event.h"
+#if ESP32
 
-#ifndef OSTIMER_INLINE
-#define OSTIMER_INLINE inline
-#endif
+#include "OSTimer_esp32.hpp"
 
-#if DEBUG_OSTIMER
+#elif ESP8266 || _MSC_VER
 
-static void __DBG_printEtsTimer(ETSTimer &timer) {
-    __DBG_printf("timer=%p func=%p arg=%p period=%u next=%p", &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
-}
+#include "OSTimer_esp8266.hpp"
 
 #endif
-
-
-#if DEBUG_OSTIMER
-    OSTIMER_INLINE ETSTimerEx::ETSTimerEx(const char *name) : _magic(kMagic), _name(name)
-#else
-    OSTIMER_INLINE ETSTimerEx::ETSTimerEx()
-#endif
-{
-    clear();
-}
-
-OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
-{
-    #if DEBUG_OSTIMER
-        if (_magic != kMagic) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s _magic=%08x<>%08x", __S(_name), _magic, kMagic);
-        }
-        if (isRunning()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s isRunning()", __S(_name));
-        }
-        if (!isDone()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::~ETSTimerEx(). name=%s !isDone()", __S(_name));
-        }
-        _magic = 0;
-    #endif
-    clear();
-}
-
-OSTIMER_INLINE bool ETSTimerEx::isRunning() const
-{
-    return timer_period != 0;
-}
-
-OSTIMER_INLINE bool ETSTimerEx::isDone() const
-{
-    return timer_period == 0 && timer_func == nullptr && timer_arg == nullptr && (uint32_t)timer_next == 0xffffffffU;
-}
-
-OSTIMER_INLINE bool ETSTimerEx::isLocked() const
-{
-    return timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback);
-}
-
-OSTIMER_INLINE void ETSTimerEx::lock()
-{
-    #if DEBUG_OSTIMER
-        if (!isRunning()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::lock() name=%s", __S(_name));
-        }
-    #endif
-    timer_func = reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback);
-}
-
-OSTIMER_INLINE void ETSTimerEx::unlock()
-{
-    #if DEBUG_OSTIMER
-        if (!isLocked()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::unlock() name=%s", __S(_name));
-        }
-    #endif
-    timer_func = reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback);
-}
-
-OSTIMER_INLINE void ETSTimerEx::disarm()
-{
-    #if DEBUG_OSTIMER
-        if (!find()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::disarm() name=%s", __S(_name));
-        }
-    #endif
-    ets_timer_disarm(this);
-}
-
-OSTIMER_INLINE void ETSTimerEx::done()
-{
-    #if DEBUG_OSTIMER
-        if (isRunning()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::done() name=%s", __S(_name));
-        }
-    #endif
-    ets_timer_done(this);
-}
-
-OSTIMER_INLINE void ETSTimerEx::clear()
-{
-    timer_func = nullptr;
-    timer_arg = nullptr;
-    timer_period = 0;
-    timer_next = (ETSTimer *)0xfffffffffU;
-}
-
-OSTIMER_INLINE ETSTimer *ETSTimerEx::find()
-{
-    return find(this);
-}
-
-OSTIMER_INLINE ETSTimer *ETSTimerEx::find(ETSTimer *timer)
-{
-    #if ESP8266
-        ETSTimer *cur = timer_list;
-        while(cur) {
-            if (cur == timer) {
-                #if DEBUG_OSTIMER
-                    auto &t = *reinterpret_cast<ETSTimerEx *>(timer);
-                    if (t._magic != kMagic) {
-                        __DBG_printEtsTimer(t);
-                        __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s _magic=%08x<>%08x", __S(t._name), t._magic, kMagic);
-                    }
-                #endif
-                return cur;
-            }
-            cur = cur->timer_next;
-        }
-    #elif ESP32
-        #warning TODO
-        return timer;
-    #endif
-    return nullptr;
-}
-
-OSTIMER_INLINE void ETSTimerEx::end()
-{
-    #if ESP8266
-        ETSTimer *cur = timer_list;
-        while(cur) {
-            auto next = cur->timer_next;
-            if (cur->timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback) || cur->timer_func == reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback)) {
-                ets_timer_disarm(cur);
-                ets_timer_done(cur);
-            }
-            cur = next;
-        }
-    #elif ESP32
-    #warning TODO
-    #endif
-}
 
 OSTIMER_INLINE OSTimer::
 #if DEBUG_OSTIMER
@@ -187,10 +39,22 @@ OSTIMER_INLINE OSTimer::operator bool() const
 
 OSTIMER_INLINE void OSTimer::startTimer(int32_t delay, bool repeat, bool millis)
 {
-    delay = std::clamp<int32_t>(delay, Event::kMinDelay, Event::kMaxDelay);
-    ets_timer_disarm(&_etsTimer);
-    ets_timer_setfn(&_etsTimer, &_EtsTimerCallback, this);
-    ets_timer_arm_new(&_etsTimer, delay, repeat, millis);
+    #if ESP32
+        delay = std::clamp<int32_t>(delay, 1, std::numeric_limits<decltype(delay)>::max());
+        if (_etsTimer._timer) {
+            _etsTimer.disarm();
+            _etsTimer.done();
+            _etsTimer.create(&_EtsTimerCallback, this);
+        }
+        else {
+            _etsTimer.disarm();
+        }
+        _etsTimer.arm(delay, repeat, millis);
+    #else
+        delay = std::clamp<int32_t>(delay, Event::kMinDelay, Event::kMaxDelay);
+        _etsTimer.create(&_EtsTimerCallback, this);
+        ets_timer_arm_new(&_etsTimer, delay, repeat, millis);
+    #endif
 }
 
 OSTIMER_INLINE void OSTimer::detach()

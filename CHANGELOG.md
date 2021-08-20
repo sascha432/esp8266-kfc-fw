@@ -2,6 +2,7 @@
 
 ## Version 0.0.5
 
+- OSTimer implementation for ESP32 based in esp_timer
 - framework-arduinoespressif8266 3.2.0
 - Arduino-ESP32 2.0.0-rc1 integration
 - Merged Atomic Sun plugin into Dimmer plugin (**work in progress**)

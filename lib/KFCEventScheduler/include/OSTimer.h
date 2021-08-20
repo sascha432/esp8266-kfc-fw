@@ -15,19 +15,55 @@
 #endif
 
 #include <Arduino_compat.h>
-#if ESP8266 || ESP32
+#if ESP32
 
-    #if ESP8266
+    #include <esp_timer.h>
+    #include <list>
+
+    struct ETSTimerEx {
+
+        #if DEBUG_OSTIMER
+            ETSTimerEx(const char *name);
+        #else
+            ETSTimerEx();
+        #endif
+        ~ETSTimerEx();
+
+        void create(esp_timer_cb_t callback, void *arg);
+        void arm(int32_t delay, bool repeat, bool millis);
+        bool isRunning() const;
+        bool isDone() const;
+        bool isLocked() const;
+        void lock();
+        void unlock();
+        void disarm();
+        void done();
+        void clear();
+        ETSTimerEx *find();
+        static ETSTimerEx *find(ETSTimerEx *timer);
+
+        // terminate all OSTimer instances
+        static void end();
+
+        #if DEBUG_OSTIMER
+            const char *_name;
+        #endif
+        esp_timer_handle_t _timer;
+        bool _running;
+        bool _locked;
+
+        static std::list<ETSTimerEx *> _timers;
+    };
+
+#elif ESP8266 || _MSC_VER
+
     #include <osapi.h>
-    #endif
 
     #ifdef __cplusplus
     extern "C" {
     #endif
 
-        #if ESP8266
-            extern ETSTimer *timer_list;
-        #endif
+        extern ETSTimer *timer_list;
 
     #ifdef __cplusplus
     }
@@ -46,6 +82,7 @@
         #endif
         ~ETSTimerEx();
 
+        void create(ETSTimerFunc *callback, void *arg);
         bool isRunning() const;
         bool isDone() const;
         bool isLocked() const;
@@ -54,8 +91,8 @@
         void disarm();
         void done();
         void clear();
-        ETSTimer *find();
-        static ETSTimer *find(ETSTimer *timer);
+        ETSTimerEx *find();
+        static ETSTimerEx *find(ETSTimerEx *timer);
 
         // terminate all OSTimer instances
         static void end();
@@ -97,7 +134,7 @@ public:
 protected:
     ETSTimerEx _etsTimer;
 
-    operator ETSTimer *() const {
+    operator ETSTimerEx *() const {
         return const_cast<ETSTimerEx *>(&_etsTimer);
     }
 };

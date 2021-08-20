@@ -17,13 +17,12 @@
 #if ESP8266
 #include <coredecls.h>
 #endif
+#if ESP32
+#include <nvs.h>
+#endif
 
 #include "ConfigurationHelper.h"
 #include "ConfigurationParameter.h"
-
-// #if defined(ESP32)
-// #include <esp_partition.h>
-// #endif
 
 #if DEBUG_CONFIGURATION
 #include <debug_helper_enable.h>
@@ -184,6 +183,9 @@ public:
 
     static constexpr uint16_t kHeaderOffset = 0;
     static_assert((kHeaderOffset & 3) == 0, "not dword aligned");
+    #if ESP32
+        static_assert(kHeaderOffset == 0, "offset not supported");
+    #endif
 
     static constexpr uint16_t kParamsOffset = kHeaderOffset + sizeof(Header);
     static_assert((kParamsOffset & 3) == 0, "not dword aligned");
@@ -414,6 +416,84 @@ private:
 
     // ------------------------------------------------------------------------
     // EEPROM
+
+    #if ESP8266
+
+        // Flash implementation
+
+        bool flashWrite(uint32_t offset, const uint8_t *data, size_t size)
+        {
+            return ESP.flashWrite(offset, data, size);
+        }
+
+        bool flashRead(uint32_t offset, uint8_t *data, size_t size)
+        {
+            return ESP.flashRead(offset, data, size);
+        }
+
+        bool flashWrite(uint32_t offset, const uint32_t *data, size_t size)
+        {
+            return ESP.flashWrite(offset, const_cast<uint32_t *>(data), size);
+        }
+
+        bool flashRead(uint32_t offset, uint32_t *data, size_t size)
+        {
+            return ESP.flashRead(offset, data, size);
+        }
+
+        bool flashEraseSector(uint32_t sector) {
+            return ESP.flashEraseSector(sector);
+        }
+
+    #elif ESP32
+
+        // NVS implementation
+        char *_nvs_key_name(uint32_t address, uint16_t length) const {
+            static char buffer[24];
+            snprintf_P(buffer, sizeof(buffer), PSTR("a%08xl%04x"), address, length);
+            return buffer;
+        }
+
+        bool flashWrite(uint32_t offset, const uint8_t *data, size_t size)
+        {
+            if (nvs_set_blob(_handle, _nvs_key_name(offset, size), data, size) != ESP_OK) {
+                __DBG_printf_E("failed to write NVS name=%s size=%u", _nvs_key_name(offset, size), size);
+                return false;
+            }
+            return true;
+        }
+
+        bool flashRead(uint32_t offset, uint8_t *data, size_t size)
+        {
+            size_t readSize = size;
+            if (nvs_get_blob(_handle, _nvs_key_name(offset, size), data, &readSize) != ESP_OK) {
+                __DBG_printf_E("failed to read NVS name=%s size=%u", _nvs_key_name(offset, size), size);
+                return false;
+            }
+            if (readSize != size) {
+                __DBG_printf_E("failed to read NVS name=%s size=%u size_read=%u", _nvs_key_name(offset, size), size, readSize);
+                return false;
+            }
+            return true;
+        }
+
+        bool flashWrite(uint32_t offset, const uint32_t *data, size_t size)
+        {
+            return flashWrite(offset, reinterpret_cast<const uint8_t *>(data), size);
+        }
+
+        bool flashRead(uint32_t offset, uint32_t *data, size_t size)
+        {
+            return flashRead(offset, reinterpret_cast<uint8_t *>(data), size);
+        }
+
+        bool flashEraseSector(uint32_t sector) {
+            return true;
+        }
+
+        nvs_handle _handle;
+
+    #endif
 
 protected:
     ParameterList _params;

@@ -7,7 +7,8 @@ nvs,       data, nvs,       0x9000,     20K,
 otadata,   data, ota,       0xe000,      8K,
 uf2,       app,  factory,  0x10000,   2048K,
 eeprom,    data, fat,     0x210000,      4K,
-savecrash, data, fat,     0x211000,     16K,
+savecrash, data, fat,     0x211000,     64K,
+kfcfw,     data, fat,     0x221000,     64K,
 spiffs,    data, spiffs,  0x2ee000,   1096K,
 
 

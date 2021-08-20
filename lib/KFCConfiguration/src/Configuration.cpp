@@ -8,6 +8,9 @@
 #if ESP8266
 #include <interrupts.h>
 #endif
+#if ESP32
+#include <nvs.h>
+#endif
 #include "misc.h"
 #include "DumpBinary.h"
 
@@ -28,14 +31,28 @@
 #endif
 
 Configuration::Configuration(uint16_t size) :
+    #if ESP32
+        _handle(0),
+    #endif
     _readAccess(0),
     _size(size)
 {
+    #if ESP32
+        auto name = "kfcfw_config";
+        esp_err_t res = nvs_open(name, NVS_READWRITE, &_handle);
+        if (res != ESP_OK) {
+            __DBG_panic("cannot open NVS name=%s", name);
+        }
+    #endif
 }
 
 Configuration::~Configuration()
 {
     clear();
+    #if ESP32
+        nvs_close(_handle);
+        _handle = 0;
+    #endif
 }
 
 void Configuration::clear()
@@ -96,7 +113,7 @@ Configuration::WriteResultType Configuration::write()
     auto address = ConfigurationHelper::getFlashAddress(kHeaderOffset);
 
     // get header
-    if (!ESP.flashRead(address, header, sizeof(header))) {
+    if (!flashRead(address, header, sizeof(header))) {
         __DBG_printf("cannot read header offset=%u address=0x%08x aligned=%u", ConfigurationHelper::getOffsetFromFlashAddress(address), address, (address % sizeof(uint32_t)) == 0);
         header = Header();
         // return WriteResultType::READING_HEADER_FAILED;
@@ -171,7 +188,7 @@ Configuration::WriteResultType Configuration::write()
                 }
                 auto ptr = buffer.end();
                 buffer.setLength(buffer.length() + len);
-                if (!ESP.flashRead(oldAddress, ptr, len)) {
+                if (!flashRead(oldAddress, ptr, len)) {
                     __DBG_panic("failed to read flash address=%u len=%u", oldAddress, len);
                     return WriteResultType::READING_PREV_CONF_FAILED;
                 }
@@ -202,7 +219,7 @@ Configuration::WriteResultType Configuration::write()
                 __DBG_printf("failed to allocate memory=%u (preoffset data)", kHeaderOffset);
                 return WriteResultType::OUT_OF_MEMORY;
             }
-            if (!ESP.flashRead(address, data.get(), kHeaderOffset)) {
+            if (!flashRead(address, data.get(), kHeaderOffset)) {
                 __DBG_printf("failed to read flash (preoffset data, address=0x%08x size=%u)", address, kHeaderOffset);
                 return WriteResultType::FLASH_READ_ERROR;
             }
@@ -210,36 +227,50 @@ Configuration::WriteResultType Configuration::write()
 
         __DBG_printf("flash write %08x sector %u", address, address / SPI_FLASH_SEC_SIZE);
 
-        // erase sector
-        // TODO if something goes wrong here, all data is lost
-        // add redundancy writing to multiple sectors, the header has an incremental version number
-        // append mode can be used to fill the sector before erasing
-        if (!ESP.flashEraseSector(address / SPI_FLASH_SEC_SIZE)) {
-            __DBG_printf("failed to write configuration (erase)");
-            return WriteResultType::FLASH_ERASE_ERROR;
-        }
+        #if ESP8266
 
-        if __CONSTEXPR17 (kHeaderOffset != 0) {
-            // restore data before the offset
-            ESP.flashWrite(address, data.get(), kHeaderOffset);
-            // if this fails, we cannot do anything anymore
-            // the sector has been erased already
-            data.reset();
-        }
+            // erase sector
+            // TODO if something goes wrong here, all data is lost
+            // add redundancy writing to multiple sectors, the header has an incremental version number
+            // append mode can be used to fill the sector before erasing
+            if (!flashEraseSector(address / SPI_FLASH_SEC_SIZE)) {
+                __DBG_printf("failed to write configuration (erase)");
+                return WriteResultType::FLASH_ERASE_ERROR;
+            }
+
+            if __CONSTEXPR17 (kHeaderOffset != 0) {
+                // restore data before the offset
+                flashWrite(address, data.get(), kHeaderOffset);
+                // if this fails, we cannot do anything anymore
+                // the sector has been erased already
+                data.reset();
+            }
+
+        #elif ESP32
+
+            // clear previous configuration
+            nvs_erase_all(_handle);
+
+        #endif
 
         // write header
         address += kHeaderOffset;
 
-        if (!ESP.flashWrite(address, header, sizeof(header))) {
+        if (!flashWrite(address, header, sizeof(header))) {
             __DBG_printf("failed to write configuration (write header, address=0x%08x, size=%u, aligned=%u)", address, sizeof(header), (address % sizeof(uint32_t)) == 0);
             return WriteResultType::FLASH_WRITE_ERROR;
         }
         // params and data
         address += sizeof(header);
-        if (!ESP.flashWrite(address, buffer.get(), buffer.length())) {
+        if (!flashWrite(address, buffer.get(), buffer.length())) {
             __DBG_printf("failed to write configuration (write buffer, address=0x%08x, size=%u)", address, buffer.length());
             return WriteResultType::FLASH_WRITE_ERROR;
         }
+
+        #if ESP32
+            // commit pending data
+            nvs_commit(_handle);
+        #endif
 
     }
 
@@ -330,7 +361,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
     Header header;
     auto address = ConfigurationHelper::getFlashAddress(kHeaderOffset);
 
-    if (!ESP.flashRead(address, header, sizeof(header)) || !header) {
+    if (!flashRead(address, header, sizeof(header)) || !header) {
         output.printf_P(PSTR("cannot read header, magic=0x%08x"), header.magic());
         return;
     }
@@ -484,7 +515,7 @@ bool Configuration::_readParams()
 {
     Header header;
 
-    if (!ESP.flashRead(ConfigurationHelper::getFlashAddress(kHeaderOffset), header, sizeof(header))) {
+    if (!flashRead(ConfigurationHelper::getFlashAddress(kHeaderOffset), header, sizeof(header))) {
         __LDBG_printf("read error offset %u", kHeaderOffset);
         clear();
         return false;
@@ -517,7 +548,7 @@ bool Configuration::_readParams()
         uint32_t buf[128 / sizeof(uint32_t)];
         while(address < endAddress) {
             auto read = std::min<size_t>(endAddress - address, sizeof(buf));
-            if (!ESP.flashRead(address, buf, read)) { // using uint32_t * since buf is aligned
+            if (!flashRead(address, buf, read)) { // using uint32_t * since buf is aligned
                 break;
             }
             crc = crc32(buf, read, crc);

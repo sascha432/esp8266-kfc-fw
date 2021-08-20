@@ -290,7 +290,7 @@ bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, u
     if (_param.length() == 0) {
         return true;
     }
-    return ESP.flashRead(ConfigurationHelper::getFlashAddress(offset), ptr, _param.length());
+    return conf.flashRead(ConfigurationHelper::getFlashAddress(offset), ptr, _param.length());
 }
 
 bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)

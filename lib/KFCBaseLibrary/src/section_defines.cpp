@@ -32,15 +32,16 @@ PartitionAddress get_partition_address_start(const char *label)
 // char &_heap_start[];
 // uint32_t &_FS_start;
 // uint32_t &_FS_end;
-// uint32_t &_KFCFW_start;
-// uint32_t &_KFCFW_end;
-static auto P_SAVECRASH_start = get_partition_address_start("savecrash");
-static auto P_EEPROM_start = get_partition_address_start("eeprom");
+static auto P_KFCFW = get_partition_address_start("kfcfw");
+static auto P_SAVECRASH = get_partition_address_start("savecrash");
+static auto P_EEPROM = get_partition_address_start("eeprom");
 
-uint32_t &_SAVECRASH_start = *P_SAVECRASH_start._start;
-uint32_t &_SAVECRASH_end = *P_SAVECRASH_start._end;
-uint32_t &_EEPROM_start = *P_EEPROM_start._start;
-uint32_t &_EEPROM_end = *P_EEPROM_start._end;
+uint32_t &_KFCFW_start = *P_KFCFW._start;
+uint32_t &_KFCFW_end = *P_KFCFW._end;
+uint32_t &_SAVECRASH_start = *P_SAVECRASH._start;
+uint32_t &_SAVECRASH_end = *P_SAVECRASH._end;
+uint32_t &_EEPROM_start = *P_EEPROM._start;
+uint32_t &_EEPROM_end = *P_EEPROM._end;
 
 #endif
 

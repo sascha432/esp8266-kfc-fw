@@ -15,18 +15,29 @@
 class StaticString {
 public:
 
-    StaticString(StaticString &&str) noexcept : _ptr(std::exchange(str._ptr, nullptr)) {
+    StaticString(StaticString &&str) noexcept :
+        _ptr(std::exchange(str._ptr, nullptr)),
+        _length(str._length),
+        _progmem(str._progmem)
+    {
     }
-    StaticString(const String &str) : StaticString(str.c_str(), (uint16_t)str.length()) {
+
+    StaticString(const String &str) :
+        StaticString(str.c_str(), (uint16_t)str.length())
+    {
     }
-    StaticString(const char *str) : StaticString(str, (uint16_t)strlen(str)) {
+
+    StaticString(const char *str) :
+        StaticString(str, (uint16_t)strlen(str))
+    {
     }
+
     ~StaticString() {
         __free();
     }
 
     String toString() const {
-        return _ptr ? (isProgMem() ? String(FPSTR(_ptr)) : String(reinterpret_cast<const char *>(_ptr))) : emptyString;
+        return _ptr ? (isProgMem() ? String(FPSTR(_ptr)) : String(reinterpret_cast<const char *>(_ptr))) : String();
     }
 
     const char *c_str() const {
@@ -73,7 +84,7 @@ public:
             free(_ptr);
             _ptr = nullptr;
         }
-        new(this) StaticString();
+        *this = StaticString();
     }
 
 #if ESP8266
@@ -104,15 +115,15 @@ private:
     void *_ptr;
 #else
 
-    StaticString() : _ptr(), _length(), _progmem() {
+    StaticString() : _ptr(nullptr), _length(0), _progmem(false) {
     }
 
     StaticString &operator=(StaticString &&str) noexcept {
         this->~StaticString();
         _ptr = std::exchange(str._ptr, nullptr);
         _length = str._length;
-        str._length = 0;
         _progmem = str._progmem;
+        str._length = 0;
         str._progmem = 0;
         return *this;
     }

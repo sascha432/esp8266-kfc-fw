@@ -94,6 +94,7 @@ public:
 #if ESP_ARDUINO_VERSION_MAJOR >= 2
 
     #include <mbedtls/sha256.h>
+    #include <mbedtls/sha1.h>
 
     namespace Session {
 

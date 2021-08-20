@@ -506,7 +506,18 @@ size_t printTrimmedDouble(Print *output, double value, int digits)
     return size;
 }
 
-#if defined(ESP8266)
+#if ESP32
+
+bool str_endswith(const char *str, char ch)
+{
+    if (!str) {
+        return false;
+    }
+    auto len = strlen(str);
+    return (len != 0) && (str[len - 1] == ch);
+}
+
+#elif ESP8266
 
 bool str_endswith_P(PGM_P str, char ch)
 {

@@ -25,7 +25,9 @@
     extern "C" {
     #endif
 
-        extern ETSTimer *timer_list;
+        #if ESP8266
+            extern ETSTimer *timer_list;
+        #endif
 
     #ifdef __cplusplus
     }

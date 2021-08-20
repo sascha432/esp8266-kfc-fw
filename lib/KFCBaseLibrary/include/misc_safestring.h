@@ -89,7 +89,17 @@ inline bool is_HEAP_P(const void *ptr) {
     return true;
 }
 
+#if ESP32
+
+inline bool is_PGM_P(const void *ptr) {
+    return false;
+}
+
+#else
+
 bool is_PGM_P(const void *ptr);
+
+#endif
 
 inline bool is_aligned_PGM_P(const void * ptr)
 {

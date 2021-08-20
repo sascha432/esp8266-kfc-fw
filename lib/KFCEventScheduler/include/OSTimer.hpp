@@ -121,34 +121,43 @@ OSTIMER_INLINE ETSTimer *ETSTimerEx::find()
 
 OSTIMER_INLINE ETSTimer *ETSTimerEx::find(ETSTimer *timer)
 {
-    ETSTimer *cur = timer_list;
-    while(cur) {
-        if (cur == timer) {
-            #if DEBUG_OSTIMER
-                auto &t = *reinterpret_cast<ETSTimerEx *>(timer);
-                if (t._magic != kMagic) {
-                    __DBG_printEtsTimer(t);
-                    __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s _magic=%08x<>%08x", __S(t._name), t._magic, kMagic);
-                }
-            #endif
-            return cur;
+    #if ESP8266
+        ETSTimer *cur = timer_list;
+        while(cur) {
+            if (cur == timer) {
+                #if DEBUG_OSTIMER
+                    auto &t = *reinterpret_cast<ETSTimerEx *>(timer);
+                    if (t._magic != kMagic) {
+                        __DBG_printEtsTimer(t);
+                        __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s _magic=%08x<>%08x", __S(t._name), t._magic, kMagic);
+                    }
+                #endif
+                return cur;
+            }
+            cur = cur->timer_next;
         }
-        cur = cur->timer_next;
-    }
+    #elif ESP32
+        #warning TODO
+        return timer;
+    #endif
     return nullptr;
 }
 
 OSTIMER_INLINE void ETSTimerEx::end()
 {
-    ETSTimer *cur = timer_list;
-    while(cur) {
-        auto next = cur->timer_next;
-        if (cur->timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback) || cur->timer_func == reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback)) {
-            ets_timer_disarm(cur);
-            ets_timer_done(cur);
+    #if ESP8266
+        ETSTimer *cur = timer_list;
+        while(cur) {
+            auto next = cur->timer_next;
+            if (cur->timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback) || cur->timer_func == reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback)) {
+                ets_timer_disarm(cur);
+                ets_timer_done(cur);
+            }
+            cur = next;
         }
-        cur = next;
-    }
+    #elif ESP32
+    #warning TODO
+    #endif
 }
 
 OSTIMER_INLINE OSTimer::

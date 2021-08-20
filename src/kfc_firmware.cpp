@@ -92,6 +92,9 @@ bool isSystemKeyComboPressed()
 
 void setup()
 {
+    #if ESP32
+        resetDetector.armTimer();
+    #endif
     #if ENABLE_DEEP_SLEEP
         deepSleepPinState.merge();
     #endif

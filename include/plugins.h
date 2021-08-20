@@ -9,7 +9,7 @@
 #include "PluginComponent.h"
 
 #ifndef DEBUG_PLUGINS
-#    define DEBUG_PLUGINS 0
+#    define DEBUG_PLUGINS 1
 #endif
 
 #if ENABLE_DEEP_SLEEP
@@ -33,7 +33,11 @@ namespace PluginComponents {
         }
 
         static Register *getInstance();
-        static void add(PluginComponent *plugin);
+        #if DEBUG_PLUGINS
+            static void add(PluginComponent *plugin, const char *name);
+        #else
+            static void add(PluginComponent *plugin);
+        #endif
         static void setDelayedStartupTime(uint32_t delayedStartupTime);
         static PluginsVector &getPlugins();
 
@@ -42,7 +46,11 @@ namespace PluginComponents {
         void dumpList(Print &output);
 
     protected:
-        void _add(PluginComponent *plugin);
+        #if DEBUG_PLUGINS
+            void _add(PluginComponent *plugin, const char *name);
+        #else
+            void _add(PluginComponent *plugin);
+        #endif
         void _setDelayedStartupTime(uint32_t delayedStartupTime);
         PluginsVector &_getPlugins();
 
@@ -52,11 +60,24 @@ namespace PluginComponents {
         bool _enableWebUIMenu;
     };
 
-    inline __attribute__((__always_inline__))
-    void Register::add(PluginComponent *plugin)
-    {
-        getInstance()->_add(plugin);
-    }
+    #if DEBUG_PLUGINS
+
+        inline __attribute__((__always_inline__))
+        void Register::add(PluginComponent *plugin, const char *name)
+        {
+            ets_printf("Register::add() plugin=%s\n", name);
+            getInstance()->_add(plugin, name);
+        }
+
+    #else
+
+        inline __attribute__((__always_inline__))
+        void Register::add(PluginComponent *plugin)
+        {
+            getInstance()->_add(plugin);
+        }
+
+    #endif
 
     inline __attribute__((__always_inline__))
     PluginsVector &Register::getPlugins()
@@ -87,7 +108,6 @@ namespace PluginComponents {
 // register plug in
 #if DEBUG_PLUGINS
 #define REGISTER_PLUGIN(plugin, name)                   PluginComponents::Register::add(plugin, name)
-void register_plugin(PluginComponent *plugin, const char *name);
 #else
 #define REGISTER_PLUGIN(plugin, name)                   PluginComponents::Register::add(plugin)
 #endif

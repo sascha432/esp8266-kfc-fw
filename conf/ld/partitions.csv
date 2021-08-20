@@ -3,11 +3,16 @@
 # bootloader.bin,,          0x1000, 32K
 # partition table,          0x8000, 4K
 
-nvs,       data, nvs,       0x9000,   20K,
-otadata,   data, ota,       0xe000,   8K,
-ota_0,     0,    ota_0,   0x10000,  1408K,
-ota_1,     0,    ota_1,  0x170000,  1408K,
-uf2,       app,  factory, 0x2d0000,   256K,
-eeprom,    data, fat,     0x310000,   4K,
-savecrash, data, fat,     0x311000,   4K,
-data,      data, spiffs,  0x312000,   952K,
+nvs,       data, nvs,       0x9000,     20K,
+otadata,   data, ota,       0xe000,      8K,
+uf2,       app,  factory,  0x10000,   2048K,
+eeprom,    data, fat,     0x210000,      4K,
+savecrash, data, fat,     0x211000,     16K,
+spiffs,    data, spiffs,  0x217000,   1000K,
+
+#ota_0,     0,    ota_0,    0x10000,   1408K,
+#ota_1,     0,    ota_1,   0x170000,   1408K,
+#uf2,       app,  factory, 0x2d0000,    256K,
+#eeprom,    data, fat,     0x310000,      4K,
+#savecrash, data, fat,     0x311000,      8K,
+#data,      data, spiffs,  0x313000,    952K,

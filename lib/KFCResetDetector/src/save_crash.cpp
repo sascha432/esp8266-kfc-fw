@@ -52,45 +52,45 @@ namespace SaveCrash {
 
     uint8_t getCrashCounter()
     {
-#if KFC_DISABLE_CRASHCOUNTER
-        return 0;
-#else
-        uint8_t counter = 0;
-        File file = KFCFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::read);
-        if (file) {
-            counter = file.read() + 1;
-        }
-        file = KFCFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::write);
-        file.write(counter);
-        return counter;
-#endif
+        #if KFC_DISABLE_CRASHCOUNTER
+            return 0;
+        #else
+            uint8_t counter = 0;
+            File file = KFCFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::read);
+            if (file) {
+                counter = file.read() + 1;
+            }
+            file = KFCFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::write);
+            file.write(counter);
+            return counter;
+        #endif
     }
 
     void removeCrashCounterAndSafeMode()
     {
         resetDetector.clearCounter();
-#if KFC_DISABLE_CRASHCOUNTER == 0
-        removeCrashCounter();
-#endif
+        #if KFC_DISABLE_CRASHCOUNTER == 0
+            removeCrashCounter();
+        #endif
     }
 
     void removeCrashCounter()
     {
-#if KFC_DISABLE_CRASHCOUNTER == 0
-        KFCFS.begin();
-        auto filename = String(FSPGM(crash_counter_file, "/.pvt/crash_counter"));
-        if (KFCFS.exists(filename)) {
-            KFCFS.remove(filename);
-        }
-#endif
+        #if KFC_DISABLE_CRASHCOUNTER == 0
+            KFCFS.begin();
+            auto filename = String(FSPGM(crash_counter_file, "/.pvt/crash_counter"));
+            if (KFCFS.exists(filename)) {
+                KFCFS.remove(filename);
+            }
+        #endif
     }
 
     void installRemoveCrashCounter(uint32_t delay_seconds)
     {
         _Scheduler.add(Event::seconds(delay_seconds), false, [](Event::CallbackTimerPtr timer) {
-#if KFC_DISABLE_CRASHCOUNTER == 0
-            removeCrashCounter();
-#endif
+            #if KFC_DISABLE_CRASHCOUNTER == 0
+                removeCrashCounter();
+            #endif
             resetDetector.clearCounter();
         });
     }
@@ -404,9 +404,9 @@ inline __attribute__((__always_inline__)) static void _custom_crash_callback(str
     // create header first to capture umm_last_fail_alloc_*
     auto header = SaveCrash::Data(time(nullptr), stack, stack_end, sp_dump, (void *)umm_last_fail_alloc_addr, umm_last_fail_alloc_size, *rst_info);
 
-#if IOT_LED_MATRIX_OUTPUT_PIN
-    ClockPluginClearPixels();
-#endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN
+        ClockPluginClearPixels();
+    #endif
 
     auto fs = SaveCrash::createFlashStorage();
     auto results = SPIFlash::FindResultArray();

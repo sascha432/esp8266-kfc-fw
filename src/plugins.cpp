@@ -27,6 +27,8 @@ using KFCConfigurationClasses::System;
 
 using namespace PluginComponents;
 
+#if ESP8266
+
 using RegisterExUninitialized = stdex::UninitializedClass<PluginComponents::RegisterEx>;
 RegisterExUninitialized componentRegisterNoInit __attribute__((section(".noinit")));
 
@@ -35,10 +37,23 @@ Register *Register::getInstance()
     return &componentRegisterNoInit._object;
 }
 
-#if DEBUG_PLUGINS
-void register_plugin(PluginComponent *plugin, const char *name)
+#else
+
+PluginComponents::RegisterEx componentRegister;
+
+Register *Register::getInstance()
 {
-    KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
+    return &componentRegister;
+}
+
+#endif
+
+#if DEBUG_PLUGINS
+void Register::_add(PluginComponent *plugin, const char *name)
+{
+    #if ESP8266
+        KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
+    #endif
     ::printf(PSTR("register_plugin(%p): name=%s\r\n"), plugin, name);
 #else
 void Register::_add(PluginComponent *plugin)

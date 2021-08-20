@@ -92,14 +92,27 @@ def which(name, env, flags=os.F_OK):
 
 
 def mem_analyzer(source, target, env):
-    # https://github.com/Sermus/ESP8266_memory_analyzer
-    args = [
-        path.realpath(path.join(env.subst("$PROJECT_DIR"), "./scripts/tools/MemAnalyzer.exe")),
-        which('xtensa-lx106-elf-objdump.exe', env)[0],
-        path.realpath(str(target[0]))
-    ]
-    p = subprocess.Popen(args, text=True)
-    p.wait()
+
+    esp32 = False
+    defines = env.get('CPPDEFINES');
+    for define in defines:
+        if isinstance(define, tuple):
+            (key, val) = define
+        else:
+            key = define
+            val = 1;
+        if key == 'ESP32':
+            esp32 = True
+
+    if esp32==False:
+        # https://github.com/Sermus/ESP8266_memory_analyzer
+        args = [
+            path.realpath(path.join(env.subst("$PROJECT_DIR"), "./scripts/tools/MemAnalyzer.exe")),
+            which('xtensa-lx106-elf-objdump.exe', env)[0],
+            path.realpath(str(target[0]))
+        ]
+        p = subprocess.Popen(args, text=True)
+        p.wait()
 
 
 def disassemble(source, target, env):

@@ -154,7 +154,9 @@ private:
     ETSTimer _timer;
     Data _storedData;
     Data _data;
-    uart_t *_uart;
+    #if DEBUG_RESET_DETECTOR
+        uart_t *_uart;
+    #endif
 };
 
 class ResetDetectorPlugin : public PluginComponent {
@@ -173,7 +175,15 @@ public:
 
 class HardwareSerial;
 
+#if ESP8266
+
 extern ResetDetector &resetDetector;
+
+#else
+
+extern ResetDetector resetDetector;
+
+#endif
 
 #if RESET_DETECTOR_INCLUDE_HPP_INLINE
 #include "reset_detector.hpp"

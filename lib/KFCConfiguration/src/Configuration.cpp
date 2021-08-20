@@ -13,6 +13,7 @@
 #endif
 #if ESP32
 #include <nvs.h>
+#define NVS_PARTITION_NAME "nvs"
 #endif
 #include "misc.h"
 #include "DumpBinary.h"
@@ -102,6 +103,29 @@ bool Configuration::read()
     return true;
 }
 
+Configuration::WriteResultType Configuration::erase()
+{
+    #if ESP32
+        // clear previous configuration
+        esp_err_t err;
+        if ((err = nvs_erase_all(_handle)) != ESP_OK) {
+            __DBG_printf_E("failed to erase NVS name=%s err=%08x", _name, err);
+            return WriteResultType::NVS_ERASE_ALL;
+        }
+
+        #if DEBUG_CONFIGURATION
+            nvs_stats_t stats;
+            if ((err = nvs_get_stats(NVS_PARTITION_NAME, &stats)) == ESP_OK) {
+                __DBG_printf_N("NVS stats free=%u ns_count=%u total=%u used=%u", stats.free_entries, stats.namespace_count, stats.total_entries, stats.used_entries);
+            }
+            else {
+                __DBG_printf_E("failed to get stats name=%s err=%08x", NVS_PARTITION_NAME, err);
+            }
+        #endif
+    #endif
+    return WriteResultType::SUCCESS;
+}
+
 Configuration::WriteResultType Configuration::write()
 {
     __LDBG_printf("params=%u", _params.size());
@@ -120,13 +144,6 @@ Configuration::WriteResultType Configuration::write()
             __DBG_printf("cannot read header size=%u stored=%u", sizeof(header), size);
             header = Header();
         }
-
-        // // clear previous configuration
-        // esp_err_t err;
-        // if ((err = nvs_erase_all(_handle)) != ESP_OK) {
-        //     __DBG_printf_E("failed to erase NVS name=%s err=%08x", _name, err);
-        //     return WriteResultType::FLASH_ERASE_ERROR;
-        // }
 
         // update header
         header.update(header.version() + 1, _params.size(), Header::getParamsLength(_params.size()));
@@ -168,13 +185,15 @@ Configuration::WriteResultType Configuration::write()
 
         #if DEBUG_CONFIGURATION
             nvs_stats_t stats;
-            if ((err = nvs_get_stats("nvs", &stats)) == ESP_OK) {
+            if ((err = nvs_get_stats(NVS_PARTITION_NAME, &stats)) == ESP_OK) {
                 __DBG_printf_N("NVS stats free=%u ns_count=%u total=%u used=%u", stats.free_entries, stats.namespace_count, stats.total_entries, stats.used_entries);
             }
             else {
-                __DBG_printf_E("failed to get stats name=%s err=%08x", "nvs", err);
+                __DBG_printf_E("failed to get stats name=%s err=%08x", NVS_PARTITION_NAME, err);
             }
         #endif
+
+        dump(Serial);
 
         return WriteResultType::SUCCESS;
 
@@ -349,9 +368,9 @@ Configuration::WriteResultType Configuration::write()
 
 void Configuration::makeWriteable(ConfigurationParameter &param, size_type length)
 {
-#if DEBUG_CONFIGURATION
-    delay(1);
-#endif
+    #if DEBUG_CONFIGURATION
+        delay(1);
+    #endif
     param._makeWriteable(*this, length);
 }
 

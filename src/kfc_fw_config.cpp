@@ -624,16 +624,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     __LDBG_println();
     PrintString str;
 
-    #if ESP32
-    #warning TODO
-        // // clear previous configuration
-        // esp_err_t err;
-        // if ((err = nvs_erase_all(_handle)) != ESP_OK) {
-        //     __DBG_printf_E("failed to erase NVS name=%s err=%08x", _name, err);
-        //     return WriteResultType::FLASH_ERASE_ERROR;
-        // }
-    #endif
-
+    erase();
     clear();
     auto deviceName = defaultDeviceName();
     System::Flags::defaults();

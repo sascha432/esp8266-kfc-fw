@@ -227,6 +227,7 @@ public:
         #if ESP32
             NVS_COMMIT_ERROR,
             NVS_SET_BLOB_ERROR,
+            NVS_ERASE_ALL,
         #endif
     };
 
@@ -257,6 +258,8 @@ public:
                     return F("NVS_COMMIT_ERROR");
                 case WriteResultType::NVS_SET_BLOB_ERROR:
                     return F("NVS_SET_BLOB_ERROR");
+                case WriteResultType::NVS_ERASE_ALL:
+                    return F("NVS_ERASE_ALL");
             #endif
             // default:
             //     break;
@@ -284,6 +287,9 @@ public:
 
     // read data from EEPROM
     bool read();
+
+    // erase NVS data, not implemented for EEPROM since it gets erased during each write
+    WriteResultType erase();
 
     // write data to EEPROM
     WriteResultType write();
@@ -492,7 +498,6 @@ private:
 
         void _nvs_open() {
             if (_handle) {
-                __DBG_printf_N("NVS already open name=%s handle=%08x", _name, _handle);
                 return;
             }
             esp_err_t err = nvs_open(_name, NVS_READWRITE, &_handle);
@@ -504,22 +509,8 @@ private:
             }
         }
 
-        bool flashWrite(uint32_t offset, const void *data, size_t size)
-        {
-            return false;
-        }
-
-        bool flashRead(uint32_t offset, void *data, size_t size)
-        {
-            return false;
-        }
-
-        bool flashEraseSector(uint32_t sector) {
-            return false;
-        }
-
-        nvs_handle _handle;
-        const char *_name;
+        nvs_handle _handle; // NV handle
+        const char *_name; // NVS namespace
 
     #endif
 

@@ -307,6 +307,8 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
     #endif
 }
 
+#if ESP8266
+
 bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, uint8_t *ptr) const
 {
     // nothing to read
@@ -315,6 +317,8 @@ bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, u
     }
     return conf.flashRead(ConfigurationHelper::getFlashAddress(offset), ptr, _param.length());
 }
+
+#endif
 
 bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)
 {

@@ -19,8 +19,9 @@
         "minify_css": "${bin.java} -jar ${bin.yui_compressor} --type css ${file.tmp_in} > ${file.tmp_out}",
         "compress_gzip": "${bin.gzip} -9 -k -n -c ${file.tmp_in} > ${file.tmp_out}",
         "create_spiffs": {
-            "#if USE_LITTLEFS==1": "${bin.mklittlefs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/littlefs.bin",
-            "#elif USE_LITTLEFS!=1": "${bin.mkspiffs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/spiffs.bin"
+            "#if ESP32 && USE_LITTLEFS": "${bin.mklittlefs} -c data -p 256 -b 8192 -s 1122304 .pio/build/${pio.env}/littlefs.bin",
+            "#elif USE_LITTLEFS": "${bin.mklittlefs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/littlefs.bin",
+            "#elif !USE_LITTLEFS": "${bin.mkspiffs} -c data -p 256 -b 8192 -s 1024000 .pio/build/${pio.env}/spiffs.bin"
         },
         "pio_upload_spiffs": {
             "#if OS_WIN": "${bin.platformio_activate} && ${bin.platformio} run --target uploadfs -v",

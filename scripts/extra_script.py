@@ -20,6 +20,20 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+esp32 = False
+defines = env.get('CPPDEFINES');
+for define in defines:
+    if isinstance(define, tuple):
+        (key, val) = define
+    else:
+        key = define
+        val = 1;
+    if key == 'ESP32':
+        esp32 = True
+if esp32:
+    click.secho('ESP32 detected', fg='green')
+
+
 sys.path.insert(0, path.abspath(path.join(env.subst("$PROJECT_DIR"), 'scripts', 'libs')))
 
 def new_build(source, target, env):
@@ -92,17 +106,6 @@ def which(name, env, flags=os.F_OK):
 
 
 def mem_analyzer(source, target, env):
-
-    esp32 = False
-    defines = env.get('CPPDEFINES');
-    for define in defines:
-        if isinstance(define, tuple):
-            (key, val) = define
-        else:
-            key = define
-            val = 1;
-        if key == 'ESP32':
-            esp32 = True
 
     if esp32==False:
         # https://github.com/Sermus/ESP8266_memory_analyzer
@@ -245,6 +248,17 @@ def dump_info(source, target, env):
     print(source[0].get_abspath())
     # print(target)
 
+
+# change MKSPIFFSTOOL for ESP32 to mklittlefs
+if esp32 and env.GetProjectOption('board_build.filesystem') == 'littlefs':
+    click.secho('Replacing MKSPIFFS with MKLITTLEFS', fg='yellow')
+    environ = env.get('ENV')
+    path = environ.get('PATH')
+    path = path.replace('tool-mkspiffs', 'tool-mklittlefs')
+    environ['PATH'] = path
+    env.Replace(MKSPIFFSTOOL='mklittlefs', ENV=environ, ESP32_SPIFFS_IMAGE_NAME='littlefs')
+
+
 env.AddPreAction('upload', modify_upload_command)
 env.AddPreAction('uploadota', modify_upload_command)
 env.AddPreAction('uploadfs', modify_upload_command_fs)
@@ -268,3 +282,4 @@ env.AlwaysBuild(env.Alias('kfcfw_auto_discovery', None, lambda source, target, e
 env.AddCustomTarget('disassemble', None, [], title='disassemble main prog', description='run objdump to create disassembly', always_build=True)
 env.AddCustomTarget('kfcfw_factory', None, [], title='factory reset', description='KFC firmware OTA factory reset', always_build=False)
 env.AddCustomTarget('kfcfw_auto_discovery', None, [], title='auto discovery', description='KFC firmware OTA publish auto discovery', always_build=False)
+

@@ -458,9 +458,13 @@ inline __attribute__((__always_inline__)) static void _custom_crash_callback(str
     }
 }
 
+#if !ESP32 //TODO
+
 void custom_crash_callback(struct rst_info *rst_info, uint32_t stack, uint32_t stack_end)
 {
     _custom_crash_callback(rst_info, stack, stack_end);
 }
+
+#endif
 
 #endif

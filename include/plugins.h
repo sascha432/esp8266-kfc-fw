@@ -9,7 +9,7 @@
 #include "PluginComponent.h"
 
 #ifndef DEBUG_PLUGINS
-#    define DEBUG_PLUGINS 1
+#    define DEBUG_PLUGINS 0
 #endif
 
 #if ENABLE_DEEP_SLEEP

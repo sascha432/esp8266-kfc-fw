@@ -251,7 +251,8 @@ def dump_info(source, target, env):
 
 # change MKSPIFFSTOOL for ESP32 to mklittlefs
 if esp32 and env.GetProjectOption('board_build.filesystem') == 'littlefs':
-    click.secho('Replacing MKSPIFFS with MKLITTLEFS', fg='yellow')
+    click.echo('board_build.filesystem = littlefs: ', nl=False)
+    click.secho('replacing MKSPIFFS with MKLITTLEFS', fg='yellow')
     environ = env.get('ENV')
     path = environ.get('PATH')
     path = path.replace('tool-mkspiffs', 'tool-mklittlefs')

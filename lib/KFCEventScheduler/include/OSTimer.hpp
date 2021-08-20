@@ -12,7 +12,7 @@
 #if DEBUG_OSTIMER
 
 static void __DBG_printEtsTimer(ETSTimer &timer) {
-    ::printf(PSTR("timer=%p func=%p arg=%p period=%u next=%p\n"), &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
+    __DBG_printf("timer=%p func=%p arg=%p period=%u next=%p", &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
 }
 
 #endif

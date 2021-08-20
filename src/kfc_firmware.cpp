@@ -370,6 +370,28 @@ void setup()
         // KFCFS.setConfig(LittleFSConfig(true));
         KFCFS.begin();
 
+        #if ESP32
+        {
+            auto dir = ListDir("/", false, true);
+            while(dir.next()) {
+                Serial0.print(F("+LS: "));
+                if (dir.isFile()) {
+                    Serial0.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
+                }
+                else {
+                    Serial0.print(F("[...]    "));
+                }
+                Serial0.println(dir.fileName());
+            }
+        }
+        for(uint8_t i = 0; i < 500; i++) {
+            delay(100);
+            Serial0.print('.');
+        }
+        Serial0.println();
+
+        #endif
+
         #if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASHCOUNTER == 0
             if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
                 uint8_t counter = SaveCrash::getCrashCounter();
@@ -489,7 +511,7 @@ void loop()
     }
     __Scheduler.run(); // check all events
 
-    #if ESP32
+    #if _MSC_VER || ESP32
         run_scheduled_functions();
     #endif
 }

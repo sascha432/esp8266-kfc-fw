@@ -89,6 +89,9 @@ void WebTemplate::printVersion(Print &output)
 {
     output.print(F("KFC FW "));
     output.print(config.getFirmwareVersion());
+    #if ESP32
+        output.printf_P(PSTR(HTML_S(br) "ESP-IDF Version %s"), esp_get_idf_version());
+    #endif
 }
 
 void WebTemplate::printWebInterfaceUrl(Print &output)
@@ -233,13 +236,13 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     // private variables
     // ------------------------------------------------------------------------------------
     else if (key == F("HARDWARE")) {
-#if defined(ESP8266)
-        output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
-#elif defined(ESP32)
-        output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipSize()).c_str(), ESP.getCpuFreqMHz(), formatBytes(ESP.getFreeHeap()).c_str());
-#else
-#error Platform not supported
-#endif
+        #if ESP8266
+            output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
+        #elif ESP32
+            output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s, Temperature %.1f"), formatBytes(ESP.getFlashChipSize()).c_str(), ESP.getCpuFreqMHz(), formatBytes(ESP.getFreeHeap()).c_str(), temperatureRead());
+        #else
+            #error Platform not supported
+        #endif
     }
     else if (key == F("SOFTWARE")) {
         printVersion(output);
@@ -247,22 +250,22 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
         }
     }
-#if NTP_CLIENT || RTC_SUPPORT
-    else if (key == F("TIME")) {
-        auto now = time(nullptr);
-        if (isTimeValid(now)) {
-            printSystemTime(now, output);
+    #if NTP_CLIENT || RTC_SUPPORT
+        else if (key == F("TIME")) {
+            auto now = time(nullptr);
+            if (isTimeValid(now)) {
+                printSystemTime(now, output);
+            }
+            else {
+                output.print(F("No time available"));
+            }
         }
-        else {
-            output.print(F("No time available"));
+    #endif
+    #if HAVE_IOEXPANDER
+        else if (key == F("IOEXPANDER_STATUS")) {
+            IOExpander::config.printStatus<true>(output);
         }
-    }
-#endif
-#if HAVE_IOEXPANDER
-    else if (key == F("IOEXPANDER_STATUS")) {
-        IOExpander::config.printStatus<true>(output);
-    }
-#endif
+    #endif
     else if (key == F("RTC_STATUS")) {
         config.printRTCStatus(output, false);
     }
@@ -305,26 +308,26 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
     else if (key == F("PIN_MONITOR_STATUS")) {
-#if PIN_MONITOR
-        PinMonitor::pinMonitor.printStatus(output);
-#else
-        output.print(F("Pin monitor disabled"));
-#endif
+    #if PIN_MONITOR
+            PinMonitor::pinMonitor.printStatus(output);
+    #else
+            output.print(F("Pin monitor disabled"));
+    #endif
     }
-#if IOT_ALARM_PLUGIN_ENABLED
-    else if (key.startsWith(F("ALARM_TIMESTAMP_"))) {
-        uint8_t num = atoi(key.c_str() + 16);
-        if (num < Plugins::Alarm::MAX_ALARMS) {
-            auto cfg = Plugins::Alarm::getConfig().alarms[num];
-            if (cfg.is_enabled) {
-                char buf[32];
-                time_t _now = (time_t)cfg.time.timestamp;
-                strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&_now));
-                output.print(buf);
+    #if IOT_ALARM_PLUGIN_ENABLED
+        else if (key.startsWith(F("ALARM_TIMESTAMP_"))) {
+            uint8_t num = atoi(key.c_str() + 16);
+            if (num < Plugins::Alarm::MAX_ALARMS) {
+                auto cfg = Plugins::Alarm::getConfig().alarms[num];
+                if (cfg.is_enabled) {
+                    char buf[32];
+                    time_t _now = (time_t)cfg.time.timestamp;
+                    strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&_now));
+                    output.print(buf);
+                }
             }
         }
-    }
-#endif
+    #endif
     else if (_form) {
         _form->process(key, output);
     }

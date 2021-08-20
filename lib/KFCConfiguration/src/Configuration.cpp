@@ -113,7 +113,7 @@ Configuration::WriteResultType Configuration::erase()
             return WriteResultType::NVS_ERASE_ALL;
         }
 
-        #if DEBUG_CONFIGURATION
+        #if DEBUG_CONFIGURATION || 1
             nvs_stats_t stats;
             if ((err = nvs_get_stats(NVS_PARTITION_NAME, &stats)) == ESP_OK) {
                 __DBG_printf_N("NVS stats free=%u ns_count=%u total=%u used=%u", stats.free_entries, stats.namespace_count, stats.total_entries, stats.used_entries);
@@ -183,7 +183,7 @@ Configuration::WriteResultType Configuration::write()
             return WriteResultType::NVS_COMMIT_ERROR;
         }
 
-        #if DEBUG_CONFIGURATION
+        #if DEBUG_CONFIGURATION || 1
             nvs_stats_t stats;
             if ((err = nvs_get_stats(NVS_PARTITION_NAME, &stats)) == ESP_OK) {
                 __DBG_printf_N("NVS stats free=%u ns_count=%u total=%u used=%u", stats.free_entries, stats.namespace_count, stats.total_entries, stats.used_entries);

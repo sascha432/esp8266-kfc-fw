@@ -1672,6 +1672,7 @@ void at_mode_serial_handle_event(String &commandString)
             args.print(F("Device name: %s"), System::Device::getName());
             #if ESP32
                 args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
+                args.print(F("ESP-IDF version %s"), esp_get_idf_version());
             #else
                 #if ARDUINO_ESP8266_DEV
                     #ifndef ARDUINO_ESP8266_RELEASE_EX

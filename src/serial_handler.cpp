@@ -10,6 +10,9 @@
 #if ESP8266
 #include <interrupts.h>
 #endif
+#if ESP32
+#include <esp32-hal-uart.h>
+#endif
 #include "serial_handler.h"
 
 #if DEBUG_SERIAL_HANDLER

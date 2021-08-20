@@ -36,6 +36,7 @@
 // #include <sntp-lwip2.h>
 #elif defined(ESP32)
 #include <lwip/apps/sntp.h>
+#include <nvs.h>
 #endif
 
 #if RTC_SUPPORT
@@ -622,6 +623,16 @@ void KFCFWConfiguration::restoreFactorySettings()
 {
     __LDBG_println();
     PrintString str;
+
+    #if ESP32
+    #warning TODO
+        // // clear previous configuration
+        // esp_err_t err;
+        // if ((err = nvs_erase_all(_handle)) != ESP_OK) {
+        //     __DBG_printf_E("failed to erase NVS name=%s err=%08x", _name, err);
+        //     return WriteResultType::FLASH_ERASE_ERROR;
+        // }
+    #endif
 
     clear();
     auto deviceName = defaultDeviceName();

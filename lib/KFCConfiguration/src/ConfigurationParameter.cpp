@@ -269,19 +269,42 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
         return true;
     }
 
-    size_t requiredSize = _param.length();
-    if (requiredSize < 128) {
-        uint8_t buffer[128];
-        return _readDataTo(conf, offset, buffer) && (memcmp(buffer, _param.data(), _param.length()) != 0);
-    }
+    #if ESP32
 
-    // allocate memory
-    auto tmp = std::unique_ptr<uint8_t[]>(::new uint8_t[requiredSize]);
-    if (!tmp) {
-        __LDBG_assert_panic(tmp.get(), "allocate returned nullptr");
-        return true;
-    }
-    return _readDataTo(conf, offset, tmp.get()) && (memcmp(tmp.get(), _param.data(), _param.length()) != 0);
+        size_t requiredSize = _param.length();
+        auto tmp = std::unique_ptr<uint8_t[]>(::new uint8_t[requiredSize]);
+        if (!tmp) {
+            __LDBG_assert_panic(tmp.get(), "allocate returned nullptr");
+            return true;
+        }
+
+        esp_err_t err;
+        size_t size;
+        if ((err = nvs_get_blob(conf._handle, Configuration::_nvs_key_handle_name(_param.type(), _param.getHandle()), tmp.get(), &requiredSize)) != ESP_OK) {
+            return true;
+        }
+        else if (size != requiredSize) {
+            return true;
+        }
+
+        return (memcmp(tmp.get(), _param.data(), _param.length()) != 0);
+
+    #else
+
+        size_t requiredSize = _param.length();
+        if (requiredSize < 128) {
+            uint8_t buffer[128];
+            return _readDataTo(conf, offset, buffer) && (memcmp(buffer, _param.data(), _param.length()) != 0);
+        }
+
+        // allocate memory
+        auto tmp = std::unique_ptr<uint8_t[]>(::new uint8_t[requiredSize]);
+        if (!tmp) {
+            __LDBG_assert_panic(tmp.get(), "allocate returned nullptr");
+            return true;
+        }
+        return _readDataTo(conf, offset, tmp.get()) && (memcmp(tmp.get(), _param.data(), _param.length()) != 0);
+    #endif
 }
 
 bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, uint8_t *ptr) const
@@ -303,9 +326,22 @@ bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)
     ConfigurationHelper::allocate(_param.size(), *this);
     conf.setLastReadAccess();
 
-    if (!_readDataTo(conf, offset, _param.data())) {
-        return false;
-    }
+    #if ESP32
+        esp_err_t err;
+        size_t size = _param.length();
+        if ((err = nvs_get_blob(conf._handle, conf._nvs_key_handle_name(_param.type(), _param.getHandle()), _param._readable, &size)) != ESP_OK) {
+            __DBG_printf_E("cannot read data handle=%u size=%u err=%u", _param.getHandle(), _param.size(), err);
+            return false;
+        }
+        else if (size != _param.length()) {
+            __DBG_printf_E("cannot read data handle=%u size=%u read=%u", _param.getHandle(), _param.length(), size);
+            return false;
+        }
+    #else
+        if (!_readDataTo(conf, offset, _param.data())) {
+            return false;
+        }
+    #endif
     __LDBG_assert_printf(_param.isString() == false || _param.string()[_param.length()] == 0, "%s NUL byte missing", toString().c_str());
     return true;
 }

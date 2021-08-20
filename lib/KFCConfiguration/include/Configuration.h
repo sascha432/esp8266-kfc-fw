@@ -96,6 +96,10 @@ namespace ConfigurationHelper {
             return sizeof(ParameterHeaderType) * numParams();
         };
 
+        static uint16_t getParamsLength(uint16_t num) {
+            return sizeof(ParameterHeaderType) * num;
+        };
+
         // compare magic and crc
         bool validateCrc(uint32_t crc) const {
             return (CONFIG_MAGIC_DWORD == _magic) && (_crc == crc);
@@ -118,13 +122,27 @@ namespace ConfigurationHelper {
             return CONFIG_MAGIC_DWORD == _magic;
         }
 
-        explicit operator uint8_t *() {
-            return reinterpret_cast<uint8_t *>(this);
-        }
+        #if ESP8266
 
-        operator uint32_t *() {
-            return reinterpret_cast<uint32_t *>(this);
-        }
+            explicit operator uint8_t *() {
+                return reinterpret_cast<uint8_t *>(this);
+            }
+
+            operator uint32_t *() {
+                return reinterpret_cast<uint32_t *>(this);
+            }
+
+        #elif ESP32
+
+            operator void *() {
+                return reinterpret_cast<void *>(this);
+            }
+
+            operator const void *() const {
+                return reinterpret_cast<const void *>(this);
+            }
+
+        #endif
 
         void setMagic() {
             _magic = CONFIG_MAGIC_DWORD;
@@ -201,9 +219,15 @@ public:
         OUT_OF_MEMORY,
         READING_PREV_CONF_FAILED,
         MAX_SIZE_EXCEEDED,
-        FLASH_READ_ERROR,
-        FLASH_ERASE_ERROR,
-        FLASH_WRITE_ERROR,
+        #if ESP8266
+            FLASH_READ_ERROR,
+            FLASH_ERASE_ERROR,
+            FLASH_WRITE_ERROR,
+        #endif
+        #if ESP32
+            NVS_COMMIT_ERROR,
+            NVS_SET_BLOB_ERROR,
+        #endif
     };
 
     static const __FlashStringHelper *getWriteResultTypeStr(WriteResultType result) {
@@ -220,12 +244,20 @@ public:
                 return F("READING_PREV_CONF_FAILED");
             case WriteResultType::MAX_SIZE_EXCEEDED:
                 return F("MAX_SIZE_EXCEEDED");
-            case WriteResultType::FLASH_READ_ERROR:
-                return F("FLASH_READ_ERROR");
-            case WriteResultType::FLASH_ERASE_ERROR:
-                return F("FLASH_ERASE_ERROR");
-            case WriteResultType::FLASH_WRITE_ERROR:
-                return F("FLASH_WRITE_ERROR");
+            #if ESP8266
+                case WriteResultType::FLASH_READ_ERROR:
+                    return F("FLASH_READ_ERROR");
+                case WriteResultType::FLASH_ERASE_ERROR:
+                    return F("FLASH_ERASE_ERROR");
+                case WriteResultType::FLASH_WRITE_ERROR:
+                    return F("FLASH_WRITE_ERROR");
+            #endif
+            #if ESP32
+                case WriteResultType::NVS_COMMIT_ERROR:
+                    return F("NVS_COMMIT_ERROR");
+                case WriteResultType::NVS_SET_BLOB_ERROR:
+                    return F("NVS_SET_BLOB_ERROR");
+            #endif
             // default:
             //     break;
         }
@@ -364,15 +396,15 @@ public:
         size_type length;
         auto ptr = reinterpret_cast<const _Ta *>(param->getBinary(*this, length, offset));
         if (!ptr || length != sizeof(_Ta)) {
-#if DEBUG_CONFIGURATION
-            if (ptr && length != sizeof(_Ta)) {
-                __LDBG_printf("size does not match, type=%s handle %04x (%s)",
-                    (const char *)ConfigurationParameter::getTypeString(param->getType()),
-                    handle,
-                    ConfigurationHelper::getHandleName(handle)
-                );
-            }
-#endif
+            #if DEBUG_CONFIGURATION
+                if (ptr && length != sizeof(_Ta)) {
+                    __LDBG_printf("size does not match, type=%s handle %04x (%s)",
+                        (const char *)ConfigurationParameter::getTypeString(param->getType()),
+                        handle,
+                        ConfigurationHelper::getHandleName(handle)
+                    );
+                }
+            #endif
             return _Ta();
         }
         return *ptr;
@@ -448,50 +480,46 @@ private:
     #elif ESP32
 
         // NVS implementation
-        char *_nvs_key_name(uint32_t address, uint16_t length) const {
-            static char buffer[24];
-            snprintf_P(buffer, sizeof(buffer), PSTR("a%08xl%04x"), address, length);
+        static uint32_t _nvs_key_handle(ConfigurationParameter::TypeEnum_t type, HandleType handle) {
+            return (static_cast<uint32_t>(type) << 16) | handle;
+        }
+
+        static char *_nvs_key_handle_name(ConfigurationParameter::TypeEnum_t type, HandleType handle) {
+            static char buffer[9];
+            snprintf_P(buffer, sizeof(buffer), PSTR("%08x"), _nvs_key_handle(type, handle));
             return buffer;
         }
 
-        bool flashWrite(uint32_t offset, const uint8_t *data, size_t size)
-        {
-            if (nvs_set_blob(_handle, _nvs_key_name(offset, size), data, size) != ESP_OK) {
-                __DBG_printf_E("failed to write NVS name=%s size=%u", _nvs_key_name(offset, size), size);
-                return false;
+        void _nvs_open() {
+            if (_handle) {
+                __DBG_printf_N("NVS already open name=%s handle=%08x", _name, _handle);
+                return;
             }
-            return true;
+            esp_err_t err = nvs_open(_name, NVS_READWRITE, &_handle);
+            if (err != ESP_OK) {
+                __DBG_printf_E("cannot open NVS name=%s err=%08x", _name, err);
+            }
+            else {
+                __DBG_printf_N("NVS name=%s handle=%08x", _name, _handle);
+            }
         }
 
-        bool flashRead(uint32_t offset, uint8_t *data, size_t size)
+        bool flashWrite(uint32_t offset, const void *data, size_t size)
         {
-            size_t readSize = size;
-            if (nvs_get_blob(_handle, _nvs_key_name(offset, size), data, &readSize) != ESP_OK) {
-                __DBG_printf_E("failed to read NVS name=%s size=%u", _nvs_key_name(offset, size), size);
-                return false;
-            }
-            if (readSize != size) {
-                __DBG_printf_E("failed to read NVS name=%s size=%u size_read=%u", _nvs_key_name(offset, size), size, readSize);
-                return false;
-            }
-            return true;
+            return false;
         }
 
-        bool flashWrite(uint32_t offset, const uint32_t *data, size_t size)
+        bool flashRead(uint32_t offset, void *data, size_t size)
         {
-            return flashWrite(offset, reinterpret_cast<const uint8_t *>(data), size);
-        }
-
-        bool flashRead(uint32_t offset, uint32_t *data, size_t size)
-        {
-            return flashRead(offset, reinterpret_cast<uint8_t *>(data), size);
+            return false;
         }
 
         bool flashEraseSector(uint32_t sector) {
-            return true;
+            return false;
         }
 
         nvs_handle _handle;
+        const char *_name;
 
     #endif
 

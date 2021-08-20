@@ -2,9 +2,10 @@
 
 ## Version 0.0.5
 
-- OSTimer implementation for ESP32 based in esp_timer
+- ESP32: NVS storage for configuration
+- ESP32: OSTimer implementation based in esp_timer
 - framework-arduinoespressif8266 3.2.0
-- Arduino-ESP32 2.0.0-rc1 integration
+- ESP32: Arduino-ESP32 2.0.0-rc1 integration
 - Merged Atomic Sun plugin into Dimmer plugin (**work in progress**)
 - Linear brightness levels with cubic interpolation for the dimmer plugin
 - Support for trailing edge dimmer v2.2.2 [https://github.com/sascha432/trailing_edge_dimmer](https://github.com/sascha432/trailing_edge_dimmer)

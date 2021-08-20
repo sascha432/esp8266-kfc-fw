@@ -57,18 +57,20 @@ OSTIMER_INLINE void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)
     }
 }
 
-OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool millis)
+OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool isMillis)
 {
-    uint64_t delayMicros = millis ? delay * 1000 : delay;
+    uint64_t delayMicros = isMillis ? delay * 1000ULL : delay;
     _running = true;
     _locked = false;
     if (repeat) {
         if (esp_timer_start_periodic(_timer, delayMicros) != ESP_OK) {
+            __DBG_printf("esp_timer_start_periodic failed delay=%d", delay);
             _running = false;
         }
     }
     else {
         if (esp_timer_start_once(_timer, delayMicros) != ESP_OK) {
+            __DBG_printf("esp_timer_start_once failed delay=%d", delay);
             _running = false;
         }
     }
@@ -113,6 +115,9 @@ OSTIMER_INLINE void ETSTimerEx::disarm()
 
 OSTIMER_INLINE void ETSTimerEx::done()
 {
+    if (isRunning()) {
+        disarm();
+    }
     if (_timer) {
         esp_timer_delete(_timer);
         _timers.erase(std::remove(_timers.begin(), _timers.end(), this), _timers.end());

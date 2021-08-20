@@ -37,23 +37,23 @@ OSTIMER_INLINE OSTimer::operator bool() const
     return _etsTimer.isRunning();
 }
 
-OSTIMER_INLINE void OSTimer::startTimer(int32_t delay, bool repeat, bool millis)
+OSTIMER_INLINE void OSTimer::startTimer(int32_t delay, bool repeat, bool isMillis)
 {
+    #if DEBUG_OSTIMER
+        __DBG_printf("start timer name=%s delay=%u repeat=%u millis=%u", _etsTimer._name, delay, repeat, isMillis);
+    #endif
     #if ESP32
         delay = std::clamp<int32_t>(delay, 1, std::numeric_limits<decltype(delay)>::max());
         if (_etsTimer._timer) {
             _etsTimer.disarm();
             _etsTimer.done();
-            _etsTimer.create(&_EtsTimerCallback, this);
         }
-        else {
-            _etsTimer.disarm();
-        }
-        _etsTimer.arm(delay, repeat, millis);
+        _etsTimer.create(&_EtsTimerCallback, this);
+        _etsTimer.arm(delay, repeat, isMillis);
     #else
         delay = std::clamp<int32_t>(delay, Event::kMinDelay, Event::kMaxDelay);
         _etsTimer.create(&_EtsTimerCallback, this);
-        ets_timer_arm_new(&_etsTimer, delay, repeat, millis);
+        ets_timer_arm_new(&_etsTimer, delay, repeat, isMillis);
     #endif
 }
 

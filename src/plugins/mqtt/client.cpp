@@ -279,6 +279,7 @@ namespace MQTT {
         // turn off interrupts to avoid issues with running auto discovery
         {
             InterruptLock lock;
+            portMuxLock mLock(_mux);
             _components.push_back(component);
         }
         __LDBG_printf("components=%u entities=%u", _components.size(), AutoDiscovery::List::size(_components));
@@ -294,6 +295,7 @@ namespace MQTT {
         if (size) {
             remove(component);
             InterruptLock lock;
+            portMuxLock mLock(_mux);
             _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
         }
         __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), AutoDiscovery::List::size(_components), _components.size() != size);

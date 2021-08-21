@@ -600,7 +600,6 @@ inline void BlindsControl::_disableMotors()
 {
     // do not allow interrupts when changing a pin pair from high/high to low/low and vice versa
     InterruptLock lock;
-
     for(uint8_t i = 0; i < 2 * kChannelCount; i++) {
         digitalWrite(_config.pins[i], LOW);
     }

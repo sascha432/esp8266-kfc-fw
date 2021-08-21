@@ -320,4 +320,15 @@ struct portMuxLock {
     portMuxType &_mux;
 };
 
+// scope level auto enter/exit
+struct portMuxLockISR {
+    portMuxLockISR(portMuxType &mux) : _mux(mux) {
+        _mux.enterISR();
+    }
+    ~portMuxLockISR() {
+        _mux.exitISR();
+    }
+    portMuxType &_mux;
+};
+
 #endif

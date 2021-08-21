@@ -167,6 +167,7 @@ void Event::Scheduler::_sort()
     __LDBG_printf("size=%u timers=%u", _size, _timers.size());
     //__dump(_timers);
     // sort by priority and move all nullptr to the end for removal
+    portMuxLock mLock(_mux);
     std::sort(_timers.begin(), _timers.end(), [](const CallbackTimerPtr a, const CallbackTimerPtr b) {
         return (a && b) ? (b->_priority < a->_priority) : (b < a);
     });
@@ -219,7 +220,9 @@ void Scheduler::_run()
                     break;
                 }
                 if (timer->_callbackScheduled) {
+                    _mux.enterISR();
                     timer->_callbackScheduled = false;
+                    _mux.exitISR();
                     timer->_invokeCallback(timer);
                 }
             }

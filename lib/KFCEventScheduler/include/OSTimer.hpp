@@ -59,6 +59,7 @@ OSTIMER_INLINE void OSTimer::startTimer(int32_t delay, bool repeat, bool isMilli
 
 OSTIMER_INLINE void OSTimer::detach()
 {
+    portMuxLock mLock(_mux);
     if (_etsTimer.isRunning()) {
         _etsTimer.disarm();
     }

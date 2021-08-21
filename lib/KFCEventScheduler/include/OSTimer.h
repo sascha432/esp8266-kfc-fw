@@ -133,7 +133,7 @@ public:
 
 protected:
     ETSTimerEx _etsTimer;
-    portMuxType _mux;
+    static portMuxType _mux;
 
     operator ETSTimerEx *() const {
         return const_cast<ETSTimerEx *>(&_etsTimer);

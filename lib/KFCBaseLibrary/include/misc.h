@@ -53,6 +53,20 @@ extern "C" {
     #include <interrupts.h>
     using InterruptLock = esp8266::InterruptLock;
 
+#elif ESP32
+
+    struct InterruptLock {
+        InterruptLock() {
+            XTOS_DISABLE_ALL_INTERRUPTS;
+        }
+        ~InterruptLock() {
+            XTOS_ENABLE_INTERRUPTS;
+        }
+        static constexpr uint32_t savedInterruptLevel() {
+            return 0;
+        }
+    };
+
 #else
 
     struct InterruptLock {

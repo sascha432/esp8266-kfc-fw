@@ -193,7 +193,7 @@ KFCFWConfiguration::~KFCFWConfiguration()
 
 void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &event)
 {
-    __LDBG_printf("ssid=%s channel=%u bssid=%s wifi_connected=%u is_connected=%u ip=%u/%s", event.ssid.c_str(), event.channel, mac2String(event.bssid).c_str(), _wifiConnected, WiFi.isConnected(), WiFi.localIP().isSet(), WiFi.localIP().toString().c_str());
+    __LDBG_printf("ssid=%s channel=%u bssid=%s wifi_connected=%u is_connected=%u ip=%u/%s", event.ssid.c_str(), event.channel, mac2String(event.bssid).c_str(), _wifiConnected, WiFi.isConnected(), IPAddress_isValid(WiFi.localIP()), WiFi.localIP().toString().c_str());
     if (!_wifiConnected) {
 
         _wifiConnected = millis();

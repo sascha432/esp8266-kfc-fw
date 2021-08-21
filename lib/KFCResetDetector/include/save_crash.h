@@ -13,7 +13,7 @@
 #endif
 
 #ifndef DEBUG_SAVE_CRASH
-#    define DEBUG_SAVE_CRASH 0
+#    define DEBUG_SAVE_CRASH (0 || defined(DEBUG_ALL))
 #endif
 
 #ifndef KFC_DISABLE_CRASHCOUNTER

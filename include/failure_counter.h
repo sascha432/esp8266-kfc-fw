@@ -9,7 +9,7 @@
 #if SECURITY_LOGIN_ATTEMPTS
 
 #ifndef DEBUG_LOGIN_FAILURES
-#define DEBUG_LOGIN_FAILURES                0
+#    define DEBUG_LOGIN_FAILURES (0 || defined(DEBUG_ALL))
 #endif
 
 #include <Arduino_compat.h>

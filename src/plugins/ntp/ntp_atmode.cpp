@@ -59,9 +59,9 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(TZ))) {
         #if ESP32
-            #warning TODO
-            PGM_P str = getenv("TZ");
-            args.print(F("TZ=%s"), str ? str : PSTR("(none)"));
+            if (args.size()) {
+                args.print(F("setting the timezone is not supported"));
+            }
         #else
             if (args.size()) {
                 auto tz = args.get(0);
@@ -70,18 +70,17 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
                 localtime(&now); // update __gettzinfo()
                 args.printf_P(PSTR("TZ set to '%s'"), tz);
             }
-
-            auto fmt = PSTR("%FT%T %Z %z");
-            String fmtStr = fmt;
-            auto &tz = *__gettzinfo();
-            args.print(F("_tzname[0]=%s,_tzname[1]=%s"), _tzname[0], _tzname[1]);
-            args.print(F("__tznorth=%u,__tzyear=%u"), tz.__tznorth, tz.__tzyear);
-            for(int i = 0; i < 2; i++) {
-                args.print(F("ch=%c,m=%d,n=%d,d=%d,s=%d,change=" TIME_T_FMT ",offset=%ld"), tz.__tzrule[i].ch, tz.__tzrule[i].m, tz.__tzrule[i].n, tz.__tzrule[i].d, tz.__tzrule[i].s, (long)tz.__tzrule[i].change, tz.__tzrule[i].offset);
-            }
-            PGM_P str = getenv("TZ");
-            args.print(F("TZ=%s"), str ? str : PSTR("(none)"));
         #endif
+        auto fmt = PSTR("%FT%T %Z %z");
+        String fmtStr = fmt;
+        auto &tz = *__gettzinfo();
+        args.print(F("_tzname[0]=%s,_tzname[1]=%s"), _tzname[0], _tzname[1]);
+        args.print(F("__tznorth=%u,__tzyear=%u"), tz.__tznorth, tz.__tzyear);
+        for(int i = 0; i < 2; i++) {
+            args.print(F("ch=%c,m=%d,n=%d,d=%d,s=%d,change=" TIME_T_FMT ",offset=%ld"), tz.__tzrule[i].ch, tz.__tzrule[i].m, tz.__tzrule[i].n, tz.__tzrule[i].d, tz.__tzrule[i].s, (long)tz.__tzrule[i].change, tz.__tzrule[i].offset);
+        }
+        PGM_P str = getenv("TZ");
+        args.print(F("TZ=%s"), str ? str : PSTR("(none)"));
         return true;
     }
     return false;

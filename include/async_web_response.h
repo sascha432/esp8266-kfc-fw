@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_ASYNC_WEB_RESPONSE
-#define DEBUG_ASYNC_WEB_RESPONSE            0
+#    define DEBUG_ASYNC_WEB_RESPONSE (0 || defined(DEBUG_ALL))
 #endif
 
 #include <Arduino_compat.h>

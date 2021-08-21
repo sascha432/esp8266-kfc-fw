@@ -20,10 +20,6 @@
 
 #define U_ATMEGA 254
 
-#if ESP32
-#define U_FS U_SPIFFS
-#endif
-
 using KFCConfigurationClasses::System;
 
 using namespace WebServer;

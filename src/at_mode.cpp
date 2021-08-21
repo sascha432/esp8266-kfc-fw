@@ -36,21 +36,21 @@
 #include "../src/plugins/plugins.h"
 
 #if ESP8266
-#include <umm_malloc/umm_malloc.h>
-extern "C" {
-#include <umm_malloc/umm_local.h>
-#if ARDUINO_ESP8266_MAJOR == 3
-#include <umm_malloc/umm_heap_select.h>
-#endif
-}
-#include <core_esp8266_waveform.h>
-#include <core_version.h>
+#    include <umm_malloc/umm_malloc.h>
+     extern "C" {
+#    include <umm_malloc/umm_local.h>
+#    if ARDUINO_ESP8266_MAJOR == 3
+#        include <umm_malloc/umm_heap_select.h>
+#    endif
+     }
+#    include <core_esp8266_waveform.h>
+#    include <core_version.h>
 #endif
 
 #if DEBUG_AT_MODE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using KFCConfigurationClasses::System;
@@ -67,13 +67,13 @@ extern void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClien
 
 void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClient *_client, AsyncWebSocket *_server)
 {
-#if 0
-    Serial.printf_P(PSTR("+WSQ: count=%u size=%u [%u:%u]"), _server->_getQueuedMessageCount(), _server->_getQueuedMessageSize(), WS_MAX_QUEUED_MESSAGES, WS_MAX_QUEUED_MESSAGES_SIZE);
-#if WS_MAX_QUEUED_MESSAGES_MIN_HEAP
-    Serial.printf_P(PSTR(" heap %u/%u [%u:%u]"), ESP.getFreeHeap(), WS_MAX_QUEUED_MESSAGES_MIN_HEAP, WS_MIN_QUEUED_MESSAGES, WS_MIN_QUEUED_MESSAGES_SIZE);
-#endif
-    Serial.println();
-#endif
+    #if 0
+        Serial.printf_P(PSTR("+WSQ: count=%u size=%u [%u:%u]"), _server->_getQueuedMessageCount(), _server->_getQueuedMessageSize(), WS_MAX_QUEUED_MESSAGES, WS_MAX_QUEUED_MESSAGES_SIZE);
+    #if WS_MAX_QUEUED_MESSAGES_MIN_HEAP
+        Serial.printf_P(PSTR(" heap %u/%u [%u:%u]"), ESP.getFreeHeap(), WS_MAX_QUEUED_MESSAGES_MIN_HEAP, WS_MIN_QUEUED_MESSAGES, WS_MIN_QUEUED_MESSAGES_SIZE);
+    #endif
+        Serial.println();
+    #endif
 }
 
 #if HAVE_I2CSCANNER
@@ -725,9 +725,12 @@ void at_mode_setup()
     if (_client) {
         serialHandler.removeClient(*_client);
     }
+    __LDBG_printf("installing serial handler");
     _client = &serialHandler.addClient(at_mode_serial_input_handler, SerialHandler::EventType::READ);
 
+    __LDBG_printf("adding wificallback");
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, at_mode_wifi_callback);
+    __LDBG_printf("setup done");
 }
 
 void enable_at_mode(Stream *output)

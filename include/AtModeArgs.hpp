@@ -316,7 +316,7 @@ inline bool AtModeArgs::isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHe
 }
 
 // return true for "", "*", "any", "all"
-inline  bool AtModeArgs::isAny(uint16_t num) const
+inline bool AtModeArgs::isAny(uint16_t num) const
 {
     if (isInvalidArg(num)) {
         return false;
@@ -353,7 +353,6 @@ inline bool AtModeArgs::isFalse(uint16_t num, bool bDefault) const
     }
     return false;
 }
-
 
 inline bool AtModeArgs::_isAnyMatchIgnoreCase(String str, const __FlashStringHelper *strings) const
 {

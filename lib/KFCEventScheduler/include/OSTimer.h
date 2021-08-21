@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_OSTIMER
-#    define DEBUG_OSTIMER 1
+#    define DEBUG_OSTIMER (0 || defined(DEBUG_ALL))
 #endif
 
 #if DEBUG_OSTIMER

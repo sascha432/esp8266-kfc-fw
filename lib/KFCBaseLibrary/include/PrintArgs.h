@@ -12,24 +12,26 @@
 #include <StringDepulicator.h>
 
 #ifndef DEBUG_PRINT_ARGS
-#define DEBUG_PRINT_ARGS                                DEBUG_STRING_DEDUPLICATOR
+#    define DEBUG_PRINT_ARGS (0 || defined(DEBUG_ALL))
 #endif
 
 #if DEBUG_PRINT_ARGS
-#include "debug_helper_enable.h"
+#    include "debug_helper_enable.h"
 #else
-#include "debug_helper_disable.h"
+#    include "debug_helper_disable.h"
 #endif
 
 #if 0
-#define __PADBG_printf_prefix(fmt, ...)                  __debug_prefix(DEBUG_OUTPUT); DEBUG_OUTPUT.printf_P(PSTR(fmt), ##__VA_ARGS__)
-#define __PADBG_printf(fmt, ...)                         DEBUG_OUTPUT.printf_P(PSTR(fmt), ##__VA_ARGS__)
-#define __PADBG_println()                                DEBUG_OUTPUT.println()
+#    define __PADBG_printf_prefix(fmt, ...) \
+        __debug_prefix(DEBUG_OUTPUT);       \
+        DEBUG_OUTPUT.printf_P(PSTR(fmt), ##__VA_ARGS__)
+#    define __PADBG_printf(fmt, ...) DEBUG_OUTPUT.printf_P(PSTR(fmt), ##__VA_ARGS__)
+#    define __PADBG_println()        DEBUG_OUTPUT.println()
 #else
-#include "debug_helper_disable.h"
-#define __PADBG_printf_prefix(...)
-#define __PADBG_printf(...)
-#define __PADBG_println()
+#    include "debug_helper_disable.h"
+#    define __PADBG_printf_prefix(...)
+#    define __PADBG_printf(...)
+#    define __PADBG_println()
 #endif
 
 class PrintArgs;

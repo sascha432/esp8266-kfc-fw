@@ -23,6 +23,10 @@
 
 #define isFlashInterfacePin(p) false
 
+#if ESP32
+#define U_FS U_SPIFFS
+#endif
+
 // TODO
 enum rst_reason {
     REASON_DEFAULT_RST      = 0,    /* normal startup by power on */

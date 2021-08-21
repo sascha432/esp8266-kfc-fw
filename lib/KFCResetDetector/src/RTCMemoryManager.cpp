@@ -104,12 +104,16 @@ namespace RTCMemoryManagerNS {
         RTC_NOINIT_ATTR uint8_t rtcMemoryBlock[RTCMemoryManager::kMemorySize];
 
         bool system_rtc_mem_read(size_t ofs, void *data, size_t len) {
-            memcpy(data, rtcMemoryBlock + ofs * RTCMemoryManager::kBlockSize, len);
+            __LDBG_printf("ofs=%u data=%p len=%u", ofs, data, len);
+            memmove_P(data, rtcMemoryBlock + ofs * RTCMemoryManager::kBlockSize, len);
+            __LDBG_printf("return true");
             return true;
         }
 
         bool system_rtc_mem_write(size_t ofs, void *data, size_t len) {
-            memcpy(rtcMemoryBlock + ofs * RTCMemoryManager::kBlockSize, data, len);
+            __LDBG_printf("ofs=%u data=%p len=%u", ofs, data, len);
+            memmove_P(rtcMemoryBlock + ofs * RTCMemoryManager::kBlockSize, data, len);
+            __LDBG_printf("return true");
             return true;
         }
 
@@ -136,15 +140,6 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
     uint8_t *buf = nullptr;
 
     while (_readHeader(header)) {
-// #if defined(ESP32)
-//         // we can use the RTC memory directly
-//         memPtr = reinterpret_cast<uint32_t *>(rtcMemoryBlock + offset);
-//         uint16_t crc = crc16_calc((const uint8_t *)memPtr, header.length + sizeof(header) - sizeof(header.crc));
-//         if (crc != header.crc) {
-//             __LDBG_printf("CRC mismatch %04x != %04x, length %d", crc, header.crc, header.length);
-//             return nullptr;
-//         }
-// #else
         auto minSize = header.crc_length() + extraSize;
         auto size = minSize;
         if (kBlockSize > 1) {
@@ -173,7 +168,6 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
             __LDBG_printf("CRC mismatch %04x != %04x, size=%u crclen=%u", crc, header.crc, header.length, header.crc_length());
             break;
         }
-// #endif
         __LDBG_printf("read: address=%u[%u-%u] length=%u crc=0x%04x", header.start_address(), kBaseAddress, kLastAddress, header.length, header.crc);
         return buf;
     }
@@ -346,9 +340,8 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
     return RTCMemoryManagerNS::system_rtc_mem_write(header.start_address(), reinterpret_cast<uint32_t *>(memPtr), header.length);
 }
 
-bool RTCMemoryManager::clear() {
-// #if defined(ESP8266)
-
+bool RTCMemoryManager::clear()
+{
     // clear 16 blocks including header
     static constexpr auto kNumBlocks = 16;
     static constexpr auto kAddress = (kMemorySize - (kNumBlocks * kBlockSize)) / kBlockSize;
@@ -359,16 +352,7 @@ bool RTCMemoryManager::clear() {
     if (!RTCMemoryManagerNS::system_rtc_mem_write(kBaseAddress + kAddress, &data, sizeof(data))) {
         return false;
     }
-
     return write(RTCMemoryId::NONE, nullptr, 0);
-
-// #elif defined(ESP32)
-
-//     // clear entire block
-//     memset(rtcMemoryBlock, 0xff, sizeof(rtcMemoryBlock));
-//     return true;
-
-// #endif
 }
 
 #if DEBUG
@@ -384,9 +368,9 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
         return false;
     }
 
-#if RTC_SUPPORT == 0
-    output.printf_P(PSTR("RTC memory time: %u\n"), RTCMemoryManager::readTime().getTime());
-#endif
+    #if RTC_SUPPORT == 0
+        output.printf_P(PSTR("RTC memory time: %u\n"), RTCMemoryManager::readTime().getTime());
+    #endif
 
     output.printf_P(PSTR("RTC data length: %u\n"), header.data_length());
 
@@ -400,7 +384,7 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
         if (!entry) {
             break;
         }
-#if DEBUG_RTC_MEMORY_MANAGER
+        #if DEBUG_RTC_MEMORY_MANAGER
         {
             PrintString out;
             DumpBinary dumper(out);
@@ -409,7 +393,7 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
             dumper.setGroupBytes(4);
             __LDBG_printf("rtcm=%d id=0x%02x length=%u data=%s", header.distance(memPtr, ptr), entry.mem_id, entry.length, out.c_str());
         }
-#endif
+        #endif
         ptr += sizeof(entry);
         if (ptr >= endPtr) {
             __LDBG_printf("entry length exceeds total size. id=0x%02x entry_length=%u size=%u", entry.mem_id, entry.length, header.length);
@@ -419,11 +403,11 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
             if (entry.length) {
                 result = true;
             }
-#if HAVE_KFC_PLUGINS
-            output.printf_P(PSTR("id: 0x%02x (%s), length %d "), entry.mem_id, PluginComponent::getMemoryIdName(entry.mem_id), entry.length);
-#else
-            output.printf_P(PSTR("id: 0x%02x, length %d "), entry.mem_id, entry.length);
-#endif
+            #if HAVE_KFC_PLUGINS
+                output.printf_P(PSTR("id: 0x%02x (%s), length %d "), entry.mem_id, PluginComponent::getMemoryIdName(entry.mem_id), entry.length);
+            #else
+                output.printf_P(PSTR("id: 0x%02x, length %d "), entry.mem_id, entry.length);
+            #endif
             dumper.setGroupBytes(4);
             dumper.setPerLine(entry.length);
             dumper.dump(ptr, entry.length);
@@ -439,22 +423,22 @@ bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
 RTCMemoryManager::RtcTime RTCMemoryManager::_readTime()
 {
     RtcTime time;
-#if RTC_SUPPORT == 0
-    if (read(RTCMemoryId::RTC, &time, sizeof(time)) == sizeof(time)) {
-        __LDBG_printf("read time=%u status=%s", time.getTime(), time.getStatus());
-        return time;
-    }
-    __LDBG_printf("invalid RtcTime");
-#endif
+    #if RTC_SUPPORT == 0
+        if (read(RTCMemoryId::RTC, &time, sizeof(time)) == sizeof(time)) {
+            __LDBG_printf("read time=%u status=%s", time.getTime(), time.getStatus());
+            return time;
+        }
+        __LDBG_printf("invalid RtcTime");
+    #endif
     return RtcTime();
 }
 
 void RTCMemoryManager::_writeTime(const RtcTime &time)
 {
-#if RTC_SUPPORT == 0
-    __LDBG_printf("write time=%u status=%s", time.getTime(), time.getStatus());
-    write(RTCMemoryId::RTC, &time, sizeof(time));
-#endif
+    #if RTC_SUPPORT == 0
+        __LDBG_printf("write time=%u status=%s", time.getTime(), time.getStatus());
+        write(RTCMemoryId::RTC, &time, sizeof(time));
+    #endif
 }
 
 #if RTC_SUPPORT == 0

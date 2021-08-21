@@ -105,15 +105,6 @@ void Register::dumpList(Print &output)
 
 }
 
-// void Register::prepare()
-// {
-//     // sort plugins
-//     // std::sort(_plugins.begin(), _plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
-//     //      return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
-//     // });
-//     __LDBG_printf("counter=%d", _plugins.size());
-// }
-
 void RegisterEx::_createMenu()
 {
     //TODO move to PROGMEM
@@ -154,19 +145,24 @@ void RegisterEx::_createMenu()
 
 void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
 {
+    __LDBG_printf("mode=%u dependencies=%p", mode, dependencies.get());
     // the object is passed into the next setup_plugins called and destroyed when all are done
     if (!dependencies.get()) {
         dependencies.reset(new PluginComponents::Dependencies());
     }
+    __LDBG_printf("main menu");
     auto &_bootstrapMenu = RegisterEx::getBootstrapMenu();
+    __LDBG_printf("nav menu");
     auto &_navMenu = RegisterEx::getNavMenu();
 
     __LDBG_printf("mode=%d counter=%d", mode, _plugins.size());
 
     if (mode != SetupModeType::DELAYED_AUTO_WAKE_UP) {
+        __LDBG_printf("create menu");
         RegisterEx::getInstance()._createMenu();
     }
 
+    __LDBG_printf("get blacklist");
     auto blacklist = System::Firmware::getPluginBlacklist();
 
     for(const auto plugin : _plugins) {
@@ -175,7 +171,9 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             continue;
         }
         if ((mode != SetupModeType::SAFE_MODE) || (mode == SetupModeType::SAFE_MODE && plugin->allowSafeMode())) {
+            __LDBG_printf("presetup plugin=%s", plugin->getName_P());
             plugin->preSetup(mode);
+            __LDBG_printf("presetup plugin=%s done", plugin->getName_P());
         }
     }
 
@@ -196,8 +194,9 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
         __LDBG_printf("name=%s prio=%d setup=%d mode=%u menu=%u add_menu=%u", plugin->getName_P(), plugin->getOptions().priority, runSetup, mode, plugin->getMenuType(), (mode != SetupModeType::DELAYED_AUTO_WAKE_UP));
         if (runSetup) {
             plugin->setSetupTime();
-            __LDBG_printf("SETUP plugin=%s mode=%u plugin=%p", plugin->getName_P(), mode, plugin);
+            __LDBG_printf("setup plugin=%s mode=%u plugin=%p", plugin->getName_P(), mode, plugin);
             plugin->setup(mode, dependencies);
+            __LDBG_printf("esetup plugin=%s done", plugin->getName_P());
             dependencies->check();
 
             if (plugin->hasWebUI()) {
@@ -235,6 +234,7 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
     if (_enableWebUIMenu && System::Flags::getConfig().is_webui_enabled) {
         auto url = F("webui.html");
         if (!_bootstrapMenu.isValid(_bootstrapMenu.findMenuByURI(url, _navMenu.device))) {
+            __LDBG_printf("adding webui");
             auto webUi = FSPGM(WebUI);
             _bootstrapMenu.addMenuItem(webUi, url, _navMenu.device, _navMenu.device/*insert at the top*/);
             _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
@@ -243,6 +243,7 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
 
 #if ENABLE_DEEP_SLEEP
     if (mode == SetupModeType::AUTO_WAKE_UP) {
+        __LDBG_printf("auto wakeup");
         if (!dependencies->empty()) {
             __DBG_printf("unresolved dependencies=%u", dependencies->size());
             _delayedStartupTime = PLUGIN_DEEP_SLEEP_DELAYED_START_TIME;
@@ -256,4 +257,5 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
         }
     }
 #endif
+    __LDBG_printf("exiting plugin setup");
 }

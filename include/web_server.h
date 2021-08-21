@@ -8,12 +8,12 @@
 #if WEBSERVER_SUPPORT
 
 #ifndef DEBUG_WEB_SERVER
-#define DEBUG_WEB_SERVER 0
+#    define DEBUG_WEB_SERVER (0 || defined(DEBUG_ALL))
 #endif
 
 // enable logging HTTP requests to Serial
 #ifndef WEBSERVER_LOG_SERIAL
-#define WEBSERVER_LOG_SERIAL 1
+#    define WEBSERVER_LOG_SERIAL 1
 #endif
 
 #include <Arduino_compat.h>

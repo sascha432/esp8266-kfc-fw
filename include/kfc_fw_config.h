@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_KFC_CONFIG
-#define DEBUG_KFC_CONFIG            0
+#    define DEBUG_KFC_CONFIG (0 || defined(DEBUG_ALL))
 #endif
 
 #include <Arduino_compat.h>
@@ -31,22 +31,22 @@
 #include "reset_detector.h"
 
 #ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
-#undef dhcp_start
+#    undef dhcp_start
 #endif
 
-#define HASH_SIZE                   64
+#define HASH_SIZE 64
 
 #include "kfc_fw_config_types.h"
 #include <IOExpander.h>
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB
-#define USE_WIFI_SET_EVENT_HANDLER_CB           1
+#    define USE_WIFI_SET_EVENT_HANDLER_CB 1
 #endif
 #if defined(ESP32)
-#if USE_WIFI_SET_EVENT_HANDLER_CB == 0
-#error ESP32 requires USE_WIFI_SET_EVENT_HANDLER_CB=1
-#endif
+#    if USE_WIFI_SET_EVENT_HANDLER_CB == 0
+#        error ESP32 requires USE_WIFI_SET_EVENT_HANDLER_CB=1
+#    endif
 #endif
 
 #include "kfc_fw_config_classes.h"
@@ -140,11 +140,11 @@ public:
 private:
     void _setupWiFiCallbacks();
     void _apStandbyModehandler(WiFiCallbacks::EventType event);
-#if defined(ESP32)
-    static void _onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
-#elif USE_WIFI_SET_EVENT_HANDLER_CB
-    static void _onWiFiEvent(System_Event_t *orgEvent);
-#endif
+    #if defined(ESP32)
+        static void _onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
+    #elif USE_WIFI_SET_EVENT_HANDLER_CB
+        static void _onWiFiEvent(System_Event_t *orgEvent);
+    #endif
 
 public:
     void _onWiFiConnectCb(const WiFiEventStationModeConnected &);
@@ -184,14 +184,14 @@ private:
 
     static bool _initTwoWire;
 
-#if USE_WIFI_SET_EVENT_HANDLER_CB == 0
-    WiFiEventHandler _onWiFiConnect;
-    WiFiEventHandler _onWiFiDisconnect;
-    WiFiEventHandler _onWiFiGotIP;
-    WiFiEventHandler _onWiFiOnDHCPTimeout;
-    WiFiEventHandler _softAPModeStationConnected;
-    WiFiEventHandler _softAPModeStationDisconnected;
-#endif
+    #if USE_WIFI_SET_EVENT_HANDLER_CB == 0
+        WiFiEventHandler _onWiFiConnect;
+        WiFiEventHandler _onWiFiDisconnect;
+        WiFiEventHandler _onWiFiGotIP;
+        WiFiEventHandler _onWiFiOnDHCPTimeout;
+        WiFiEventHandler _softAPModeStationConnected;
+        WiFiEventHandler _softAPModeStationDisconnected;
+    #endif
 };
 
 extern KFCFWConfiguration config;
@@ -224,18 +224,17 @@ inline void KFCFWConfiguration::apStandbyModehandler(WiFiCallbacks::EventType ev
     config._apStandbyModehandler(event);
 }
 
-
 #ifndef HAVE_IMPERIAL_MARCH
-#define HAVE_IMPERIAL_MARCH 1
+#    define HAVE_IMPERIAL_MARCH 1
 #endif
 
 #if HAVE_IMPERIAL_MARCH
 
-#define IMPERIAL_MARCH_NOTES_COUNT          66
-#define MPERIAL_MARCH_NOTE_OFFSET           19
-#define NOTE_TO_FREQUENCY_COUNT             56
-#define NOTE_FP_TO_INT(freq)                ((uint16_t)(freq >> 5))
-#define NOTE_FP_TO_FLOAT(freq)              ((float)(freq / 32.0f))
+#    define IMPERIAL_MARCH_NOTES_COUNT 66
+#    define MPERIAL_MARCH_NOTE_OFFSET  19
+#    define NOTE_TO_FREQUENCY_COUNT    56
+#    define NOTE_FP_TO_INT(freq)       ((uint16_t)(freq >> 5))
+#    define NOTE_FP_TO_FLOAT(freq)     ((float)(freq / 32.0f))
 
 extern const uint16_t note_to_frequency[NOTE_TO_FREQUENCY_COUNT] PROGMEM;
 extern const uint8_t imperial_march_notes[IMPERIAL_MARCH_NOTES_COUNT] PROGMEM;

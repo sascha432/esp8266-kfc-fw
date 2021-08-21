@@ -5,37 +5,37 @@
 #pragma once
 
 #ifndef DEBUG_SYSLOG
-#define DEBUG_SYSLOG                            0
+#    define DEBUG_SYSLOG (0 || defined(DEBUG_ALL))
 #endif
 
+#include "SyslogParameter.h"
+#include "SyslogQueue.h"
 #include <Arduino_compat.h>
 #include <PrintString.h>
 #include <functional>
 #include <vector>
-#include "SyslogParameter.h"
-#include "SyslogQueue.h"
 
 #ifndef SYSLOG_USE_RFC5424
-#define SYSLOG_USE_RFC5424                      0                           // 1 is not working ATM
+#    define SYSLOG_USE_RFC5424 0 // 1 is not working ATM
 #endif
 #if SYSLOG_USE_RFC5424
-#define SEND_NILVALUE_IF_INVALID_TIMESTAMP      1
-#define SYSLOG_VERSION                          "1"
-#define SYSLOG_TIMESTAMP_FORMAT                 "%FT%H:%M:%S."
-#define SYSLOG_TIMESTAMP_FRAC_FMT               "%03u"
-#define SYSLOG_SEND_BOM                         1                           // UTF8 BOM
+#    define SEND_NILVALUE_IF_INVALID_TIMESTAMP 1
+#    define SYSLOG_VERSION                     "1"
+#    define SYSLOG_TIMESTAMP_FORMAT            "%FT%H:%M:%S."
+#    define SYSLOG_TIMESTAMP_FRAC_FMT          "%03u"
+#    define SYSLOG_SEND_BOM                    1 // UTF8 BOM
 // TCP only
 #else
 // old/fall-back format
-#define SYSLOG_TIMESTAMP_FORMAT                 "%h %d %T "
-#define SYSLOG_VERSION                          ""                          // not used
-#define SEND_NILVALUE_IF_INVALID_TIMESTAMP      0                           // must be 0 for fallback
+#    define SYSLOG_TIMESTAMP_FORMAT            "%h %d %T "
+#    define SYSLOG_VERSION                     "" // not used
+#    define SEND_NILVALUE_IF_INVALID_TIMESTAMP 0 // must be 0 for fallback
 #endif
 
-#define SYSLOG_FILE_TIMESTAMP_FORMAT            "%FT%T%z"
+#define SYSLOG_FILE_TIMESTAMP_FORMAT "%FT%T%z"
 
-#define SYSLOG_NIL_SP                           "- "
-#define SYSLOG_NIL_VALUE                        (SYSLOG_NIL_SP[0])
+#define SYSLOG_NIL_SP    "- "
+#define SYSLOG_NIL_VALUE (SYSLOG_NIL_SP[0])
 
 class Syslog;
 class SyslogStream;

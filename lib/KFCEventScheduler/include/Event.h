@@ -5,34 +5,33 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <time.h>
 #include <chrono>
+#include <time.h>
 
 #ifndef DEBUG_EVENT_SCHEDULER
-#define DEBUG_EVENT_SCHEDULER                           0
+#    define DEBUG_EVENT_SCHEDULER (0 || defined(DEBUG_ALL))
 #endif
 
 #ifndef DISABLE_GLOBAL_EVENT_SCHEDULER
-#define DISABLE_GLOBAL_EVENT_SCHEDULER                  0
+#    define DISABLE_GLOBAL_EVENT_SCHEDULER 0
 #endif
 
 #ifndef DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR
-#define DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR   1
+#    define DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR 1
 #endif
 
 #ifndef EVENT_SCHEDULER_ASSERT
 // #define EVENT_SCHEDULER_ASSERT(cond)                    assert(cond)
-#define EVENT_SCHEDULER_ASSERT(cond)                    __DBG_assert(cond)
+#    define EVENT_SCHEDULER_ASSERT(cond) __DBG_assert(cond)
 #endif
 
-
 #if DEBUG_EVENT_SCHEDULER
-#define __DBG_Event_Timer_store_position()              __DBG_store_position()
-#define _Scheduler                                      ((__DBG_store_position()) ? __Scheduler : __Scheduler)
-#define _Timer(obj)                                     ((__DBG_store_position()) ? obj : obj)
+#    define __DBG_Event_Timer_store_position() __DBG_store_position()
+#    define _Scheduler                         ((__DBG_store_position()) ? __Scheduler : __Scheduler)
+#    define _Timer(obj)                        ((__DBG_store_position()) ? obj : obj)
 #else
-#define _Scheduler                                      __Scheduler
-#define _Timer(obj)                                     obj
+#    define _Scheduler  __Scheduler
+#    define _Timer(obj) obj
 #endif
 
 #pragma push_macro("HIGH")
@@ -41,9 +40,9 @@
 #undef LOW
 
 #if DEBUG_EVENT_SCHEDULER
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 //

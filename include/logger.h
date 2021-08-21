@@ -9,18 +9,18 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_LOGGER
-#define DEBUG_LOGGER                    0
+#    define DEBUG_LOGGER (0 || defined(DEBUG_ALL))
 #endif
 
 #ifndef LOGGER_SERIAL_OUTPUT
-#define LOGGER_SERIAL_OUTPUT            1
+#    define LOGGER_SERIAL_OUTPUT 1
 #endif
 
-#define Logger_error                    _logger.error
-#define Logger_security                 _logger.security
-#define Logger_warning                  _logger.warning
-#define Logger_notice                   _logger.notice
-#define Logger_debug                    _logger.debug
+#define Logger_error    _logger.error
+#define Logger_security _logger.security
+#define Logger_warning  _logger.warning
+#define Logger_notice   _logger.notice
+#define Logger_debug    _logger.debug
 
 class Logger;
 class SyslogStream;
@@ -63,9 +63,9 @@ public:
     static Level getLevelFromString(PGM_P str);
     void setLevel(Level logLevel);
 
-#if SYSLOG_SUPPORT
-    void setSyslog(SyslogStream *syslog);
-#endif
+    #if SYSLOG_SUPPORT
+        void setSyslog(SyslogStream *syslog);
+    #endif
 
     bool isExtraFileEnabled(Level level) const;
     void setExtraFileEnabled(Level level, bool state);

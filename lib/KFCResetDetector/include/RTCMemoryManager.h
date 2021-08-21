@@ -4,16 +4,16 @@
 
 #pragma once
 
-#ifndef DEBUG_RTC_MEMORY_MANAGER
-#define DEBUG_RTC_MEMORY_MANAGER                    0
-#endif
-
 #include <Arduino_compat.h>
 #include <push_pack.h>
 
 #if HAVE_KFC_FIRMWARE_VERSION
 #include <EventScheduler.h>
 #include <PluginComponent.h>
+#endif
+
+#ifndef DEBUG_RTC_MEMORY_MANAGER
+#    define DEBUG_RTC_MEMORY_MANAGER (0 || defined(DEBUG_ALL))
 #endif
 
 #if DEBUG_RTC_MEMORY_MANAGER
@@ -179,11 +179,11 @@ private:
 
 // methods to use the internal RTC
 public:
-#if RTC_SUPPORT == 0
-    static void setupRTC();
-    static void updateTimeOffset(uint32_t millis_offset);
-    static void storeTime();
-#endif
+    #if RTC_SUPPORT == 0
+        static void setupRTC();
+        static void updateTimeOffset(uint32_t millis_offset);
+        static void storeTime();
+    #endif
     static void setTime(time_t time, SyncStatus status);
     static SyncStatus getSyncStatus();
     // there must be valid record in the RTC memory to use following methods

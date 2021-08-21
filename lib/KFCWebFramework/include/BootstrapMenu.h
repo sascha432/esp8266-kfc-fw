@@ -11,14 +11,14 @@
 #include <MicrosTimer.h>
 
 #ifndef DEBUG_BOOTSTRAP_MENU
-#define DEBUG_BOOTSTRAP_MENU                    0
+#    define DEBUG_BOOTSTRAP_MENU (0 || defined(DEBUG_ALL))
 #endif
 
 #ifndef DEBUG_BOOTSTRAP_MENU_RENDER_TIME
-#define DEBUG_BOOTSTRAP_MENU_RENDER_TIME        0 //DEBUG_BOOTSTRAP_MENU
+#    define DEBUG_BOOTSTRAP_MENU_RENDER_TIME 0 //DEBUG_BOOTSTRAP_MENU
 #endif
 
- #include "push_pack.h"
+#include "push_pack.h"
 
 // typedef struct __attribute__packed__ {
 //     PGM_P _label;

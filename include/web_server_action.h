@@ -7,11 +7,11 @@
 #include "web_server.h"
 #include <EventScheduler.h>
 #if ESP8266
-#    include "coredecls.h"
+#    include <coredecls.h>
 #endif
 
 #ifndef DEBUG_WEB_SERVER_ACTION
-#    define DEBUG_WEB_SERVER_ACTION 0
+#    define DEBUG_WEB_SERVER_ACTION (0 || defined(DEBUG_ALL))
 #endif
 
 #if DEBUG_WEB_SERVER_ACTION

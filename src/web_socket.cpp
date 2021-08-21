@@ -2,14 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-//#include <sha512.h>
-// #include <base64.hpp>
 #include <Arduino_compat.h>
-// #include <memory>
-// #include <map>
-// #include <vector>
-// #include <algorithm>
-// #include <functional>
 #include <stl_ext/conv_utf8.h>
 #include <PrintString.h>
 #include <Buffer.h>

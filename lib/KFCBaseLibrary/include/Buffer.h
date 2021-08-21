@@ -9,25 +9,29 @@
 #include <stl_ext/non_std.h>
 
 #ifndef DEBUG_BUFFER
-#define DEBUG_BUFFER                            0
+#    define DEBUG_BUFFER (0 || defined(DEBUG_ALL))
 #endif
 
 #ifndef BUFFER_ZERO_FILL
-#define BUFFER_ZERO_FILL                        0
+#    define BUFFER_ZERO_FILL !DEBUG_BUFFER
 #endif
 
 #if DEBUG_BUFFER
-#include "debug_helper_enable.h"
+#    include "debug_helper_enable.h"
 #else
-#include "debug_helper_disable.h"
+#    include "debug_helper_disable.h"
 #endif
 
 #if DEBUG_BUFFER
-#define __DBG_BUFFER_assert(...)                assert(__VA_ARGS__)
-#define __DBG_BUFFER_asserted(cmp, ...)         { auto res = (bool)(__VA_ARGS__); __DBG_BUFFER_assert(res == cmp); }
+#    define __DBG_BUFFER_assert(...) assert(__VA_ARGS__)
+#    define __DBG_BUFFER_asserted(cmp, ...)  \
+        {                                    \
+            auto res = (bool)(__VA_ARGS__);  \
+            __DBG_BUFFER_assert(res == cmp); \
+        }
 #else
-#define __DBG_BUFFER_assert(...)
-#define __DBG_BUFFER_asserted(cmp, ...)         __VA_ARGS__
+#    define __DBG_BUFFER_assert(...)
+#    define __DBG_BUFFER_asserted(cmp, ...) __VA_ARGS__
 #endif
 
 class FileBufferStreamImpl;

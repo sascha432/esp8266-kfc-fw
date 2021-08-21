@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_WEB_SOCKETS
-#define DEBUG_WEB_SOCKETS               0
+#   define DEBUG_WEB_SOCKETS (0 || defined(DEBUG_ALL))
 #endif
 
 #include <Arduino_compat.h>

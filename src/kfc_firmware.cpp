@@ -25,7 +25,7 @@
 #include <printf_wrapper.h>
 #endif
 #include "../src/plugins/plugins.h"
-#if 0
+#if DEBUG_ALL
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
@@ -370,26 +370,26 @@ void setup()
         // KFCFS.setConfig(LittleFSConfig(true));
         KFCFS.begin();
 
-        #if ESP32
+        #if 0
+        // dump file system and wait 5 seconds
         {
-            auto dir = ListDir("/", false, true);
+            KFC_SAFE_MODE_SERIAL_PORT.println(F("File system contents:"));
+            auto dir = ListDir(F("/"), false, true);
             while(dir.next()) {
-                Serial0.print(F("+LS: "));
                 if (dir.isFile()) {
-                    Serial0.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
+                    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
                 }
                 else {
-                    Serial0.print(F("[...]    "));
+                    KFC_SAFE_MODE_SERIAL_PORT.print(F("[...]    "));
                 }
-                Serial0.println(dir.fileName());
+                KFC_SAFE_MODE_SERIAL_PORT.println(dir.fileName());
             }
+            for(uint8_t i = 0; i < 50; i++) {
+                delay(100);
+                KFC_SAFE_MODE_SERIAL_PORT.print('.');
+            }
+            KFC_SAFE_MODE_SERIAL_PORT.println();
         }
-        for(uint8_t i = 0; i < 500; i++) {
-            delay(100);
-            Serial0.print('.');
-        }
-        Serial0.println();
-
         #endif
 
         #if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASHCOUNTER == 0

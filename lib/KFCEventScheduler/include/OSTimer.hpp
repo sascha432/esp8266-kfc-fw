@@ -2,6 +2,12 @@
   Author: sascha_lammers@gmx.de
 */
 
+#pragma once
+
+#ifndef OSTIMER_INLINE
+#   define OSTIMER_INLINE inline
+#endif
+
 #if ESP32
 
 #include "OSTimer_esp32.hpp"

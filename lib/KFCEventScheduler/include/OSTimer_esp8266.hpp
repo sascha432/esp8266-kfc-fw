@@ -4,19 +4,16 @@
 
 // timer implementation for ESP8266
 
+#pragma once
 
 #if ESP8266
 
 #include "OSTimer.h"
 #include "Event.h"
 
-#ifndef OSTIMER_INLINE
-#define OSTIMER_INLINE inline
-#endif
-
 #if DEBUG_OSTIMER
 
-static void __DBG_printEtsTimer(ETSTimer &timer, const char *msg = "") {
+static OSTIMER_INLINE void __DBG_printEtsTimer(ETSTimer &timer, const char *msg = "") {
     __DBG_printf("%stimer=%p func=%p arg=%p period=%u next=%p", msg, &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
 }
 

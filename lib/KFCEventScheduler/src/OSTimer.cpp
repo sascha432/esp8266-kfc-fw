@@ -6,6 +6,10 @@
 #include <Arduino_compat.h>
 #include "OSTimer.h"
 
+#if ESP32
+std::list<ETSTimerEx *> ETSTimerEx::_timers;
+#endif
+
 portMuxType OSTimer::_mux;
 
 void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)

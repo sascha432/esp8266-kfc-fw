@@ -4,15 +4,11 @@
 
 // timer implementation for ESP32
 
+#pragma once
+
 #if ESP32
 
 #include <esp_timer.h>
-
-#ifndef OSTIMER_INLINE
-#define OSTIMER_INLINE inline
-#endif
-
-std::list<ETSTimerEx *> ETSTimerEx::_timers;
 
 #if DEBUG_OSTIMER
     OSTIMER_INLINE ETSTimerEx::ETSTimerEx(const char *name) : _name(name),

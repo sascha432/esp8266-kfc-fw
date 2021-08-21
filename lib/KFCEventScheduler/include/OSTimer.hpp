@@ -65,16 +65,14 @@ OSTIMER_INLINE void OSTimer::startTimer(int32_t delay, bool repeat, bool isMilli
 
 OSTIMER_INLINE void OSTimer::detach()
 {
-    portMuxLock mLock(_mux);
     if (_etsTimer.isRunning()) {
+        portMuxLockISR mLock(_mux);
         _etsTimer.disarm();
     }
 }
 
 OSTIMER_INLINE bool OSTimer::lock()
 {
-    InterruptLock intrLock;
-    portMuxLock mLock(_mux);
     if (!_etsTimer.find()) {
         return false;
     }
@@ -101,7 +99,6 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
         optimistic_yield(timeoutMicros - timeout);
     }
 
-    InterruptLock intrLock;
     portMuxLock mLock(_mux);
     if (!ETSTimerEx::find(timer)) {
         #if DEBUG_OSTIMER
@@ -117,8 +114,7 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
 
 OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer)
 {
-    InterruptLock intrLock;
-    portMuxLock mLock(_mux);
+    portMuxLockISR mLock(_mux);
     if (!ETSTimerEx::find(timer)) {
         return;
     }
@@ -127,7 +123,6 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer)
 
 OSTIMER_INLINE bool OSTimer::isLocked(OSTimer &timer)
 {
-    InterruptLock intrLock;
     portMuxLock mLock(_mux);
     return ETSTimerEx::find(&timer._etsTimer) && timer._etsTimer.isLocked();
 }

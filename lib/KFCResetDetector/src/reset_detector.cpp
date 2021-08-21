@@ -13,21 +13,6 @@
 #include "../src/plugins/switch/switch_def.h"
 #endif
 
-#if ESP32
-#include <esp32-hal.h>
-#include <esp32-hal-uart.h>
-#if CONFIG_IDF_TARGET_ESP32
-#define RX_PIN 3
-#define TX_PIN 1
-#elif CONFIG_IDF_TARGET_ESP32S2
-#define RX_PIN 44
-#define TX_PIN 43
-#elif CONFIG_IDF_TARGET_ESP32C3
-#define RX_PIN 20
-#define TX_PIN 21
-#endif
-#endif
-
 #undef __LDBG_printf
 #if DEBUG_RESET_DETECTOR
 #define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u (line %u): " fmt "\r\n"), micros() / 1000, __LINE__, ##__VA_ARGS__)
@@ -186,7 +171,7 @@ void ResetDetector::begin()
     #if ESP8266
         armTimer();
     #elif ESP32
-        // the timer must be start in setup()
+        // the timer must be started in setup()
     #endif
 
     #if IOT_SWITCH && IOT_SWITCH_STORE_STATES_RTC_MEM

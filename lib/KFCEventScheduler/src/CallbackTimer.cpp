@@ -18,13 +18,13 @@
 using namespace Event;
 
 CallbackTimer::CallbackTimer(Callback callback, int64_t delay, RepeatType repeat, PriorityType priority) :
-    _etsTimer({}),
+    _etsTimer(OSTIMER_NAME("CallbackTimer")),
     _callback(callback),
     _timer(nullptr),
     _delay(std::max<int64_t>(kMinDelay, delay)),
+    _remainingDelay(0),
     _repeat(repeat),
     _priority(priority),
-    _remainingDelay(0),
     _callbackScheduled(false),
     _maxDelayExceeded(false)
 {
@@ -47,9 +47,9 @@ CallbackTimer::~CallbackTimer()
     // ets_timer must be disarmed
     EVENT_SCHEDULER_ASSERT(isArmed() == false);
 
-    __LDBG_printf("ets_timer=%p func=%p armed=%d %s:%u", &_etsTimer, _etsTimer.timer_func, isArmed(), __S(_file), _line);
+    __LDBG_printf("ets_timer=%p running=%p armed=%d %s:%u", &_etsTimer, _etsTimer.isRunning(), isArmed(), __S(_file), _line);
 
-    ets_timer_done(&_etsTimer);
+    _etsTimer.done();
 }
 
 void CallbackTimer::rearm(int64_t delay, RepeatType repeat, Callback callback)
@@ -114,20 +114,19 @@ void CallbackTimer::_rearm()
         __LDBG_printf("delay=%d repeat=%u", delay, repeat);
     }
 
-    ets_timer_setfn(&_etsTimer, Scheduler::__TimerCallback, this);
-    ets_timer_arm_new(&_etsTimer, delay, repeat, true);
+
+    _etsTimer.create(Scheduler::__TimerCallback, this);
+    _etsTimer.arm(delay, repeat, true);
 }
 
 void CallbackTimer::_disarm()
 {
     __LDBG_printf("timer=%p armed=%u cb=%p %s:%u", this, isArmed(), lambda_target(_callback), __S(_file), _line);
     if (isArmed()) {
-        ets_timer_disarm(&_etsTimer);
+        _etsTimer.disarm();
         _remainingDelay = 0;
         _callbackScheduled = false;
         _maxDelayExceeded = false;
-        // set timer_func to nullptr as indication that the timer is disarmed
-        _etsTimer.timer_func = nullptr;
     }
 }
 

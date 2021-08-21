@@ -69,8 +69,13 @@ namespace Event {
     class Scheduler;
     class ManangedCallbackTimer;
 
-    static constexpr uint32_t kMinDelay = 5;
-    static constexpr uint32_t kMaxDelay = 0x68D7A3;                                              // 6870947ms / 6870.947 seconds
+    #if ESP8266
+        static constexpr uint32_t kMinDelay = 5;
+        static constexpr uint32_t kMaxDelay = 0x68D7A3;
+    #else
+        static constexpr uint32_t kMinDelay = 1;
+        static constexpr uint32_t kMaxDelay = ~0U;
+    #endif
 
     static constexpr uint64_t kMaxDelayMillis = (1ULL << 17) * (uint64_t)kMaxDelay + (kMaxDelay - 1);
     static constexpr uint64_t kMaxDelaySeconds = kMaxDelayMillis / 1000;

@@ -193,7 +193,33 @@ File tmpfile(String /*dir*/tmpfile, const String &prefix)
         }
     } while (len-- > 1 || KFCFS.exists(tmpfile));
 
-    return KFCFS.open(tmpfile, fs::FileOpenMode::write);
+    return createFileRecursive(tmpfile, fs::FileOpenMode::write);
+}
+
+File createFileRecursive(const String &path, const char *mode)
+{
+    String parts;
+    File file = KFCFS.open(path, mode);
+    if (!file) {
+        char sep[2] = { '/', 0 };
+        split::split(path.c_str(), sep, [&](const char *str, size_t size, int flags) {
+            if (!parts.endsWith('/')) {
+                parts += '/';
+            }
+            parts.concat(str, size);
+            if (flags & split::SplitFlagsType::LAST) {
+                __DBG_printf("create file=%s exists=%u", parts.c_str(), KFCFS.exists(parts));
+                if (!KFCFS.exists(parts)) {
+                    file = KFCFS.open(parts, mode);
+                }
+            }
+            else {
+                KFCFS.mkdir(parts);
+                __DBG_printf("create dir=%s exists=%u", parts.c_str(), KFCFS.exists(parts));
+            }
+        }, split::SplitFlagsType::NONE, 32);
+    }
+    return file;
 }
 
 const __FlashStringHelper *WiFi_disconnect_reason(WiFiDisconnectReason reason)

@@ -365,9 +365,6 @@ void setup()
         }
     #endif
 
-        // __DBG_printf("FS begin");
-        // start FS, we need it for getCrashCounter()
-        // KFCFS.setConfig(LittleFSConfig(true));
         KFCFS_begin();
 
         #if 0

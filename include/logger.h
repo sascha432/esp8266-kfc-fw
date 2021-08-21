@@ -7,6 +7,8 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <PrintString.h>
+#include <EnumHelper.h>
 
 #ifndef DEBUG_LOGGER
 #    define DEBUG_LOGGER (0 || defined(DEBUG_ALL))
@@ -21,6 +23,12 @@
 #define Logger_warning  _logger.warning
 #define Logger_notice   _logger.notice
 #define Logger_debug    _logger.debug
+
+#if DEBUG_LOGGER
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
 
 class Logger;
 class SyslogStream;
@@ -75,28 +83,191 @@ public:
 
 protected:
     void writeLog(Level logLevel, const char *message, va_list arg);
-    inline void writeLog(Level logLevel, const String &message, va_list arg) {
-        writeLog(logLevel, message.c_str(), arg);
-    }
-    inline void writeLog(Level logLevel, const __FlashStringHelper *message, va_list arg) {
-        writeLog(logLevel, String(message).c_str(), arg);
-    }
+    void writeLog(Level logLevel, const String &message, va_list arg);
+    void writeLog(Level logLevel, const __FlashStringHelper *message, va_list arg);
 
 private:
     String _getLogFilename(Level logLevel);
     String _getLogDevice(Level logLevel);
-    String _getBackupFilename(String filename, int num);
+    String _getBackupFilename(const String &filename, int num);
     void _closeLog(File file);
 
 private:
     Level _logLevel;
     Level _enabled;
-#if SYSLOG_SUPPORT
-    SyslogStream *_syslog;
-#endif
+    #if SYSLOG_SUPPORT
+        SyslogStream *_syslog;
+    #endif
 };
 
+inline void Logger::writeLog(Level logLevel, const String &message, va_list arg)
+{
+    writeLog(logLevel, message.c_str(), arg);
+}
+
+inline void Logger::writeLog(Level logLevel, const __FlashStringHelper *message, va_list arg)
+{
+    writeLog(logLevel, reinterpret_cast<PGM_P>(message), arg);
+}
+
+inline void Logger::error(const __FlashStringHelper *message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::ERROR, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::error(const String &message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::ERROR, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::security(const __FlashStringHelper *message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::SECURITY, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::security(const String &message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::SECURITY, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::warning(const __FlashStringHelper *message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::WARNING, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::warning(const String &message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::WARNING, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::notice(const __FlashStringHelper *message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::NOTICE, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::notice(const String &message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::NOTICE, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::debug(const __FlashStringHelper *message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::DEBUG, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::debug(const String &message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(Level::DEBUG, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::log(Level level, const String &message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(level, message, arg);
+    va_end(arg);
+}
+
+inline void Logger::log(Level level, const char *message, ...)
+{
+    va_list arg;
+    va_start(arg, message);
+    this->writeLog(level, message, arg);
+    va_end(arg);
+}
+
+inline Logger::Level Logger::getLevelFromString(PGM_P str)
+{
+    auto level = static_cast<Level>(1 << static_cast<uint8_t>(stringlist_find_P_P(reinterpret_cast<PGM_P>(getLevelAsString(Level::ANY)), str, '|')));
+    __LDBG_assert(level < Level::MAX); // as long as Level::ANY is defined correctly, we cannot get any invalid level. defaults to 0
+    return level;
+}
+
+inline void Logger::setLevel(Level logLevel)
+{
+    _logLevel = logLevel;
+}
+
+#if SYSLOG_SUPPORT
+
+inline void Logger::setSyslog(SyslogStream *syslog)
+{
+    _syslog = syslog;
+}
+
+#endif
+
+inline bool Logger::isExtraFileEnabled(Level level) const
+{
+    return EnumHelper::Bitset::hasAny(_enabled, level);
+}
+
+inline void Logger::setExtraFileEnabled(Level level, bool state)
+{
+    EnumHelper::Bitset::setBits(_enabled, state, level);
+}
+
+inline File Logger::__openLog(Level logLevel, bool write)
+{
+    auto fileName = _getLogFilename(logLevel);
+    __LDBG_printf("logLevel=%u filename=%s", logLevel, fileName.c_str());
+    if (write) {
+        return createFileRecursive(fileName, fs::FileOpenMode::append);
+    }
+    return KFCFS.open(fileName, fs::FileOpenMode::read);
+}
+
+inline void Logger::__rotate(Level logLevel)
+{
+    __LDBG_printf("rotate=%u", logLevel);
+    _closeLog(__openLog(logLevel, true));
+}
+
+inline String Logger::_getBackupFilename(const String &filename, int num)
+{
+    PrintString str = filename;
+    if (num > 0) {
+        str.printf_P(PSTR(".%u"), num);
+    }
+    str.print(F(".bak"));
+    return str;
+}
+
 #pragma pop_macro("DEBUG")
+
+#if DEBUG_LOGGER
+#include <debug_helper_disable.h>
+#endif
 
 #else
 

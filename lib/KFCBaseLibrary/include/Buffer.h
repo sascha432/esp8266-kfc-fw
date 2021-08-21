@@ -26,8 +26,8 @@
 #    define __DBG_BUFFER_assert(...) assert(__VA_ARGS__)
 #    define __DBG_BUFFER_asserted(cmp, ...)  \
         {                                    \
-            auto res = (bool)(__VA_ARGS__);  \
-            __DBG_BUFFER_assert(res == cmp); \
+            auto res = (__VA_ARGS__);        \
+            __DBG_assert_printf(res == cmp, _STRINGIFY(__VA_ARGS__) " failed result=%d expected=%d", res, cmp); \
         }
 #else
 #    define __DBG_BUFFER_assert(...)
@@ -59,6 +59,7 @@ public:
         }
 
         back_inserter operator++() noexcept {
+
             return *this;
         }
 
@@ -398,12 +399,22 @@ public:
 
 public:
      template <typename _Ta, std::enable_if_t<
+            !std::is_same<char, std::remove_cv_t<_Ta>>::value &&
+            !std::is_same<int8_t, std::remove_cv_t<_Ta>>::value &&
             !std::is_same<uint8_t, std::remove_cv_t<_Ta>>::value &&
             !std::is_same<String, std::remove_cv_t<_Ta>>::value &&
             !stdex::is_c_str<_Ta>::value
         , int> = 0>
      void push_back(const _Ta &data) {
          __DBG_BUFFER_asserted(sizeof(_Ta), write(reinterpret_cast<const uint8_t *>(std::addressof(data)), sizeof(_Ta)));
+     }
+
+     inline void push_back(int8_t data) {
+         __DBG_BUFFER_asserted(sizeof(data), write(data));
+     }
+
+     inline void push_back(char data) {
+         __DBG_BUFFER_asserted(sizeof(data), write(data));
      }
 
      inline void push_back(uint8_t data) {

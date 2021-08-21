@@ -60,7 +60,7 @@ namespace SaveCrash {
             if (file) {
                 counter = file.read() + 1;
             }
-            file = KFCFS.open(FSPGM(crash_counter_file), fs::FileOpenMode::write);
+            file = createFileRecursive(FSPGM(crash_counter_file), fs::FileOpenMode::write);
             file.write(counter);
             return counter;
         #endif

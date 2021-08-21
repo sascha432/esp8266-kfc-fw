@@ -75,48 +75,48 @@ void ResetDetector::setSafeMode(bool safeMode)
 __RESET_DETECTOR_INLINE__
 bool ResetDetector::hasCrashDetected() const
 {
-#if defined(ESP32)
-    switch(_data.getReason()) {
-        case ESP_RST_UNKNOWN:
-        case ESP_RST_PANIC:
-        case ESP_RST_INT_WDT:
-        case ESP_RST_TASK_WDT:
-        case ESP_RST_WDT:
-            return true;
-        default:
-            return false;
-    }
-#elif defined(ESP8266)
+    #if defined(ESP32)
+        switch(_data.getReason()) {
+            case ESP_RST_UNKNOWN:
+            case ESP_RST_PANIC:
+            case ESP_RST_INT_WDT:
+            case ESP_RST_TASK_WDT:
+            case ESP_RST_WDT:
+                return true;
+            default:
+                return false;
+        }
+    #elif defined(ESP8266)
 
-    // REASON_WDT_RST          = 1,    /* hardware watch dog reset */
-    // REASON_EXCEPTION_RST    = 2,    /* exception reset, GPIO status won’t change */
-    // REASON_SOFT_WDT_RST     = 3,    /* software watch dog reset, GPIO status won’t change */
+        // REASON_WDT_RST          = 1,    /* hardware watch dog reset */
+        // REASON_EXCEPTION_RST    = 2,    /* exception reset, GPIO status won’t change */
+        // REASON_SOFT_WDT_RST     = 3,    /* software watch dog reset, GPIO status won’t change */
 
 
-    return (
-        _data.getReason() != REASON_DEFAULT_RST &&
-        _data.getReason() != REASON_EXT_SYS_RST &&
-        _data.getReason() != REASON_SOFT_RESTART &&
-        _data.getReason() != REASON_DEEP_SLEEP_AWAKE
-    );
-#endif
+        return (
+            _data.getReason() != REASON_DEFAULT_RST &&
+            _data.getReason() != REASON_EXT_SYS_RST &&
+            _data.getReason() != REASON_SOFT_RESTART &&
+            _data.getReason() != REASON_DEEP_SLEEP_AWAKE
+        );
+    #endif
 }
 
 __RESET_DETECTOR_INLINE__
 bool ResetDetector::hasResetDetected() const
 {
     switch(_data.getReason()) {
-#if defined(ESP32)
+    #if defined(ESP32)
         case ESP_RST_UNKNOWN:
         case ESP_RST_EXT:
         case ESP_RST_BROWNOUT:
         case ESP_RST_SDIO:
             return true;
-#elif defined(ESP8266)
+    #elif defined(ESP8266)
         case REASON_DEFAULT_RST:
         case REASON_EXT_SYS_RST:
             return true;
-#endif
+    #endif
         default:
             break;
     }
@@ -127,13 +127,13 @@ __RESET_DETECTOR_INLINE__
 bool ResetDetector::hasRebootDetected() const
 {
     switch(_data.getReason()) {
-#if defined(ESP32)
+    #if defined(ESP32)
         case ESP_RST_SW:
             return true;
-#elif defined(ESP8266)
+    #elif defined(ESP8266)
         case REASON_SOFT_RESTART:
             return true;
-#endif
+    #endif
         default:
             break;
     }
@@ -144,13 +144,13 @@ __RESET_DETECTOR_INLINE__
 bool ResetDetector::hasWakeUpDetected() const
 {
     switch(_data.getReason()) {
-#if defined(ESP32)
+    #if defined(ESP32)
         case ESP_RST_DEEPSLEEP:
             return true;
-#elif defined(ESP8266)
+    #elif defined(ESP8266)
         case REASON_DEEP_SLEEP_AWAKE:
             return true;
-#endif
+    #endif
         default:
             break;
     }
@@ -189,11 +189,11 @@ void ResetDetector::armTimer()
 __RESET_DETECTOR_INLINE__
 const String ResetDetector::getResetInfo() const
 {
-#if defined(ESP32)
-    return getResetReason();
-#else
-    return ESP.getResetInfo();
-#endif
+    #if defined(ESP32)
+        return getResetReason();
+    #else
+        return ESP.getResetInfo();
+    #endif
 }
 
 __RESET_DETECTOR_INLINE__

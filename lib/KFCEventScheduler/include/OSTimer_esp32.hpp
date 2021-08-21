@@ -43,6 +43,7 @@ OSTIMER_INLINE void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)
         #endif
     };
 
+    done();
     if (esp_timer_create(&args, &_timer) == ESP_OK) {
         _timers.push_back(this);
         _running = false;
@@ -58,6 +59,7 @@ OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool isMillis)
     uint64_t delayMicros = isMillis ? delay * 1000ULL : delay;
     _running = true;
     _locked = false;
+    esp_timer_stop(_timer);
     if (repeat) {
         if (esp_timer_start_periodic(_timer, delayMicros) != ESP_OK) {
             __DBG_printf("esp_timer_start_periodic failed delay=%d", delay);

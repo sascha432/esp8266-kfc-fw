@@ -75,7 +75,6 @@ bool FSWrapper::remove(const String &path)
     return remove(path.c_str());
 }
 
-
 #ifdef __FS_MAPPING_INSIDE_INCLUDE
 #undef __FS_MAPPING_INSIDE_INCLUDE
 #endif

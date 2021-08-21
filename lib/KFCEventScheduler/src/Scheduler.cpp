@@ -262,7 +262,7 @@ void Scheduler::__TimerCallback(void *arg)
     else if (timer->_remainingDelay >= 1) {
         // continue with remaining delay
         uint32_t delay = (--timer->_remainingDelay) ? kMaxDelay : (timer->_delay % kMaxDelay);
-        ets_timer_arm_new(&timer->_etsTimer, delay, false, true);
+        timer->_etsTimer.arm(delay, false, true);
     }
     else {
         // schedule for execution in main loop
@@ -332,8 +332,8 @@ void Scheduler::__list(bool debug)
         int deleted = 0;
         for(const auto timer: _timers) {
             if (timer) {
-                output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p managed=%p dly=%.0f (%.3fs) repeat=%d prio=%d scheduled=%d %s:%u\n"),
-                    &timer->_etsTimer, timer->_etsTimer.timer_func, timer, timer->_timer, timer->_delay / 1.0, timer->_delay / 1000.0, timer->_repeat._repeat, timer->_priority, timer->_callbackScheduled, __S(timer->_file), timer->_line
+                output.printf_P(PSTR("ETSTimer=%p running=%u arg=%p managed=%p dly=%.0f (%.3fs) repeat=%d prio=%d scheduled=%d %s:%u\n"),
+                    &timer->_etsTimer, timer->_etsTimer.isRunning(), timer, timer->_timer, timer->_delay / 1.0, timer->_delay / 1000.0, timer->_repeat._repeat, timer->_priority, timer->_callbackScheduled, __S(timer->_file), timer->_line
                 );
                 if (timer->_callbackScheduled) {
                     scheduled++;

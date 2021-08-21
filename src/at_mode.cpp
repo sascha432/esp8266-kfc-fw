@@ -1381,15 +1381,17 @@ void at_mode_serial_handle_event(String &commandString)
         __LDBG_printf("tokenizer('%s')", command);
         args.setQueryMode(false);
         tokenizer(command, args, true, &nextCommand);
-        __LDBG_printf("cmd=%s,argc=%d,args='%s',next_cmd='%s'", command, args.size(), implode(F("','"), args.getArgs()).c_str(), nextCommand ? nextCommand : String(0).c_str());
+        auto argsStr = implode(F("' '"), args.getArgs());
+        __LDBG_printf("cmd=%s,argc=%d,args='%s',next_cmd='%s'", command, args.size(), argsStr.c_str(), __S(nextCommand));
     }
-    else if (kCommandParserModeAllowNoPrefix) {
+    else if __CONSTEXPR17 (kCommandParserModeAllowNoPrefix) {
         // run tokenizer in cli mode
         // command arg1 arg2 arg3 ; command2 ...
 
         args.setQueryMode(false);
         tokenizer(command, args, true, &nextCommand, tokenizerCmpFuncCmdLineMode);
-        __LDBG_printf("cmd=%s,argc=%d,args='%s',next_cmd='%s'", command, args.size(), implode(F("' '"), args.getArgs()).c_str(), nextCommand ? nextCommand : String(0).c_str());
+        auto argsStr = implode(F("' '"), args.getArgs());
+        __LDBG_printf("cmd=%s,argc=%u,args='%s',next_cmd='%s'", __S(command), args.size(), __S(implode(F("' '"), args.getArgs())), __S(nextCommand));
     }
     // store copy of command
     args.setCommand(command);

@@ -109,11 +109,7 @@ class __FlashStringHelper;
 #    if USE_LITTLEFS
 #        include <LittleFS.h>
 #        define KFCFS LittleFS
-#        if ESP32
-#            define KFCFS_begin() KFCFS.begin(true, "/")
-#        else
-#            define KFCFS_begin() KFCFS.begin()
-#        endif
+#        define KFCFS_begin() KFCFS.begin()
 #        define KFCFS_MAX_FILE_LEN 31
 #        define KFCFS_MAX_PATH_LEN 127
 #    else

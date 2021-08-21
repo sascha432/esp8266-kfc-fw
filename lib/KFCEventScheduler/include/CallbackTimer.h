@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include "Event.h"
+#include "OSTimer.h"
 
 class SwitchPlugin;
 
@@ -67,15 +68,15 @@ namespace Event {
         }
 
     public:
-        ETSTimer _etsTimer;
+        ETSTimerEx _etsTimer;
         Callback _callback;
         Timer *_timer;
         int64_t _delay;
+        uint32_t _remainingDelay;
         RepeatType _repeat;
         PriorityType _priority;
-        uint32_t _remainingDelay : 24;
-        uint32_t _callbackScheduled : 1;
-        uint32_t _maxDelayExceeded : 1;
+        bool _callbackScheduled;
+        bool _maxDelayExceeded;
 
 #if DEBUG_EVENT_SCHEDULER
         uint32_t _line;
@@ -90,8 +91,7 @@ namespace Event {
 
     inline bool CallbackTimer::isArmed() const
     {
-        //return (_etsTimer.timer_func == Scheduler::__TimerCallback);
-        return (_etsTimer.timer_func != nullptr);
+        return _etsTimer.isRunning();
     }
 
     inline void CallbackTimer::_initTimer()

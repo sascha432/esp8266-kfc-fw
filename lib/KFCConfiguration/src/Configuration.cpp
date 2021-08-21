@@ -106,6 +106,7 @@ bool Configuration::read()
 Configuration::WriteResultType Configuration::erase()
 {
     #if ESP32
+        _nvs_open();
         // clear previous configuration
         esp_err_t err;
         if ((err = nvs_erase_all(_handle)) != ESP_OK) {
@@ -191,9 +192,8 @@ Configuration::WriteResultType Configuration::write()
             else {
                 __DBG_printf_E("failed to get stats name=%s err=%08x", NVS_PARTITION_NAME, err);
             }
+            dump(DEBUG_OUTPUT);
         #endif
-
-        dump(Serial);
 
         return WriteResultType::SUCCESS;
 

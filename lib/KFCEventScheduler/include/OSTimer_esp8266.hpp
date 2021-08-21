@@ -37,12 +37,12 @@ OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
             __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s _magic=%08x<>%08x", __S(_name), _magic, kMagic);
         }
         if (isRunning()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s isRunning()", __S(_name));
+            disarm();
+            __DBG_printf_E("ETSTimerEx::~ETSTimerEx(): name=%s isRunning()", __S(_name));
         }
         if (!isDone()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::~ETSTimerEx(). name=%s !isDone()", __S(_name));
+            __DBG_printf_E("ETSTimerEx::~ETSTimerEx(). name=%s !isDone()", __S(_name));
+            done();
         }
         _magic = 0;
     #endif
@@ -100,22 +100,15 @@ OSTIMER_INLINE void ETSTimerEx::disarm()
             __DBG_panic("ETSTimerEx::disarm() name=%s", __S(_name));
         }
     #endif
-    __DBG_printEtsTimer(*this, "before disarm ");
     ets_timer_disarm(this);
-    __DBG_printEtsTimer(*this, "after disarm ");
 }
 
 OSTIMER_INLINE void ETSTimerEx::done()
 {
-    #if DEBUG_OSTIMER
-        if (isRunning()) {
-            __DBG_printEtsTimer(*this);
-            __DBG_panic("ETSTimerEx::done() name=%s", __S(_name));
-        }
-    #endif
-    __DBG_printEtsTimer(*this, "before done ");
+    if (isRunning()) {
+        ets_timer_disarm(this);
+    }
     ets_timer_done(this);
-    __DBG_printEtsTimer(*this, "after done ");
 }
 
 OSTIMER_INLINE void ETSTimerEx::clear()

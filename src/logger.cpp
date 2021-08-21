@@ -5,10 +5,8 @@
 #if LOGGER
 
 #include "logger.h"
-#include <PrintString.h>
 #include <time.h>
 #include <vector>
-#include <EnumHelper.h>
 #include <misc.h>
 #include "kfc_fw_config.h"
 #include "../src/plugins/plugins.h"
@@ -43,108 +41,6 @@ Logger::Logger() :
 {
 }
 
-void Logger::error(const __FlashStringHelper *message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::ERROR, message, arg);
-    va_end(arg);
-}
-
-void Logger::error(const String &message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::ERROR, message, arg);
-    va_end(arg);
-}
-
-void Logger::security(const __FlashStringHelper *message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::SECURITY, message, arg);
-    va_end(arg);
-}
-
-void Logger::security(const String &message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::SECURITY, message, arg);
-    va_end(arg);
-}
-
-void Logger::warning(const __FlashStringHelper *message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::WARNING, message, arg);
-    va_end(arg);
-}
-
-void Logger::warning(const String &message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::WARNING, message, arg);
-    va_end(arg);
-}
-
-void Logger::notice(const __FlashStringHelper *message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::NOTICE, message, arg);
-    va_end(arg);
-}
-
-void Logger::notice(const String &message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::NOTICE, message, arg);
-    va_end(arg);
-}
-
-void Logger::debug(const __FlashStringHelper *message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::DEBUG, message, arg);
-    va_end(arg);
-}
-
-void Logger::debug(const String &message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(Level::DEBUG, message, arg);
-    va_end(arg);
-}
-
-void Logger::log(Level level, const String &message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(level, message, arg);
-    va_end(arg);
-}
-
-void Logger::log(Level level, const char *message, ...)
-{
-    va_list arg;
-    va_start(arg, message);
-    this->writeLog(level, message, arg);
-    va_end(arg);
-}
-
-Logger::Level Logger::getLevelFromString(PGM_P str)
-{
-    auto level = static_cast<Level>(1 << static_cast<uint8_t>(stringlist_find_P_P(reinterpret_cast<PGM_P>(getLevelAsString(Level::ANY)), str, '|')));
-    __LDBG_assert(level < Level::MAX); // as long as Level::ANY is defined correctly, we cannot get any invalid level. defaults to 0
-    return level;
-}
 
 const __FlashStringHelper *Logger::getLevelAsString(Level logLevel)
 {
@@ -165,30 +61,6 @@ const __FlashStringHelper *Logger::getLevelAsString(Level logLevel)
             break;
     }
     return F("");
-}
-
-void Logger::setLevel(Level logLevel)
-{
-    _logLevel = logLevel;
-}
-
-#if SYSLOG_SUPPORT
-
-void Logger::setSyslog(SyslogStream *syslog)
-{
-    _syslog = syslog;
-}
-
-#endif
-
-bool Logger::isExtraFileEnabled(Level level) const
-{
-    return EnumHelper::Bitset::hasAny(_enabled, level);
-}
-
-void Logger::setExtraFileEnabled(Level level, bool state)
-{
-    EnumHelper::Bitset::setBits(_enabled, state, level);
 }
 
 void Logger::writeLog(Level logLevel, const char *message, va_list arg)
@@ -222,9 +94,12 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
                 file.flush();
             }
         }
-        else {
-            __LDBG_printf("Cannot append to log file %s", _getLogFilename(logLevel).c_str());
-        }
+        #if DEBUG_LOGGER
+            else {
+                auto filename = _getLogFilename(logLevel);
+                __LDBG_printf("Cannot append to log file %s", filename.c_str());
+            }
+        #endif
 
         _closeLog(file);
 
@@ -297,33 +172,11 @@ String Logger::_getLogFilename(Level logLevel)
     return FSPGM(logger_filename_messags, "/.logs/messages");
 }
 
-File Logger::__openLog(Level logLevel, bool write)
-{
-    auto fileName = _getLogFilename(logLevel);
-    __LDBG_printf("logLevel=%u filename=%s", logLevel, fileName.c_str());
-    return KFCFS.open(fileName, write ? (KFCFS.exists(fileName) ? fs::FileOpenMode::append : fs::FileOpenMode::write) : fs::FileOpenMode::read);
-}
-
-void Logger::__rotate(Level logLevel)
-{
-    __LDBG_printf("rotate=%u", logLevel);
-    _closeLog(__openLog(logLevel, true));
-}
-
-String Logger::_getBackupFilename(String filename, int num)
-{
-    if (num > 0) {
-        filename += '.';
-        filename += String(num);
-    }
-    return filename + F(".bak");
-}
-
 void Logger::_closeLog(File file)
 {
+    String filename = file.fullName();
     #if LOGGER_MAX_FILESIZE
         if (file.size() >= LOGGER_MAX_FILESIZE) {
-            String filename = file.fullName();
             #if LOGGER_MAX_BACKUP_FILES
                 // rotation enabled
                 String backFilename;
@@ -353,7 +206,7 @@ void Logger::_closeLog(File file)
             return;
         }
     #endif
-    __LDBG_printf("filename=%s", file.fullName());
+    __LDBG_printf("close file=%s", filename.c_str());
     file.close();
 }
 

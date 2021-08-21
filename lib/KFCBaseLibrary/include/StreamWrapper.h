@@ -105,6 +105,7 @@ private:
     StreamWrapperVector *_streams;
     bool _freeStreams;
     Stream *_input;
+    portMuxType _mux;
 };
 
 inline StreamCacheVector::StreamCacheVector(uint16_t size) : _size(size)

@@ -44,7 +44,31 @@ extern "C" {
 
 #endif
 
-
 }
+
+// currently not implemented
+struct portMuxType {
+    portMuxType() {}
+    void enter() {
+    }
+    void exit() {
+    }
+    void enterISR() {
+    }
+    void exitISR() {
+    }
+};
+
+// scope level auto enter/exit
+struct portMuxLock {
+    portMuxLock(portMuxType &mux) : _mux(mux) {
+        // _mux.enter();
+    }
+    ~portMuxLock() {
+        // _mux.exit();
+    }
+    // portMuxType &_mux;
+};
+
 
 #endif

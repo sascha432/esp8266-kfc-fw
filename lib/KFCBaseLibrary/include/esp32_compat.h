@@ -290,4 +290,34 @@ inline uint32_t crc32(const void *buf, size_t len, uint32_t crc = ~0)
 
 using SpiFlashOpResult = esp_err_t;
 
+#include <freertos/portmacro.h>
+
+struct portMuxType : portMUX_TYPE {
+    portMuxType(portMUX_TYPE value = portMUX_INITIALIZER_UNLOCKED) : portMUX_TYPE(value) {}
+    void enter() {
+        portENTER_CRITICAL(this);
+    }
+    void exit() {
+        portEXIT_CRITICAL(this);
+    }
+    // for inside ISRs
+    void enterISR() {
+        portENTER_CRITICAL_ISR(this);
+    }
+    void exitISR() {
+        portEXIT_CRITICAL_ISR(this);
+    }
+};
+
+// scope level auto enter/exit
+struct portMuxLock {
+    portMuxLock(portMuxType &mux) : _mux(mux) {
+        _mux.enter();
+    }
+    ~portMuxLock() {
+        _mux.exit();
+    }
+    portMuxType &_mux;
+};
+
 #endif

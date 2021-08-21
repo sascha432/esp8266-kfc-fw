@@ -27,16 +27,21 @@ static Sensor_HLW8012 *sensor = nullptr;
 static volatile uint32_t energyCounter = 0;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
+portMuxType _mux;
 
 extern "C" void IRAM_ATTR Sensor_HLW8012_callbackCF()
 {
+    _mux.enterISR();
     _interruptBufferCF.push_back(micros());
     energyCounter++;
+    _mux.exitISR();
 }
 
 extern "C" void IRAM_ATTR Sensor_HLW8012_callbackCF1()
 {
+    _mux.enterISR();
     _interruptBufferCF1.push_back(micros());
+    _mux.exitISR();
 }
 
 // ------------------------------------------------------------------------
@@ -122,6 +127,7 @@ void Sensor_HLW8012::_loop()
         decltype(energyCounter) tempCounter;
         {
             InterruptLock lock;
+            portMuxLock mLock(_mux);
             tempCounter = std::exchange(energyCounter, 0);
         }
         if (IOT_SENSOR_HLW80xx_NO_NOISE(_noiseLevel)) {
@@ -145,6 +151,7 @@ void Sensor_HLW8012::_loop()
             _inputCF1->delayStart = 0;
             _inputCF1->counter = 1;
             InterruptLock lock;
+            portMuxLock mLock(_mux);
             _interruptBufferCF1.clear();
         }
     }
@@ -190,6 +197,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
     size_t size;
     {
         InterruptLock lock;
+        portMuxLock mLock(_mux);
         size = buffer.size();
     }
     if (size >= 2) {
@@ -216,10 +224,12 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         // jitter +-0.03Hz @ 500Hz
         {
             InterruptLock lock;
+            _mux.enter();
             auto iterator = buffer.begin();
             auto lastValue = *iterator;
             while(++iterator != buffer.end()) {
                 auto value = *iterator;
+                _mux.exit();
                 lock.~InterruptLock();
 
                 auto diff = __inline_get_time_diff(lastValue, value);
@@ -300,12 +310,14 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                 #endif
 
             new(static_cast<void *>(&lock)) InterruptLock(); // recreate destroyed lock
+            _mux.enter();
         }
 
         // copy last value and items that have not been processed
         --iterator;
         // buffer = std::move(buffer.slice(iterator, buffer.end()));           // takes ~20-30µs
         buffer.shrink(iterator, buffer.end());                              // <1µs
+        _mux.exit();
     }
 
 #if IOT_SENSOR_HLW80xx_DATA_PLOT

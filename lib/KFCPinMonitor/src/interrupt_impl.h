@@ -29,10 +29,13 @@ namespace PinMonitor {
 
         struct GPIOInterruptLock {
             GPIOInterruptLock() {
+                portMuxLock mLock(_mux);
             }
             ~GPIOInterruptLock() {
+                portMuxLock mLock(_mux);
             }
-    };
+            static portMuxType _mux;
+        };
 
     #endif
 

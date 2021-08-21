@@ -2,6 +2,7 @@
   Author: sascha_lammers@gmx.de
 */
 
+#include <Arduino_compat.h>
 #include <LoopFunctions.h>
 #include <functional>
 #include <algorithm>
@@ -198,6 +199,7 @@ namespace SerialHandler {
         // remove outside interrupts
         LoopFunctions::callOnce([ptr, this]() {
             InterruptLock lock;
+            portMuxLock mLock(_mux);
             _clients.erase(std::remove_if(_clients.begin(), _clients.end(), [ptr](const ClientPtr &client) {
                 return client.get() == ptr;
             }), _clients.end());
@@ -265,6 +267,7 @@ namespace SerialHandler {
     {
         for(const auto &clientPtr: _clients) {
             if (clientPtr) {
+                portMuxLock lock(_mux);
                 auto &client = *clientPtr;
                 auto &rx = client._getRx();
                 if (client._hasAny(EventType::RW) && client._cb && !rx.empty()) {
@@ -280,6 +283,7 @@ namespace SerialHandler {
     {
         for(const auto &clientPtr: _clients) {
             if (clientPtr) {
+                portMuxLock lock(_mux);
                 auto &tx = clientPtr->_getTx();
                 if (tx.available()) {
                     uint8_t buf[Wrapper::kMinBufferSize / 2];

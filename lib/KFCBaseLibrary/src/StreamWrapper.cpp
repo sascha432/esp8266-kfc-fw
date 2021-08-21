@@ -28,6 +28,7 @@ void StreamWrapper::setInput(nullptr_t input)
 void StreamWrapper::remove(Stream *output)
 {
     InterruptLock lock;
+    portMuxLock mLock(_mux);
     __DSW("remove output=%p", output);
     _streams->erase(std::remove(_streams->begin(), _streams->end(), output), _streams->end());
     if (_streams->empty() || _input == output) {
@@ -38,6 +39,7 @@ void StreamWrapper::remove(Stream *output)
 void StreamWrapper::clear()
 {
     InterruptLock lock;
+    portMuxLock mLock(_mux);
     __DSW("clear");
     _streams->clear();
     setInput(&NullSerial);
@@ -46,6 +48,7 @@ void StreamWrapper::clear()
 void StreamWrapper::add(Stream *output)
 {
     InterruptLock lock;
+    portMuxLock mLock(_mux);
     __DSW("add output=%p", output);
     if (std::find(_streams->begin(), _streams->end(), output) != _streams->end()) {
         __DSW("IGNORING DUPLICATE STREAM %p", output);
@@ -57,6 +60,7 @@ void StreamWrapper::add(Stream *output)
 void StreamWrapper::replaceFirst(Stream *output, Stream *input)
 {
     InterruptLock lock;
+    portMuxLock mLock(_mux);
     __DSW("output=%p size=%u", output, _streams->size());
     if (_streams->size() > 1) {
         if (_streams->front() == _input) {

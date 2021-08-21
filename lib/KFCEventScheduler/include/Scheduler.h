@@ -75,6 +75,7 @@ namespace Event {
         bool _addedFlag;
         bool _removedFlag;
         volatile bool _checkTimers;
+        portMuxType _mux;
 
 #if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR
         static constexpr uint32_t _runtimeLimit = kMaxRuntimeLimit;

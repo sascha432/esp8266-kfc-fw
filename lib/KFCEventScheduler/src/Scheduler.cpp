@@ -228,6 +228,7 @@ void Scheduler::_run()
         // reset event flag
         {
             InterruptLock lock;
+            portMuxLock mLock(_mux);
             _hasEvent = PriorityType::NONE;
             for (const auto &timer : _timers) {
                 if (timer && timer->_callbackScheduled && timer->_priority > _hasEvent) {

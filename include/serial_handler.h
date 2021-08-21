@@ -155,6 +155,7 @@ namespace SerialHandler {
 
         Clients _clients;
         bool _txFlag; // indicator that _clients have _tx with data
+        portMuxType _mux;
     };
 
     //
@@ -243,6 +244,7 @@ namespace SerialHandler {
 
     inline Client &Wrapper::addClient(const Callback &cb, EventType events)
     {
+        portMuxLock lock(_mux);
         _clients.emplace_back(new Client(cb, events));
         return *_clients.back().get();
     }

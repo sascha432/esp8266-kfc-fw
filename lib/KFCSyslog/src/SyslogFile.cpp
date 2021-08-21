@@ -35,7 +35,7 @@ void SyslogFile::transmit(const SyslogQueueItem &item)
 {
     auto &message = item.getMessage();
 #if DEBUG_SYSLOG
-    if (!String_startsWith(message, F("::transmit '"))) {
+    if (!message.startsWith(F("::transmit '"))) {
         __LDBG_printf("::transmit id=%u msg=%s", item.getId(), message.c_str());
     }
 #endif

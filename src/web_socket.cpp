@@ -24,6 +24,7 @@ using KFCConfigurationClasses::System;
 
  WsClient::ClientCallbackVector WsClient::_clientCallback;
  WsClient::AsyncWebSocketVector WsClient::_webSockets;
+ portMuxType WsClient::_mux;
 
 extern bool generate_session_for_username(const String &username, String &password);
 

@@ -13,7 +13,8 @@
 #endif
 
 #ifndef DEBUG_RTC_MEMORY_MANAGER
-#    define DEBUG_RTC_MEMORY_MANAGER (0 || defined(DEBUG_ALL))
+#    define DEBUG_RTC_MEMORY_MANAGER 0
+// #    define DEBUG_RTC_MEMORY_MANAGER (0 || defined(DEBUG_ALL))
 #endif
 
 #if DEBUG_RTC_MEMORY_MANAGER

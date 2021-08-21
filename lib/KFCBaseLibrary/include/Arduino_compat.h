@@ -106,32 +106,36 @@ class __FlashStringHelper;
 
 class __FlashStringHelper;
 
-#if USE_LITTLEFS
-#include <LittleFS.h>
-#define KFCFS                                           LittleFS
-#define KFCFS_MAX_FILE_LEN                              31
-#define KFCFS_MAX_PATH_LEN                              127
-#else
-#include <FS.h>
-#define KFCFS                                           SPIFFS
-#define KFCFS_MAX_FILE_LEN                              31
+#    if USE_LITTLEFS
+#        include <LittleFS.h>
+#        define KFCFS LittleFS
+#        if ESP32
+#            define KFCFS_begin() KFCFS.begin(true, "/")
+#        else
+#            define KFCFS_begin() KFCFS.begin()
+#        endif
+#        define KFCFS_MAX_FILE_LEN 31
+#        define KFCFS_MAX_PATH_LEN 127
+#    else
+#        include <FS.h>
+#        define KFCFS              SPIFFS
+#        define KFCFS_MAX_FILE_LEN 31
 // includes directory slashes and filename
-#define KFCFS_MAX_PATH_LEN                              KFCFS_MAX_FILE_LEN
-#endif
+#        define KFCFS_MAX_PATH_LEN KFCFS_MAX_FILE_LEN
+#    endif
 
+#    define SPGM(name, ...)  PROGMEM_STRING_ID(name)
+#    define FSPGM(name, ...) reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
+#    define PSPGM(name, ...) (PGM_P)(SPGM(name))
 
-#define SPGM(name, ...)                                 PROGMEM_STRING_ID(name)
-#define FSPGM(name, ...)                                reinterpret_cast<const __FlashStringHelper *>(SPGM(name))
-#define PSPGM(name, ...)                                (PGM_P)(SPGM(name))
+#    ifndef __attribute__packed__
+#        define __attribute__packed__    __attribute__((packed))
+#        define __attribute__unaligned__ __attribute__((__aligned__(1)))
+#        define PSTR1(str)               PSTRN(str, 1)
+#    endif
 
-#ifndef __attribute__packed__
-#define __attribute__packed__                           __attribute__((packed))
-#define __attribute__unaligned__                        __attribute__((__aligned__(1)))
-#define PSTR1(str)                                      PSTRN(str, 1)
-#endif
-
-#include "debug_helper.h"
-#include "misc.h"
+#    include "debug_helper.h"
+#    include "misc.h"
 
 #elif defined(ESP8266)
 

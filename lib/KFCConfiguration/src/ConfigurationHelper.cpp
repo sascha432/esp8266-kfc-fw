@@ -171,7 +171,7 @@ namespace ConfigurationHelper {
 
     void readHandles()
     {
-        KFCFS.begin();
+        KFCFS_begin();
         auto file = KFCFS.open(FSPGM(__DBG_config_handle_storage), fs::FileOpenMode::read);
         if (file) {
             uint32_t count = 0;

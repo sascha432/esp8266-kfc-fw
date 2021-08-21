@@ -82,14 +82,15 @@ public:
     void __free() {
         if (!isProgMem() && _ptr) {
             free(_ptr);
-            _ptr = nullptr;
         }
-        *this = StaticString();
+        _ptr = nullptr;
+        _length = 0;
+        _progmem = false;
     }
 
 #if ESP8266
 
-    StaticString() : _ptr() {
+    StaticString() noexcept : _ptr(nullptr), _length(0), _progmem(false) {
     }
 
     StaticString(const char *str, uint16_t length) : _ptr(length ? malloc(length + 1) : nullptr) {
@@ -115,7 +116,7 @@ private:
     void *_ptr;
 #else
 
-    StaticString() : _ptr(nullptr), _length(0), _progmem(false) {
+    StaticString() noexcept : _ptr(nullptr), _length(0), _progmem(false) {
     }
 
     StaticString &operator=(StaticString &&str) noexcept {
@@ -143,8 +144,8 @@ private:
 
 private:
     void *_ptr;
-    uint16_t _length : 15;
-    uint16_t _progmem : 1;
+    uint16_t _length;
+    bool _progmem;
 #endif
 };
 

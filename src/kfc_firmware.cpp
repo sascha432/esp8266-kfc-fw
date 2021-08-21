@@ -50,7 +50,7 @@ using KFCConfigurationClasses::Network;
 void delayedSetup(bool delayed)
 {
     if (delayed) {
-        KFCFS.begin();
+        KFCFS_begin();
     }
 
     // check if wifi is up
@@ -368,7 +368,7 @@ void setup()
         // __DBG_printf("FS begin");
         // start FS, we need it for getCrashCounter()
         // KFCFS.setConfig(LittleFSConfig(true));
-        KFCFS.begin();
+        KFCFS_begin();
 
         #if 0
         // dump file system and wait 5 seconds

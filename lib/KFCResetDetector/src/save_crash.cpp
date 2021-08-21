@@ -77,7 +77,7 @@ namespace SaveCrash {
     void removeCrashCounter()
     {
         #if KFC_DISABLE_CRASHCOUNTER == 0
-            KFCFS.begin();
+            KFCFS_begin();
             auto filename = String(FSPGM(crash_counter_file, "/.pvt/crash_counter"));
             if (KFCFS.exists(filename)) {
                 KFCFS.remove(filename);

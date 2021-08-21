@@ -149,7 +149,7 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
     #endif
     if (Update.hasError()) {
         // TODO check if we need to restart the file system
-        // KFCFS.begin();
+        // KFCFS_begin();
 
         Update.printError(errorStr);
         #if STK500V1

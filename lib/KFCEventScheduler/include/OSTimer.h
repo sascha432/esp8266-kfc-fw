@@ -140,6 +140,6 @@ protected:
     }
 };
 
-// #if !DEBUG_OSTIMER
-// #   include "OSTimer.hpp"
-// #endif
+#if !DEBUG_OSTIMER
+#   include "OSTimer.hpp"
+#endif

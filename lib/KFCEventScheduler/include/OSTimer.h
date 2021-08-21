@@ -141,5 +141,6 @@ protected:
 };
 
 #if !DEBUG_OSTIMER
+#   define OSTIMER_INLINE inline
 #   include "OSTimer.hpp"
 #endif

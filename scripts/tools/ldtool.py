@@ -73,7 +73,7 @@ def create_eagle_ld(file, split):
 
 eagle_dir = path.abspath('./conf/ld');
 if not os.path.isdir(eagle_dir):
-    print('cannot find: ')
+    print('cannot find: %s' % eagle_dir)
     sys.exit(-1)
 
 # 4/1

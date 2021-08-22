@@ -14,6 +14,7 @@
 
 #if ESP8266
 #include "FileOpenMode.h"
+#define NVS_STORAGE_DIRECTORY "/.nvs/"
 #endif
 
 #if ESP32
@@ -88,7 +89,7 @@ inline NVSStorage::~NVSStorage()
 inline bool NVSStorage::open(bool write)
 {
     #if ESP8266
-        String filename = F("/.nvs/");
+        String filename = F(NVS_STORAGE_DIRECTORY);
         filename += _name;
         _file = createFileRecursive(filename, write ? fs::FileOpenMode::write : fs::FileOpenMode::read);
         return _file;

@@ -24,12 +24,18 @@
 
 class NVSStorage {
 public:
-    // name is limited to 8 characters
+    enum class OpenMode {
+        READ = 0,
+        WRITE = 1,
+    };
+
+public:
+    // name is limited to 15 characters
     NVSStorage(const String &name);
     NVSStorage(const __FlashStringHelper *name);
     ~NVSStorage();
 
-    bool open(bool write);
+    bool open(OpenMode mode);
     void close();
 
     bool write(const uint8_t *data, size_t size);
@@ -44,6 +50,13 @@ public:
     template<typename _Type>
     bool read(_Type &data) {
         return read(reinterpret_cast<uint8_t *>(std::addressof(data)), sizeof(data));
+    }
+
+    bool isEqual(uint8_t *data, size_t size);
+
+    template<typename _Type>
+    bool isEqual(_Type &data) {
+        return isEqual(reinterpret_cast<uint8_t *>(std::addressof(data)), sizeof(data));
     }
 
 private:
@@ -86,18 +99,19 @@ inline NVSStorage::~NVSStorage()
     close();
 }
 
-inline bool NVSStorage::open(bool write)
+inline bool NVSStorage::open(OpenMode mode)
 {
+    close();
     #if ESP8266
         String filename = F(NVS_STORAGE_DIRECTORY);
         filename += _name;
-        _file = createFileRecursive(filename, write ? fs::FileOpenMode::write : fs::FileOpenMode::read);
+        _file = createFileRecursive(filename, mode == OpenMode::WRITE ? fs::FileOpenMode::write : fs::FileOpenMode::read);
         return _file;
     #endif
     #if ESP32
         if (_handle) {
             close();
-            if (nvs_open(NVS_STORAGE_NAMESPACE, write ? nvs_open_mode_t::NVS_READWRITE : nvs_open_mode_t::NVS_READONLY, &_handle) != ESP_OK) {
+            if (nvs_open(NVS_STORAGE_NAMESPACE, mode == OpenMode::WRITE ? nvs_open_mode_t::NVS_READWRITE : nvs_open_mode_t::NVS_READONLY, &_handle) != ESP_OK) {
                 _handle = 0;
                 return false;
             }
@@ -109,7 +123,9 @@ inline bool NVSStorage::open(bool write)
 inline void NVSStorage::close()
 {
     #if ESP8266
-        _file.close();
+        if (_file) {
+            _file.close();
+        }
     #endif
     #if ESP32
         if (_handle) {
@@ -167,4 +183,16 @@ inline bool NVSStorage::read(uint8_t *data, size_t size)
         }
         return true;
     #endif
+}
+
+inline bool NVSStorage::isEqual(uint8_t *data, size_t size)
+{
+    auto storedData = std::unique_ptr<uint8_t[]>(new uint8_t[size]);
+    if (!storedData) {
+        return false;
+    }
+    if (!read(storedData.get(), size)) {
+        return false;
+    }
+    return memcmp(storedData.get(), data, size) == 0;
 }

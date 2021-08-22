@@ -115,6 +115,7 @@ void CallbackTimer::_rearm()
     }
 
 
+    _etsTimer.disarm();
     _etsTimer.create(Scheduler::__TimerCallback, this);
     _etsTimer.arm(delay, repeat, true);
 }

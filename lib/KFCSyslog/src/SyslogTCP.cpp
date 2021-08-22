@@ -25,7 +25,8 @@ SyslogTCP::SyslogTCP(const char *hostname, SyslogQueue *queue, const String &hos
     _ack(0),
     _useTLS(useTLS)
 {
-    __LDBG_printf("%s:%d TLS %d", host.c_str(), _port, _useTLS);
+    __LDBG_printf("this=%p", this);
+    __LDBG_printf("%p:%d TLS %d", host, _port, _useTLS);
     if (host.length() && !_address.fromString(host)) {
         _host = strdup(host.c_str());
     }
@@ -37,12 +38,12 @@ void SyslogTCP::transmit(const SyslogQueueItem &item)
     __LDBG_printf("id=%u msg=%s%s", item.getId(), _getHeader(item.getMillis()).c_str(), message.c_str());
     __LDBG_assert(_ack == 0);
     __LDBG_assert(_queueId == 0);
-#if DEBUG_SYSLOG
-    if (_ack) {
-        __LDBG_printf("ack=%u id=%u buffer=%u", _ack, _queueId, _buffer.length());
-        clear();
-    }
-#endif
+    #if DEBUG_SYSLOG
+        if (_ack) {
+            __LDBG_printf("ack=%u id=%u buffer=%u", _ack, _queueId, _buffer.length());
+            clear();
+        }
+    #endif
 
     _queueId = item.getId();
     _buffer = _getHeader(item.getMillis());
@@ -151,11 +152,11 @@ void SyslogTCP::_connect()
     __LDBG_printf("connected=%u port=%u connecting=%u can_send=%u state=%s", _client->connected(), _port, _client->connecting(), _client->canSend(), _client->stateToString());
     _allocClient();
 
-#if ASYNC_TCP_SSL_ENABLED
-#   define USE_TLS              , _useTLS
-#else
-#   define USE_TLS
-#endif
+    #if ASYNC_TCP_SSL_ENABLED
+    #   define USE_TLS , _useTLS
+    #else
+    #   define USE_TLS
+    #endif
     bool result;
     if (_host) {
         result = _client->connect(_host, _port USE_TLS);

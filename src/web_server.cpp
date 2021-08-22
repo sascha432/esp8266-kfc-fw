@@ -1239,6 +1239,7 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
         invokeReconfigureNow(getName());
     }
     else {
+        __LDBG_printf_N("starting web server");
         begin(false);
     }
 }

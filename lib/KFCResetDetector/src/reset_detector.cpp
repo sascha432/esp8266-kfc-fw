@@ -20,19 +20,20 @@
 #define __LDBG_printf(...)
 #endif
 
-#if ESP8266
-
 using ResetDetectorUninitialized = stdex::UninitializedClass<ResetDetector>;
 static ResetDetectorUninitialized resetDetectorNoInit __attribute__((section(".noinit")));
 ResetDetector &resetDetector = resetDetectorNoInit._object;
 
-#else
-
-ResetDetector resetDetector;
-
-#endif
+void __preinit(void)
+{
+    resetDetectorNoInit.init();
+    componentRegisterNoInit.init();
+    resetDetector.begin();
+}
 
 extern "C" {
+
+
 
 #if ESP8266
 
@@ -42,9 +43,7 @@ extern "C" {
 
         void preinit(void)
         {
-            resetDetectorNoInit.init();
-            componentRegisterNoInit.init();
-            resetDetector.begin();
+            __preinit();
         }
 
     #endif
@@ -308,7 +307,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 ResetDetectorPlugin::ResetDetectorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ResetDetectorPlugin))
 {
     #if ESP32
-        resetDetector.begin();
+        __preinit();
     #endif
     REGISTER_PLUGIN(this, "ResetDetectorPlugin");
 }

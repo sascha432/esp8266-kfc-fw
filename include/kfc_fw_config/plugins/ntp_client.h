@@ -49,7 +49,7 @@ namespace KFCConfigurationClasses {
                 CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, TimezoneName, 64);
                 CREATE_STRING_GETTER_SETTER(MainConfig().plugins.ntpclient, PosixTimezone, 64);
 
-                static char *getServer(uint8_t num, bool alloc = false);
+                static String getServer(uint8_t num);
                 static constexpr uint8_t kServersMax = SNTP_MAX_SERVERS;
                 static_assert(kServersMax <= 4, "limited to 4 servers");
 

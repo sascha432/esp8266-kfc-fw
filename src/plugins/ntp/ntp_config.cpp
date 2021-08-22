@@ -23,61 +23,25 @@ bool NTPClient::isEnabled()
     return System::Flags::getConfig().is_ntp_client_enabled;
 }
 
-static char *trim(const char *hostname, bool alloc)
+String NTPClient::getServer(uint8_t num)
 {
-    char *server = const_cast<char *>(hostname);
-    while (isspace(*server) && *server) {
-        server++;
-    }
-    if (!*server) {
-        return nullptr;
-    }
-    auto end = server + strlen(server) - 1;
-    while (isspace(*end) && end >= server) {
-        end--;
-    }
-    if (server == end) {
-        return nullptr;
-    }
-    end++; // move to \0
-    if (alloc) {
-        // allocate memory for the trimmed hostname name
-        auto size = end - server;
-        auto ptr = new char[size + 1];
-        if (!ptr) {
-            return nullptr;
-        }
-        // copy trimmed hostname to server
-        std::copy(server, end, ptr);
-        server = ptr;
-        server[size] = 0;
-        // __DBG_printf("newptr '%s' %u", server, size);
-    }
-    else {
-        // return trimmed hostname
-        *end = 0;
-        // __DBG_printf("newsvr '%s' %u", server, strlen(server));
-    }
-    return server;
-}
-
-char *NTPClient::getServer(uint8_t num, bool alloc) {
     switch(num) {
         case 0:
-            return trim(getServer1(), alloc);
+            return String(getServer1()).trim();
         #if SNTP_MAX_SERVERS > 1
         case 1:
-            return trim(getServer2(), alloc);
+            return String(getServer2()).trim();
         #endif
         #if SNTP_MAX_SERVERS > 2
         case 2:
-            return trim(getServer3(), alloc);
+            return String(getServer3()).trim();
         #endif
         #if SNTP_MAX_SERVERS > 3
         case 3:
-            return trim(getServer4(), alloc);
+            return String(getServer4()).trim();
         #endif
         default:
-            return nullptr;
+            __DBG_printf_E("invalid server num=%u", num);
+            return String();
     }
 }

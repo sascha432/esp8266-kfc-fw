@@ -7,15 +7,15 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_NTP_CLIENT
-#define DEBUG_NTP_CLIENT                        0
+#    define DEBUG_NTP_CLIENT  (0 || defined(DEBUG_ALL))
 #endif
 
 #ifndef NTP_HAVE_CALLBACKS
-#define NTP_HAVE_CALLBACKS                      0
+#    define NTP_HAVE_CALLBACKS 0
 #endif
 
 #ifndef NTP_LOG_TIME_UPDATE
-#define NTP_LOG_TIME_UPDATE                     1
+#    define NTP_LOG_TIME_UPDATE 1
 #endif
 
 #if NTP_HAVE_CALLBACKS

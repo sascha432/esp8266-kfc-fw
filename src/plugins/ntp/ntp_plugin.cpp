@@ -134,14 +134,19 @@ uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
 
 void NTPPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies)
 {
+    __LDBG_printf("setup");
     _updateDelay = plusMinusPercent(Plugins::NTPClient::getConfig().getRefreshIntervalMillis(), 5);
     if (System::Flags::getConfig().is_ntp_client_enabled) {
+        __LDBG_printf("startup");
         _callbackState = CallbackState::STARTUP;
         _execConfigTime();
+        __LDBG_printf("startup done");
     }
     else {
         _setTZ(_GMT);
+        __LDBG_printf("shutdown");
         shutdown();
+        __LDBG_printf("shutdown done");
     }
 }
 
@@ -159,7 +164,7 @@ void NTPPlugin::shutdown()
     sntp_stop();
     for (uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
         // remove pointer to server before releasing memory
-        sntp_setservername(i, nullptr);
+        sntp_setservername(i, emptyString.c_str());
         if (_servers[i]) {
             delete[] _servers[i];
             _servers[i] = nullptr;
@@ -176,8 +181,8 @@ void NTPPlugin::getStatus(Print &output)
 
         auto firstServer = true;
         for (uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
-            auto server = Plugins::NTPClient::getServer(i, false);
-            if (server) {
+            auto server = Plugins::NTPClient::getServer(i);
+            if (server.length()) {
                 if (firstServer) {
                     firstServer = false;
                     output.print(F(HTML_S(br) "Servers "));
@@ -194,7 +199,7 @@ void NTPPlugin::getStatus(Print &output)
     }
 }
 
-extern "C" int	setenv (const char *__string, const char *__value, int __overwrite);
+extern "C" int	setenv(const char *__string, const char *__value, int __overwrite);
 extern "C" void tzset(void);
 
 void NTPPlugin::_setTZ(const char *tz)
@@ -212,28 +217,29 @@ void NTPPlugin::_execConfigTime()
     sntp_stop();
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
 
-#if DEBUG_NTP_CLIENT
-    PrintString debugStr;
-#endif
+    #if DEBUG_NTP_CLIENT
+        PrintString debugStr;
+    #endif
 
     for(uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
-        auto server = Plugins::NTPClient::getServer(i, true);
-#if DEBUG_NTP_CLIENT
-        debugStr.printf_P(PSTR("server%u=%s "), i, __S(server));
-#endif
-        sntp_setservername(i, server);
+        auto server = Plugins::NTPClient::getServer(i);
+        #if DEBUG_NTP_CLIENT
+            debugStr.printf_P(PSTR("server%u=%s "), i, __S(server));
+        #endif
+        sntp_setservername(i, emptyString.c_str());
         // release memory after setting a new server
         if (_servers[i]) {
             delete[] _servers[i];
         }
-        _servers[i] = server;
+        _servers[i] = strdup(server.c_str());
+        sntp_setservername(i, _servers[i]);
     }
 
     auto timezone = Plugins::NTPClient::getPosixTimezone();
-#if DEBUG_NTP_CLIENT
-    debugStr.printf_P(PSTR("tz=%s"), Plugins::NTPClient::getPosixTimezone());
-    __DBG_printf("%s", debugStr.c_str());
-#endif
+    #if DEBUG_NTP_CLIENT
+        debugStr.printf_P(PSTR("tz=%s"), Plugins::NTPClient::getPosixTimezone());
+        __DBG_printf("%s", debugStr.c_str());
+    #endif
 	_setTZ(timezone ? timezone : _GMT);
     sntp_init();
 
@@ -262,26 +268,26 @@ void NTPPlugin::_updateNtpCallback()
     if (isTimeValid(now + 60)) { // allow to change time back up to 60 seconds
         setLastKnownTimeOfDay(now);
         RTCMemoryManager::setTime(time(nullptr), RTCMemoryManager::SyncStatus::YES);
-#if NTP_LOG_TIME_UPDATE
-        Logger_notice(F("NTP time: %s"), timeStr.c_str());
-#endif
+        #if NTP_LOG_TIME_UPDATE
+            Logger_notice(F("NTP time: %s"), timeStr.c_str());
+        #endif
     }
     else {
         __LDBG_printf("invalid SNTP time=" TIME_T_FMT "+60 lk_time=" TIME_T_FMT, now, getLastKnownTimeOfDay());
         Logger_error(F("NTP time is in the past: %s"), timeStr.c_str());
     }
 
-#if NTP_HAVE_CALLBACKS
-    for(const auto &callback: _callbacks) {
-        callback(time(nullptr));
-    }
-#endif
+    #if NTP_HAVE_CALLBACKS
+        for(const auto &callback: _callbacks) {
+            callback(time(nullptr));
+        }
+    #endif
 
-#if DEBUG_NTP_CLIENT
-    for(uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
-        __DBG_printf("reachability server%s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
-    }
-#endif
+    #if DEBUG_NTP_CLIENT
+        for(uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
+            __DBG_printf("reachability server%s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
+        }
+    #endif
 
 }
 
@@ -296,9 +302,9 @@ void NTPPlugin::_checkTimerCallback(Event::CallbackTimerPtr timer)
 
     if (WiFi.isConnected()) {
 
-#if DEBUG_NTP_CLIENT
-        __LDBG_printf("checktimer retrying update interval=%u", kCheckInterval);
-#endif
+        #if DEBUG_NTP_CLIENT
+            __LDBG_printf("checktimer retrying update interval=%u", kCheckInterval);
+        #endif
         timer->updateInterval(Event::milliseconds(kCheckInterval));
         _execConfigTime();
     }

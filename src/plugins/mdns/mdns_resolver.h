@@ -149,7 +149,11 @@ namespace MDNSResolver {
             String _prefix;
             String _suffix;
             ResolvedCallback _callback;
-            // MDNSResponder::hMDNSServiceQuery _serviceQuery;
+            #if ESP32
+                void *_serviceQuery;
+            #else
+                MDNSResponder::hMDNSServiceQuery _serviceQuery;
+            #endif
             uint16_t _port;
             uint16_t _fallbackPort;
             uint16_t _timeout;

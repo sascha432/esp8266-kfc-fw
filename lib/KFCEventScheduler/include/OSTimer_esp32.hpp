@@ -137,7 +137,11 @@ OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find()
 
 OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
 {
-    return timer->isRunning() ? timer : nullptr;
+    auto iterator = std::find(_timers.begin(), _timers.end(), timer);
+    if (iterator == _timers.end()) {
+        return nullptr;
+    }
+    return timer;
 }
 
 OSTIMER_INLINE void ETSTimerEx::end()

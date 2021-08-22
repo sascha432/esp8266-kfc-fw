@@ -172,23 +172,19 @@ void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
     auto wasEmpty = _queries.empty();
     __LDBG_printf("query=%p running=%u queries=%u", query, _isRunning(), _queries.size());
 
-    #if ESP32
-        #warning TODO
-    #else
-        _queries.emplace_back(query);
-        if (!isEnabled()) {
-            //TODO this might fail if wifi is down
-            if (wasEmpty) {
-                __LDBG_printf("MDNS disabled, calling begin");
-                MDNS.begin(System::Device::getName());
-                LoopFunctions::add(loop);
-            }
-            query->begin();
+    _queries.emplace_back(query);
+    if (!isEnabled()) {
+        //TODO this might fail if wifi is down
+        if (wasEmpty) {
+            __LDBG_printf("MDNS disabled, calling begin");
+            MDNS.begin(System::Device::getName());
+            LoopFunctions::add(loop);
         }
-        else if (_isRunning()) {
-            query->begin();
-        }
-    #endif
+        query->begin();
+    }
+    else if (_isRunning()) {
+        query->begin();
+    }
 }
 
 MDNSResolver::Query *MDNSPlugin::findQuery(void *query) const

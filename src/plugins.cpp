@@ -27,7 +27,7 @@ using KFCConfigurationClasses::System;
 
 using namespace PluginComponents;
 
-#if ESP8266
+// #if ESP8266
 
 using RegisterExUninitialized = stdex::UninitializedClass<PluginComponents::RegisterEx>;
 RegisterExUninitialized componentRegisterNoInit __attribute__((section(".noinit")));
@@ -37,18 +37,19 @@ Register *Register::getInstance()
     return &componentRegisterNoInit._object;
 }
 
-#else
+// #else
 
-PluginComponents::RegisterEx componentRegister;
+// PluginComponents::RegisterEx componentRegister __attribute__((section(".noinit")));;
 
-Register *Register::getInstance()
-{
-    return &componentRegister;
-}
+// Register *Register::getInstance()
+// {
+//     return &componentRegister;
+// }
 
-#endif
+// #endif
 
 #if DEBUG_PLUGINS
+
 void Register::_add(PluginComponent *plugin, const char *name)
 {
     #if ESP8266
@@ -196,7 +197,7 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             plugin->setSetupTime();
             __LDBG_printf("setup plugin=%s mode=%u plugin=%p", plugin->getName_P(), mode, plugin);
             plugin->setup(mode, dependencies);
-            __LDBG_printf("esetup plugin=%s done", plugin->getName_P());
+            __LDBG_printf("end_setup plugin=%s", plugin->getName_P());
             dependencies->check();
 
             if (plugin->hasWebUI()) {

@@ -3,7 +3,7 @@
  */
 
 #include "kfc_fw_config/base.h"
-#include "ConfigurationHelper.h"
+#include <ConfigurationHelper.h>
 
 namespace KFCConfigurationClasses {
 

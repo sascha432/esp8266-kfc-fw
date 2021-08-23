@@ -28,6 +28,7 @@ static constexpr auto kWiFiEncryptionTypes = stdex::array_of<const uint8_t>(ENC_
 #endif
 using WiFiEncryptionType = decltype(kWiFiEncryptionTypeDefault);
 
+
 enum class SyslogProtocolType : uint8_t {
     MIN = 0,
     NONE = MIN,
@@ -37,6 +38,8 @@ enum class SyslogProtocolType : uint8_t {
     FILE,
     MAX
 };
+
+using SyslogProtocol = SyslogProtocolType;
 
 #undef DISABLED
 

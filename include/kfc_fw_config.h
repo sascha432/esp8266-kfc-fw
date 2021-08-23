@@ -196,6 +196,8 @@ private:
 
 extern KFCFWConfiguration config;
 
+#include "kfc_fw_config_classes.hpp"
+
 inline bool KFCFWConfiguration::isSafeMode() const
 {
     return _safeMode;

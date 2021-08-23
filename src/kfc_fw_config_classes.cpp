@@ -88,7 +88,7 @@ namespace KFCConfigurationClasses {
 
     FormUI::Container::List createFormPinList(uint8_t from, uint8_t to)
     {
-#if ESP8266
+    #if ESP8266
         return FormUI::Container::List(
             0, F("GPIO0"),
             1, F("GPIO1/U0TXD"),
@@ -103,12 +103,12 @@ namespace KFCConfigurationClasses {
             16, F("GPIO16/RTC_GPIO0")
         );
         // PROGMEM_DEF_LOCAL_PSTR_ARRAY(pinNames, "GPIO0", "U0TXD", "GPIO2", "U0RXD", "GPIO4", "GPIO5", "", "", "", "", "", "", "GPIO12", "GPIO13", "GPIO14", "GPIO15", "GPIO16/RTC_GPIO0");
-#else
+    #else
         #ifndef NUM_DIGITAL_PINS
-        #define NUM_DIGITAL_PINS 16
+            #define NUM_DIGITAL_PINS 16
         #endif
         #ifndef isFlashInterfacePin
-        #define isFlashInterfacePin(i) false
+            #define isFlashInterfacePin(i) false
         #endif
         PROGMEM_DEF_LOCAL_PSTR_ARRAY_INDEXED(pinNames, 0, NUM_DIGITAL_PINS, "", GPIO);
         FormUI::Container::List list;
@@ -127,7 +127,7 @@ namespace KFCConfigurationClasses {
             }
         }
         return list;
-#endif
+    #endif
     }
 
     // "${zeroconf:" service "." proto "," variable "|" default_value "}"
@@ -142,56 +142,6 @@ namespace KFCConfigurationClasses {
         return str;
     }
 
-
-    const void *loadBinaryConfig(HandleType handle, uint16_t &length)
-    {
-        auto data = config.getBinaryV(handle, length);
-        // __CDBG_printf("handle=%04x data=%p len=%u", handle, data, length);
-        return data;
-    }
-
-    void *loadWriteableBinaryConfig(HandleType handle, uint16_t length)
-    {
-        auto data = config.getWriteableBinary(handle, length);
-        __CDBG_printf("handle=%04x data=%p len=%u", handle, data, length);
-        return data;
-    }
-
-    void storeBinaryConfig(HandleType handle, const void *data, uint16_t length)
-    {
-        __CDBG_printf("handle=%04x data=%p len=%u", handle, data, length);
-        config.setBinary(handle, data, length);
-    }
-
-    const char *loadStringConfig(HandleType handle)
-    {
-        auto str = config.getString(handle);
-        // __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
-        return str;
-    }
-
-    char *loadWriteableStringConfig(HandleType handle, uint16_t size)
-    {
-        return config.getWriteableString(handle, size);
-    }
-
-    void storeStringConfig(HandleType handle, const char *str)
-    {
-        __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
-        config.setString(handle, str);
-    }
-
-    void storeStringConfig(HandleType handle, const __FlashStringHelper *str)
-    {
-        __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
-        config.setString(handle, str);
-    }
-
-    void storeStringConfig(HandleType handle, const String &str)
-    {
-        __CDBG_printf("handle=%04x str=%s len=%u", handle, _S_STR(str), _S_STRLEN(str));
-        config.setString(handle, str);
-    }
 
     // --------------------------------------------------------------------
     // Flags

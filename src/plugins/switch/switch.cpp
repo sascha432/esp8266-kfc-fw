@@ -10,6 +10,7 @@
 #include <ESPAsyncWebServer.h>
 #include <StreamString.h>
 #include <WebUISocket.h>
+#include <nvs_storage.h>
 #include "PluginComponent.h"
 #include "Utility/ProgMemHelper.h"
 #include "plugins.h"
@@ -363,16 +364,20 @@ void SwitchPlugin::_readStates()
         }
     #endif
     #if IOT_SWITCH_STORE_STATES_FS
-        auto file = KFCFS.open(FSPGM(iot_switch_states_file, "/.pvt/switch.states"), fs::FileOpenMode::read);
-        if (!file || !_states.read(file)) {
-            // reset on read error
+        auto storage = NVSStorage(F("iot_switch"));
+        if (!storage.open(NVSStorage::OpenMode::READ) || !storage.read<States>(_states)) {
             _states = States();
         }
-        uint32_t crc = ~0U;
-        if ((static_cast<size_t>(file.read(reinterpret_cast<uint8_t *>(&crc), sizeof(crc))) != sizeof(crc)) || (crc != crc32(_states, sizeof(_states)))) {
-            __LDBG_printf("invalid stored=0x%08x crc=0x%08x", crc, crc32(_states, sizeof(_states)));
-            _states = States();
-        }
+        // auto file = KFCFS.open(FSPGM(iot_switch_states_file, "/.pvt/switch.states"), fs::FileOpenMode::read);
+        // if (!file || !_states.read(file)) {
+        //     // reset on read error
+        //     _states = States();
+        // }
+        // uint32_t crc = ~0U;
+        // if ((static_cast<size_t>(file.read(reinterpret_cast<uint8_t *>(&crc), sizeof(crc))) != sizeof(crc)) || (crc != crc32(_states, sizeof(_states)))) {
+        //     __LDBG_printf("invalid stored=0x%08x crc=0x%08x", crc, crc32(_states, sizeof(_states)));
+        //     _states = States();
+        // }
     #endif
     __LDBG_printf("states=%s", _states.toString().c_str());
     _statesInitialized = true;
@@ -395,17 +400,26 @@ void SwitchPlugin::_writeStatesDelayed()
 void SwitchPlugin::_writeStatesNow()
 {
     __LDBG_printf("states=%s", _states.toString().c_str());
-    auto file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::read);
-    if (file && _states.compare(file)) {
+
+    auto storage = NVSStorage(F("iot_switch"));
+    if (storage.open(NVSStorage::OpenMode::READ) && storage.isEqual<States>(_states)) {
         __LDBG_printf("write skipped no changes");
         return;
     }
-    file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
-    if (file && !_states.write(file)) {
+    if (!storage.open(NVSStorage::OpenMode::WRITE) || !storage.write<States>(_states)) {
         __LDBG_printf("failed to write states");
     }
-    uint32_t crc = crc32(_states, sizeof(_states));
-    file.write(reinterpret_cast<uint8_t *>(&crc), sizeof(crc));
+    // auto file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::read);
+    // if (file && _states.compare(file)) {
+    //     __LDBG_printf("write skipped no changes");
+    //     return;
+    // }
+    // file = KFCFS.open(FSPGM(iot_switch_states_file), fs::FileOpenMode::write);
+    // if (file && !_states.write(file)) {
+    //     __LDBG_printf("failed to write states");
+    // }
+    // uint32_t crc = crc32(_states, sizeof(_states));
+    // file.write(reinterpret_cast<uint8_t *>(&crc), sizeof(crc));
 }
 
 void SwitchPlugin::_publishState(int8_t channel)

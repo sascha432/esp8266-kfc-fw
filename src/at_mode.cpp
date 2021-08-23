@@ -2749,7 +2749,7 @@ void at_mode_serial_input_handler(Stream &client)
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
         while(client.available()) {
             int ch = client.read();
-            __LDBG_printf("read %u (%c) cr=%u", (unsigned)((uint8_t)ch), isprint(ch) ? ch : '-', lastWasCR);
+            // __LDBG_printf("read %u (%c) cr=%u", (unsigned)((uint8_t)ch), isprint(ch) ? ch : '-', lastWasCR);
             if (lastWasCR == true && ch == '\n') {
                 lastWasCR = false;
                 continue;

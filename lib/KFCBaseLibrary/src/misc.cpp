@@ -208,14 +208,14 @@ File createFileRecursive(const String &path, const char *mode)
             }
             parts.concat(str, size);
             if (flags & split::SplitFlagsType::LAST) {
-                __DBG_printf("create file=%s exists=%u", parts.c_str(), KFCFS.exists(parts));
+                __LDBG_printf("create file=%s exists=%u", parts.c_str(), KFCFS.exists(parts));
                 if (!KFCFS.exists(parts)) {
                     file = KFCFS.open(parts, mode);
                 }
             }
             else {
                 KFCFS.mkdir(parts);
-                __DBG_printf("create dir=%s exists=%u", parts.c_str(), KFCFS.exists(parts));
+                __LDBG_printf("create dir=%s exists=%u", parts.c_str(), KFCFS.exists(parts));
             }
         }, split::SplitFlagsType::NONE, 32);
     }

@@ -382,7 +382,11 @@ const char *Configuration::getString(HandleType handle)
     if (param == _params.end()) {
         return emptyString.c_str();
     }
-    return param->getString(*this, offset);
+    auto result = param->getString(*this, offset);;
+    if (!result) {
+        __DBG_panic("handle=%04x string=%p", result);
+    }
+    return result;
 }
 
 char *Configuration::getWriteableString(HandleType handle, size_type maxLength)

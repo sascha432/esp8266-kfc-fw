@@ -25,23 +25,32 @@ bool NTPClient::isEnabled()
 
 String NTPClient::getServer(uint8_t num)
 {
+    const char *server = nullptr;
     switch(num) {
         case 0:
-            return String(getServer1()).trim();
+            server = getServer1();
+            break;
         #if SNTP_MAX_SERVERS > 1
         case 1:
-            return String(getServer2()).trim();
+            server = getServer2();
+            break;
         #endif
         #if SNTP_MAX_SERVERS > 2
         case 2:
-            return String(getServer3()).trim();
+            server = getServer3();
+            break;
         #endif
         #if SNTP_MAX_SERVERS > 3
         case 3:
-            return String(getServer4()).trim();
+            server = getServer4();
+            break;
         #endif
         default:
             __DBG_printf_E("invalid server num=%u", num);
-            return String();
+            break;
     }
+    if (!server) {
+        return String();
+    }
+    return String(server).trim();
 }

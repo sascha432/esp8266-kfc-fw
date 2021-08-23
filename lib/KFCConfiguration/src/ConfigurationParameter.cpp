@@ -74,10 +74,10 @@ void ConfigurationParameter::setData(Configuration &conf, const uint8_t *data, s
 const char *ConfigurationParameter::getString(Configuration &conf, uint16_t offset)
 {
     if (_param.size() == 0) {
-        return nullptr;
+        return emptyString.c_str();
     }
     if (!_readData(conf, offset)) {
-        return nullptr;
+        return emptyString.c_str();
     }
     //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
     return _param.string();
@@ -265,7 +265,7 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
     __LDBG_assert_panic(static_cast<const void *>(&(*iterator)) == static_cast<const void *>(this), "*iterator=%p this=%p", &(*iterator), this);
 
     if (_param.length() != _param.next_offset_unaligned()) {
-        __DBG_printf("%s length changed", toString().c_str());
+        __DBG_printf_E("%s length changed", toString().c_str());
         return true;
     }
 

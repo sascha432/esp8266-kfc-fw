@@ -21,17 +21,21 @@
 
 #endif
 
-#elif __GNUG__ && __GNUC__ < 5
+#elif __GNUG__ && __GNUC__ < 10
 
 #define TIME_T_FMT "%ld"
 #define TIME_T_MIN 946684800L       // Sat Jan 01 2000 00:00:00 GMT+0000
 #define TIME_T_MAX 0x7FFFFFFFL      // Tue Jan 19 2038 03:14:07 GMT+0000
+
+static_assert(sizeof(time_t) == sizeof(long), "invalid type");
 
 #else
 
 #define TIME_T_FMT "%lld"
 #define TIME_T_MIN 946684800LL      // Sat Jan 01 2000 00:00:00 GMT+0000
 #define TIME_T_MAX 0xFFFFFFFFLL     // Sun Feb 07 2106 06:28:15 GMT+0000
+
+static_assert(sizeof(time_t) == sizeof(long long), "invalid type");
 
 #endif
 

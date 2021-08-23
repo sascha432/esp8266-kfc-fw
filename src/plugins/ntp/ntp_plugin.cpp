@@ -137,16 +137,12 @@ void NTPPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies)
     __LDBG_printf("setup");
     _updateDelay = plusMinusPercent(Plugins::NTPClient::getConfig().getRefreshIntervalMillis(), 5);
     if (System::Flags::getConfig().is_ntp_client_enabled) {
-        __LDBG_printf("startup");
         _callbackState = CallbackState::STARTUP;
         _execConfigTime();
-        __LDBG_printf("startup done");
     }
     else {
         _setTZ(_GMT);
-        __LDBG_printf("shutdown");
         shutdown();
-        __LDBG_printf("shutdown done");
     }
 }
 
@@ -164,9 +160,9 @@ void NTPPlugin::shutdown()
     sntp_stop();
     for (uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
         // remove pointer to server before releasing memory
-        sntp_setservername(i, emptyString.c_str());
+        sntp_setservername(i, nullptr);
         if (_servers[i]) {
-            delete[] _servers[i];
+            free(_servers[i]);
             _servers[i] = nullptr;
         }
     }
@@ -217,29 +213,18 @@ void NTPPlugin::_execConfigTime()
     sntp_stop();
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
 
-    #if DEBUG_NTP_CLIENT
-        PrintString debugStr;
-    #endif
-
     for(uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
         auto server = Plugins::NTPClient::getServer(i);
-        #if DEBUG_NTP_CLIENT
-            debugStr.printf_P(PSTR("server%u=%s "), i, __S(server));
-        #endif
-        sntp_setservername(i, emptyString.c_str());
+        sntp_setservername(i, nullptr);
         // release memory after setting a new server
         if (_servers[i]) {
-            delete[] _servers[i];
+            free(_servers[i]);
         }
         _servers[i] = strdup(server.c_str());
         sntp_setservername(i, _servers[i]);
     }
 
     auto timezone = Plugins::NTPClient::getPosixTimezone();
-    #if DEBUG_NTP_CLIENT
-        debugStr.printf_P(PSTR("tz=%s"), Plugins::NTPClient::getPosixTimezone());
-        __DBG_printf("%s", debugStr.c_str());
-    #endif
 	_setTZ(timezone ? timezone : _GMT);
     sntp_init();
 
@@ -257,13 +242,13 @@ void NTPPlugin::updateNtpCallback()
 void NTPPlugin::_updateNtpCallback()
 {
     auto now = time(nullptr);
-    __LDBG_printf("new time=" TIME_T_FMT " @ %.3fs valid=%u lk_time=" TIME_T_FMT " timer=%u callback_state=%s", now, millis() / 1000.0, isTimeValid(now), getLastKnownTimeOfDay(), (bool)_checkTimer, getCallbackState());
+    __LDBG_printf("new time=" TIME_T_FMT " @ %.3fs valid=%u lk_time=" TIME_T_FMT " timer=%u callback_state=%s",now, millis() / 1000.0, isTimeValid(now), getLastKnownTimeOfDay(), (bool)_checkTimer, getCallbackState());
 
     _callbackState = CallbackState::WAITING_FOR_REFRESH;
     _checkTimer.remove();
 
     PrintString timeStr;
-    timeStr.strftime(FSPGM(strftime_date_time_zone, "%FT%T %Z"), localtime(&now));
+    timeStr.strftime(FSPGM(strftime_date_time_zone, "%FT%T %Z"), now);
 
     if (isTimeValid(now + 60)) { // allow to change time back up to 60 seconds
         setLastKnownTimeOfDay(now);

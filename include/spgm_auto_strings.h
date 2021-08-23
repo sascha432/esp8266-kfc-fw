@@ -348,7 +348,6 @@ PROGMEM_STRING_DECL(int);
 PROGMEM_STRING_DECL(interval);
 PROGMEM_STRING_DECL(iot_blinds_control_state_file);
 PROGMEM_STRING_DECL(iot_sensor_hlw80xx_state_file);
-PROGMEM_STRING_DECL(iot_switch_states_file);
 PROGMEM_STRING_DECL(ip_8_8_8_8);
 PROGMEM_STRING_DECL(is_);
 PROGMEM_STRING_DECL(kWh);

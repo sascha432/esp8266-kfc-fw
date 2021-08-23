@@ -270,7 +270,7 @@ void NTPPlugin::_updateNtpCallback()
 
     #if DEBUG_NTP_CLIENT
         for(uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
-            __DBG_printf("reachability server%s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
+            __DBG_printf("reachability server %s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
         }
     #endif
 

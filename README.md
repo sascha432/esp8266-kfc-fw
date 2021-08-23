@@ -6,9 +6,15 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 ## Required flash size
 
-1M with most features activated, no OTA updates
+### ESP8266
 
+1M with most features activated, no OTA updates
 2M with OTA
+
+### ESP32
+
+4M and 8M with OTA
+**OTA for 4M is work in progress**
 
 ## ChangeLog
 
@@ -39,6 +45,22 @@ I started to create branches of stable versions for my different devices.
 [Blinds Control - Version 0.0.4.7591](https://github.com/sascha432/esp8266-kfc-fw/tree/blinds_control_0.0.4.7591)
 
 [Remote Control - Version 0.0.4.7545](https://github.com/sascha432/esp8266-kfc-fw/tree/remote_control_0.0.4.7545)
+
+## Requirements
+
+### ESP8266
+
+- GCC 10.x
+- Arduino Core 3.x with modified WString class
+
+The modified version of the core is available on github and used by default
+
+### ESP32
+
+- GCC 8.x with gnu++17
+- Arduino Core 2.x with modified WString class and ESP8266 compatibility extensions
+
+The modified version of the core is available on github and used by default. `framework-arduinoespressif32#feature/arduino-upstream` is used in order to get the GCC 8.x toolchain instead of 5.x
 
 ## Libraries
 

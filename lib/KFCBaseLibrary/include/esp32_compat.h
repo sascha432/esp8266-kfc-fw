@@ -134,11 +134,7 @@ namespace fs {
         }
 
         bool next() {
-            return false;
-        }
-
-        const char *fileName() const {
-            return name();
+            return openNextFile();
         }
 
         size_t fileSize() const {

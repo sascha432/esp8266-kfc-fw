@@ -33,10 +33,10 @@ ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
     _listing({}),
     _isDir(false),
     _filterSubdirs(filterSubdirs),
-    _hiddenFiles(hiddenFiles),
-    _dir(KFCFS.open(dirName))
+    _hiddenFiles(hiddenFiles)
 {
     append_slash(_dirName);
+    _dir = KFCFS.open(_dirName);
     __LDBG_printf("dirName=%s", _dirName.c_str());
 }
 

@@ -334,9 +334,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text fi
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<filename>,<new filename>", "Rename file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|false>,<subdirs=true|false>]]", "List files and directories");
-#if ESP8266
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using FS.openDir()");
-#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off|ap_standby|wimo>][,<wimo-mode 0=off|1=STA|2=AP|3=STA+AP>|clear[_flash]|diag[nostics]]", "Modify WiFi settings, wimo sets mode and reboots");
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
@@ -417,9 +415,7 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RN), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LS), name);
-#if ESP8266
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LSR), name);
-#endif
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIFI), name);
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LED), name);
@@ -2142,21 +2138,23 @@ void at_mode_serial_handle_event(String &commandString)
             output.println(dir.fileName());
         }
     }
-    #if ESP8266
-        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LSR))) {
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LSR))) {
+        #if ESP32
+            auto dir = Dir(KFCFS.open(args.toString(0), fs::FileOpenMode::read));
+        #else
             auto dir = KFCFS.openDir(args.toString(0));
-            while(dir.next()) {
-                output.print(F("+LS: "));
-                if (dir.isFile()) {
-                    output.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
-                }
-                else {
-                    output.print(F("[...]    "));
-                }
-                output.println(dir.fileName());
+        #endif
+        while(dir.next()) {
+            output.print(F("+LS: "));
+            if (dir.isDirectory()) {
+                output.print(F("[...]    "));
             }
+            else {
+                output.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
+            }
+            output.println(dir.fullName());
         }
-    #endif
+    }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {
         if (args.requireArgs(1, 1)) {
             StreamOutput::Cat::dump(args.toString(0), output, StreamOutput::Cat::kPrintInfo|StreamOutput::Cat::kPrintCrLfAsText);

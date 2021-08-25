@@ -201,7 +201,7 @@ void WiFi_get_status(Print &out)
 
         tcpip_adapter_ip_info_t ip;
         if (tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip) != ESP_OK) {
-            memset(&ip, 0, sizeof(ip));
+            ip = {};
         }
 
         out.print(F(HTML_S(strong) "Access point:" HTML_E(strong) HTML_S(br)));
@@ -289,12 +289,12 @@ void WiFi_SoftAP_SSID(Print &out)
     #if defined(ESP32)
         wifi_config_t _config;
         wifi_ap_config_t &config = _config.ap;
-        if (esp_wifi_get_config(wifi_interface_t::WIFI_IF_STA, &_config) == ESP_OK) {
+        if (esp_wifi_get_config(wifi_interface_t::WIFI_IF_AP, &_config) == ESP_OK) {
     #elif defined(ESP8266)
         softap_config config;
         if (wifi_softap_get_config(&config)) {
     #else
-    #error Platform not supported
+        #error Platform not supported
     #endif
         out.printf_P(PSTR("%*.*s"), config.ssid_len, config.ssid_len, config.ssid);
         if (config.ssid_hidden) {

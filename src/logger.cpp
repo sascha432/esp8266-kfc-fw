@@ -84,7 +84,6 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
         header.print(F("] "));
 
         msg.vprintf_P(message, arg);
-
         msg.rtrim();
 
         if (file) {
@@ -110,9 +109,9 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
                 Serial.println(msg);
             }
             #if ___DEBUG
-            else {
-                DebugContext_prefix(DEBUG_OUTPUT.println(msg));
-            }
+                else {
+                    DebugContext_prefix(DEBUG_OUTPUT.println(msg));
+                }
             #endif
         #else
             DebugContext_prefix(DEBUG_OUTPUT.println(msg));

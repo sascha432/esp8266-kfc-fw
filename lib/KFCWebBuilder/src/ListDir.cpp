@@ -10,23 +10,6 @@
 #include "debug_helper_disable.h"
 // #include "debug_helper_enable.h"
 
-#if ESP8266
-
-ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
-    _dirName(dirName),
-    _listings(KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
-    _listing({}),
-    _isDir(false),
-    _filterSubdirs(filterSubdirs),
-    _hiddenFiles(hiddenFiles),
-    _dir(KFCFS.openDir(dirName))
-{
-    append_slash(_dirName);
-    __LDBG_printf("dirName=%s hiddenFiles=%u", _dirName.c_str(), _hiddenFiles);
-}
-
-#elif ESP32
-
 ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
     _dirName(dirName),
     _listings(KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
@@ -35,18 +18,16 @@ ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
     _filterSubdirs(filterSubdirs),
     _hiddenFiles(hiddenFiles)
 {
-    append_slash(_dirName);
-    _dir = KFCFS.open(_dirName);
+    #if ESP8266
+        _dir = KFCFS.openDir(dirName);
+        append_slash(_dirName);
+    #endif
+    #if ESP32
+        append_slash(_dirName);
+        _dir = Dir(KFCFS.open(_dirName));
+    #endif
     __LDBG_printf("dirName=%s", _dirName.c_str());
 }
-
-File ListDir::openFile(const char* mode)
-{
-    return KFCFS.open(_file.name(), mode);
-}
-
-#endif
-
 
 // _dirName = "/mydir/subdir0/"
 // dir = "/mydir/subdir0/mystuff/many/files.txt"
@@ -130,7 +111,7 @@ bool ListDir::next()
             }
         }
     }
-    #if defined(ESP8266)
+    // #if defined(ESP8266)
         bool next;
         if (_listing.valid && _listing.header.uuid == kDirectoryUUID) {
             next = true;
@@ -141,16 +122,16 @@ bool ListDir::next()
         }
         while (next) {
             #if USE_LITTLEFS
-                _filename = _dirName + _dir.fileName();
+                _filename = _dirName + _dir.fullName();
             #else
-                _filename = _dir.fileName();
+                _filename = _dir.fullName();
             #endif
 
-    #elif defined(ESP32)
-        File next;
-        while((next = _dir.openNextFile())) {
-            _filename = next.name();
-    #endif
+    // #elif defined(ESP32)
+    //     File next;
+    //     while((next = _dir.openNextFile())) {
+    //         _filename = next.name();
+    // #endif
 
         while(true) {
             if (_filename.startsWithIgnoreCase(FSPGM(fs_mapping_dir))) {
@@ -158,7 +139,7 @@ bool ListDir::next()
             }
             _isDir = false;
             auto subDirCount = _countSubDirs(_filename);
-            #if defined(ESP8266)
+            #if defined(ESP8266) || 1
                 // this emulates one level of subdirecties only
                 String dir = _getFirstSubDirectory(_filename);
                 __LDBG_printf("file=%s subdirs=%u show=%u dir=%s add=%u",
@@ -184,7 +165,7 @@ bool ListDir::next()
             if (subDirCount == 0 || !_showPath(_filename)) { // multiple subdirectories
                 break;
             }
-            #if defined(ESP8266)
+            #if !USE_LITTLEFS
                 if (_filename.endsWith(F("/."))) {   // directory emulation
                     _filename.remove(_filename.length() - 1);
                     __LDBG_printf("file=%s is_dirname=%d is_dir=%d dirname=%s dir=%s",
@@ -206,7 +187,7 @@ bool ListDir::next()
                 else if (subDirCount == 1) { // file in a sub directory
                     break;
                 }
-            #elif defined(ESP32)
+            #else
                 if (_file.isDirectory()) {
                     _isDir = true;
                 }
@@ -214,9 +195,7 @@ bool ListDir::next()
             return true;
         }
 
-        #if defined(ESP8266)
-            next = _dir.next();
-        #endif
+        next = _dir.next();
     }
     return false;
 }

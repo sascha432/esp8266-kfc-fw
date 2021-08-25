@@ -55,12 +55,27 @@ I started to create branches of stable versions for my different devices.
 
 The modified version of the core is available on github and used by default
 
+| System Info | |
+|---|---|
+| Hardware | ESP8266 4.00MB Flash, 80 Mhz, Free RAM 22.56KB |
+| Software | KFC FW 0.0.5 Build 9509.3.0.2-17-g5266f22b-dev Aug 17 2021 18:12:25 |
+| Framework | Arduino ESP8266 3.0.1-dev 3.0.2-17-g5266f22b 0x5266f22b |
+| SDK | 2.2.2-dev(38a443e) |
+| Core | 3.0.2-17-g5266f22b=30002017 |
+| lwIP | STABLE-2_1_2_RELEASE/glue:1.2-48-g7421258/BearSSL:6105635 |
+
 ### ESP32
 
 - GCC 8.x with gnu++17
 - Arduino Core 2.x with modified WString class and ESP8266 compatibility extensions
 
 The modified version of the core is available on github and used by default. `framework-arduinoespressif32#feature/arduino-upstream` is used in order to get the GCC 8.x toolchain instead of 5.x
+
+| System Info | |
+|---|---|
+| Hardware  | ESP32 4.00MB Flash, 240 Mhz, Free RAM 154.59KB, Temperature 36.7°C |
+| Software | KFC FW 0.0.5 Build 9681 Aug 22 2021 18:18:35<br>ESP-IDF Version v4.4-dev-2313-gc69f0ec32  |
+| Framework | Arduino ESP32 2.0.0 |
 
 ## Libraries
 

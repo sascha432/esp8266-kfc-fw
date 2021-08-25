@@ -226,6 +226,16 @@ inline void KFCFWConfiguration::apStandbyModehandler(WiFiCallbacks::EventType ev
     config._apStandbyModehandler(event);
 }
 
+inline void KFCFWConfiguration::setLastError(const String &error)
+{
+    _lastError = error;
+}
+
+inline const char *KFCFWConfiguration::getLastError() const
+{
+    return _lastError.c_str();
+}
+
 #ifndef HAVE_IMPERIAL_MARCH
 #    define HAVE_IMPERIAL_MARCH 1
 #endif

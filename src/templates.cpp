@@ -68,7 +68,9 @@ void WebTemplate::printUniqueId(Print &output, const String &name, int8_t dashPo
     esp_read_mac(info.mac + 18, ESP_MAC_ETH);
 
 #else
-#error Platform not supported
+
+    #error Platform not supported
+
 #endif
 
     crc[0] = crc16_update(~0, &info, sizeof(info));
@@ -239,7 +241,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         #if ESP8266
             output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
         #elif ESP32
-            output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s, Temperature %.1f"), formatBytes(ESP.getFlashChipSize()).c_str(), ESP.getCpuFreqMHz(), formatBytes(ESP.getFreeHeap()).c_str(), temperatureRead());
+            output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s, Temperature %.1f%s"), formatBytes(ESP.getFlashChipSize()).c_str(), ESP.getCpuFreqMHz(), formatBytes(ESP.getFreeHeap()).c_str(), temperatureRead(), SPGM(UTF8_degreeC));
         #else
             #error Platform not supported
         #endif

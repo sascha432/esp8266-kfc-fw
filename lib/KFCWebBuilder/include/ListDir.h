@@ -83,31 +83,19 @@ private:
     bool _filterSubdirs;
     bool _hiddenFiles;
 
-#if ESP8266
-
 private:
     fs::Dir _dir;
-
-#elif ESP32
-
-private:
-    fs::File _dir;
     fs::File _file;
-#endif
 };
 
 static constexpr size_t kListDir = sizeof(ListDir);
 
-
-#if ESP8266
 
 inline __attribute__((__always_inline__))
 File ListDir::openFile(const char* mode)
 {
     return _dir.openFile(mode);
 }
-
-#endif
 
 inline String ListDir::fileName()
 {

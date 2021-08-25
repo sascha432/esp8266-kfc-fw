@@ -145,6 +145,14 @@ namespace fs {
             return !isDirectory();
         }
 
+        const char *fullName() const {
+            return _file.path();
+        }
+
+        File openFile(const char *mode) {
+            return KFCFS.open(_file.fullName(), mode);
+        }
+
     private:
         File _file;
     };

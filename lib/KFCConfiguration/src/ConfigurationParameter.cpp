@@ -334,11 +334,11 @@ bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)
         esp_err_t err;
         size_t size = _param.length();
         if ((err = nvs_get_blob(conf._handle, conf._nvs_key_handle_name(_param.type(), _param.getHandle()), _param._readable, &size)) != ESP_OK) {
-            __DBG_printf_E("cannot read data handle=%u size=%u err=%u", _param.getHandle(), _param.size(), err);
+            __DBG_printf_E("cannot read data handle=%04x size=%u err=%u", _param.getHandle(), _param.size(), err);
             return false;
         }
         else if (size != _param.length()) {
-            __DBG_printf_E("cannot read data handle=%u size=%u read=%u", _param.getHandle(), _param.length(), size);
+            __DBG_printf_E("cannot read data handle=%04x size=%u read=%u", _param.getHandle(), _param.length(), size);
             return false;
         }
     #else

@@ -697,16 +697,6 @@ void KFCFWConfiguration::restoreFactorySettings()
     #include "retracted/custom_config.h"
 #endif
 
-void KFCFWConfiguration::setLastError(const String &error)
-{
-    _lastError = error;
-}
-
-const char *KFCFWConfiguration::getLastError() const
-{
-    return _lastError.c_str();
-}
-
 void KFCFWConfiguration::gc()
 {
     if (_readAccess && millis() > _readAccess + _garbageCollectionCycleDelay) {
@@ -1326,22 +1316,20 @@ bool KFCFWConfiguration::connectWiFi()
         auto network = Network::Settings::getConfig();
         bool result;
         if (flags.is_station_mode_dhcp_enabled) {
-            result = WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0, (uint32_t)0);
+            result = WiFi.config(0U, 0U, 0U, 0U, 0U);
         }
         else {
             result = WiFi.config(network.getLocalIp(), network.getGateway(), network.getSubnet(), network.getDns1(), network.getDns2());
         }
         if (!result) {
-            PrintString message(F("Failed to configure Station Mode with %s"), flags.is_station_mode_dhcp_enabled ? PSTR("DHCP") : PSTR("static address"));
-            setLastError(message);
-            Logger_error(message);
+            setLastError(PrintString(F("Failed to configure Station Mode with %s"), flags.is_station_mode_dhcp_enabled ? PSTR("DHCP") : PSTR("static address")));
+            Logger_error(F("%s"), getLastError());
         }
         else {
 
             if (WiFi.begin(Network::WiFi::getSSID(), Network::WiFi::getPassword()) == WL_CONNECT_FAILED) {
-                String message = F("Failed to start Station Mode");
-                setLastError(message);
-                Logger_error(message);
+                setLastError(F("Failed to start Station Mode"));
+                Logger_error(F("%s"), getLastError());
             }
             else {
                 __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID());
@@ -1359,14 +1347,11 @@ bool KFCFWConfiguration::connectWiFi()
         __LDBG_printf("init AP mode");
 
         auto softAp = Network::SoftAP::getConfig();
-
         if (!WiFi.softAPConfig(softAp.getAddress(), softAp.getGateway(), softAp.getSubnet())) {
-            String message = F("Cannot configure AP mode");
-            setLastError(message);
-            Logger_error(message);
+            setLastError(F("Cannot configure AP mode"));
+            Logger_error(F("%s"), getLastError());
         }
         else {
-
             #if defined(ESP32)
 
                 if (tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP) != ESP_OK) {
@@ -1379,14 +1364,12 @@ bool KFCFWConfiguration::connectWiFi()
                 lease.end_ip.addr = softAp.dhcp_end;
 
                 if (tcpip_adapter_dhcps_option(TCPIP_ADAPTER_OP_SET, TCPIP_ADAPTER_REQUESTED_IP_ADDRESS, &lease, sizeof(lease)) != ESP_OK) {
-                    String message = F("Failed to configure DHCP server");
-                    setLastError(message);
-                    Logger_error(message);
+                    setLastError(F("Failed to configure DHCP server"));
+                    Logger_error(F("%s"), getLastError());
                 }
                 else if (flags.is_softap_dhcpd_enabled && tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP) != ESP_OK) {
-                    String message = F("Failed to start DHCP server");
-                    setLastError(message);
-                    Logger_error(message);
+                    setLastError(F("Failed to start DHCP server"));
+                    Logger_error(F("%s"), getLastError());
                 }
 
             #elif defined(ESP8266)
@@ -1398,32 +1381,27 @@ bool KFCFWConfiguration::connectWiFi()
                 dhcp_lease.start_ip.addr = softAp.dhcp_start;
                 dhcp_lease.end_ip.addr = softAp.dhcp_end;
                 if (!wifi_softap_set_dhcps_lease(&dhcp_lease)) {
-                    String message = F("Failed to configure DHCP server");
-                    setLastError(message);
-                    Logger_error(message);
+                    setLastError(F("Failed to configure DHCP server"));
+                    Logger_error(F("%s"), getLastError());
                 }
-                else {
-                    if (flags.is_softap_dhcpd_enabled) {
-                        if (!wifi_softap_dhcps_start()) {
-                            String message = F("Failed to start DHCP server");
-                            setLastError(message);
-                            Logger_error(message);
-                        }
-                    }
+                else if (flags.is_softap_dhcpd_enabled && !wifi_softap_dhcps_start()) {
+                    setLastError(F("Failed to start DHCP server"));
+                    Logger_error(F("%s"), getLastError());
                 }
 
             #endif
+
+            __LDBG_printf("ap ssid=%s pass=%s channel=%u hidden=%u", Network::WiFi::getSoftApSSID(), Network::WiFi::getSoftApPassword(), softAp.getChannel(), flags.is_softap_ssid_hidden);
+
             if (!WiFi.softAP(Network::WiFi::getSoftApSSID(), Network::WiFi::getSoftApPassword(), softAp.getChannel(), flags.is_softap_ssid_hidden)) {
-                String message = F("Cannot start AP mode");
-                setLastError(message);
-                Logger_error(message);
+                setLastError(F("Cannot start AP mode"));
+                Logger_error(F("%s"), getLastError());
             }
             else {
                 Logger_notice(F("AP Mode successfully initialized"));
                 ap_mode_success = true;
             }
         }
-
     }
     else {
         __LDBG_print("disabling AP mode");

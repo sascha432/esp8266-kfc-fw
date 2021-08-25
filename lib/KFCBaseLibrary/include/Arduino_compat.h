@@ -102,8 +102,6 @@ class __FlashStringHelper;
 #include <FS.h>
 #include <LittleFS.h>
 
-#include "esp32_compat.h"
-
 class __FlashStringHelper;
 
 #    if USE_LITTLEFS
@@ -119,6 +117,8 @@ class __FlashStringHelper;
 // includes directory slashes and filename
 #        define KFCFS_MAX_PATH_LEN KFCFS_MAX_FILE_LEN
 #    endif
+
+#include "esp32_compat.h"
 
 #    define SPGM(name, ...)  PROGMEM_STRING_ID(name)
 #    define FSPGM(name, ...) reinterpret_cast<const __FlashStringHelper *>(SPGM(name))

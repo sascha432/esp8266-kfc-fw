@@ -240,10 +240,11 @@ inline void Logger::setExtraFileEnabled(Level level, bool state)
 inline File Logger::__openLog(Level logLevel, bool write)
 {
     auto fileName = _getLogFilename(logLevel);
-    __LDBG_printf("logLevel=%u filename=%s", logLevel, fileName.c_str());
     if (write) {
+        __LDBG_printf("logLevel=%u append=%s", logLevel, fileName.c_str());
         return createFileRecursive(fileName, fs::FileOpenMode::append);
     }
+    __LDBG_printf("logLevel=%u read=%s", logLevel, fileName.c_str());
     return KFCFS.open(fileName, fs::FileOpenMode::read);
 }
 

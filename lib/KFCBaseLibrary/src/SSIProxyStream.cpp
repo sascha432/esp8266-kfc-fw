@@ -14,7 +14,7 @@
 
 #if !DEBUG_SSI_PROXY_STREAM
 #    undef __DBG_validatePointer
-#    define __DBG_validatePointer(ptr, ...) ptr
+#    define __DBG_validatePointer(ptr, ...)
 #endif
 
 size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)

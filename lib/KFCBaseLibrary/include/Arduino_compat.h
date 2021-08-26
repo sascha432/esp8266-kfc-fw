@@ -107,12 +107,15 @@ class __FlashStringHelper;
 #    if USE_LITTLEFS
 #        include <LittleFS.h>
 #        define KFCFS LittleFS
-#        define KFCFS_begin() KFCFS.begin()
+#        define KFCFS_begin()      KFCFS.begin()
+#        define KFCFS_openDir(dir) Dir(KFCFS.open(dir, fs::FileOpenMode::read))
 #        define KFCFS_MAX_FILE_LEN 31
 #        define KFCFS_MAX_PATH_LEN 127
 #    else
 #        include <FS.h>
 #        define KFCFS              SPIFFS
+#        define KFCFS_begin()      KFCFS.begin()
+#        define KFCFS_openDir(dir) Dir(KFCFS.open(dir, fs::FileOpenMode::read))
 #        define KFCFS_MAX_FILE_LEN 31
 // includes directory slashes and filename
 #        define KFCFS_MAX_PATH_LEN KFCFS_MAX_FILE_LEN
@@ -140,17 +143,22 @@ class __FlashStringHelper;
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiType.h>
 #include <WiFiUdp.h>
+
 #if USE_LITTLEFS
-#include <LittleFS.h>
-#define KFCFS                                           LittleFS
-#define KFCFS_MAX_FILE_LEN                              31
-#define KFCFS_MAX_PATH_LEN                              127
-#else
-#include <FS.h>
-#define KFCFS                                           SPIFFS
-#define KFCFS_MAX_FILE_LEN                              31
+#        include <LittleFS.h>
+#        define KFCFS              LittleFS
+#        define KFCFS_begin()      KFCFS.begin()
+#        define KFCFS_openDir(dir) KFCFS.openDir(dir)
+#        define KFCFS_MAX_FILE_LEN 31
+#        define KFCFS_MAX_PATH_LEN 127
+#    else
+#        include <FS.h>
+#        define KFCFS              SPIFFS
+#        define KFCFS_begin()      KFCFS.begin()
+#        define KFCFS_openDir(dir) KFCFS.openDir(dir)
+#        define KFCFS_MAX_FILE_LEN 31
 // includes directory slashes and filename
-#define KFCFS_MAX_PATH_LEN                              KFCFS_MAX_FILE_LEN
+#        define KFCFS_MAX_PATH_LEN KFCFS_MAX_FILE_LEN
 #endif
 
 #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB

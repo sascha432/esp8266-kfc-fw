@@ -98,7 +98,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
             }
             break;
         #if ESP8266
-            case case AutoDiscoveryENum::HEAP_FRAGMENTATION:
+            case AutoDiscoveryENum::HEAP_FRAGMENTATION:
                 if (discovery->create(this, F("heap_frag"), format)) {
                     discovery->addStateTopic(_getTopic());
                     discovery->addValueTemplate(F("heap_frag"));

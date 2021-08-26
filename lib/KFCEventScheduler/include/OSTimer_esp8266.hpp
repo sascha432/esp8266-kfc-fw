@@ -161,4 +161,8 @@ OSTIMER_INLINE void ETSTimerEx::end()
     }
 }
 
+OSTIMER_INLINE void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(void *arg)
+{
+}
+
 #endif

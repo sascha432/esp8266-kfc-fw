@@ -20,7 +20,9 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
+# verify that ESP32 or ESP8266 is set and equals 1
 esp32 = False
+esp8266 = False
 defines = env.get('CPPDEFINES');
 for define in defines:
     if isinstance(define, tuple):
@@ -28,12 +30,24 @@ for define in defines:
     else:
         key = define
         val = 1;
-    if key == 'ESP32':
-        esp32 = True
+    if val==1:
+        if key == 'ESP32':
+            esp32 = True
+        if key == 'ESP8266':
+            esp8266 = True
+if esp32 and esp8266:
+    click.secho('ESP32 and ESP866 set to 1', fg='red')
+    exit(1)
+elif not esp32 and not esp8266:
+    click.secho('Neither ESP32 nor ESP866 set to 1', fg='red')
+    exit(1)
+
 if esp32:
     click.secho('ESP32 detected', fg='green')
+elif esp8266:
+    click.secho('ESP866 detected', fg='green')
 
-
+# add extra dirs for modules
 sys.path.insert(0, path.abspath(path.join(env.subst("$PROJECT_DIR"), 'scripts', 'libs')))
 
 def new_build(source, target, env):
@@ -248,7 +262,7 @@ def dump_info(source, target, env):
     print(source[0].get_abspath())
     # print(target)
 
-
+# ESP32
 # change MKSPIFFSTOOL for ESP32 to mklittlefs
 if esp32 and env.GetProjectOption('board_build.filesystem') == 'littlefs':
     click.echo('board_build.filesystem = littlefs: ', nl=False)

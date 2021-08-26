@@ -350,7 +350,7 @@ uint16_t FileManager::view(bool isDownload)
         message += F("Cannot open ");
         message += requestFilename;
         _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
-        __LDBG_print(message);
+        __LDBG_printf("msg=%s", message.c_str());
     }
     else {
         String filename = file.name();
@@ -465,7 +465,7 @@ void FileManagerWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
     // request->url() starts with _uri
     auto uri = request->url().c_str() + strlen_P(RFPSTR(_uri));
-    __LDBG_printf("file manager %s (%s)", uri, request->url().c_str())
+    __LDBG_printf("file manager %s (%s)", uri, request->url().c_str());
     FileManager fm(request, WebServer::Plugin::getInstance().isAuthenticated(request) == true, uri);
     fm.handleRequest();
 }

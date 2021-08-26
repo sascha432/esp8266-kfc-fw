@@ -15,11 +15,13 @@
 
 namespace PinMonitor {
 
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-    Interrupt::EventBuffer eventBuffer;
-#endif
+    #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+        Interrupt::EventBuffer eventBuffer;
+    #endif
     uint16_t interrupt_levels;
-    portMuxType GPIOInterruptLock::_mux;
+    #if ESP32
+        portMuxType GPIOInterruptLock::_mux;
+    #endif
 
 // ------------------------------------------------------------------------
 // implementation with GPIO interrupt instead of attachInterrupt...

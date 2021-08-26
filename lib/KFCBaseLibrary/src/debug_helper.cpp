@@ -61,8 +61,6 @@ void *__validatePointer(const void *ptr, ValidatePointerType type, const char *f
 
 #else
 
-#warning TODO
-
 String &__validatePointer(const String &str, ValidatePointerType type, const char *file, int line, const char *func)
 {
     __validatePointer(str.c_str(), type, file, line, func);

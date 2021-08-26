@@ -152,5 +152,5 @@ private:
 #include "SSIProxyStream.hpp"
 
 #if !DEBUG_SSI_PROXY_STREAM
-#    pragma push_pop("__DBG_validatePointer")
+#    pragma pop_macro("__DBG_validatePointer")
 #endif

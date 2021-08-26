@@ -492,7 +492,6 @@ void at_mode_generate_help(Stream &output, StringVector *findText = nullptr)
     if (!atModeCommandHelp) {
         return;
     }
-return;//TODO remove
 
     // call handler to gather help for all commands
     at_mode_help_commands();
@@ -515,7 +514,6 @@ void at_mode_print_command_string(Stream &output, char separator)
     if (!atModeCommandHelp) {
         return;
     }
-return;//TODO remove
 
     // call handler to gather help for all commands
     at_mode_help_commands();
@@ -2139,11 +2137,7 @@ void at_mode_serial_handle_event(String &commandString)
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LSR))) {
-        #if ESP32
-            auto dir = Dir(KFCFS.open(args.toString(0), fs::FileOpenMode::read));
-        #else
-            auto dir = KFCFS.openDir(args.toString(0));
-        #endif
+        auto dir = KFCFS_openDir(args.toString(0));
         while(dir.next()) {
             output.print(F("+LS: "));
             if (dir.isDirectory()) {
@@ -2152,7 +2146,7 @@ void at_mode_serial_handle_event(String &commandString)
             else {
                 output.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
             }
-            output.println(dir.fullName());
+            output.println(dir.fileName());
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CAT))) {

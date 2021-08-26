@@ -122,7 +122,7 @@ bool ListDir::next()
         }
         while (next) {
             #if USE_LITTLEFS
-                _filename = _dirName + _dir.fullName();
+                _filename = _dirName + _dir.fileName();
             #else
                 _filename = _dir.fullName();
             #endif

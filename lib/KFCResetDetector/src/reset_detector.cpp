@@ -54,7 +54,7 @@ extern "C" {
 
 void ResetDetector::end()
 {
-    #if ESP8266
+    #if ESP8266 && DEBUG_RESET_DETECTOR
         __LDBG_printf("rd::end(), _uart=%p", _uart);
         if (_uart) {
             __LDBG_printf("\r\n");
@@ -67,7 +67,7 @@ void ResetDetector::end()
 
 void ResetDetector::begin(HardwareSerial *serial, int baud)
 {
-    #if ESP8266
+    #if ESP8266 && DEBUG_RESET_DETECTOR
         __LDBG_printf("rd::begin(), _uart=%p, serial=%p", _uart, serial, baud);
 
         if (_uart) {
@@ -94,7 +94,7 @@ void ResetDetector::begin(HardwareSerial *serial, int baud)
 
 void ResetDetector::begin()
 {
-    #if ESP8266
+    #if ESP8266 && DEBUG_RESET_DETECTOR
         #if DEBUG_RESET_DETECTOR
             auto oldUart = _uart;
             __LDBG_printf("rd::begin(), _uart=%p", _uart);

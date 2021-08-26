@@ -74,7 +74,7 @@ namespace Event {
         static constexpr uint32_t kMaxDelay = 0x68D7A3;
     #else
         static constexpr uint32_t kMinDelay = 1;
-        static constexpr uint32_t kMaxDelay = ~0U;
+        static constexpr uint32_t kMaxDelay = std::numeric_limits<int32_t>::max();
     #endif
 
     static constexpr uint64_t kMaxDelayMillis = (1ULL << 17) * (uint64_t)kMaxDelay + (kMaxDelay - 1);

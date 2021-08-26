@@ -81,7 +81,15 @@ ADCManager::ResultQueue::ResultQueue(uint8_t numSamples, uint32_t intervalMicros
 
 void ADCManager::ResultQueue::invokeCallback()
 {
-    __LDBG_printf("callback=%p result=%.2f min=%u max=%u samples=%u invalid=%u", &_callback, _result.getFloatValue(), _result.getMinValue(), _result.getMaxValue(), _samples, _result._invalid);
+    __LDBG_printf("callback=%p mean=%.2f median=%.2f min=%u max=%u samples=%u invalid=%u",
+        &_callback,
+        _result.getMeanValue(),
+        _result.getMedianValue(),
+        _result.getMinValue(),
+        _result.getMaxValue(),
+        _samples,
+        _result._invalid
+    );
     _callback(_result);
 }
 

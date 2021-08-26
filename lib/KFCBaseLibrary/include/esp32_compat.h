@@ -149,6 +149,10 @@ namespace fs {
             return _file.path();
         }
 
+        const char *fileName() const {
+            return _file.path();
+        }
+
         File openFile(const char *mode) {
             return KFCFS.open(_file.fullName(), mode);
         }

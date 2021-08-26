@@ -406,10 +406,14 @@ class ConfigReader {
                 $file = substr($file, 1);
             }
             if (!FileUtils::isAbsoluteDir($file)) {
-                if (($result = FileUtils::findInPath($file, $pathEnv)) === false && $silent === false) {
-                    throw new \RuntimeException(sprintf('bin.%s cannot find %s in current PATH (%s)', $key, $file, $pathEnv));
+                if (($result = FileUtils::findInPath($file, $pathEnv)) === false) {
+                    if ($silent === false) {
+                        throw new \RuntimeException(sprintf('bin.%s cannot find %s in current PATH (%s)', $key, $file, $pathEnv));
+                    }
                 }
-                $file = $result;
+                else {
+                    $file = $result;
+                }
             }
             if (!file_exists($file)) {
                 if (file_exists($file.'.exe')) {

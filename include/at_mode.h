@@ -26,7 +26,7 @@
 #include <../include/time.h>
 
 #    ifndef DEBUG_AT_MODE
-#        define DEBUG_AT_MODE 1
+#        define DEBUG_AT_MODE (1 || defined(DEBUG_ALL))
 #    endif
 
 #    ifndef AT_MODE_MAX_ARGUMENTS

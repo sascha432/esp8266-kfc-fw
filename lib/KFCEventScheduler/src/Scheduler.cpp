@@ -230,8 +230,11 @@ void Scheduler::_run()
 
         // reset event flag
         {
-            InterruptLock lock;
-            portMuxLock mLock(_mux);
+            #if ESP8266
+                InterruptLock lock;
+            #elif ESP32
+                portMuxLock mLock(_mux);
+            #endif
             _hasEvent = PriorityType::NONE;
             for (const auto &timer : _timers) {
                 if (timer && timer->_callbackScheduled && timer->_priority > _hasEvent) {

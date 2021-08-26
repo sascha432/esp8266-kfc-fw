@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_NTP_CLIENT
-#    define DEBUG_NTP_CLIENT  (0 || defined(DEBUG_ALL))
+#    define DEBUG_NTP_CLIENT (0 || defined(DEBUG_ALL))
 #endif
 
 #ifndef NTP_HAVE_CALLBACKS

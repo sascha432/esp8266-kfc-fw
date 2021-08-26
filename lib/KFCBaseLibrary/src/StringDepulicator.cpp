@@ -14,8 +14,7 @@
 #endif
 
 #if !DEBUG_STRING_DEDUPLICATOR
-#undef __DBG_validatePointer
-#define __DBG_validatePointer(ptr, ...) ptr
+#    include <debug_helper_disable_ptr_validation.h>
 #endif
 
 static constexpr size_t kFirstPoolSize = 56;

@@ -5,6 +5,10 @@
 #include <time.h>
 #include "PrintString.h"
 
+#if 0
+#    include <debug_helper_disable_ptr_validation.h>
+#endif
+
 void PrintString::printFormatted(const __FlashStringHelper *format)
 {
     print(format);

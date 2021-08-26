@@ -11,7 +11,6 @@
 #include "constexpr_tools.h"
 #include "section_defines.h"
 
-
 #if _MSC_VER
 #ifndef DEBUG_INCLUDE_SOURCE_INFO
 #define DEBUG_INCLUDE_SOURCE_INFO                           1

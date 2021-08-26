@@ -49,6 +49,10 @@
 #define __SID(...)                          ;
 #endif
 
+#if 0
+#    include <debug_helper_disable_ptr_validation.h>
+#endif
+
 using KFCConfigurationClasses::System;
 
 using namespace WebServer;

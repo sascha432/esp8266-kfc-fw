@@ -30,7 +30,7 @@
 #include "../src/plugins/remote/remote_def.h"
 #endif
 
-#    define DEBUG_DEEP_SLEEP 1
+#    define DEBUG_DEEP_SLEEP (1 || defined(DEBUG_ALL))
 
 // enable debug output
 #    ifndef DEBUG_DEEP_SLEEP

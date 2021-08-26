@@ -1,10 +1,8 @@
 
 #include "SafeRead.h"
 
-// set to 1 to disable additional pointer validation
 #if 0
-#    undef __DBG_validatePointer
-#    define __DBG_validatePointer(ptr, ...) ptr
+#    include <debug_helper_disable_ptr_validation.h>
 #endif
 
 static uint8_t *buffer = nullptr;

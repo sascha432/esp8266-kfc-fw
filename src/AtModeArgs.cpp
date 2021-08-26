@@ -16,6 +16,10 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if 0
+#    include <debug_helper_disable_ptr_validation.h>
+#endif
+
 bool AtModeArgs::isCommand(const ATModeCommandHelp_t *help) const
 {
     __DBG_validatePointer(help, VP_HPS);

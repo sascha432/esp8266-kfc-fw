@@ -84,25 +84,25 @@ void Syslog::_addTimestamp(PrintString &buffer, uint32_t ms, PGM_P format) const
 {
 	time_t now = time(nullptr);
     uint32_t frac = millis() - ms;
-#if SEND_NILVALUE_IF_INVALID_TIMESTAMP
-	if (!isTimeValid(now)) {
-		buffer.printF(SYSLOG_NIL_SP));
-		return;
-	}
-#endif
+    #if SEND_NILVALUE_IF_INVALID_TIMESTAMP
+        if (!isTimeValid(now)) {
+            buffer.printF(SYSLOG_NIL_SP));
+            return;
+        }
+    #endif
     if (ms) {
         now -= frac / 1000;
     }
     auto tm = localtime(&now);
     buffer.strftime_P(format, tm);
-#ifdef SYSLOG_TIMESTAMP_FRAC_FMT
-    buffer.printf_P(PSTR(SYSLOG_TIMESTAMP_FRAC_FMT), frac);
-    char buf[8];
-    strftime_P(buf, sizeof(buf), PSTR("%z "), tm);
-    buffer.write(buf, 3);
-    buffer.write(':');
-    buffer.print(buf + 3);
-#endif
+    #ifdef SYSLOG_TIMESTAMP_FRAC_FMT
+        buffer.printf_P(PSTR(SYSLOG_TIMESTAMP_FRAC_FMT), frac);
+        char buf[8];
+        strftime_P(buf, sizeof(buf), PSTR("%z "), tm);
+        buffer.write(buf, 3);
+        buffer.write(':');
+        buffer.print(buf + 3);
+    #endif
 }
 
 /*
@@ -165,40 +165,40 @@ NILVALUE        = "-"
 
 String Syslog::_getHeader(uint32_t millis) const
 {
-#if SYSLOG_USE_RFC5424
+    #if SYSLOG_USE_RFC5424
 
-    // currently not working
-    //   <3>1 2020-08-21T10:20:38.967-07:00 KFCAC52DB kfcfw - - - It is a test
-    //   <5>1 2020-08-21T10:29:09.726-07:00 KFCAC52DB kfcfw - - - MQTT auto discovery published
-    // <165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - %% It's time to make the do-nuts.
-    //  <34>1 2003-10-11T22:14:15.003Z mymachine.example.com appname - ID47 - BOM'su root' failed for lonvick on /dev/pts/8
-    // "<" PRIVAL ">" VERSION SP TIMESTAMP SP HOSTNAME SP APP-NAME SP PROCID SP MSGID SP STRUCTURED-DATA [SP MSG]
+        // currently not working
+        //   <3>1 2020-08-21T10:20:38.967-07:00 KFCAC52DB kfcfw - - - It is a test
+        //   <5>1 2020-08-21T10:29:09.726-07:00 KFCAC52DB kfcfw - - - MQTT auto discovery published
+        // <165>1 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - %% It's time to make the do-nuts.
+        //  <34>1 2003-10-11T22:14:15.003Z mymachine.example.com appname - ID47 - BOM'su root' failed for lonvick on /dev/pts/8
+        // "<" PRIVAL ">" VERSION SP TIMESTAMP SP HOSTNAME SP APP-NAME SP PROCID SP MSGID SP STRUCTURED-DATA [SP MSG]
 
-	PrintString buffer(F("<%u>" SYSLOG_VERSION " "), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL> VERSION SP
-	_addTimestamp(buffer, millis, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
-	_addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
-	_addParameter(buffer, F(SYSLOG_APPNAME)); // APP-NAME SP
-	buffer.print(F(SYSLOG_NIL_SP)); // PROCID SP
-	buffer.print(F(SYSLOG_NIL_SP)); // MSGID SP
-	buffer.print(F(SYSLOG_NIL_SP)); // STRUCTURED-DATA SP
-#if SYSLOG_SEND_BOM
-    buffer.write(0xef);
-    buffer.write(0xbb);
-    buffer.write(0xbf);
-#endif
-	// followed by MSG
+        PrintString buffer(F("<%u>" SYSLOG_VERSION " "), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL> VERSION SP
+        _addTimestamp(buffer, millis, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
+        _addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
+        _addParameter(buffer, F(SYSLOG_APPNAME)); // APP-NAME SP
+        buffer.print(F(SYSLOG_NIL_SP)); // PROCID SP
+        buffer.print(F(SYSLOG_NIL_SP)); // MSGID SP
+        buffer.print(F(SYSLOG_NIL_SP)); // STRUCTURED-DATA SP
+        #if SYSLOG_SEND_BOM
+            buffer.write(0xef);
+            buffer.write(0xbb);
+            buffer.write(0xbf);
+        #endif
+        // followed by MSG
 
-#else
+    #else
 
-	// format used by "rsyslog/stable,now 8.24.0-1 armhf"
-	// <PRIVAL> TIMESTAMP SP HOSTNAME SP APPNAME ["[" PROCESSID "]"] ":" SP MESSAGE
+        // format used by "rsyslog/stable,now 8.24.0-1 armhf"
+        // <PRIVAL> TIMESTAMP SP HOSTNAME SP APPNAME ["[" PROCESSID "]"] ":" SP MESSAGE
 
-	PrintString buffer(F("<%u>"), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL>
-	_addTimestamp(buffer, millis, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
-	_addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
-    buffer.print(F(SYSLOG_APPNAME ": ")); // APPNAME ":" SP
-	// followed by MSG
+        PrintString buffer(F("<%u>"), (_parameter.getFacility() << 3) | _parameter.getSeverity()); // <PRIVAL>
+        _addTimestamp(buffer, millis, PSTR(SYSLOG_TIMESTAMP_FORMAT)); // TIMESTAMP SP
+        _addParameter(buffer, _parameter.getHostname()); // HOSTNAME SP
+        buffer.print(F(SYSLOG_APPNAME ": ")); // APPNAME ":" SP
+        // followed by MSG
 
-#endif
+    #endif
     return buffer;
 }

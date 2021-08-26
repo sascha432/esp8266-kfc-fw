@@ -12,8 +12,7 @@
 
 #if !DEBUG_STRING_DEDUPLICATOR
 #    pragma push_macro("__DBG_validatePointer")
-#    undef __DBG_validatePointer
-#    define __DBG_validatePointer(ptr, ...) ptr
+#    include <debug_helper_disable_ptr_validation.h>
 #endif
 
 #if defined(ESP8266)

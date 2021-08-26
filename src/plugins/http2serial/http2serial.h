@@ -20,6 +20,10 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if 0
+#    include <debug_helper_disable_ptr_validation.h>
+#endif
+
 class Http2Serial {
 public:
     Http2Serial();

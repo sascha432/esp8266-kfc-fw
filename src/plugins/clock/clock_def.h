@@ -33,7 +33,7 @@
 #endif
 
 #ifndef DEBUG_IOT_CLOCK
-#    define DEBUG_IOT_CLOCK 0
+#    define DEBUG_IOT_CLOCK (0 || defined(DEBUG_ALL))
 #endif
 
 #ifndef DEBUG_MEASURE_ANIMATION

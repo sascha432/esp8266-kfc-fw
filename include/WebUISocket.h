@@ -12,6 +12,10 @@
 #include "web_socket.h"
 #include "templates.h"
 
+#if 0
+#    include <debug_helper_disable_ptr_validation.h>
+#endif
+
 class WebUISocket : public WsClient {
 public:
     using WsClient::WsClient;

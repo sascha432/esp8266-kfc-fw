@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_IOT_SENSOR
-#define DEBUG_IOT_SENSOR 0
+#define DEBUG_IOT_SENSOR (0 || defined(DEBUG_ALL))
 #endif
 
 #include <Arduino_compat.h>

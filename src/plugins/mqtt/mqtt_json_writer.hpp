@@ -11,11 +11,10 @@
 #define MQTT_JSON_WRITER_DEBUG 1
 
 #if MQTT_JSON_WRITER_DEBUG
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
-#undef __DBG_validatePointer
-#define __DBG_validatePointer(...) true
+#    include <debug_helper_disable.h>
+#    include <debug_helper_disable_ptr_validation.h>
 #endif
 
 namespace MQTT {

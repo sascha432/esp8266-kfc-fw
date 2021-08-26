@@ -34,11 +34,11 @@ String SyslogFile::_getHeader()
 void SyslogFile::transmit(const SyslogQueueItem &item)
 {
     auto &message = item.getMessage();
-#if DEBUG_SYSLOG
-    if (!message.startsWith(F("::transmit '"))) {
-        __LDBG_printf("::transmit id=%u msg=%s", item.getId(), message.c_str());
-    }
-#endif
+    #if DEBUG_SYSLOG
+        if (!message.startsWith(F("::transmit '"))) {
+            __LDBG_printf("::transmit id=%u msg=%s", item.getId(), message.c_str());
+        }
+    #endif
 
     auto logFile = KFCFS.open(_filename, fs::FileOpenMode::appendplus);
     if (logFile) {

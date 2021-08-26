@@ -198,8 +198,11 @@ namespace SerialHandler {
         auto ptr = std::addressof(client);
         // remove outside interrupts
         LoopFunctions::callOnce([ptr, this]() {
-            InterruptLock lock;
-            portMuxLock mLock(_mux);
+            #if ESP8266
+                InterruptLock lock;
+            #elif ESP32
+                portMuxLock mLock(_mux);
+            #endif
             _clients.erase(std::remove_if(_clients.begin(), _clients.end(), [ptr](const ClientPtr &client) {
                 return client.get() == ptr;
             }), _clients.end());

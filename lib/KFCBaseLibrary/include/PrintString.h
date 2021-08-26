@@ -21,8 +21,7 @@
 #endif
 
 #if 0
-#    undef __DBG_validatePointer
-#    define __DBG_validatePointer(ptr, type) ptr
+#    include <debug_helper_disable_ptr_validation.h>
 #endif
 
 class PrintString : public String, public Print {

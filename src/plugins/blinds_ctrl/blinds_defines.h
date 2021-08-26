@@ -7,7 +7,7 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_IOT_BLINDS_CTRL
-#    define DEBUG_IOT_BLINDS_CTRL 0
+#    define DEBUG_IOT_BLINDS_CTRL (0 || defined(DEBUG_ALL))
 #endif
 
 // save last state on FS

@@ -229,13 +229,13 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
             }
         #endif
 
-        #if defined(ESP32)
-            auto hostname = System::Device::getName();
-            __LDBG_printf("WiFi.setHostname(%s)", hostname);
-            if (!WiFi.setHostname(hostname)) {
-                __LDBG_printf("WiFi.setHostname(%s) failed", hostname);
-            }
-        #endif
+        // #if defined(ESP32)
+        //     auto hostname = System::Device::getName();
+        //     __LDBG_printf("WiFi.setHostname(%s)", hostname);
+        //     if (!WiFi.setHostname(hostname)) {
+        //         __LDBG_printf("WiFi.setHostname(%s) failed", hostname);
+        //     }
+        // #endif
 
     }
 
@@ -612,7 +612,7 @@ void KFCFWConfiguration::recoveryMode(bool resetPasswords)
 
 String KFCFWConfiguration::defaultDeviceName()
 {
-    uint8_t mac[6];
+    uint8_t mac[WL_MAC_ADDR_LENGTH];
     WiFi.macAddress(mac);
     return PrintString(F("KFC%02X%02X%02X"), mac[3], mac[4], mac[5]);
 }
@@ -1657,9 +1657,9 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
     config.setup();
 
     #if NTP_LOG_TIME_UPDATE
-            PrintString nowStr;
-            nowStr.strftime(FSPGM(strftime_date_time_zone), time(nullptr));
-            Logger_notice(F("RTC time: %s"), nowStr.c_str());
+        PrintString nowStr;
+        nowStr.strftime(FSPGM(strftime_date_time_zone), time(nullptr));
+        Logger_notice(F("RTC time: %s"), nowStr.c_str());
     #endif
 
     if (WiFi.isConnected() && !resetDetector.hasWakeUpDetected()) {

@@ -129,11 +129,11 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
     }
     auto result = std::find(WsClient::_webSockets.begin(), WsClient::_webSockets.end(), server);
     if (result == WsClient::_webSockets.end()) {
-#if DEBUG_WEB_SOCKETS
-        __DBG_panic("websocket %p has been removed, event type %u", server, type);
-#else
-        __DBG_printf("websocket %p has been removed, event type %u", server, type);
-#endif
+        #if DEBUG_WEB_SOCKETS
+            __DBG_panic("websocket %p has been removed, event type %u", server, type);
+        #else
+            __DBG_printf("websocket %p has been removed, event type %u", server, type);
+        #endif
         return;
     }
 

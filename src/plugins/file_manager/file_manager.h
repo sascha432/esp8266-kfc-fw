@@ -7,7 +7,7 @@
 #if FILE_MANAGER
 
 #ifndef DEBUG_FILE_MANAGER
-#define DEBUG_FILE_MANAGER              0
+#   define DEBUG_FILE_MANAGER (0 || defined(DEBUG_ALL))
 #endif
 
 #include <Arduino_compat.h>

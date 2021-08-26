@@ -18,6 +18,10 @@
 
 #include "Utility/Debug.h"
 
+#if 0
+#    include <debug_helper_disable_ptr_validation.h>
+#endif
+
 using namespace FormUI;
 
 const char *WebUI::Config::encodeHtmlEntities(const char *cStr, Mode mode)

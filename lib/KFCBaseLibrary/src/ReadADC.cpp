@@ -7,24 +7,24 @@
 #include "ReadADC.h"
 
 #ifndef DEBUG_READ_ADC
-#define DEBUG_READ_ADC                          0
+#    define DEBUG_READ_ADC (0 || defined(DEBUG_ALL))
 #endif
 
 // #define DEBUG_READ_ADC_PRINT_INTERVAL           5000
 
 // display interval of how often the ADC has been read per second
 #ifndef DEBUG_READ_ADC_PRINT_INTERVAL
-#if DEBUG_READ_ADC
-#define DEBUG_READ_ADC_PRINT_INTERVAL           10000
-#else
-#define DEBUG_READ_ADC_PRINT_INTERVAL           0
-#endif
+#    if DEBUG_READ_ADC
+#        define DEBUG_READ_ADC_PRINT_INTERVAL 10000
+#    else
+#        define DEBUG_READ_ADC_PRINT_INTERVAL 0
+#    endif
 #endif
 
 #if DEBUG_READ_ADC
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #undef _min

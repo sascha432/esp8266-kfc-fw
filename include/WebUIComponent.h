@@ -5,35 +5,34 @@
 #pragma once
 
 #ifndef DEBUG_WEBUI
-#define DEBUG_WEBUI                             0
+#    define DEBUG_WEBUI (0 || defined(DEBUG_ALL))
 #endif
 
 #include <Arduino_compat.h>
 // #include <KFCJson.h>
-#include <vector>
-#include <memory>
 #include "../src/plugins/mqtt/mqtt_json.h"
+#include <memory>
+#include <vector>
 
 #if DEBUG_WEBUI
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
-#define J(str)                                  FSPGM(webui_json_##str)
+#define J(str) FSPGM(webui_json_##str)
 #if DEBUG_COLLECT_STRING_ENABLE
-#define WEBUI_PROGMEM_STRING_DEF(str) \
-    int __webui_json_##str = __debug_json_string_skip(String(__STRINGIFY(str))); \
-    PROGMEM_STRING_DEF(webui_json_##str, _STRINGIFY(str));
-#define WEBUI_PROGMEM_STRING_DEFVAL(str, val) \
-    int __webui_json_##str = __debug_json_string_skip(String(val)); \
-    PROGMEM_STRING_DEF(webui_json_##str, val);
+#    define WEBUI_PROGMEM_STRING_DEF(str)                                            \
+        int __webui_json_##str = __debug_json_string_skip(String(__STRINGIFY(str))); \
+        PROGMEM_STRING_DEF(webui_json_##str, _STRINGIFY(str));
+#    define WEBUI_PROGMEM_STRING_DEFVAL(str, val)                       \
+        int __webui_json_##str = __debug_json_string_skip(String(val)); \
+        PROGMEM_STRING_DEF(webui_json_##str, val);
 #else
-#define WEBUI_PROGMEM_STRING_DEF(str)           PROGMEM_STRING_DEF(webui_json_##str, _STRINGIFY(str))
-#define WEBUI_PROGMEM_STRING_DEFVAL(str, val)   PROGMEM_STRING_DEF(webui_json_##str, val)
+#    define WEBUI_PROGMEM_STRING_DEF(str)         PROGMEM_STRING_DEF(webui_json_##str, _STRINGIFY(str))
+#    define WEBUI_PROGMEM_STRING_DEFVAL(str, val) PROGMEM_STRING_DEF(webui_json_##str, val)
 #endif
-#define WEBUI_PROGMEM_STRING_DECL(str)          PROGMEM_STRING_DECL(webui_json_##str)
-
+#define WEBUI_PROGMEM_STRING_DECL(str) PROGMEM_STRING_DECL(webui_json_##str)
 
 WEBUI_PROGMEM_STRING_DECL(align)
 WEBUI_PROGMEM_STRING_DECL(badge)

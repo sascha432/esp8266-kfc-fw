@@ -7,8 +7,7 @@
 
 #define DEBUG_PTR_VALIDATION 1
 #if !DEBUG_PTR_VALIDATION
-#undef __DBG_validatePointer
-#define __DBG_validatePointer(...) true
+#    include <debug_helper_disable_ptr_validation.h>
 #endif
 
 // #define PRINTHTMLENTITIES_COPY      "\xa9"  // 0xa9 = 169 = ©

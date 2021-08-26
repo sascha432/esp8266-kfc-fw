@@ -7,6 +7,10 @@
 #include "StringDepulicator.h"
 #include <numeric>
 
+#if 0
+#    include <debug_helper_disable_ptr_validation.h>
+#endif
+
 inline size_t StringBuffer::count() const
 {
     size_t count = 0;

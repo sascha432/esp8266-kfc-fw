@@ -17,16 +17,20 @@
 
 using namespace Event;
 
-CallbackTimer::CallbackTimer(Callback callback, int64_t delay, RepeatType repeat, PriorityType priority) :
-    _etsTimer(OSTIMER_NAME("CallbackTimer")),
+CallbackTimer::CallbackTimer(const char *name, Callback callback, int64_t delay, RepeatType repeat, PriorityType priority) :
+    _etsTimer(OSTIMER_NAME_VAR(name)),
     _callback(callback),
     _timer(nullptr),
     _delay(std::max<int64_t>(kMinDelay, delay)),
-    _remainingDelay(0),
+    #if SCHEDULER_HAVE_REMAINING_DELAY
+        _remainingDelay(0),
+    #endif
     _repeat(repeat),
     _priority(priority),
-    _callbackScheduled(false),
-    _maxDelayExceeded(false)
+    #if SCHEDULER_HAVE_REMAINING_DELAY
+        _maxDelayExceeded(false),
+    #endif
+    _callbackScheduled(false)
 {
     EVENT_SCHEDULER_ASSERT(delay >= kMinDelay);
 }
@@ -49,110 +53,71 @@ CallbackTimer::~CallbackTimer()
 
     __LDBG_printf("ets_timer=%p running=%p armed=%d %s:%u", &_etsTimer, _etsTimer.isRunning(), isArmed(), __S(_file), _line);
 
+#if DEBUG
+    if (_etsTimer.isRunning()) {
+        __DBG_printf_E("ets_timer running name=%s", _etsTimer.name());
+        _etsTimer.disarm();
+    }
+    if (!_etsTimer.isDone()) {
+        __DBG_printf("ets_timer not done name=%s", _etsTimer.name());
+        _etsTimer.done();
+    }
+    else {
+        __DBG_printf_E("ets_timer already done name=%s", _etsTimer.name());
+    }
+#else
     _etsTimer.done();
-}
-
-void CallbackTimer::rearm(int64_t delay, RepeatType repeat, Callback callback)
-{
-    _disarm();
-    EVENT_SCHEDULER_ASSERT(delay >= kMinDelay);
-    _delay = std::max<int64_t>(kMinDelay, delay);
-    if (repeat._repeat != RepeatType::kPreset) {
-        _repeat._repeat = repeat._repeat;
-    }
-    EVENT_SCHEDULER_ASSERT(_repeat._repeat != RepeatType::kPreset);
-    if (callback) {
-        _callback = callback;
-    }
-    __LDBG_printf("rearm=%.0f timer=%p repeat=%d cb=%p %s:%u", delay / 1.0, this, _repeat._repeat, lambda_target(_callback), __S(_file), _line);
-    _rearm();
-}
-
-void CallbackTimer::rearm(milliseconds interval, RepeatType repeat, Callback callback)
-{
-    rearm(interval.count(), repeat, callback);
-}
-
-void CallbackTimer::disarm()
-{
-    __LDBG_printf("disarm timer=%p %s:%u", this, __S(_file), _line);
-    _disarm();
+#endif
 }
 
 void CallbackTimer::_rearm()
 {
-    uint32_t delay;
     bool repeat;
 
-    EVENT_SCHEDULER_ASSERT(_remainingDelay == 0);
     EVENT_SCHEDULER_ASSERT(_callbackScheduled == false);
     EVENT_SCHEDULER_ASSERT(isArmed() == false);
 
-    // split interval in multiple parts if max delay is exceeded
-    if (_delay > kMaxDelay) {
-        uint32_t lastDelay = _delay % kMaxDelay;
-        // adjust the _delay here to avoid checking in the ISR
-        // delay must be between kMinDelay and (kMaxDelay - 1)
-        if (lastDelay == 0) {
-            _delay--;
+    #if SCHEDULER_HAVE_REMAINING_DELAY
+
+        EVENT_SCHEDULER_ASSERT(_remainingDelay == 0);
+
+        uint32_t delay;
+        // split interval in multiple parts if max delay is exceeded
+        if (_delay > kMaxDelay) {
+            uint32_t lastDelay = _delay % kMaxDelay;
+            // adjust the _delay here to avoid checking in the ISR
+            // delay must be between kMinDelay and (kMaxDelay - 1)
+            if (lastDelay == 0) {
+                _delay--;
+            }
+            else if (lastDelay < kMinDelay) {
+                _delay += kMinDelay - lastDelay;
+            }
+            _remainingDelay = static_cast<decltype(_remainingDelay)>((_delay / kMaxDelay) + 1); // 1 to n times kMaxDelay
+            // store state to avoid comparing uint64_t inside isr
+            _maxDelayExceeded = true;
+            delay = kMaxDelay;
+            repeat = false; // we manually repeat
+            __LDBG_printf("delay=%.0f repeat=%u * %d + %u", _delay / 1.0, (_remainingDelay - 1), kMaxDelay, (uint32_t)(_delay % kMaxDelay));
         }
-        else if (lastDelay < kMinDelay) {
-            _delay += kMinDelay - lastDelay;
+        else {
+            // delay that can be handled by ets timer
+            delay = std::max(kMinDelay, static_cast<uint32_t>(_delay));
+            _maxDelayExceeded = false;
+            repeat = _repeat._hasRepeat();
+            __LDBG_printf("delay=%d repeat=%u", delay, repeat);
         }
-        _remainingDelay = static_cast<decltype(_remainingDelay)>((_delay / kMaxDelay) + 1); // 1 to n times kMaxDelay
-        // store state to avoid comparing uint64_t inside isr
-        _maxDelayExceeded = true;
-        delay = kMaxDelay;
-        repeat = false; // we manually repeat
-        __LDBG_printf("delay=%.0f repeat=%u * %d + %u", _delay / 1.0, (_remainingDelay - 1), kMaxDelay, (uint32_t)(_delay % kMaxDelay));
-    }
-    else {
-        // delay that can be handled by ets timer
-        delay = std::max<int32_t>(kMinDelay, _delay);
-        _maxDelayExceeded = false;
+    #else
+        int64_t delay = std::clamp<int64_t>(_delay, kMinDelay, kMaxDelay);
         repeat = _repeat._hasRepeat();
-        __LDBG_printf("delay=%d repeat=%u", delay, repeat);
+        __LDBG_printf("delay=%.0f repeat=%u", (float)delay, repeat);
+    #endif
+
+    if (_etsTimer.isRunning()) {
+        _etsTimer.disarm();
     }
-
-
-    _etsTimer.disarm();
     _etsTimer.create(Scheduler::__TimerCallback, this);
     _etsTimer.arm(delay, repeat, true);
-}
-
-void CallbackTimer::_disarm()
-{
-    __LDBG_printf("timer=%p armed=%u cb=%p %s:%u", this, isArmed(), lambda_target(_callback), __S(_file), _line);
-    if (isArmed()) {
-        _etsTimer.disarm();
-        _remainingDelay = 0;
-        _callbackScheduled = false;
-        _maxDelayExceeded = false;
-    }
-}
-
-void CallbackTimer::_invokeCallback(CallbackTimerPtr timer)
-{
-    __Scheduler._invokeCallback(timer, _runtimeLimit(timer->_priority));
-}
-
-uint32_t CallbackTimer::_runtimeLimit(PriorityType priority) const
-{
-    if (priority == PriorityType::TIMER) {
-        return kMaxRuntimePrioTimer;
-    }
-    else if (priority > PriorityType::NORMAL) {
-        return kMaxRuntimePrioAboveNormal;
-    }
-    return 0;
-}
-
-void CallbackTimer::_releaseManagerTimer()
-{
-    __LDBG_printf("_timer=%p", _timer);
-    if (_timer) {
-        _timer->_managedTimer.clear();
-    }
 }
 
 #if DEBUG_EVENT_SCHEDULER

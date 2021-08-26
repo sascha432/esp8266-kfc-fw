@@ -121,7 +121,11 @@ inline _Ta *__validatePointer(const _Ta *ptr, ValidatePointerType type, const ch
 
 #endif
 
+#if _MSC_VER
+#define __DBG_newline                                       "\r\n"
+#else
 #define __DBG_newline                                       "\n"
+#endif
 
 
 // regular debug functions

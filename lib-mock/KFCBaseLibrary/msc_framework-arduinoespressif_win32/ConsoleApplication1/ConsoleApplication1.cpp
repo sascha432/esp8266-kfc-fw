@@ -13,6 +13,9 @@
 
 class TestTimer : public OSTimer /* ETSTimer implementation */ {
 public:
+    TestTimer() : OSTimer(OSTIMER_NAME("TestTimer")) {
+    }
+
     virtual void run() override {
         Serial.printf_P(PSTR("OSTimer %.3fms\n"), micros() / 1000.0);
     }

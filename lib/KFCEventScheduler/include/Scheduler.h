@@ -27,6 +27,10 @@ namespace Event {
         void add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
         void add(milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
 
+        // add named timer in debug mode
+        void add(const char *name, int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
+        void add(const char *name, milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
+
         // remove timer
         void remove(CallbackTimerPtr timer);
 
@@ -50,7 +54,7 @@ namespace Event {
         friend Timer;
         friend ManangedCallbackTimer;
 
-        CallbackTimer *_add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
+        CallbackTimer *_add(const char *name, int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
         void _invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit);
 
         bool _hasTimer(CallbackTimerPtr timer) const;
@@ -98,12 +102,22 @@ namespace Event {
 
     inline void Scheduler::add(int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority)
     {
-        _add(intervalMillis, repeat, callback, priority);
+        _add(PSTR("SchedulerTimer"), intervalMillis, repeat, callback, priority);
     }
 
     inline void Scheduler::add(milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority)
     {
-        _add(interval.count(), repeat, callback, priority);
+        _add(PSTR("SchedulerTimer"), interval.count(), repeat, callback, priority);
+    }
+
+    inline void Scheduler::add(const char *name, int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority)
+    {
+        _add(name, intervalMillis, repeat, callback, priority);
+    }
+
+    inline void Scheduler::add(const char *name, milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority)
+    {
+        _add(name, interval.count(), repeat, callback, priority);
     }
 
 }
@@ -111,3 +125,5 @@ namespace Event {
 #if !DISABLE_GLOBAL_EVENT_SCHEDULER
 extern Event::Scheduler __Scheduler;
 #endif
+
+#include "Scheduler.hpp"

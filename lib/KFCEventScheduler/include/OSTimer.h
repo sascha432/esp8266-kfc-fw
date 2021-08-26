@@ -10,8 +10,12 @@
 
 #if DEBUG_OSTIMER
 #    define OSTIMER_NAME(name) PSTR(name)
+#    define OSTIMER_NAME_VAR(var) var
+#    define OSTIMER_NAME_ARG(name) OSTIMER_NAME(name),
 #else
 #    define OSTIMER_NAME(name)
+#    define OSTIMER_NAME_VAR(varname)
+#    define OSTIMER_NAME_ARG(name)
 #endif
 
 #include <Arduino_compat.h>
@@ -107,6 +111,14 @@
         #if DEBUG_OSTIMER
             uint32_t _magic;
             const char *_name;
+
+            const char *name() const {
+                return _name;
+            }
+        #else
+            const char *name() const {
+                return PSTR("OSTimer");
+            }
         #endif
     };
 
@@ -115,6 +127,8 @@
 class OSTimer {
 public:
     #if DEBUG_OSTIMER
+        OSTimer() : OSTimer(PSTR("OSTimer")) {
+        }
         OSTimer(const char *name);
     #else
         OSTimer();

@@ -13,9 +13,10 @@
 
 #if DEBUG_OSTIMER
 
-static OSTIMER_INLINE void __DBG_printEtsTimer(ETSTimer &timer, const char *msg = "") {
-    __DBG_printf("%stimer=%p func=%p arg=%p period=%u next=%p", msg, &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
-}
+    OSTIMER_INLINE static void __DBG_printEtsTimer(ETSTimer &timer, const char *msg = "") 
+    {
+        __DBG_printf("%stimer=%p func=%p arg=%p period=%u next=%p", msg, &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
+    }
 
 #endif
 

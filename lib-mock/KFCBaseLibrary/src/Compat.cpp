@@ -76,6 +76,32 @@ uint32_t crc32(const void *data, size_t length, uint32_t crc)
 // all data is dword aligned
 // TODO the memory is write protected and can be set to read protected that only functions like strcmp_P(), memcpy_P() can access it
 
+#define DISABLE_FLASH_STRING_EMULATION 1
+
+#if DISABLE_FLASH_STRING_EMULATION
+
+const void *__register_flash_memory(const void *ptr, size_t length, size_t alignment)
+{
+    return ptr;
+}
+
+const char *__register_flash_memory_string(const void *str, size_t alignment)
+{
+    return (const char *)str;
+}
+
+const char *__find_flash_memory_string(const char *str)
+{
+    return str;
+}
+
+bool is_PGM_P(const void *ptr)
+{
+    return false;
+}
+
+#else
+
 #pragma push_macro("new")
 #undef new
 
@@ -229,23 +255,26 @@ public:
         _deduplicated++;
     }
 
-    static IteratorPair find_pointer_in_range(const uint8_t *ptr) {
+    static IteratorPair find_pointer_in_range(const uint8_t *ptr)
+    {
         return std::make_pair(
-            std::lower_bound(_vector.begin(), _vector.end(), ptr, _comp_lower_end), 
+            std::lower_bound(_vector.begin(), _vector.end(), ptr, _comp_lower_end),
             std::upper_bound(_vector.begin(), _vector.end(), ptr, _comp_upper_begin)
         );
     }
 
-    static Iterator find_pointer(const uint8_t *ptr) {
+    static Iterator find_pointer(const uint8_t *ptr)
+    {
         return std::lower_bound(_vector.begin(), _vector.end(), ptr, _comp_lower_begin);
     }
 
-    static const char *find_str(const char *str) {
-        auto iterator = find_pointer((const uint8_t *)str);
+    static const char *find_str(const char *str)
+    {
+        auto iterator = find_pointer(reinterpret_cast<const uint8_t *>(str));
         if (iterator != _vector.end() && iterator->c_str() == str) {
             return iterator->c_str();
         }
-        return nullptr;    
+        return nullptr;
     }
 
     static const uint8_t *create_data(const uint8_t *ptr, size_t length, size_t alignment)
@@ -255,8 +284,14 @@ public:
         // find duplicates
         auto iterator = std::find(_vector.begin(), _vector.end(), item);
         if (iterator == _vector.end()) {
-            // insert sorted
-            return _vector.insert(std::upper_bound(_vector.begin(), _vector.end(), item), std::move(item))->begin();
+            _vector.push_back(std::move(item));
+            auto ptr = _vector.back().begin();
+            std::sort(_vector.begin(), _vector.end(), [](const flash_memory &a, const flash_memory &b) {
+                return a.begin() < b.begin();
+            });
+            return ptr;
+            //// insert sorted
+            //return _vector.insert(std::lower_bound(_vector.begin(), _vector.end(), item), std::move(item))->begin();
         }
         // increase duplicate counter and discard item
         iterator->duplicate();
@@ -315,31 +350,9 @@ public:
     static Vector _vector;
 };
 
-flash_memory::Vector flash_memory::_vector;
-
 #pragma pop_macro("new")
 
-//
-//void __clear_flash_memory() {
-//    flash_memory::_vector.clear();
-//}
-//
-//const uint8_t *__flash_memory_front() {
-//    return flash_memory::_vector.front().begin();
-//}
-//
-//const uint8_t *__flash_memory_back() {
-//    return flash_memory::_vector.back().end();
-//}
-//
-//const char *__flash_memory_list() {
-//
-//    for (auto &item : flash_memory::_vector) {
-//        Serial.printf("begin=%p end=%p len=%u str=%s\n", item.begin(), item.end(), item.size(), item.c_str());
-//    }
-//    return flash_memory::_vector.at(flash_memory::_vector.size() / 2).c_str();
-//}
-
+flash_memory::Vector flash_memory::_vector;
 
 const void *__register_flash_memory(const void *ptr, size_t length, size_t alignment)
 {
@@ -368,6 +381,8 @@ bool is_PGM_P(const void *ptr)
     }
     return false;
 }
+
+#endif
 
 void throwException(PGM_P message) 
 {

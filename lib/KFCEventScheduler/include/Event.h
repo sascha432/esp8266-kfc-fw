@@ -34,6 +34,28 @@
 #    define _Timer(obj) obj
 #endif
 
+// enable SCHEDULER_HAVE_REMAINING_DELAY if the underlying timer does not provide enough resolution
+
+// milliseconds
+// 31bit 24.855135 days or 0.068050 years
+// 32bit 49.710270 days or 0.136099 years
+// 48bit 3257812.230447 days or 8919.403779 years
+
+// microseconds
+// 31bit 0.024855 days or 0.000068 years
+// 32bit 0.049710 days or 0.000136 years
+// 48bit 3257.812230 days or 8.919404 years
+// 56bit 833999.930995 days or 2283.367368 years
+
+#ifndef SCHEDULER_HAVE_REMAINING_DELAY
+#    if ESP8266 || _MSC_VER
+#        define SCHEDULER_HAVE_REMAINING_DELAY 1
+#    endif
+#endif
+#ifndef SCHEDULER_HAVE_REMAINING_DELAY
+#    define SCHEDULER_HAVE_REMAINING_DELAY 0
+#endif
+
 #pragma push_macro("HIGH")
 #pragma push_macro("LOW")
 #undef HIGH
@@ -72,12 +94,15 @@ namespace Event {
     #if ESP8266
         static constexpr uint32_t kMinDelay = 5;
         static constexpr uint32_t kMaxDelay = 0x68D7A3;
+    #elif SCHEDULER_HAVE_REMAINING_DELAY
+        static constexpr uint32_t kMinDelay = 5;
+        static constexpr uint32_t kMaxDelay = ~0;
     #else
         static constexpr uint32_t kMinDelay = 1;
-        static constexpr uint32_t kMaxDelay = std::numeric_limits<int32_t>::max();
+        static constexpr uint64_t kMaxDelay = std::numeric_limits<int64_t>::max();
     #endif
 
-    static constexpr uint64_t kMaxDelayMillis = (1ULL << 17) * (uint64_t)kMaxDelay + (kMaxDelay - 1);
+    static constexpr uint64_t kMaxDelayMillis = (1ULL << 17) * static_cast<uint64_t>(kMaxDelay) + (kMaxDelay - 1);
     static constexpr uint64_t kMaxDelaySeconds = kMaxDelayMillis / 1000;
     static constexpr uint64_t kMaxDelayInDays  = kMaxDelaySeconds / 86400;
 

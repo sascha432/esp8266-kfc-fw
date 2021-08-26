@@ -7,6 +7,12 @@
 #include "Event.h"
 #include "CallbackTimer.h"
 
+#if DEBUG_EVENT_SCHEDULER
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 namespace Event {
 
     class Timer;
@@ -39,4 +45,58 @@ namespace Event {
         CallbackTimerPtr _callbackTimer;
     };
 
+    inline ManangedCallbackTimer::ManangedCallbackTimer() : _callbackTimer(nullptr)
+    {
+    }
+
+    inline ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer) : _callbackTimer(callbackTimer)
+    {
+    }
+
+    inline ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer, TimerPtr timer) : _callbackTimer(callbackTimer)
+    {
+        EVENT_SCHEDULER_ASSERT(callbackTimer != nullptr);
+        __LDBG_printf("callback_timer=%p timer=%p _timer=%p", callbackTimer, timer, callbackTimer->_timer);
+        if (callbackTimer) {
+            callbackTimer->_releaseManagerTimer();
+            _callbackTimer->_timer = timer;
+        }
+    }
+
+    inline ManangedCallbackTimer &ManangedCallbackTimer::operator=(ManangedCallbackTimer &&move) noexcept
+    {
+        EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
+        if (_callbackTimer) {
+            _callbackTimer->_releaseManagerTimer();
+        }
+        EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
+        _callbackTimer = std::exchange(move._callbackTimer, nullptr);
+        return *this;
+    }
+
+    inline ManangedCallbackTimer::~ManangedCallbackTimer()
+    {
+        __LDBG_printf("this=%p callback_timer=%p timer=%p", this, _callbackTimer, _callbackTimer ? _callbackTimer->_timer : nullptr);
+        remove();
+    }
+
+    inline ManangedCallbackTimer::operator bool() const
+    {
+        return _callbackTimer != nullptr;
+    }
+
+    inline CallbackTimerPtr ManangedCallbackTimer::operator->() const noexcept
+    {
+        return _callbackTimer;
+    }
+
+    inline CallbackTimerPtr ManangedCallbackTimer::get() const noexcept
+    {
+        return _callbackTimer;
+    }
+
 }
+
+#if DEBUG_EVENT_SCHEDULER
+#include <debug_helper_disable.h>
+#endif

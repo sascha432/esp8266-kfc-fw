@@ -61,9 +61,9 @@ Scheduler::~Scheduler()
     end();
 }
 
-CallbackTimer *Scheduler::_add(int64_t delay, RepeatType repeat, Callback callback, PriorityType priority)
+CallbackTimer *Scheduler::_add(const char *name, int64_t delay, RepeatType repeat, Callback callback, PriorityType priority)
 {
-    auto timerPtr = new CallbackTimer(callback, delay, repeat, priority);
+    auto timerPtr = new CallbackTimer(name, callback, delay, repeat, priority);
     _mux.enter();
     _timers.push_back(timerPtr);
     _mux.exit();
@@ -105,11 +105,6 @@ void Scheduler::end()
     _addedFlag = false;
     _removedFlag = false;
     _checkTimers = false;
-}
-
-bool Scheduler::_hasTimer(CallbackTimerPtr timer) const
-{
-    return (timer == nullptr) ? false : (std::find(_timers.begin(), _timers.end(), timer) != _timers.end());
 }
 
 bool Scheduler::_removeTimer(CallbackTimerPtr timer)
@@ -155,56 +150,23 @@ static void __dump(Event::TimerVector &timers)
 
 #endif
 
-void Scheduler::_cleanup()
-{
-    _timers.erase(std::remove(_timers.begin(), _timers.end(), nullptr), _timers.end());
-    _timers.shrink_to_fit();
-    _size = static_cast<int16_t>(_timers.size());
-    _removedFlag = false;
-}
-
 void Event::Scheduler::_sort()
 {
-    // if _fp_size changed, new timers have been added
-    __LDBG_printf("size=%u timers=%u", _size, _timers.size());
-    //__dump(_timers);
     // sort by priority and move all nullptr to the end for removal
     portMuxLock mLock(_mux);
+    // if _fp_size changed, new timers have been added
+    __LDBG_printf("size=%u timers=%u", _size, _timers.size());
+
     std::sort(_timers.begin(), _timers.end(), [](const CallbackTimerPtr a, const CallbackTimerPtr b) {
         return (a && b) ? (b->_priority < a->_priority) : (b < a);
     });
-    // remove all null pointers with std::find()
+    // remove all null pointers with std::find() since they have been moved to the end of the vector already
     _timers.erase(std::find(_timers.begin(), _timers.end(), nullptr), _timers.end());
     _timers.shrink_to_fit();
     _size = static_cast<int16_t>(_timers.size());
     //__dump(_timers);
     _addedFlag = false;
     _removedFlag = false;
-}
-
-void Scheduler::run(PriorityType runAbovePriority)
-{
-    __Scheduler._run(runAbovePriority);
-}
-
-void Scheduler::run()
-{
-    __Scheduler._run();
-}
-
-void Scheduler::_run(PriorityType runAbovePriority)
-{
-    if (_hasEvent > runAbovePriority) {
-        for(int i = 0; i < _size; i++) {
-            auto timer = _timers[i];
-            if (timer) {
-                if (timer->_priority > runAbovePriority && timer->_callbackScheduled) {
-                    timer->_callbackScheduled = false;
-                    timer->_invokeCallback(timer);
-                }
-            }
-        }
-    }
 }
 
 void Scheduler::_run()
@@ -264,11 +226,13 @@ void Scheduler::__TimerCallback(void *arg)
         // PriorityType::TIMER invoke now
         __Scheduler._invokeCallback(timer, kMaxRuntimePrioTimer);
     }
-    else if (timer->_remainingDelay >= 1) {
-        // continue with remaining delay
-        uint32_t delay = (--timer->_remainingDelay) ? kMaxDelay : (timer->_delay % kMaxDelay);
-        timer->_etsTimer.arm(delay, false, true);
-    }
+    #if SCHEDULER_HAVE_REMAINING_DELAY
+        else if (timer->_remainingDelay >= 1) {
+            // continue with remaining delay
+            uint32_t delay = (--timer->_remainingDelay) ? kMaxDelay : (timer->_delay % kMaxDelay);
+            timer->_etsTimer.arm(delay, false, true);
+        }
+    #endif
     else {
         // schedule for execution in main loop
         timer->_callbackScheduled = true;
@@ -310,12 +274,14 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
         __LDBG_printf("timer=%p armed=%u cb=%p %s:%u", timer, timer->isArmed(), lambda_target(timer->_callback), __S(timer->_file), timer->_line);
         _removeTimer(timer);
     }
-    else if (timer->_maxDelayExceeded) {
-        // if max delay is exceeded we need to manually reschedule
-        __LDBG_printf("timer=%p armed=%u cb=%p %s:%u", timer, timer->isArmed(), lambda_target(timer->_callback), __S(timer->_file), timer->_line);
-        timer->_disarm();
-        timer->_rearm();
-    }
+    #if SCHEDULER_HAVE_REMAINING_DELAY
+        else if (timer->_maxDelayExceeded) {
+            // if max delay is exceeded we need to manually reschedule
+            __LDBG_printf("timer=%p armed=%u cb=%p %s:%u", timer, timer->isArmed(), lambda_target(timer->_callback), __S(timer->_file), timer->_line);
+            timer->_disarm();
+            timer->_rearm();
+        }
+    #endif
 }
 
 

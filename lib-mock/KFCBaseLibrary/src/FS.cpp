@@ -6,7 +6,7 @@
 
 #include "Arduino_compat.h"
 
-File _SPIFFS::open(const String filename, const char *mode) 
+File _SPIFFS::open(const String &filename, const char *mode) 
 {
     FILE *fp;
     String modeStr = mode;
@@ -18,12 +18,12 @@ File _SPIFFS::open(const String filename, const char *mode)
     return File(fp, filename);
 }
 
-Dir _SPIFFS::openDir(const String dir) 
+Dir _SPIFFS::openDir(const String &dir) 
 {
     return Dir(dir);
 }
 
-bool _SPIFFS::exists(const String filename) 
+bool _SPIFFS::exists(const String &filename) 
 {
     File file   = open(filename, "r");
     bool result = !!file;
@@ -31,14 +31,19 @@ bool _SPIFFS::exists(const String filename)
     return result;
 }
 
-bool _SPIFFS::remove(const String filename) 
+bool _SPIFFS::remove(const String &filename) 
 {
     return ::remove(filename.c_str()) == 0;
 }
 
-bool _SPIFFS::rename(const String fromPath, const String toPath) 
+bool _SPIFFS::rename(const String &fromPath, const String &toPath) 
 {
     return ::rename(fromPath.c_str(), toPath.c_str()) == 0;
+}
+
+bool _SPIFFS::mkdir(const String &dir)
+{
+    return ::_wmkdir(LPWStr(dir).lpw_str());
 }
 
 void _SPIFFS::begin() 

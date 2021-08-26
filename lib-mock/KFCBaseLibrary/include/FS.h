@@ -67,11 +67,12 @@ private:
 
 class _SPIFFS {
 public:
-    File open(const String filename, const char *mode);
-    Dir openDir(const String dir);
-    bool exists(const String filename);
-    bool remove(const String filename);
-    bool rename(const String fromPath, const String toPath);
+    File open(const String &filename, const char *mode);
+    Dir openDir(const String &dir);
+    bool exists(const String &filename);
+    bool remove(const String &filename);
+    bool rename(const String &fromPath, const String &toPath);
+    bool mkdir(const String &dir);
 
     void begin();
     void end();

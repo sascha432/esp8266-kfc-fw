@@ -15,6 +15,7 @@
 #elif ESP8266 || _MSC_VER
 
 #include "OSTimer_esp8266.hpp"
+#include "Event.h"
 
 #endif
 

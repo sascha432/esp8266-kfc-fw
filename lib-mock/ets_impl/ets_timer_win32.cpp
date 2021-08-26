@@ -29,6 +29,10 @@ static std::thread __ets_timer_thread;
 static std::atomic_bool __ets_timer_callback;
 static ETSTimer root;
 
+void optimistic_yield(uint32_t)
+{
+}
+
 bool can_yield()
 {
     return (__ets_timer_callback == false);

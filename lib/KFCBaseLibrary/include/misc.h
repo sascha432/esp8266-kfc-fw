@@ -461,7 +461,7 @@ void *lambda_target(T callback) {
 // auto address = convertToIPAddress("192.168.0.1");
 // if (IPAddress_isValid(address)) { //we can use the address }
 
-#if ESP8266
+#if ESP8266 || _MSC_VER
 
 // use instead of address.isSet()
 // performs additional checks to validate the stored IP address

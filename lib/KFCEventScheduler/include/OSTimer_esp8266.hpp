@@ -6,7 +6,7 @@
 
 #pragma once
 
-#if ESP8266
+#if ESP8266 || _MSC_VER
 
 #include "OSTimer.h"
 #include "Event.h"
@@ -52,7 +52,12 @@ OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
 OSTIMER_INLINE void ETSTimerEx::create(ETSTimerFunc *callback, void *arg)
 {
     ets_timer_disarm(reinterpret_cast<ETSTimer *>(this));
-    ets_timer_setfn(reinterpret_cast<ETSTimer *>(this), &_EtsTimerCallback, arg);
+    ets_timer_setfn(reinterpret_cast<ETSTimer *>(this), reinterpret_cast<ETSTimerFunc *>(&OSTimer::_EtsTimerCallback), arg);
+}
+
+OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool millis)
+{
+    ets_timer_arm_new(reinterpret_cast<ETSTimer *>(this), delay, repeat, millis);
 }
 
 OSTIMER_INLINE bool ETSTimerEx::isRunning() const
@@ -136,7 +141,7 @@ OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
                     __DBG_panic("ETSTimerEx::~ETSTimerEx(): name=%s _magic=%08x<>%08x", __S(t._name), t._magic, kMagic);
                 }
             #endif
-            return cur;
+            return reinterpret_cast<ETSTimerEx *>(cur);
         }
         cur = cur->timer_next;
     }

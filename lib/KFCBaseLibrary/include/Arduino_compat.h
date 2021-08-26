@@ -207,6 +207,7 @@ extern "C" bool gdb_present(void);
 #include <CRTDBG.h>
 #include <pgmspace.h>
 
+#include "win32_compat.h"
 #include "WString.h"
 
 #define KFCFS                                           SPIFFS

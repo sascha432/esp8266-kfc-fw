@@ -99,7 +99,7 @@ void CallbackTimer::_rearm()
         else if (lastDelay < kMinDelay) {
             _delay += kMinDelay - lastDelay;
         }
-        _remainingDelay = (_delay / kMaxDelay) + 1; // 1 to n times kMaxDelay
+        _remainingDelay = static_cast<decltype(_remainingDelay)>((_delay / kMaxDelay) + 1); // 1 to n times kMaxDelay
         // store state to avoid comparing uint64_t inside isr
         _maxDelayExceeded = true;
         delay = kMaxDelay;

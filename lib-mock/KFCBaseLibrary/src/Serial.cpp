@@ -134,5 +134,7 @@ size_t HardwareSerial::write(const uint8_t *buffer, size_t size)
 HardwareSerial fakeSerial;
 HardwareSerial &Serial0 = fakeSerial;
 Stream &Serial = fakeSerial;
+HardwareSerial fakeSerial1;
+HardwareSerial &Serial1 = fakeSerial1;
 
 #endif

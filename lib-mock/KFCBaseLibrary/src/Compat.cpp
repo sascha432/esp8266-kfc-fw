@@ -18,6 +18,33 @@
 
 _SPIFFS SPIFFS;
 
+LPWStr::LPWStr() : _str(nullptr) {
+    lpw_str(String());
+}
+
+LPWStr::LPWStr(const String &str) : _str(nullptr) {
+    lpw_str(str);
+}
+
+LPWStr::~LPWStr() {
+    delete[] _str;
+}
+
+LPWSTR LPWStr::lpw_str(const String &str) {
+    if (_str) {
+        delete[] _str;
+    }
+    int slength = (int)str.length() + 1;
+    int len = MultiByteToWideChar(CP_ACP, 0, str.c_str(), slength, 0, 0);
+    _str = new wchar_t[len];
+    MultiByteToWideChar(CP_ACP, 0, str.c_str(), slength, _str, len);
+    return _str;
+}
+
+LPWSTR LPWStr::lpw_str() {
+    return _str;
+}
+
 char *dtostrf(double val, signed char width, unsigned char prec, char *s) 
 {
     sprintf(s, "%*.*f", width, prec, val);

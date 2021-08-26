@@ -51,6 +51,7 @@ typedef int32_t esp_err_t;
 
 typedef uint8_t byte;
 
+extern void optimistic_yield(uint32_t);
 extern bool can_yield();
 extern void yield();
 

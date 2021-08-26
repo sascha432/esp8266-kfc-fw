@@ -15,6 +15,9 @@ class String;
 #include "util/stdlib_noniso.h"
 #include "cores/esp8266/WString.h"
 
+#ifndef HAVE_LPWSTR_WSTRING
+#define HAVE_LPWSTR_WSTRING 1
+
 class LPWStr {
 public:
     LPWStr();
@@ -27,6 +30,8 @@ public:
 private:
     LPWSTR _str;
 };
+
+#endif
 
 #if CUSTOM_STRING_CLASS
 

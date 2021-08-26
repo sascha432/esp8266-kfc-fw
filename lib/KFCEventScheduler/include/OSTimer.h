@@ -57,7 +57,11 @@
 
 #elif ESP8266 || _MSC_VER
 
-    #include <osapi.h>
+    #if ESP8266
+
+        #include <osapi.h>
+
+    #endif
 
     #ifdef __cplusplus
     extern "C" {
@@ -83,6 +87,7 @@
         ~ETSTimerEx();
 
         void create(ETSTimerFunc *callback, void *arg);
+        void arm(int32_t delay, bool repeat, bool millis);
         bool isRunning() const;
         bool isDone() const;
         bool isLocked() const;

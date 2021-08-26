@@ -399,15 +399,31 @@ class ConfigReader {
             if (!is_string($bin)) {
                 throw new \RuntimeException(sprintf('bin.%s=empty', $key));
             }
+            $silent = false;
             $file = $this->resolveVariable($bin, array(), array(), "bin.$key");
+            if ($file{0} == '@') {
+                $silent = true;
+                $file = substr($file, 1);
+            }
             if (!FileUtils::isAbsoluteDir($file)) {
-                if (($result = FileUtils::findInPath($file, $pathEnv)) === false) {
-                    throw new \RuntimeException(sprintf('Cannot find %s in current PATH (%s)', $file, $pathEnv));
+                if (($result = FileUtils::findInPath($file, $pathEnv)) === false && $silent === false) {
+                    throw new \RuntimeException(sprintf('bin.%s cannot find %s in current PATH (%s)', $key, $file, $pathEnv));
                 }
                 $file = $result;
             }
             if (!file_exists($file)) {
-                throw new \RuntimeException(sprintf('Cannot find %s', $file));
+                if (file_exists($file.'.exe')) {
+                    $file .= '.exe';
+                }
+                else if (file_exists($file.'.bat')) {
+                    $file .= '.bat';
+                }
+                else if (file_exists($file.'.batcmd')) {
+                    $file .= '.cmd';
+                }
+            }
+            if (!file_exists($file) && $silent === false) {
+                throw new \RuntimeException(sprintf('bin.%s: cannot find: %s', $key, $file));
             }
             $path = FileUtils::realpath($file);
             $key = self::UNESCAPED_STRING_MARKED.$key;

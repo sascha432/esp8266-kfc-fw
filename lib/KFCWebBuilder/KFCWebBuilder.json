@@ -34,7 +34,7 @@
             "#else": "~/.platformio/penv/bin/activate"
         },
         "platformio": {
-            "#if OS_WIN": "~/.platformio/penv/Scripts/platformio.exe",
+            "#if OS_WIN": "~/.platformio/penv/Scripts/platformio",
             "#else": "~/.platformio/penv/bin/platformio"
         },
         "java": {
@@ -42,16 +42,12 @@
             "#else": "java"
         },
         "mklittlefs": {
-            "#if OS_WIN && ESP8266": "~/.platformio/packages/tool-mklittlefs/mklittlefs.exe",
-            "#elif OS_WIN && ESP32": "~/.platformio/packages/tool-mklittlefs/mklittlefs.exe",
-            "#elif ESP8266": "~/.platformio/packages/tool-mklittlefs/mklittlefs",
+            "#if ESP8266": "~/.platformio/packages/tool-mklittlefs/mklittlefs",
             "#elif ESP32": "~/.platformio/packages/tool-mklittlefs/mklittlefs"
         },
         "mkspiffs": {
-            "#if OS_WIN && ESP8266": "~/.platformio/packages/tool-mkspiffs/mkspiffs_espressif8266_arduino.exe",
-            "#elif OS_WIN && ESP32": "~/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino.exe",
-            "#elif ESP8266": "~/.platformio/packages/tool-mkspiffs/mkspiffs/mkspiffs_espressif8266_arduino",
-            "#elif ESP32": "~/.platformio/packages/tool-mkspiffs/mkspiffs/mkspiffs_espressif32_arduino"
+            "#if ESP8266": "@~/.platformio/packages/tool-mkspiffs/mkspiffs/mkspiffs_espressif8266_arduino",
+            "#elif ESP32": "@~/.platformio/packages/tool-mkspiffs/mkspiffs/mkspiffs_espressif32_arduino"
         },
         "nodejs": {
             "#if OS_WIN": "${env.ProgramFiles}/nodejs/node.exe",

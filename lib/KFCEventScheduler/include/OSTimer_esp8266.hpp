@@ -51,13 +51,13 @@ OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
 
 OSTIMER_INLINE void ETSTimerEx::create(ETSTimerFunc *callback, void *arg)
 {
-    ets_timer_disarm(reinterpret_cast<ETSTimer *>(this));
-    ets_timer_setfn(reinterpret_cast<ETSTimer *>(this), reinterpret_cast<ETSTimerFunc *>(&OSTimer::_EtsTimerCallback), arg);
+    ets_timer_disarm(this);
+    ets_timer_setfn(this, callback, arg);
 }
 
 OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool millis)
 {
-    ets_timer_arm_new(reinterpret_cast<ETSTimer *>(this), delay, repeat, millis);
+    ets_timer_arm_new(this, delay, repeat, millis);
 }
 
 OSTIMER_INLINE bool ETSTimerEx::isRunning() const
@@ -67,7 +67,7 @@ OSTIMER_INLINE bool ETSTimerEx::isRunning() const
 
 OSTIMER_INLINE bool ETSTimerEx::isDone() const
 {
-    return timer_period == 0 && timer_func == nullptr && timer_arg == nullptr && (uint32_t)timer_next == 0xffffffffU;
+    return timer_period == 0 && timer_func == nullptr && timer_arg == nullptr && reinterpret_cast<uint32_t>(timer_next) == 0xffffffffU;
 }
 
 OSTIMER_INLINE bool ETSTimerEx::isLocked() const
@@ -121,7 +121,7 @@ OSTIMER_INLINE void ETSTimerEx::clear()
     timer_func = nullptr;
     timer_arg = nullptr;
     timer_period = 0;
-    timer_next = (ETSTimer *)0xfffffffffU;
+    timer_next = reinterpret_cast<ETSTimer *>(0xfffffffffU);
 }
 
 OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find()

@@ -5,7 +5,7 @@
 #if AT_MODE_SUPPORTED
 
 #include <Arduino_compat.h>
-#include <Syslog.h>
+#include <../include/Syslog.h>
 #include <ReadADC.h>
 #include <EventScheduler.h>
 #include <MicrosTimer.h>

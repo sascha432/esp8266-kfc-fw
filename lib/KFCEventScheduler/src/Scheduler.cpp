@@ -64,7 +64,9 @@ Scheduler::~Scheduler()
 CallbackTimer *Scheduler::_add(int64_t delay, RepeatType repeat, Callback callback, PriorityType priority)
 {
     auto timerPtr = new CallbackTimer(callback, delay, repeat, priority);
+    _mux.enter();
     _timers.push_back(timerPtr);
+    _mux.exit();
     _addedFlag = true;
 
 #if DEBUG_EVENT_SCHEDULER
@@ -157,7 +159,7 @@ void Scheduler::_cleanup()
 {
     _timers.erase(std::remove(_timers.begin(), _timers.end(), nullptr), _timers.end());
     _timers.shrink_to_fit();
-    _size = _timers.size();
+    _size = static_cast<int16_t>(_timers.size());
     _removedFlag = false;
 }
 
@@ -174,7 +176,7 @@ void Event::Scheduler::_sort()
     // remove all null pointers with std::find()
     _timers.erase(std::find(_timers.begin(), _timers.end(), nullptr), _timers.end());
     _timers.shrink_to_fit();
-    _size = _timers.size();
+    _size = static_cast<int16_t>(_timers.size());
     //__dump(_timers);
     _addedFlag = false;
     _removedFlag = false;

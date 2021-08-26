@@ -108,7 +108,7 @@ void CallbackTimer::_rearm()
     }
     else {
         // delay that can be handled by ets timer
-        delay = std::max(kMinDelay, (uint32_t)_delay);
+        delay = std::max<int32_t>(kMinDelay, _delay);
         _maxDelayExceeded = false;
         repeat = _repeat._hasRepeat();
         __LDBG_printf("delay=%d repeat=%u", delay, repeat);

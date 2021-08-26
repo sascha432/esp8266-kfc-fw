@@ -422,7 +422,7 @@ class ConfigReader {
                 else if (file_exists($file.'.bat')) {
                     $file .= '.bat';
                 }
-                else if (file_exists($file.'.batcmd')) {
+                else if (file_exists($file.'.cmd')) {
                     $file .= '.cmd';
                 }
             }

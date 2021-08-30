@@ -4,7 +4,7 @@
 
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
-
+#pragma GCC push_options
 #include <push_optimize.h>
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
@@ -46,5 +46,5 @@ void Lines::fill(ColorType color, uYType start, uYType end)
     }
 }
 
-#include <pop_optimize.h>
+#pragma GCC pop_options
 

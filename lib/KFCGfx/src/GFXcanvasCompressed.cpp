@@ -16,7 +16,7 @@ extern "C" {
 }
 #endif
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -386,4 +386,4 @@ Cache &GFXCanvasCompressed::getLine(sYType y)
     return _decodeLine(y);
 }
 
-#include <pop_optimize.h>
+#pragma GCC pop_options

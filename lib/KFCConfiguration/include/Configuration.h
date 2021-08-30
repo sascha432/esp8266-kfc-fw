@@ -7,11 +7,12 @@
 #include <Arduino_compat.h>
 #include <PrintString.h>
 #include <crc16.h>
-#include <list>
-#include <vector>
 #include <Buffer.h>
 #include <DumpBinary.h>
+#include <JsonTools.h>
 #include <type_traits>
+#include <list>
+#include <vector>
 #include <stl_ext/chunked_list.h>
 #include <stl_ext/is_trivially_copyable.h>
 #if ESP8266

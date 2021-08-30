@@ -8,7 +8,7 @@
 #include "GFXCanvasBufferPool.h"
 #include "GFXCanvasByteBuffer.h"
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -82,9 +82,9 @@ BufferPool::BufferIterator BufferPool::add(BufferTypePtr id)
         }
         else if (
             // old buffer is smaller, check if there is enough space left in the buffer
-            header.end() - diff < iterator->begin() + iterator->size() && 
+            header.end() - diff < iterator->begin() + iterator->size() &&
             // check if iterator points to the last item
-            !(iterator + 1) 
+            !(iterator + 1)
         ) {
             header._dataSize -= diff; // extend size
             iterator->setLength(iterator->length() - diff); // update buffer length as well
@@ -187,4 +187,4 @@ void BufferPool::dump(Print &output)
     output.printf_P(PSTR("data len=%u data=%u available=%u pool=%u\n"), len, data, available, _list.size());
 }
 
-#include <pop_optimize.h>
+#pragma GCC pop_options

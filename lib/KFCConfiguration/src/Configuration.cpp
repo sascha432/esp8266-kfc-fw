@@ -5,9 +5,7 @@
 // ESP8266 configuration is stored in flash memory
 // ESP32 configuration is stored in NVS
 
-#include "JsonConfigReader.h"
 #include <Buffer.h>
-#include <JsonTools.h>
 #if ESP8266
 #include <interrupts.h>
 #endif
@@ -28,6 +26,7 @@
 #endif
 
 #include "DebugHandle.h"
+#include "Configuration.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -42,30 +41,6 @@ Configuration::Configuration(uint16_t size) :
     _readAccess(0),
     _size(size)
 {
-}
-
-Configuration::~Configuration()
-{
-    clear();
-    #if ESP32
-        nvs_close(_handle);
-        _handle = 0;
-    #endif
-}
-
-void Configuration::clear()
-{
-    __LDBG_printf("params=%u", _params.size());
-    _params.clear();
-}
-
-void Configuration::discard()
-{
-    __LDBG_printf("discard params=%u", _params.size());
-    for(auto &parameter: _params) {
-        ConfigurationHelper::deallocate(parameter);
-    }
-    _readAccess = 0;
 }
 
 void Configuration::release()
@@ -86,21 +61,6 @@ void Configuration::release()
         }
     }
     _readAccess = 0;
-}
-
-bool Configuration::read()
-{
-    __LDBG_printf("params=%u", _params.size());
-    clear();
-    #if DEBUG_CONFIGURATION_GETHANDLE
-        ConfigurationHelper::readHandles();
-    #endif
-    if (!_readParams()) {
-        __LDBG_printf("readParams()=false");
-        clear();
-        return false;
-    }
-    return true;
 }
 
 Configuration::WriteResultType Configuration::erase()
@@ -366,82 +326,6 @@ Configuration::WriteResultType Configuration::write()
     #endif
 }
 
-void Configuration::makeWriteable(ConfigurationParameter &param, size_type length)
-{
-    #if DEBUG_CONFIGURATION
-        delay(1);
-    #endif
-    param._makeWriteable(*this, length);
-}
-
-const char *Configuration::getString(HandleType handle)
-{
-    __LDBG_printf("handle=%04x", handle);
-    uint16_t offset;
-    auto param = _findParam(ParameterType::STRING, handle, offset);
-    if (param == _params.end()) {
-        return emptyString.c_str();
-    }
-    auto result = param->getString(*this, offset);;
-    if (!result) {
-        __DBG_panic("handle=%04x string=%p", result);
-    }
-    return result;
-}
-
-char *Configuration::getWriteableString(HandleType handle, size_type maxLength)
-{
-    __LDBG_printf("handle=%04x max_len=%u", handle, maxLength);
-    auto &param = getWritableParameter<char *>(handle, maxLength);
-    return param._getParam().string();
-}
-
-const uint8_t *Configuration::getBinary(HandleType handle, size_type &length)
-{
-    __LDBG_printf("handle=%04x", handle);
-    uint16_t offset;
-    auto param = _findParam(ParameterType::BINARY, handle, offset);
-    if (param == _params.end()) {
-        length = 0;
-        return nullptr;
-    }
-    return param->getBinary(*this, length, offset);
-}
-
-void *Configuration::getWriteableBinary(HandleType handle, size_type length)
-{
-    __LDBG_printf("handle=%04x len=%u", handle, length);
-    auto &param = getWritableParameter<void *>(handle, length);
-    return param._getParam().data();
-}
-
-void Configuration::_setString(HandleType handle, const char *string, size_type length, size_type maxLength)
-{
-    __LDBG_printf("handle=%04x length=%u max_len=%u", handle, length, maxLength);
-    if (maxLength != (size_type)~0U) {
-        if (length >= maxLength - 1) {
-            length = maxLength - 1;
-        }
-    }
-    _setString(handle, string, length);
-}
-
-void Configuration::_setString(HandleType handle, const char *string, size_type length)
-{
-    __LDBG_printf("handle=%04x length=%u", handle, length);
-    uint16_t offset;
-    auto &param = _getOrCreateParam(ParameterType::STRING, handle, offset);
-    param.setData(*this, (const uint8_t *)string, length);
-}
-
-void Configuration::setBinary(HandleType handle, const void *data, size_type length)
-{
-    __LDBG_printf("handle=%04x data=%p length=%u", handle, data, length);
-    uint16_t offset;
-    auto &param = _getOrCreateParam(ParameterType::BINARY, handle, offset);
-    param.setData(*this, (const uint8_t *)data, length);
-}
-
 void Configuration::dump(Print &output, bool dirty, const String &name)
 {
     Header header;
@@ -517,16 +401,6 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
     }
 }
 
-bool Configuration::isDirty() const
-{
-    for(auto &param: _params) {
-        if (param.isWriteable()) {
-            return true;
-        }
-    }
-    return false;
-}
-
 void Configuration::exportAsJson(Print &output, const String &version)
 {
     output.printf_P(PSTR(
@@ -573,47 +447,7 @@ void Configuration::exportAsJson(Print &output, const String &version)
     output.print(F("\n\t}\n}\n"));
 }
 
-bool Configuration::importJson(Stream &stream, HandleType *handles)
-{
-    JsonConfigReader reader(&stream, *this, handles);
-    reader.initParser();
-    return reader.parseStream();
-}
 
-Configuration::ParameterList::iterator Configuration::_findParam(ConfigurationParameter::TypeEnum_t type, HandleType handle, uint16_t &offset)
-{
-    offset = getDataOffset(_params.size());
-    for (auto it = _params.begin(); it != _params.end(); ++it) {
-        if (*it == handle && ((type == ParameterType::_ANY) || (it->_param.type() == type))) {
-        // if (*it == handle && (it->_param.type() == type)) {
-            //__LDBG_printf("%s FOUND", it->toString().c_str());
-            // it->_getParam()._usage._counter++;
-            return it;
-        }
-        offset += it->_param.next_offset();
-    }
-    __LDBG_printf("handle=%s[%04x] type=%s = NOT FOUND", ConfigurationHelper::getHandleName(handle), handle, (const char *)ConfigurationParameter::getTypeString(type));
-    return _params.end();
-}
-
-ConfigurationParameter &Configuration::_getOrCreateParam(ConfigurationParameter::TypeEnum_t type, HandleType handle, uint16_t &offset)
-{
-    #if DEBUG_CONFIGURATION
-        delay(1);
-    #endif
-    auto iterator = _findParam(ParameterType::_ANY, handle, offset);
-    if (iterator == _params.end()) {
-        _params.emplace_back(handle, type);
-        __LDBG_printf("new param %s", _params.back().toString().c_str());
-        __DBG__checkIfHandleExists("create", handle);
-        return _params.back();
-    }
-    else if (type != iterator->_param.type()) {
-        __DBG_panic("%s: new_type=%s type=%s different", ConfigurationHelper::getHandleName(iterator->getHandle()), iterator->toString().c_str(), (const char *)ConfigurationParameter::getTypeString(type));
-    }
-    __DBG__checkIfHandleExists("find", iterator->getHandle());
-    return *iterator;
-}
 
 bool Configuration::_readParams()
 {

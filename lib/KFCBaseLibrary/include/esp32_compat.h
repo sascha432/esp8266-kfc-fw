@@ -339,4 +339,7 @@ struct portMuxLockISR {
     portMuxType &_mux;
 };
 
+#define PORT_MUX_LOCK_ISR_BLOCK(mux) for(auto value = portMuxLockISR(mux); false; )
+#define PORT_MUX_LOCK_BLOCK(mux) for(auto value = portMuxLock(mux); false; )
+
 #endif

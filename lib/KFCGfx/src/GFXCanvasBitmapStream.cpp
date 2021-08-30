@@ -6,7 +6,7 @@
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -95,4 +95,4 @@ void GFXCanvasBitmapStream::_createHeader()
     _header.h.bih.biHeight = -_height; // negative means top to bottom
 }
 
-#include <pop_optimize.h>
+#pragma GCC pop_options

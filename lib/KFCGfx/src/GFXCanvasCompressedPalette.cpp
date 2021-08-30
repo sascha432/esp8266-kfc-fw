@@ -7,7 +7,7 @@
 #include "GFXCanvasConfig.h"
 #include "GFXCanvasCompressedPalette.h"
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -137,4 +137,4 @@ String GFXCanvasCompressedPalette::getDetails() const
     return str;
 }
 
-#include <pop_optimize.h>
+#pragma GCC pop_options

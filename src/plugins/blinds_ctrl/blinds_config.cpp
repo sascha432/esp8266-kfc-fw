@@ -3,7 +3,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include <Configuration.h>
+#include <Configuration.hpp>
 #include <kfc_fw_config.h>
 #include "blinds_defines.h"
 

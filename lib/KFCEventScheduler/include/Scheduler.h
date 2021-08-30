@@ -7,6 +7,11 @@
 #include <Arduino_compat.h>
 #include "Event.h"
 
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
+#endif
+
 namespace Event {
 
     static constexpr uint32_t kMaxRuntimeLimit = 250;                       // milliseconds, per main loop(). hard limit
@@ -127,3 +132,7 @@ extern Event::Scheduler __Scheduler;
 #endif
 
 #include "Scheduler.hpp"
+
+#ifndef _MSC_VER
+#    pragma GCC pop_options
+#endif

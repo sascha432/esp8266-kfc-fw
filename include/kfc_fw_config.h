@@ -14,7 +14,7 @@
 #include <functional>
 #include <bitset>
 #include <chrono>
-#include <Configuration.h>
+#include <Configuration.hpp>
 #include <IOExpander.h>
 #if SYSLOG_SUPPORT
 #include <Syslog.h>

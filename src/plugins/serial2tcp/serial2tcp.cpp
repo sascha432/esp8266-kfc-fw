@@ -6,7 +6,7 @@
 #include "serial2tcp.h"
 #include "Serial2TcpBase.h"
 #include <LoopFunctions.h>
-#include <Configuration.h>
+#include <Configuration.hpp>
 #include <KFCForms.h>
 #include <kfc_fw_config.h>
 #include "at_mode.h"

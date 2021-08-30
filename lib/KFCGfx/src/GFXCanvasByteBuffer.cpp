@@ -6,7 +6,7 @@
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -19,4 +19,4 @@
 using namespace GFXCanvas;
 
 
-#include <pop_optimize.h>
+#pragma GCC pop_options

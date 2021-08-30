@@ -9,7 +9,7 @@
 #endif
 #include "GFXCanvasConfig.h"
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else

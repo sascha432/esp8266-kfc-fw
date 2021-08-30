@@ -6,7 +6,7 @@
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -235,4 +235,4 @@ uint8_t *GFXCanvasRLEStream::_writeColor(uint8_t *buffer, uint16_t rle, uint16_t
     return buffer;
 }
 
-#include <pop_optimize.h>
+#pragma GCC pop_options

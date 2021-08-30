@@ -89,13 +89,6 @@ namespace ConfigurationHelper {
     using size_type = uint16_t;
     using ParameterHeaderType = uint32_t;
 
-    class ParameterInfo;
-    class WriteableData;
-
-    uint8_t *allocate(size_t size, size_t *realSize);
-    void allocate(size_t size, ConfigurationParameter &parameter);
-    void deallocate(ConfigurationParameter &parameter);
-
     enum class ParameterType : uint8_t { // 4 bit, 0-13 available as type
         _INVALID = 0,
         STRING,
@@ -113,28 +106,37 @@ namespace ConfigurationHelper {
 
     static_assert((int)ParameterType::MAX < 15, "size exceeded");
 
-    size_type getParameterLength(ParameterType type, size_t length = 0);
+    class ParameterInfo;
+    class WriteableData;
 
-#if DEBUG_CONFIGURATION_GETHANDLE
+    uint8_t *allocate(size_t size, size_t *realSize);
+    void allocate(size_t size, ConfigurationParameter &parameter);
+    void deallocate(ConfigurationParameter &parameter);
+    size_type getParameterLength(ParameterType type, size_t length);
 
-    const char *getHandleName(HandleType crc);
+    #if DEBUG_CONFIGURATION_GETHANDLE
 
-    const HandleType registerHandleName(const char *name, uint8_t type);
-    const HandleType registerHandleName(const __FlashStringHelper *name, uint8_t type);
-    bool registerHandleExists(HandleType handle);
+        const char *getHandleName(HandleType crc);
 
-    void setPanicMode(bool value);
-    void addFlashUsage(HandleType handle, size_t readSize, size_t writeSize);
+        const HandleType registerHandleName(const char *name, uint8_t type);
+        const HandleType registerHandleName(const __FlashStringHelper *name, uint8_t type);
+        bool registerHandleExists(HandleType handle);
 
-    void readHandles();
-    void writeHandles(bool clear = false);
-    void dumpHandles(Print &output, bool log);
+        void setPanicMode(bool value);
+        void addFlashUsage(HandleType handle, size_t readSize, size_t writeSize);
 
-#else
+        void readHandles();
+        void writeHandles(bool clear = false);
+        void dumpHandles(Print &output, bool log);
 
-    const char *getHandleName(HandleType crc);
+    #else
 
-#endif
+        inline const char *getHandleName(HandleType crc)
+        {
+            return emptyString.c_str();
+        }
+
+    #endif
 
 }
 
@@ -142,4 +144,6 @@ namespace ConfigurationHelper {
 #    include "DebugHandle.h"
 #endif
 
-#include <debug_helper_disable.h>
+#if DEBUG_CONFIGURATION
+#    include <debug_helper_disable.h>
+#endif

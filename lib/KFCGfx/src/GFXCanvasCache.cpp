@@ -8,7 +8,7 @@
 #include "GFXCanvasConfig.h"
 #include "GFXCanvasCompressed.h"
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -121,5 +121,4 @@ Cache &SingleLineCache::get(GFXCanvasCompressed &canvas, sYType y)
     }
     return *this;
 }
-
-#include <pop_optimize.h>
+#pragma GCC pop_options

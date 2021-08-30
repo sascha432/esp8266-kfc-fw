@@ -161,6 +161,7 @@ namespace SerialHandler {
 
     size_t Client::write(const uint8_t *buffer, size_t size)
     {
+        __DBG_validatePointer(buffer, VP_HS);
         _checkBufferSize(_tx, size);
         serialHandler._txFlag = true;
         return _tx.write((const char *)buffer, size);
@@ -204,6 +205,7 @@ namespace SerialHandler {
                 portMuxLock mLock(_mux);
             #endif
             _clients.erase(std::remove_if(_clients.begin(), _clients.end(), [ptr](const ClientPtr &client) {
+                __DBG_validatePointer(client.get(), VP_HS);
                 return client.get() == ptr;
             }), _clients.end());
         });
@@ -223,7 +225,12 @@ namespace SerialHandler {
     void Wrapper::_writeClientsRx(Client *src, const uint8_t *buffer, size_t size, EventType type)
     {
         for(const auto &clientPtr: _clients) {
-            if (clientPtr && (src != clientPtr.get()) && clientPtr->_hasAny(type)) {
+            #if ESP8266
+                InterruptLock lock;
+            #elif ESP32
+                portMuxLock mLock(_mux);
+            #endif
+            if (clientPtr && (src != clientPtr.get()) && __DBG_validatePointer(clientPtr.get(), VP_HS)->_hasAny(type)) {
                 auto &rx = clientPtr->_getRx();
                 clientPtr->_checkBufferSize(rx, size);
                 rx.write(reinterpret_cast<const char *>(buffer), size);
@@ -231,7 +238,12 @@ namespace SerialHandler {
         }
         // second loop for the callbacks to keep all clients in sync
         for(const auto &clientPtr: _clients) {
-            if (clientPtr && (src != clientPtr.get()) && clientPtr->_hasAny(type) && clientPtr->_cb && !clientPtr->_getRx().empty()) {
+            if (clientPtr && (src != clientPtr.get()) && __DBG_validatePointer(clientPtr.get(), VP_HS)->_hasAny(type) && clientPtr->_cb && !clientPtr->_getRx().empty()) {
+                #if ESP8266
+                    InterruptLock lock;
+                #elif ESP32
+                    portMuxLock mLock(_mux);
+                #endif
                 __DBGSHIO("write rx client %p callback %u", clientPtr.get(), clientPtr->_getRx().available());
                 clientPtr->_cb(*clientPtr);
             }
@@ -241,7 +253,12 @@ namespace SerialHandler {
     void Wrapper::_writeClientsTx(Client *src, const uint8_t *buffer, size_t size)
     {
         for(const auto &clientPtr: _clients) {
-            if (clientPtr && (src != clientPtr.get()) && clientPtr->_hasAny(EventType::WRITE)) {
+            #if ESP8266
+                InterruptLock lock;
+            #elif ESP32
+                portMuxLock mLock(_mux);
+            #endif
+            if (clientPtr && (src != clientPtr.get()) && __DBG_validatePointer(clientPtr.get(), VP_HS)->_hasAny(EventType::WRITE)) {
                 auto &tx = clientPtr->_getTx();
                 clientPtr->_checkBufferSize(tx, size);
                 tx.write(reinterpret_cast<const char *>(buffer), size);
@@ -270,7 +287,12 @@ namespace SerialHandler {
     {
         for(const auto &clientPtr: _clients) {
             if (clientPtr) {
-                portMuxLock lock(_mux);
+                #if ESP8266
+                    InterruptLock lock;
+                #elif ESP32
+                    portMuxLock mLock(_mux);
+                #endif
+                __DBG_validatePointer(clientPtr.get(), VP_HS);
                 auto &client = *clientPtr;
                 auto &rx = client._getRx();
                 if (client._hasAny(EventType::RW) && client._cb && !rx.empty()) {
@@ -286,7 +308,12 @@ namespace SerialHandler {
     {
         for(const auto &clientPtr: _clients) {
             if (clientPtr) {
-                portMuxLock lock(_mux);
+                #if ESP8266
+                    InterruptLock lock;
+                #elif ESP32
+                    portMuxLock mLock(_mux);
+                #endif
+                __DBG_validatePointer(clientPtr.get(), VP_HS);
                 auto &tx = clientPtr->_getTx();
                 if (tx.available()) {
                     uint8_t buf[Wrapper::kMinBufferSize / 2];

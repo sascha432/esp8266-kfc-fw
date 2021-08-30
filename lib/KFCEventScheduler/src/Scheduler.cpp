@@ -2,28 +2,32 @@
   Author: sascha_lammers@gmx.de
 */
 
-#include <Arduino_compat.h>
-#include <PrintString.h>
-#include "LoopFunctions.h"
-#include "Event.h"
 #include "Scheduler.h"
 #include "CallbackTimer.h"
+#include "Event.h"
+#include "LoopFunctions.h"
 #include "ManagedTimer.h"
 #include "Timer.h"
+#include <Arduino_compat.h>
+#include <PrintString.h>
 
 #if DEBUG_EVENT_SCHEDULER
-#include <debug_helper_enable.h>
-#define DEBUG_EVENT_SCHEDULER_ASSERT        1
+#    include <debug_helper_enable.h>
+#    define DEBUG_EVENT_SCHEDULER_ASSERT 1
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 // enable extra asserts
-#define DEBUG_EVENT_SCHEDULER_ASSERT        1
+#    define DEBUG_EVENT_SCHEDULER_ASSERT 1
 #endif
 
 #if DEBUG_EVENT_SCHEDULER_ASSERT
-#include <MicrosTimer.h>
+#    include <MicrosTimer.h>
 #endif
 
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
+#endif
 
 #if !DISABLE_GLOBAL_EVENT_SCHEDULER
 Event::Scheduler __Scheduler;
@@ -44,22 +48,6 @@ using namespace Event;
  * - priority TIMER is executed directly as callback or user task, not as ISR
  * - min. interval 5 milliseconds or 100 microseconds for PriorityType::TIMER
  */
-Scheduler::Scheduler() :
-    _size(0),
-    _hasEvent(PriorityType::NONE),
-    _addedFlag(false),
-    _removedFlag(false),
-    _checkTimers(false)
-#if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR == 0
-    , _runtimeLimit(kMaxRuntimeLimit)
-#endif
-{
-}
-
-Scheduler::~Scheduler()
-{
-    end();
-}
 
 CallbackTimer *Scheduler::_add(const char *name, int64_t delay, RepeatType repeat, Callback callback, PriorityType priority)
 {
@@ -84,20 +72,22 @@ void Scheduler::end()
 {
     __LDBG_print("terminating scheduler");
     // disarm all timers to ensure __TimerCallback is not called while deleting them
-    for(const auto &timer: _timers) {
-        if (timer) {
-            timer->_disarm();
-            if (timer->_timer) {
-                timer->_timer->_managedTimer.clear();
+    PORT_MUX_LOCK_BLOCK(_mux) {
+        for(const auto &timer: _timers) {
+            if (timer) {
+                timer->_disarm();
+                if (timer->_timer) {
+                    timer->_timer->_managedTimer.clear();
+                }
             }
         }
-    }
-    // move vector before deleting all CallbackTimer objects
-    auto tmp = std::move(_timers);
-    std::swap(_timers, tmp);
-    for(auto timer: tmp) {
-        if (timer) {
-            delete timer;
+        // move vector before deleting all CallbackTimer objects
+        auto tmp = std::move(_timers);
+        std::swap(_timers, tmp);
+        for(auto timer: tmp) {
+            if (timer) {
+                delete timer;
+            }
         }
     }
     _size = 0;
@@ -110,22 +100,24 @@ void Scheduler::end()
 bool Scheduler::_removeTimer(CallbackTimerPtr timer)
 {
     if (timer) {
-        auto iterator = std::find(_timers.begin(), _timers.end(), timer);
-        EVENT_SCHEDULER_ASSERT(iterator != _timers.end());
-        if (iterator != _timers.end()) {
-            __LDBG_printf("timer=%p iterator=%p managed=%p %s:%u", timer, *iterator, timer->_timer, __S(timer->_file), timer->_line);
-            // disarm and delete
-            timer->_disarm();
-            // mark as deleted in vector
-            *iterator = nullptr;
-            _removedFlag = true;
-            _checkTimers = true;
-            delete timer;
-            return true;
-        }
-        else {
-            // __LDBG_printf(_VT100(bold_red) "timer=%p NOT FOUND" _VT100(reset), timer);
-            __DBG_assert_printf(false, "timer=%p NOT FOUND", timer);
+        PORT_MUX_LOCK_BLOCK(_mux) {
+            auto iterator = std::find(_timers.begin(), _timers.end(), timer);
+            EVENT_SCHEDULER_ASSERT(iterator != _timers.end());
+            if (iterator != _timers.end()) {
+                __LDBG_printf("timer=%p iterator=%p managed=%p %s:%u", timer, *iterator, timer->_timer, __S(timer->_file), timer->_line);
+                // disarm and delete
+                timer->_disarm();
+                // mark as deleted in vector
+                *iterator = nullptr;
+                _removedFlag = true;
+                _checkTimers = true;
+                delete timer;
+                return true;
+            }
+            else {
+                // __LDBG_printf(_VT100(bold_red) "timer=%p NOT FOUND" _VT100(reset), timer);
+                __DBG_assert_printf(false, "timer=%p NOT FOUND", timer);
+            }
         }
     }
     return false;
@@ -153,7 +145,7 @@ static void __dump(Event::TimerVector &timers)
 void Event::Scheduler::_sort()
 {
     // sort by priority and move all nullptr to the end for removal
-    portMuxLock mLock(_mux);
+    portMuxLockISR mLock(_mux);
     // if _fp_size changed, new timers have been added
     __LDBG_printf("size=%u timers=%u", _size, _timers.size());
 
@@ -186,19 +178,25 @@ void Scheduler::_run()
                 if (timer->_callbackScheduled) {
                     _mux.enterISR();
                     timer->_callbackScheduled = false;
-                    _mux.exitISR();
-                    timer->_invokeCallback(timer);
+                    if (timer->_etsTimer.isLocked()) {
+                        _mux.exitISR();
+
+                    }
+                    else {
+                        timer->_etsTimer.lock();
+                        _mux.exitISR();
+
+                        timer->_invokeCallback(timer);
+                        PORT_MUX_LOCK_ISR_BLOCK(OSTimer::getMux()) {
+                            timer->_etsTimer.unlock();
+                        }
+                    }
                 }
             }
         }
 
         // reset event flag
-        {
-            #if ESP8266
-                InterruptLock lock;
-            #elif ESP32
-                portMuxLock mLock(_mux);
-            #endif
+        PORT_MUX_LOCK_ISR_BLOCK(_mux) {
             _hasEvent = PriorityType::NONE;
             for (const auto &timer : _timers) {
                 if (timer && timer->_callbackScheduled && timer->_priority > _hasEvent) {
@@ -215,7 +213,9 @@ void Scheduler::_run()
     }
     // remove null pointers
     else if (_removedFlag) {
-        _cleanup();
+        PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+            _cleanup();
+        }
     }
 }
 
@@ -249,7 +249,26 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
 
     String fpos = timer->__getFilePos();
     uint32_t start = runtimeLimit ? micros() : 0;
-    timer->_callback(timer);
+
+    OSTimer::getMux().enter();
+    bool locked = timer->_etsTimer.isLocked();
+    if (locked) {
+        OSTimer::getMux().exit();
+
+        __DBG_printEtsTimer_E(timer->_etsTimer, PSTR("cannot invoke callback on locked timer"));
+    }
+    else {
+        OSTimer::getMux().exit();
+
+        timer->_etsTimer.lock();
+        timer->_callback(timer);
+
+        PORT_MUX_LOCK_BLOCK(OSTimer::getMux()) {
+            if (timer->_etsTimer.isLocked()) {
+                timer->_etsTimer.unlock();
+            }
+        }
+    }
     uint32_t diff = runtimeLimit ? get_time_diff(start, micros()) : 0;
 
     if (diff > runtimeLimit) {
@@ -284,7 +303,6 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
     #endif
 }
 
-
 #if DEBUG_EVENT_SCHEDULER
 
 void Scheduler::__list(bool debug)
@@ -318,9 +336,8 @@ void Scheduler::__list(bool debug)
     }
 }
 
-#else
-
-void Scheduler::__list(bool debug) {}
-
 #endif
 
+#ifndef _MSC_VER
+#    pragma GCC pop_options
+#endif

@@ -6,7 +6,7 @@
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -127,4 +127,4 @@ size_t ColorPalette::getBytesLength() const
     return sizeof(_palette[0]) * _count;
 }
 
-#include <pop_optimize.h>
+#pragma GCC pop_options

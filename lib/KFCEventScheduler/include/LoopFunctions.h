@@ -11,15 +11,20 @@
 
 #include <Arduino_compat.h>
 #if ESP8266
-#include <Schedule.h>
+#    include <Schedule.h>
 #elif ESP32
-#include <EventScheduler.h>
+#    include <EventScheduler.h>
 #endif
 #include <functional>
 #include <vector>
 
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
+#endif
+
 #if defined(ESP32) || defined(_MSC_VER)
-bool IRAM_ATTR schedule_function (const std::function<void(void)> &fn);
+bool IRAM_ATTR schedule_function(const std::function<void(void)> &fn);
 void run_scheduled_functions();
 #endif
 
@@ -142,4 +147,35 @@ private:
     static FunctionsVector _functions;
 };
 
+inline void LoopFunctions::add(Callback callback, CallbackPtr callbackPtr)
+{
+    auto iterator = std::find(_functions.begin(), _functions.end(), callbackPtr);
+    if (iterator == _functions.end()) {
+        _functions.emplace_back(callback, callbackPtr, false);
+        return;
+    }
+    iterator->deleteCallback = false;
+}
+
+#if _MSC_VER || ESP32
+
+extern std::vector<std::function<void(void)>> scheduled_functions;
+
+inline void run_scheduled_functions()
+{
+    for(auto fn: scheduled_functions) {
+        fn();
+        #if _MSC_VER
+            _ASSERTE(_CrtCheckMemory());
+        #endif
+    }
+    scheduled_functions.clear();
+}
+
+#endif
+
 #include <debug_helper_disable.h>
+
+#ifndef _MSC_VER
+#    pragma GCC pop_options
+#endif

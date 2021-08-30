@@ -3,11 +3,11 @@
  */
 
 #ifndef _MSC_VER
-#include <push_optimize.h>
+#pragma GCC push_options
 #pragma GCC optimize ("O3")
 #endif
 
 #include "AdafruitGFXExtension.h"
 
-#include <pop_optimize.h>
+#pragma GCC pop_options
 

@@ -8,6 +8,11 @@
 #include <chrono>
 #include <time.h>
 
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
+#endif
+
 #ifndef DEBUG_EVENT_SCHEDULER
 #    define DEBUG_EVENT_SCHEDULER (0 || defined(DEBUG_ALL))
 #endif
@@ -83,7 +88,6 @@
 // and remove() Event::CallbackTimer and Event::Timer. It is recommended to use Event::Timer instead of the
 // Scheduler or Event::CallbackTimer
 
-
 namespace Event {
 
     class Timer;
@@ -91,12 +95,15 @@ namespace Event {
     class Scheduler;
     class ManangedCallbackTimer;
 
+    using OSTimerDelayType = uint32_t;
+
     #if ESP8266
         static constexpr uint32_t kMinDelay = 5;
         static constexpr uint32_t kMaxDelay = 0x68D7A3;
     #elif SCHEDULER_HAVE_REMAINING_DELAY
         static constexpr uint32_t kMinDelay = 5;
-        static constexpr uint32_t kMaxDelay = ~0;
+        static constexpr uint32_t kMaxDelay = std::numeric_limits<OSTimerDelayType>::max();
+        //std::numeric_limits<int32_t>::max();
     #else
         static constexpr uint32_t kMinDelay = 1;
         static constexpr uint64_t kMaxDelay = std::numeric_limits<int64_t>::max();
@@ -226,3 +233,7 @@ namespace Event {
 
 #pragma pop_macro("HIGH")
 #pragma pop_macro("LOW")
+
+#ifndef _MSC_VER
+#    pragma GCC pop_options
+#endif

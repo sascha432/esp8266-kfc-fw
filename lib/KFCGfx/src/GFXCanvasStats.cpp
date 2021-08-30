@@ -8,7 +8,7 @@
 
 #if DEBUG_GFXCANVASCOMPRESSED_STATS
 
-#include <push_optimize.h>
+#pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
 #else
@@ -35,6 +35,6 @@ void Stats::dump(Print &output) const {
 }
 
 
-#include <pop_optimize.h>
+#pragma GCC pop_options
 
 #endif

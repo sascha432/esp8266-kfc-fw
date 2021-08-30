@@ -14,6 +14,11 @@
 #include "debug_helper_disable.h"
 #endif
 
+#ifndef _MSC_VER
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
+#endif
+
 inline size_t Buffer::available() const
 {
     if (_length < _size) {
@@ -242,4 +247,8 @@ inline void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
 
 #if DEBUG_BUFFER
 #include "debug_helper_disable.h"
+#endif
+
+#ifndef _MSC_VER
+#pragma GCC pop_options
 #endif

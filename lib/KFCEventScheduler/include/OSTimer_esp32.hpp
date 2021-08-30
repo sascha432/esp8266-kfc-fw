@@ -6,6 +6,11 @@
 
 #pragma once
 
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
+#endif
+
 #if ESP32
 
 #include <esp_timer.h>
@@ -160,3 +165,6 @@ OSTIMER_INLINE void ETSTimerEx::end()
 
 #endif
 
+#ifndef _MSC_VER
+#    pragma GCC pop_options
+#endif

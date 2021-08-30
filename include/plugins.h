@@ -42,6 +42,7 @@ namespace PluginComponents {
         static PluginsVector &getPlugins();
 
     public:
+        void sort();
         void setup(SetupModeType mode, DependenciesPtr dependencies = nullptr);
         void dumpList(Print &output);
 

@@ -6,12 +6,43 @@
 #include "Timer.h"
 
 #if DEBUG_EVENT_SCHEDULER
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
+#endif
+
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
 #endif
 
 namespace Event {
+
+    inline Scheduler::Scheduler() :
+        _size(0),
+        _hasEvent(PriorityType::NONE),
+        _addedFlag(false),
+        _removedFlag(false),
+        _checkTimers(false)
+        #if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR == 0
+            , _runtimeLimit(kMaxRuntimeLimit)
+        #endif
+    {
+    }
+
+    inline Scheduler::~Scheduler()
+    {
+        end();
+    }
+
+    #if !DEBUG_EVENT_SCHEDULER
+
+        inline void Scheduler::__list(bool debug)
+        {
+        }
+
+    #endif
+
 
     inline void Timer::add(const char *name, int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority)
     {
@@ -146,5 +177,9 @@ namespace Event {
 }
 
 #if DEBUG_EVENT_SCHEDULER
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
+#endif
+
+#ifndef _MSC_VER
+#    pragma GCC pop_options
 #endif

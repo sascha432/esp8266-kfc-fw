@@ -2,17 +2,22 @@
   Author: sascha_lammers@gmx.de
 */
 
-#include <Arduino_compat.h>
-#include <stl_ext/utility.h>
-#include "Event.h"
 #include "CallbackTimer.h"
+#include "Event.h"
 #include "EventScheduler.h"
 #include "Scheduler.h"
+#include <Arduino_compat.h>
+#include <stl_ext/utility.h>
 
 #if DEBUG_EVENT_SCHEDULER
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
+#endif
+
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
 #endif
 
 using namespace Event;
@@ -53,21 +58,15 @@ CallbackTimer::~CallbackTimer()
 
     __LDBG_printf("ets_timer=%p running=%p armed=%d %s:%u", &_etsTimer, _etsTimer.isRunning(), isArmed(), __S(_file), _line);
 
-#if DEBUG
-    if (_etsTimer.isRunning()) {
-        __DBG_printf_E("ets_timer running name=%s", _etsTimer.name());
-        _etsTimer.disarm();
-    }
-    if (!_etsTimer.isDone()) {
-        __DBG_printf("ets_timer not done name=%s", _etsTimer.name());
-        _etsTimer.done();
-    }
-    else {
-        __DBG_printf_E("ets_timer already done name=%s", _etsTimer.name());
-    }
-#else
-    _etsTimer.done();
-#endif
+    // #if DEBUG
+    //     if (_etsTimer.isRunning()) {
+    //         ::printf(PSTR("ets_timer running\n"));
+    //         _etsTimer.disarm();
+    //     }
+    //     if (_etsTimer.isDone()) {
+    //         ::printf(PSTR("ets_timer already done\n"));
+    //     }
+    // #endif
 }
 
 void CallbackTimer::_rearm()
@@ -129,4 +128,8 @@ String CallbackTimer::__getFilePos()
     return PrintString(F(" %s:%u"), __S(_file), _line);
 }
 
+#endif
+
+#ifndef _MSC_VER
+#    pragma GCC pop_options
 #endif

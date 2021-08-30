@@ -30,7 +30,7 @@
 #endif
 
 #ifndef _MSC_VER
-#include <push_optimize.h>
+#pragma GCC push_options
 #pragma GCC optimize ("O2")
 #endif
 
@@ -622,7 +622,7 @@ namespace STL_STD_EXT_NAMESPACE_EX {
 }
 
 #ifndef _MSC_VER
-#include <pop_optimize.h>
+#pragma GCC pop_options
 #endif
 
 

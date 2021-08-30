@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_OSTIMER
-#    define DEBUG_OSTIMER (0 || defined(DEBUG_ALL))
+#    define DEBUG_OSTIMER (1 || defined(DEBUG_ALL) || _MSC_VER)
 #endif
 
 #if DEBUG_OSTIMER
@@ -19,6 +19,23 @@
 #endif
 
 #include <Arduino_compat.h>
+#include <PrintString.h>
+#include "Event.h"
+
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
+#endif
+
+struct ETSTimerEx;
+
+inline void __DBG_printEtsTimer(ETSTimer &timer, const char *msg = nullptr);
+inline void __DBG_printEtsTimer(ETSTimerEx *timerPtr, const String &msg);
+extern void __DBG_printEtsTimer(ETSTimerEx *timerPtr, const char *msg = nullptr, bool error = false);
+inline void __DBG_printEtsTimer_E(ETSTimer &timer, const char *msg = nullptr);
+inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const String &msg);
+inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg = nullptr);
+
 #if ESP32
 
     #include <esp_timer.h>
@@ -137,7 +154,7 @@ public:
 
     virtual void run() = 0;
 
-    void startTimer(int32_t delay, bool repeat, bool millis = true);
+    void startTimer(Event::OSTimerDelayType delay, bool repeat, bool millis = true);
     virtual void detach();
 
     bool isRunning() const;
@@ -150,6 +167,10 @@ public:
 
     static void ICACHE_FLASH_ATTR _EtsTimerCallback(void *arg);
 
+    static portMuxType &getMux() {
+        return _mux;
+    }
+
 protected:
     ETSTimerEx _etsTimer;
     static portMuxType _mux;
@@ -159,7 +180,42 @@ protected:
     }
 };
 
+inline void __DBG_printEtsTimer(ETSTimer &timer, const char *msg)
+{
+    if (!msg) {
+        msg = emptyString.c_str();
+    }
+    __DBG_printf("%stimer=%p func=%p arg=%p period=%u next=%p", msg, &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
+}
+
+inline void __DBG_printEtsTimer_E(ETSTimer &timer, const char *msg)
+{
+    if (!msg) {
+        msg = emptyString.c_str();
+    }
+    __DBG_printf_E("%stimer=%p func=%p arg=%p period=%u next=%p", msg, &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
+}
+
+inline void __DBG_printEtsTimer(ETSTimerEx *timerPtr, const String &msg)
+{
+    __DBG_printEtsTimer(*reinterpret_cast<ETSTimer *>(timerPtr), msg.c_str());
+}
+
+inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const String &msg)
+{
+    __DBG_printEtsTimer_E(*reinterpret_cast<ETSTimer *>(timerPtr), msg.c_str());
+}
+
+inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg)
+{
+    __DBG_printEtsTimer(timerPtr, msg, true);
+}
+
 #if !DEBUG_OSTIMER
 #   define OSTIMER_INLINE inline
 #   include "OSTimer.hpp"
+#endif
+
+#ifndef _MSC_VER
+#    pragma GCC pop_options
 #endif

@@ -6,6 +6,11 @@
 
 #include "Buffer.h"
 
+#ifndef _MSC_VER
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
+#endif
+
 class PrintBuffer : public Buffer, public Print {
 public:
     PrintBuffer(size_t size = 0);
@@ -39,3 +44,7 @@ inline size_t PrintBuffer::write(char *buffer, size_t size)
 {
     return Buffer::write(reinterpret_cast<uint8_t *>(buffer), size);
 }
+
+#ifndef _MSC_VER
+#pragma GCC pop_options
+#endif

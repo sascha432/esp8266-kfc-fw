@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <EEPROM.h>
 #include <MicrosTimer.h>
+#include <PrintString.h>
 #include <type_traits>
 #include <algorithm>
 #include <stl_ext/type_traits.h>
@@ -318,6 +319,42 @@ inline const __FlashStringHelper *ConfigurationParameter::getTypeString(Paramete
         break;
     }
     return F("INVALID");
+}
+
+inline void ConfigurationParameter::_makeWriteable(Configuration &conf, size_type length)
+{
+    __LDBG_printf("%s length=%u is_writable=%u _writeable=%p ", toString().c_str(), length, _param.isWriteable(), _param._writeable);
+    if (_param.isWriteable()) {
+        _param.resizeWriteable(length, *this, conf);
+    }
+    else {
+        _param.setWriteable(new WriteableData(length, *this, conf));
+    }
+}
+
+inline String ConfigurationParameter::toString() const
+{
+    #if DEBUG_CONFIGURATION_GETHANDLE
+
+        //return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u (%p:%p %u %u)"), ConfigurationHelper::getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty, dataPtr, _info.data, dataOfs, dataLen);
+        return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u next_ofs=%u"),
+            ConfigurationHelper::getHandleName(_param.getHandle()),
+            _param.getHandle(),
+            _param.size(),
+            _param.length(),
+            _param.data(),
+            getTypeString(_param.type()),
+            _param.isWriteable(),
+            _param.next_offset()
+        );
+
+    #else
+
+        return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s writable=%u next_ofs=%u"),
+            _param.getHandle(), _param.size(), _param.length(), _param.data(), getTypeString(_param.type()), _param.isWriteable(), _param.next_offset()
+        );
+
+    #endif
 }
 
 #ifdef _MSC_VER

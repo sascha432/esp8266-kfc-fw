@@ -408,6 +408,9 @@ void setup()
     config.read();
     SaveCrash::Data::setMD5(KFCConfigurationClasses::System::Firmware::getFirmwareMD5());
 
+    auto &componentRegister = PluginComponents::RegisterEx::getInstance();
+    componentRegister.sort();
+
     // __DBG_printf("starting safe_mode=%u", safe_mode);
     if (safe_mode) {
 
@@ -417,7 +420,6 @@ void setup()
             at_mode_setup();
         #endif
 
-        auto &componentRegister = PluginComponents::RegisterEx::getInstance();
         componentRegister.setup(PluginComponent::SetupModeType::SAFE_MODE);
 
         // check if wifi is up
@@ -457,8 +459,6 @@ void setup()
         #if AT_MODE_SUPPORTED
             at_mode_setup();
         #endif
-
-        auto &componentRegister = PluginComponents::RegisterEx::getInstance();
 
         #if ENABLE_DEEP_SLEEP
             componentRegister.setup(wakeup ? PluginComponent::SetupModeType::AUTO_WAKE_UP : PluginComponent::SetupModeType::DEFAULT);

@@ -2,8 +2,7 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#include "ConfigurationParameter.h"
-#include "Configuration.h"
+#include "Configuration.hpp"
 #include <Buffer.h>
 #include <DumpBinary.h>
 #include <JsonTools.h>
@@ -18,36 +17,6 @@
 #else
 #include <debug_helper_disable.h>
 #endif
-
-#include "ConfigurationHelper.h"
-
-String ConfigurationParameter::toString() const
-{
-    //auto dataPtr = (uint8_t *)((((uintptr_t)&_info) + 3) & ~3);
-    //auto dataOfs = (intptr_t)dataPtr - (intptr_t)&_info;
-    //ptrdiff_t dataLen = sizeof(_info) - dataOfs;
-#if DEBUG_CONFIGURATION_GETHANDLE
-
-    //return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u (%p:%p %u %u)"), ConfigurationHelper::getHandleName(_param.handle), _param.handle, _info.size, _param.length, _info.data, getTypeString(_param.getType()), _info.dirty, dataPtr, _info.data, dataOfs, dataLen);
-    return PrintString(F("handle=%s[%04x] size=%u len=%u data=%p type=%s dirty=%u next_ofs=%u"),
-        ConfigurationHelper::getHandleName(_param.getHandle()),
-        _param.getHandle(),
-        _param.size(),
-        _param.length(),
-        _param.data(),
-        getTypeString(_param.type()),
-        _param.isWriteable(),
-        _param.next_offset()
-    );
-
-#else
-
-    return PrintString(F("handle=%04x size=%u len=%u data=%p type=%s writable=%u next_ofs=%u"),
-        _param.getHandle(), _param.size(), _param.length(), _param.data(), getTypeString(_param.type()), _param.isWriteable(), _param.next_offset()
-    );
-
-#endif
-}
 
 void ConfigurationParameter::setData(Configuration &conf, const uint8_t *data, size_type length)
 {
@@ -69,52 +38,6 @@ void ConfigurationParameter::setData(Configuration &conf, const uint8_t *data, s
         memmove_P(_param.data(), data, length); // for strings, we do not copy trailing NUL byte if length != 0
     }
     // __LDBG_assert_printf(_param.isString() == false || _param.string()[length] == 0, "%s NUL byte missing", toString().c_str());
-}
-
-const char *ConfigurationParameter::getString(Configuration &conf, uint16_t offset)
-{
-    if (_param.size() == 0) {
-        return emptyString.c_str();
-    }
-    if (!_readData(conf, offset)) {
-        return emptyString.c_str();
-    }
-    //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
-    return _param.string();
-}
-
-const uint8_t *ConfigurationParameter::getBinary(Configuration &conf, size_type &length, uint16_t offset)
-{
-    if (_param.size() == 0) {
-        length = 0;
-        return nullptr;
-    }
-    if (!_readData(conf, offset)) {
-        length = 0;
-        return nullptr;
-    }
-    //__LDBG_printf("%s %s", toString().c_str(), Configuration::__debugDumper(*this, _info.data, _info.size).c_str());
-    length = _param.length();
-    return _param.data();
-}
-
-uint16_t ConfigurationParameter::read(Configuration &conf, uint16_t offset)
-{
-    if (!_readData(conf, offset)) {
-        return 0;
-    }
-    return _param.length();
-}
-
-void ConfigurationParameter::_makeWriteable(Configuration &conf, size_type length)
-{
-    __LDBG_printf("%s length=%u is_writable=%u _writeable=%p ", toString().c_str(), length, _param.isWriteable(), _param._writeable);
-    if (_param.isWriteable()) {
-        _param.resizeWriteable(length, *this, conf);
-    }
-    else {
-        _param.setWriteable(new WriteableData(length, *this, conf));
-    }
 }
 
 void ConfigurationParameter::dump(Print &output)
@@ -306,19 +229,6 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
         return _readDataTo(conf, offset, tmp.get()) && (memcmp(tmp.get(), _param.data(), _param.length()) != 0);
     #endif
 }
-
-#if ESP8266
-
-bool ConfigurationParameter::_readDataTo(Configuration &conf, uint16_t offset, uint8_t *ptr) const
-{
-    // nothing to read
-    if (_param.length() == 0) {
-        return true;
-    }
-    return conf.flashRead(ConfigurationHelper::getFlashAddress(offset), ptr, _param.length());
-}
-
-#endif
 
 bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)
 {

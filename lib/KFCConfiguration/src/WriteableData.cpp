@@ -2,36 +2,9 @@
 * Author: sascha_lammers@gmx.de
 */
 
-#include "ConfigurationHelper.h"
-#include "WriteableData.h"
-#include "ConfigurationParameter.h"
+#include "Configuration.hpp"
 
 using namespace ConfigurationHelper;
-
-WriteableData::WriteableData(size_type length, ConfigurationParameter &parameter, Configuration &conf) :
-    _buffer_start_words{},
-    _buffer_end_word(0),
-    _length(getParameterLength(parameter.getType(), length)),
-    _is_string(parameter.getType() == ParameterType::STRING),
-    _is_allocated(false)
-{
-    if (_length > _buffer_length()) {
-        _data = allocate(size() + 4, nullptr);
-        _is_allocated = true;
-    }
-
-    if (parameter.hasData()) {
-        auto &param = parameter._getParam();
-        memcpy(data(), param._readable, std::min(_length, param.length()));
-        free(param._readable);
-        param._readable = nullptr;
-    }
-}
-
-WriteableData::~WriteableData()
-{
-    freeData();
-}
 
 void WriteableData::resize(size_type newLength, ConfigurationParameter &parameter, Configuration &conf)
 {
@@ -77,14 +50,5 @@ void WriteableData::resize(size_type newLength, ConfigurationParameter &paramete
     // the data is already in _buffer
     // fill it with 0 after newLength
     std::fill(_buffer_begin() + newLength, _buffer_end(), 0);
-}
-
-void WriteableData::setData(uint8_t *ptr, size_type length)
-{
-    // free _data or clear _buffer and set new pointer
-    freeData();
-    __LDBG_printf("set data=%p length=%u", ptr, _length);
-    _data = ptr;
-    _length = length;
 }
 

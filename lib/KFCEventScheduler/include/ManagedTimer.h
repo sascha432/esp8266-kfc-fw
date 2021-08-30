@@ -4,13 +4,18 @@
 
 #pragma once
 
-#include "Event.h"
 #include "CallbackTimer.h"
+#include "Event.h"
 
 #if DEBUG_EVENT_SCHEDULER
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
+#endif
+
+#ifndef _MSC_VER
+#    pragma GCC push_options
+#    pragma GCC optimize("O3")
 #endif
 
 namespace Event {
@@ -99,4 +104,8 @@ namespace Event {
 
 #if DEBUG_EVENT_SCHEDULER
 #include <debug_helper_disable.h>
+#endif
+
+#ifndef _MSC_VER
+#    pragma GCC pop_options
 #endif

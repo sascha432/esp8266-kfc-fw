@@ -61,11 +61,14 @@ void Register::_add(PluginComponent *plugin)
 {
 #endif
     __LDBG_printf("register_plugin %s priority %d", plugin->getName_P(), plugin->getOptions().priority);
-    auto iterator = std::upper_bound(_plugins.begin(), _plugins.end(), plugin, [](const PluginComponent *a, const PluginComponent *b) {
-        return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
-    });
-    _plugins.insert(iterator, plugin);
-    // _plugins.push_back(plugin);
+    //// insert sorted
+    // auto iterator = std::upper_bound(_plugins.begin(), _plugins.end(), plugin, [](const PluginComponent *a, const PluginComponent *b) {
+    //     return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
+    // });
+    // _plugins.insert(iterator, plugin);
+
+    // push_back + sort is faster
+    _plugins.push_back(plugin);
 }
 
 void Register::dumpList(Print &output)
@@ -142,6 +145,13 @@ void RegisterEx::_createMenu()
 
     _navMenu.util = _bootstrapMenu.addMenu(F("Utilities"));
     _bootstrapMenu.addMenuItem(F("Speed Test"), F("speed-test.html"), _navMenu.util);
+}
+
+void Register::sort()
+{
+    std::sort(_plugins.begin(), _plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
+        return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
+    });
 }
 
 void Register::setup(SetupModeType mode, DependenciesPtr dependencies)

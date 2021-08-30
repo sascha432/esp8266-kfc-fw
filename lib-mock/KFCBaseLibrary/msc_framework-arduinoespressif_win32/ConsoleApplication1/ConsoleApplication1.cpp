@@ -32,7 +32,12 @@ void setup()
 
     // Scheduler test
     _Scheduler.add(Event::seconds(30), 10, [](Event::CallbackTimerPtr timer) {
-        Serial.printf_P(PSTR("Scheduled event %.3fs, %u/%u\n"), micros() / 1000000.0, timer->_repeat.getRepeatsLeft() + 1, 10);
+        Serial.printf_P(PSTR("Scheduled event #1 %.3fs, %u/%u\n"), micros() / 1000000.0, timer->_repeat.getRepeatsLeft() + 1, 10);
+    });
+
+    _Scheduler.add(Event::seconds(10), true, [](Event::CallbackTimerPtr timer) {
+        Serial.printf_P(PSTR("Scheduled event #2 %.3fs\n"), micros() / 1000000.0);
+        timer->disarm();
     });
 
     //ets_dump_timer(Serial); // #include "ets_timer_win32.h"

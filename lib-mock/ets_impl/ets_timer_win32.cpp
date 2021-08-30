@@ -90,6 +90,7 @@ static void remove_timer(ETSTimer *timer)
                 prev->timer_next = timer->timer_next;
                 timer->timer_next = nullptr;
                 timer->init = 0;
+                timer->timer_period = 0;
             }
         }
     }

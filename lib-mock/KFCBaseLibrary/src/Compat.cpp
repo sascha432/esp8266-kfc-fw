@@ -76,7 +76,7 @@ uint32_t crc32(const void *data, size_t length, uint32_t crc)
 // all data is dword aligned
 // TODO the memory is write protected and can be set to read protected that only functions like strcmp_P(), memcpy_P() can access it
 
-#define DISABLE_FLASH_STRING_EMULATION 1
+#define DISABLE_FLASH_STRING_EMULATION 0
 
 #if DISABLE_FLASH_STRING_EMULATION
 
@@ -175,16 +175,16 @@ protected:
 public:
     ~flash_memory() {
         if (_begin) {
-            free(_begin);
+            delete[] _begin;
         }
     }
 
     uint8_t *_allocate(size_t size, uint8_t alignment) {
-        return (uint8_t *)malloc(_align(size, alignment));
+        return new uint8_t[_align(size, alignment)]();
     }
 
     uint8_t *_allocate(const uint8_t *begin, const uint8_t *end, uint8_t alignment) {
-        return (uint8_t *)malloc(_align(end - begin, alignment));
+        return new uint8_t[_align(end - begin, alignment)]();
     }
 
     const uint8_t *begin() const {
@@ -221,6 +221,18 @@ public:
 
     bool operator<(const flash_memory &fm) const {
         return _begin < fm._begin;
+    }
+
+    bool operator<=(const flash_memory &fm) const {
+        return _begin <= fm._begin;
+    }
+
+    bool operator>(const flash_memory &fm) const {
+        return _begin > fm._begin;
+    }
+
+    bool operator>=(const flash_memory &fm) const {
+        return _begin >= fm._begin;
     }
 
     bool operator==(const flash_memory &fm) const {
@@ -284,14 +296,8 @@ public:
         // find duplicates
         auto iterator = std::find(_vector.begin(), _vector.end(), item);
         if (iterator == _vector.end()) {
-            _vector.push_back(std::move(item));
-            auto ptr = _vector.back().begin();
-            std::sort(_vector.begin(), _vector.end(), [](const flash_memory &a, const flash_memory &b) {
-                return a.begin() < b.begin();
-            });
-            return ptr;
-            //// insert sorted
-            //return _vector.insert(std::lower_bound(_vector.begin(), _vector.end(), item), std::move(item))->begin();
+            // insert sorted
+            return _vector.insert(std::lower_bound(_vector.begin(), _vector.end(), item), std::move(item))->begin();
         }
         // increase duplicate counter and discard item
         iterator->duplicate();

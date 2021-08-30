@@ -45,22 +45,13 @@
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\CallbackTimer.cpp">
       <Filter>Source Files\lib\KFCEventScheduler</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Event.cpp">
-      <Filter>Source Files\lib\KFCEventScheduler</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\LoopFunctions.cpp">
-      <Filter>Source Files\lib\KFCEventScheduler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\ManagedTimer.cpp">
       <Filter>Source Files\lib\KFCEventScheduler</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\OSTimer.cpp">
       <Filter>Source Files\lib\KFCEventScheduler</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Scheduler.cpp">
-      <Filter>Source Files\lib\KFCEventScheduler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Timer.cpp">
       <Filter>Source Files\lib\KFCEventScheduler</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\WiFiCallbacks.cpp">

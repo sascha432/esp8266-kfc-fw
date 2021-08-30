@@ -180,12 +180,9 @@
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\PrintString.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCBaseLibrary\src\TypeName.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\CallbackTimer.cpp" />
-    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Event.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\LoopFunctions.cpp" />
-    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\ManagedTimer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\OSTimer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Scheduler.cpp" />
-    <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\Timer.cpp" />
     <ClCompile Include="..\..\..\..\lib\KFCEventScheduler\src\WiFiCallbacks.cpp" />
     <ClCompile Include="..\..\..\..\src\spgm_auto_strings.cpp" />
     <ClCompile Include="..\..\..\ets_impl\ets_main.cpp" />

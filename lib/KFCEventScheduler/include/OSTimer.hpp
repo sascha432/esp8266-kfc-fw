@@ -34,9 +34,9 @@ OSTIMER_INLINE OSTimer::
 
 OSTIMER_INLINE OSTimer::~OSTimer()
 {
-    portMuxType mLock(_mux);
-    detach();
-    _etsTimer.done();
+    PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+        _etsTimer.done();
+    }
 }
 
 OSTIMER_INLINE bool OSTimer::isRunning() const
@@ -54,49 +54,44 @@ OSTIMER_INLINE void OSTimer::startTimer(Event::OSTimerDelayType delay, bool repe
     #if DEBUG_OSTIMER
         __DBG_printf("start timer name=%s delay=%u repeat=%u millis=%u", _etsTimer._name, delay, repeat, isMillis);
     #endif
-    PORT_MUX_LOCK_BLOCK(_mux) {
-        #if ESP32
-            delay = std::clamp<int32_t>(delay, 1, std::numeric_limits<decltype(delay)>::max());
-            if (_etsTimer._timer) {
-                _etsTimer.disarm();
-                _etsTimer.done();
-            }
-            _etsTimer.create(&_EtsTimerCallback, this);
-            _etsTimer.arm(delay, repeat, isMillis);
-        #else
-            delay = std::clamp<Event::OSTimerDelayType>(delay, Event::kMinDelay, Event::kMaxDelay);
-            _etsTimer.create(&_EtsTimerCallback, this);
-            ets_timer_arm_new(&_etsTimer, delay, repeat, isMillis);
-        #endif
+    PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+        delay = std::clamp<Event::OSTimerDelayType>(delay, Event::kMinDelay, Event::kMaxDelay);
+        _etsTimer.arm(delay, repeat, isMillis);
     }
 }
 
 OSTIMER_INLINE void OSTimer::detach()
 {
-    portMuxType mLock(_mux);
-    if (_etsTimer.isRunning()) {
-        _etsTimer.disarm();
+    PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+        if (_etsTimer.isRunning()) {
+            _etsTimer.disarm();
+        }
     }
 }
 
 OSTIMER_INLINE bool OSTimer::lock()
 {
-    portMuxType mLock(_mux);
-    if (!_etsTimer.find()) {
-        return false;
+    PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+        #if DEBUG_OSTIMER_FIND
+            if (!_etsTimer.find()) {
+                return false;
+            }
+        #endif
+        if (_etsTimer.isLocked()) {
+            return false;
+        }
+        _etsTimer.lock();
     }
-    if (_etsTimer.isLocked()) {
-        return false;
-    }
-    _etsTimer.lock();
     return true;
 }
 
 OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
 {
-    if (!ETSTimerEx::find(timer)) {
-        return;
-    }
+    #if DEBUG_OSTIMER_FIND
+        if (!ETSTimerEx::find(timer)) {
+            return;
+        }
+    #endif
     if (!timer._etsTimer.isLocked()) {
         return;
     }
@@ -108,13 +103,15 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
         optimistic_yield(timeoutMicros - timeout);
     }
 
-    PORT_MUX_LOCK_BLOCK(_mux) {
-        if (!ETSTimerEx::find(timer)) {
-            #if DEBUG_OSTIMER
-                ::printf(PSTR("%p:unlock() timer vanished\n"), &timer);
-            #endif
-            return;
-        }
+    PORT_MUX_LOCK_ISR_BLOCK(timer.getMux()) {
+        #if DEBUG_OSTIMER_FIND
+            if (!ETSTimerEx::find(timer)) {
+                #if DEBUG_OSTIMER
+                    ::printf(PSTR("%p:unlock() timer vanished\n"), &timer);
+                #endif
+                return;
+            }
+        #endif
         if (!timer._etsTimer.isLocked()) {
             return;
         }
@@ -124,18 +121,31 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
 
 OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer)
 {
-    portMuxLock mLock(_mux);
-    if (!ETSTimerEx::find(timer)) {
-        return;
+    PORT_MUX_LOCK_ISR_BLOCK(timer.getMux()) {
+        #if DEBUG_OSTIMER_FIND
+            if (!ETSTimerEx::find(timer)) {
+                return;
+            }
+        #endif
+        timer._etsTimer.unlock();
     }
-    timer._etsTimer.unlock();
 }
 
 OSTIMER_INLINE bool OSTimer::isLocked(OSTimer &timer)
 {
-    portMuxLock mLock(_mux);
-    return ETSTimerEx::find(&timer._etsTimer) && timer._etsTimer.isLocked();
+    portMuxLockISR mLock(timer.getMux());
+    return
+        #if DEBUG_OSTIMER_FIND
+            ETSTimerEx::find(&timer._etsTimer) &&
+        #endif
+        timer._etsTimer.isLocked();
 }
+
+OSTIMER_INLINE portMuxType &OSTimer::getMux()
+{
+    return _mux;
+}
+
 
 #ifndef _MSC_VER
 #    pragma GCC pop_options

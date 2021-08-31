@@ -18,9 +18,46 @@
 #    define OSTIMER_NAME_ARG(name)
 #endif
 
+// keep a list of all timers to check it exists
+// using the internal list of the ESP8266
+#ifndef DEBUG_OSTIMER_FIND
+#    if ESP32
+#        define DEBUG_OSTIMER_FIND 0
+#    else
+#        define DEBUG_OSTIMER_FIND 1
+#    endif
+#endif
+
 #include <Arduino_compat.h>
 #include <PrintString.h>
 #include "Event.h"
+
+class ETSTimerEx;
+
+void ___DBG_printEtsTimer(ETSTimerEx &timer, const char *msg);
+void ___DBG_printEtsTimer_E(ETSTimerEx &timer, const char *msg);
+
+inline void ___DBG_printEtsTimer(ETSTimerEx &timer, const String &msg)
+{
+    ___DBG_printEtsTimer(timer, msg.c_str());
+}
+
+inline void ___DBG_printEtsTimer_E(ETSTimerEx &timer, const String &msg)
+{
+    ___DBG_printEtsTimer_E(timer, msg.c_str());
+}
+
+#define __DBG_printEtsTimer(timer, msg) \
+    if (isDebugContextActive()) { \
+        debug_prefix(); \
+        ___DBG_printEtsTimer(timer, msg); \
+    }
+
+#define __DBG_printEtsTimer_E(timer, msg) \
+    if (isDebugContextActive()) { \
+        debug_prefix(); \
+        ___DBG_printEtsTimer_E(timer, msg); \
+    }
 
 #ifndef _MSC_VER
 #    pragma GCC push_options
@@ -28,13 +65,6 @@
 #endif
 
 struct ETSTimerEx;
-
-inline void __DBG_printEtsTimer(ETSTimer &timer, const char *msg = nullptr);
-inline void __DBG_printEtsTimer(ETSTimerEx *timerPtr, const String &msg);
-extern void __DBG_printEtsTimer(ETSTimerEx *timerPtr, const char *msg = nullptr, bool error = false);
-inline void __DBG_printEtsTimer_E(ETSTimer &timer, const char *msg = nullptr);
-inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const String &msg);
-inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg = nullptr);
 
 #if ESP32
 
@@ -52,6 +82,7 @@ inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg = nullpt
 
         void create(esp_timer_cb_t callback, void *arg);
         void arm(int32_t delay, bool repeat, bool millis);
+        bool isNew() const;
         bool isRunning() const;
         bool isDone() const;
         bool isLocked() const;
@@ -60,8 +91,10 @@ inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg = nullpt
         void disarm();
         void done();
         void clear();
-        ETSTimerEx *find();
-        static ETSTimerEx *find(ETSTimerEx *timer);
+        #if DEBUG_OSTIMER_FIND
+            ETSTimerEx *find();
+            static ETSTimerEx *find(ETSTimerEx *timer);
+        #endif
 
         // terminate all OSTimer instances
         static void end();
@@ -79,9 +112,7 @@ inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg = nullpt
 #elif ESP8266 || _MSC_VER
 
     #if ESP8266
-
         #include <osapi.h>
-
     #endif
 
     #ifdef __cplusplus
@@ -99,6 +130,7 @@ inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg = nullpt
     //
     // in debug mode the timers integrity is checked to protect against dangling pointers or invalid state
     struct ETSTimerEx : ETSTimer {
+        static constexpr uint32_t kUnusedMagic = 0x12345678;
         #if DEBUG_OSTIMER
             static constexpr uint32_t kMagic = 0x73f281f1;
             ETSTimerEx(const char *name);
@@ -109,6 +141,7 @@ inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg = nullpt
 
         void create(ETSTimerFunc *callback, void *arg);
         void arm(int32_t delay, bool repeat, bool millis);
+        bool isNew() const;
         bool isRunning() const;
         bool isDone() const;
         bool isLocked() const;
@@ -117,8 +150,10 @@ inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg = nullpt
         void disarm();
         void done();
         void clear();
-        ETSTimerEx *find();
-        static ETSTimerEx *find(ETSTimerEx *timer);
+        #if DEBUG_OSTIMER_FIND
+            ETSTimerEx *find();
+            static ETSTimerEx *find(ETSTimerEx *timer);
+        #endif
 
         // terminate all OSTimer instances
         static void end();
@@ -167,55 +202,20 @@ public:
 
     static void ICACHE_FLASH_ATTR _EtsTimerCallback(void *arg);
 
-    static portMuxType &getMux() {
-        return _mux;
-    }
+    portMuxType &getMux();
 
 protected:
     ETSTimerEx _etsTimer;
-    static portMuxType _mux;
+    portMuxType _mux;
 
     operator ETSTimerEx *() const {
         return const_cast<ETSTimerEx *>(&_etsTimer);
     }
 };
 
-inline void __DBG_printEtsTimer(ETSTimer &timer, const char *msg)
-{
-    if (!msg) {
-        msg = emptyString.c_str();
-    }
-    __DBG_printf("%stimer=%p func=%p arg=%p period=%u next=%p", msg, &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
-}
-
-inline void __DBG_printEtsTimer_E(ETSTimer &timer, const char *msg)
-{
-    if (!msg) {
-        msg = emptyString.c_str();
-    }
-    __DBG_printf_E("%stimer=%p func=%p arg=%p period=%u next=%p", msg, &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
-}
-
-inline void __DBG_printEtsTimer(ETSTimerEx *timerPtr, const String &msg)
-{
-    __DBG_printEtsTimer(*reinterpret_cast<ETSTimer *>(timerPtr), msg.c_str());
-}
-
-inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const String &msg)
-{
-    __DBG_printEtsTimer_E(*reinterpret_cast<ETSTimer *>(timerPtr), msg.c_str());
-}
-
-inline void __DBG_printEtsTimer_E(ETSTimerEx *timerPtr, const char *msg)
-{
-    __DBG_printEtsTimer(timerPtr, msg, true);
-}
-
-#if !DEBUG_OSTIMER
-#   define OSTIMER_INLINE inline
-#   include "OSTimer.hpp"
-#endif
-
 #ifndef _MSC_VER
 #    pragma GCC pop_options
 #endif
+
+#define OSTIMER_INLINE inline
+#include "OSTimer.hpp"

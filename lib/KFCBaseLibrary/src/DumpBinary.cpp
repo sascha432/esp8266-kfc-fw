@@ -78,6 +78,8 @@ DumpBinary &DumpBinary::dump(const uint8_t *data, size_t length)
     if (_perLine == kPerLineDisabled) {
         _output.print(_newLine);
     }
-    delayMicroseconds(100);
+    if (can_yield()) {
+        delayMicroseconds(100);
+    }
     return *this;
 }

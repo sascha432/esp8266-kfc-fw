@@ -28,11 +28,7 @@
 
 OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
 {
-    if (_timer) {
-        disarm();
-        done();
-    }
-    clear();
+    done();
 }
 
 OSTIMER_INLINE void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)
@@ -62,9 +58,11 @@ OSTIMER_INLINE void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)
 OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool isMillis)
 {
     uint64_t delayMicros = isMillis ? delay * 1000ULL : delay;
+    if (running) {
+        esp_timer_stop(_timer);
+    }
     _running = true;
     _locked = false;
-    esp_timer_stop(_timer);
     if (repeat) {
         if (esp_timer_start_periodic(_timer, delayMicros) != ESP_OK) {
             __DBG_printf("esp_timer_start_periodic failed delay=%d", delay);
@@ -82,6 +80,11 @@ OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool isMillis)
 OSTIMER_INLINE bool ETSTimerEx::isRunning() const
 {
     return _timer != nullptr && esp_timer_is_active(_timer);
+}
+
+OSTIMER_INLINE bool ETSTimerEx::isNew() const
+{
+    return _timer == nullptr;
 }
 
 OSTIMER_INLINE bool ETSTimerEx::isDone() const
@@ -103,14 +106,14 @@ OSTIMER_INLINE void ETSTimerEx::lock()
 
 OSTIMER_INLINE void ETSTimerEx::unlock()
 {
-    if (_timer && _locked) {
+    if (_locked) {
         _locked = false;
     }
 }
 
 OSTIMER_INLINE void ETSTimerEx::disarm()
 {
-    if (_timer) {
+    if (_timer && _running) {
         esp_timer_stop(_timer);
     }
     _running = false;
@@ -118,14 +121,14 @@ OSTIMER_INLINE void ETSTimerEx::disarm()
 
 OSTIMER_INLINE void ETSTimerEx::done()
 {
-    if (isRunning()) {
-        disarm();
-    }
     if (_timer) {
+        if (_running) {
+            esp_timer_stop(_timer);
+        }
         esp_timer_delete(_timer);
         _timers.erase(std::remove(_timers.begin(), _timers.end(), this), _timers.end());
-        _timer = nullptr;
     }
+    clear();
 }
 
 OSTIMER_INLINE void ETSTimerEx::clear()
@@ -134,6 +137,8 @@ OSTIMER_INLINE void ETSTimerEx::clear()
     _running = false;
     _locked = false;
 }
+
+#if DEBUG_OSTIMER_FIND
 
 OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find()
 {
@@ -149,15 +154,17 @@ OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
     return timer;
 }
 
+#endif
+
 OSTIMER_INLINE void ETSTimerEx::end()
 {
     for(auto timer: _timers) {
-        if (!timer->isDone()) {
-            if (timer->isRunning()) {
-                timer->disarm();
+        if (timer->_timer) {
+            if (timer->_running) {
+                esp_timer_stop(timer->_timer);
             }
             esp_timer_delete(timer->_timer);
-            timer->_timer = nullptr;
+            timer->clear();
         }
     }
     _timers.clear();

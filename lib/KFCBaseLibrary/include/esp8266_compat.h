@@ -48,43 +48,22 @@ extern "C" {
 
 struct portMuxType {
     portMuxType() {}
-    void enter() {
+    bool enter() {
         ets_intr_lock();
+        return true;
     }
-    void exit() {
+    bool exit() {
         ets_intr_unlock();
+        return false;
     }
-    void enterISR() {
+    bool enterISR() {
         ets_intr_lock();
+        return true;
     }
-    void exitISR() {
+    bool exitISR() {
         ets_intr_unlock();
+        return false;
     }
 };
-
-// scope level auto enter/exit
-struct portMuxLock {
-    portMuxLock(portMuxType &mux) : _mux(mux) {
-        _mux.enter();
-    }
-    ~portMuxLock() {
-        _mux.exit();
-    }
-    portMuxType &_mux;
-};
-
-// scope level auto enter/exit
-struct portMuxLockISR {
-    portMuxLockISR(portMuxType &mux) : _mux(mux) {
-        _mux.enterISR();
-    }
-    ~portMuxLockISR() {
-        _mux.exitISR();
-    }
-    portMuxType &_mux;
-};
-
-#define PORT_MUX_LOCK_ISR_BLOCK(mux) for(auto value = portMuxLockISR(mux); false; )
-#define PORT_MUX_LOCK_BLOCK(mux) for(auto value = portMuxLock(mux); false; )
 
 #endif

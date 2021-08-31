@@ -280,6 +280,79 @@ extern const String emptyString;
 #include "constexpr_tools.h"
 #include <stl_ext/utility.h>
 
+// scope level auto enter/exit
+struct portMuxLock {
+    portMuxLock(portMuxType &mux) : _mux(mux), _locked(true) {
+        _mux.enter();
+    }
+    ~portMuxLock() {
+        if (_locked) {
+            _mux.exit();
+        }
+    }
+    bool enter() {
+        if (!_locked) {
+            _mux.enter();
+            _locked = true;
+        }
+        return _locked;
+    }
+    bool exit() {
+        if (_locked) {
+            _mux.exit();
+            _locked = false;
+        }
+        return _locked;
+    }
+    portMuxType &_mux;
+    bool _locked;
+};
+
+// scope level auto enter/exit
+struct portMuxLockISR {
+    portMuxLockISR(portMuxType &mux) : _mux(mux), _locked(true) {
+        _mux.enterISR();
+    }
+    ~portMuxLockISR() {
+        if (_locked) {
+            _mux.exitISR();
+        }
+    }
+    bool enter() {
+        if (!_locked) {
+            _mux.enterISR();
+            _locked = true;
+        }
+        return _locked;
+    }
+    bool exit() {
+        if (_locked) {
+            _mux.exitISR();
+            _locked = false;
+        }
+        return _locked;
+    }
+    portMuxType &_mux;
+    bool _locked;
+};
+
+/*
+ #define PORT_MUX_LOCK (*reinterpret_cast<portMuxType *>(__muxLock))
+ #define PORT_MUX_LOCK_ISR_BLOCK(mux) \
+     for(auto __muxLock = reinterpret_cast<void *>(&mux), __locked = reinterpret_cast<void *>(mux.enterISR()); __locked; __locked = reinterpret_cast<void *>(mux.exitISR()))
+ #define PORT_MUX_LOCK_BLOCK(mux) \
+     for(auto __muxLock = reinterpret_cast<void *>(&mux), __locked = reinterpret_cast<void *>(mux.enter()); __locked; __locked = reinterpret_cast<void *>(mux.exit()))
+*/
+
+#define PORT_MUX_LOCK_ISR_BLOCK(mux) \
+    auto __muxLock = portMuxLockISR(mux); \
+    for(uint32_t __muxPortLocked = __muxLock.enter(); __muxPortLocked; __muxPortLocked = __muxLock.exit())
+
+#define PORT_MUX_LOCK_BLOCK(mux) \
+    auto __muxLock = portMuxLock(mux); \
+    for(uint32_t __muxPortLocked = __muxLock.enter(); __muxPortLocked; __muxPortLocked = __muxLock.exit())
+
+
 #if __GNUC__
 
 static size_t constexpr constexpr_strlen(const char *str) noexcept

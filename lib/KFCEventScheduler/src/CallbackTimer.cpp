@@ -58,15 +58,9 @@ CallbackTimer::~CallbackTimer()
 
     __LDBG_printf("ets_timer=%p running=%p armed=%d %s:%u", &_etsTimer, _etsTimer.isRunning(), isArmed(), __S(_file), _line);
 
-    // #if DEBUG
-    //     if (_etsTimer.isRunning()) {
-    //         ::printf(PSTR("ets_timer running\n"));
-    //         _etsTimer.disarm();
-    //     }
-    //     if (_etsTimer.isDone()) {
-    //         ::printf(PSTR("ets_timer already done\n"));
-    //     }
-    // #endif
+    PORT_MUX_LOCK_BLOCK(_mux) {
+        _etsTimer.done();
+    }
 }
 
 void CallbackTimer::_rearm()
@@ -112,11 +106,10 @@ void CallbackTimer::_rearm()
         __LDBG_printf("delay=%.0f repeat=%u", (float)delay, repeat);
     #endif
 
-    if (_etsTimer.isRunning()) {
-        _etsTimer.disarm();
+    PORT_MUX_LOCK_BLOCK(_mux) {
+        _etsTimer.create(Scheduler::__TimerCallback, this);
+        _etsTimer.arm(delay, repeat, true);
     }
-    _etsTimer.create(Scheduler::__TimerCallback, this);
-    _etsTimer.arm(delay, repeat, true);
 }
 
 #if DEBUG_EVENT_SCHEDULER

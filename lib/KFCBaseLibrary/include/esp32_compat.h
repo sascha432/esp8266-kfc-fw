@@ -302,44 +302,23 @@ using SpiFlashOpResult = esp_err_t;
 
 struct portMuxType : portMUX_TYPE {
     portMuxType(portMUX_TYPE value = portMUX_INITIALIZER_UNLOCKED) : portMUX_TYPE(value) {}
-    void enter() {
+    bool enter() {
         portENTER_CRITICAL(this);
+        return true;
     }
-    void exit() {
+    bool  exit() {
         portEXIT_CRITICAL(this);
+        return false;
     }
     // for inside ISRs
-    void enterISR() {
+    bool enterISR() {
         portENTER_CRITICAL_ISR(this);
+        return true;
     }
-    void exitISR() {
+    bool exitISR() {
         portEXIT_CRITICAL_ISR(this);
+        return false;
     }
 };
-
-// scope level auto enter/exit
-struct portMuxLock {
-    portMuxLock(portMuxType &mux) : _mux(mux) {
-        _mux.enter();
-    }
-    ~portMuxLock() {
-        _mux.exit();
-    }
-    portMuxType &_mux;
-};
-
-// scope level auto enter/exit
-struct portMuxLockISR {
-    portMuxLockISR(portMuxType &mux) : _mux(mux) {
-        _mux.enterISR();
-    }
-    ~portMuxLockISR() {
-        _mux.exitISR();
-    }
-    portMuxType &_mux;
-};
-
-#define PORT_MUX_LOCK_ISR_BLOCK(mux) for(auto value = portMuxLockISR(mux); false; )
-#define PORT_MUX_LOCK_BLOCK(mux) for(auto value = portMuxLock(mux); false; )
 
 #endif

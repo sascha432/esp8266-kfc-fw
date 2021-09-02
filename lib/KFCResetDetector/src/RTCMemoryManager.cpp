@@ -27,7 +27,7 @@
 #include <DumpBinary.h>
 #include <Buffer.h>
 
-#if DEBUG_RTC_MEMORY_MANAGER
+#if DEBUG_RTC_MEMORY_MANAGER && 1
 #include "debug_helper_enable.h"
 #else
 #include "debug_helper_disable.h"
@@ -124,10 +124,10 @@ namespace RTCMemoryManagerNS {
 bool RTCMemoryManager::_readHeader(RTCMemoryManager::Header_t &header) {
 
     if (RTCMemoryManagerNS::system_rtc_mem_read(kHeaderAddress, &header, sizeof(header))) {
-        if (header.length <= kMemoryLimit) {
+        if (header.length < kMemoryLimit) {
             return true;
         }
-        __LDBG_printf("invalid length=%d limit=%d max=%d", header.length, kMemoryLimit, kMemorySize - header.length);
+        __LDBG_printf("invalid length=%d size=%d limit=%d", header.length, header.length, kMemoryLimit);
     }
     else {
         __LDBG_printf("read error ofs=%d size=%d", kHeaderAddress, sizeof(header));
@@ -140,32 +140,39 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
     uint8_t *buf = nullptr;
 
     while (_readHeader(header)) {
-        auto minSize = header.crc_length() + extraSize;
+        auto minSize = header.crc_offset() + extraSize;
         auto size = minSize;
-        if (kBlockSize > 1) {
-            auto alignment = size % kBlockSize;
-            if (alignment) {
-                size += kBlockSize - alignment;
-            }
+        if __CONSTEXPR17 (kBlockSize > 1) {
+            size = ((size + (kBlockSize - 1)) / kBlockSize) * kBlockSize;
         }
-        if (size > kMemorySize) {
+        if (size >= kMemorySize) {
             __DBG_printf("malloc failed length=%u max_size=%u", size, kMemorySize);
             break;
         }
         // auto buf = reinterpret_cast<uint8_t *>(calloc(size, 1));
+        #if ESP32
+        //TODO buffer overflow
+        auto buf = new uint8_t[kMemorySize + 16]();
+        memset(buf + size, 0xcc, kMemorySize + 16 - size);
+        #else
         auto buf = new uint8_t[size]();
+        #endif
         if (!buf) {
             __DBG_printf("malloc failed length=%u", size);
             break;
         }
-        __LDBG_printf("allocate size=%u aligned=%u", minSize, size);
+        __LDBG_printf("allocated size=%u aligned=%u address=%u crc_len=%u", minSize, size, header.start_address(), header.crc_offset());
         uint16_t crc = static_cast<uint16_t>(~0U);
-        if (!RTCMemoryManagerNS::system_rtc_mem_read(header.start_address(), buf, header.crc_length())) {
-            __LDBG_printf("failed to read data adrress=%u size=%u", header.start_offset(), header.crc_length());
+        if (header.crc_offset() > size) {
+            __DBG_printf("read out of bounds size=%u max=%u", header.crc_offset(), size);
             break;
         }
-        if ((crc = crc16_update(buf, header.crc_length())) != header.crc) {
-            __LDBG_printf("CRC mismatch %04x != %04x, size=%u crclen=%u", crc, header.crc, header.length, header.crc_length());
+        if (!RTCMemoryManagerNS::system_rtc_mem_read(header.start_address(), buf, header.crc_offset())) {
+            __LDBG_printf("failed to read data address=%u offset=%u size=%u", header.start_address(), header.start_address() * kBlockSize, header.crc_offset());
+            break;
+        }
+        if ((crc = crc16_update(buf, header.crc_offset())) != header.crc) {
+            __LDBG_printf("CRC mismatch %04x != %04x, size=%u crclen=%u", crc, header.crc, header.length, header.crc_offset());
             break;
         }
         __LDBG_printf("read: address=%u[%u-%u] length=%u crc=0x%04x", header.start_address(), kBaseAddress, kLastAddress, header.length, header.crc);
@@ -276,11 +283,12 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
                 return false;
             }
             if (entry.mem_id != static_cast<decltype(entry.mem_id)>(id)) {
-                memcpy(outPtr, &entry, sizeof(entry));
+                memmove(outPtr, &entry, sizeof(entry));
                 outPtr += sizeof(entry);
                 memmove(outPtr, ptr, entry.length);
                 outPtr += entry.length;
                 newLength += entry.length + sizeof(entry);
+                __LDBG_assert_printf(outPtr - ptr < kMemoryLimit, "read beyond memory limit size=%d limit=%u", (outPtr - ptr), kMemoryLimit);
                 __LDBG_printf("copy id=%u len=%u distance=%d nl=%u", entry.mem_id, entry.length, header.distance(outPtr, ptr), newLength);
             }
             else {
@@ -292,9 +300,10 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
         header.length = newLength;
     }
     else {
-        auto size = dataLength + kBlockSize + sizeof(header) + sizeof(Entry_t);
-        if (size > kMemorySize) {
-            __DBG_printf("malloc failed length=%u max_size=%u", size, kMemorySize);
+        // align length to kBlockSize and add header/entry size
+        auto size = (((dataLength + (kBlockSize - 1)) / kBlockSize) * kBlockSize) + sizeof(header) + sizeof(Entry_t);
+        if (size >= kMemoryLimit) {
+            __DBG_printf("malloc failed length=%u limit=%u", size, kMemoryLimit);
             return false;
         }
         memUnqiuePtr.reset(new uint8_t[size]());
@@ -321,32 +330,36 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
     }
     header.length = newLength;
 
-    __LDBG_printf("unaligned length=%u", header.length);
-
-    // align before adding header
-    while (!_isAligned(header.length)) {
-        *outPtr++ = 0;
-        header.length++;
+    if __CONSTEXPR17 (kBlockSize > 1) {
+        __LDBG_printf("unaligned length=%u", header.length);
+        // align before adding header
+        while (!_isAligned(header.length)) {
+            *outPtr++ = 0;
+            header.length++;
+        }
+        __LDBG_printf("aligned length=%u", header.length);
     }
     header.crc = static_cast<uint16_t>(~0U);
 
-    __LDBG_printf("aligned length=%u", header.length);
+    // append header
     memcpy(outPtr, &header, sizeof(header));
 
     // update CRC in newData and store
-    header.crc = *reinterpret_cast<uint16_t *>(outPtr + offsetof(Header_t, crc)) = crc16_update(memPtr, header.crc_length());
+    header.crc = crc16_update(memPtr, header.crc_offset());
+    memcpy(outPtr + offsetof(Header_t, crc), &header.crc, sizeof(header.crc));
 
+    __LDBG_assert_printf(header.length < kMemoryLimit, "data too long size=%u limit=%u", header.length, kMemoryLimit);
     __LDBG_printf("write: address=%u[%u-%u] length=%u crc=0x%04x", header.start_address(), kBaseAddress, kLastAddress, header.length, header.crc);
     return RTCMemoryManagerNS::system_rtc_mem_write(header.start_address(), reinterpret_cast<uint32_t *>(memPtr), header.length);
 }
 
 bool RTCMemoryManager::clear()
 {
-    // clear 16 blocks including header
-    static constexpr auto kNumBlocks = 16;
-    static constexpr auto kAddress = (kMemorySize - (kNumBlocks * kBlockSize)) / kBlockSize;
-    uint32_t data[kNumBlocks];
-    std::fill_n(data, kNumBlocks, 0xffffffffU);
+    // clear kClearNumBlocks blocks including header
+    constexpr auto kAddress = (kMemorySize - (kClearNumBlocks * kBlockSize)) / kBlockSize;
+    static_assert(((kClearNumBlocks * kBlockSize) & 3) == 0, "not a multiple of 4");
+    uint32_t data[(kClearNumBlocks * kBlockSize) / sizeof(uint32_t)];
+    std::fill(std::begin(data), std::end(data), 0xffffffffU);
     // memset(data, 0xff, sizeof(data));
     __LDBG_printf("clear: address=%u[%u-%u] length=%u", kBaseAddress + kAddress, kBaseAddress, kLastAddress, sizeof(data));
     if (!RTCMemoryManagerNS::system_rtc_mem_write(kBaseAddress + kAddress, &data, sizeof(data))) {

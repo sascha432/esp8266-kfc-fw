@@ -229,18 +229,19 @@ inline _Ta *__validatePointer(const _Ta *ptr, ValidatePointerType type, const ch
 #define __LDBG_check_ptr_no_null(...)                       __LDBG_IF(__DBG_check_ptr_no_null(__VA_ARGS__))
 #define __LDBG_check_ptr_null(...)                          __LDBG_IF(__DBG_check_ptr_null(__VA_ARGS__))
 
-// depricated functions below
+// deprecated functions below
 
 #if DEBUG_INCLUDE_SOURCE_INFO
 #   if ESP32 && CONFIG_HEAP_POISONING_COMPREHENSIVE
-#       define                                              __debug_prefix(stream) (stream.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__) + heap_caps_check_integrity_all(true))
+#       define                                              __debug_prefix(stream, file, line) (stream.printf_P(___debugPrefix, millis(), file, line, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__) + heap_caps_check_integrity_all(true))
 #   else
-#       define                                              __debug_prefix(stream) stream.printf_P(___debugPrefix, millis(), __BASENAME_FILE__, __LINE__, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__)
+#       define                                              __debug_prefix(stream, file, line) stream.printf_P(___debugPrefix, millis(), file, line, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__)
 #   endif
 #else
-#   define                                                  __debug_prefix(stream) stream.print(FPSTR(___debugPrefix))
+#   define                                                  __debug_prefix(stream, file, line) stream.print(FPSTR(___debugPrefix))
 #endif
-#define debug_prefix()                                      __debug_prefix(DEBUG_OUTPUT)
+#define debug_prefix()                                      debug_prefix_args(__BASENAME_FILE__, __LINE__)
+#define debug_prefix_args(file, line)                       __debug_prefix(DEBUG_OUTPUT, file, line)
 
 
 static inline int DEBUG_OUTPUT_flush() {

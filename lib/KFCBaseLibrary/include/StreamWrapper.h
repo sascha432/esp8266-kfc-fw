@@ -10,6 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <vector>
+#include <Mutex.h>
 
 #if DEBUG_SERIAL_HANDLER
 #    define __DSW(fmt, ...) ::printf(PSTR("SW:" fmt "\n"), ##__VA_ARGS__);
@@ -105,7 +106,7 @@ private:
     StreamWrapperVector *_streams;
     bool _freeStreams;
     Stream *_input;
-    portMuxType _mux;
+    MutexSemaphore _lock;
 };
 
 inline StreamCacheVector::StreamCacheVector(uint16_t size) : _size(size)

@@ -277,12 +277,7 @@ namespace MQTT {
             return;
         }
         // turn off interrupts to avoid issues with running auto discovery
-        {
-            #if ESP8266
-                InterruptLock lock;
-            #elif ESP32
-                portMuxLock mLock(_mux);
-            #endif
+        MUTEX_LOCK_BLOCK(_lock) {
             _components.push_back(component);
         }
         __LDBG_printf("components=%u entities=%u", _components.size(), AutoDiscovery::List::size(_components));
@@ -297,12 +292,9 @@ namespace MQTT {
         auto size = _components.size();
         if (size) {
             remove(component);
-            #if ESP8266
-                InterruptLock lock;
-            #elif ESP32
-                portMuxLock mLock(_mux);
-            #endif
-            _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
+            MUTEX_LOCK_BLOCK(_lock) {
+                _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
+            }
         }
         __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), AutoDiscovery::List::size(_components), _components.size() != size);
         return _components.size() != size;

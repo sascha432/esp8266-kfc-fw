@@ -4,13 +4,17 @@
 
 #pragma once
 
-#ifndef DEBUG_OSTIMER
-#    define DEBUG_OSTIMER (1 || defined(DEBUG_ALL) || _MSC_VER)
-#endif
+#include <Arduino_compat.h>
+#include <PrintString.h>
+#include "Event.h"
 
 #if DEBUG_OSTIMER
-#    define OSTIMER_NAME(name) PSTR(name)
-#    define OSTIMER_NAME_VAR(var) var
+#    if ESP8266
+#        define OSTIMER_NAME(name) PSTR(name)
+#    else
+#        define OSTIMER_NAME(name) strdup_P(PSTR(name))
+#    endif
+#    define OSTIMER_NAME_VAR(var)  var
 #    define OSTIMER_NAME_ARG(name) OSTIMER_NAME(name),
 #else
 #    define OSTIMER_NAME(name)
@@ -28,21 +32,17 @@
 #    endif
 #endif
 
-#include <Arduino_compat.h>
-#include <PrintString.h>
-#include "Event.h"
+struct ETSTimerEx;
 
-class ETSTimerEx;
+extern void ___DBG_printEtsTimer(const ETSTimerEx &timer, const char *msg);
+extern void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const char *msg);
 
-void ___DBG_printEtsTimer(ETSTimerEx &timer, const char *msg);
-void ___DBG_printEtsTimer_E(ETSTimerEx &timer, const char *msg);
-
-inline void ___DBG_printEtsTimer(ETSTimerEx &timer, const String &msg)
+inline void ___DBG_printEtsTimer(const ETSTimerEx &timer, const String &msg)
 {
     ___DBG_printEtsTimer(timer, msg.c_str());
 }
 
-inline void ___DBG_printEtsTimer_E(ETSTimerEx &timer, const String &msg)
+inline void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const String &msg)
 {
     ___DBG_printEtsTimer_E(timer, msg.c_str());
 }
@@ -63,8 +63,6 @@ inline void ___DBG_printEtsTimer_E(ETSTimerEx &timer, const String &msg)
 #    pragma GCC push_options
 #    pragma GCC optimize("O3")
 #endif
-
-struct ETSTimerEx;
 
 #if ESP32
 
@@ -101,6 +99,10 @@ struct ETSTimerEx;
 
         #if DEBUG_OSTIMER
             const char *_name;
+            const char *name() const {
+                return _name;
+            }
+            esp_err_t __debug_ostimer_validate_result(esp_err_t error, const char *func, PGM_P file, int line) const;
         #endif
         esp_timer_handle_t _timer;
         bool _running;
@@ -202,20 +204,15 @@ public:
 
     static void ICACHE_FLASH_ATTR _EtsTimerCallback(void *arg);
 
-    portMuxType &getMux();
+    MutexSemaphore &getLock();
 
 protected:
     ETSTimerEx _etsTimer;
-    portMuxType _mux;
-
-    operator ETSTimerEx *() const {
-        return const_cast<ETSTimerEx *>(&_etsTimer);
-    }
+    MutexSemaphore _lock;
 };
 
 #ifndef _MSC_VER
 #    pragma GCC pop_options
 #endif
 
-#define OSTIMER_INLINE inline
 #include "OSTimer.hpp"

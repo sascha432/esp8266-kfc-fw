@@ -199,15 +199,12 @@ namespace SerialHandler {
         auto ptr = std::addressof(client);
         // remove outside interrupts
         LoopFunctions::callOnce([ptr, this]() {
-            #if ESP8266
-                InterruptLock lock;
-            #elif ESP32
-                portMuxLock mLock(_mux);
-            #endif
-            _clients.erase(std::remove_if(_clients.begin(), _clients.end(), [ptr](const ClientPtr &client) {
-                __DBG_validatePointer(client.get(), VP_HS);
-                return client.get() == ptr;
-            }), _clients.end());
+            MUTEX_LOCK_BLOCK(_lock) {
+                _clients.erase(std::remove_if(_clients.begin(), _clients.end(), [ptr](const ClientPtr &client) {
+                    __DBG_validatePointer(client.get(), VP_HS);
+                    return client.get() == ptr;
+                }), _clients.end());
+            }
         });
     }
 
@@ -225,27 +222,27 @@ namespace SerialHandler {
     void Wrapper::_writeClientsRx(Client *src, const uint8_t *buffer, size_t size, EventType type)
     {
         for(const auto &clientPtr: _clients) {
-            #if ESP8266
-                InterruptLock lock;
-            #elif ESP32
-                portMuxLock mLock(_mux);
-            #endif
-            if (clientPtr && (src != clientPtr.get()) && __DBG_validatePointer(clientPtr.get(), VP_HS)->_hasAny(type)) {
-                auto &rx = clientPtr->_getRx();
-                clientPtr->_checkBufferSize(rx, size);
-                rx.write(reinterpret_cast<const char *>(buffer), size);
+            MUTEX_LOCK_BLOCK(_lock) {
+                if (clientPtr && (src != clientPtr.get()) && __DBG_validatePointer(clientPtr.get(), VP_HS)->_hasAny(type)) {
+                    auto &rx = clientPtr->_getRx();
+                    clientPtr->_checkBufferSize(rx, size);
+                    rx.write(reinterpret_cast<const char *>(buffer), size);
+                    #if ESP32
+                        esp_task_wdt_reset();
+                    #endif
+                }
             }
         }
         // second loop for the callbacks to keep all clients in sync
         for(const auto &clientPtr: _clients) {
             if (clientPtr && (src != clientPtr.get()) && __DBG_validatePointer(clientPtr.get(), VP_HS)->_hasAny(type) && clientPtr->_cb && !clientPtr->_getRx().empty()) {
-                #if ESP8266
-                    InterruptLock lock;
-                #elif ESP32
-                    portMuxLock mLock(_mux);
+                MUTEX_LOCK_BLOCK(_lock) {
+                    __DBGSHIO("write rx client %p callback %u", clientPtr.get(), clientPtr->_getRx().available());
+                    clientPtr->_cb(*clientPtr);
+                }
+                #if ESP32
+                    esp_task_wdt_reset();
                 #endif
-                __DBGSHIO("write rx client %p callback %u", clientPtr.get(), clientPtr->_getRx().available());
-                clientPtr->_cb(*clientPtr);
             }
         }
     }
@@ -255,14 +252,15 @@ namespace SerialHandler {
         for(const auto &clientPtr: _clients) {
             #if ESP8266
                 InterruptLock lock;
-            #elif ESP32
-                portMuxLock mLock(_mux);
             #endif
             if (clientPtr && (src != clientPtr.get()) && __DBG_validatePointer(clientPtr.get(), VP_HS)->_hasAny(EventType::WRITE)) {
                 auto &tx = clientPtr->_getTx();
                 clientPtr->_checkBufferSize(tx, size);
                 tx.write(reinterpret_cast<const char *>(buffer), size);
                 _txFlag = true;
+                #if ESP32
+                    esp_task_wdt_reset();
+                #endif
             }
         }
     }
@@ -279,7 +277,9 @@ namespace SerialHandler {
                 len++;
             }
             __DBGSHIO("poll %u", len);
-            _writeClientsRx(nullptr, buf, len, EventType::READ);
+            MUTEX_LOCK_BLOCK(_lock) {
+                _writeClientsRx(nullptr, buf, len, EventType::READ);
+            }
         }
     }
 
@@ -287,18 +287,18 @@ namespace SerialHandler {
     {
         for(const auto &clientPtr: _clients) {
             if (clientPtr) {
-                #if ESP8266
-                    InterruptLock lock;
-                #elif ESP32
-                    portMuxLock mLock(_mux);
-                #endif
-                __DBG_validatePointer(clientPtr.get(), VP_HS);
-                auto &client = *clientPtr;
-                auto &rx = client._getRx();
-                if (client._hasAny(EventType::RW) && client._cb && !rx.empty()) {
-                    __DBGSHIO("transmit rx client %p callback %u", &client, rx.available());
-                    client._cb(client);
-                    client._resizeBufferMinSize(rx);
+                MUTEX_LOCK_BLOCK(_lock) {
+                    __DBG_validatePointer(clientPtr.get(), VP_HS);
+                    auto &client = *clientPtr;
+                    auto &rx = client._getRx();
+                    if (client._hasAny(EventType::RW) && client._cb && !rx.empty()) {
+                        __DBGSHIO("transmit rx client %p callback %u", &client, rx.available());
+                        client._cb(client);
+                        client._resizeBufferMinSize(rx);
+                        #if ESP32
+                            esp_task_wdt_reset();
+                        #endif
+                    }
                 }
             }
         }
@@ -308,22 +308,19 @@ namespace SerialHandler {
     {
         for(const auto &clientPtr: _clients) {
             if (clientPtr) {
-                #if ESP8266
-                    InterruptLock lock;
-                #elif ESP32
-                    portMuxLock mLock(_mux);
-                #endif
-                __DBG_validatePointer(clientPtr.get(), VP_HS);
-                auto &tx = clientPtr->_getTx();
-                if (tx.available()) {
-                    uint8_t buf[Wrapper::kMinBufferSize / 2];
-                    size_t len;
-                    while((len = tx.read(reinterpret_cast<char *>(buf), sizeof(buf))) != 0) {
-                        __DBGSHIO("transmit tx client %p size %u", &client, len);
-                        _writeClientsRx(clientPtr.get(), buf, len, EventType::READ);
+                MUTEX_LOCK_BLOCK(_lock) {
+                    __DBG_validatePointer(clientPtr.get(), VP_HS);
+                    auto &tx = clientPtr->_getTx();
+                    if (tx.available()) {
+                        uint8_t buf[Wrapper::kMinBufferSize / 2];
+                        size_t len;
+                        while((len = tx.read(reinterpret_cast<char *>(buf), sizeof(buf))) != 0) {
+                            __DBGSHIO("transmit tx client %p size %u", &client, len);
+                            _writeClientsRx(clientPtr.get(), buf, len, EventType::READ);
+                        }
                     }
+                    clientPtr->_resizeBufferMinSize(tx);
                 }
-                clientPtr->_resizeBufferMinSize(tx);
             }
         }
         _txFlag = false;

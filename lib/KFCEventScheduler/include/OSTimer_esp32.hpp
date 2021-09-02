@@ -16,9 +16,26 @@
 #include <esp_timer.h>
 
 #if DEBUG_OSTIMER
-    OSTIMER_INLINE ETSTimerEx::ETSTimerEx(const char *name) : _name(name),
+    #define DEBUG_OSTIMER_VALIDATE(timer, func) timer->__debug_ostimer_validate_result(func, _STRINGIFY(func), __BASENAME_FILE__, __LINE__)
+
+    inline esp_err_t ETSTimerEx::__debug_ostimer_validate_result(esp_err_t error, const char *func, PGM_P file, int line) const
+    {
+        if (isDebugContextActive()) {
+            if (error != ESP_OK) {
+                debug_prefix_args(file, line);
+                ___DBG_printEtsTimer_E(*this, PrintString(F("%s error=%x"), func, error).c_str());
+            }
+        }
+        return error;
+    }
 #else
-    OSTIMER_INLINE ETSTimerEx::ETSTimerEx() :
+    DEBUG_OSTIMER_VALIDATE(timer, func) func
+#endif
+
+#if DEBUG_OSTIMER
+    inline ETSTimerEx::ETSTimerEx(const char *name) : _name(strdup_P(name)),
+#else
+    inline ETSTimerEx::ETSTimerEx() :
 #endif
     _timer(nullptr),
     _running(false),
@@ -26,12 +43,13 @@
 {
 }
 
-OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
+inline __attribute__((__always_inline__)) ETSTimerEx::~ETSTimerEx()
 {
     done();
+    free(const_cast<char *>(_name));
 }
 
-OSTIMER_INLINE void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)
+inline void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)
 {
     esp_timer_create_args_t args = {
         callback,
@@ -45,93 +63,103 @@ OSTIMER_INLINE void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)
     };
 
     done();
-    if (esp_timer_create(&args, &_timer) == ESP_OK) {
+    if (DEBUG_OSTIMER_VALIDATE(this, esp_timer_create(&args, &_timer)) == ESP_OK) {
         _timers.push_back(this);
         _running = false;
         _locked = false;
     }
     else {
-        clear();
+        #if DEBUG_OSTIMER
+            __DBG_panic("%s: esp_timer_create failed", name());
+        #else
+            __DBG_panic("esp_timer_create failed");
+        #endif
     }
 }
 
-OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool isMillis)
+inline void ETSTimerEx::arm(int32_t delay, bool repeat, bool isMillis)
 {
+    #if DEBUG_OSTIMER
+        if (!_timer) {
+            __DBG_panic("%s: timer is nullptr", name());
+        }
+    #endif
     uint64_t delayMicros = isMillis ? delay * 1000ULL : delay;
-    if (running) {
-        esp_timer_stop(_timer);
+    if (_running) {
+        DEBUG_OSTIMER_VALIDATE(this, esp_timer_stop(_timer));
     }
     _running = true;
     _locked = false;
     if (repeat) {
-        if (esp_timer_start_periodic(_timer, delayMicros) != ESP_OK) {
-            __DBG_printf("esp_timer_start_periodic failed delay=%d", delay);
+        if (DEBUG_OSTIMER_VALIDATE(this, esp_timer_start_periodic(_timer, delayMicros)) != ESP_OK) {
             _running = false;
         }
     }
     else {
-        if (esp_timer_start_once(_timer, delayMicros) != ESP_OK) {
-            __DBG_printf("esp_timer_start_once failed delay=%d", delay);
+        if (DEBUG_OSTIMER_VALIDATE(this, esp_timer_start_once(_timer, delayMicros)) != ESP_OK) {
             _running = false;
         }
     }
 }
 
-OSTIMER_INLINE bool ETSTimerEx::isRunning() const
+inline __attribute__((__always_inline__)) bool ETSTimerEx::isRunning() const
 {
-    return _timer != nullptr && esp_timer_is_active(_timer);
+    return _timer != nullptr && _running && esp_timer_is_active(_timer);
 }
 
-OSTIMER_INLINE bool ETSTimerEx::isNew() const
-{
-    return _timer == nullptr;
-}
-
-OSTIMER_INLINE bool ETSTimerEx::isDone() const
+inline __attribute__((__always_inline__)) bool ETSTimerEx::isNew() const
 {
     return _timer == nullptr;
 }
 
-OSTIMER_INLINE bool ETSTimerEx::isLocked() const
+inline __attribute__((__always_inline__)) bool ETSTimerEx::isDone() const
+{
+    return _timer == nullptr;
+}
+
+inline __attribute__((__always_inline__)) bool ETSTimerEx::isLocked() const
 {
     return _timer && _running && _locked;
 }
 
-OSTIMER_INLINE void ETSTimerEx::lock()
+inline __attribute__((__always_inline__)) void ETSTimerEx::lock()
 {
     if (_timer && !_locked) {
         _locked = true;
     }
 }
 
-OSTIMER_INLINE void ETSTimerEx::unlock()
+inline __attribute__((__always_inline__)) void ETSTimerEx::unlock()
 {
     if (_locked) {
         _locked = false;
     }
 }
 
-OSTIMER_INLINE void ETSTimerEx::disarm()
+inline void ETSTimerEx::disarm()
 {
-    if (_timer && _running) {
-        esp_timer_stop(_timer);
+    if (_timer && _running && esp_timer_is_active(_timer)) {
+        DEBUG_OSTIMER_VALIDATE(this, esp_timer_stop(_timer));
     }
     _running = false;
 }
 
-OSTIMER_INLINE void ETSTimerEx::done()
+inline void ETSTimerEx::done()
 {
     if (_timer) {
-        if (_running) {
-            esp_timer_stop(_timer);
+        if (_running && esp_timer_is_active(_timer)) {
+            DEBUG_OSTIMER_VALIDATE(this, esp_timer_stop(_timer));
         }
-        esp_timer_delete(_timer);
-        _timers.erase(std::remove(_timers.begin(), _timers.end(), this), _timers.end());
+        auto iterator = std::remove(_timers.begin(), _timers.end(), this);
+        if (iterator != _timers.end()) {
+            DEBUG_OSTIMER_VALIDATE(this, esp_timer_delete(_timer));
+            _timers.erase(iterator, _timers.end());
+        }
     }
     clear();
 }
 
-OSTIMER_INLINE void ETSTimerEx::clear()
+inline __attribute__((__always_inline__)) void ETSTimerEx::clear()
 {
     _timer = nullptr;
     _running = false;
@@ -140,12 +168,12 @@ OSTIMER_INLINE void ETSTimerEx::clear()
 
 #if DEBUG_OSTIMER_FIND
 
-OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find()
+inline __attribute__((__always_inline__)) ETSTimerEx *ETSTimerEx::find()
 {
     return find(this);
 }
 
-OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
+inline ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
 {
     auto iterator = std::find(_timers.begin(), _timers.end(), timer);
     if (iterator == _timers.end()) {
@@ -156,14 +184,14 @@ OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
 
 #endif
 
-OSTIMER_INLINE void ETSTimerEx::end()
+inline void ETSTimerEx::end()
 {
     for(auto timer: _timers) {
         if (timer->_timer) {
             if (timer->_running) {
-                esp_timer_stop(timer->_timer);
+                DEBUG_OSTIMER_VALIDATE(timer, esp_timer_stop(timer->_timer));
             }
-            esp_timer_delete(timer->_timer);
+            DEBUG_OSTIMER_VALIDATE(timer, esp_timer_delete(timer->_timer));
             timer->clear();
         }
     }

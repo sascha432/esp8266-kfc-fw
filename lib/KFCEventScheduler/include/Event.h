@@ -13,6 +13,10 @@
 #    pragma GCC optimize("O3")
 #endif
 
+#ifndef DEBUG_OSTIMER
+#    define DEBUG_OSTIMER (1 || defined(DEBUG_ALL) || _MSC_VER)
+#endif
+
 #ifndef DEBUG_EVENT_SCHEDULER
 #    define DEBUG_EVENT_SCHEDULER (0 || defined(DEBUG_ALL))
 #endif
@@ -30,7 +34,7 @@
 #    define EVENT_SCHEDULER_ASSERT(cond) __DBG_assert(cond)
 #endif
 
-#if DEBUG_EVENT_SCHEDULER
+#if DEBUG_EVENT_SCHEDULER || DEBUG_OSTIMER
 #    define __DBG_Event_Timer_store_position() __DBG_store_position()
 #    define _Scheduler                         ((__DBG_store_position()) ? __Scheduler : __Scheduler)
 #    define _Timer(obj)                        ((__DBG_store_position()) ? obj : obj)
@@ -95,7 +99,11 @@ namespace Event {
     class Scheduler;
     class ManangedCallbackTimer;
 
-    using OSTimerDelayType = uint32_t;
+    #if ESP32
+        using OSTimerDelayType = int64_t;
+    #else
+        using OSTimerDelayType = uint32_t;
+    #endif
 
     #if ESP8266
         static constexpr uint32_t kMinDelay = 5;
@@ -106,7 +114,7 @@ namespace Event {
         //std::numeric_limits<int32_t>::max();
     #else
         static constexpr uint32_t kMinDelay = 1;
-        static constexpr uint64_t kMaxDelay = std::numeric_limits<int64_t>::max();
+        static constexpr int64_t kMaxDelay = (1LL << 56) - 1; // 2283.367368 years
     #endif
 
     static constexpr uint64_t kMaxDelayMillis = (1ULL << 17) * static_cast<uint64_t>(kMaxDelay) + (kMaxDelay - 1);

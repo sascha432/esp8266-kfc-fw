@@ -42,3 +42,29 @@ private:
     bool _isConfigObject;
     HandleVector _imported;
 };
+
+inline JsonConfigReader::JsonConfigReader(Stream* stream, Configuration &config, HandleType *handles) :
+    JsonBaseReader(stream),
+    _config(config),
+    _handles(handles),
+    _handle(INVALID_HANDLE),
+    _isConfigObject(false)
+{
+}
+
+inline JsonConfigReader::JsonConfigReader(Configuration &config, HandleType *handles) : JsonConfigReader(nullptr, config, handles) {
+}
+
+inline bool JsonConfigReader::recoverableError(JsonErrorEnum_t errorType)
+{
+    return true;
+}
+
+inline long long JsonConfigReader::stringToLl(const String& value) const
+{
+    auto ptr = value.c_str();
+    if (*ptr == '"') {
+        ptr++;
+    }
+    return strtoll(ptr, nullptr, 0);
+}

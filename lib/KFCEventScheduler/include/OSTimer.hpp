@@ -9,10 +9,6 @@
 #    pragma GCC optimize("O3")
 #endif
 
-#ifndef OSTIMER_INLINE
-#   define OSTIMER_INLINE inline
-#endif
-
 #if ESP32
 
 #include "OSTimer_esp32.hpp"
@@ -23,7 +19,8 @@
 
 #endif
 
-OSTIMER_INLINE OSTimer::
+
+inline __attribute__((__always_inline__)) OSTimer::
 #if DEBUG_OSTIMER
     OSTimer(const char *name) : _etsTimer(name)
 #else
@@ -32,46 +29,47 @@ OSTIMER_INLINE OSTimer::
 {
 }
 
-OSTIMER_INLINE OSTimer::~OSTimer()
+inline OSTimer::~OSTimer()
 {
-    PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+    MUTEX_LOCK_BLOCK(_lock) {
         _etsTimer.done();
     }
 }
 
-OSTIMER_INLINE bool OSTimer::isRunning() const
+inline __attribute__((__always_inline__)) bool OSTimer::isRunning() const
 {
     return _etsTimer.isRunning();
 }
 
-OSTIMER_INLINE OSTimer::operator bool() const
+inline __attribute__((__always_inline__)) OSTimer::operator bool() const
 {
     return _etsTimer.isRunning();
 }
 
-OSTIMER_INLINE void OSTimer::startTimer(Event::OSTimerDelayType delay, bool repeat, bool isMillis)
+inline void OSTimer::startTimer(Event::OSTimerDelayType delay, bool repeat, bool isMillis)
 {
     #if DEBUG_OSTIMER
         __DBG_printf("start timer name=%s delay=%u repeat=%u millis=%u", _etsTimer._name, delay, repeat, isMillis);
     #endif
-    PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+    MUTEX_LOCK_BLOCK(_lock) {
+        _etsTimer.create(OSTimer::_EtsTimerCallback, this);
         delay = std::clamp<Event::OSTimerDelayType>(delay, Event::kMinDelay, Event::kMaxDelay);
         _etsTimer.arm(delay, repeat, isMillis);
     }
 }
 
-OSTIMER_INLINE void OSTimer::detach()
+inline void OSTimer::detach()
 {
-    PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+    MUTEX_LOCK_BLOCK(_lock) {
         if (_etsTimer.isRunning()) {
             _etsTimer.disarm();
         }
     }
 }
 
-OSTIMER_INLINE bool OSTimer::lock()
+inline bool OSTimer::lock()
 {
-    PORT_MUX_LOCK_ISR_BLOCK(_mux) {
+    MUTEX_LOCK_BLOCK(_lock) {
         #if DEBUG_OSTIMER_FIND
             if (!_etsTimer.find()) {
                 return false;
@@ -85,7 +83,7 @@ OSTIMER_INLINE bool OSTimer::lock()
     return true;
 }
 
-OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
+inline void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
 {
     #if DEBUG_OSTIMER_FIND
         if (!ETSTimerEx::find(timer)) {
@@ -103,7 +101,7 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
         optimistic_yield(timeoutMicros - timeout);
     }
 
-    PORT_MUX_LOCK_ISR_BLOCK(timer.getMux()) {
+    MUTEX_LOCK_BLOCK(timer.getLock()) {
         #if DEBUG_OSTIMER_FIND
             if (!ETSTimerEx::find(timer)) {
                 #if DEBUG_OSTIMER
@@ -119,9 +117,9 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
     }
 }
 
-OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer)
+inline void OSTimer::unlock(OSTimer &timer)
 {
-    PORT_MUX_LOCK_ISR_BLOCK(timer.getMux()) {
+    MUTEX_LOCK_BLOCK(timer.getLock()) {
         #if DEBUG_OSTIMER_FIND
             if (!ETSTimerEx::find(timer)) {
                 return;
@@ -131,19 +129,22 @@ OSTIMER_INLINE void OSTimer::unlock(OSTimer &timer)
     }
 }
 
-OSTIMER_INLINE bool OSTimer::isLocked(OSTimer &timer)
+inline bool OSTimer::isLocked(OSTimer &timer)
 {
-    portMuxLockISR mLock(timer.getMux());
-    return
-        #if DEBUG_OSTIMER_FIND
-            ETSTimerEx::find(&timer._etsTimer) &&
-        #endif
-        timer._etsTimer.isLocked();
+    bool result;
+    MUTEX_LOCK_BLOCK(timer.getLock()) {
+        result =
+            #if DEBUG_OSTIMER_FIND
+                ETSTimerEx::find(&timer._etsTimer) &&
+            #endif
+            timer._etsTimer.isLocked();
+    }
+    return result;
 }
 
-OSTIMER_INLINE portMuxType &OSTimer::getMux()
+inline MutexSemaphore &OSTimer::getLock()
 {
-    return _mux;
+    return _lock;
 }
 
 

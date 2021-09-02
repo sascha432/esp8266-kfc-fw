@@ -46,24 +46,4 @@ extern "C" {
 
 }
 
-struct portMuxType {
-    portMuxType() {}
-    bool enter() {
-        ets_intr_lock();
-        return true;
-    }
-    bool exit() {
-        ets_intr_unlock();
-        return false;
-    }
-    bool enterISR() {
-        ets_intr_lock();
-        return true;
-    }
-    bool exitISR() {
-        ets_intr_unlock();
-        return false;
-    }
-};
-
 #endif

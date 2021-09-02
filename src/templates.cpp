@@ -99,58 +99,57 @@ void WebTemplate::printVersion(Print &output)
 void WebTemplate::printWebInterfaceUrl(Print &output)
 {
     auto cfg = System::WebServer::getConfig();
-    output.print(cfg.is_https ? FSPGM(https) : FSPGM(http));
-    output.print(F("://"));
+    output.print(cfg.is_https ? F("https://") : F("http://"));
     WiFi.localIP().printTo(output);
     output.printf_P(PSTR(":%u/"), cfg.getPort());
 }
 
 void WebTemplate::printModel(Print &output)
 {
-#if defined(MQTT_AUTO_DISCOVERY_MODEL)
-        output.print(F(MQTT_AUTO_DISCOVERY_MODEL));
-#elif IOT_SWITCH
-    #if IOT_SWITCH_CHANNEL_NUM>1
-        output.print(F(_STRINGIFY(IOT_SWITCH_CHANNEL_NUM) " Channel Switch"));
+    #if defined(MQTT_AUTO_DISCOVERY_MODEL)
+            output.print(F(MQTT_AUTO_DISCOVERY_MODEL));
+    #elif IOT_SWITCH
+        #if IOT_SWITCH_CHANNEL_NUM>1
+            output.print(F(_STRINGIFY(IOT_SWITCH_CHANNEL_NUM) " Channel Switch"));
+        #else
+            output.print(F("Switch"));
+        #endif
+    #elif IOT_DIMMER_MODULE
+        #if IOT_DIMMER_MODULE_CHANNELS > 1
+            output.print(F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer"));
+        #else
+            output.print(F("MOSFET Dimmer"));
+        #endif
     #else
-        output.print(F("Switch"));
+            output.print(F("Generic"));
     #endif
-#elif IOT_DIMMER_MODULE
-    #if IOT_DIMMER_MODULE_CHANNELS > 1
-        output.print(F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer"));
+    #if defined(ESP8266)
+            output.print(F("/ESP8266"));
+    #elif defined(ESP32)
+            output.print(F("/ESP32"));
+    #elif defined(__AVR__) || defined(__avr__)
+            output.print(F("/AVR"));
     #else
-        output.print(F("MOSFET Dimmer"));
+            output.print(F("/Unknown"));
     #endif
-#else
-        output.print(F("Generic"));
-#endif
-#if defined(ESP8266)
-        output.print(F("/ESP8266"));
-#elif defined(ESP32)
-        output.print(F("/ESP32"));
-#elif defined(__AVR__) || defined(__avr__)
-        output.print(F("/AVR"));
-#else
-        output.print(F("/Unknown"));
-#endif
 }
 
 void WebTemplate::printFileSystemInfo(Print &output)
 {
-#if USE_LITTLEFS
-    FSInfo info;
-    KFCFS.info(info);
-    output.printf_P(PSTR("Block size %d" HTML_S(br)
-            "Max. open files %d" HTML_S(br)
-            "Max. path length %d" HTML_S(br)
-            "Page size %d" HTML_S(br)
-            "Total bytes %d" HTML_S(br)
-            "Used bytes %d (%.2f%%)" HTML_S(br)
-        ), info.blockSize, info.maxOpenFiles, info.maxPathLength, info.pageSize, info.totalBytes, info.usedBytes, info.usedBytes * 100.0 / info.totalBytes
-    );
-#else
-    output.print(F("SPIFFS is deprecated." HTML_S(br) "Please consider to upgrade to LittleFS or another file system"));
-#endif
+    #if USE_LITTLEFS
+        FSInfo info;
+        KFCFS.info(info);
+        output.printf_P(PSTR("Block size %d" HTML_S(br)
+                "Max. open files %d" HTML_S(br)
+                "Max. path length %d" HTML_S(br)
+                "Page size %d" HTML_S(br)
+                "Total bytes %d" HTML_S(br)
+                "Used bytes %d (%.2f%%)" HTML_S(br)
+            ), info.blockSize, info.maxOpenFiles, info.maxPathLength, info.pageSize, info.totalBytes, info.usedBytes, info.usedBytes * 100.0 / info.totalBytes
+        );
+    #else
+        output.print(F("SPIFFS is deprecated." HTML_S(br) "Please consider to upgrade to LittleFS or another file system"));
+    #endif
 }
 
 #if IOT_SSDP_SUPPORT
@@ -186,14 +185,14 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(index_html));
         }
     }
-#if DEBUG_ASSETS
-    else if (key == F("DEBUG_ASSETS_URL1")) {
-        output.print(F(DEBUG_ASSETS_URL1));
-    }
-    else if (key == F("DEBUG_ASSETS_URL2")) {
-        output.print(F(DEBUG_ASSETS_URL2));
-    }
-#endif
+    #if DEBUG_ASSETS
+        else if (key == F("DEBUG_ASSETS_URL1")) {
+            output.print(F(DEBUG_ASSETS_URL1));
+        }
+        else if (key == F("DEBUG_ASSETS_URL2")) {
+            output.print(F(DEBUG_ASSETS_URL2));
+        }
+    #endif
     // ------------------------------------------------------------------------------------
     // SSDP public info
     // ------------------------------------------------------------------------------------
@@ -213,11 +212,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         printUniqueId(output, FSPGM(kfcfw), -1);
     }
     else if (key == F("SSDP_UUID")) {
-#if IOT_SSDP_SUPPORT
-        printSSDPUUID(output);
-#else
-        output.print(F("<SSDP support disabled>"));
-#endif
+    #if IOT_SSDP_SUPPORT
+            printSSDPUUID(output);
+    #else
+            output.print(F("<SSDP support disabled>"));
+    #endif
     }
     // ------------------------------------------------------------------------------------
     // requires to be authenticated after the next block
@@ -514,20 +513,20 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
     else if (key == F("SSL_CERT")) {
-#if WEBSERVER_TLS_SUPPORT
-        File file = KFCFS.open(FSPGM(server_crt, "/.pvt/server.crt"), fs::FileOpenMode::read);
-        if (file) {
-            output.print(file.readString());
-        }
-#endif
+    #if WEBSERVER_TLS_SUPPORT
+            File file = KFCFS.open(FSPGM(server_crt, "/.pvt/server.crt"), fs::FileOpenMode::read);
+            if (file) {
+                output.print(file.readString());
+            }
+    #endif
     }
     else if (key == F("SSL_KEY")) {
-#if WEBSERVER_TLS_SUPPORT
-        File file = KFCFS.open(FSPGM(server_key, "/.pvt/server.key"), fs::FileOpenMode::read);
-        if (file) {
-            output.print(file.readString());
-        }
-#endif
+    #if WEBSERVER_TLS_SUPPORT
+            File file = KFCFS.open(FSPGM(server_key, "/.pvt/server.key"), fs::FileOpenMode::read);
+            if (file) {
+                output.print(file.readString());
+            }
+    #endif
     }
     else {
         WebTemplate::process(key, output);

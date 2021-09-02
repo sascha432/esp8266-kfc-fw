@@ -611,8 +611,24 @@ public:
                     Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
                 }
             }
-            // pinMode(A0, INPUT);
             Serial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
+        #elif defined(ESP32)
+            for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
+                if (i != 1 && !isFlashInterfacePin(i)) { // do not display TX and flash SPI
+                    // pinMode(i, INPUT);
+                    Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
+                }
+            }
+            Serial.println();
+            // static const uint8_t pins[] PROGMEM = {36, 39};
+            // auto ptr = pins;
+            // for(uint8_t i = 0; i < sizeof(pins); i++) {
+            //     auto pin = pgm_read_byte(ptr++);
+            //     Serial.printf_P(PSTR(" A%u=%u"), pin, analogRead(pin));
+
+            // }
+            // Serial.println();
+
         #endif
         #if HAVE_IOEXPANDER
             IOExpander::config.dumpPins(Serial);
@@ -1342,11 +1358,7 @@ void at_mode_serial_handle_event(String &commandString)
         return;
     }
 
-    #if ESP8266
-        auto command = commandString.begin();
-    #else
-        auto command = const_cast<char *>(commandString.begin());
-    #endif
+    auto command = commandString.begin();
     // remove leading '+'
     if (*command == '+') {
         command++;
@@ -2735,13 +2747,17 @@ void at_mode_serial_handle_event(String &commandString)
 void at_mode_serial_input_handler(Stream &client)
 {
     if (is_at_mode_enabled) {
-        static String line;
+        static String *_line = nullptr;
         static bool lastWasCR = false;
+        if (!_line) {
+            _line = new String();
+        }
+        auto &line = *_line;
 
-        auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output online
+        auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output only
         while(client.available()) {
             int ch = client.read();
-            // __LDBG_printf("read %u (%c) cr=%u", (unsigned)((uint8_t)ch), isprint(ch) ? ch : '-', lastWasCR);
+            // __DBG_printf("read %u (%c) cr=%u", (unsigned)((uint8_t)ch), isprint(ch) ? ch : '-', lastWasCR);
             if (lastWasCR == true && ch == '\n') {
                 lastWasCR = false;
                 continue;

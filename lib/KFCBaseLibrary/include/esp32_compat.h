@@ -7,14 +7,19 @@
 #if defined(ESP32)
 
 #if USE_LITTLEFS
-#include <LittleFS.h>
+#    include <LittleFS.h>
 #else
-#include "../src/SPIFFS.h"
-#include <FS.h>
+#    include "../src/SPIFFS.h"
+#    include <FS.h>
 #endif
 
 #include <esp_timer.h>
 #include <esp_err.h>
+#include <esp_wifi.h>
+#include <esp_wifi_types.h>
+#include <sdkconfig.h>
+#include <sys/queue.h>
+#include <freertos/portmacro.h>
 
 #ifndef ARDUINO_ESP32_RELEASE
 #include <esp_arduino_version.h>
@@ -58,20 +63,33 @@ inline void *memmove_P(void *dst, const void *src, size_t len)
     return memmove(dst, src, len);
 }
 
+
+struct esp_timer {
+    uint64_t alarm;
+    uint64_t period:56;
+    uint64_t flags:8;
+    union {
+        esp_timer_cb_t callback;
+        uint32_t event_id;
+    };
+    void* arg;
+#if WITH_PROFILING
+    const char* name;
+    size_t times_triggered;
+    size_t times_armed;
+    size_t times_skipped;
+    uint64_t total_callback_run_time;
+#endif // WITH_PROFILING
+    LIST_ENTRY(esp_timer) list_entry;
+};
+
 typedef esp_timer_cb_t os_timer_func_t_ptr;
 typedef struct esp_timer os_timer_t;
 
-#ifndef OS_TIMER_DEBUG
-#   define OS_TIMER_DEBUG 0
-#endif
-
-#include <esp_wifi.h>
-
-inline bool wifi_get_country(wifi_country_t *country) {
+inline bool wifi_get_country(wifi_country_t *country)
+{
     return esp_wifi_get_country(country) == ESP_OK;
 }
-
-#include <esp_wifi_types.h>
 
 using WiFiMode = wifi_mode_t;
 
@@ -115,7 +133,7 @@ typedef struct {
     uint8_t mac[WL_MAC_ADDR_LENGTH];
 } WiFiEventSoftAPModeStationDisconnected;
 
-#define WiFi_isHidden(num)                  (WiFi.SSID(num).length() == 0)
+#define WiFi_isHidden(num) (WiFi.SSID(num).length() == 0)
 
 namespace fs {
 
@@ -165,95 +183,12 @@ namespace fs {
 
 using Dir = fs::Dir;
 
-// namespace fs {
-
-//     enum OpenMode {
-//         OM_DEFAULT = 0,
-//         OM_CREATE = 1,
-//         OM_APPEND = 2,
-//         OM_TRUNCATE = 4
-//     };
-
-//     enum AccessMode {
-//         AM_READ = 1,
-//         AM_WRITE = 2,
-//         AM_RW = AM_READ | AM_WRITE
-//     };
-
-//     class DirImpl {
-//     public:
-//         virtual ~DirImpl() { }
-//         virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode) = 0;
-//         virtual const char* fileName() = 0;
-//         virtual size_t fileSize() = 0;
-//         virtual bool isFile() const = 0;
-//         virtual bool isDirectory() const = 0;
-//         virtual bool next() = 0;
-//         virtual bool rewind() = 0;
-//     };
-
-
-//     class Dir : public DirImpl {
-//     public:
-//         Dir() {
-//         }
-//         Dir(const File &root) {
-//             _root = root;
-//         }
-
-//         virtual FileImplPtr openFile(OpenMode openMode, AccessMode accessMode) {
-//             return FileImplPtr(nullptr);
-//         }
-//         virtual String fileName() {
-//             return _file.name();
-//         }
-//         virtual size_t fileSize() {
-//             return _file.size();
-//         }
-//         virtual bool isFile() const {
-//             return false;
-//         }
-//         virtual bool isDirectory() const {
-//             return false;
-//         }
-//         virtual bool next()  {
-//             return false;
-//         }
-//         virtual bool rewind() {
-//             return false;
-//         }
-
-
-//     private:
-//         File _root;
-//         File _file;
-//     };
-
-// };
-
-// typedef fs::Dir Dir;
-
-// typedef struct {
-//     size_t totalBytes;
-//     size_t usedBytes;
-//     int blockSize;
-//     int maxOpenFiles;
-//     int maxPathLength;
-//     int pageSize;
-// } FSInfo;
-
-
-// //TODO change to KFCFS.info()
-// #define SPIFFS_info(info) \
-//     memset(&info, 0, sizeof(info)); \
-//     info.totalBytes = SPIFFS.totalBytes(); \
-//     info.usedBytes = SPIFFS.usedBytes();
-
-
-inline void ets_timer_arm_new(ETSTimer *timer, uint32_t tmout, bool repeat, bool millis) {
+inline void ets_timer_arm_new(ETSTimer *timer, uint32_t tmout, bool repeat, bool millis)
+{
     if (millis) {
         ets_timer_arm(timer, tmout, repeat);
-    } else {
+    }
+    else {
         ets_timer_arm_us(timer, tmout, repeat);
     }
 }
@@ -297,28 +232,5 @@ inline uint32_t crc32(const void *buf, size_t len, uint32_t crc = ~0)
 #define SPI_FLASH_RESULT_OK ESP_OK
 
 using SpiFlashOpResult = esp_err_t;
-
-#include <freertos/portmacro.h>
-
-struct portMuxType : portMUX_TYPE {
-    portMuxType(portMUX_TYPE value = portMUX_INITIALIZER_UNLOCKED) : portMUX_TYPE(value) {}
-    bool enter() {
-        portENTER_CRITICAL(this);
-        return true;
-    }
-    bool  exit() {
-        portEXIT_CRITICAL(this);
-        return false;
-    }
-    // for inside ISRs
-    bool enterISR() {
-        portENTER_CRITICAL_ISR(this);
-        return true;
-    }
-    bool exitISR() {
-        portEXIT_CRITICAL_ISR(this);
-        return false;
-    }
-};
 
 #endif

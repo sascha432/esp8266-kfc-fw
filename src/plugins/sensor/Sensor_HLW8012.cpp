@@ -27,7 +27,7 @@ static Sensor_HLW8012 *sensor = nullptr;
 static volatile uint32_t energyCounter = 0;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
-portMuxType _mux;
+MutexSemaphore _lock;
 
 extern "C" void IRAM_ATTR Sensor_HLW8012_callbackCF()
 {

@@ -654,7 +654,7 @@ bool EspClass::flashWrite(uint32_t address, const uint8_t *data, size_t size)
 	if (!FlashMemory::flashStorage.open()) {
 		return false;
 	}
-	return FlashMemory::flashStorage.write(address, data, size);
+	return FlashMemory::flashStorage.write(address, data, size) == size;
 }
 
 bool EspClass::flashRead(uint32_t address, uint32_t *data, size_t size)
@@ -667,7 +667,7 @@ bool EspClass::flashRead(uint32_t address, uint8_t *data, size_t size)
 	if (!FlashMemory::flashStorage.open()) {
 		return false;
 	}
-	return FlashMemory::flashStorage.read(address, data, size);
+	return FlashMemory::flashStorage.read(address, data, size) == size;
 }
 
 void EspClass::flashDump(Stream &output)

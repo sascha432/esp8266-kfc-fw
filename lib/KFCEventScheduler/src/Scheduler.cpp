@@ -52,20 +52,28 @@ using namespace Event;
 
 CallbackTimer *Scheduler::_add(const char *name, int64_t delay, RepeatType repeat, Callback callback, PriorityType priority)
 {
+    #if DEBUG_OSTIMER
+        auto nameStr = PrintString(F("%s(%s:%u)"), name, DebugContext::__pos._file, DebugContext::__pos._line);
+        name = nameStr.c_str();
+        DebugContext::__pos = DebugContext();
+    #endif
+
     auto timerPtr = new CallbackTimer(name, callback, delay, repeat, priority);
-    PORT_MUX_LOCK_BLOCK(_mux) {
+    MUTEX_LOCK_BLOCK(_lock) {
         _timers.push_back(timerPtr);
         _addedFlag = true;
     }
 
-#if DEBUG_EVENT_SCHEDULER
-    timerPtr->_file = DebugContext::__pos._file;
-    timerPtr->_line = DebugContext::__pos._line;
-    __LDBG_printf("dly=%.0f maxrep=%d prio=%u callback=%p timer=%p %s:%u", delay / 1.0, repeat._repeat, priority, lambda_target(callback), timerPtr, __S(DebugContext::__pos._file), DebugContext::__pos._line);
-    DebugContext::__pos = DebugContext();
-#endif
+    #if DEBUG_EVENT_SCHEDULER
+        timerPtr->_file = DebugContext::__pos._file;
+        timerPtr->_line = DebugContext::__pos._line;
+        __LDBG_printf("dly=%.0f maxrep=%d prio=%u callback=%p timer=%p %s:%u", delay / 1.0, repeat._repeat, priority, lambda_target(callback), timerPtr, __S(DebugContext::__pos._file), DebugContext::__pos._line);
+        DebugContext::__pos = DebugContext();
+    #endif
 
-    timerPtr->_initTimer();
+    MUTEX_LOCK_BLOCK(timerPtr->getLock()) {
+        timerPtr->_rearm();
+    }
     return timerPtr;
 }
 
@@ -73,10 +81,10 @@ void Scheduler::end()
 {
     __LDBG_print("terminating scheduler");
     // disarm all timers to ensure __TimerCallback is not called while deleting them
-    PORT_MUX_LOCK_BLOCK(_mux) {
+    MUTEX_LOCK_BLOCK(_lock) {
         for(const auto &timer: _timers) {
             if (timer) {
-                PORT_MUX_LOCK_BLOCK(timer->getMux()) {
+                MUTEX_LOCK_BLOCK(timer->getLock()) {
                     timer->_disarm();
                     if (timer->_timer) {
                         timer->_timer->_managedTimer.clear();
@@ -89,9 +97,7 @@ void Scheduler::end()
         std::swap(_timers, tmp);
         for(auto timer: tmp) {
             if (timer) {
-                PORT_MUX_LOCK_BLOCK(timer->getMux()) {
-                    delete timer;
-                }
+                delete timer;
             }
         }
     }
@@ -105,20 +111,21 @@ void Scheduler::end()
 bool Scheduler::_removeTimer(CallbackTimerPtr timer)
 {
     if (timer) {
-        PORT_MUX_LOCK_BLOCK(_mux) {
+        MUTEX_LOCK_BLOCK(_lock) {
             auto iterator = std::find(_timers.begin(), _timers.end(), timer);
             EVENT_SCHEDULER_ASSERT(iterator != _timers.end());
             if (iterator != _timers.end()) {
                 __LDBG_printf("timer=%p iterator=%p managed=%p %s:%u", timer, *iterator, timer->_timer, __S(timer->_file), timer->_line);
-                PORT_MUX_LOCK_BLOCK(timer->getMux()) {
+                MUTEX_LOCK_BLOCK(timer->getLock()) {
                     // disarm and delete
                     timer->_disarm();
+                    timer->_etsTimer.done();
                     // mark as deleted in vector
                     *iterator = nullptr;
                     _removedFlag = true;
                     _checkTimers = true;
-                    delete timer;
                 }
+                delete timer;
                 return true;
             }
             else {
@@ -182,7 +189,7 @@ void Scheduler::_run()
                     break;
                 }
                 if (timer->_callbackScheduled) {
-                    PORT_MUX_LOCK_BLOCK(_mux) {
+                    MUTEX_LOCK_BLOCK(_lock) {
                         timer->_callbackScheduled = false;
                     }
                     _invokeCallback(timer, timer->_runtimeLimit(timer->_priority));
@@ -191,7 +198,7 @@ void Scheduler::_run()
         }
 
         // reset event flag
-        PORT_MUX_LOCK_BLOCK(_mux) {
+        MUTEX_LOCK_BLOCK(_lock) {
             _hasEvent = PriorityType::NONE;
             for (const auto &timer : _timers) {
                 if (timer && timer->_callbackScheduled && timer->_priority > _hasEvent) {
@@ -203,7 +210,7 @@ void Scheduler::_run()
 
     // sort new timers and remove null pointers
     if (_addedFlag || _removedFlag) {
-        PORT_MUX_LOCK_BLOCK(_mux) {
+        MUTEX_LOCK_BLOCK(_lock) {
             if (_addedFlag) {
                 _sort();
             }
@@ -224,12 +231,13 @@ void Scheduler::__TimerCallback(void *arg)
         __Scheduler._invokeCallback(timer, kMaxRuntimePrioTimer);
     }
     else {
-        PORT_MUX_LOCK_ISR_BLOCK(__Scheduler._mux) {
+        MUTEX_LOCK_BLOCK(_Scheduler.getLock()) {
             #if SCHEDULER_HAVE_REMAINING_DELAY
                 if (timer->_remainingDelay >= 1) {
                     // continue with remaining delay
-                    PORT_MUX_LOCK_BLOCK(timer->getMux()) {
+                    MUTEX_LOCK_BLOCK(timer->getLock()) {
                         uint32_t delay = (--timer->_remainingDelay) ? kMaxDelay : (timer->_delay % kMaxDelay);
+                        timer->_etsTimer.disarm();
                         timer->_etsTimer.arm(delay, false, true);
                     }
                 }
@@ -254,15 +262,15 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
     String fpos = timer->__getFilePos();
     uint32_t start = runtimeLimit ? micros() : 0;
 
-    PORT_MUX_LOCK_BLOCK(timer->getMux()) {
+    MUTEX_LOCK_BLOCK(timer->getLock()) {
         bool locked = timer->_etsTimer.isLocked();
         if (locked) {
             __DBG_printEtsTimer_E(timer->_etsTimer, PSTR("cannot invoke callback on locked timer"));
         }
         else {
-            __muxLock.exit();
+            __lock.unlock();
             timer->_callback(timer);
-            __muxLock.enter();
+            __lock.lock();
             // check if it was unlocked inside the callback
             if (timer->_etsTimer.isLocked()) {
                 timer->_etsTimer.unlock();
@@ -297,7 +305,7 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
         else if (timer->_maxDelayExceeded) {
             // if max delay is exceeded we need to manually reschedule
             __LDBG_printf("timer=%p armed=%u cb=%p %s:%u", timer, timer->isArmed(), lambda_target(timer->_callback), __S(timer->_file), timer->_line);
-            PORT_MUX_LOCK_BLOCK(timer->getMux()) {
+            MUTEX_LOCK_BLOCK(timer->getLock()) {
                 timer->_disarm();
                 timer->_rearm();
             }

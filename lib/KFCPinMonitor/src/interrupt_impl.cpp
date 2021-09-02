@@ -19,9 +19,6 @@ namespace PinMonitor {
         Interrupt::EventBuffer eventBuffer;
     #endif
     uint16_t interrupt_levels;
-    #if ESP32
-        portMuxType GPIOInterruptLock::_mux;
-    #endif
 
 // ------------------------------------------------------------------------
 // implementation with GPIO interrupt instead of attachInterrupt...

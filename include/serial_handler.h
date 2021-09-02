@@ -19,6 +19,9 @@
 #include <HardwareSerial.h>
 #include <EnumHelper.h>
 #include <cbuf.h>
+#if ESP32
+#include <esp_task_wdt.h>
+#endif
 
 #ifndef SERIAL_HANDLER_INPUT_BUFFER_MAX
 #    define SERIAL_HANDLER_INPUT_BUFFER_MAX 512
@@ -155,7 +158,7 @@ namespace SerialHandler {
 
         Clients _clients;
         bool _txFlag; // indicator that _clients have _tx with data
-        portMuxType _mux;
+        MutexSemaphore _lock;
     };
 
     //
@@ -244,9 +247,12 @@ namespace SerialHandler {
 
     inline Client &Wrapper::addClient(const Callback &cb, EventType events)
     {
-        portMuxLock lock(_mux);
-        _clients.emplace_back(new Client(cb, events));
-        return *_clients.back().get();
+        Client *client;
+        MUTEX_LOCK_BLOCK(_lock) {
+            _clients.emplace_back(new Client(cb, events));
+            client = _clients.back().get();
+        }
+        return *client;
     }
 
     inline int Wrapper::available()
@@ -281,9 +287,15 @@ namespace SerialHandler {
 
     inline void Wrapper::_loop()
     {
+        #if ESP32
+            esp_task_wdt_add(NULL);
+        #endif
         _pollSerial();
         _transmitClientsRx();
         _transmitClientsTx();
+        #if ESP32
+            esp_task_wdt_delete(NULL);
+        #endif
     }
 
 };

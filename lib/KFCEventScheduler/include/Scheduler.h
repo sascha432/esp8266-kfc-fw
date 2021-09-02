@@ -77,6 +77,8 @@ namespace Event {
         // remove null pointers and sort timers by priority
         void _sort();
 
+        MutexSemaphore &getLock();
+
     private:
         TimerVector _timers;
         int16_t _size;
@@ -84,7 +86,7 @@ namespace Event {
         bool _addedFlag;
         bool _removedFlag;
         volatile bool _checkTimers;
-        portMuxType _mux;
+        MutexSemaphore _lock;
 
 #if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR
         static constexpr uint32_t _runtimeLimit = kMaxRuntimeLimit;
@@ -123,6 +125,11 @@ namespace Event {
     inline void Scheduler::add(const char *name, milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority)
     {
         _add(name, interval.count(), repeat, callback, priority);
+    }
+
+    inline MutexSemaphore &Scheduler::getLock()
+    {
+        return _lock;
     }
 
 }

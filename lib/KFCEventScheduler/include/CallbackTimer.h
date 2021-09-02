@@ -57,14 +57,13 @@ namespace Event {
         // once exiting the callback it is being removed
         void disarm();
 
-        portMuxType &getMux();
+        MutexSemaphore &getLock();
 
     private:
         friend Timer;
         friend ManangedCallbackTimer;
         friend Scheduler;
 
-        void _initTimer();
         void _rearm();
         void _disarm();
         void _invokeCallback(CallbackTimerPtr timer);
@@ -77,7 +76,7 @@ namespace Event {
 
     public:
         ETSTimerEx _etsTimer;
-        portMuxType _mux;
+        MutexSemaphore _lock;
         Callback _callback;
         Timer *_timer;
         int64_t _delay;
@@ -105,11 +104,6 @@ namespace Event {
     inline bool CallbackTimer::isArmed() const
     {
         return _etsTimer.isRunning();
-    }
-
-    inline void CallbackTimer::_initTimer()
-    {
-        _rearm();
     }
 
     inline int64_t CallbackTimer::getInterval() const
@@ -173,24 +167,22 @@ namespace Event {
         _disarm();
     }
 
-    inline portMuxType &CallbackTimer::getMux()
+    inline MutexSemaphore &CallbackTimer::getLock()
     {
-        return _mux;
+        return _lock;
     }
 
     inline void CallbackTimer::_disarm()
     {
         __LDBG_printf("timer=%p armed=%u cb=%p %s:%u", this, isArmed(), lambda_target(_callback), __S(_file), _line);
-        PORT_MUX_LOCK_BLOCK(_mux) {
-            if (isArmed()) {
-                _etsTimer.disarm();
-                #if SCHEDULER_HAVE_REMAINING_DELAY
-                    _remainingDelay = 0;
-                    _maxDelayExceeded = false;
-                #endif
-                _callbackScheduled = false;
-            }
+        if (isArmed()) {
+            _etsTimer.disarm();
         }
+        #if SCHEDULER_HAVE_REMAINING_DELAY
+            _remainingDelay = 0;
+            _maxDelayExceeded = false;
+        #endif
+        _callbackScheduled = false;
     }
 
 }

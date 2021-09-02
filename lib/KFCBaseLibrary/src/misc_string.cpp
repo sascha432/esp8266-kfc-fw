@@ -506,7 +506,7 @@ size_t printTrimmedDouble(Print *output, double value, int digits)
     return size;
 }
 
-#if ESP32
+#if ESP32 || _MSC_VER
 
 bool str_endswith(const char *str, char ch)
 {

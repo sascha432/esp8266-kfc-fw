@@ -3,21 +3,10 @@
 */
 
 #include "JsonConfigReader.h"
+#include "Configuration.hpp"
 
 PROGMEM_STRING_DECL(config_object_name);
 PROGMEM_STRING_DEF(config_object_name, "config");
-
-JsonConfigReader::JsonConfigReader(Stream* stream, Configuration &config, HandleType *handles) :
-    JsonBaseReader(stream),
-    _config(config),
-    _handles(handles),
-    _handle(INVALID_HANDLE),
-    _isConfigObject(false)
-{
-}
-
-JsonConfigReader::JsonConfigReader(Configuration &config, HandleType *handles) : JsonConfigReader(nullptr, config, handles) {
-}
 
 bool JsonConfigReader::beginObject(bool isArray)
 {
@@ -144,27 +133,4 @@ bool JsonConfigReader::processElement()
         }
     }
     return true;
-}
-
-bool JsonConfigReader::recoverableError(JsonErrorEnum_t errorType)
-{
-    return true;
-}
-
-long long JsonConfigReader::stringToLl(const String& value) const
-{
-    auto ptr = value.c_str();
-    if (*ptr == '"') {
-        ptr++;
-    }
-    return strtoll(ptr, nullptr, 0);
-    //if (*ptr == '0' && *(ptr + 1) == 'x') {
-    //    return (long long)strtoull(ptr + 2, nullptr, 16);
-    //}
-    //else {
-    //    if (*ptr == '-') {
-    //        return strtoll(ptr, nullptr, 10);
-    //    }
-    //    return (long long)strtoull(ptr, nullptr, 10);
-    //}
 }

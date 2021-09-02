@@ -18,9 +18,9 @@
 #include "OSTimer.h"
 
 #if DEBUG_OSTIMER
-    OSTIMER_INLINE ETSTimerEx::ETSTimerEx(const char *name) : _magic(kMagic), _name(name)
+    inline ETSTimerEx::ETSTimerEx(const char *name) : _magic(kMagic), _name(is_HEAP_P(name) ? strdup_P(name) : name)
 #else
-    OSTIMER_INLINE ETSTimerEx::ETSTimerEx()
+    inline ETSTimerEx::ETSTimerEx()
 #endif
 {
     clear();
@@ -30,7 +30,7 @@
     #endif
 }
 
-OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
+inline ETSTimerEx::~ETSTimerEx()
 {
     #if DEBUG_OSTIMER
         __DBG_printEtsTimer(*this, PSTR("dtor"));
@@ -51,6 +51,9 @@ OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
             done();
         }
         _magic = 0;
+        if (is_HEAP_P(_name)) {
+            free(const_cast<char *>(_name));
+        }
     #else
         if (!isDone()) {
             // calls disarm if running
@@ -59,38 +62,40 @@ OSTIMER_INLINE ETSTimerEx::~ETSTimerEx()
     #endif
 }
 
-OSTIMER_INLINE void ETSTimerEx::create(ETSTimerFunc *callback, void *arg)
+inline void ETSTimerEx::create(ETSTimerFunc *callback, void *arg)
 {
-    ets_timer_disarm(this);
+    if (!isNew()) {
+        ets_timer_disarm(this);
+    }
     ets_timer_setfn(this, callback, arg);
 }
 
-OSTIMER_INLINE void ETSTimerEx::arm(int32_t delay, bool repeat, bool millis)
+inline void ETSTimerEx::arm(int32_t delay, bool repeat, bool millis)
 {
     ets_timer_arm_new(this, delay, repeat, millis);
 }
 
-OSTIMER_INLINE bool ETSTimerEx::isNew() const
+inline bool ETSTimerEx::isNew() const
 {
-    return (timer_arg == reinterpret_cast<ETSTimer *>(kUnusedMagic));
+    return (timer_next != reinterpret_cast<void *>(0xffffffffU)) && (timer_arg == reinterpret_cast<void *>(kUnusedMagic));
 }
 
-OSTIMER_INLINE bool ETSTimerEx::isRunning() const
+inline bool ETSTimerEx::isRunning() const
 {
     return timer_period != 0;
 }
 
-OSTIMER_INLINE bool ETSTimerEx::isDone() const
+inline bool ETSTimerEx::isDone() const
 {
-    return (timer_arg == reinterpret_cast<ETSTimer *>(kUnusedMagic)) || (timer_period == 0 && timer_func == nullptr && timer_arg == nullptr);
+    return (timer_next != reinterpret_cast<void *>(0xffffffffU)) && ((timer_arg == reinterpret_cast<void *>(kUnusedMagic)) || (timer_period == 0 && timer_func == nullptr && timer_arg == nullptr));
 }
 
-OSTIMER_INLINE bool ETSTimerEx::isLocked() const
+inline bool ETSTimerEx::isLocked() const
 {
     return timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback);
 }
 
-OSTIMER_INLINE void ETSTimerEx::lock()
+inline void ETSTimerEx::lock()
 {
     #if DEBUG_OSTIMER_FIND
         if (!find()) {
@@ -114,7 +119,7 @@ OSTIMER_INLINE void ETSTimerEx::lock()
     timer_func = reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback);
 }
 
-OSTIMER_INLINE void ETSTimerEx::unlock()
+inline void ETSTimerEx::unlock()
 {
     #if DEBUG_OSTIMER_FIND
         if (!find()) {
@@ -138,7 +143,7 @@ OSTIMER_INLINE void ETSTimerEx::unlock()
     timer_func = reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback);
 }
 
-OSTIMER_INLINE void ETSTimerEx::disarm()
+inline void ETSTimerEx::disarm()
 {
     #if DEBUG_OSTIMER_FIND
         if (!find()) {
@@ -156,8 +161,11 @@ OSTIMER_INLINE void ETSTimerEx::disarm()
     ets_timer_disarm(this);
 }
 
-OSTIMER_INLINE void ETSTimerEx::done()
+inline void ETSTimerEx::done()
 {
+    if (isNew()) {
+        return;
+    }
     #if DEBUG_OSTIMER_FIND
         if (!find()) {
             __DBG_printEtsTimer_E(*this, PSTR("done(): find()==FALSE"));
@@ -170,9 +178,6 @@ OSTIMER_INLINE void ETSTimerEx::done()
         if (isDone()) {
             __DBG_printEtsTimer_E(*this, PSTR("done(): isDone()==TRUE"));
         }
-        else if (isNew()) {
-            __DBG_printEtsTimer_E(*this, PSTR("done(): isNew()==TRUE"));
-        }
         if (isLocked()) {
             __DBG_printEtsTimer_E(*this, PSTR("done(): isLocked()==TRUE"));
         }
@@ -182,21 +187,22 @@ OSTIMER_INLINE void ETSTimerEx::done()
     clear();
 }
 
-OSTIMER_INLINE void ETSTimerEx::clear()
+inline void ETSTimerEx::clear()
 {
     timer_func = nullptr;
     timer_arg = reinterpret_cast<ETSTimer *>(kUnusedMagic);
     timer_period = 0;
+    timer_next = nullptr;
 }
 
 #if DEBUG_OSTIMER_FIND
 
-OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find()
+inline ETSTimerEx *ETSTimerEx::find()
 {
     return find(this);
 }
 
-OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
+inline ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
 {
     ETSTimer *cur = timer_list;
     while(cur) {
@@ -211,12 +217,15 @@ OSTIMER_INLINE ETSTimerEx *ETSTimerEx::find(ETSTimerEx *timer)
         }
         cur = cur->timer_next;
     }
+    if (is_HEAP_P(timer) && ((timer->timer_next == reinterpret_cast<void *>(0xffffffffU)) || (timer->timer_arg == reinterpret_cast<void *>(kUnusedMagic)))) {
+        return timer;
+    }
     return nullptr;
 }
 
 #endif
 
-OSTIMER_INLINE void ETSTimerEx::end()
+inline void ETSTimerEx::end()
 {
     ETSTimer *cur = timer_list;
     while(cur) {
@@ -229,7 +238,7 @@ OSTIMER_INLINE void ETSTimerEx::end()
     }
 }
 
-OSTIMER_INLINE void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(void *arg)
+inline void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(void *arg)
 {
 }
 

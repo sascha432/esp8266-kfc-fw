@@ -21,13 +21,13 @@ void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)
     // #if DEBUG_OSTIMER
     //     __DBG_printf("timer run name=%s running=%u locked=%u", timer._etsTimer._name, timer.isRunning(), timer.isLocked(timer));
     // #endif
-    PORT_MUX_LOCK_ISR_BLOCK(timer.getMux()) {
+    MUTEX_LOCK_BLOCK(timer.getLock()) {
         if (!timer.lock()) {
             return;
         }
-        __muxLock.exit();
+        __lock.unlock();
         timer.run();
-        __muxLock.enter();
+        __lock.lock();
         OSTimer::unlock(timer);
     }
 }
@@ -36,15 +36,16 @@ void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)
 #    pragma GCC pop_options
 #endif
 
-#if ESP8266
-
-static void ___DBG_printEtsTimerRaw(ETSTimerEx &timer, const char *msg)
+static void ___DBG_printEtsTimerRaw(const ETSTimerEx &timer, const char *msg)
 {
     #if DEBUG_OSTIMER
-        if (timer._magic != ETSTimerEx::kMagic) {
-            DEBUG_OUTPUT.printf_P(PSTR("name=invalid ptr=%p "), &timer);
-        }
-        else {
+        #if ESP8266
+            if (timer._magic != ETSTimerEx::kMagic) {
+                DEBUG_OUTPUT.printf_P(PSTR("name=invalid ptr=%p "), &timer);
+            }
+            else
+        #endif
+        {
             DEBUG_OUTPUT.printf_P(PSTR("name=%s "), __S(timer.name()));
         }
     #endif
@@ -56,22 +57,31 @@ static void ___DBG_printEtsTimerRaw(ETSTimerEx &timer, const char *msg)
             DEBUG_OUTPUT.print(' ');
         }
     }
-    DEBUG_OUTPUT.printf_P(PSTR("timer=%p func=%p arg=%p period=%u next=%p"), &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
+    #if ESP8266
+        DEBUG_OUTPUT.printf_P(PSTR("timer=%p func=%p arg=%p period=%u next=%p"), &timer, timer.timer_func, timer.timer_arg, timer.timer_period, timer.timer_next);
+    #elif ESP32
+        if (timer._timer) {
+            DEBUG_OUTPUT.printf_P(PSTR("timer=%p alarm=%llu func=%p arg=%p period=%llu prev %p next=%p"), &timer, timer._timer->alarm, timer._timer->callback, timer._timer->arg, timer._timer->period, timer._timer->list_entry.le_prev, timer._timer->list_entry.le_next);
+        }
+        else {
+            DEBUG_OUTPUT.printf_P(PSTR("timer=%p _timer=nullptr"), &timer);
+        }
+    #else
+        DEBUG_OUTPUT.printf_P(PSTR("timer=%p"), &timer);
+    #endif
 }
 
-void ___DBG_printEtsTimer(ETSTimerEx &timer, const char *msg)
+void ___DBG_printEtsTimer(const ETSTimerEx &timer, const char *msg)
 {
     ___DBG_printEtsTimerRaw(timer, msg);
     DEBUG_OUTPUT.print(F(__DBG_newline));
     DEBUG_OUTPUT.flush();
 }
 
-void ___DBG_printEtsTimer_E(ETSTimerEx &timer, const char *msg)
+void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const char *msg)
 {
     DEBUG_OUTPUT.printf_P(PSTR(_VT100(bold_red)));
     ___DBG_printEtsTimerRaw(timer, msg);
     DEBUG_OUTPUT.print(F(_VT100(reset) __DBG_newline));
     DEBUG_OUTPUT.flush();
 }
-
-#endif

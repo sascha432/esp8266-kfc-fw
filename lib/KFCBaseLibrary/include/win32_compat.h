@@ -32,20 +32,4 @@ extern "C"  {
     extern void yield();
 }
 
-struct portMuxType {
-    portMuxType() {}
-    bool enter() {
-        return true;
-    }
-    bool exit() {
-        return false;
-    }
-    bool enterISR() {
-        return true;
-    }
-    bool exitISR() {
-        return false;
-    }
-};
-
 #endif

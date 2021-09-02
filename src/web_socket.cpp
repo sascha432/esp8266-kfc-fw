@@ -24,7 +24,7 @@ using KFCConfigurationClasses::System;
 
  WsClient::ClientCallbackVector WsClient::_clientCallback;
  WsClient::AsyncWebSocketVector WsClient::_webSockets;
- portMuxType WsClient::_mux;
+ MutexSemaphore WsClient::_lock;
 
 extern bool generate_session_for_username(const String &username, String &password);
 
@@ -336,9 +336,11 @@ uint16_t WsClient::getQeueDelay()
     }
     if (qSize > 8192) {
         qDelay = std::max(qDelay, (uint16_t)50);
-    } else if (qSize > 4096) {
+    }
+    else if (qSize > 4096) {
         qDelay = std::max(qDelay, (uint16_t)10);
-    } else if (qSize > 1024) {
+    }
+    else if (qSize > 1024) {
         qDelay = std::max(qDelay, (uint16_t)5);
     }
     return qDelay;
@@ -379,18 +381,28 @@ static bool __get_server(AsyncWebSocket *&server, AsyncWebSocketClient *client)
 
 void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
+    #if ESP32
+        esp_task_wdt_add(NULL);
+    #endif
     auto qDelay = getQeueDelay();
     buffer->lock();
     WsClient::foreach(server, sender, [buffer, qDelay](AsyncWebSocketClient *client) {
         if (client->canSend()) {
             client->text(buffer);
-            if (can_yield()) {
-                delay(qDelay); // let the device work on its tcp buffers
-            }
+            #if ESP32
+                esp_task_wdt_reset();
+            #elif ESP8266
+                if (can_yield()) {
+                    delay(qDelay); // let the device work on its tcp buffers
+                }
+            #endif
         }
     });
     buffer->unlock();
     server->_cleanBuffers();
+    #if ESP32
+        esp_task_wdt_delete(NULL);
+    #endif
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
@@ -517,18 +529,28 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, message);
         return;
     }
+    #if ESP32
+        esp_task_wdt_add(NULL);
+    #endif
     WsClient::forsocket(server, client, [server, &message](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {
             auto msg = String(message);
             auto buffer = utf8ToBuffer(server, msg.c_str(), msg.length()); //TODO change to __FlashStringHelper
             if (buffer) {
                 socket->text(buffer);
-                if (can_yield()) {
-                    delay(WsClient::getQeueDelay());
-                }
+                #if ESP32
+                    esp_task_wdt_reset();
+                #elif ESP8266
+                    if (can_yield()) {
+                        delay(WsClient::getQeueDelay());
+                    }
+                #endif
             }
         }
     });
+    #if ESP32
+        esp_task_wdt_delete(NULL);
+    #endif
 }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
@@ -537,17 +559,27 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, message.c_str());
         return;
     }
+    #if ESP32
+        esp_task_wdt_add(NULL);
+    #endif
     WsClient::forsocket(server, client, [server, &message](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {
             auto buffer = utf8ToBuffer(server, message.c_str(), message.length());
             if (buffer) {
                 socket->text(buffer);
-                if (can_yield()) {
-                    delay(WsClient::getQeueDelay());
-                }
+                #if ESP32
+                    esp_task_wdt_reset();
+                #elif ESP8266
+                    if (can_yield()) {
+                        delay(WsClient::getQeueDelay());
+                    }
+                #endif
             }
         }
     });
+    #if ESP32
+        esp_task_wdt_delete(NULL);
+    #endif
 }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const MQTT::Json::UnnamedObject &json)
@@ -556,31 +588,22 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, json.toString().c_str());
         return;
     }
+    #if ESP32
+        esp_task_wdt_add(NULL);
+    #endif
     WsClient::forsocket(server, client, [server, &json](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {
             socket->text(json.toString());
-            if (can_yield()) {
-                delay(WsClient::getQeueDelay());
-            }
+            #if ESP32
+                esp_task_wdt_reset();
+            #elif ESP8266
+                if (can_yield()) {
+                    delay(WsClient::getQeueDelay());
+                }
+            #endif
         }
     });
+    #if ESP32
+        esp_task_wdt_delete(NULL);
+    #endif
 }
-
-// void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const JsonUnnamedObject &json)
-// {
-//     if (!__get_server(server, client)) {
-//         __LDBG_printf("no clients connected: server=%p client=%p message=%s", server, client, json.toString().c_str());
-//         return;
-//     }
-//     WsClient::forsocket(server, client, [server, &json](AsyncWebSocketClient *socket) {
-//         if (socket->canSend()) {
-//             auto buffer = jsonToBuffer(server, json);
-//             if (buffer) {
-//                 socket->text(buffer);
-//                 if (can_yield()) {
-//                     delay(WsClient::getQeueDelay());
-//                 }
-//             }
-//         }
-//     });
-// }

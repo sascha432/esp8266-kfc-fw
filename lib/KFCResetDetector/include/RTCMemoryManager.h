@@ -43,39 +43,42 @@ public:
         static constexpr uint8_t kBlockSize = 4;
         static constexpr uint8_t kBaseAddress = 64;
         static constexpr uint8_t kLastAddress = kBaseAddress + (kMemorySize / kBlockSize) - 1;
+        static constexpr uint32_t kClearNumBlocks = 16;
     #elif ESP32
-        static constexpr uint16_t kMemorySize = 64 * 4; // can be adjusted
-        static constexpr uint8_t kBlockSize = 1;
         static constexpr uint8_t kBaseAddress = 0;
+        static constexpr uint16_t kMemorySize = (64 * 4) - kBaseAddress; // can be adjusted
+        static constexpr uint8_t kBlockSize = 1;
         static constexpr uint8_t kLastAddress = kBaseAddress + (kMemorySize / kBlockSize) - 1;
+        static constexpr uint32_t kClearNumBlocks = 64;
     #endif
 
     struct Header_t {
+        // length includes the header
         uint16_t length;
         uint16_t crc;
+        // get length of the data
         inline uint16_t data_length() const {
             return length - sizeof(Header_t);
         }
+        // get offset of the crc
         inline uint16_t crc_offset() const {
             return data_length() + offsetof(Header_t, crc);
         }
-        inline uint16_t crc_length() const {
-            return crc_offset();
-        }
-        inline uint16_t start_offset() const {
-            return kMemorySize - length;
-        }
+        // get start address
         inline uint16_t start_address() const {
-            return (kMemorySize - length) / kBlockSize + kBaseAddress;
+            return ((kMemorySize - length) / kBlockSize) + kBaseAddress;
         }
+        // get start pointer to the start of the data
         inline uint8_t *begin(void *ptr) const {
             return reinterpret_cast<uint8_t *>(ptr);
         }
+        // get pointer to the end of the data
         inline uint8_t *end(void *ptr) const {
             return begin(ptr) + data_length();
         }
-        inline size_t distance(void *stast, void *iterator) {
-            return end(iterator) - begin(stast);
+        // get distance to the start in bytes
+        inline size_t distance(void *start, void *iterator) {
+            return end(iterator) - begin(start);
         }
     };
 
@@ -144,9 +147,9 @@ public:
     static constexpr auto kRtcTimeSize = sizeof(RtcTime);
 
 public:
-    static constexpr uint16_t kMemoryLimit = kMemorySize - sizeof(Header_t);
     static constexpr uint16_t kHeaderOffset = kMemorySize - sizeof(Header_t);
-    static constexpr uint16_t kHeaderAddress = kHeaderOffset / kBlockSize + kBaseAddress;
+    static constexpr uint16_t kHeaderAddress = (kHeaderOffset / kBlockSize) + kBaseAddress;
+    static constexpr uint16_t kMemoryLimit = kMemorySize - (kMemorySize - (kHeaderAddress * kBlockSize)) - kBaseAddress;
 
     inline static bool _isAligned(size_t len) {
         return (len % kBlockSize) == 0;

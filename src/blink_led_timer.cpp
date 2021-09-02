@@ -8,7 +8,7 @@
 using KFCConfigurationClasses::System;
 using Device = KFCConfigurationClasses::System::Device;
 
-#if (0 || defined(DEBUG_ALL))
+#if (0 || defined(DEBUG_ALL) && 0)
 #include "debug_helper_enable.h"
 #endif
 

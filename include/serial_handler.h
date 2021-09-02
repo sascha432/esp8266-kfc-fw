@@ -290,9 +290,11 @@ namespace SerialHandler {
         #if ESP32
             esp_task_wdt_add(NULL);
         #endif
-        _pollSerial();
-        _transmitClientsRx();
-        _transmitClientsTx();
+        MUTEX_LOCK_BLOCK(_lock) {
+            _pollSerial();
+            _transmitClientsRx();
+            _transmitClientsTx();
+        }
         #if ESP32
             esp_task_wdt_delete(NULL);
         #endif

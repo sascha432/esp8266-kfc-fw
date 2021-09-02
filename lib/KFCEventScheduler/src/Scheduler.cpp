@@ -262,6 +262,7 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
     String fpos = timer->__getFilePos();
     uint32_t start = runtimeLimit ? micros() : 0;
 
+    __DBG_printf_E("callback start");
     MUTEX_LOCK_BLOCK(timer->getLock()) {
         bool locked = timer->_etsTimer.isLocked();
         if (locked) {
@@ -277,6 +278,7 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
             }
         }
     }
+    __DBG_printf_E("callback end");
     uint32_t diff = runtimeLimit ? get_time_diff(start, micros()) : 0;
 
     if (diff > runtimeLimit) {

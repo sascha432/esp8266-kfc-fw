@@ -18,9 +18,6 @@ std::list<ETSTimerEx *> ETSTimerEx::_timers;
 void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)
 {
     auto &timer = *reinterpret_cast<OSTimer *>(arg);
-    // #if DEBUG_OSTIMER
-    //     __DBG_printf("timer run name=%s running=%u locked=%u", timer._etsTimer._name, timer.isRunning(), timer.isLocked(timer));
-    // #endif
     MUTEX_LOCK_BLOCK(timer.getLock()) {
         if (!timer.lock()) {
             return;

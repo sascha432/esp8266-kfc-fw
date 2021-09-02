@@ -636,12 +636,6 @@ void setup()
 
 void loop()
 {
-    static uint32_t timer;
-    if (millis() - timer > 5000) {
-        timer = millis();
-        log_printf("loop\n");
-    }
-
     auto &loopFunctions = LoopFunctions::getVector();
     bool cleanUp = false;
     for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback

@@ -189,7 +189,8 @@ void Scheduler::_run()
                     break;
                 }
                 if (timer->_callbackScheduled) {
-                    MUTEX_LOCK_BLOCK(_lock) {
+                    // MUTEX_LOCK_BLOCK(_lock)
+                    {
                         timer->_callbackScheduled = false;
                     }
                     _invokeCallback(timer, timer->_runtimeLimit(timer->_priority));
@@ -198,7 +199,8 @@ void Scheduler::_run()
         }
 
         // reset event flag
-        MUTEX_LOCK_BLOCK(_lock) {
+        // MUTEX_LOCK_BLOCK(_lock)
+        {
             _hasEvent = PriorityType::NONE;
             for (const auto &timer : _timers) {
                 if (timer && timer->_callbackScheduled && timer->_priority > _hasEvent) {
@@ -210,7 +212,8 @@ void Scheduler::_run()
 
     // sort new timers and remove null pointers
     if (_addedFlag || _removedFlag) {
-        MUTEX_LOCK_BLOCK(_lock) {
+        // MUTEX_LOCK_BLOCK(_lock)
+        {
             if (_addedFlag) {
                 _sort();
             }
@@ -262,7 +265,6 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
     String fpos = timer->__getFilePos();
     uint32_t start = runtimeLimit ? micros() : 0;
 
-    __DBG_printf_E("callback start");
     MUTEX_LOCK_BLOCK(timer->getLock()) {
         bool locked = timer->_etsTimer.isLocked();
         if (locked) {
@@ -278,7 +280,6 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
             }
         }
     }
-    __DBG_printf_E("callback end");
     uint32_t diff = runtimeLimit ? get_time_diff(start, micros()) : 0;
 
     if (diff > runtimeLimit) {

@@ -240,7 +240,7 @@ void Sensor_HLW80xx::publishState()
             MQTT::Json::NamedDouble(FSPGM(energy_total), _getEnergy(0), 1),
             MQTT::Json::NamedDouble(FSPGM(energy), _getEnergy(1), 1),
             MQTT::Json::NamedDouble(FSPGM(voltage), _voltage, 1 + _extraDigits),
-            MQTT::Json::NamedDouble(FSPGM(current), _current, _extraDigits),
+            MQTT::Json::NamedDouble(FSPGM(current), _current, (_current < 1 ? 3 : 2) + _extraDigits),
             MQTT::Json::NamedDouble(FSPGM(pf), _getPowerFactor(), 2)
         ).toString());
     }

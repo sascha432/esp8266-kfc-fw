@@ -31,7 +31,8 @@ inline __attribute__((__always_inline__)) OSTimer::
 
 inline OSTimer::~OSTimer()
 {
-    MUTEX_LOCK_BLOCK(_lock) {
+    // MUTEX_LOCK_BLOCK(_lock)
+    {
         _etsTimer.done();
     }
 }
@@ -51,7 +52,8 @@ inline void OSTimer::startTimer(Event::OSTimerDelayType delay, bool repeat, bool
     #if DEBUG_OSTIMER
         __DBG_printf("start timer name=%s delay=%u repeat=%u millis=%u", _etsTimer._name, delay, repeat, isMillis);
     #endif
-    MUTEX_LOCK_BLOCK(_lock) {
+    // MUTEX_LOCK_BLOCK(_lock)
+    {
         _etsTimer.create(OSTimer::_EtsTimerCallback, this);
         delay = std::clamp<Event::OSTimerDelayType>(delay, Event::kMinDelay, Event::kMaxDelay);
         _etsTimer.arm(delay, repeat, isMillis);
@@ -60,7 +62,8 @@ inline void OSTimer::startTimer(Event::OSTimerDelayType delay, bool repeat, bool
 
 inline void OSTimer::detach()
 {
-    MUTEX_LOCK_BLOCK(_lock) {
+    // MUTEX_LOCK_BLOCK(_lock)
+    {
         if (_etsTimer.isRunning()) {
             _etsTimer.disarm();
         }
@@ -69,7 +72,8 @@ inline void OSTimer::detach()
 
 inline bool OSTimer::lock()
 {
-    MUTEX_LOCK_BLOCK(_lock) {
+    // MUTEX_LOCK_BLOCK(_lock)
+    {
         #if DEBUG_OSTIMER_FIND
             if (!_etsTimer.find()) {
                 return false;
@@ -101,7 +105,8 @@ inline void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
         optimistic_yield(timeoutMicros - timeout);
     }
 
-    MUTEX_LOCK_BLOCK(timer.getLock()) {
+    // MUTEX_LOCK_BLOCK(timer.getLock())
+    {
         #if DEBUG_OSTIMER_FIND
             if (!ETSTimerEx::find(timer)) {
                 #if DEBUG_OSTIMER
@@ -119,7 +124,8 @@ inline void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
 
 inline void OSTimer::unlock(OSTimer &timer)
 {
-    MUTEX_LOCK_BLOCK(timer.getLock()) {
+    // MUTEX_LOCK_BLOCK(timer.getLock())
+    {
         #if DEBUG_OSTIMER_FIND
             if (!ETSTimerEx::find(timer)) {
                 return;
@@ -132,7 +138,8 @@ inline void OSTimer::unlock(OSTimer &timer)
 inline bool OSTimer::isLocked(OSTimer &timer)
 {
     bool result;
-    MUTEX_LOCK_BLOCK(timer.getLock()) {
+    // MUTEX_LOCK_BLOCK(timer.getLock())
+    {
         result =
             #if DEBUG_OSTIMER_FIND
                 ETSTimerEx::find(&timer._etsTimer) &&

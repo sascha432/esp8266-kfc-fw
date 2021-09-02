@@ -18,13 +18,14 @@ std::list<ETSTimerEx *> ETSTimerEx::_timers;
 void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)
 {
     auto &timer = *reinterpret_cast<OSTimer *>(arg);
-    MUTEX_LOCK_BLOCK(timer.getLock()) {
+    // MUTEX_LOCK_BLOCK(timer.getLock())
+    {
         if (!timer.lock()) {
             return;
         }
-        __lock.unlock();
+        // __lock.unlock();
         timer.run();
-        __lock.lock();
+        // __lock.lock();
         OSTimer::unlock(timer);
     }
 }

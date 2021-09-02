@@ -24,7 +24,7 @@ using KFCConfigurationClasses::System;
 
  WsClient::ClientCallbackVector WsClient::_clientCallback;
  WsClient::AsyncWebSocketVector WsClient::_webSockets;
- MutexSemaphore WsClient::_lock;
+ SemaphoreMutex WsClient::_lock;
 
 extern bool generate_session_for_username(const String &username, String &password);
 

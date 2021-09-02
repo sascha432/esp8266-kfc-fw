@@ -163,7 +163,7 @@ void Event::Scheduler::_sort()
     __LDBG_printf("size=%u timers=%u", _size, _timers.size());
 
     std::sort(_timers.begin(), _timers.end(), [](const CallbackTimerPtr a, const CallbackTimerPtr b) {
-        return (a && b) ? (b->_priority < a->_priority) : (b < a);
+        return (a && b) ? (b->_priority < a->_priority) : (b < a)/* move nullptr to the end */;
     });
     // remove all null pointers with std::find() since they have been moved to the end of the vector already
     _timers.erase(std::find(_timers.begin(), _timers.end(), nullptr), _timers.end());
@@ -259,7 +259,7 @@ void Scheduler::__TimerCallback(void *arg)
 
 void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
 {
-    // any delete sets this flag to true
+    // any timer disarmed sets this flag to true
     _checkTimers = false;
 
     String fpos = timer->__getFilePos();
@@ -268,9 +268,15 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
     MUTEX_LOCK_BLOCK(timer->getLock()) {
         bool locked = timer->_etsTimer.isLocked();
         if (locked) {
+            #if DEBUG_OSTIMER
+                timer->_etsTimer._calledWhileLocked++;
+            #endif
             __DBG_printEtsTimer_E(timer->_etsTimer, PSTR("cannot invoke callback on locked timer"));
         }
         else {
+            #if DEBUG_OSTIMER
+                timer->_etsTimer._called++;
+            #endif
             __lock.unlock();
             timer->_callback(timer);
             __lock.lock();

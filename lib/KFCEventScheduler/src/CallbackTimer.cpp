@@ -58,8 +58,7 @@ CallbackTimer::~CallbackTimer()
 
     __LDBG_printf("ets_timer=%p running=%p armed=%d %s:%u", &_etsTimer, _etsTimer.isRunning(), isArmed(), __S(_file), _line);
 
-    // MUTEX_LOCK_BLOCK(_lock)
-    {
+    MUTEX_LOCK_BLOCK(_lock) {
         if (!_etsTimer.isDone()) {
             _etsTimer.done();
         }

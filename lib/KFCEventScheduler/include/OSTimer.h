@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
+
 #include "Event.h"
 
 #if DEBUG_OSTIMER
@@ -31,6 +32,8 @@
 #        define DEBUG_OSTIMER_FIND 1
 #    endif
 #endif
+
+void dumpTimers(Print &output);
 
 struct ETSTimerEx;
 
@@ -69,114 +72,109 @@ inline void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const String &msg)
     #include <esp_timer.h>
     #include <list>
 
-    struct ETSTimerEx {
-
-        #if DEBUG_OSTIMER
-            ETSTimerEx(const char *name);
-        #else
-            ETSTimerEx();
-        #endif
-        ~ETSTimerEx();
-
-        void create(esp_timer_cb_t callback, void *arg);
-        void arm(int32_t delay, bool repeat, bool millis);
-        bool isNew() const;
-        bool isRunning() const;
-        bool isDone() const;
-        bool isLocked() const;
-        void lock();
-        void unlock();
-        void disarm();
-        void done();
-        void clear();
-        #if DEBUG_OSTIMER_FIND
-            ETSTimerEx *find();
-            static ETSTimerEx *find(ETSTimerEx *timer);
-        #endif
-
-        // terminate all OSTimer instances
-        static void end();
-
-        #if DEBUG_OSTIMER
-            const char *_name;
-            const char *name() const {
-                return _name;
-            }
-            esp_err_t __debug_ostimer_validate_result(esp_err_t error, const char *func, PGM_P file, int line) const;
-        #endif
-        esp_timer_handle_t _timer;
-        bool _running;
-        bool _locked;
-
-        static std::list<ETSTimerEx *> _timers;
-    };
-
 #elif ESP8266 || _MSC_VER
 
     #if ESP8266
         #include <osapi.h>
     #endif
 
-    #ifdef __cplusplus
-    extern "C" {
-    #endif
-
-        extern ETSTimer *timer_list;
-
-    #ifdef __cplusplus
-    }
-    #endif
-
-    // to avoid calling the timer's run() while it is still running, the callback is changed to
-    // a dummy function and restored when run() has finished
-    //
-    // in debug mode the timers integrity is checked to protect against dangling pointers or invalid state
-    struct ETSTimerEx : ETSTimer {
-        static constexpr uint32_t kUnusedMagic = 0x12345678;
-        #if DEBUG_OSTIMER
-            static constexpr uint32_t kMagic = 0x73f281f1;
-            ETSTimerEx(const char *name);
-        #else
-            ETSTimerEx();
-        #endif
-        ~ETSTimerEx();
-
-        void create(ETSTimerFunc *callback, void *arg);
-        void arm(int32_t delay, bool repeat, bool millis);
-        bool isNew() const;
-        bool isRunning() const;
-        bool isDone() const;
-        bool isLocked() const;
-        void lock();
-        void unlock();
-        void disarm();
-        void done();
-        void clear();
-        #if DEBUG_OSTIMER_FIND
-            ETSTimerEx *find();
-            static ETSTimerEx *find(ETSTimerEx *timer);
-        #endif
-
-        // terminate all OSTimer instances
-        static void end();
-
-        static void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg);
-
-        #if DEBUG_OSTIMER
-            uint32_t _magic;
-            const char *_name;
-
-            const char *name() const {
-                return _name;
-            }
-        #else
-            const char *name() const {
-                return PSTR("OSTimer");
-            }
-        #endif
-    };
+    extern "C" ETSTimer *timer_list;
 
 #endif
+
+// ETSTimerEx is using ETSTimer on ESP8266 and esp_timer on ESP32 and adds
+// debug functions to ensure the consistency of the timer states. interrupt
+// locking and semaphores are not built-in, those are in OSTimer and the
+// EventScheduler
+
+struct ETSTimerEx {
+
+    static constexpr uint32_t kUnusedMagic = 0x12345678;
+
+    #if DEBUG_OSTIMER
+        ETSTimerEx(const char *name);
+    #else
+        ETSTimerEx();
+    #endif
+    ~ETSTimerEx();
+
+    void create(esp_timer_cb_t callback, void *arg);
+    void arm(int32_t delay, bool repeat, bool millis);
+    bool isNew() const;
+    bool isRunning() const;
+    bool isDone() const;
+    bool isLocked() const;
+    void lock();
+    void unlock();
+    void disarm();
+    void done();
+    void clear();
+
+    #if DEBUG_OSTIMER_FIND
+        ETSTimerEx *find();
+        static ETSTimerEx *find(ETSTimerEx *timer);
+    #endif
+
+    // terminate all OSTimer instances
+    static void end();
+
+    #if DEBUG_OSTIMER
+        char *_name;
+
+        const char *name() const {
+            return _name;
+        }
+
+        uint32_t _called;
+        uint32_t _calledWhileLocked;
+
+        uint32_t getStatsCalled() const {
+            return _called;
+        }
+
+        uint32_t getStatsCalledWhileLocked() const {
+            return _calledWhileLocked;
+        }
+
+        #if ESP32
+
+            esp_err_t __debug_ostimer_validate_result(esp_err_t error, const char *func, PGM_P file, int line) const;
+
+        #else
+            // locking is implemented by changing the timer callback to _EtsTimerLockedCallback to
+            // avoid using extra memory for locking. this also avoid any extra overhead checking
+            // locks
+            static void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg);
+
+            static constexpr uint32_t kMagic = 0x73f281f1;
+            uint32_t _magic;
+        #endif
+
+    #else
+
+        const char *name() const {
+            return PSTR("ETSTimerEx");
+        }
+
+        uint32_t getStatsCalled() const {
+            return -1;
+        }
+
+        uint32_t getStatsCalledWhileLocked() const {
+            return -1;
+        }
+
+    #endif
+
+    #if ESP32
+        esp_timer_handle_t _timer;
+        bool _running;
+        bool _locked;
+
+        static std::list<ETSTimerEx *> _timers;
+    #endif
+};
+
 
 class OSTimer {
 public:
@@ -202,13 +200,13 @@ public:
     static void unlock(OSTimer &timer);
     static bool isLocked(OSTimer &timer);
 
-    static void ICACHE_FLASH_ATTR _EtsTimerCallback(void *arg);
+    static void ICACHE_FLASH_ATTR _OSTimerCallback(void *arg);
 
-    MutexSemaphore &getLock();
+    SemaphoreMutex &getLock();
 
 protected:
     ETSTimerEx _etsTimer;
-    MutexSemaphore _lock;
+    SemaphoreMutex _lock;
 };
 
 #ifndef _MSC_VER

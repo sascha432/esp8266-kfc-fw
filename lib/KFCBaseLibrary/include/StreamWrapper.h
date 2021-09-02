@@ -106,7 +106,7 @@ private:
     StreamWrapperVector *_streams;
     bool _freeStreams;
     Stream *_input;
-    MutexSemaphore _lock;
+    SemaphoreMutex _lock;
 };
 
 inline StreamCacheVector::StreamCacheVector(uint16_t size) : _size(size)

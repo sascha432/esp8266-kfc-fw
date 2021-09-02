@@ -188,7 +188,6 @@ void ATModeCommandHelp::setPluginName(PGM_P name)
     _name = name;
 }
 
-
 void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName)
 {
     atModeCommandHelp->emplace_back(help, pluginName);
@@ -468,11 +467,10 @@ void at_mode_help_commands()
 #if ENABLE_ARDUINO_OTA
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(AOTA), name);
 #endif
-
 }
 
 static void new_ATModeHelpVector_atModeCommandHelp()
-    {
+{
     #if DEBUG
         if (atModeCommandHelp) {
             __DBG_panic("atModeCommandHelp=%p", atModeCommandHelp);
@@ -727,10 +725,16 @@ bool at_mode_enabled()
     return is_at_mode_enabled;
 }
 
+static String *_line = nullptr;
+
 void at_mode_setup()
 {
     is_at_mode_enabled = System::Flags::getConfig().is_at_mode_enabled;
     __LDBG_printf("AT_MODE_ENABLED=%u", is_at_mode_enabled);
+
+    if (!_line) {
+        _line = new String();
+    }
 
     if (_client) {
         serialHandler.removeClient(*_client);
@@ -834,75 +838,6 @@ void at_mode_print_prefix(Stream &output, const char *command)
 {
     output.printf_P(PSTR("+%s: "), command);
 }
-
-#if DEBUG && ESP32
-
-void at_mode_list_ets_timers(Print &output)
-{
-    for(const auto timer: ETSTimerEx::_timers) {
-        void *callback = nullptr;
-        for(const auto timer: __Scheduler.__getTimers()) {
-            if (&timer->_etsTimer == reinterpret_cast<void *>(timer)) {
-                callback = lambda_target(timer->_callback);
-                break;
-            }
-        }
-        output.printf_P(PSTR("ETSTimerEx=%p running=%p locked=%p callback=%p\n"),
-            timer,
-            timer->isRunning(),
-            timer->isLocked(),
-            callback);
-    }
-    #if DEBUG_EVENT_SCHEDULER
-        output.println(F("Event::Scheduler"));
-        __Scheduler.__list(false);
-    #endif
-}
-
-#elif DEBUG && ESP8266
-
-extern ETSTimer *timer_list;
-
-void at_mode_list_ets_timers(Print &output)
-{
-    ETSTimer *cur = timer_list;
-    while(cur) {
-        void *callback = nullptr;
-        for(const auto timer: __Scheduler.__getTimers()) {
-            if (&timer->_etsTimer == cur) {
-                callback = lambda_target(timer->_callback);
-                break;
-            }
-        }
-        float period_in_s = NAN;
-        auto timeUnit = emptyString.c_str();
-        if (cur->timer_period) {
-            timeUnit = PSTR("s");
-            period_in_s = cur->timer_period / 312500.0;
-            if (period_in_s < 1) {
-                period_in_s /= 1000.0;
-                timeUnit = PSTR("ms");
-            }
-        }
-        output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3f%s) exp=%u callback=%p\n"),
-            cur,
-            cur->timer_func,
-            cur->timer_arg,
-            cur->timer_period,
-            period_in_s,
-            timeUnit,
-            cur->timer_expire,
-            callback);
-
-        cur = cur->timer_next;
-    }
-    #if DEBUG_EVENT_SCHEDULER
-        output.println(F("Event::Scheduler"));
-        __Scheduler.__list(false);
-    #endif
-}
-
-#endif
 
 static void at_mode_adc_loop();
 static void at_mode_adc_delete_object();
@@ -2493,7 +2428,7 @@ void at_mode_serial_handle_event(String &commandString)
     }
     #if DEBUG
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPT))) {
-            at_mode_list_ets_timers(output);
+            dumpTimers(output);
         }
     #endif
     #if DEBUG_CONFIGURATION_GETHANDLE
@@ -2747,12 +2682,8 @@ void at_mode_serial_handle_event(String &commandString)
 void at_mode_serial_input_handler(Stream &client)
 {
     if (is_at_mode_enabled) {
-        static String *_line = nullptr;
         static bool lastWasCR = false;
-        if (!_line) {
-            _line = new String();
-        }
-        auto &line = *_line;
+        auto &line = *_line; // static String line; casues the ESP32 to crash
 
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output only
         while(client.available()) {
@@ -2810,4 +2741,3 @@ void at_mode_serial_input_handler(Stream &client)
 }
 
 #endif
-

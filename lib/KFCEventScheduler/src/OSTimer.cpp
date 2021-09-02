@@ -12,26 +12,129 @@
 #endif
 
 #if ESP32
+
 std::list<ETSTimerEx *> ETSTimerEx::_timers;
+
 #endif
 
-void ICACHE_FLASH_ATTR OSTimer::_EtsTimerCallback(void *arg)
+void ICACHE_FLASH_ATTR OSTimer::_OSTimerCallback(void *arg)
 {
     auto &timer = *reinterpret_cast<OSTimer *>(arg);
-    // MUTEX_LOCK_BLOCK(timer.getLock())
-    {
+    MUTEX_LOCK_BLOCK(timer.getLock()) {
         if (!timer.lock()) {
             return;
         }
-        // __lock.unlock();
+        #if DEBUG_OSTIMER
+            timer._etsTimer._called++;
+        #endif
+        __lock.unlock();
         timer.run();
-        // __lock.lock();
+        __lock.lock();
         OSTimer::unlock(timer);
     }
 }
 
 #ifndef _MSC_VER
 #    pragma GCC pop_options
+#endif
+
+#include "Scheduler.h"
+
+#if ESP8266 || _MSC_VER
+
+void dumpTimers(Print &output)
+{
+    ETSTimer *cur = timer_list;
+    while(cur) {
+        void *callback = nullptr;
+        for(const auto timer: __Scheduler.__getTimers()) {
+            if (reinterpret_cast<ETSTimer *>(&timer->_etsTimer) == cur) {
+                callback = lambda_target(timer->_callback);
+                break;
+            }
+        }
+        float period_in_s = NAN;
+        auto timeUnit = emptyString.c_str();
+        if (cur->timer_period) {
+            timeUnit = PSTR("s");
+            period_in_s = cur->timer_period / 312500.0;
+            if (period_in_s < 1) {
+                period_in_s /= 1000.0;
+                timeUnit = PSTR("ms");
+            }
+        }
+        output.printf_P(PSTR("ETSTimer=%p func=%p arg=%p period=%u (%.3f%s) exp=%u callback=%p"),
+            cur,
+            cur->timer_func,
+            cur->timer_arg,
+            cur->timer_period,
+            period_in_s,
+            timeUnit,
+            cur->timer_expire,
+            callback
+        );
+
+        #if DEBUG_OSTIMER
+            if (cur->timer_func == reinterpret_cast<ETSTimerFunc *>(ETSTimerEx::_EtsTimerLockedCallback) || cur->timer_func == reinterpret_cast<ETSTimerFunc *>(OSTimer::_OSTimerCallback)) {
+                auto timer = reinterpret_cast<ETSTimerEx *>(cur);
+                output.printf_P(PSTR(" ETSTimerEx=%p running=%p locked=%p callback=%p called=%u called_lock=%u name=%s"),
+                    timer,
+                    timer->isRunning(),
+                    timer->isLocked(),
+                    callback,
+                    timer->getStatsCalled(),
+                    timer->getStatsCalledWhileLocked(),
+                    timer->name()
+                );
+            }
+        #endif
+
+        output.println();
+
+        cur = cur->timer_next;
+    }
+    #if DEBUG_EVENT_SCHEDULER
+        output.println(F("Event::Scheduler"));
+        __Scheduler.__list(false);
+    #endif
+}
+
+#elif ESP32
+
+#include <sys/reent.h>
+
+void dumpTimers(Print &output)
+{
+    for(const auto timer: ETSTimerEx::_timers) {
+        void *callback = nullptr;
+        for(const auto timer: __Scheduler.__getTimers()) {
+            if (&timer->_etsTimer == reinterpret_cast<void *>(timer)) {
+                callback = lambda_target(timer->_callback);
+                break;
+            }
+        }
+        output.printf_P(PSTR("ETSTimerEx=%p running=%u locked=%u callback=%p"),
+            timer,
+            timer->isRunning(),
+            timer->isLocked(),
+            callback
+        );
+        #if DEBUG_OSTIMER
+            output.printf_P(PSTR(" called=%u called_lock=%u name=%s"),
+                timer->getStatsCalled(),
+                timer->getStatsCalledWhileLocked(),
+                timer->name()
+            );
+        #endif
+        output.println();
+    }
+    #if DEBUG_EVENT_SCHEDULER
+        output.println(F("Event::Scheduler"));
+        __Scheduler.__list(false);
+    #endif
+    esp_timer_dump(reinterpret_cast<FILE *>(const_cast<__sFILE_fake *>(&__sf_fake_stdout)));
+}
+
 #endif
 
 static void ___DBG_printEtsTimerRaw(const ETSTimerEx &timer, const char *msg)

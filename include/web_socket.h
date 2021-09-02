@@ -223,7 +223,7 @@ private:
     using AsyncWebSocketVector = std::vector<AsyncWebSocket *>;
 
     static AsyncWebSocketVector _webSockets;
-    static MutexSemaphore _lock;
+    static SemaphoreMutex _lock;
 };
 
 class WsClientAsyncWebSocket : public AsyncWebSocket {

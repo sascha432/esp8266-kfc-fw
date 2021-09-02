@@ -4,10 +4,12 @@
 
 #pragma once
 
-struct MutexSemaphore {
-    MutexSemaphore() {}
+struct SemaphoreMutex {
     void lock() {
     }
     void unlock() {
     }
+};
+
+struct SemaphoreMutexRecursive : SemaphoreMutex {
 };

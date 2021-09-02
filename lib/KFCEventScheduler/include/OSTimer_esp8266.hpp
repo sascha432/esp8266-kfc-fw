@@ -18,7 +18,11 @@
 #include "OSTimer.h"
 
 #if DEBUG_OSTIMER
-    inline ETSTimerEx::ETSTimerEx(const char *name) : _magic(kMagic), _name(is_HEAP_P(name) ? strdup_P(name) : name)
+    inline ETSTimerEx::ETSTimerEx(const char *name) :
+        _magic(kMagic),
+        _name(is_HEAP_P(name) ? strdup_P(name) : name),
+        _called(0),
+        _calledWhileLocked(0)
 #else
     inline ETSTimerEx::ETSTimerEx()
 #endif
@@ -230,7 +234,7 @@ inline void ETSTimerEx::end()
     ETSTimer *cur = timer_list;
     while(cur) {
         auto next = cur->timer_next;
-        if (cur->timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback) || cur->timer_func == reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback)) {
+        if (cur->timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback) || cur->timer_func == reinterpret_cast<ETSTimerFunc *>(OSTimer::_OSTimerCallback)) {
             ets_timer_disarm(cur);
             //ets_timer_done(cur);
         }
@@ -240,6 +244,8 @@ inline void ETSTimerEx::end()
 
 inline void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(void *arg)
 {
+    auto &timer = *reinterpret_cast<OSTimer *>(arg);
+    timer._etsTimer._calledWhileLocked++;
 }
 
 #endif

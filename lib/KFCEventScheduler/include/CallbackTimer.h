@@ -57,7 +57,7 @@ namespace Event {
         // once exiting the callback it is being removed
         void disarm();
 
-        MutexSemaphore &getLock();
+        SemaphoreMutex &getLock();
 
     private:
         friend Timer;
@@ -76,7 +76,7 @@ namespace Event {
 
     public:
         ETSTimerEx _etsTimer;
-        MutexSemaphore _lock;
+        SemaphoreMutex _lock;
         Callback _callback;
         Timer *_timer;
         int64_t _delay;
@@ -167,7 +167,7 @@ namespace Event {
         _disarm();
     }
 
-    inline MutexSemaphore &CallbackTimer::getLock()
+    inline SemaphoreMutex &CallbackTimer::getLock()
     {
         return _lock;
     }

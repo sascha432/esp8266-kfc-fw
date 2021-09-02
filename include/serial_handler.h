@@ -158,7 +158,7 @@ namespace SerialHandler {
 
         Clients _clients;
         bool _txFlag; // indicator that _clients have _tx with data
-        MutexSemaphore _lock;
+        SemaphoreMutex _lock;
     };
 
     //

@@ -280,7 +280,6 @@ extern const String emptyString;
 #include "FileOpenMode.h"
 #include "constexpr_tools.h"
 #include <stl_ext/utility.h>
-#include "Mutex.h"
 
 #if __GNUC__
 

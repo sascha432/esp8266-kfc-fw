@@ -238,9 +238,20 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     // ------------------------------------------------------------------------------------
     else if (key == F("HARDWARE")) {
         #if ESP8266
-            output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), system_get_cpu_freq(), formatBytes(ESP.getFreeHeap()).c_str());
+            output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"),
+                formatBytes(ESP.getFlashChipRealSize()).c_str(),
+                system_get_cpu_freq(),
+                formatBytes(ESP.getFreeHeap()).c_str()
+            );
         #elif ESP32
-            output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s, Temperature %.1f%s"), formatBytes(ESP.getFlashChipSize()).c_str(), ESP.getCpuFreqMHz(), formatBytes(ESP.getFreeHeap()).c_str(), temperatureRead(), SPGM(UTF8_degreeC));
+            output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s, Free PSRam %s, Temperature %.1f%s"),
+                formatBytes(ESP.getFlashChipSize()).c_str(),
+                ESP.getCpuFreqMHz(),
+                formatBytes(ESP.getFreeHeap()).c_str(),
+                formatBytes(ESP.getFreePsram()).c_str(),
+                temperatureRead(),
+                SPGM(UTF8_degreeC)
+            );
         #else
             #error Platform not supported
         #endif

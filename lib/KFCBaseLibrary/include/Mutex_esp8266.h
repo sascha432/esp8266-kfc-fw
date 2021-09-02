@@ -6,12 +6,15 @@
 
 #include "Arduino_compat.h"
 
-struct MutexSemaphore {
-    MutexSemaphore() {}
+struct SemaphoreMutex {
+    SemaphoreMutex() {}
     void lock() {
         ets_intr_lock();
     }
     void unlock() {
         ets_intr_unlock();
     }
+};
+
+struct SemaphoreMutexRecursive : SemaphoreMutex {
 };

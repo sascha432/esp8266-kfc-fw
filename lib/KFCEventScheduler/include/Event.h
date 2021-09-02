@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <chrono>
 #include <time.h>
+#include <Mutex.h>
 
 #ifndef _MSC_VER
 #    pragma GCC push_options

@@ -30,6 +30,9 @@ private:
     enum class MetricsType {
         UPTIME,
         MEMORY,
+        #if ESP32
+            PSRAM,
+        #endif
     };
 
     String _getTopic() const;

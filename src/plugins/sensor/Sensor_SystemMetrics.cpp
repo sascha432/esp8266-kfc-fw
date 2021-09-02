@@ -41,6 +41,9 @@ enum class AutoDiscoveryENum {
     UPTIME_SECONDS = 0,
     UPTIME_HUMAN,
     HEAP,
+    #if ESP32
+        PSRAM,
+    #endif
     VERSION,
     #if ESP8266
         HEAP_FRAGMENTATION,
@@ -88,6 +91,18 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 #endif
             }
             break;
+        #if ESP32
+            case AutoDiscoveryENum::PSRAM:
+                if (discovery->create(this, "psram", format)) {
+                    discovery->addStateTopic(_getTopic());
+                    discovery->addUnitOfMeasurement(FSPGM(bytes));
+                    discovery->addValueTemplate(F("psram"));
+                    #if MQTT_AUTO_DISCOVERY_USE_NAME
+                        discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Free PSRAM")));
+                    #endif
+                }
+                break;
+        #endif
         case AutoDiscoveryENum::VERSION:
             if (discovery->create(this, FSPGM(version), format)) {
                 discovery->addStateTopic(_getTopic());
@@ -168,8 +183,12 @@ void Sensor_SystemMetrics::getValues(WebUINS::Events &array, bool timer)
 {
     array.append(
         WebUINS::Values(_getId(MetricsType::UPTIME), _getUptime(), true)
+        #if ESP32
+            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.wf KB<br>"), ESP.getFreeHeap() / 1024.0), true)
+            , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.wf KB<br>"), ESP.getFreePsram() / 1024.0), true)
+        #endif
         #if ESP8266
-            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.3f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
+            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.wf KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
         #endif
     );
 }
@@ -213,6 +232,9 @@ void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)
     WebUINS::Row row;
     row.append(WebUINS::Sensor(_getId(MetricsType::UPTIME), F("Uptime"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
     row.append(WebUINS::Sensor(_getId(MetricsType::MEMORY), F("Free Memory"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
+    #if ESP32
+        row.append(WebUINS::Sensor(_getId(MetricsType::PSRAM), F("Free PSRam"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
+    #endif
     webUI.addRow(row);
 }
 
@@ -227,7 +249,10 @@ String Sensor_SystemMetrics::_getMetricsJson() const
     UnnamedObject jsonObj(
         NamedUint32(FSPGM(uptime), getSystemUptime()),
         NamedStoredString(F("uptime_hr"), _getUptime(F("\n"))),
-        NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
+            NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
+        #if ESP32
+            NamedUint32(F("psram"), ESP.getFreePsram()),
+        #endif
         #if ESP8266
             NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
         #endif
@@ -247,6 +272,10 @@ const __FlashStringHelper *Sensor_SystemMetrics::_getId(MetricsType type) const
             return F("metricsuptime");
         case MetricsType::MEMORY:
             return F("metricsmem");
+        #if ESP32
+            case MetricsType::PSRAM:
+                return F("metricspsram");
+        #endif
     }
     return F("kfcfwmetrics");
 }

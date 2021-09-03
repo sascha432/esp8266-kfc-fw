@@ -184,11 +184,11 @@ void Sensor_SystemMetrics::getValues(WebUINS::Events &array, bool timer)
     array.append(
         WebUINS::Values(_getId(MetricsType::UPTIME), _getUptime(), true)
         #if ESP32
-            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.wf KB<br>"), ESP.getFreeHeap() / 1024.0), true)
-            , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.wf KB<br>"), ESP.getFreePsram() / 1024.0), true)
+            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB"), ESP.getFreeHeap() / 1024.0), true)
+            , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.2f KB"), ESP.getFreePsram() / 1024.0), true)
         #endif
         #if ESP8266
-            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.wf KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
+            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
         #endif
     );
 }

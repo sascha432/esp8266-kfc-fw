@@ -248,6 +248,28 @@ namespace MQTT {
         };
 
         // if the value is not normal (nan, inf, -inf etc..) the output is null to meet JSON standards
+        struct UnnamedFloat : PrintToInterface, UnnamedBase {
+            UnnamedFloat(float value, uint8_t precision) :
+                _precision(precision),
+                _value(value)
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+                void printTo(PrintStringInterface &output) const {
+                if (std::isnormal(_value)) {
+                    output.printf_P(PSTR("%.*f"), _precision, _value);
+                }
+                else {
+                    output.print(F("null"));
+                }
+            }
+
+            uint8_t _precision;
+            float _value;
+        };
+
+        // if the value is not normal (nan, inf, -inf etc..) the output is null to meet JSON standards
         struct UnnamedDouble : PrintToInterface, UnnamedBase {
             UnnamedDouble(double value, uint8_t precision) :
                 _precision(precision),
@@ -267,6 +289,53 @@ namespace MQTT {
 
             uint8_t _precision;
             double _value;
+        };
+
+        // if the value is not normal (nan, inf, -inf etc..) the output is null to meet JSON standards
+        struct UnnamedFormattedFloat : PrintToInterface, UnnamedBase {
+            UnnamedFormattedFloat(float value, FStr format = FSPGM(default_format_double, "%.2f")) :
+                _format(__DBG_validatePointer(format, VP_HP)),
+                _value(value)
+            {
+            }
+
+            inline static FStr getPrecisionFormat(int precision) {
+                switch (precision) {
+                case 0:
+                    return F("%.0f");
+                case 1:
+                    return F("%.1f");
+                case 2:
+                    return F("%.2f");
+                case 3:
+                    return F("%.3f");
+                case 4:
+                    return F("%.4f");
+                case 5:
+                    return F("%.5f");
+                case 6:
+                    return F("%.6f");
+                case 7:
+                    return F("%.7f");
+                default:
+                    break;
+                }
+                return F("%f");
+            }
+
+            inline __attribute__((__always_inline__))
+                void printTo(PrintStringInterface &output) const {
+                if (std::isnormal(_value)) {
+                    __DBG_validatePointer(_format, VP_HP);
+                    output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
+                }
+                else {
+                    output.print(F("null"));
+                }
+            }
+
+            FStr _format;
+            float _value;
         };
 
         // if the value is not normal (nan, inf, -inf etc..) the output is null to meet JSON standards
@@ -297,6 +366,14 @@ namespace MQTT {
                     return F("%.7f");
                 case 8:
                     return F("%.8f");
+                case 9:
+                    return F("%.9f");
+                case 10:
+                    return F("%.10f");
+                case 11:
+                    return F("%.11f");
+                case 12:
+                    return F("%.12f");
                 default:
                     break;
                 }
@@ -318,9 +395,37 @@ namespace MQTT {
             double _value;
         };
 
+        struct NamedFloat : UnnamedFloat, NamedBase {
+            NamedFloat(FStr key, float value, uint8_t precision) :
+                UnnamedFloat(value, precision), _key(key)
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+            FStr key() const {
+                return __DBG_validatePointer(_key, VP_HP);
+            }
+
+            FStr _key;
+        };
+
         struct NamedDouble : UnnamedDouble, NamedBase {
             NamedDouble(FStr key, double value, uint8_t precision) :
                 UnnamedDouble(value, precision), _key(key)
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+            FStr key() const {
+                return __DBG_validatePointer(_key, VP_HP);
+            }
+
+            FStr _key;
+        };
+
+        struct NamedFormattedFloat : UnnamedFormattedFloat, NamedBase {
+            NamedFormattedFloat(FStr key, float value, FStr format = FSPGM(default_format_double)) :
+                UnnamedFormattedFloat(value, format), _key(key)
             {
             }
 
@@ -344,6 +449,39 @@ namespace MQTT {
             }
 
             FStr _key;
+        };
+
+        // if the value is not normaled (nan, inf, -inf etc..) the output is null to meet JSON standards
+        // if the value has more than one leading zero (1.00000, 1.23000), those get trimmed (1.0, 1.23)
+        struct UnnamedTrimmedFormattedFloat : PrintToInterface, UnnamedBase {
+            UnnamedTrimmedFormattedFloat(float value, FStr format = FSPGM(default_format_double)) :
+                _format(__DBG_validatePointer(format, VP_HP)),
+                _value(value)
+            {
+            }
+
+            void printTo(PrintStringInterface &output) const {
+                if (std::isnormal(_value)) {
+                    auto length = output.length();
+                    output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
+                    // find the dot
+                    auto pos = output.indexOf('.', length);
+                    if (pos != -1) {
+                        // trim all zeros
+                        output.rtrim('0');
+                        // if the dot is the last character, append a 0
+                        if (pos == static_cast<decltype(pos)>(output.length() - 1)) {
+                            output += '0';
+                        }
+                    }
+                }
+                else {
+                    output.print(F("null"));
+                }
+            }
+
+            FStr _format;
+            float _value;
         };
 
         // if the value is not normaled (nan, inf, -inf etc..) the output is null to meet JSON standards
@@ -377,6 +515,21 @@ namespace MQTT {
 
             FStr _format;
             double _value;
+        };
+
+        struct NamedTrimmedFormattedFloat : UnnamedTrimmedFormattedFloat, NamedBase {
+            NamedTrimmedFormattedFloat(FStr key, double value, FStr format = FSPGM(default_format_double)) :
+                UnnamedTrimmedFormattedFloat(value, format),
+                _key(key)
+            {
+            }
+
+            inline __attribute__((__always_inline__))
+            FStr key() const {
+                return __DBG_validatePointer(_key, VP_HP);
+            }
+
+            FStr _key;
         };
 
         struct NamedTrimmedFormattedDouble : UnnamedTrimmedFormattedDouble, NamedBase {
@@ -534,9 +687,9 @@ namespace MQTT {
             Effect(const char *effect) : NamedString(F("effect"), effect) {}
         };
 
-        struct Transition : NamedTrimmedFormattedDouble {
-            Transition(double transition, uint8_t precision = 2) :
-                NamedTrimmedFormattedDouble(F("transition"), transition, UnnamedFormattedDouble::getPrecisionFormat(precision))
+        struct Transition : NamedTrimmedFormattedFloat {
+            Transition(float transition, uint8_t precision = 2) :
+                NamedTrimmedFormattedFloat(F("transition"), transition, UnnamedFormattedFloat::getPrecisionFormat(precision))
             {
             }
         };

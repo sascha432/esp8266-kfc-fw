@@ -4,13 +4,13 @@
 
 #include "moon_phase.h"
 
-double unixTimeToJulianDate(time_t time) {
+float unixTimeToJulianDate(time_t time) {
     return (time / 86400.0) + 2440587.5;
 }
 
-void calcMoon(time_t time, double &moonDay, uint8_t &moonPhase,char &moonPhaseFont, bool upperCase) {
-    const double moonCycle = 29.53;
-    double value = (unixTimeToJulianDate(time) - 2244116.75) / moonCycle;
+void calcMoon(time_t time, float &moonDay, uint8_t &moonPhase,char &moonPhaseFont, bool upperCase) {
+    const float moonCycle = 29.53;
+    float value = (unixTimeToJulianDate(time) - 2244116.75) / moonCycle;
     value -= floor(value);
     moonDay = value * moonCycle; // convert to days
     moonPhase = (uint8_t)((value * 8) + 0.5) & 0x07; // convert to moon phase (0-7)

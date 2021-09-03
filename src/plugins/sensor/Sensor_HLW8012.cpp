@@ -371,7 +371,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
 void Sensor_HLW8012::getStatus(Print &output)
 {
     output.printf_P(PSTR("Power Monitor HLW8012" HTML_S(br) "Calibration U=%f, I=%f, P=%f, Rs="), _calibrationU, _calibrationI, _calibrationP);
-    printTrimmedDouble(&output, IOT_SENSOR_HLW80xx_SHUNT, 5);
+    printTrimmedFloat(&output, IOT_SENSOR_HLW80xx_SHUNT, 5);
     output.print(F("R" HTML_S(br)));
 
     #if DEBUG_IOT_SENSOR

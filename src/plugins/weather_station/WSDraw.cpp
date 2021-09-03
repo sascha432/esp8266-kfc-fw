@@ -410,7 +410,7 @@ void WSDraw::_drawSunAndMoon()
 
     _offsetY = Y_START_POSITION_SUN_MOON;
 
-    double moonDay;
+    float moonDay;
     uint8_t moonPhase;
     char moonPhaseFont;
     calcMoon(time(nullptr), moonDay, moonPhase, moonPhaseFont, FONTS_MOON_PHASE_UPPERCASE);

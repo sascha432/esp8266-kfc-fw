@@ -208,6 +208,7 @@ size_t str_case_replace(char *src, int from, int to, size_t maxLen = ~0);
 // return length of the string
 // output can be nullptr to get the length
 size_t printTrimmedDouble(Print *output, double value, int digits = 6);
+size_t printTrimmedFloat(Print *output, float value, int digits = 6);
 
 // static inline bool String_startsWith(const String &str1, char ch) {
 //     return str1.length() != 0 && str1.charAt(0) == ch;

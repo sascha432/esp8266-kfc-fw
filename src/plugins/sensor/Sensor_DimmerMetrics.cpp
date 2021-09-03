@@ -64,10 +64,10 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
 void Sensor_DimmerMetrics::getValues(WebUINS::Events &array, bool timer)
 {
     array.append(
-        WebUINS::Values(F("ntc_temp"), WebUINS::TrimmedDouble(_metrics.metrics.get_ntc_temp(), 1), _metrics.metrics.has_ntc_temp()),
-        WebUINS::Values(F("int_temp"), WebUINS::TrimmedDouble(_metrics.metrics.get_int_temp(), 1), _metrics.metrics.has_int_temp()),
-        WebUINS::Values(F("vcc"), WebUINS::TrimmedDouble(_metrics.metrics.get_vcc(), 3), _metrics.metrics.has_vcc()),
-        WebUINS::Values(F("frequency"), WebUINS::FormattedDouble(_metrics.metrics.get_freqency(), 2), _metrics.metrics.has_frequency())
+        WebUINS::Values(F("ntc_temp"), WebUINS::TrimmedFloat(_metrics.metrics.get_ntc_temp(), 1), _metrics.metrics.has_ntc_temp()),
+        WebUINS::Values(F("int_temp"), WebUINS::TrimmedFloat(_metrics.metrics.get_int_temp(), 1), _metrics.metrics.has_int_temp()),
+        WebUINS::Values(F("vcc"), WebUINS::TrimmedFloat(_metrics.metrics.get_vcc(), 3), _metrics.metrics.has_vcc()),
+        WebUINS::Values(F("frequency"), WebUINS::TrimmedFloat(_metrics.metrics.get_freqency(), 2), _metrics.metrics.has_frequency())
     );
 }
 

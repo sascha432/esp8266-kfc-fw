@@ -223,9 +223,9 @@ protected:
     void _loadEnergyCounter();
     void _incrEnergyCounters(uint32_t count);
 
-    WebUINS::TrimmedDouble _currentToNumber(float current) const;
-    WebUINS::TrimmedDouble _energyToNumber(float energy) const;
-    WebUINS::TrimmedDouble _powerToNumber(float power) const;
+    WebUINS::TrimmedFloat _currentToNumber(float current) const;
+    WebUINS::TrimmedFloat _energyToNumber(float energy) const;
+    WebUINS::TrimmedFloat _powerToNumber(float power) const;
 
     float _getPowerFactor() const;
     float _getEnergy(uint8_t num = 0) const;
@@ -319,16 +319,16 @@ inline void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)
     }
 }
 
-inline WebUINS::TrimmedDouble Sensor_HLW80xx::_currentToNumber(float current) const
+inline WebUINS::TrimmedFloat Sensor_HLW80xx::_currentToNumber(float current) const
 {
     uint8_t digits = 2;
     if (current < 1) {
         digits = 3;
     }
-    return WebUINS::TrimmedDouble(current, digits + _extraDigits);
+    return WebUINS::TrimmedFloat(current, digits + _extraDigits);
 }
 
-inline WebUINS::TrimmedDouble Sensor_HLW80xx::_energyToNumber(float energy) const
+inline WebUINS::TrimmedFloat Sensor_HLW80xx::_energyToNumber(float energy) const
 {
     auto tmp = energy;
     uint8_t digits = 0;
@@ -336,12 +336,12 @@ inline WebUINS::TrimmedDouble Sensor_HLW80xx::_energyToNumber(float energy) cons
         digits++;
         tmp *= 0.1;
     }
-    return WebUINS::TrimmedDouble(energy, 3 - digits + _extraDigits);
+    return WebUINS::TrimmedFloat(energy, 3 - digits + _extraDigits);
 }
 
-inline WebUINS::TrimmedDouble Sensor_HLW80xx::_powerToNumber(float power) const
+inline WebUINS::TrimmedFloat Sensor_HLW80xx::_powerToNumber(float power) const
 {
-    return WebUINS::TrimmedDouble(power, ((power < 10) ? 2 : 1) + _extraDigits);
+    return WebUINS::TrimmedFloat(power, ((power < 10) ? 2 : 1) + _extraDigits);
 }
 
 inline float Sensor_HLW80xx::_getPowerFactor() const

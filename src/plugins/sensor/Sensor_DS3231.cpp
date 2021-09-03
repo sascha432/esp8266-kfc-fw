@@ -72,7 +72,7 @@ void Sensor_DS3231::getValues(WebUINS::Events &array, bool timer)
     auto temp = _readSensorTemp();
     String timeStr = _getTimeStr();
     array.append(
-        WebUINS::Values(FSPGM(ds3231_id_temp), WebUINS::TrimmedDouble(temp, 2), isnan(temp)),
+        WebUINS::Values(FSPGM(ds3231_id_temp), WebUINS::TrimmedFloat(temp, 2), isnan(temp)),
         WebUINS::Values(FSPGM(ds3231_id_time), timeStr, timeStr.indexOf('\n') != -1)
     );
 }

@@ -168,7 +168,7 @@ void Sensor_Battery::getValues(WebUINS::Events &array, bool timer)
 {
     using namespace WebUINS;
     array.append(
-        Values(_getId(TopicType::VOLTAGE), TrimmedDouble(_status.getVoltage(), _config.precision))
+        Values(_getId(TopicType::VOLTAGE), TrimmedFloat(_status.getVoltage(), _config.precision))
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
         , Values(_getId(TopicType::LEVEL), _status.getLevel(), true)
 #endif

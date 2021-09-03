@@ -52,7 +52,7 @@ uint8_t Sensor_LM75A::getAutoDiscoveryCount() const
 void Sensor_LM75A::getValues(WebUINS::Events &array, bool timer)
 {
     auto temp = _readSensor();
-    array.append(WebUINS::Values(_getId(), WebUINS::TrimmedDouble(temp, 2)));
+    array.append(WebUINS::Values(_getId(), WebUINS::TrimmedFloat(temp, 2)));
 }
 
 void Sensor_LM75A::createWebUI(WebUINS::Root &webUI)

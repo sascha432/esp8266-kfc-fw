@@ -77,9 +77,9 @@ void Sensor_BME280::getValues(WebUINS::Events &array, bool timer)
 {
     auto sensor = _readSensor();
     array.append(
-        WebUINS::Values(_getId(FSPGM(temperature)), WebUINS::TrimmedDouble(sensor.temperature, 2), true),
-        WebUINS::Values(_getId(FSPGM(humidity)), WebUINS::TrimmedDouble(sensor.humidity, 2), true),
-        WebUINS::Values(_getId(FSPGM(pressure)), WebUINS::TrimmedDouble(sensor.pressure, 2), true)
+        WebUINS::Values(_getId(FSPGM(temperature)), WebUINS::TrimmedFloat(sensor.temperature, 2), true),
+        WebUINS::Values(_getId(FSPGM(humidity)), WebUINS::TrimmedFloat(sensor.humidity, 2), true),
+        WebUINS::Values(_getId(FSPGM(pressure)), WebUINS::TrimmedFloat(sensor.pressure, 2), true)
     );
 }
 

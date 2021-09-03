@@ -496,6 +496,16 @@ inline static size_t String_rtrim_zeros(String &str, size_t minLength)
     return len;
 }
 
+size_t printTrimmedFloat(Print *output, float value, int digits)
+{
+    auto str = PrintString(F("%.*f"), digits, value);
+    auto size = String_rtrim_zeros(str, str.indexOf('.') + 2); // min. length dot + 1 char to avoid getting "1." for "1.0000"
+    if (output) {
+        return output->print(str);
+    }
+    return size;
+}
+
 size_t printTrimmedDouble(Print *output, double value, int digits)
 {
     auto str = PrintString(F("%.*f"), digits, value);

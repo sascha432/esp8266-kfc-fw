@@ -569,6 +569,28 @@ namespace WebUINS {
         UnnamedObject _json;
     };
 
+    class FloatBase {
+    public:
+        FloatBase(float value, const __FlashStringHelper *format) : _value(value), _format(format) {}
+        FloatBase(float value, int precision = 2) : _value(value), _format(UnnamedFormattedFloat::getPrecisionFormat(precision)) {}
+
+        inline float getValue() const {
+            return _value;
+        }
+
+        inline FStr getFormat() const {
+            return _format;
+        }
+
+        inline bool isNormal() const {
+            return std::isnormal(_value);
+        }
+
+    private:
+        float _value;
+        FStr _format;
+    };
+
     class DoubleBase {
     public:
         DoubleBase(double value, const __FlashStringHelper *format) : _value(value), _format(format) {}
@@ -601,10 +623,20 @@ namespace WebUINS {
         using DoubleBase::DoubleBase;
     };
 
+    class TrimmedFloat : public FloatBase {
+    public:
+        using FloatBase::FloatBase;
+    };
+
     // helper class for double and float with a fixed number of digits
     class FormattedDouble : public DoubleBase {
     public:
         using DoubleBase::DoubleBase;
+    };
+
+    class FormattedFloat : public FloatBase {
+    public:
+        using FloatBase::FloatBase;
     };
 
     // helper class for double and float with zero digits
@@ -612,6 +644,11 @@ namespace WebUINS {
     class RoundedDouble : public TrimmedDouble {
     public:
         RoundedDouble(double value) : TrimmedDouble(value, 0) {}
+    };
+
+    class RoundedFloat : public TrimmedFloat {
+    public:
+        RoundedFloat(float value) : TrimmedFloat(value, 0) {}
     };
 
 
@@ -689,9 +726,19 @@ namespace WebUINS {
             return NamedBool(J(v), value);
         }
 
+        NamedTrimmedFormattedFloat getValueObject(const TrimmedFloat &value) {
+            _validValue = value.isNormal();
+            return NamedTrimmedFormattedFloat(J(v), value.getValue(), value.getFormat());
+        }
+
         NamedTrimmedFormattedDouble getValueObject(const TrimmedDouble &value) {
             _validValue = value.isNormal();
             return NamedTrimmedFormattedDouble(J(v), value.getValue(), value.getFormat());
+        }
+
+        NamedFormattedFloat getValueObject(const FormattedFloat &value) {
+            _validValue = value.isNormal();
+            return NamedFormattedFloat(J(v), value.getValue(), value.getFormat());
         }
 
         NamedFormattedDouble getValueObject(const FormattedDouble &value) {

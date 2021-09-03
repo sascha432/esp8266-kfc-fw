@@ -74,7 +74,7 @@ namespace FormUI {
                 return getField().getValue().toInt();
             }
             double _getValue(double) {
-                return getField().getValue().toFloat();
+                return getField().getValue().toDouble();
             }
 
         protected:

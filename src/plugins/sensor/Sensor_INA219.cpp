@@ -109,18 +109,18 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
 
 void Sensor_INA219::getValues(WebUINS::Events &array, bool timer)
 {
-    array.append(WebUINS::Values(_getId(SensorInputType::VOLTAGE), WebUINS::TrimmedDouble(_data.U(), _config.webui_voltage_precision)));
+    array.append(WebUINS::Values(_getId(SensorInputType::VOLTAGE), WebUINS::TrimmedFloat(_data.U(), _config.webui_voltage_precision)));
     if (_config.webui_current) {
-        array.append(WebUINS::Values(_getId(SensorInputType::CURRENT), WebUINS::TrimmedDouble(_convertCurrent(_data.I()), _config.webui_current_precision)));
-        array.append(WebUINS::Values(_getId(SensorInputType::POWER), WebUINS::TrimmedDouble(_convertPower(_data.P()), _config.webui_power_precision)));
+        array.append(WebUINS::Values(_getId(SensorInputType::CURRENT), WebUINS::TrimmedFloat(_convertCurrent(_data.I()), _config.webui_current_precision)));
+        array.append(WebUINS::Values(_getId(SensorInputType::POWER), WebUINS::TrimmedFloat(_convertPower(_data.P()), _config.webui_power_precision)));
     }
     if (_config.webui_average) {
-        array.append(WebUINS::Values(_getId(SensorInputType::AVG_CURRENT), WebUINS::TrimmedDouble(_convertCurrent(_avgData.I()), _config.webui_current_precision)));
-        array.append(WebUINS::Values(_getId(SensorInputType::AVG_POWER), WebUINS::TrimmedDouble(_convertPower(_avgData.P()), _config.webui_power_precision)));
+        array.append(WebUINS::Values(_getId(SensorInputType::AVG_CURRENT), WebUINS::TrimmedFloat(_convertCurrent(_avgData.I()), _config.webui_current_precision)));
+        array.append(WebUINS::Values(_getId(SensorInputType::AVG_POWER), WebUINS::TrimmedFloat(_convertPower(_avgData.P()), _config.webui_power_precision)));
     }
     if (_config.webui_peak) {
-        array.append(WebUINS::Values(_getId(SensorInputType::PEAK_CURRENT), WebUINS::TrimmedDouble(_convertCurrent(_Ipeak), _config.webui_current_precision)));
-        array.append(WebUINS::Values(_getId(SensorInputType::PEAK_POWER), WebUINS::TrimmedDouble(_convertPower(_Ppeak), _config.webui_power_precision)));
+        array.append(WebUINS::Values(_getId(SensorInputType::PEAK_CURRENT), WebUINS::TrimmedFloat(_convertCurrent(_Ipeak), _config.webui_current_precision)));
+        array.append(WebUINS::Values(_getId(SensorInputType::PEAK_POWER), WebUINS::TrimmedFloat(_convertPower(_Ppeak), _config.webui_power_precision)));
     }
     // __LDBG_printf("U=%f I=%f P=%f %s", _data.U(), _data.I(), _data.P(), array.toString().c_str());
 }

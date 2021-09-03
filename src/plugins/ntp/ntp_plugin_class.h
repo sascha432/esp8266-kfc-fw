@@ -31,7 +31,7 @@ public:
 #endif
 
 public:
-    static void updateNtpCallback();
+    static void updateNtpCallback(settimeofday_cb_args_t);
     static void checkTimerCallback(Event::CallbackTimerPtr timer);
     // static void wifiCallback(WiFiCallbacks::EventType type, void *);
 

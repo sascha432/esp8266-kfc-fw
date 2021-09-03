@@ -21,6 +21,7 @@
 #include <coredecls.h>
 #elif defined(ESP32)
 #include <lwip/apps/sntp.h>
+#include <esp_sntp.h>
 #endif
 
 #if DEBUG_NTP_CLIENT
@@ -129,7 +130,7 @@ static uint32_t _updateDelay = 3600000;
 
 uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
 {
-    __DBG_printf("sntp_update_delay_MS_rfc_not_less_than_15000=%u", _updateDelay);
+    __LDBG_printf("sntp_update_delay_MS_rfc_not_less_than_15000=%u", _updateDelay);
     return _updateDelay;
 }
 
@@ -157,7 +158,7 @@ void NTPPlugin::shutdown()
 {
     _callbackState = CallbackState::SHUTDOWN;
     _checkTimer.remove();
-    settimeofday_cb((BoolCB)nullptr);
+    settimeofday_cb((settimeofday_cb_t)nullptr);
     sntp_stop();
     for (uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
         // remove pointer to server before releasing memory
@@ -235,7 +236,7 @@ void NTPPlugin::_execConfigTime()
     _Timer(_checkTimer).add(interval, true, checkTimerCallback);
 }
 
-void NTPPlugin::updateNtpCallback()
+void NTPPlugin::updateNtpCallback(settimeofday_cb_args_t)
 {
     plugin._updateNtpCallback();
 }

@@ -17,6 +17,7 @@
 #include <esp_err.h>
 #include <esp_wifi.h>
 #include <esp_wifi_types.h>
+#include <esp_sntp.h>
 #include <sdkconfig.h>
 #include <sys/queue.h>
 #include <freertos/portmacro.h>
@@ -203,19 +204,17 @@ inline void panic() {
     }
 }
 
-using BoolCB = std::function<void(bool)>;
-using TrivialCB = std::function<void()>;
+using settimeofday_cb_t = sntp_sync_time_cb_t;
+using settimeofday_cb_args_t = struct timeval *;
 
-void settimeofday_cb(const BoolCB &cb);
-void settimeofday_cb(const TrivialCB &cb);
+inline void settimeofday_cb(settimeofday_cb_t cb)
+{
+    sntp_set_time_sync_notification_cb(cb);
+}
 
 extern "C" {
 
-    // emulation of callback
-    void settimeofday_cb (void (*cb)(void));
-
     uint32_t crc32_le(uint32_t crc, uint8_t const *buf, uint32_t len);
-
     bool can_yield();
 
 }

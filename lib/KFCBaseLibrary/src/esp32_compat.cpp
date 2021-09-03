@@ -53,6 +53,13 @@ extern "C" {
         return result;
     }
 
+    uint32_t sntp_update_delay_MS_rfc_not_less_than_15000();
+
+    uint32_t __wrap_sntp_get_sync_interval()
+    {
+        return sntp_update_delay_MS_rfc_not_less_than_15000();
+    }
+
 }
 
 #endif

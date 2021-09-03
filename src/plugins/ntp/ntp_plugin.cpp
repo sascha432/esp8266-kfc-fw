@@ -116,19 +116,20 @@ uint32_t sntp_startup_delay_MS_rfc_not_less_than_60000()
             _startUpDelay = 1000;
         }
     }
-    __LDBG_printf("sntp_startup_delay_MS_rfc_not_less_than_60000=%u", _startUpDelay);
+    __DBG_printf("sntp_startup_delay_MS_rfc_not_less_than_60000=%u", _startUpDelay);
     return _startUpDelay;
 }
 
 #endif
 
+// sntp_get_sync_interval
 extern "C" uint32_t sntp_update_delay_MS_rfc_not_less_than_15000();
 
 static uint32_t _updateDelay = 3600000;
 
 uint32_t sntp_update_delay_MS_rfc_not_less_than_15000()
 {
-    __LDBG_printf("sntp_update_delay_MS_rfc_not_less_than_15000=%u", _updateDelay);
+    __DBG_printf("sntp_update_delay_MS_rfc_not_less_than_15000=%u", _updateDelay);
     return _updateDelay;
 }
 

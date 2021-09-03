@@ -184,7 +184,8 @@ void NTPPlugin::getStatus(Print &output)
                 if (firstServer) {
                     firstServer = false;
                     output.print(F(HTML_S(br) "Servers "));
-                } else {
+                }
+                else {
                     output.print(FSPGM(comma_));
                 }
                 output.print(server);
@@ -238,7 +239,9 @@ void NTPPlugin::_execConfigTime()
 
 void NTPPlugin::updateNtpCallback(settimeofday_cb_args_t)
 {
-    plugin._updateNtpCallback();
+    LoopFunctions::callOnce([]() {
+        plugin._updateNtpCallback();
+    });
 }
 
 void NTPPlugin::_updateNtpCallback()

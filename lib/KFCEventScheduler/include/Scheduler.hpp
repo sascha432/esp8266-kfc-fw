@@ -59,10 +59,11 @@ namespace Event {
 
 namespace Event {
 
-    inline void CallbackTimer::_releaseManagerTimer()
+    inline void CallbackTimer::_releaseManagedTimer()
     {
         __LDBG_printf("_timer=%p", _timer);
         if (_timer) {
+            __LDBG_printf("removing managed timer=%p", _timer);
             _timer->_managedTimer.clear();
         }
     }
@@ -119,6 +120,9 @@ namespace Event {
                     if (timer->_priority > runAbovePriority && timer->_callbackScheduled) {
                         timer->_callbackScheduled = false;
                         timer->_invokeCallback(timer);
+                        #if ESP32 && defined(CONFIG_HEAP_POISONING_COMPREHENSIVE)
+                            heap_caps_check_integrity_all(true);
+                        #endif
                     }
                 }
             }

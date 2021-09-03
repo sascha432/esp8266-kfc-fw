@@ -40,14 +40,14 @@ using namespace Event;
  *
  * class EventScheduler
  *
- * - support for intervals of months in millisecond precision
+ * - support for intervals of months with millisecond precision
  * - no loop() function that wastes CPU cycles except a single comparison
  * - no IRAM is used
  * - all code is executed in the main loop()
- * - runtime limit per loop()
+ * - runtime limit per loop() call
  * - high priority timers have no runtime limit
- * - priority TIMER is executed directly as callback or user task, not as ISR
- * - min. interval 5 milliseconds or 100 microseconds for PriorityType::TIMER
+ * - priority TIMER is executed directly as callback or task, not in the ISR
+ * - min. interval 5 (ESP8266) / 1 (ESP32) millisecond or 100 microseconds for PriorityType::TIMER
  */
 
 CallbackTimer *Scheduler::_add(const char *name, int64_t delay, RepeatType repeat, Callback callback, PriorityType priority)
@@ -86,9 +86,7 @@ void Scheduler::end()
             if (timer) {
                 MUTEX_LOCK_BLOCK(timer->getLock()) {
                     timer->_disarm();
-                    if (timer->_timer) {
-                        timer->_timer->_managedTimer.clear();
-                    }
+                    timer->_releaseManagedTimer();
                 }
             }
         }
@@ -100,12 +98,12 @@ void Scheduler::end()
                 delete timer;
             }
         }
+        _size = 0;
+        _hasEvent = PriorityType::NONE;
+        _addedFlag = false;
+        _removedFlag = false;
+        _checkTimers = false;
     }
-    _size = 0;
-    _hasEvent = PriorityType::NONE;
-    _addedFlag = false;
-    _removedFlag = false;
-    _checkTimers = false;
 }
 
 bool Scheduler::_removeTimer(CallbackTimerPtr timer)
@@ -120,7 +118,7 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
                     // disarm and delete
                     timer->_disarm();
                     timer->_etsTimer.done();
-                    // mark as deleted in vector
+                    // mark as deleted in vector and schedule cleanup
                     *iterator = nullptr;
                     _removedFlag = true;
                     _checkTimers = true;
@@ -159,7 +157,7 @@ static void __dump(Event::TimerVector &timers)
 void Event::Scheduler::_sort()
 {
     // sort by priority and move all nullptr to the end for removal
-    // if _fp_size changed, new timers have been added
+    // if size() has changed, new timers have been added
     __LDBG_printf("size=%u timers=%u", _size, _timers.size());
 
     std::sort(_timers.begin(), _timers.end(), [](const CallbackTimerPtr a, const CallbackTimerPtr b) {
@@ -169,7 +167,6 @@ void Event::Scheduler::_sort()
     _timers.erase(std::find(_timers.begin(), _timers.end(), nullptr), _timers.end());
     _timers.shrink_to_fit();
     _size = static_cast<int16_t>(_timers.size());
-    //__dump(_timers);
     _addedFlag = false;
     _removedFlag = false;
 }
@@ -189,8 +186,7 @@ void Scheduler::_run()
                     break;
                 }
                 if (timer->_callbackScheduled) {
-                    // MUTEX_LOCK_BLOCK(_lock)
-                    {
+                    MUTEX_LOCK_BLOCK(_lock) {
                         timer->_callbackScheduled = false;
                     }
                     _invokeCallback(timer, timer->_runtimeLimit(timer->_priority));
@@ -199,8 +195,7 @@ void Scheduler::_run()
         }
 
         // reset event flag
-        // MUTEX_LOCK_BLOCK(_lock)
-        {
+        MUTEX_LOCK_BLOCK(_lock) {
             _hasEvent = PriorityType::NONE;
             for (const auto &timer : _timers) {
                 if (timer && timer->_callbackScheduled && timer->_priority > _hasEvent) {
@@ -212,23 +207,21 @@ void Scheduler::_run()
 
     // sort new timers and remove null pointers
     if (_addedFlag || _removedFlag) {
-        // MUTEX_LOCK_BLOCK(_lock)
-        {
+        MUTEX_LOCK_BLOCK(_lock) {
             if (_addedFlag) {
+                // sort by priority and remove deleted timers
                 _sort();
             }
-            // remove null pointers
             else if (_removedFlag) {
+                // remove deleted timers pointers
                 _cleanup();
             }
         }
     }
-
 }
 
-void Scheduler::__TimerCallback(void *arg)
+void Scheduler::__TimerCallback(CallbackTimerPtr timer)
 {
-    auto timer = reinterpret_cast<CallbackTimerPtr>(arg);
     if (timer->_priority == PriorityType::TIMER) {
         // PriorityType::TIMER invoke now
         __Scheduler._invokeCallback(timer, kMaxRuntimePrioTimer);
@@ -236,7 +229,7 @@ void Scheduler::__TimerCallback(void *arg)
     else {
         MUTEX_LOCK_BLOCK(_Scheduler.getLock()) {
             #if SCHEDULER_HAVE_REMAINING_DELAY
-                if (timer->_remainingDelay >= 1) {
+                if (timer->_remainingDelay > 0) {
                     // continue with remaining delay
                     MUTEX_LOCK_BLOCK(timer->getLock()) {
                         uint32_t delay = (--timer->_remainingDelay) ? kMaxDelay : (timer->_delay % kMaxDelay);

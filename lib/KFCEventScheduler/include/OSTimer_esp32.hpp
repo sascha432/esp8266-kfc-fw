@@ -49,7 +49,7 @@
 inline __attribute__((__always_inline__)) ETSTimerEx::~ETSTimerEx()
 {
     done();
-    free(const_cast<char *>(_name));
+    free(_name);
 }
 
 inline void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)

@@ -141,17 +141,17 @@ public:
     const __FlashStringHelper *getResetReason() const;
     static const __FlashStringHelper *getResetReason(Reason_t reason);
 
-    ETSTimer *getTimer();
+    ETSTimerEx *getTimer();
     void armTimer();
     void disarmTimer();
-    static void _timerCallback(void *arg);
+    static void _timerCallback(ResetDetector *arg);
 
 private:
     void _readData();
     void _writeData();
 
 private:
-    ETSTimer _timer;
+    ETSTimerEx _timer;
     Data _storedData;
     Data _data;
     #if DEBUG_RESET_DETECTOR

@@ -56,7 +56,7 @@ inline ETSTimerEx::~ETSTimerEx()
         }
         _magic = 0;
         if (is_HEAP_P(_name)) {
-            free(const_cast<char *>(_name));
+            free(_name);
         }
     #else
         if (!isDone()) {
@@ -242,10 +242,9 @@ inline void ETSTimerEx::end()
     }
 }
 
-inline void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(void *arg)
+inline void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(OSTimer *timer)
 {
-    auto &timer = *reinterpret_cast<OSTimer *>(arg);
-    timer._etsTimer._calledWhileLocked++;
+    timer->_etsTimer._calledWhileLocked++;
 }
 
 #endif

@@ -63,7 +63,7 @@ namespace Event {
         EVENT_SCHEDULER_ASSERT(callbackTimer != nullptr);
         __LDBG_printf("callback_timer=%p timer=%p _timer=%p", callbackTimer, timer, callbackTimer->_timer);
         if (callbackTimer) {
-            callbackTimer->_releaseManagerTimer();
+            callbackTimer->_releaseManagedTimer();
             _callbackTimer->_timer = timer;
         }
     }
@@ -72,7 +72,7 @@ namespace Event {
     {
         EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
         if (_callbackTimer) {
-            _callbackTimer->_releaseManagerTimer();
+            _callbackTimer->_releaseManagedTimer();
         }
         EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
         _callbackTimer = std::exchange(move._callbackTimer, nullptr);

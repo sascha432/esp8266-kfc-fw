@@ -52,7 +52,7 @@ inline void OSTimer::startTimer(Event::OSTimerDelayType delay, bool repeat, bool
         __DBG_printf("start timer name=%s delay=%u repeat=%u millis=%u", _etsTimer._name, delay, repeat, isMillis);
     #endif
     MUTEX_LOCK_BLOCK(_lock) {
-        _etsTimer.create(OSTimer::_OSTimerCallback, this);
+        _etsTimer.create(reinterpret_cast<ETSTimerEx::ETSTimerExCallback>(OSTimer::_OSTimerCallback), this);
         delay = std::clamp<Event::OSTimerDelayType>(delay, Event::kMinDelay, Event::kMaxDelay);
         _etsTimer.arm(delay, repeat, isMillis);
     }

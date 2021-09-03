@@ -232,7 +232,7 @@ inline _Ta *__validatePointer(const _Ta *ptr, ValidatePointerType type, const ch
 // deprecated functions below
 
 #if DEBUG_INCLUDE_SOURCE_INFO
-#   if ESP32 && CONFIG_HEAP_POISONING_COMPREHENSIVE
+#   if ESP32 && defined(CONFIG_HEAP_POISONING_COMPREHENSIVE)
 #       define                                              __debug_prefix(stream, file, line) (stream.printf_P(___debugPrefix, millis(), file, line, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__) + heap_caps_check_integrity_all(true))
 #   else
 #       define                                              __debug_prefix(stream, file, line) stream.printf_P(___debugPrefix, millis(), file, line, ESP.getFreeHeap(), can_yield(), __DEBUG_FUNCTION__)

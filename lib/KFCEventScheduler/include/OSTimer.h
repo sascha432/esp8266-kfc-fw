@@ -36,6 +36,7 @@
 void dumpTimers(Print &output);
 
 struct ETSTimerEx;
+class OSTimer;
 
 extern void ___DBG_printEtsTimer(const ETSTimerEx &timer, const char *msg);
 extern void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const char *msg);
@@ -140,14 +141,11 @@ struct ETSTimerEx {
 
             esp_err_t __debug_ostimer_validate_result(esp_err_t error, const char *func, PGM_P file, int line) const;
 
-        #else
-            // locking is implemented by changing the timer callback to _EtsTimerLockedCallback to
-            // avoid using extra memory for locking. this also avoid any extra overhead checking
-            // locks
-            static void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(void *arg);
+        #elif ESP8266
 
             static constexpr uint32_t kMagic = 0x73f281f1;
             uint32_t _magic;
+
         #endif
 
     #else
@@ -167,12 +165,26 @@ struct ETSTimerEx {
     #endif
 
     #if ESP32
+
+        using ETSTimerExCallback = esp_timer_cb_t;
+
         esp_timer_handle_t _timer;
         bool _running;
         bool _locked;
 
         static std::list<ETSTimerEx *> _timers;
+
+    #elif ESP8266
+
+        using ETSTimerExCallback = ETSTimerFunc *;
+
+        // locking is implemented by changing the timer callback to _EtsTimerLockedCallback to
+        // avoid using extra memory for locking. this also avoid any extra overhead checking
+        // locks/locking interrupts
+        static void ICACHE_FLASH_ATTR _EtsTimerLockedCallback(OSTimer *arg);
+
     #endif
+
 };
 
 
@@ -200,7 +212,7 @@ public:
     static void unlock(OSTimer &timer);
     static bool isLocked(OSTimer &timer);
 
-    static void ICACHE_FLASH_ATTR _OSTimerCallback(void *arg);
+    static void ICACHE_FLASH_ATTR _OSTimerCallback(OSTimer *arg);
 
     SemaphoreMutex &getLock();
 

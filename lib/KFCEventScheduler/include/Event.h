@@ -134,22 +134,22 @@ namespace Event {
 
     template<typename T>
     constexpr milliseconds seconds(T seconds) {
-        return milliseconds((milliseconds::rep)seconds * (milliseconds::rep)1000);
+        return milliseconds(static_cast<milliseconds::rep>(seconds) * static_cast<milliseconds::rep>(1000));
     }
 
     template<typename T>
     constexpr milliseconds minutes(T minutes) {
-        return milliseconds((milliseconds::rep)minutes * (milliseconds::rep)60000);
+        return milliseconds(static_cast<milliseconds::rep>(minutes) * static_cast<milliseconds::rep>(60000));
     }
 
     template<typename T>
     constexpr milliseconds milliseconds_cast(T ms) {
-        return milliseconds((milliseconds::rep)ms * (milliseconds::rep)1);
+        return milliseconds(static_cast<milliseconds::rep>(ms) * static_cast<milliseconds::rep>(1));
     }
 
     template<typename T>
     constexpr milliseconds hertz(T hertz) {
-        return milliseconds((milliseconds::rep)(1000 / hertz));
+        return milliseconds(static_cast<milliseconds::rep>(1000 / hertz));
     }
 
     enum class PriorityType : int8_t {

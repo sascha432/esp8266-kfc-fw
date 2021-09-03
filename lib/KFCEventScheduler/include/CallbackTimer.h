@@ -28,7 +28,7 @@ namespace Event {
     class CallbackTimer {
     public:
 
-        CallbackTimer(const char *name, Callback loopCallback, int64_t delay, RepeatType repeat, PriorityType priority);
+        CallbackTimer(const char *name, Callback callback, int64_t delay, RepeatType repeat, PriorityType priority);
     private:
         ~CallbackTimer();
 
@@ -69,7 +69,7 @@ namespace Event {
         void _invokeCallback(CallbackTimerPtr timer);
         uint32_t _runtimeLimit(PriorityType priority) const;
         // release manager timer without removing the timer it manages
-        void _releaseManagerTimer();
+        void _releaseManagedTimer();
 
     private:
         int64_t __getRemainingDelayMillis() const;

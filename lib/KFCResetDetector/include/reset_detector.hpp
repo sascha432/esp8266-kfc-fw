@@ -160,20 +160,18 @@ bool ResetDetector::hasWakeUpDetected() const
 __RESET_DETECTOR_INLINE_ALWAYS__
 void ResetDetector::disarmTimer()
 {
-    ets_timer_disarm(&_timer);
-    ets_timer_done(&_timer);
+    _timer.done();
 }
 
 __RESET_DETECTOR_INLINE__
-void ResetDetector::_timerCallback(void *arg)
+void ResetDetector::_timerCallback(ResetDetector *rd)
 {
-    auto rd = reinterpret_cast<ResetDetector *>(arg);
     rd->clearCounter();
     rd->disarmTimer();
 }
 
 __RESET_DETECTOR_INLINE__
-ETSTimer *ResetDetector::getTimer()
+ETSTimerEx *ResetDetector::getTimer()
 {
     return &_timer;
 }
@@ -181,9 +179,8 @@ ETSTimer *ResetDetector::getTimer()
 __RESET_DETECTOR_INLINE__
 void ResetDetector::armTimer()
 {
-    ets_timer_disarm(&_timer);
-    ets_timer_setfn(&_timer, reinterpret_cast<ETSTimerFunc *>(_timerCallback), reinterpret_cast<void *>(this));
-    ets_timer_arm_new(&_timer, RESET_DETECTOR_TIMEOUT, false, true);
+    _timer.create(reinterpret_cast<ETSTimerEx::ETSTimerExCallback>(_timerCallback), this);
+    _timer.arm(RESET_DETECTOR_TIMEOUT, false, true);
 }
 
 __RESET_DETECTOR_INLINE__

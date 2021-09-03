@@ -645,6 +645,9 @@ void loop()
         else {
             __Scheduler.run(Event::PriorityType::NORMAL); // check priority above NORMAL after every loop function
             loopFunctions[i].callback();
+            #if ESP32 && defined(CONFIG_HEAP_POISONING_COMPREHENSIVE)
+                heap_caps_check_integrity_all(true);
+            #endif
         }
     }
     if (cleanUp) {

@@ -44,10 +44,7 @@ CallbackTimer::~CallbackTimer()
 {
     __LDBG_printf("_timer=%p has_timer=%u(%p)", _timer, __Scheduler._hasTimer(this), this);
 
-    if (_timer) {
-        __LDBG_printf("removing managed timer=%p", _timer);
-        _timer->_managedTimer.clear();
-    }
+    _releaseManagedTimer();
 
     // the Timer object must be nullptr
     EVENT_SCHEDULER_ASSERT(_timer == nullptr);
@@ -108,7 +105,7 @@ void CallbackTimer::_rearm()
         __LDBG_printf("delay=%.0f repeat=%u", (float)delay, repeat);
     #endif
 
-    _etsTimer.create(Scheduler::__TimerCallback, this);
+    _etsTimer.create(reinterpret_cast<ETSTimerEx::ETSTimerExCallback>(Scheduler::__TimerCallback), this);
     _etsTimer.arm(delay, repeat, true);
 }
 

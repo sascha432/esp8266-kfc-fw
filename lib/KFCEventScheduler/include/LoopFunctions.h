@@ -165,7 +165,9 @@ inline void run_scheduled_functions()
 {
     for(auto fn: scheduled_functions) {
         fn();
-        #if _MSC_VER
+        #if ESP32 && defined(CONFIG_HEAP_POISONING_COMPREHENSIVE)
+            heap_caps_check_integrity_all(true);
+        #elif _MSC_VER
             _ASSERTE(_CrtCheckMemory());
         #endif
     }

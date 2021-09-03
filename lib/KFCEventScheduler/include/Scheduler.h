@@ -45,7 +45,7 @@ namespace Event {
     public:
         static void run(PriorityType runAbovePriority);
         static void run();
-        static void __TimerCallback(void *arg);
+        static void __TimerCallback(CallbackTimerPtr timer);
 
     public:
         TimerVector &__getTimers() { return _timers; }

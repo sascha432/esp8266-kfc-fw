@@ -553,8 +553,7 @@ public:
 
     DisplayTimer() :
         _type(DisplayType::HEAP),
-        _maxHeap(0),
-        _maxHeapTime(0)
+        _maxHeap(0)
     {
         __DBG_assert_printf(displayTimer == nullptr, "displayTimer not null");
         if (displayTimer) {
@@ -578,7 +577,7 @@ public:
         }
         _Timer(_timer).add(interval, true, DisplayTimer::printTimerCallback);
         _maxHeap = 0;
-        _minHeap = 0;
+        _minHeap = ESP.getFreeHeap();
         _rssiMin = std::numeric_limits<decltype(_rssiMin)>::min();
         _rssiMax = 0;
     }
@@ -588,15 +587,28 @@ public:
     }
 
     void printHeap() {
-        auto heap = ESP.getFreeHeap();
-        if (heap > _maxHeap) {
-            _maxHeap = heap;
-            _maxHeapTime = getSystemUptime();
-        }
-        Serial.printf_P(PSTR("+HEAP: free=%u(%u/%u@%us) cpu=%dMHz frag=%u uptime=%us\n"), heap, _minHeap, _maxHeap, _maxHeapTime, ESP.getCpuFreqMHz(), ESP.getHeapFragmentation(), getSystemUptime());
-        _minHeap = heap;
-        #if defined(UMM_STATS) || defined(UMM_STATS_FULL)
-        umm_print_stats(2);
+        #if ESP32
+            Serial.printf_P(PSTR("+HEAP: heap=%u(min=%u/max=%u) psram=%u(min=%u) cpu=%dMHz uptime=%us\n"),
+                ESP.getFreeHeap(),
+                _minHeap,
+                _maxHeap,
+                ESP.getFreePsram(),
+                ESP.getMinFreePsram(),
+                ESP.getCpuFreqMHz(),
+                getSystemUptime()
+            );
+        #else
+            Serial.printf_P(PSTR("+HEAP: free=%u(min=%u/max=%u) cpu=%dMHz frag=%u uptime=%us\n"),
+                ESP.getFreeHeap(),
+                _minHeap,
+                _maxHeap,
+                ESP.getCpuFreqMHz(),
+                ESP.getHeapFragmentation(),
+                getSystemUptime()
+            );
+            #if defined(UMM_STATS) || defined(UMM_STATS_FULL)
+                umm_print_stats(2);
+            #endif
         #endif
     }
 
@@ -609,15 +621,11 @@ public:
                     Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
                 }
             }
-            Serial.printf_P(PSTR(" A0=%u\n"), analogRead(A0));
+            Serial.printf_P(PSTR("A0=%u\n"), analogRead(A0));
         #elif defined(ESP32)
             for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
-                if (i != 1 && !isFlashInterfacePin(i)) { // do not display TX and flash SPI
-                    // pinMode(i, INPUT);
-                    Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
-                }
+                Serial.printf_P(PSTR("%u=%u%c"), i, digitalRead(i), (i == NUM_DIGITAL_PINS - 1) ? '\n' : ' ');
             }
-            Serial.println();
             // static const uint8_t pins[] PROGMEM = {36, 39};
             // auto ptr = pins;
             // for(uint8_t i = 0; i < sizeof(pins); i++) {
@@ -674,7 +682,8 @@ public:
     }
 
     void _loop() {
-        _minHeap = std::min<uint16_t>(ESP.getFreeHeap(), _minHeap);
+        _minHeap = std::min<uint32_t>(ESP.getFreeHeap(), _minHeap);
+        _maxHeap = std::max<uint32_t>(ESP.getFreeHeap(), _maxHeap);
     }
 
     static void loop() {
@@ -688,9 +697,8 @@ private:
     DisplayType _type;
     int16_t _rssiMin;
     int16_t _rssiMax;
-    uint16_t _maxHeap;
-    uint16_t _minHeap;
-    uint16_t _maxHeapTime;
+    uint32_t _maxHeap;
+    uint32_t _minHeap;
 };
 
 DisplayTimer *displayTimer;

@@ -239,9 +239,13 @@ void NTPPlugin::_execConfigTime()
 
 void NTPPlugin::updateNtpCallback(settimeofday_cb_args_t)
 {
-    LoopFunctions::callOnce([]() {
+    #if ESP32
+        LoopFunctions::callOnce([]() {
+            plugin._updateNtpCallback();
+        });
+    #else
         plugin._updateNtpCallback();
-    });
+    #endif
 }
 
 void NTPPlugin::_updateNtpCallback()

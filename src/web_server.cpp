@@ -1341,7 +1341,7 @@ AsyncWebServerEx *Plugin::getWebServerObject()
 
 bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri)
 {
-    __DBG_validatePointer(handler, VP_HSU);
+    __DBG_validatePointerCheck(handler, VP_HSU);
     __LDBG_assert_printf(!!plugin._server, "_server is nullptr");
     if (!plugin._server) {
         return false;
@@ -1353,7 +1353,7 @@ bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri
 
 AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerFunction onRequest)
 {
-    __DBG_validatePointer(uri, VP_HS);
+    __DBG_validatePointerCheck(uri, VP_HS);
     __LDBG_assert_printf(!!plugin._server, "_server is nullptr");
     if (!plugin._server) {
         return nullptr;

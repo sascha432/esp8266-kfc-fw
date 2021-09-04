@@ -55,16 +55,19 @@ extern "C" {
 
 #elif ESP32
 
+    #include <freertos/portmacro.h>
+
     struct InterruptLock {
-        InterruptLock() {
-            XTOS_DISABLE_ALL_INTERRUPTS;
+        InterruptLock() : _mux(portMUX_INITIALIZER_UNLOCKED) {
+            portENTER_CRITICAL_SAFE(&_mux);
         }
         ~InterruptLock() {
-            XTOS_ENABLE_INTERRUPTS;
+            portEXIT_CRITICAL_SAFE(&_mux);
         }
         static constexpr uint32_t savedInterruptLevel() {
             return 0;
         }
+        portMUX_TYPE _mux;
     };
 
 #else

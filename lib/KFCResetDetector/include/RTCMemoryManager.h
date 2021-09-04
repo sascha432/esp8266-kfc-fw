@@ -38,10 +38,10 @@ public:
     #endif
 
     #if ESP8266
-        static constexpr uint16_t kMemorySize = 64 * 4; // fixed
         // static constexpr uint16_t kMemoryLimit = kMemorySize - sizeof(Header_t);
         static constexpr uint8_t kBlockSize = 4;
         static constexpr uint8_t kBaseAddress = 64;
+        static constexpr uint16_t kMemorySize = (128 - kBaseAddress) * kBlockSize; // fixed
         static constexpr uint8_t kLastAddress = kBaseAddress + (kMemorySize / kBlockSize) - 1;
         static constexpr uint32_t kClearNumBlocks = 16;
     #elif ESP32
@@ -202,6 +202,10 @@ private:
     static RtcTime _readTime();
     static void _writeTime(const RtcTime &time);
     static void _clearTime();
+
+    // TODO remove
+    public:
+    static uint32_t _bufSize;
 
     #if RTC_SUPPORT == 0
     public:

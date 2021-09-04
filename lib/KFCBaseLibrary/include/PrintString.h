@@ -140,7 +140,7 @@ size_t PrintString::write(const char *buf, size_t size)
 inline __attribute__((__always_inline__))
 size_t PrintString::_write(const uint8_t *buf, size_t size)
 {
-    __DBG_validatePointer(buf, VP_HS);
+    __DBG_validatePointerCheck(buf, VP_HS);
     auto len = length();
     if (size && !reserve(len + size)) {
         return 0;
@@ -166,7 +166,7 @@ size_t PrintString::write_P(PGM_P buf, size_t size)
 inline __attribute__((__always_inline__))
 size_t PrintString::print(const __FlashStringHelper *str)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     return Print::print(str);
 }
 

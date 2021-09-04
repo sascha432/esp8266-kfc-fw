@@ -31,7 +31,7 @@ inline size_t StringBuffer::space() const
 
 inline const char *StringBuffer::addString(const char *str, size_t len)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     if (len + 1 > size()) {
         return nullptr;
     }
@@ -87,7 +87,7 @@ inline size_t StringBufferPool::size() const
 
 inline const char *StringDeduplicator::isAttached(const char *str, size_t *len)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     if (is_PGM_P(str)) {
         _fpStrCount++;
         auto iterator = std::find(_fpStrings.begin(), _fpStrings.end(), str);
@@ -108,7 +108,7 @@ inline const char *StringDeduplicator::isAttached(const char *str, size_t *len)
 
 inline const char *StringDeduplicator::isAttached(const char *str, size_t *len)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     if (is_PGM_P(str)) {
         return str;
     }
@@ -119,20 +119,20 @@ inline const char *StringDeduplicator::isAttached(const char *str, size_t *len)
 
 inline const char *StringDeduplicator::isAttached(const __FlashStringHelper *str, size_t *len)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     return isAttached(reinterpret_cast<const char *>(str), len);
 }
 
 inline const char *StringDeduplicator::isAttached(const String &str)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     size_t len = str.length();
     return isAttached(str.c_str(), &len);
 }
 
 inline const char *StringDeduplicator::attachString(const char *str)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     size_t len = ~0U;
     const char *ptr = isAttached(str, &len);
     if (ptr) {
@@ -152,13 +152,13 @@ inline const char *StringDeduplicator::attachString(const char *str)
 
 inline const char *StringDeduplicator::attachString(const __FlashStringHelper *str)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     return attachString(reinterpret_cast<const char *>(str));
 }
 
 inline const char *StringDeduplicator::attachString(const String &str)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     return attachString(str.c_str());
 }
 

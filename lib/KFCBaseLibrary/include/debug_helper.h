@@ -73,16 +73,17 @@ inline _Ta *__validatePointer(const _Ta *ptr, ValidatePointerType type, const ch
     return reinterpret_cast<_Ta *>(__validatePointer(reinterpret_cast<const void *>(ptr), type, file, line, func));
 }
 
-#define VP_HS                            ValidatePointerType::P_HS
-#define VP_HSU                           ValidatePointerType::P_HSU
-#define VP_HP                            ValidatePointerType::P_HP
-#define VP_HPS                           ValidatePointerType::P_HPS
-#define VP_PS                            ValidatePointerType::P_PS
-#define VP_NHS                           ValidatePointerType::P_NHS
-#define VP_NHP                           ValidatePointerType::P_NHP
-#define VP_NHPS                          ValidatePointerType::P_NHPS
-#define VP_NPS                           ValidatePointerType::P_NPS
-#define __DBG_validatePointer(ptr, type) __validatePointer(ptr, type, __BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
+#define VP_HS                                       ValidatePointerType::P_HS
+#define VP_HSU                                      ValidatePointerType::P_HSU
+#define VP_HP                                       ValidatePointerType::P_HP
+#define VP_HPS                                      ValidatePointerType::P_HPS
+#define VP_PS                                       ValidatePointerType::P_PS
+#define VP_NHS                                      ValidatePointerType::P_NHS
+#define VP_NHP                                      ValidatePointerType::P_NHP
+#define VP_NHPS                                     ValidatePointerType::P_NHPS
+#define VP_NPS                                      ValidatePointerType::P_NPS
+#define __DBG_validatePointer(ptr, type)            __validatePointer(ptr, type, __BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
+#define __DBG_validatePointerCheck(ptr, type)       __validatePointer(ptr, type, __BASENAME_FILE__, __LINE__, __DEBUG_FUNCTION__)
 
 // call in setup, after initializing the output stream
 #define DEBUG_HELPER_INIT()                                 DebugContext::__state = DEBUG_HELPER_STATE_DEFAULT;

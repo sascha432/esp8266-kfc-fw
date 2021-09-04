@@ -288,7 +288,9 @@ namespace SerialHandler {
     inline void Wrapper::_loop()
     {
         #if ESP32
-            esp_task_wdt_add(NULL);
+            if (esp_task_wdt_add(nullptr) != ESP_OK) {
+                __DBG_printf_E("esp_task_wdt_add failed");
+            }
         #endif
         MUTEX_LOCK_BLOCK(_lock) {
             _pollSerial();

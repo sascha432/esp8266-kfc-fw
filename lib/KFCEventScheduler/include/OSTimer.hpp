@@ -84,7 +84,7 @@ inline bool OSTimer::lock()
 inline void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
 {
     #if DEBUG_OSTIMER_FIND
-        if (!ETSTimerEx::find(timer)) {
+        if (!ETSTimerEx::find(&timer._etsTimer)) {
             return;
         }
     #endif
@@ -100,7 +100,7 @@ inline void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
     }
 
     #if DEBUG_OSTIMER_FIND
-        if (!ETSTimerEx::find(timer)) {
+        if (!ETSTimerEx::find(&timer._etsTimer)) {
             #if DEBUG_OSTIMER
                 ::printf(PSTR("%p:unlock() timer vanished\n"), &timer);
             #endif
@@ -116,7 +116,7 @@ inline void OSTimer::unlock(OSTimer &timer, uint32_t timeoutMicros)
 inline void OSTimer::unlock(OSTimer &timer)
 {
     #if DEBUG_OSTIMER_FIND
-        if (!ETSTimerEx::find(timer)) {
+        if (!ETSTimerEx::find(&timer._etsTimer)) {
             return;
         }
     #endif

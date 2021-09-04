@@ -88,7 +88,11 @@ inline void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const String &msg)
 // locking and semaphores are not built-in, those are in OSTimer and the
 // EventScheduler
 
-struct ETSTimerEx {
+struct ETSTimerEx
+    #if ESP8266
+        : ETSTimer
+    #endif
+{
 
     static constexpr uint32_t kUnusedMagic = 0x12345678;
 
@@ -99,7 +103,11 @@ struct ETSTimerEx {
     #endif
     ~ETSTimerEx();
 
-    void create(esp_timer_cb_t callback, void *arg);
+    #if ESP32
+        void create(esp_timer_cb_t callback, void *arg);
+    #else
+        void create(ETSTimerFunc *callback, void *arg);
+    #endif
     void arm(int32_t delay, bool repeat, bool millis);
     bool isNew() const;
     bool isRunning() const;
@@ -217,6 +225,8 @@ public:
     SemaphoreMutex &getLock();
 
 protected:
+    friend ETSTimerEx;
+
     ETSTimerEx _etsTimer;
     SemaphoreMutex _lock;
 };

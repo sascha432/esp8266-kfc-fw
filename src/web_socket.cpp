@@ -103,25 +103,6 @@ void WsClientAsyncWebSocket::_enableAuthentication()
     setAuthentication(String('\xff'), password);
 }
 
-
-WsClient::WsClient(AsyncWebSocketClient *client) : _authenticated(false), _client(client)
-{
-}
-
-WsClient::~WsClient()
-{
-}
-
-void WsClient::setAuthenticated(bool authenticated)
-{
-    _authenticated = authenticated;
-}
-
-bool WsClient::isAuthenticated() const
-{
-    return _authenticated;
-}
-
 void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance)
 {
     if (WsClient::_webSockets.empty()) {
@@ -382,7 +363,9 @@ static bool __get_server(AsyncWebSocket *&server, AsyncWebSocketClient *client)
 void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
     #if ESP32
-        esp_task_wdt_add(NULL);
+        if (esp_task_wdt_add(nullptr) != ESP_OK) {
+            __DBG_printf_E("esp_task_wdt_add failed");
+        }
     #endif
     auto qDelay = getQeueDelay();
     buffer->lock();
@@ -408,7 +391,7 @@ void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSock
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
     if (__get_server(server, sender)) {
-        broadcast(server, sender, buffer);
+        _broadcast(server, sender, buffer);
     }
 }
 
@@ -530,7 +513,9 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         return;
     }
     #if ESP32
-        esp_task_wdt_add(NULL);
+        if (esp_task_wdt_add(nullptr) != ESP_OK) {
+            __DBG_printf_E("esp_task_wdt_add failed");
+        }
     #endif
     WsClient::forsocket(server, client, [server, &message](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {
@@ -560,7 +545,9 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         return;
     }
     #if ESP32
-        esp_task_wdt_add(NULL);
+        if (esp_task_wdt_add(nullptr) != ESP_OK) {
+            __DBG_printf_E("esp_task_wdt_add failed");
+        }
     #endif
     WsClient::forsocket(server, client, [server, &message](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {
@@ -578,7 +565,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         }
     });
     #if ESP32
-        esp_task_wdt_delete(NULL);
+        esp_task_wdt_delete(nullptr);
     #endif
 }
 
@@ -589,7 +576,9 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         return;
     }
     #if ESP32
-        esp_task_wdt_add(NULL);
+        if (esp_task_wdt_add(nullptr) != ESP_OK) {
+            __DBG_printf_E("esp_task_wdt_add failed");
+        }
     #endif
     WsClient::forsocket(server, client, [server, &json](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {

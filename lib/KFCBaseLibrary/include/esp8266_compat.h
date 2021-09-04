@@ -10,8 +10,9 @@
 
 #include <os_type.h>
 #include <user_interface.h>
+#include <coredecls.h>
 
-#define WiFi_isHidden(num)                          WiFi.isHidden(num)
+#define WiFi_isHidden(num) WiFi.isHidden(num)
 
 using settimeofday_cb_t = BoolCB;
 using settimeofday_cb_args_t = void;
@@ -34,7 +35,6 @@ extern "C" {
     void settimeofday_cb (void (*cb)(void));
 
 #endif
-
 
 #if ARDUINO_ESP8266_MAJOR >= 3
 

@@ -680,7 +680,7 @@ inline void HttpHeaders::init()
 
 inline HttpHeader &HttpHeaders::add(HttpHeader *header)
 {
-    __DBG_validatePointer(header, VP_HSU);
+    __DBG_validatePointerCheck(header, VP_HSU);
     _headers.emplace_back(header);
     return *_headers.back().get();
 }
@@ -692,7 +692,7 @@ inline void HttpHeaders::add(const String& name, const String& value)
 
 inline HttpHeader &HttpHeaders::replace(HttpHeader *header)
 {
-    __DBG_validatePointer(header, VP_HSU);
+    __DBG_validatePointerCheck(header, VP_HSU);
     remove(*header);
     _headers.emplace_back(header);
     return *_headers.back().get();

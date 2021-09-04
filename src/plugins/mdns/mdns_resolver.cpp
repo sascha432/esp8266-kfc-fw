@@ -277,15 +277,10 @@ void MDNSResolver::Query::end()
 
 void MDNSResolver::Query::dnsFoundCallback(const char *name, const ip_addr *ipaddr, void *arg)
 {
-    __LDBG_printf("dnsFoundCallback=%p query=%p address=%s", arg, MDNSPlugin::getPlugin().findQuery(arg), ipaddr ? IPAddress(ipaddr->addr).toString().c_str() : SPGM(null));
+    __LDBG_printf("dnsFoundCallback=%p query=%p address=%s", arg, MDNSPlugin::getPlugin().findQuery(arg), IPAddress(ipaddr).toString().c_str());
     if (ipaddr && MDNSPlugin::getPlugin().findQuery(arg)) { // verify that the query has not been deleted yet
         auto &query = *reinterpret_cast<MDNSResolver::Query *>(arg);
-        #if ESP32
-            auto addr = ipaddr->u_addr.ip4.addr;
-        #else
-            auto addr = ipaddr->addr;
-        #endif
-        query._hostname = IPAddress(addr).toString();
+        query._hostname = IPAddress(ipaddr).toString();
         query._dataCollected |= DATA_COLLECTED_HOSTNAME;
         __LDBG_printf("resolved=%s", query._hostname.c_str());
     }

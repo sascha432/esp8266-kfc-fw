@@ -27,7 +27,7 @@
 #include <DumpBinary.h>
 #include <Buffer.h>
 
-#if DEBUG_RTC_MEMORY_MANAGER && 1
+#if DEBUG_RTC_MEMORY_MANAGER
 #include "debug_helper_enable.h"
 #else
 #include "debug_helper_disable.h"
@@ -44,6 +44,8 @@ namespace DeepSleep {
 }
 #endif
 
+//TODO remove
+uint32_t RTCMemoryManager::_bufSize;
 
 #if RTC_SUPPORT == 0
 RTCMemoryManager::RtcTimer RTCMemoryManager::_rtcTimer;
@@ -87,13 +89,25 @@ namespace RTCMemoryManagerNS {
 
         #else
 
-            inline static bool system_rtc_mem_read(uint8_t ofs, void *data, uint16_t len) {
-                __DBG_assert_printf(((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0), "read OOB ofs=%d len=%d", ofs, len);
+            inline static bool system_rtc_mem_read(uint8_t ofs, void *data, uint16_t len)
+            {
+                __LDBG_assert_printf(
+                    (ofs >= RTCMemoryManager::kBaseAddress) &&
+                    (((ofs * RTCMemoryManager::kBlockSize) + len) <= (RTCMemoryManager::kMemorySize + (RTCMemoryManager::kBaseAddress * RTCMemoryManager::kBlockSize))) &&
+                    (len != 0),
+                    "read OOB ofs=%d len=%d", ofs, len
+                );
                 return ::system_rtc_mem_read(ofs, data, len);
             }
 
-            inline static bool system_rtc_mem_write(uint8_t ofs, const void *data, uint16_t len) {
-                __DBG_assert_printf(((ofs * 4) >= 256 && (ofs * 4 + len) <= 512 && len != 0), "write OOB ofs=%d len=%d", ofs, len);
+            inline static bool system_rtc_mem_write(uint8_t ofs, const void *data, uint16_t len)
+            {
+                __LDBG_assert_printf(
+                    (ofs >= RTCMemoryManager::kBaseAddress) &&
+                    (((ofs * RTCMemoryManager::kBlockSize) + len) <= (RTCMemoryManager::kMemorySize + (RTCMemoryManager::kBaseAddress * RTCMemoryManager::kBlockSize))) &&
+                    (len != 0),
+                    "write OOB ofs=%d len=%d", ofs, len
+                );
                 return ::system_rtc_mem_write(ofs, data, len);
             }
 
@@ -103,17 +117,19 @@ namespace RTCMemoryManagerNS {
 
         RTC_NOINIT_ATTR uint8_t rtcMemoryBlock[RTCMemoryManager::kMemorySize];
 
-        bool system_rtc_mem_read(size_t ofs, void *data, size_t len) {
-            __LDBG_printf("ofs=%u data=%p len=%u", ofs, data, len);
-            memmove_P(data, rtcMemoryBlock + ofs * RTCMemoryManager::kBlockSize, len);
-            __LDBG_printf("return true");
+        bool system_rtc_mem_read(size_t ofs, void *data, size_t len)
+        {
+            ofs *= RTCMemoryManager::kBlockSize;
+            __DBG_assert_printf(ofs + len <= (sizeof(rtcMemoryBlock) - RTCMemoryManager::kBlockSize * RTCMemoryManager::kBaseAddress), "read OOB ofs=%d len=%d max=%u", ofs, len, sizeof(rtcMemoryBlock));
+            memmove_P(data, rtcMemoryBlock + ofs, len);
             return true;
         }
 
-        bool system_rtc_mem_write(size_t ofs, void *data, size_t len) {
-            __LDBG_printf("ofs=%u data=%p len=%u", ofs, data, len);
-            memmove_P(rtcMemoryBlock + ofs * RTCMemoryManager::kBlockSize, data, len);
-            __LDBG_printf("return true");
+        bool system_rtc_mem_write(size_t ofs, void *data, size_t len)
+        {
+            ofs *= RTCMemoryManager::kBlockSize;
+            __DBG_assert_printf(ofs + len <= (sizeof(rtcMemoryBlock) - RTCMemoryManager::kBlockSize * RTCMemoryManager::kBaseAddress), "write OOB ofs=%d len=%d max=%u", ofs, len, sizeof(rtcMemoryBlock));
+            memmove_P(rtcMemoryBlock + ofs, data, len);
             return true;
         }
 
@@ -149,14 +165,11 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
             __DBG_printf("malloc failed length=%u max_size=%u", size, kMemorySize);
             break;
         }
-        // auto buf = reinterpret_cast<uint8_t *>(calloc(size, 1));
-        #if ESP32
         //TODO buffer overflow
         auto buf = new uint8_t[kMemorySize + 16]();
         memset(buf + size, 0xcc, kMemorySize + 16 - size);
-        #else
-        auto buf = new uint8_t[size]();
-        #endif
+        _bufSize = size;
+        // auto buf = new uint8_t[size]();
         if (!buf) {
             __DBG_printf("malloc failed length=%u", size);
             break;
@@ -164,7 +177,7 @@ uint8_t *RTCMemoryManager::_readMemory(Header_t &header, uint16_t extraSize) {
         __LDBG_printf("allocated size=%u aligned=%u address=%u crc_len=%u", minSize, size, header.start_address(), header.crc_offset());
         uint16_t crc = static_cast<uint16_t>(~0U);
         if (header.crc_offset() > size) {
-            __DBG_printf("read out of bounds size=%u max=%u", header.crc_offset(), size);
+            __DBG_printf("read OOB size=%u max=%u", header.crc_offset(), size);
             break;
         }
         if (!RTCMemoryManagerNS::system_rtc_mem_read(header.start_address(), buf, header.crc_offset())) {
@@ -218,6 +231,12 @@ uint8_t *RTCMemoryManager::read(RTCMemoryId id, uint8_t &length)
 void RTCMemoryManager::release(uint8_t *buffer)
 {
     if (buffer) {
+        //TODO remove
+        for(uint32_t i = _bufSize; i < kMemorySize + 16; i++) {
+            if (buffer[i] != 0xcc) {
+                __DBG_printf_E("buffer overflow @ %u (%u)", i, i - _bufSize);
+            }
+        }
         delete[] buffer;
     }
 }
@@ -288,7 +307,7 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
                 memmove(outPtr, ptr, entry.length);
                 outPtr += entry.length;
                 newLength += entry.length + sizeof(entry);
-                __LDBG_assert_printf(outPtr - ptr < kMemoryLimit, "read beyond memory limit size=%d limit=%u", (outPtr - ptr), kMemoryLimit);
+                __LDBG_assert_panic(outPtr - ptr < kMemoryLimit, "read OOB size=%d limit=%u", (outPtr - ptr), kMemoryLimit);
                 __LDBG_printf("copy id=%u len=%u distance=%d nl=%u", entry.mem_id, entry.length, header.distance(outPtr, ptr), newLength);
             }
             else {
@@ -306,7 +325,11 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
             __DBG_printf("malloc failed length=%u limit=%u", size, kMemoryLimit);
             return false;
         }
-        memUnqiuePtr.reset(new uint8_t[size]());
+        //TODO buffer overflow
+        memUnqiuePtr.reset(new uint8_t[kMemorySize + 16]());
+        memset(memUnqiuePtr.get() + size, 0xcc, kMemorySize + 16 - size);
+        _bufSize = size;
+        // memUnqiuePtr.reset(new uint8_t[size]());
         memPtr = memUnqiuePtr.get();
         if (!memUnqiuePtr) {
             __DBG_printf("malloc failed length=%u", size);
@@ -348,23 +371,26 @@ bool RTCMemoryManager::write(RTCMemoryId id, const void *dataPtr, uint8_t dataLe
     header.crc = crc16_update(memPtr, header.crc_offset());
     memcpy(outPtr + offsetof(Header_t, crc), &header.crc, sizeof(header.crc));
 
-    __LDBG_assert_printf(header.length < kMemoryLimit, "data too long size=%u limit=%u", header.length, kMemoryLimit);
-    __LDBG_printf("write: address=%u[%u-%u] length=%u crc=0x%04x", header.start_address(), kBaseAddress, kLastAddress, header.length, header.crc);
+    __LDBG_printf("write: address=%u-%u[%u-%u] length=%u crc=0x%04x", header.start_address(), header.start_address() + header.length - 1, kBaseAddress, kLastAddress, header.length, header.crc);
     return RTCMemoryManagerNS::system_rtc_mem_write(header.start_address(), reinterpret_cast<uint32_t *>(memPtr), header.length);
 }
 
 bool RTCMemoryManager::clear()
 {
-    // clear kClearNumBlocks blocks including header
-    constexpr auto kAddress = (kMemorySize - (kClearNumBlocks * kBlockSize)) / kBlockSize;
-    static_assert(((kClearNumBlocks * kBlockSize) & 3) == 0, "not a multiple of 4");
-    uint32_t data[(kClearNumBlocks * kBlockSize) / sizeof(uint32_t)];
-    std::fill(std::begin(data), std::end(data), 0xffffffffU);
-    // memset(data, 0xff, sizeof(data));
-    __LDBG_printf("clear: address=%u[%u-%u] length=%u", kBaseAddress + kAddress, kBaseAddress, kLastAddress, sizeof(data));
-    if (!RTCMemoryManagerNS::system_rtc_mem_write(kBaseAddress + kAddress, &data, sizeof(data))) {
-        return false;
-    }
+    #if ESP32
+        __LDBG_printf("clearing RTC memory");
+        std::fill(std::begin(RTCMemoryManagerNS::rtcMemoryBlock), std::end(RTCMemoryManagerNS::rtcMemoryBlock), 0xff);
+    #else
+        // clear kClearNumBlocks blocks including header
+        constexpr auto kAddress = (kMemorySize - (kClearNumBlocks * kBlockSize)) / kBlockSize;
+        static_assert(((kClearNumBlocks * kBlockSize) % kBlockSize) == 0, "not a multiple of kBlockSize");
+        uint32_t data[(kClearNumBlocks * kBlockSize) / sizeof(uint32_t)];
+        std::fill(std::begin(data), std::end(data), 0xffffffffU);
+        __LDBG_printf("clear: address=%u[%u-%u] length=%u", kBaseAddress + kAddress, kBaseAddress, kLastAddress, sizeof(data));
+        if (!RTCMemoryManagerNS::system_rtc_mem_write(kBaseAddress + kAddress, &data, sizeof(data))) {
+            return false;
+        }
+    #endif
     return write(RTCMemoryId::NONE, nullptr, 0);
 }
 

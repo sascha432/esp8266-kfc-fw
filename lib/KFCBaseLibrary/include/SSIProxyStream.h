@@ -13,12 +13,6 @@
 #   define DEBUG_SSI_PROXY_STREAM (0 || defined(DEBUG_ALL))
 #endif
 
-#if !DEBUG_SSI_PROXY_STREAM
-#    pragma push_macro("__DBG_validatePointer")
-#    undef __DBG_validatePointer
-#    define __DBG_validatePointer(ptr, ...) ptr
-#endif
-
 class SSIProxyStream : public Stream {
 public:
     SSIProxyStream(File &file, DataProviderInterface &provider) :
@@ -150,7 +144,3 @@ private:
 };
 
 #include "SSIProxyStream.hpp"
-
-#if !DEBUG_SSI_PROXY_STREAM
-#    pragma pop_macro("__DBG_validatePointer")
-#endif

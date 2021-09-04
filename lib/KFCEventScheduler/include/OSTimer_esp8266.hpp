@@ -19,10 +19,10 @@
 
 #if DEBUG_OSTIMER
     inline ETSTimerEx::ETSTimerEx(const char *name) :
-        _magic(kMagic),
-        _name(is_HEAP_P(name) ? strdup_P(name) : name),
+        _name(is_HEAP_P(name) ? strdup_P(name) : const_cast<char *>(name)),
         _called(0),
-        _calledWhileLocked(0)
+        _calledWhileLocked(0),
+        _magic(kMagic)
 #else
     inline ETSTimerEx::ETSTimerEx()
 #endif
@@ -144,7 +144,7 @@ inline void ETSTimerEx::unlock()
             __DBG_printEtsTimer_E(*this, PSTR("unlock(): isNew()==TRUE"));
         }
     #endif
-    timer_func = reinterpret_cast<ETSTimerFunc *>(OSTimer::_EtsTimerCallback);
+    timer_func = reinterpret_cast<ETSTimerFunc *>(OSTimer::_OSTimerCallback);
 }
 
 inline void ETSTimerEx::disarm()

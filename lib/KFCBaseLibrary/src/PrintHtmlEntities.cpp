@@ -62,7 +62,7 @@ const char *__values_javascript_P[] PROGMEM = {
 
 int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, Mode mode)
 {
-    __DBG_validatePointer(str, VP_NHPS);
+    __DBG_validatePointerCheck(str, VP_NHPS);
     if (!str) {
         return kNoTranslationRequired;
     }
@@ -86,7 +86,7 @@ int PrintHtmlEntities::getTranslatedSize_P(PGM_P str, Mode mode)
 
 bool PrintHtmlEntities::translateTo(const char *str, String &target, Mode mode, int requiredSize)
 {
-    __DBG_validatePointer(str, VP_NHPS);
+    __DBG_validatePointerCheck(str, VP_NHPS);
     if (!str) {
         return false;
     }
@@ -112,7 +112,7 @@ bool PrintHtmlEntities::translateTo(const char *str, String &target, Mode mode, 
 
 char *PrintHtmlEntities::translateTo(const char *str, Mode mode, int requiredSize)
 {
-    __DBG_validatePointer(str, VP_NHPS);
+    __DBG_validatePointerCheck(str, VP_NHPS);
     if (!str) {
         return nullptr;
     }
@@ -145,7 +145,7 @@ char *PrintHtmlEntities::translateTo(const char *str, Mode mode, int requiredSiz
 
 size_t PrintHtmlEntities::printTo(Mode mode, const char *str, Print &output)
 {
-    __DBG_validatePointer(str, VP_NHPS);
+    __DBG_validatePointerCheck(str, VP_NHPS);
     if (!str) {
         return 0;
     }

@@ -123,7 +123,7 @@ inline void Http2Serial::_outputLoop()
 
 inline void Http2Serial::outputLoop()
 {
-    __DBG_validatePointer(_instance, VP_HSU);
+    __DBG_validatePointerCheck(_instance, VP_HSU);
     _instance->_outputLoop();
 }
 
@@ -144,9 +144,9 @@ inline void Http2Serial::createInstance()
 inline void Http2Serial::destroyInstance()
 {
     __LDBG_printf("inst=%p", _instance);
-    __DBG_validatePointer(_instance, VP_NHS);
+    __DBG_validatePointerCheck(_instance, VP_NHS);
     if (_instance) {
-        __DBG_validatePointer(_instance, VP_HSU);
+        __DBG_validatePointerCheck(_instance, VP_HSU);
         delete _instance;
         _instance = nullptr;
     }

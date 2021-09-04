@@ -12,6 +12,7 @@
 
 #if !DEBUG_STRING_DEDUPLICATOR
 #    pragma push_macro("__DBG_validatePointer")
+#    pragma push_macro("__DBG_validatePointerCheck")
 #    include <debug_helper_disable_ptr_validation.h>
 #endif
 
@@ -121,4 +122,5 @@ private:
 
 #if !DEBUG_STRING_DEDUPLICATOR
 #    pragma pop_macro("__DBG_validatePointer")
+#    pragma pop_macro("__DBG_validatePointerCheck")
 #endif

@@ -133,10 +133,11 @@ public:
     // the clients sockets are passed to the function
     static void foreach(AsyncWebSocket *server, WsClient *sender, std::function<void(AsyncWebSocketClient *)> func)
     {
-        MutexLock mLock(_lock);
-        for(auto client: server->getClients()) {
-            if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject != sender && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                func(client);
+        MUTEX_LOCK_BLOCK(_lock) {
+            for(auto client: server->getClients()) {
+                if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject != sender && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                    func(client);
+                }
             }
         }
     }
@@ -145,11 +146,12 @@ public:
     // the clients socket is passed to the function
     static void forclient(AsyncWebSocket *server, WsClient *forClient, std::function<void(AsyncWebSocketClient *)> func)
     {
-        MutexLock mLock(_lock);
-        for(auto client: server->getClients()) {
-            if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject == forClient && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                func(client);
-                return;
+        MUTEX_LOCK_BLOCK(_lock) {
+            for(auto client: server->getClients()) {
+                if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject == forClient && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                    func(client);
+                    return;
+                }
             }
         }
     }
@@ -157,11 +159,12 @@ public:
     // call function for "client" if connected and authenticated
     static void forsocket(AsyncWebSocket *server, AsyncWebSocketClient *socket, std::function<void(AsyncWebSocketClient *)> func)
     {
-        MutexLock mLock(_lock);
-        for(auto client: server->getClients()) {
-            if (socket == client && client->status() == WS_CONNECTED && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                func(socket);
-                return;
+        MUTEX_LOCK_BLOCK(_lock) {
+            for(auto client: server->getClients()) {
+                if (socket == client && client->status() == WS_CONNECTED && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+                    func(socket);
+                    return;
+                }
             }
         }
     }
@@ -252,6 +255,25 @@ private:
     uint16_t _authenticatedClients;
 };
 
+inline WsClient::WsClient(AsyncWebSocketClient *client) :
+    _authenticated(false),
+    _client(client)
+{
+}
+
+inline WsClient::~WsClient()
+{
+}
+
+inline void WsClient::setAuthenticated(bool authenticated)
+{
+    _authenticated = authenticated;
+}
+
+inline bool WsClient::isAuthenticated() const
+{
+    return _authenticated;
+}
 
 inline bool WsClient::hasAuthenticatedClients(AsyncWebSocket *server)
 {

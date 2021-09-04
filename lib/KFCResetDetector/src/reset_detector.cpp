@@ -33,8 +33,6 @@ void __preinit(void)
 
 extern "C" {
 
-
-
 #if ESP8266
 
     #include <user_interface.h>

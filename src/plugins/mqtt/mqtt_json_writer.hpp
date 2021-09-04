@@ -113,15 +113,15 @@ namespace MQTT {
         };
 
         inline static FStr F_cast(const char *str) {
-            __DBG_validatePointer(str, VP_HPS);
+            __DBG_validatePointerCheck(str, VP_HPS);
             return reinterpret_cast<FStr>(str);
         }
         inline static FStr F_cast(char *str) {
-            __DBG_validatePointer(str, VP_HP);
+            __DBG_validatePointerCheck(str, VP_HP);
             return reinterpret_cast<FStr>(const_cast<const char *>(str));
         }
         inline static FStr F_cast(const String &str) {
-            __DBG_validatePointer(str, VP_HS);
+            __DBG_validatePointerCheck(str, VP_HS);
             return reinterpret_cast<FStr>(str.c_str());
         }
 
@@ -326,7 +326,7 @@ namespace MQTT {
             inline __attribute__((__always_inline__))
                 void printTo(PrintStringInterface &output) const {
                 if (std::isnormal(_value)) {
-                    __DBG_validatePointer(_format, VP_HP);
+                    __DBG_validatePointerCheck(_format, VP_HP);
                     output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                 }
                 else {
@@ -787,7 +787,7 @@ namespace MQTT {
         public:
             inline __attribute__((__always_inline__))
             const char *c_str() const {
-                __DBG_validatePointer(_output, VP_HS);
+                __DBG_validatePointerCheck(_output, VP_HS);
                 return _output.c_str();
             }
 
@@ -898,7 +898,7 @@ namespace MQTT {
             }
 
             int findNamed(FStr name) const {
-                __DBG_validatePointer(name, VP_HP);
+                __DBG_validatePointerCheck(name, VP_HP);
                 int ofs = 0;
                 auto len = strlen_P(reinterpret_cast<PGM_P>(name));
                 while ((ofs = _output.indexOf(name, ofs)) != -1) {
@@ -977,7 +977,7 @@ namespace MQTT {
         protected:
             inline __attribute__((__always_inline__))
             void appendValue(const char *value) {
-                __DBG_validatePointer(value, VP_HPS);
+                __DBG_validatePointerCheck(value, VP_HPS);
                 JsonTools::Utf8Buffer buffer;
                 _output.print('"');
                 JsonTools::printToEscaped(_output, value, strlen(value), &buffer);
@@ -986,7 +986,7 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             void appendValue(FStr value) {
-                __DBG_validatePointer(value, VP_HP);
+                __DBG_validatePointerCheck(value, VP_HP);
                 JsonTools::Utf8Buffer buffer;
                 _output.print('"');
                 JsonTools::printToEscaped(_output, value, &buffer);
@@ -995,7 +995,7 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
             void appendValue(const String &value) {
-                __DBG_validatePointer(value, VP_HS);
+                __DBG_validatePointerCheck(value, VP_HS);
                 JsonTools::Utf8Buffer buffer;
                 _output.print('"');
                 JsonTools::printToEscaped(_output, value, &buffer);
@@ -1236,19 +1236,19 @@ namespace MQTT {
         private:
             inline __attribute__((__always_inline__))
             void appendKey(const String &key) {
-                __DBG_validatePointer(key, VP_HS);
+                __DBG_validatePointerCheck(key, VP_HS);
                 _output.printf_P(PSTR("\"%s\":"), key.c_str());
             }
 
             inline __attribute__((__always_inline__))
             void appendKey(const char *key) {
-                __DBG_validatePointer(key, VP_HPS);
+                __DBG_validatePointerCheck(key, VP_HPS);
                 _output.printf_P(PSTR("\"%s\":"), key);
             }
 
             inline __attribute__((__always_inline__))
             void appendKey(FStr key) {
-                __DBG_validatePointer(key, VP_HP);
+                __DBG_validatePointerCheck(key, VP_HP);
                 _output.printf_P(PSTR("\"%s\":"), reinterpret_cast<PGM_P>(key));
             }
 

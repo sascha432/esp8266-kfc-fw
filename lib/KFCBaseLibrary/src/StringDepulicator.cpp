@@ -22,7 +22,7 @@ static constexpr size_t knthPoolSize = 32;
 
 const char *StringBuffer::findStr(const char *str, size_t len) const
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     auto begin = cstr_begin();
     auto end = cstr_end();
     auto findLen = safe_strlen(str);
@@ -91,7 +91,7 @@ void StringBufferPool::dump(Print &output) const
 
 const char *StringBufferPool::findStr(const char *str, size_t len) const
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     if (len == 0) {
         return emptyString.c_str();
     }
@@ -111,7 +111,7 @@ const char *StringBufferPool::findStr(const char *str, size_t len) const
 
 const char *StringBufferPool::addString(const char *str, size_t len)
 {
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     if (len == 0) {
         return emptyString.c_str();
     }

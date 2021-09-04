@@ -161,7 +161,7 @@ namespace SerialHandler {
 
     size_t Client::write(const uint8_t *buffer, size_t size)
     {
-        __DBG_validatePointer(buffer, VP_HS);
+        __DBG_validatePointerCheck(buffer, VP_HS);
         _checkBufferSize(_tx, size);
         serialHandler._txFlag = true;
         return _tx.write((const char *)buffer, size);
@@ -201,7 +201,7 @@ namespace SerialHandler {
         LoopFunctions::callOnce([ptr, this]() {
             MUTEX_LOCK_BLOCK(_lock) {
                 _clients.erase(std::remove_if(_clients.begin(), _clients.end(), [ptr](const ClientPtr &client) {
-                    __DBG_validatePointer(client.get(), VP_HS);
+                    __DBG_validatePointerCheck(client.get(), VP_HS);
                     return client.get() == ptr;
                 }), _clients.end());
             }
@@ -278,7 +278,7 @@ namespace SerialHandler {
     {
         for(const auto &clientPtr: _clients) {
             if (clientPtr) {
-                __DBG_validatePointer(clientPtr.get(), VP_HS);
+                __DBG_validatePointerCheck(clientPtr.get(), VP_HS);
                 auto &client = *clientPtr;
                 auto &rx = client._getRx();
                 if (client._hasAny(EventType::RW) && client._cb && !rx.empty()) {
@@ -297,7 +297,7 @@ namespace SerialHandler {
     {
         for(const auto &clientPtr: _clients) {
             if (clientPtr) {
-                __DBG_validatePointer(clientPtr.get(), VP_HS);
+                __DBG_validatePointerCheck(clientPtr.get(), VP_HS);
                 auto &tx = clientPtr->_getTx();
                 if (tx.available()) {
                     uint8_t buf[Wrapper::kMinBufferSize / 2];

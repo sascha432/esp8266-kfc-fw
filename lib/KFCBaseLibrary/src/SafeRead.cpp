@@ -27,7 +27,7 @@ static void __check_buffer()
 
 bool is_safe_ptr(const uint8_t *ptr)
 {
-    __DBG_validatePointer(ptr, VP_HPS);
+    __DBG_validatePointerCheck(ptr, VP_HPS);
 #if _MSC_VER
     return true;
 #else
@@ -44,8 +44,8 @@ bool is_safe_ptr(const void *ptr)
 
 size_t safe_read(uint8_t *buffer, const uint8_t *data, size_t len, uint16_t stop)
 {
-    __DBG_validatePointer(data, VP_HPS);
-    __DBG_validatePointer(buffer, VP_HPS);
+    __DBG_validatePointerCheck(data, VP_HPS);
+    __DBG_validatePointerCheck(buffer, VP_HPS);
     auto dst = buffer;
     auto src = data;
     auto flag = true;
@@ -66,7 +66,7 @@ size_t safe_read(uint8_t *buffer, const uint8_t *data, size_t len, uint16_t stop
 
 const char *safe_read(const char *ptr, size_t len)
 {
-    __DBG_validatePointer(ptr, VP_HPS);
+    __DBG_validatePointerCheck(ptr, VP_HPS);
 #if _MSC_VER
     return ptr;
 #else
@@ -86,7 +86,7 @@ const char *safe_read(const char *ptr, size_t len)
 
 const char *safe_read(const char *ptr)
 {
-    __DBG_validatePointer(ptr, VP_HPS);
+    __DBG_validatePointerCheck(ptr, VP_HPS);
 #if _MSC_VER
     return ptr;
 #else
@@ -106,7 +106,7 @@ const char *safe_read(const char *ptr)
 
 uint32_t safe_read(const uint32_t *ptr)
 {
-    __DBG_validatePointer(ptr, VP_HPS);
+    __DBG_validatePointerCheck(ptr, VP_HPS);
 #if _MSC_VER
     return *ptr;
 #else
@@ -118,7 +118,7 @@ uint32_t safe_read(const uint32_t *ptr)
 
 uintptr_t safe_read_uintptr(const uintptr_t *ptr)
 {
-    __DBG_validatePointer(ptr, VP_HPS);
+    __DBG_validatePointerCheck(ptr, VP_HPS);
 #if _MSC_VER
     return *ptr;
 #else

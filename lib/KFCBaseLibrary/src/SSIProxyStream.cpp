@@ -13,13 +13,12 @@
 #endif
 
 #if !DEBUG_SSI_PROXY_STREAM
-#    undef __DBG_validatePointer
-#    define __DBG_validatePointer(ptr, ...)
+#include <debug_helper_disable_ptr_validation.h>
 #endif
 
 size_t SSIProxyStream::_copy(uint8_t *buffer, size_t length)
 {
-    __DBG_validatePointer(buffer, VP_HPS);
+    __DBG_validatePointerCheck(buffer, VP_HPS);
     __LDBG_assert(_template.marker == -1);
     if (length > _available()) {
         length = _available();

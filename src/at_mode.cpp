@@ -552,8 +552,7 @@ public:
     };
 
     DisplayTimer() :
-        _type(DisplayType::HEAP),
-        _maxHeap(0)
+        _type(DisplayType::HEAP)
     {
         __DBG_assert_printf(displayTimer == nullptr, "displayTimer not null");
         if (displayTimer) {
@@ -642,9 +641,9 @@ public:
     }
 
     void printRSSI() {
-        int32_t rssi = WiFi.RSSI();
-        _rssiMin = std::max<int16_t>(_rssiMin, rssi);
-        _rssiMax = std::min<int16_t>(_rssiMax, rssi);
+        int16_t rssi = WiFi.RSSI();
+        _rssiMin = std::max(_rssiMin, rssi);
+        _rssiMax = std::min(_rssiMax, rssi);
         Serial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, _rssiMin, _rssiMax);
     }
 

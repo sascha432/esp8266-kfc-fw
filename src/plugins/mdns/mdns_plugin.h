@@ -23,7 +23,7 @@
 #endif
 
 #ifndef DEBUG_MDNS_SD
-#   define DEBUG_MDNS_SD 0
+#   define DEBUG_MDNS_SD 1
 #endif
 
 #if DEBUG_MDNS_SD

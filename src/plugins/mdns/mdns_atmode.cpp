@@ -73,7 +73,7 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
             }
             break;
         case MDNSResponder::AnswerType::Txt: {
-                auto keys = PSTR("vbt");
+                auto keys = PSTR("vbtd");
                 auto ptr = keys;
                 char ch;
                 while((ch = pgm_read_byte(ptr++)) != 0) {

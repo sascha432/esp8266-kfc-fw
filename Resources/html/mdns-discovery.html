@@ -62,7 +62,7 @@
                     <div class="row mdns-console pr-3 pl-3">
                         <table class="table table-striped">
                             <thead class="thead-light">
-                                <tr><th>Hostname</th><th>Addresses</th><th>Device Name</th><th>Device Title</th><th>Version</th></tr>
+                                <tr><th>Hostname</th><th>Addresses</th><th>Device Name</th><th>Device Title</th><th>Version</th><th>Device</th></tr>
                             </thead>
                             <tbody>
                                 <tr scope="row" class="spinner">
@@ -124,7 +124,8 @@
                             version = version + '-' + val['b'];
                         }
                         var title = val['t'] ? val['t'] : '-';
-                        var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td></tr>';
+                        var device = val['d'] ? val['d'] : '-';
+                        var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td><td>' + device + '</td></tr>';
                         if (row.length) {
                             row.html($(html).find('tr').html());
                         }

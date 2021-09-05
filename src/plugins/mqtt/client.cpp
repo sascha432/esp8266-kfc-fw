@@ -142,7 +142,7 @@ namespace MQTT {
 
     void Client::_resetClient()
     {
-        __LDBG_printf("queue=%p rebroadcast_timer=%u queue_timer=%u queue_size=%u conn=%s", _autoDiscoveryQueue.get(), (bool)_autoDiscoveryRebroadcast, (bool)_queueTimer, _queue.size(), _connection());
+        __LDBG_printf("queue=%p rebroadcast_timer=%u queue_timer=%u queue_size=%u conn=%s", _autoDiscoveryQueue.get(), (bool)_autoDiscoveryRebroadcast, (bool)_queue.getTimer(), _queue.size(), _connection());
         _autoDiscoveryQueue.reset();
         _autoDiscoveryRebroadcast.remove();
         _queue.clear();
@@ -291,8 +291,8 @@ namespace MQTT {
         }
         auto size = _components.size();
         if (size) {
-            remove(component);
             MUTEX_LOCK_BLOCK(_lock) {
+                remove(component);
                 _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
             }
         }
@@ -515,9 +515,9 @@ namespace MQTT {
         _client->setCleanSession(true);
         _client->setKeepAlive(_config.keepalive);
 
-    #if MQTT_SET_LAST_WILL_MODE != 0
-        publishLastWill();
-    #endif
+        #if MQTT_SET_LAST_WILL_MODE != 0
+            publishLastWill();
+        #endif
 
         _connState = ConnectionState::CONNECTING;
         _client->connect();
@@ -552,7 +552,7 @@ namespace MQTT {
     #if MQTT_SET_LAST_WILL_MODE != 0
     void MQTT::Client::publishLastWill()
     {
-        __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayload.c_str());
+        __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayloadOffline.c_str());
         _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
     }
     #endif
@@ -600,19 +600,19 @@ namespace MQTT {
 
         _resetClient();
 
-    #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
-        // set last will topic
-        publish(_lastWillTopic, true, MQTT_LAST_WILL_TOPIC_ONLINE);
-    #endif
-    #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
-        // set availability topic
-        publish(MQTT_AVAILABILITY_TOPIC, true, MQTT_AVAILABILITY_TOPIC_ONLINE);
-    #endif
+        #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
+            // set last will topic
+            publish(_lastWillTopic, true, MQTT_LAST_WILL_TOPIC_ONLINE);
+        #endif
+        #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
+            // set availability topic
+            publish(MQTT_AVAILABILITY_TOPIC, true, MQTT_AVAILABILITY_TOPIC_ONLINE);
+        #endif
 
-    #if MQTT_AUTO_DISCOVERY
-        _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();
-        subscribe(nullptr, _autoDiscoveryStatusTopic, QosType::AT_LEAST_ONCE);
-    #endif
+        #if MQTT_AUTO_DISCOVERY
+            _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();
+            subscribe(nullptr, _autoDiscoveryStatusTopic, QosType::AT_LEAST_ONCE);
+        #endif
 
         // reset reconnect timer if connection was successful
         setAutoReconnect(_config.auto_reconnect_min);
@@ -620,10 +620,10 @@ namespace MQTT {
         for(const auto &component: _components) {
             component->onConnect();
         }
-    #if MQTT_AUTO_DISCOVERY
-        if (_startAutoDiscovery) {
-            publishAutoDiscovery();
-        }
+        #if MQTT_AUTO_DISCOVERY
+            if (_startAutoDiscovery) {
+                publishAutoDiscovery();
+            }
     #endif
     }
 

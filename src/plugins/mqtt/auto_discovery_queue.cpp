@@ -88,7 +88,6 @@ void Queue::onPacketAck(uint16_t packetId, PacketAckType type)
     }
 }
 
-
 bool Queue::isEnabled(bool force)
 {
     #if MQTT_AUTO_DISCOVERY

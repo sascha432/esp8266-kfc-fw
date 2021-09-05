@@ -106,6 +106,7 @@ namespace MQTT {
             if (++_internalPacketQueueId == (1U << 15)) { // ids are 15bit, 1-32767. 0 = invalid
                 _internalPacketQueueId = 1;
             }
+            // __DBG_printf("packet_id=%u", _internalPacketQueueId);
             return _internalPacketQueueId;
         }
 

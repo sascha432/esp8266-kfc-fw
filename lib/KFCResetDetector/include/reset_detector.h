@@ -15,7 +15,7 @@
 
 // enable debug outout
 #ifndef DEBUG_RESET_DETECTOR
-    #define DEBUG_RESET_DETECTOR 0
+    #define DEBUG_RESET_DETECTOR 1
 #endif
 
 // include methods in source code = 0, or in header as always inline = 1
@@ -154,7 +154,7 @@ private:
     ETSTimerEx _timer;
     Data _storedData;
     Data _data;
-    #if DEBUG_RESET_DETECTOR
+    #if ESP8266 && DEBUG_RESET_DETECTOR
         uart_t *_uart;
     #endif
 };

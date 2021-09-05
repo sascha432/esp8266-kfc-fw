@@ -120,7 +120,7 @@ MQTT::PacketQueue MQTT::Client::recordId(int packetId, QosType qos, uint16_t int
     }
     _packetQueue.emplace_back(packetId, millis(), false, internalPacketId);
     _packetQueueStartTimer();
-    // __LDBG_printf("adding to packet queue(%u) %s", _packetQueue.size(), _packetQueue.back().toString().c_str());
+    __LDBG_printf("adding to packet queue(%u) %s", _packetQueue.size(), _packetQueue.back().toString().c_str());
     return _packetQueue.back();
 }
 

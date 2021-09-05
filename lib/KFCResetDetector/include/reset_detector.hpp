@@ -28,7 +28,7 @@
 __RESET_DETECTOR_INLINE__
 ResetDetector::ResetDetector() :
     _timer({})
-    #if DEBUG_RESET_DETECTOR
+    #if ESP8266 && DEBUG_RESET_DETECTOR
         , _uart(nullptr)
     #endif
 {

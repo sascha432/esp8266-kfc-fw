@@ -44,9 +44,9 @@ inline ETSTimerEx::~ETSTimerEx()
         if (isRunning()) {
             __DBG_printEtsTimer_E(*this, PSTR("dtor(): isRunning()==TRUE"));
         }
-        if (isDone()) {
-            __DBG_printEtsTimer_E(*this, PSTR("dtor(): isDone()==TRUE"));
-        }
+        // if (isDone()) {
+        //     __DBG_printEtsTimer_E(*this, PSTR("dtor(): isDone()==TRUE"));
+        // }
         if (isLocked()) {
             __DBG_printEtsTimer_E(*this, PSTR("dtor(): isLocked()==TRUE"));
         }

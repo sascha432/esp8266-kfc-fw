@@ -6,6 +6,7 @@
 #include <../include/time.h>
 #include <time.h>
 #include <sys/time.h>
+#include <string.h>
 #include <EventScheduler.h>
 #include <stdlib.h>
 #include <PrintHtmlEntitiesString.h>

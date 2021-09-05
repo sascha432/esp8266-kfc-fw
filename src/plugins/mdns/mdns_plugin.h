@@ -34,12 +34,11 @@
 
 class MDNSPlugin : public PluginComponent {
 public:
-#if ESP8266
-    using MDNSResponder = esp8266::MDNSImplementation::MDNSResponder;
-
-#elif ESP32
-    using MDNSResponder = ::MDNSResponder;
-#endif
+    #if ESP8266
+        using MDNSResponder = esp8266::MDNSImplementation::MDNSResponder;
+    #elif ESP32
+        using MDNSResponder = ::MDNSResponder;
+    #endif
 
     class ServiceInfo {
     public:
@@ -128,10 +127,10 @@ public:
         void serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
     #endif
 
-#if AT_MODE_SUPPORTED
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+    #if AT_MODE_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        virtual bool atModeHandler(AtModeArgs &args) override;
+    #endif
 
 public:
     static void loop();
@@ -145,7 +144,6 @@ public:
     void resolveZeroConf(MDNSResolver::Query *query);
     static void removeQuery(MDNSResolver::Query *query);
 
-    static MDNSPlugin &getPlugin();
     MDNSResolver::Query *findQuery(void *query) const;
 
 private:
@@ -158,6 +156,7 @@ private:
         void _setupNetBIOS();
     #endif
     void _startQueries();
+    void _stopQueries();
     void _removeQuery(MDNSResolver::Query *query);
     bool _isRunning() const;
     void _loop();
@@ -165,6 +164,17 @@ private:
 private:
     bool _running;
 };
+
+inline void MDNSPlugin::_stopQueries()
+{
+    _queries.clear();
+}
+
+inline bool MDNSPlugin::isEnabled()
+{
+    auto flags = KFCConfigurationClasses::System::Flags::getConfig();
+    return flags.is_mdns_enabled;
+}
 
 inline void MDNSPlugin::reconfigure(const String &source)
 {

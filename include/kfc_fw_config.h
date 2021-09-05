@@ -124,6 +124,7 @@ public:
     // clear RTC memory and reset device
     void resetDevice(bool safeMode = false);
 
+    static String getChipModel();
     static void printVersion(Print &output);
     void printInfo(Print &output);
 

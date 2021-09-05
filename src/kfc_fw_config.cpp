@@ -1434,6 +1434,29 @@ bool KFCFWConfiguration::connectWiFi()
     return (station_mode_success && ap_mode_success);
 }
 
+String KFCFWConfiguration::getChipModel()
+{
+    #if ESP8265
+        return F("ESP8265");
+    #elif ESP8266
+        return F("ESP8266");
+    #elif ESP32
+        #if CONFIG_IDF_TARGET_ESP32
+            return F("ESP32");
+        #elif CONFIG_IDF_TARGET_ESP32S2
+            return F("ESP32-S2");
+        #elif CONFIG_IDF_TARGET_ESP32S3
+            return F("ESP32-S3");
+        #elif CONFIG_IDF_TARGET_ESP32C3
+            return F("ESP32-C3");
+        #else
+            #error unknown device
+        #endif
+    #else
+        #error unknown device
+    #endif
+}
+
 void KFCFWConfiguration::printVersion(Print &output)
 {
     output.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), KFCFWConfiguration::getFirmwareVersion().c_str(), formatBytes(ESP.getFlashChipSize()).c_str());

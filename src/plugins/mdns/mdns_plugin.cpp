@@ -81,7 +81,6 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
             Output *output = new Output(millis() + timeout);
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
-
             {
                 auto service = String(FSPGM(kfcmdns));
                 auto name = String(FSPGM(udp));
@@ -131,21 +130,11 @@ void MDNSPlugin::_startQueries()
 {
     // start all queries in the queue
     __LDBG_printf("zerconf queries=%u", _queries.size());
-    #if ESP32
-        #warning TODO
-    #else
-        for(const auto &query: _queries) {
-            if (query->getState() == MDNSResolver::Query::StateType::NONE) {
-                query->begin();
-            }
+    for(const auto &query: _queries) {
+        if (query->getState() == MDNSResolver::Query::StateType::NONE) {
+            query->begin();
         }
-    #endif
-}
-
-bool MDNSPlugin::isEnabled()
-{
-    auto flags = System::Flags::getConfig();
-    return flags.is_mdns_enabled;
+    }
 }
 
 bool MDNSPlugin::isNetBIOSEnabled()
@@ -213,10 +202,7 @@ void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
     }
 }
 
-MDNSPlugin &MDNSPlugin::getPlugin()
-{
-    return plugin;
-}
+
 
 void MDNSPlugin::begin()
 {
@@ -229,6 +215,7 @@ void MDNSPlugin::begin()
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), String(__BUILD_NUMBER_INT));
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), KFCConfigurationClasses::System::Device::getTitle());
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('d'), KFCFWConfiguration::getChipModel());
 
         #if MDNS_NETBIOS_SUPPORT
             _setupNetBIOS();
@@ -244,6 +231,7 @@ void MDNSPlugin::begin()
 void MDNSPlugin::end()
 {
     __LDBG_printf("running=%u", _running);
+    _stopQueries();
     MDNS.end();
     LoopFunctions::remove(loop);
     _running = false;
@@ -260,15 +248,11 @@ void MDNSPlugin::_loop()
     #if ESP8266
         MDNS.update();
     #endif
-    #if ESP32
-        #warning TODO
-    #else
-        if (!_queries.empty()) {
-            for(auto &query: _queries) {
-                query->checkTimeout();
-            }
+    if (!_queries.empty()) {
+        for(auto &query: _queries) {
+            query->check();
         }
-    #endif
+    }
 }
 
 void MDNSPlugin::getStatus(Print &output)
@@ -283,7 +267,5 @@ void MDNSPlugin::getStatus(Print &output)
         output.printf_P(PSTR(HTML_S(br) "NetBIOS %s"), isNetBIOSEnabled() ? SPGM(enabled) : SPGM(disabled));
     #endif
 }
-
-//void resolveZeroConf(const String &service, const String &proto, const String &field, const String &fallback, uint16_t port, ResolvedCallback callback);
 
 #endif

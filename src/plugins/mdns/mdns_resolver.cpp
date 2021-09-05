@@ -7,18 +7,17 @@
 #include <Arduino_compat.h>
 #include "mdns_plugin.h"
 #include "mdns_resolver.h"
+#include <lwip/dns.h>
 
 #if DEBUG_MDNS_SD
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using KFCConfigurationClasses::System;
 
 #if ESP8266
-
-    #include <lwip/dns.h>
 
     IPAddress MDNSResolver::MDNSServiceInfo::findIP4Address(const IPAddress &myAddress)
     {
@@ -112,72 +111,11 @@ using KFCConfigurationClasses::System;
         }
     }
 
-#elif ESP32
-
-    // void MDNSResolver::Query::serviceCallback(bool map, MDNSResolver::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
-    // {
-    //     __LDBG_printf("answerType=%u p_bSetContent=%u", answerType, p_bSetContent);
-    //     PrintString str;
-
-    //     mdnsServiceInfo.serviceDomain();
-
-    //     if (mdnsServiceInfo.hostDomainAvailable() && _isAddress) {
-    //         __LDBG_printf("domain=%s", mdnsServiceInfo.hostDomain());
-    //         ip_addr_t addr;
-    //         auto result = dns_gethostbyname(mdnsServiceInfo.hostDomain(), &addr, (dns_found_callback)&dnsFoundCallback, this); // try to resolve before marking as collected
-    //         if (result == ERR_OK) {
-    //             _hostname = IPAddress(addr.addr).toString();
-    //             _dataCollected |= DATA_COLLECTED_HOSTNAME;
-    //         }
-    //         else if (result == ERR_INPROGRESS) {
-    //             // waiting for callback
-    //         }
-    //         __LDBG_printf("dns_gethostbyname=%d this=%p", result, this);
-    //     }
-    //     if (mdnsServiceInfo.IP4AddressAvailable() && _isAddress) {
-    //         _address = mdnsServiceInfo.findIP4Address(WiFi.localIP());
-    //         _dataCollected |= DATA_COLLECTED_ADDRESS;
-    //     }
-    //     if (mdnsServiceInfo.hostPortAvailable() && _isPort) {
-    //         __LDBG_printf("port=%u", mdnsServiceInfo.hostPort());
-    //         _port = mdnsServiceInfo.hostPort();
-    //         _dataCollected |= DATA_COLLECTED_PORT;
-    //     }
-    //     if (mdnsServiceInfo.txtAvailable()) {
-    //         if (!_isAddress) {
-    //             auto value = mdnsServiceInfo.findTxtValue(_addressValue);
-    //             if (value) {
-    //                 if (IPAddress_isValid(_address = convertToIPAddress(value))) {
-    //                     _dataCollected |= DATA_COLLECTED_ADDRESS;
-    //                 } else {
-    //                     _hostname = value;
-    //                     _dataCollected |= DATA_COLLECTED_HOSTNAME;
-    //                 }
-    //             }
-    //         }
-    //         if (!_isPort) {
-    //             auto value = mdnsServiceInfo.findTxtValue(_portValue);
-    //             if (value) {
-    //                 _port = static_cast<uint16_t>(atoi(value));
-    //                 _dataCollected |= DATA_COLLECTED_PORT;
-    //             }
-    //         }
-    //     }
-
-    //     __LDBG_printf("data_collected=%u port=%u address_or_host=%u callback=%u", _dataCollected, (_dataCollected & DATA_COLLECTED_PORT), (_dataCollected & (DATA_COLLECTED_ADDRESS|DATA_COLLECTED_HOSTNAME)), (bool)_callback);
-
-    //     // collected address or hostname and port
-    //     if ((_dataCollected & DATA_COLLECTED_PORT) && (_dataCollected & (DATA_COLLECTED_ADDRESS|DATA_COLLECTED_HOSTNAME)) && !_resolved) {
-    //         _resolved = true;
-    //         end();
-    //     }
-    // }
-
 #endif
 
 MDNSResolver::Query::Query(const String &name, const String &service, const String &proto, const String &addressValue, const String &portValue, const String &fallback, uint16_t port, const String &prefix, const String &suffix, ResolvedCallback callback, uint16_t timeout) :
     _name(name),
-    _endTime(END_TIME_NOT_STARTED),
+    _startTime(0),
     _service(service),
     _proto(proto),
     _addressValue(addressValue),
@@ -191,22 +129,27 @@ MDNSResolver::Query::Query(const String &name, const String &service, const Stri
     _fallbackPort(port),
     _timeout(timeout),
     _dataCollected(DATA_COLLECTED_NONE),
+    _state(StateType::NONE),
     _resolved(false),
     _isAddress(addressValue.equals(FSPGM(address))),
     _isPort(portValue.equals(FSPGM(port)))
 {
+    __LDBG_printf("name=%s service=%s proto=%s address_value=%s port_value=%s fallback=%s port=%u prefix=%s suffix=%s timeout=%u is_address=%u is_port=%u",
+        name.c_str(), service.c_str(), proto.c_str(), addressValue.c_str(), portValue.c_str(), fallback.c_str(), port, prefix.c_str(), suffix.c_str(), timeout, _isAddress, _isPort
+    );
 }
 
 MDNSResolver::Query::~Query()
 {
-    end();
+    __LDBG_printf("resolved=%u data_collected=%u", _resolved, _dataCollected);
+    end(false);
 }
 
 void MDNSResolver::Query::begin()
 {
-    __LDBG_printf("service_query=%p zeroconf=%s callback=%u", _serviceQuery, createZeroConfString().c_str(), (bool)_callback);
-    if (_endTime == END_TIME_FINISHED) {
-        __LDBG_printf("end time set to finished");
+    __LDBG_printf("service_query=%p zeroconf=%s callback=%u state=%u", _serviceQuery, createZeroConfString().c_str(), (bool)_callback, _state);
+    if (_state == StateType::FINISHED) {
+        __LDBG_printf("query finished");
         return;
     }
     if (!_callback) {
@@ -217,14 +160,8 @@ void MDNSResolver::Query::begin()
         __LDBG_printf("service query already set");
         return;
     }
-    _endTime = millis() + _timeout;
-    if (_endTime == END_TIME_FINISHED) {
-        __LDBG_printf("unlucky day");
-        _endTime--;
-    } else if (_endTime == END_TIME_NOT_STARTED) {
-        __LDBG_printf("unlucky day");
-        _endTime++;
-    }
+    _startTime = millis();
+    _state = StateType::STARTED;
 
     #if ESP8266
         _serviceQuery = MDNS.installServiceQuery(_service.c_str(), _proto.c_str(), [this](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
@@ -232,23 +169,32 @@ void MDNSResolver::Query::begin()
             auto &resolverInfo = static_cast<MDNSResolver::MDNSServiceInfo &>(mdnsServiceInfo);
             serviceCallback(true, resolverInfo, answerType, p_bSetContent);
         });
+    #elif ESP32
+        __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", _service.c_str(), _proto.c_str(), _timeout);
+        _serviceQuery = mdns_query_async_new(nullptr, _service.c_str(), _proto.c_str(), MDNS_TYPE_PTR, _timeout, 1);
+        if (!_serviceQuery) {
+            __LDBG_printf("mdns_query_async_new failed");
+            _state = StateType::FINISHED;
+        }
     #endif
 }
 
 
-void MDNSResolver::Query::end()
+void MDNSResolver::Query::end(bool removeQuery)
 {
-    __LDBG_printf("end_time=%u dur=%d resolved=%u this=%p", _endTime, millis() - (_endTime - _timeout), _resolved, this);
-    if (_endTime != END_TIME_FINISHED) {
-        _endTime = END_TIME_FINISHED;
+    __LDBG_printf("time=%d resolved=%u this=%p state=%u remove_query=%u", millis() - _startTime, _resolved, this, _state, removeQuery);
+    if (_state == StateType::STARTED) {
+        _state = StateType::FINISHED;
 
         // run in main loop
-        LoopFunctions::callOnce([this]() {
+        LoopFunctions::callOnce([this, removeQuery]() {
             __LDBG_printf("main loop end=%p", this);
             if (_serviceQuery) {
                 __LDBG_printf("service_query=%p zeroconf=%s", _serviceQuery, createZeroConfString().c_str());
                 #if ESP8266
                     MDNS.removeServiceQuery(_serviceQuery);
+                #elif ESP32
+                    mdns_query_async_delete(_serviceQuery);
                 #endif
                 _serviceQuery = nullptr;
             }
@@ -270,15 +216,20 @@ void MDNSResolver::Query::end()
                 _prefix += _suffix;
                 _callback(_fallback, convertToIPAddress(_fallback), _fallbackPort, _prefix, ResponseType::TIMEOUT);
             }
-            MDNSPlugin::removeQuery(this);
+            if (removeQuery) {
+                MDNSPlugin::removeQuery(this);
+            }
         });
     }
 }
 
 void MDNSResolver::Query::dnsFoundCallback(const char *name, const ip_addr *ipaddr, void *arg)
 {
-    __LDBG_printf("dnsFoundCallback=%p query=%p address=%s", arg, MDNSPlugin::getPlugin().findQuery(arg), IPAddress(ipaddr).toString().c_str());
-    if (ipaddr && MDNSPlugin::getPlugin().findQuery(arg)) { // verify that the query has not been deleted yet
+    __LDBG_printf("dnsFoundCallback=%p query=%p address=%s", arg, MDNSPlugin::getInstance().findQuery(arg), IPAddress(ipaddr).toString().c_str());
+    if (
+        ipaddr &&
+        MDNSPlugin::getInstance().findQuery(arg)  // verify that the query has not been deleted yet
+    ) {
         auto &query = *reinterpret_cast<MDNSResolver::Query *>(arg);
         query._hostname = IPAddress(ipaddr).toString();
         query._dataCollected |= DATA_COLLECTED_HOSTNAME;
@@ -286,19 +237,123 @@ void MDNSResolver::Query::dnsFoundCallback(const char *name, const ip_addr *ipad
     }
 }
 
-MDNSResolver::Query::StateType MDNSResolver::Query::getState() const
+void MDNSResolver::Query::check()
 {
-    return _endTime == END_TIME_FINISHED ? StateType::FINISHED : (_endTime == END_TIME_NOT_STARTED ? StateType::NONE : StateType::STARTED);
-}
-
-void MDNSResolver::Query::checkTimeout()
-{
-    if ((_endTime != END_TIME_FINISHED) && (_endTime != END_TIME_NOT_STARTED)) {
-        if (millis() >= _endTime) {
+    if (_state == StateType::STARTED) {
+        #if ESP32
+            checkResults();
+        #endif
+        if (millis() - _startTime >= _timeout) {
+            __LDBG_printf("timeout %u", _timeout);
             end();
         }
     }
 }
+
+#if ESP32
+
+void MDNSResolver::Query::checkResults()
+{
+    if (_serviceQuery) {
+        mdns_result_t *results = nullptr;
+        if (!mdns_query_async_get_results(_serviceQuery, 0, &results)) {
+            return;
+        }
+        __LDBG_printf("results=%p", results);
+        if (!results) {
+            return;
+        }
+
+        auto cur = results;
+        while(cur) {
+            if (cur->ip_protocol == mdns_ip_protocol_t::MDNS_IP_PROTOCOL_V4) {
+                if (_isAddress) {
+                    auto addr = cur->addr;
+                    while(addr) {
+                        if (addr->addr.type == ESP_IPADDR_TYPE_V4) {
+                            _address = IPAddress(addr->addr.u_addr.ip4.addr);
+                            _dataCollected |= DATA_COLLECTED_ADDRESS;
+                            if (_isPort) {
+                                if (cur->port) {
+                                    _port = cur->port;
+                                    _dataCollected |= DATA_COLLECTED_PORT;
+                                }
+                            }
+                            break;
+                        }
+                        addr = addr->next;
+                    }
+                }
+                __LDBG_printf("instance=%s if=%u hostname=%s port=%u txt_count=%u",
+                    __S(cur->instance_name), cur->tcpip_if, __S(cur->hostname), cur->port, cur->txt_count
+                );
+
+                if (!_isAddress || !_isPort) {
+                    // collect data from txt records
+                    auto count = cur->txt_count;
+                    auto txt = cur->txt;
+                    auto len = cur->txt_value_len;
+                    while(count--) {
+                        __LDBG_printf("key=%s value=%*.*s", txt->key, *len, *len, txt->value);
+                        if (!_isAddress) {
+                            if (_addressValue.equals(txt->key)) {
+                                String value;
+                                value.concat(txt->value, *len);
+                                IPAddress ip;
+                                if (ip.fromString(value) && IPAddress_isValid(ip)) {
+                                    _address = ip;
+                                    _dataCollected |= DATA_COLLECTED_ADDRESS;
+                                }
+                                else {
+                                    _hostname = value;
+                                    _dataCollected |= DATA_COLLECTED_HOSTNAME;
+                                }
+                            }
+                        }
+                        if (!_isPort) {
+                            if (_portValue.equals(txt->key)) {
+                                String buf;
+                                buf.concat(txt->value, *len);
+                                auto port = static_cast<uint16_t>(buf.toInt());
+                                if (port) {
+                                    _port = port;
+                                    _dataCollected |= DATA_COLLECTED_PORT;
+                                }
+                            }
+                        }
+                        txt++;
+                        len++;
+                    }
+                }
+
+                if (cur->hostname && _isAddress) {
+                    __LDBG_printf("domain=%s", cur->hostname);
+                    ip_addr_t addr;
+                    auto result = dns_gethostbyname(cur->hostname, &addr, reinterpret_cast<dns_found_callback>(dnsFoundCallback), this); // try to resolve before marking as collected
+                    if (result == ERR_OK) {
+                        _hostname = IPAddress(addr).toString();
+                        _dataCollected |= DATA_COLLECTED_HOSTNAME;
+                    }
+                    else if (result == ERR_INPROGRESS) {
+                        // waiting for callback
+                    }
+                    __LDBG_printf("dns_gethostbyname=%d this=%p", result, this);
+                }
+            }
+            cur = cur->next;
+        }
+        mdns_query_results_free(results);
+
+        __LDBG_printf("data_collected=%u port=%u address_or_host=%u callback=%u", _dataCollected, (_dataCollected & DATA_COLLECTED_PORT), (_dataCollected & (DATA_COLLECTED_ADDRESS|DATA_COLLECTED_HOSTNAME)), (bool)_callback);
+
+        if ((_dataCollected & DATA_COLLECTED_PORT) && (_dataCollected & (DATA_COLLECTED_ADDRESS|DATA_COLLECTED_HOSTNAME)) && !_resolved) {
+            _resolved = true;
+            end();
+        }
+    }
+}
+
+#endif
 
 void MDNSResolver::Query::createZeroConf(Print &output) const
 {
@@ -318,13 +373,6 @@ void MDNSResolver::Query::createZeroConf(Print &output) const
         output.print(_fallback);
     }
     output.print('}');
-}
-
-String MDNSResolver::Query::createZeroConfString() const
-{
-    PrintString str;
-    createZeroConf(str);
-    return str;
 }
 
 #endif

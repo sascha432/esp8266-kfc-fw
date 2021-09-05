@@ -29,7 +29,7 @@
         return error;
     }
 #else
-    DEBUG_OSTIMER_VALIDATE(timer, func) func
+    #define DEBUG_OSTIMER_VALIDATE(timer, func) func
 #endif
 
 #if DEBUG_OSTIMER
@@ -49,7 +49,9 @@
 inline __attribute__((__always_inline__)) ETSTimerEx::~ETSTimerEx()
 {
     done();
-    free(_name);
+    #if DEBUG_OSTIMER
+        free(_name);
+    #endif
 }
 
 inline void ETSTimerEx::create(esp_timer_cb_t callback, void *arg)

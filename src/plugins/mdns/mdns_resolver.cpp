@@ -179,7 +179,6 @@ void MDNSResolver::Query::begin()
     #endif
 }
 
-
 void MDNSResolver::Query::end(bool removeQuery)
 {
     __LDBG_printf("time=%d resolved=%u this=%p state=%u remove_query=%u", millis() - _startTime, _resolved, this, _state, removeQuery);
@@ -241,7 +240,7 @@ void MDNSResolver::Query::check()
 {
     if (_state == StateType::STARTED) {
         #if ESP32
-            checkResults();
+            poll();
         #endif
         if (millis() - _startTime >= _timeout) {
             __LDBG_printf("timeout %u", _timeout);
@@ -252,7 +251,7 @@ void MDNSResolver::Query::check()
 
 #if ESP32
 
-void MDNSResolver::Query::checkResults()
+void MDNSResolver::Query::poll()
 {
     if (_serviceQuery) {
         mdns_result_t *results = nullptr;

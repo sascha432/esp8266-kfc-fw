@@ -232,105 +232,41 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
 // };
 
 
-#if ESP32
-
-// size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
-// {
-//     auto &json = getJsonObject();
-//     if (!json.size()) {
-//         auto &rows = json.addArray('l');
-//         return AsyncJsonResponse::_fillBuffer(data, len);
-//     }
-//     return 0;
-// }
-
-#else
-
 #if MDNS_PLUGIN
 
 size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 {
-    InterruptLock lock;
-    if (_output->_timeout && millis() > _output->_timeout) {
-        _output->end();
-    }
-
-    size_t keep = _output->_timeout == 0 ? 0 : 32;
-    if (_output->_output.length() == 0 && keep == 0) {
-        // __DBG_printf("length=0 keep=0");
-        return 0;
-    }
-    else if (_output->_output.length() > keep) {
-        auto avail = std::clamp<int>(_output->_output.length() - (keep ? 4 : 0), 0, len);
-        // __DBG_printf("avail=%u len=%u keep=%u", avail, _output->_output.length(), keep);
-        if (avail) {
-            memcpy(data, _output->_output.c_str(), avail);
-            _output->_output = _output->_output.c_str() + avail;
-            return avail;
+    MUTEX_LOCK_BLOCK(_output->_lock) {
+        if (_output->_timeout && _startTime - millis() >= _output->_timeout) {
+            __DBG_printf("timeout");
+            _output->end();
         }
-    }
-    // __DBG_printf("retry keep=%u", keep);
-    return RESPONSE_TRY_AGAIN;
-}
-/*
 
-    if (millis() > _timeout) {
-        auto &json = getJsonObject();
-        if (!json.size()) {
-            auto &rows = json.addArray('l');
-            for(auto &svc: *_services) {
-                auto &row = rows.addObject(6);
+        #if ESP32
+            if (!_output->poll()) {
+                __DBG_printf("poll failed");
+                return RESPONSE_TRY_AGAIN;
+            }
+        #endif
 
-                svc.domain.toLowerCase();
-                row.add('h', svc.domain);
-
-                String name = svc.domain;
-                auto pos = name.indexOf('.');
-                if (pos != -1) {
-                    name.remove(pos);
-                }
-                name.toUpperCase();
-                row.add('n', name);
-
-                row.add('a', implode_cb(',', svc.addresses, [](const IPAddress &addr) {
-                    return addr.toString();
-                }));
-
-                auto version = String('-');
-                for(const auto &item: svc.map) {
-                    if (item.first.length() == 1) {
-                        char ch = item.first.charAt(0);
-                        switch(ch) {
-                            case 'v':
-                                version = item.second;
-                                break;
-                            case 'b':
-                            case 't':
-                                row.add(ch, item.second);
-                                break;
-                        }
-                    }
-                    // if (item.first.equals(String('v'))) {
-                    //     version = item.second;
-                    // }
-                    // else if (item.first.equals(String('b'))) {
-                    //     row.add('b', item.second);
-                    // }
-                    // else if (item.first.equals(String('t'))) {
-                    //     row.add('t', item.second);
-                    // }
-                }
-                row.add('v', version);
+        size_t keep = _output->_timeout == 0 ? 0 : 32;
+        if (_output->_output.length() == 0 && keep == 0) {
+            // __DBG_printf("length=0 keep=0");
+            return 0;
+        }
+        else if (_output->_output.length() > keep) {
+            auto avail = std::clamp<int>(_output->_output.length() - (keep ? 4 : 0), 0, len);
+            // __DBG_printf("avail=%u len=%u keep=%u", avail, _output->_output.length(), keep);
+            if (avail) {
+                memcpy(data, _output->_output.c_str(), avail);
+                _output->_output = _output->_output.c_str() + avail;
+                return avail;
             }
         }
-        return AsyncJsonResponse::_fillBuffer(data, len);
-    }
-    else {
+        // __DBG_printf("retry keep=%u", keep);
         return RESPONSE_TRY_AGAIN;
     }
 }
-*/
-#endif
 
 #endif
 
@@ -349,7 +285,7 @@ AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, co
 
 bool AsyncProgmemFileResponse::_sourceValid() const
 {
-    return (bool)_content;
+    return _content;
 }
 
 size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)

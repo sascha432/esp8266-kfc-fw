@@ -62,24 +62,24 @@ public:
     public:
         String _current;
         PrintString _output;
-        #if ESP8266
-            MDNSResponder::hMDNSServiceQuery _serviceQuery;
-        #endif
+        MDNSResolver::ServiceQuery _serviceQuery;
         uint32_t _timeout;
+        SemaphoreMutex _lock;
 
         Output(uint32_t timeout) :
-            #if ESP8266
-                _serviceQuery(nullptr),
-            #endif
+            _serviceQuery(nullptr),
             _timeout(timeout)
-        {}
+        {
+        }
 
         ~Output() {
-            #if ESP8266
             if (_serviceQuery) {
-                MDNS.removeServiceQuery(_serviceQuery);
+                #if ESP8266
+                    MDNS.removeServiceQuery(_serviceQuery);
+                #elif ESP32
+                    mdns_query_async_delete(_serviceQuery);
+                #endif
             }
-            #endif
         }
 
         void begin() {
@@ -104,6 +104,10 @@ public:
                 begin();
             }
         }
+
+        #if ESP32
+            bool poll();
+        #endif
     };
 
 public:

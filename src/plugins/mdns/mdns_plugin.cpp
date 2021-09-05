@@ -67,8 +67,6 @@ void MDNSService::announce()
     #endif
 }
 
-#if ESP8266
-
 void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 {
     __LDBG_printf("running=%u", plugin._isRunning());
@@ -76,17 +74,25 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
         if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
             auto timeout = request->arg(F("timeout")).toInt();
             if (timeout == 0) {
-                timeout = 2000;
+                timeout = 3000;
             }
-            Output *output = new Output(millis() + timeout);
+            auto output = new Output(timeout);
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
             {
-                auto service = String(FSPGM(kfcmdns));
-                auto name = String(FSPGM(udp));
-                output->_serviceQuery = MDNS.installServiceQuery(service.c_str(), name.c_str(), [output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                    plugin.serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
-                });
+                #if ESP8266
+                    auto service = String(FSPGM(kfcmdns));
+                    auto name = String(FSPGM(udp));
+                    output->_serviceQuery = MDNS.installServiceQuery(service.c_str(), name.c_str(), [output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
+                        plugin.serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
+                    });
+                #elif ESP32
+                    __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", SPGM(kfcmdns), SPGM(udp), timeout);
+                    output->_serviceQuery = mdns_query_async_new(nullptr, SPGM(kfcmdns), SPGM(udp), MDNS_TYPE_TXT, timeout, 1);
+                    if (!output->_serviceQuery) {
+                        __LDBG_printf("mdns_query_async_new failed");
+                    }
+                #endif
             }
             auto response = new AsyncMDNSResponse(output);
             httpHeaders.setResponseHeaders(response);
@@ -100,16 +106,6 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
         request->send(500);
     }
 }
-
-#elif ESP32
-
-void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
-{
-}
-
-#warning TODO
-
-#endif
 
 #if MDNS_NETBIOS_SUPPORT
 
@@ -201,8 +197,6 @@ void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
         LoopFunctions::remove(loop);
     }
 }
-
-
 
 void MDNSPlugin::begin()
 {

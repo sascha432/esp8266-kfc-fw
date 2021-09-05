@@ -62,30 +62,14 @@ protected:
 //     JsonBuffer _jsonBuffer;
 // };
 
-#if ESP32
-
-class AsyncMDNSResponse : public AsyncBaseResponse {
-public:
-    AsyncMDNSResponse() :
-        AsyncBaseResponse(true)
-    {
-        _contentLength = 0;
-    }
-    ~AsyncMDNSResponse() {
-    }
-
-    virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
-};
-
-#else
-
 #if MDNS_PLUGIN
 
 class AsyncMDNSResponse : public AsyncBaseResponse {
 public:
     AsyncMDNSResponse(MDNSPlugin::Output *output) :
         AsyncBaseResponse(true),
-        _output(output)
+        _output(output),
+        _startTime(millis())
     {
         _contentLength = 0;
     }
@@ -101,9 +85,8 @@ public:
 
 private:
     MDNSPlugin::Output *_output;
+    uint32_t _startTime;
 };
-
-#endif
 
 #endif
 

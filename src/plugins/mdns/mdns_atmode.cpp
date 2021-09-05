@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include <WiFiCallbacks.h>
 #include <EventScheduler.h>
+#include <Mutex.h>
 #include "mdns_plugin.h"
 #include "at_mode.h"
 
@@ -18,7 +19,7 @@
 
 using KFCConfigurationClasses::System;
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSQ, "MDNSQ", "<service>,<proto>,[<wait=2000ms>]", "Query MDNS");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSQ, "MDNSQ", "<service>,<proto>,[<wait=3000ms>]", "Query MDNS");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<stop|start|enable|disable|zeroconf>", "Configure MDNS");
 
 ATModeCommandHelpArrayPtr MDNSPlugin::atModeCommandHelp(size_t &size) const
@@ -39,63 +40,145 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
         return;
     }
 
-    InterruptLock lock;
+    MUTEX_LOCK_BLOCK(output._lock) {
 
-    if (output._current != mdnsServiceInfo.serviceDomain()) {
-        output.next();
-        output._current = mdnsServiceInfo.serviceDomain();
-    }
+        if (output._current != mdnsServiceInfo.serviceDomain()) {
+            output.next();
+            output._current = mdnsServiceInfo.serviceDomain();
+        }
 
-    switch (answerType) {
-        case MDNSResponder::AnswerType::ServiceDomain: {
-                JsonTools::Utf8Buffer buffer;
-                output._output.print(F("\"s\":\""));
-                JsonTools::printToEscaped(output._output, mdnsServiceInfo.serviceDomain(), strlen(mdnsServiceInfo.serviceDomain()), &buffer);
-                output._output.print(F("\","));
-            }
-            break;
-        case MDNSResponder::AnswerType::HostDomainAndPort: {
-                JsonTools::Utf8Buffer buffer;
-                output._output.print(F("\"h\":\""));
-                JsonTools::printToEscaped(output._output, mdnsServiceInfo.hostDomain(), strlen(mdnsServiceInfo.hostDomain()), &buffer);
-                output._output.printf_P(PSTR("\",\"p\":%u,"), mdnsServiceInfo.hostPort());
-            }
-            break;
-        case MDNSResponder::AnswerType::IP4Address: {
-                output._output.print(F("\"a\":["));
-                for (const IPAddress &ip: mdnsServiceInfo.IP4Adresses()) {
-                    output._output.print('"');
-                    output._output.print(ip.toString());
+        switch (answerType) {
+            case MDNSResponder::AnswerType::ServiceDomain: {
+                    JsonTools::Utf8Buffer buffer;
+                    output._output.print(F("\"s\":\""));
+                    JsonTools::printToEscaped(output._output, mdnsServiceInfo.serviceDomain(), strlen(mdnsServiceInfo.serviceDomain()), &buffer);
                     output._output.print(F("\","));
                 }
-                output._output.rtrim(',');
-                output._output.print(F("],"));
-            }
-            break;
-        case MDNSResponder::AnswerType::Txt: {
-                auto keys = PSTR("vbtd");
-                auto ptr = keys;
-                char ch;
-                while((ch = pgm_read_byte(ptr++)) != 0) {
-                    String key(ch);
-                    auto value = mdnsServiceInfo.value(key.c_str());
-                    if (value) {
-                        output._output.printf_P(PSTR("\"%s\":\""), key.c_str());
-                        JsonTools::Utf8Buffer buffer;
-                        JsonTools::printToEscaped(output._output, value, strlen(value), &buffer);
+                break;
+            case MDNSResponder::AnswerType::HostDomainAndPort: {
+                    JsonTools::Utf8Buffer buffer;
+                    output._output.print(F("\"h\":\""));
+                    JsonTools::printToEscaped(output._output, mdnsServiceInfo.hostDomain(), strlen(mdnsServiceInfo.hostDomain()), &buffer);
+                    output._output.printf_P(PSTR("\",\"p\":%u,"), mdnsServiceInfo.hostPort());
+                }
+                break;
+            case MDNSResponder::AnswerType::IP4Address: {
+                    output._output.print(F("\"a\":["));
+                    for (const IPAddress &ip: mdnsServiceInfo.IP4Adresses()) {
+                        output._output.print('"');
+                        ip.printTo(output._output);
+                        // output._output.print(ip.toString());
                         output._output.print(F("\","));
                     }
+                    output._output.rtrim(',');
+                    output._output.print(F("],"));
                 }
+                break;
+            case MDNSResponder::AnswerType::Txt: {
+                    auto keys = PSTR("vbtd");
+                    auto ptr = keys;
+                    char ch;
+                    while((ch = pgm_read_byte(ptr++)) != 0) {
+                        String key(ch);
+                        auto value = mdnsServiceInfo.value(key.c_str());
+                        if (value) {
+                            output._output.printf_P(PSTR("\"%s\":\""), key.c_str());
+                            JsonTools::Utf8Buffer buffer;
+                            JsonTools::printToEscaped(output._output, value, strlen(value), &buffer);
+                            output._output.print(F("\","));
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        if (output._output.length() + 1024 > ESP.getFreeHeap()) {
+            output.end();
+            __DBG_printf("out of memory len=%u", output._output.length());
+        }
+        // __DBG_printf("%s", output._output.c_str());
+    }
+}
+
+#elif ESP32
+
+bool MDNSPlugin::Output::poll()
+{
+    auto outputLen = _output.length();
+    if (_timeout && _serviceQuery) {
+        mdns_result_t *results = nullptr;
+        if (!mdns_query_async_get_results(_serviceQuery, 0, &results)) {
+            return false;
+        }
+        __LDBG_printf("results=%p", results);
+        if (!results) {
+            return false;
+        }
+
+        MUTEX_LOCK_BLOCK(_lock) {
+            auto cur = results;
+            while(cur) {
+                if (cur->ip_protocol == mdns_ip_protocol_t::MDNS_IP_PROTOCOL_V4) {
+                    uint32_t ipCount = 0;
+                    auto addr = cur->addr;
+                    while(addr) {
+                        if (addr->addr.type == ESP_IPADDR_TYPE_V4) {
+                            __LDBG_printf("ipv4=%u", addr->addr.u_addr.ip4);
+                            if (ipCount++ == 0) {
+                                _output.print(F("\"a\":["));
+                            }
+                            _output.print('"');
+                            IPAddress(addr->addr.u_addr.ip4.addr).printTo(_output);
+                            _output.print(F("\","));
+                        }
+                        addr = addr->next;
+                    }
+                    if (ipCount) {
+                        _output.rtrim(',');
+                        _output.print(F("],"));
+                    }
+
+                    {
+                        JsonTools::Utf8Buffer buffer;
+                        _output.print(F("\"h\":\""));
+                        JsonTools::printToEscaped(_output, cur->hostname, strlen(cur->hostname), &buffer);
+                        _output.printf_P(PSTR("\",\"p\":%u,"), cur->port);
+                    }
+
+                    __LDBG_printf("instance=%s if=%u hostname=%s port=%u txt_count=%u",
+                        __S(cur->instance_name), cur->tcpip_if, __S(cur->hostname), cur->port, cur->txt_count
+                    );
+
+                    // collect data from txt records
+                    auto count = cur->txt_count;
+                    auto txt = cur->txt;
+                    auto len = cur->txt_value_len;
+                    auto keys = PSTR("vbtd");
+                    while(count--) {
+                        __LDBG_printf("key=%s value=%*.*s", txt->key, *len, *len, txt->value);
+                        auto ptr = keys;
+                        char ch;
+                        while((ch = pgm_read_byte(ptr++)) != 0) {
+                            String key(ch);
+                            if (key.equals(txt->key)) {
+                                _output.printf_P(PSTR("\"%s\":\""), key.c_str());
+                                JsonTools::Utf8Buffer buffer;
+                                JsonTools::printToEscaped(_output, txt->value, *len, &buffer);
+                                _output.print(F("\","));
+                            }
+                        }
+                        txt++;
+                        len++;
+                    }
+                }
+                cur = cur->next;
             }
-            break;
-        default:
-            break;
+        }
+        mdns_query_results_free(results);
     }
-    if (output._output.length() + 1024 > ESP.getFreeHeap()) {
-        output.end();
-        __DBG_printf("out of memory len=%u", output._output.length());
-    }
-    // __DBG_printf("%s", output._output.c_str());
+    __LDBG_printf("output=%u old=%u", _output.length(), outputLen);
+    return _output.length() != outputLen;
 }
 
 #endif
@@ -108,7 +191,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
         }
         else if (args.requireArgs(2, 3)) {
             #if ESP8266
-                auto timeout = args.toMillis(2, 100, ~0, 2000);
+                auto timeout = args.toMillis(2, 100, ~0, 3000);
                 auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
                 args.print(F("Querying: %s"), query.c_str());
 
@@ -122,8 +205,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                         #if DEBUG_MDNS_SD
                             bool result;
                         #endif
-                        {
-                            InterruptLock lock;
+                        MUTEX_LOCK_BLOCK(output->_lock) {
                             #if DEBUG_MDNS_SD
                                 result =
                             #endif
@@ -140,8 +222,9 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                             args.getStream().println(output->_output);
                         }
 
-                        InterruptLock lock;
-                        delete output;
+                        MUTEX_LOCK_BLOCK(output->_lock) {
+                            delete output;
+                        }
                     });
                 }
             #endif

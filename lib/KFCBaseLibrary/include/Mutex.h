@@ -16,8 +16,10 @@
 
 struct MutexLock
 {
-    MutexLock(SemaphoreMutex &lock) : _lock(lock), _locked(true) {
-        _lock.lock();
+    MutexLock(SemaphoreMutex &lock, bool performInitialLock = true) : _lock(lock), _locked(performInitialLock) {
+        if (performInitialLock) {
+            _lock.lock();
+        }
     }
     ~MutexLock() {
         if (_locked) {
@@ -44,8 +46,10 @@ struct MutexLock
 
 struct MutexLockRecursive
 {
-    MutexLockRecursive(SemaphoreMutexRecursive &lock) : _lock(lock), _locked(1) {
-        _lock.lock();
+    MutexLockRecursive(SemaphoreMutexRecursive &lock, bool performInitialLock = true) : _lock(lock), _locked(performInitialLock ? 1 : 0) {
+        if (performInitialLock) {
+            _lock.lock();
+        }
     }
     ~MutexLockRecursive() {
         unlockAll();

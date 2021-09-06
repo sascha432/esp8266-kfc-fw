@@ -102,7 +102,7 @@ void Scheduler::end()
         _hasEvent = PriorityType::NONE;
         _addedFlag = false;
         _removedFlag = false;
-        _checkTimers = false;
+        // _checkTimers = false;
     }
 }
 
@@ -114,6 +114,11 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
             EVENT_SCHEDULER_ASSERT(iterator != _timers.end());
             if (iterator != _timers.end()) {
                 __LDBG_printf("timer=%p iterator=%p managed=%p %s:%u", timer, *iterator, timer->_timer, __S(timer->_file), timer->_line);
+                #if DEBUG_OSTIMER
+                    if (timer->_insideCallback) {
+                        ___DBG_printEtsTimer_E(timer->_etsTimer, PSTR("_removeTimer inside callback"));
+                    }
+                #endif
                 MUTEX_LOCK_BLOCK(timer->getLock()) {
                     // disarm and delete
                     timer->_disarm();
@@ -121,7 +126,7 @@ bool Scheduler::_removeTimer(CallbackTimerPtr timer)
                     // mark as deleted in vector and schedule cleanup
                     *iterator = nullptr;
                     _removedFlag = true;
-                    _checkTimers = true;
+                    // _checkTimers = true;
                 }
                 delete timer;
                 return true;
@@ -253,7 +258,7 @@ void Scheduler::__TimerCallback(CallbackTimerPtr timer)
 void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
 {
     // any timer disarmed sets this flag to true
-    _checkTimers = false;
+    // _checkTimers = false;
 
     String fpos = timer->__getFilePos();
     uint32_t start = runtimeLimit ? micros() : 0;
@@ -270,9 +275,11 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
             #if DEBUG_OSTIMER
                 timer->_etsTimer._called++;
             #endif
+            timer->_insideCallback = true;
             __lock.unlock();
             timer->_callback(timer);
             __lock.lock();
+            timer->_insideCallback = false;
             // check if it was unlocked inside the callback
             if (timer->_etsTimer.isLocked()) {
                 timer->_etsTimer.unlock();
@@ -285,14 +292,20 @@ void Scheduler::_invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit)
         __LDBG_printf(_VT100(bold_red) "timer=%p time=%u limit=%u exceeded%s" _VT100(reset), timer, diff, runtimeLimit, fpos.c_str());
     }
 
-    // verify _checkTimers is set. if false the timer must still exist
-    EVENT_SCHEDULER_ASSERT(_hasTimer(timer) || _checkTimers);
+    #if DEBUG_OSTIMER
+        if (!_hasTimer(timer)) {
+            __DBG_printf_E("timer=%p not found", timer);
+        }
+    #endif
 
-    // if _checkTimers is set, we need to check if the timer was removed
-    if (_checkTimers && !_hasTimer(timer)) {
-        __LDBG_printf(_VT100(bold_green) "timer=%p removed%s" _VT100(reset), timer, fpos.c_str());
-        return;
-    }
+    // // verify _checkTimers is set. if false the timer must still exist
+    // EVENT_SCHEDULER_ASSERT(_hasTimer(timer) || _checkTimers);
+
+    // // if _checkTimers is set, we need to check if the timer was removed
+    // if (_checkTimers && !_hasTimer(timer)) {
+    //     __LDBG_printf(_VT100(bold_green) "timer=%p removed%s" _VT100(reset), timer, fpos.c_str());
+    //     return;
+    // }
 
     if (timer->isArmed() == false) { // check if timer is still armed
         __LDBG_printf("timer=%p armed=%u cb=%p %s:%u", timer, timer->isArmed(), lambda_target(timer->_callback), __S(timer->_file), timer->_line);

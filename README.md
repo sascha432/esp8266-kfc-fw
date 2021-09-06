@@ -18,7 +18,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 ## ChangeLog
 
-**UPDATE**: First version with support for ESP32 with Arduino Core 2.0.0-rc1 is working, but not stable yet.
+**UPDATE**: First version with support for ESP32 with Arduino Core 2.0.0 is working, but not stable yet.
 
 **SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
 

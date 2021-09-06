@@ -35,9 +35,9 @@ CallbackTimer::CallbackTimer(const char *name, Callback callback, int64_t delay,
     #if SCHEDULER_HAVE_REMAINING_DELAY
         _maxDelayExceeded(false),
     #endif
-    _callbackScheduled(false)
+    _callbackScheduled(false),
+    _insideCallback(false)
 {
-    EVENT_SCHEDULER_ASSERT(delay >= kMinDelay);
 }
 
 CallbackTimer::~CallbackTimer()
@@ -54,6 +54,12 @@ CallbackTimer::~CallbackTimer()
     EVENT_SCHEDULER_ASSERT(isArmed() == false);
 
     __LDBG_printf("ets_timer=%p running=%p armed=%d %s:%u", &_etsTimer, _etsTimer.isRunning(), isArmed(), __S(_file), _line);
+
+    #if DEBUG_OSTIMER
+        if (_insideCallback) {
+            ___DBG_printEtsTimer_E(_etsTimer, PSTR("dtor called inside callback"));
+        }
+    #endif
 
     MUTEX_LOCK_BLOCK(_lock) {
         if (!_etsTimer.isDone()) {

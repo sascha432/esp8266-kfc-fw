@@ -89,6 +89,7 @@ namespace Event {
             bool _maxDelayExceeded;
         #endif
         bool _callbackScheduled;
+        bool _insideCallback;
 
         #if DEBUG_EVENT_SCHEDULER
             uint32_t _line;

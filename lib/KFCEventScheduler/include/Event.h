@@ -15,7 +15,7 @@
 #endif
 
 #ifndef DEBUG_OSTIMER
-#    define DEBUG_OSTIMER (0 || defined(DEBUG_ALL) || _MSC_VER)
+#    define DEBUG_OSTIMER (1 || defined(DEBUG_ALL) || _MSC_VER)
 #endif
 
 #ifndef DEBUG_EVENT_SCHEDULER

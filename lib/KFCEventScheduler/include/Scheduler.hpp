@@ -22,8 +22,8 @@ namespace Event {
         _size(0),
         _hasEvent(PriorityType::NONE),
         _addedFlag(false),
-        _removedFlag(false),
-        _checkTimers(false)
+        _removedFlag(false)
+        // _checkTimers(false)
         #if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR == 0
             , _runtimeLimit(kMaxRuntimeLimit)
         #endif
@@ -162,10 +162,18 @@ namespace Event {
         if (!_callbackTimer || !_callbackTimer->_timer) {
             return false;
         }
-        auto result = __Scheduler._removeTimer(_callbackTimer);
-        // remove timer after calling _removeTimer
-        // the managed timer has been cleared during removal
-        _callbackTimer = nullptr;
+        bool result;
+        if (_callbackTimer->_insideCallback) {
+            // disarm inside callbacks, the timer will be removed automatically
+            _callbackTimer->disarm();
+            result = true;
+        }
+        else {
+            result = __Scheduler._removeTimer(_callbackTimer);
+            // remove timer after calling _removeTimer
+            // the managed timer has been cleared during removal
+            _callbackTimer = nullptr;
+        }
         return result;
     }
 

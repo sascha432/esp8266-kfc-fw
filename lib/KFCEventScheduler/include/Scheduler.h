@@ -85,7 +85,7 @@ namespace Event {
         volatile PriorityType _hasEvent;
         bool _addedFlag;
         bool _removedFlag;
-        volatile bool _checkTimers;
+        // volatile bool _checkTimers;
         SemaphoreMutex _lock;
 
 #if DEBUG_EVENT_SCHEDULER_RUNTIME_LIMIT_CONSTEXPR

@@ -70,6 +70,10 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
     }
 
     PrintString msg;
+    #if ESP32
+    // log messages are sent from multiple cores and can overlap
+    MUTEX_LOCK_BLOCK(_lock)
+    #endif
     {
         PrintString header;
         auto now = time(nullptr);
@@ -116,39 +120,39 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
         #else
             DebugContext_prefix(DEBUG_OUTPUT.println(msg));
         #endif
-    }
 
-    #if SYSLOG_SUPPORT
-        if (_syslog) {
-            __LDBG_printf("sending message to syslog level=%u", logLevel);
-            switch(logLevel) {
-                case Level::SECURITY:
-                    _syslog->setSeverity(SYSLOG_WARN);
-                    _syslog->setFacility(SYSLOG_FACILITY_SECURE);
-                    break;
-                case Level::WARNING:
-                    _syslog->setSeverity(SYSLOG_WARN);
-                    _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                    break;
-                case Level::NOTICE:
-                    _syslog->setSeverity(SYSLOG_NOTICE);
-                    _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                    break;
-                case Level::DEBUG:
-                    _syslog->setSeverity(SYSLOG_DEBUG);
-                    _syslog->setFacility(SYSLOG_FACILITY_LOCAL0);
-                    break;
-                case Level::ERROR:
-                default:
-                    _syslog->setSeverity(SYSLOG_ERR);
-                    _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                    break;
+        #if SYSLOG_SUPPORT
+            if (_syslog) {
+                __LDBG_printf("sending message to syslog level=%u", logLevel);
+                switch(logLevel) {
+                    case Level::SECURITY:
+                        _syslog->setSeverity(SYSLOG_WARN);
+                        _syslog->setFacility(SYSLOG_FACILITY_SECURE);
+                        break;
+                    case Level::WARNING:
+                        _syslog->setSeverity(SYSLOG_WARN);
+                        _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                        break;
+                    case Level::NOTICE:
+                        _syslog->setSeverity(SYSLOG_NOTICE);
+                        _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                        break;
+                    case Level::DEBUG:
+                        _syslog->setSeverity(SYSLOG_DEBUG);
+                        _syslog->setFacility(SYSLOG_FACILITY_LOCAL0);
+                        break;
+                    case Level::ERROR:
+                    default:
+                        _syslog->setSeverity(SYSLOG_ERR);
+                        _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                        break;
+                }
+                _syslog->write(reinterpret_cast<const uint8_t *>(msg.c_str()), msg.length());
+                msg = String();
+                _syslog->flush();
             }
-            _syslog->write(reinterpret_cast<const uint8_t *>(msg.c_str()), msg.length());
-            msg = String();
-            _syslog->flush();
-        }
-    #endif
+        #endif
+    }
 }
 
 String Logger::_getLogFilename(Level logLevel)

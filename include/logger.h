@@ -9,6 +9,9 @@
 #include <Arduino_compat.h>
 #include <PrintString.h>
 #include <EnumHelper.h>
+#if ESP32
+#include <Mutex.h>
+#endif
 
 #ifndef DEBUG_LOGGER
 #    define DEBUG_LOGGER (0 || defined(DEBUG_ALL))
@@ -25,9 +28,9 @@
 #define Logger_debug    _logger.debug
 
 #if DEBUG_LOGGER
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 class Logger;
@@ -97,6 +100,9 @@ private:
     Level _enabled;
     #if SYSLOG_SUPPORT
         SyslogStream *_syslog;
+    #endif
+    #if ESP32
+        SemaphoreMutex _lock;
     #endif
 };
 

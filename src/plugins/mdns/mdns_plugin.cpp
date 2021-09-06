@@ -17,6 +17,11 @@
 #include <ESP8266NetBIOS.h>
 #endif
 
+// TODO
+// change async polling to notifier callback (currently missing in mdns_query_async_new, probably needs an upgrade of the framework)
+// crashes with nullptr exception inside idf framework (bug is fixed in a recent version of the framework)
+// servicedomain missing, using instance name instead. querying the servicedomain crashes with nullptr exception
+
 #if DEBUG_MDNS_SD
 #include <debug_helper_enable.h>
 #else
@@ -87,8 +92,8 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
                         plugin.serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
                     });
                 #elif ESP32
-                    __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", SPGM(kfcmdns), SPGM(udp), timeout);
-                    output->_serviceQuery = mdns_query_async_new(nullptr, SPGM(kfcmdns), SPGM(udp), MDNS_TYPE_TXT, timeout, 1);
+                    __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", PSTR("_kfcmdns"), PSTR("_udp"), timeout);
+                    output->_serviceQuery = mdns_query_async_new(nullptr, PSTR("_kfcmdns"), PSTR("_udp"), MDNS_TYPE_PTR, timeout, 64);
                     if (!output->_serviceQuery) {
                         __LDBG_printf("mdns_query_async_new failed");
                     }
@@ -124,11 +129,13 @@ void MDNSPlugin::_setupNetBIOS()
 
 void MDNSPlugin::_startQueries()
 {
-    // start all queries in the queue
-    __LDBG_printf("zerconf queries=%u", _queries.size());
-    for(const auto &query: _queries) {
-        if (query->getState() == MDNSResolver::Query::StateType::NONE) {
-            query->begin();
+    MUTEX_LOCK_BLOCK(_lock) {
+        // start all queries in the queue
+        __LDBG_printf("zerconf queries=%u", _queries.size());
+        for(const auto &query: _queries) {
+            if (query->getState() == MDNSResolver::Query::StateType::NONE) {
+                query->begin();
+            }
         }
     }
 }
@@ -154,10 +161,12 @@ MDNSPlugin &MDNSPlugin::getInstance()
 
 void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
 {
-    auto wasEmpty = _queries.empty();
-    __LDBG_printf("query=%p running=%u queries=%u", query, _isRunning(), _queries.size());
-
-    _queries.emplace_back(query);
+    bool wasEmpty;
+    MUTEX_LOCK_BLOCK(_lock) {
+        wasEmpty = _queries.empty();
+        __LDBG_printf("query=%p running=%u queries=%u", query, _isRunning(), _queries.size());
+        _queries.emplace_back(query);
+    }
     if (!isEnabled()) {
         //TODO this might fail if wifi is down
         if (wasEmpty) {
@@ -185,13 +194,17 @@ MDNSResolver::Query *MDNSPlugin::findQuery(void *query) const
 
 void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
 {
-    __LDBG_printf("remove=%p size=%u", query, _queries.size());
-    _queries.erase(std::remove_if(_queries.begin(), _queries.end(), [query](const MDNSResolver::QueryPtr queryPtr) {
-        return (queryPtr.get() == query);
-    }), _queries.end());
-    __LDBG_printf("size=%u", _queries.size());
+    bool empty;
+    MUTEX_LOCK_BLOCK(_lock) {
+        __LDBG_printf("remove=%p size=%u", query, _queries.size());
+        _queries.erase(std::remove_if(_queries.begin(), _queries.end(), [query](const MDNSResolver::QueryPtr queryPtr) {
+            return (queryPtr.get() == query);
+        }), _queries.end());
+        __LDBG_printf("size=%u", _queries.size());
+        empty = _queries.empty();
+    }
 
-    if (!isEnabled() && _queries.empty()) {
+    if (!isEnabled() && empty) {
         __LDBG_printf("MDNS disabled, zeroconf done, calling end");
         MDNS.end();
         LoopFunctions::remove(loop);
@@ -243,8 +256,10 @@ void MDNSPlugin::_loop()
         MDNS.update();
     #endif
     if (!_queries.empty()) {
-        for(auto &query: _queries) {
-            query->check();
+        MUTEX_LOCK_BLOCK(_lock) {
+            for(auto &query: _queries) {
+                query->check();
+            }
         }
     }
 }

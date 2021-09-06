@@ -187,33 +187,35 @@ void MDNSResolver::Query::end(bool removeQuery)
 
         // run in main loop
         LoopFunctions::callOnce([this, removeQuery]() {
-            __LDBG_printf("main loop end=%p", this);
-            if (_serviceQuery) {
-                __LDBG_printf("service_query=%p zeroconf=%s", _serviceQuery, createZeroConfString().c_str());
-                #if ESP8266
-                    MDNS.removeServiceQuery(_serviceQuery);
-                #elif ESP32
-                    mdns_query_async_delete(_serviceQuery);
-                #endif
-                _serviceQuery = nullptr;
-            }
+            MUTEX_LOCK_BLOCK(MDNSPlugin::getInstance().getLock()) {
+                __LDBG_printf("main loop end=%p", this);
+                if (_serviceQuery) {
+                    __LDBG_printf("service_query=%p zeroconf=%s", _serviceQuery, createZeroConfString().c_str());
+                    #if ESP8266
+                        MDNS.removeServiceQuery(_serviceQuery);
+                    #elif ESP32
+                        mdns_query_async_delete(_serviceQuery);
+                    #endif
+                    _serviceQuery = nullptr;
+                }
 
-            bool logging = _name.length() && System::Device::getConfig().zeroconf_logging;
-            if (_resolved) {
-                if (logging) {
-                    Logger_notice(F("%s: Zeroconf response %s:%u"), _name.c_str(), IPAddress_isValid(_address) ? _address.toString().c_str() : _hostname.c_str(), _port);
+                bool logging = _name.length() && System::Device::getConfig().zeroconf_logging;
+                if (_resolved) {
+                    if (logging) {
+                        Logger_notice(F("%s: Zeroconf response %s:%u"), _name.c_str(), IPAddress_isValid(_address) ? _address.toString().c_str() : _hostname.c_str(), _port);
+                    }
+                    _prefix += IPAddress_isValid(_address) ? _address.toString() : _hostname;
+                    _prefix += _suffix;
+                    _callback(_hostname, _address, _port, _prefix, ResponseType::RESOLVED);
                 }
-                _prefix += IPAddress_isValid(_address) ? _address.toString() : _hostname;
-                _prefix += _suffix;
-                _callback(_hostname, _address, _port, _prefix, ResponseType::RESOLVED);
-            }
-            else {
-                if (logging) {
-                    Logger_notice(F("%s: Zeroconf fallback %s:%u"), _name.c_str(), _fallback.c_str(), _port);
+                else {
+                    if (logging) {
+                        Logger_notice(F("%s: Zeroconf fallback %s:%u"), _name.c_str(), _fallback.c_str(), _port);
+                    }
+                    _prefix += _fallback;
+                    _prefix += _suffix;
+                    _callback(_fallback, convertToIPAddress(_fallback), _fallbackPort, _prefix, ResponseType::TIMEOUT);
                 }
-                _prefix += _fallback;
-                _prefix += _suffix;
-                _callback(_fallback, convertToIPAddress(_fallback), _fallbackPort, _prefix, ResponseType::TIMEOUT);
             }
             if (removeQuery) {
                 MDNSPlugin::removeQuery(this);
@@ -225,14 +227,15 @@ void MDNSResolver::Query::end(bool removeQuery)
 void MDNSResolver::Query::dnsFoundCallback(const char *name, const ip_addr *ipaddr, void *arg)
 {
     __LDBG_printf("dnsFoundCallback=%p query=%p address=%s", arg, MDNSPlugin::getInstance().findQuery(arg), IPAddress(ipaddr).toString().c_str());
-    if (
-        ipaddr &&
-        MDNSPlugin::getInstance().findQuery(arg)  // verify that the query has not been deleted yet
-    ) {
-        auto &query = *reinterpret_cast<MDNSResolver::Query *>(arg);
-        query._hostname = IPAddress(ipaddr).toString();
-        query._dataCollected |= DATA_COLLECTED_HOSTNAME;
-        __LDBG_printf("resolved=%s", query._hostname.c_str());
+    if (ipaddr) {
+        MUTEX_LOCK_BLOCK(MDNSPlugin::getInstance().getLock()) {
+            if (MDNSPlugin::getInstance().findQuery(arg)) {  // verify that the query has not been deleted yet
+                auto &query = *reinterpret_cast<MDNSResolver::Query *>(arg);
+                query._hostname = IPAddress(ipaddr).toString();
+                query._dataCollected |= DATA_COLLECTED_HOSTNAME;
+                __LDBG_printf("resolved=%s", query._hostname.c_str());
+            }
+        }
     }
 }
 

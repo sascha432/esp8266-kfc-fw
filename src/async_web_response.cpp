@@ -36,14 +36,12 @@ void AsyncBaseResponse::__assembleHead(uint8_t version)
 
     if (_sendContentLength) {
         _httpHeaders.replace<HttpContentLengthHeader>(_contentLength);
-        // out.printf_P(PSTR("Content-Length: %d\r\n"), _contentLength);
     }
     else {
         _httpHeaders.remove(F("Content-Length"));
     }
     if (_contentType.length()) {
         _httpHeaders.replace<HttpContentType>(_contentType);
-        //out.printf_P(PSTR("Content-Type: %s\r\n"), _contentType.c_str());
     }
 
     _httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
@@ -164,108 +162,52 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
     return 0;
 }
 
-// AsyncJsonResponse::AsyncJsonResponse() :
-//     AsyncBaseResponse(false),
-//     _jsonBuffer(_json)
-// {
-//     _code = 200;
-//     _contentType = FSPGM(mime_application_json);
-// }
-
-// bool AsyncJsonResponse::_sourceValid() const
-// {
-//     return true;
-// }
-
-// size_t AsyncJsonResponse::_fillBuffer(uint8_t *data, size_t len)
-// {
-// #if DEBUG
-//     auto size = _jsonBuffer.fillBuffer(data, len);
-//     if (size == 0) {
-//         auto diff = _contentLength - _sentLength;
-//         if (diff > len) {
-//             diff = len;
-//         }
-//         memset(data, ' ', diff);
-//         // debug code below in __assembleHead()
-//         __DBG_printf("_json.length()=%u _jsonBuffer.fillBuffer()=%u filling missing data with spaces. check for utf-8/unicode issues", _json.length(), _sentLength);
-//         return diff;
-//     }
-//     return size;
-// #else
-//     return _jsonBuffer.fillBuffer(data, len);
-// #endif
-// }
-
-// JsonUnnamedObject &AsyncJsonResponse::getJsonObject()
-// {
-//     return _json;
-// }
-
-// void AsyncJsonResponse::__assembleHead(uint8_t version)
-// {
-// #if 1
-//     __DBG_printf("__assembleHead _sendContentLength=%u _contentLength=%u json=%u/%u", _sendContentLength, _contentLength, _json.length(), _json.toString().length());
-//     Serial.println(F("------ _json.toString() ------"));
-//     Serial.println(_json.toString());
-//     Serial.println(F("------ JsonBuffer(_json).fillBuffer(); ------"));
-//     uint8_t buffer[101];
-//     JsonBuffer b(_json);
-//     PrintString c(F("chunks "));
-//     int res = 0;
-//     do {
-//         res = b.fillBuffer(buffer, 100);
-//         buffer[100] = 0;
-//         buffer[res] = 0;
-//         c.printf("%d ", res);
-//         Serial.println((char *)buffer);
-//     }
-//     while(res);
-//     Serial.println(F("------"));
-//     Serial.println(c);
-//     Serial.println(F("------"));
-// #endif
-//     if (_sendContentLength) {
-//         _contentLength = _json.length();
-//     }
-//     AsyncBaseResponse::__assembleHead(version);
-// };
-
-
 #if MDNS_PLUGIN
 
 size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 {
+    bool end = false;
     MUTEX_LOCK_BLOCK(_output->_lock) {
-        if (_output->_timeout && _startTime - millis() >= _output->_timeout) {
-            __DBG_printf("timeout");
-            _output->end();
+        uint32_t runtime = millis() - _startTime;
+        __LDBG_printf("runtime=%u timeout=%u", runtime, _output->_timeout);
+        if (runtime >= _output->_timeout) {
+            end = true;
         }
 
         #if ESP32
-            if (!_output->poll()) {
-                __DBG_printf("poll failed");
+            if (!end && !_output->poll(1000, false)) {
+                __LDBG_printf("poll without response, retrying");
                 return RESPONSE_TRY_AGAIN;
             }
         #endif
 
-        size_t keep = _output->_timeout == 0 ? 0 : 32;
-        if (_output->_output.length() == 0 && keep == 0) {
-            // __DBG_printf("length=0 keep=0");
-            return 0;
+        auto outputLen = _output->_output.length();
+        if (!end && outputLen) {
+            // we need to keep the last "," in the buffer to remove it if it was the last response
+            outputLen--;
         }
-        else if (_output->_output.length() > keep) {
-            auto avail = std::clamp<int>(_output->_output.length() - (keep ? 4 : 0), 0, len);
-            // __DBG_printf("avail=%u len=%u keep=%u", avail, _output->_output.length(), keep);
-            if (avail) {
-                memcpy(data, _output->_output.c_str(), avail);
-                _output->_output = _output->_output.c_str() + avail;
-                return avail;
+        else if (end) {
+            // terminate json output and update length
+            _output->end();
+            outputLen = _output->_output.length();
+        }
+        auto space = std::min(outputLen, len);
+        __LDBG_printf("end=%u space=%u output=%u send=%*.*s", end, space, _output->_output.length(), space, space, _output->_output.c_str());
+        if (space) {
+            memcpy(data, _output->_output.c_str(), space);
+            outputLen -= space;
+            if (_output->_output.capacity() - outputLen > 64) {
+                // create new string to release the memory
+                _output->_output = _output->_output.c_str() + space;
             }
+            else {
+                _output->_output.remove(0, space);
+            }
+            return space;
         }
-        // __DBG_printf("retry keep=%u", keep);
-        return RESPONSE_TRY_AGAIN;
     }
+    __LDBG_printf("result=%d", end ? 0 : RESPONSE_TRY_AGAIN);
+    return end ? 0 : RESPONSE_TRY_AGAIN;
 }
 
 #endif
@@ -308,7 +250,6 @@ AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) :
     _contentType = FSPGM(mime_application_json);
     append_slash(_dirName);
     __LDBG_printf("dir=%s hiddenFiles=%u", _dirName.c_str(), _dir.showHiddenFiles());
-
 }
 
 bool AsyncDirResponse::_sourceValid() const

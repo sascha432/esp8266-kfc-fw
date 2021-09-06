@@ -107,36 +107,38 @@
                 this.tbody.find('.spinner').remove();
                 this.spinner_top.fadeOut();
                 this.error_top.hide();
-                try {
-                    var self = this;
-                    $(data['l']).each(function(key, val) {
-                        var name = val['s'];
-                        var pos = name.indexOf('._');
-                        if (pos == -1) {
-                            pos = name.indexOf('.');
-                        }
-                        if (pos != -1) {
-                            name = name.substring(0, pos);
-                        }
-                        var row = self.tbody.find('#mdns_id_' + name);
-                        var version = val['v'];
-                        if (val['b']) {
-                            version = version + '-' + val['b'];
-                        }
-                        var title = val['t'] ? val['t'] : '-';
-                        var device = val['d'] ? val['d'] : '-';
-                        var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td><td>' + device + '</td></tr>';
-                        if (row.length) {
-                            row.html($(html).find('tr').html());
-                        }
-                        else {
-                            self.tbody.append(html);
-                        }
-                    });
-                }
-                catch(e) {
-                    this.fail();
-                    return;
+                if (data['l']) {
+                    try {
+                        var self = this;
+                        $(data['l']).each(function(key, val) {
+                            var name = val['s'];
+                            var pos = name.indexOf('._');
+                            if (pos == -1) {
+                                pos = name.indexOf('.');
+                            }
+                            if (pos != -1) {
+                                name = name.substring(0, pos);
+                            }
+                            var row = self.tbody.find('#mdns_id_' + name);
+                            var version = val['v'];
+                            if (val['b']) {
+                                version = version + '-' + val['b'];
+                            }
+                            var title = val['t'] ? val['t'] : '-';
+                            var device = val['d'] ? val['d'] : '-';
+                            var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td><td>' + device + '</td></tr>';
+                            if (row.length) {
+                                row.html($(html).find('tr').html());
+                            }
+                            else {
+                                self.tbody.append(html);
+                            }
+                        });
+                    }
+                    catch(e) {
+                        this.fail();
+                        return;
+                    }
                 }
                 window.setTimeout(this.update.bind(this), this._interval);
                 this._interval = this.interval[1];

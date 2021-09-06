@@ -8,6 +8,7 @@
 
 #include <Arduino_compat.h>
 #include <memory>
+#include <Mutex.h>
 #if ESP8266
 #include <ESP8266mDNS.h>
 #elif ESP32
@@ -45,16 +46,6 @@ namespace MDNSResolver {
             IPAddress findIP4Address(const IPAddress &myAddress);
             char *findTxtValue(const String &key);
         };
-
-    // #elif ESP32
-
-    //     class MDNSServiceInfo /*: public MDNSResponder::MDNSServiceInfo*/ {
-    //     public:
-    //         // using ::MDNSResponder::MDNSServiceInfo::MDNSServiceInfo;
-
-    //         IPAddress findIP4Address(const IPAddress &myAddress);
-    //         char *findTxtValue(const String &key);
-    //     };
 
     #endif
 

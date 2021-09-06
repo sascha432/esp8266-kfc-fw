@@ -103,12 +103,12 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
 
 #elif ESP32
 
-bool MDNSPlugin::Output::poll()
+bool MDNSPlugin::Output::poll(uint32_t timeout, bool lock)
 {
     auto outputLen = _output.length();
     if (_timeout && _serviceQuery) {
         mdns_result_t *results = nullptr;
-        if (!mdns_query_async_get_results(_serviceQuery, 0, &results)) {
+        if (!mdns_query_async_get_results(_serviceQuery, timeout, &results)) {
             return false;
         }
         __LDBG_printf("results=%p", results);
@@ -116,9 +116,11 @@ bool MDNSPlugin::Output::poll()
             return false;
         }
 
-        MUTEX_LOCK_BLOCK(_lock) {
+        {
+            MutexLock mLock(_lock, lock);
             auto cur = results;
             while(cur) {
+                next();
                 if (cur->ip_protocol == mdns_ip_protocol_t::MDNS_IP_PROTOCOL_V4) {
                     uint32_t ipCount = 0;
                     auto addr = cur->addr;
@@ -139,12 +141,15 @@ bool MDNSPlugin::Output::poll()
                         _output.print(F("],"));
                     }
 
-                    {
-                        JsonTools::Utf8Buffer buffer;
-                        _output.print(F("\"h\":\""));
-                        JsonTools::printToEscaped(_output, cur->hostname, strlen(cur->hostname), &buffer);
-                        _output.printf_P(PSTR("\",\"p\":%u,"), cur->port);
-                    }
+                    JsonTools::Utf8Buffer buffer;
+                    _output.print(F("\"s\":\""));
+                    JsonTools::printToEscaped(_output, cur->instance_name, strlen(cur->instance_name), &buffer);
+                    _output.print(F("\","));
+
+                    buffer = JsonTools::Utf8Buffer();
+                    _output.print(F("\"h\":\""));
+                    JsonTools::printToEscaped(_output, cur->hostname, strlen(cur->hostname), &buffer);
+                    _output.printf_P(PSTR("\",\"p\":%u,"), cur->port);
 
                     __LDBG_printf("instance=%s if=%u hostname=%s port=%u txt_count=%u",
                         __S(cur->instance_name), cur->tcpip_if, __S(cur->hostname), cur->port, cur->txt_count
@@ -163,7 +168,7 @@ bool MDNSPlugin::Output::poll()
                             String key(ch);
                             if (key.equals(txt->key)) {
                                 _output.printf_P(PSTR("\"%s\":\""), key.c_str());
-                                JsonTools::Utf8Buffer buffer;
+                                buffer = JsonTools::Utf8Buffer();
                                 JsonTools::printToEscaped(_output, txt->value, *len, &buffer);
                                 _output.print(F("\","));
                             }
@@ -190,31 +195,39 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("MDNS service is not running"));
         }
         else if (args.requireArgs(2, 3)) {
-            #if ESP8266
-                auto timeout = args.toMillis(2, 100, ~0, 3000);
-                auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
-                args.print(F("Querying: %s"), query.c_str());
+            auto timeout = args.toMillis(2, 100, ~0, 3000);
+            auto query = PrintString(F("service=%s proto=%s wait=%ums"), args.toString(0).c_str(), args.toString(1).c_str(), timeout);
+            args.print(F("Querying: %s"), query.c_str());
 
-                auto output = new MDNSPlugin::Output(millis() + timeout);
-                if (output) {
+            // +MDNSQ=_kfcmdns,_udp
+            // +MDNSQ=kfcmdns,udp
+
+            auto output = new MDNSPlugin::Output(timeout);
+            if (output) {
+                #if ESP8266
                     output->_serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this, output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
                         serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
                     });
+                #elif ESP32
+                    output->_serviceQuery = mdns_query_async_new(emptyString.c_str(), args.toString(0).c_str(), args.toString(1).c_str(), MDNS_TYPE_PTR, timeout, 64);
+                #endif
 
+                if (output->_serviceQuery) {
                     _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) {
-                        #if DEBUG_MDNS_SD
-                            bool result;
+                        #if ESP32
+                            if (esp_task_wdt_add(nullptr) != ESP_OK) {
+                                __DBG_printf_E("esp_task_wdt_add failed");
+                            }
+                            while(output->poll(1000)) {
+                                esp_task_wdt_reset();
+                                __LDBG_printf("poll repeat");
+                            }
+                            esp_task_wdt_delete(NULL);
                         #endif
                         MUTEX_LOCK_BLOCK(output->_lock) {
-                            #if DEBUG_MDNS_SD
-                                result =
-                            #endif
-                            MDNS.removeServiceQuery(output->_serviceQuery);
-                            output->_serviceQuery = nullptr;
                             output->end();
                         }
 
-                        __LDBG_printf("removeServiceQuery=%u", result);
                         if (output->_output.length() == 0) {
                             args.print(F("No response"));
                         }
@@ -227,7 +240,10 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                         }
                     });
                 }
-            #endif
+                else {
+                    args.print(F("Failed to create service query"));
+                }
+            }
         }
         return true;
     }
@@ -282,7 +298,6 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                         else {
                             args.printf_P(PSTR("Invalid config: %s"), conf.c_str());
                         }
-
                     }
                     break;
                 default:
@@ -292,10 +307,6 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    // else if (IsCommand(PROGMEM_AT_MODE_HELP_COMMAND(MDNSBSD))) {
-    //     serial.println(F("Not supported"));
-    //     return true;
-    // }
     return false;
 }
 

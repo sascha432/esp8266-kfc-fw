@@ -23,7 +23,7 @@
 #endif
 
 #ifndef DEBUG_MDNS_SD
-#   define DEBUG_MDNS_SD 1
+#   define DEBUG_MDNS_SD 0
 #endif
 
 #if DEBUG_MDNS_SD
@@ -60,15 +60,10 @@ public:
 
     class Output {
     public:
-        String _current;
-        PrintString _output;
-        MDNSResolver::ServiceQuery _serviceQuery;
-        uint32_t _timeout;
-        SemaphoreMutex _lock;
-
-        Output(uint32_t timeout) :
+        Output(uint16_t timeout) :
             _serviceQuery(nullptr),
-            _timeout(timeout)
+            _timeout(timeout),
+            _resultCounter(0)
         {
         }
 
@@ -82,32 +77,38 @@ public:
             }
         }
 
-        void begin() {
-            _output.print(F("{\"l\":[{"));
-        }
-
         void end() {
-            if (_output.length()) {
+            if (_timeout && _resultCounter) {
                 _output.trim(',');
                 _output.print(F("}]}"));
-                _timeout = 0;
-                _current = String();
+                #if ESP8266
+                    _current = String();
+                #endif
             }
+            _timeout = 0;
         }
 
         void next() {
-            if (_output.length()) {
+            if (_resultCounter++) {
                 _output.trim(',');
                 _output.print(F("},{"));
             }
             else {
-                begin();
+                _output.print(F("{\"l\":[{"));
             }
         }
 
-        #if ESP32
-            bool poll();
+        #if ESP8266
+            String _current;
+        #elif ESP32
+            //TODO check if the async notifier callback is supported, currently missing in the IDF framework
+            bool poll(uint32_t timeout = 0, bool lock = true);
         #endif
+        PrintString _output;
+        MDNSResolver::ServiceQuery _serviceQuery;
+        SemaphoreMutex _lock;
+        uint16_t _timeout;
+        uint16_t _resultCounter;
     };
 
 public:
@@ -149,6 +150,7 @@ public:
     static void removeQuery(MDNSResolver::Query *query);
 
     MDNSResolver::Query *findQuery(void *query) const;
+    SemaphoreMutex &getLock();
 
 private:
     MDNSResolver::Queries _queries;
@@ -167,11 +169,14 @@ private:
 
 private:
     bool _running;
+    SemaphoreMutex _lock;
 };
 
 inline void MDNSPlugin::_stopQueries()
 {
-    _queries.clear();
+    MUTEX_LOCK_BLOCK(_lock) {
+        _queries.clear();
+    }
 }
 
 inline bool MDNSPlugin::isEnabled()
@@ -185,6 +190,11 @@ inline void MDNSPlugin::reconfigure(const String &source)
     __LDBG_printf("running=%u source=%s", _running, source.c_str());
     end();
     begin();
+}
+
+inline SemaphoreMutex &MDNSPlugin::getLock()
+{
+    return _lock;
 }
 
 inline void MDNSPlugin::shutdown()

@@ -1708,7 +1708,10 @@ void at_mode_serial_handle_event(String &commandString)
                 args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&flashModeStr, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&flashModeStr);
             #endif
             args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
-            #if ESP8266
+            #if ESP32
+                args.print(F("Chip model %s (%s)"), KFCFWConfiguration::getChipModel(), ESP.getChipModel());
+            #elif ESP8266
+                args.print(F("Chip model %s"), KFCFWConfiguration::getChipModel());
                 args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
                 args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
                 args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());

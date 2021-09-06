@@ -51,7 +51,7 @@
     inline void debugBootPrintf(PGM_P file, int line, PGM_P msg)
     {
         #if ESP32
-            log_printf(PSTR("BOOT%08lu %s:%u heap=%d can_yield=%u heap_check=%u %s\n"), millis(), file, line, ESP.getFreeHeap(), can_yield(), heap_caps_check_integrity_all(true), msg);
+            log_printf(PSTR("BOOT%08lu %s:%u heap=%d can_yield=%u heap_check=%u %s\r\n"), millis(), file, line, ESP.getFreeHeap(), can_yield(), heap_caps_check_integrity_all(true), msg);
         #else
             switch(debugBootHaveSerial) {
                 case 0:

@@ -15,9 +15,13 @@
 
 #undef __LDBG_printf
 #if DEBUG_RESET_DETECTOR
-#define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u (line %u): " fmt "\r\n"), micros() / 1000, __LINE__, ##__VA_ARGS__)
+#    if ESP32
+#        define __LDBG_printf(fmt, ...) log_printf("RD%04u (line %u): " fmt "\r\n", micros() / 1000, __LINE__, ##__VA_ARGS__)
+#    else
+#        define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RD%04u (line %u): " fmt "\r\n"), micros() / 1000, __LINE__, ##__VA_ARGS__)
+#    endif
 #else
-#define __LDBG_printf(...)
+#    define __LDBG_printf(...)
 #endif
 
 using ResetDetectorUninitialized = stdex::UninitializedClass<ResetDetector>;
@@ -139,11 +143,6 @@ void ResetDetector::begin()
 
     #elif ESP32
 
-        // using Serial cuases WDT reset
-        // #if DEBUG_RESET_DETECTOR
-        //     Serial0.begin(KFC_SERIAL_RATE);
-        // #endif
-
         __LDBG_printf("init reset detector");
 
         struct rst_info resetInfo = {};
@@ -152,16 +151,17 @@ void ResetDetector::begin()
         _readData();
         ++_data;
         _data.pushReason(resetInfo.reason);
+
         __LDBG_printf("depc=%08x epc1=%08x epc2=%08x epc3=%08x exccause=%08x excvaddr=%08x reason=%u", resetInfo.depc, resetInfo.epc1, resetInfo.epc2, resetInfo.epc3, resetInfo.exccause, resetInfo.excvaddr, resetInfo.reason);
 
     #endif
 
     #if DEBUG_RESET_DETECTOR
-        __DBG_printf("reason history");
+        __LDBG_printf("reason history");
         for(auto reason: _storedData) {
-            __DBG_printf("%u - %s", reason, getResetReason(reason));
+            __LDBG_printf("%u - %s", reason, getResetReason(reason));
         }
-        __DBG_printf("%u - %s (recent)", _data.getReason(), getResetReason());
+        __LDBG_printf("%u - %s (recent)", _data.getReason(), getResetReason());
     #endif
 
     _writeData();

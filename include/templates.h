@@ -50,7 +50,7 @@ public:
 
     static void printSystemTime(time_t now, PrintHtmlEntitiesString &output);
     static void printUniqueId(Print &output, const String &name, int8_t dashPos = -1);
-    static void printVersion(Print &output);
+    static void printVersion(Print &output, bool full = true);
     static void printWebInterfaceUrl(Print &output);
     static void printModel(Print &output);
     static void printFileSystemInfo(Print &output);

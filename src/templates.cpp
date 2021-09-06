@@ -15,6 +15,9 @@
 #include "plugins_menu.h"
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
+#if ESP32
+#include <sdkconfig.h>
+#endif
 
 #if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>
@@ -87,12 +90,14 @@ void WebTemplate::printUniqueId(Print &output, const String &name, int8_t dashPo
     }
 }
 
-void WebTemplate::printVersion(Print &output)
+void WebTemplate::printVersion(Print &output, bool full)
 {
     output.print(F("KFC FW "));
     output.print(config.getFirmwareVersion());
     #if ESP32
-        output.printf_P(PSTR(HTML_S(br) "ESP-IDF Version %s"), esp_get_idf_version());
+        if (full) {
+            output.printf_P(PSTR(HTML_S(br) "ESP-IDF Version %s"), esp_get_idf_version());
+        }
     #endif
 }
 
@@ -123,15 +128,8 @@ void WebTemplate::printModel(Print &output)
     #else
             output.print(F("Generic"));
     #endif
-    #if defined(ESP8266)
-            output.print(F("/ESP8266"));
-    #elif defined(ESP32)
-            output.print(F("/ESP32"));
-    #elif defined(__AVR__) || defined(__avr__)
-            output.print(F("/AVR"));
-    #else
-            output.print(F("/Unknown"));
-    #endif
+    output.print('/');
+    output.print(KFCFWConfiguration::getChipModel());
 }
 
 void WebTemplate::printFileSystemInfo(Print &output)
@@ -205,6 +203,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (key == F("VERSION")) {
         printVersion(output);
     }
+    else if (key == F("VERSION_ONLY")) {
+        printVersion(output, false);
+    }
     else if (key == F("MODEL")) {
         printModel(output);
     }
@@ -244,11 +245,19 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 formatBytes(ESP.getFreeHeap()).c_str()
             );
         #elif ESP32
-            output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s, Free PSRam %s, Temperature %.1f%s"),
+            output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s, "),
                 formatBytes(ESP.getFlashChipSize()).c_str(),
                 ESP.getCpuFreqMHz(),
-                formatBytes(ESP.getFreeHeap()).c_str(),
-                formatBytes(ESP.getFreePsram()).c_str(),
+                formatBytes(ESP.getFreeHeap()).c_str()
+            );
+            #if CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM
+                if (psramFound()) {
+                    output.printf_P(PSTR("Free PSRam %s, "),
+                        formatBytes(ESP.getFreePsram()).c_str()
+                    );
+                }
+            #endif
+            output.printf_P(PSTR("Temperature %.1f%s"),
                 temperatureRead(),
                 SPGM(UTF8_degreeC)
             );

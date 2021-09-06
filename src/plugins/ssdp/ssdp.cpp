@@ -67,7 +67,7 @@ void SSDPPlugin::_begin()
     WebTemplate::printModel(tmp);
     SSDP.setModelName(tmp);
     tmp = PrintString();
-    WebTemplate::printVersion(tmp);
+    WebTemplate::printVersion(tmp, false);
     SSDP.setModelNumber(tmp);
     tmp = PrintString();
     WebTemplate::printWebInterfaceUrl(tmp);

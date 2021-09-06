@@ -10,7 +10,7 @@
 <friendlyName>%HOSTNAME% (%WIFI_IP_ADDRESS%) %TITLE%</friendlyName>
 <manufacturer>KFCLabs</manufacturer>
 <manufacturerURL>https://github.com/sascha432</manufacturerURL>
-<modelDescription>%VERSION%</modelDescription>
+<modelDescription>%VERSION_ONLY%</modelDescription>
 <modelName>%MODEL%</modelName>
 <modelNumber>%MODEL%</modelNumber>
 <modelURL>https://github.com/sascha432/esp8266-kfc-fw</modelURL>

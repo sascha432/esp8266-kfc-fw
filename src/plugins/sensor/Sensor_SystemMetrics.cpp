@@ -7,7 +7,9 @@
 #include "Sensor_SystemMetrics.h"
 #include "WebUIComponent.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
-
+#if ESP32
+#include <sdkconfig.h>
+#endif
 
 #if PING_MONITOR_SUPPORT
 #include "../src/plugins/ping_monitor/ping_monitor.h"
@@ -41,7 +43,7 @@ enum class AutoDiscoveryENum {
     UPTIME_SECONDS = 0,
     UPTIME_HUMAN,
     HEAP,
-    #if ESP32
+    #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
         PSRAM,
     #endif
     VERSION,
@@ -91,7 +93,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 #endif
             }
             break;
-        #if ESP32
+        #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
             case AutoDiscoveryENum::PSRAM:
                 if (discovery->create(this, "psram", format)) {
                     discovery->addStateTopic(_getTopic());
@@ -185,7 +187,9 @@ void Sensor_SystemMetrics::getValues(WebUINS::Events &array, bool timer)
         WebUINS::Values(_getId(MetricsType::UPTIME), _getUptime(), true)
         #if ESP32
             , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB"), ESP.getFreeHeap() / 1024.0), true)
-            , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.2f KB"), ESP.getFreePsram() / 1024.0), true)
+            #if CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM
+                , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.2f KB"), ESP.getFreePsram() / 1024.0), true)
+            #endif
         #endif
         #if ESP8266
             , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
@@ -232,7 +236,7 @@ void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)
     WebUINS::Row row;
     row.append(WebUINS::Sensor(_getId(MetricsType::UPTIME), F("Uptime"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
     row.append(WebUINS::Sensor(_getId(MetricsType::MEMORY), F("Free Memory"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
-    #if ESP32
+    #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
         row.append(WebUINS::Sensor(_getId(MetricsType::PSRAM), F("Free PSRam"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
     #endif
     webUI.addRow(row);
@@ -250,7 +254,7 @@ String Sensor_SystemMetrics::_getMetricsJson() const
         NamedUint32(FSPGM(uptime), getSystemUptime()),
         NamedStoredString(F("uptime_hr"), _getUptime(F("\n"))),
             NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
-        #if ESP32
+        #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
             NamedUint32(F("psram"), ESP.getFreePsram()),
         #endif
         #if ESP8266
@@ -259,9 +263,9 @@ String Sensor_SystemMetrics::_getMetricsJson() const
         NamedString(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()))
     );
 
-#if PING_MONITOR_SUPPORT
-    PingMonitor::Task::addToJson(jsonObj);
-#endif
+    #if PING_MONITOR_SUPPORT
+        PingMonitor::Task::addToJson(jsonObj);
+    #endif
     return jsonObj.toString();
 }
 
@@ -272,7 +276,7 @@ const __FlashStringHelper *Sensor_SystemMetrics::_getId(MetricsType type) const
             return F("metricsuptime");
         case MetricsType::MEMORY:
             return F("metricsmem");
-        #if ESP32
+        #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
             case MetricsType::PSRAM:
                 return F("metricspsram");
         #endif

@@ -11,7 +11,11 @@
 #endif
 
 #include <Arduino_compat.h>
+#if ESP8266
 #include <ESP8266SSDP.h>
+#elif ESP32
+#include <ESP32SSDP.h>
+#endif
 #include <kfc_fw_config.h>
 #include "plugins.h"
 

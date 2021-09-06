@@ -2,6 +2,7 @@
 
 ## Version 0.0.5
 
+- ESP32: Syslog and SSDP
 - ESP32: Zeroconf and MDNS discovery
 - ESP32: FreeRTOS semaphores
 - ESP32: NVS storage for configuration

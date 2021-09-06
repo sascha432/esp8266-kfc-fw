@@ -287,6 +287,10 @@ https://github.com/akaJes/AsyncPing
 
 [FastLED](https://github.com/FastLED/FastLED)
 
+### ESP32 SSDP
+
+[ESP32 Simple Service Discovery](https://github.com/luc-github/ESP32SSDP.git)
+
 ### Adafruit Libraries (Various plugins)
 
 [Adafruit_Sensor](https://github.com/adafruit/Adafruit_Sensor)

@@ -44,9 +44,6 @@
 #endif
 
 #if MDNS_PLUGIN
-#    if ESP8266
-#        include <ESP8266SSDP.h>
-#    endif
 #    include "../src/plugins/mdns/mdns_plugin.h"
 #    include "../src/plugins/mdns/mdns_resolver.h"
 #    include "../src/plugins/mdns/mdns_sd.h"

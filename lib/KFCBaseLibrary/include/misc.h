@@ -181,8 +181,9 @@ inline int countDecimalPlaces(double value)
     return countDecimalPlaces(value, std::numeric_limits<double>::digits10);
 }
 
-void append_slash(String &dir);
-void remove_trailing_slash(String &dir);
+String &append_slash(String &dir);
+String append_slash(const String &dir);
+String &remove_trailing_slash(String &dir);
 
 const __FlashStringHelper *sys_get_temp_dir();
 File tmpfile(String dir, const String &prefix);

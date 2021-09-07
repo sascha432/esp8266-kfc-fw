@@ -239,10 +239,10 @@ size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
 #include <debug_helper_enable.h>
 #endif
 
-AsyncDirResponse::AsyncDirResponse(const ListDir &dir, const String &dirName) :
+AsyncDirResponse::AsyncDirResponse(const String &dirName, bool showHiddenFiles) :
     AsyncBaseResponse(true),
     _state(0),
-    _dir(dir),
+    _dir(dirName, true, showHiddenFiles),
     _next(_dir.next()),
     _dirName(dirName)
 {

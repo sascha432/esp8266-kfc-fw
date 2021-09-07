@@ -136,21 +136,31 @@ int countDecimalPlaces(double value, uint8_t maxPrecision)
     return (endPtr - dot) - 1;
 }
 
-void append_slash(String &dir)
+String &append_slash(String &dir)
 {
     auto len = dir.length();
     if (len == 0 || (len != 0 && dir.charAt(len - 1) != '/')) {
         dir += '/';
     }
+    return dir;
 }
 
-void remove_trailing_slash(String &dir)
+String append_slash(const String &dir)
 {
     auto len = dir.length();
-    if (len && dir.charAt(len - 1) == '/')
-    {
+    if (len == 0 || (len != 0 && dir.charAt(len - 1) != '/')) {
+        return dir + '/';
+    }
+    return dir;
+}
+
+String &remove_trailing_slash(String &dir)
+{
+    auto len = dir.length();
+    if (len && dir.charAt(len - 1) == '/') {
         dir.remove(len - 1);
     }
+    return dir;
 }
 
 const __FlashStringHelper *sys_get_temp_dir()

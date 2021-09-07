@@ -145,7 +145,7 @@ public:
     static const uint8_t TYPE_MAPPED_FILE =     1;
     static const uint8_t TYPE_REGULAR_FILE =    0;
 
-    AsyncDirResponse(const ListDir &dir, const String &dirName);
+    AsyncDirResponse(const String &dirName, bool showHiddenFiles);
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 

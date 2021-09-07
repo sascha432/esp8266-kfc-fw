@@ -104,20 +104,6 @@ String FileManager::_requireDir(const String &name)
     return path;
 }
 
-ListDir FileManager::_getDir(const String &path)
-{
-    if (!path.length()) {
-        return ListDir();
-    }
-    return ListDir(path, true, _request->arg(F("hidden")).toInt());
-    // auto dir = ListDir(path, true);
-    // if (!dir.next()) {
-    //     _errors++;
-    //     __LDBG_printf("Directory %s does not exist or empty", path.c_str());
-    // }
-    // return dir;
-}
-
 String FileManager::_requireFile(const String &name, bool mustExists)
 {
     if (!_request->hasArg(name.c_str())) {
@@ -206,7 +192,7 @@ uint16_t FileManager::list()
     __LDBG_printf("FileManager::list()");
     auto dirName = _requireDir(FSPGM(dir));
     if (_isValidData()) {
-        _response = new AsyncDirResponse(_getDir(dirName), dirName);
+        _response = new AsyncDirResponse(dirName, _request->arg(F("hidden")).toInt());
         return 200;
     }
     return 500;

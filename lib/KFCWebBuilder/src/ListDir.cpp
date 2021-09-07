@@ -11,15 +11,14 @@
 // #include "debug_helper_enable.h"
 
 ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
-    _dirName(dirName),
-    _listings(KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
-    _listing({}),
-    _isDir(false),
+    _dirName(append_slash(dirName)),
+    _vfsFile(KFCFS.open(FSPGM(fs_mapping_listings), FileOpenMode::read)),
+    #if !USE_LITTLEFS
+        _isDir(false),
+    #endif
     _filterSubdirs(filterSubdirs),
     _hiddenFiles(hiddenFiles)
 {
-    append_slash(_dirName);
-    _dir = KFCFS_openDir(_dirName);
     __LDBG_printf("dirName=%s", _dirName.c_str());
 }
 
@@ -39,23 +38,21 @@ String ListDir::_getFirstSubDirectory(const String &path) const
     return String();
 }
 
+#if !USE_LITTLEFS
+
 bool ListDir::_showPath(const String &path) const
 {
     if (_hiddenFiles) {
         return true;
     }
-    #if !defined(ESP8266)
-        if (path.charAt(0) == '.') {
-            return false;
-        }
-    #endif
-
     auto pos = path.indexOf(F("/."));
     return (
         pos == -1 ||
         pos == (int)path.length() - 2    // emulated directories end with "/." do not treat them as hidden files
     );
 }
+
+#endif
 
 uint8_t ListDir::_countSubDirs(const String &dir, uint8_t limit) const
 {
@@ -79,54 +76,71 @@ uint8_t ListDir::_countSubDirs(const String &dir, uint8_t limit) const
 
 bool ListDir::next()
 {
-    if (_listings) {
+    if (_vfsFile) {
+        // read virtual files and directories
         while(true) {
-            if (_listings.readBytes(reinterpret_cast<char *>(&_listing.header), sizeof(_listing.header)) != sizeof(_listing.header)) {
-                __LDBG_printf("read failure: header pos=%u size=%u", _listings.position(), _listings.size());
-                _listings.close();
-                _listing.valid = false;
+            if (_vfsFile.readBytes(_vfs.header, sizeof(_vfs.header)) != sizeof(_vfs.header)) {
+                __LDBG_printf("read failure: header pos=%u size=%u", _vfsFile.position(), _vfsFile.size());
+                _openDir();
                 break;
             }
             else {
-                _listing.filename = _listings.readStringUntil('\n');
-                if (!_listing.filename.length()) {
-                    __LDBG_printf("filename empty pos=%u size=%u", _listings.position(), _listings.size());
-                    _listings.close();
-                    _listing.valid = false;
+                _vfs.filename = _vfsFile.readStringUntil('\n');
+                if (!_vfs.filename.length()) {
+                    __LDBG_printf("filename empty pos=%u size=%u", _vfsFile.position(), _vfsFile.size());
+                    _openDir();
                     break;
                 }
                 else {
-                    __LDBG_printf("uuid=%x filename=%s filesize=%u/%u mtime=%u gzipped=%u dir=%u skip=%u", _listing.header.uuid, _listing.filename.c_str(), _listing.header.size, _listing.header.orgSize, _listing.header.mtime, _listing.header.gzipped, _listing.header.isDir, !_listing.filename.startsWith(_dirName));
-                    if (_listing.filename.startsWith(_dirName) && _countSubDirs(_listing.filename) >= 2 && _showPath(_listing.filename)) {
-                        _listing.valid = true;
+                    __LDBG_printf("uuid=%x filename=%s filesize=%u/%u mtime=%u gzipped=%u dir=%u skip=%u", _vfs.header.uuid, _vfs.filename.c_str(), _vfs.header.size, _vfs.header.orgSize, _vfs.header.mtime, _vfs.header.gzipped, _vfs.header.isDir, !_vfs.filename.startsWith(_dirName));
+                    if (_vfs.filename.startsWith(_dirName) && _countSubDirs(_vfs.filename) >= 2 && _showPath(_vfs.filename.c_str())) {
+                        _vfs.valid = true;
                         return true;
                     }
                 }
             }
         }
     }
-    bool next;
-    if (_listing.valid && _listing.header.uuid == kDirectoryUUID) {
-        next = true;
-        _listing.valid = false;
-    }
-    else {
-        next = _dir.next();
-    }
-    while (next) {
-        #if USE_LITTLEFS
-            _filename = _dirName + _dir.fileName();
-        #else
-            _filename = _dir.fullName();
-        #endif
+    // bool next;
+    // if (_vfs.valid && _vfs.header.uuid == kDirectoryUUID) {
+    //     next = true;
+    //     _listing.valid = false;
+    //     //TODO check
+    //     __DBG_printf_E("_listing.header.uuid == kDirectoryUUID");
+    // }
+    // else {
+    //     next = _dir.next();
+    //     __LDBG_printf("next=%u", next);
+    // }
+    while (_dir.next()) {
+        #if ESP32
 
-        while(true) {
-            if (_filename.startsWithIgnoreCase(FSPGM(fs_mapping_dir))) {
-                break;
+            if (_showPath(_dir.name())) {
+                _filename = _dir.fullName();
+                if (_dir.isDirectory()) {
+                    append_slash(_filename);
+                }
+                __LDBG_printf("filename=%s is_dir=%d mapping=%u", _filename.c_str(), _dir.isDirectory(), _filename.startsWithIgnoreCase(FSPGM(fs_mapping_dir)));
+
+                if (!_filename.startsWithIgnoreCase(FSPGM(fs_mapping_dir))) {
+                    __LDBG_printf("file=%s is_dir=%d size=%u time=%u", _dir.fullName(), _dir.isDirectory(), _dir.fileSize(), _dir.fileTime());
+                    return true;
+                }
             }
-            _isDir = false;
-            auto subDirCount = _countSubDirs(_filename);
-            #if defined(ESP8266) || 1
+
+        #else
+
+            // TODO refactor code
+
+            #if USE_LITTLEFS
+                _filename = _dirName + _dir.fileName();
+            #else
+                _filename = _dir.fullName();
+            #endif
+
+            while(!_filename.startsWithIgnoreCase(FSPGM(fs_mapping_dir))) {
+                _isDir = false;
+                auto subDirCount = _countSubDirs(_filename);
                 // this emulates one level of subdirecties only
                 String dir = _getFirstSubDirectory(_filename);
                 __LDBG_printf("file=%s subdirs=%u show=%u dir=%s add=%u",
@@ -146,43 +160,36 @@ bool ListDir::next()
                         return true;
                     }
                 }
-            #else
-                __LDBG_printf("file=%s subdirs=%u show=%u", _filename.c_str(), subDirCount, _showPath(_filename));
-            #endif
-            if (subDirCount == 0 || !_showPath(_filename)) { // multiple subdirectories
-                break;
-            }
-            #if !USE_LITTLEFS
-                if (_filename.endsWith(F("/."))) {   // directory emulation
-                    _filename.remove(_filename.length() - 1);
-                    __LDBG_printf("file=%s is_dirname=%d is_dir=%d dirname=%s dir=%s",
-                        _filename.c_str(),
-                        _dirName.equals(_filename),
-                        dir.equals(_filename.substring(0, _filename.length() - 1)),
-                        _dirName.c_str(),
-                        dir.c_str()
-                    );
-                    if (_dirName.equals(_filename)) {
-                        break;
-                    }
-                    _filename.remove(_filename.length() - 1);
-                    if (dir.equals(_filename)) {
-                        break;
-                    }
-                    _isDir = true;
-                }
-                else if (subDirCount == 1) { // file in a sub directory
+                if (subDirCount == 0 || !_showPath(_filename)) { // multiple subdirectories
                     break;
                 }
-            #else
-                if (_file.isDirectory()) {
-                    _isDir = true;
-                }
-            #endif
-            return true;
-        }
-
-        next = _dir.next();
+                #if !USE_LITTLEFS
+                    if (_filename.endsWith(F("/."))) {   // directory emulation
+                        _filename.remove(_filename.length() - 1);
+                        __LDBG_printf("file=%s is_dirname=%d is_dir=%d dirname=%s dir=%s",
+                            _filename.c_str(),
+                            _dirName.equals(_filename),
+                            dir.equals(_filename.substring(0, _filename.length() - 1)),
+                            _dirName.c_str(),
+                            dir.c_str()
+                        );
+                        if (_dirName.equals(_filename)) {
+                            break;
+                        }
+                        _filename.remove(_filename.length() - 1);
+                        if (dir.equals(_filename)) {
+                            break;
+                        }
+                        _isDir = true;
+                    }
+                    else if (subDirCount == 1) { // file in a sub directory
+                        break;
+                    }
+                #endif
+                return true;
+            }
+            // next = _dir.next();
+        #endif
     }
     return false;
 }

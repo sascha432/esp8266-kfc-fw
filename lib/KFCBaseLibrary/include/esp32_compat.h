@@ -145,15 +145,21 @@ typedef struct {
 
 namespace fs {
 
+    // ESP8266 compat
     class Dir : public fs::FS {
     public:
-        Dir() : FS(nullptr)
+        Dir() :
+            FS(nullptr),
+            _dir(nullptr),
+            _entry(nullptr)
         {
         }
+
         Dir(const String &path) :
             Dir(path.c_str())
         {
         }
+
         Dir(const char *path) :
             #if USE_LITTLEFS
                 FS(LittleFS),
@@ -161,7 +167,8 @@ namespace fs {
                 FS(SPIFFS),
             #endif
             _path(_impl->mountpoint()),
-            _entry(nullptr)
+            _entry(nullptr),
+            _stats({})
         {
             if (!_path.endsWith('/') && *path != '/') {
                 _path += '/';
@@ -174,6 +181,7 @@ namespace fs {
             }
             _dir = opendir(_path.c_str());
         }
+
         ~Dir() {
             if (_dir) {
                 closedir(_dir);
@@ -185,8 +193,7 @@ namespace fs {
         }
 
         bool rewind() {
-            _fullname = String();
-            _entry = nullptr;
+            _reset();
             if (!_dir) {
                 return false;
             }
@@ -199,7 +206,7 @@ namespace fs {
         }
 
         bool next() {
-            _fullname = String();
+            _reset();
             if (!_dir) {
                 return false;
             }
@@ -212,15 +219,29 @@ namespace fs {
             return false;
         }
 
-        size_t fileSize() const {
+        size_t fileSize() {
             if (!isFile()) {
                 return 0;
             }
-            struct stat stats;
-            if (stat(_fullname.c_str(), &stats) == 0) {
-                return stats.st_size;
+            if (_getStat()) {
+                return _stats.st_size;
             }
             return 0;
+        }
+
+        size_t size() {
+            return fileSize();
+        }
+
+        time_t fileTime() {
+            if (_getStat()) {
+                return _stats.st_mtim.tv_sec;
+            }
+            return 0;
+        }
+
+        time_t dirTime() {
+            return fileTime();
         }
 
         bool isDirectory() const {
@@ -270,35 +291,45 @@ namespace fs {
         }
 
     private:
+        bool _getStat() {
+            // stats cached
+            if (_stats.st_mode) {
+                return true;
+            }
+            if (stat(_fullname.c_str(), &_stats) == 0) {
+                // Serial.printf("filename=%s uid=%u dev=%u ctime=%u mtime=%u size=%d ino=%d mode=%u\n",
+                //     _fullname.c_str(), _stats.st_uid, _stats.st_dev, (uint32_t)_stats.st_ctim.tv_sec, (uint32_t)_stats.st_mtim.tv_sec,
+                //     (int)_stats.st_size, _stats.st_ino, _stats.st_mode
+                // );
+                return true;
+            }
+            _stats.st_mode = 0;
+            return false;
+        }
+
+        void _reset() {
+            // remove filename
+            _fullname = String();
+            // reset stats
+            _stats.st_mode = 0;
+            // remove entry
+            _entry = nullptr;
+        }
+
+    private:
         String _path;
         size_t _pathStart;
         String _fullname;
         DIR *_dir;
         struct dirent *_entry;
+        struct stat _stats;
     };
 
 };
 
-using Dir = fs::Dir;
-
-// {
-//     Serial.println("dir=/");
-//     auto dir = KFCFS_openDir("/");
-//     while(dir.next()) {
-//         Serial.printf("dir=%u file=%u filename=%s path=%s name=%s  size=%d\n", dir.isDirectory(), dir.isFile(), __S(dir.fullName()), __S(dir.path()), __S(dir.name()), dir.fileSize());
-//     }
-// }
-// {
-//     Serial.println("dir=/.logs");
-//     auto dir = KFCFS_openDir("/.logs");
-//     while(dir.next()) {
-//         Serial.printf("dir=%u file=%u filename=%s path=%s name=%s size=%d\n", dir.isDirectory(), dir.isFile(), __S(dir.fullName()), __S(dir.path()), __S(dir.name()), dir.fileSize());
-//     }
-// }
-
-// for(;;) {
-//     delay(100);
-// }
+#ifndef FS_NO_GLOBALS
+using fs::Dir;
+#endif
 
 inline void ets_timer_arm_new(ETSTimer *timer, uint32_t tmout, bool repeat, bool millis)
 {

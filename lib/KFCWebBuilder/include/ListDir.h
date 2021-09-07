@@ -6,12 +6,12 @@
 
 #include <Arduino_compat.h>
 
-#include <push_pack.h>
-
 class ListDir
 {
 public:
     static constexpr uint32_t kDirectoryUUID = ~0U;
+
+    #include <push_pack.h>
 
     struct __attribute__packed__ ListingsHeader {
         uint32_t uuid;
@@ -30,21 +30,26 @@ public:
             gzipped(false),
             isDir(directory),
             ___reserved(0)
-        {}
+        {
+        }
 
+        operator char *() {
+            return reinterpret_cast<char *>(this);
+        }
     };
+
+    #include <pop_pack.h>
 
     struct Listing {
         bool valid;
         ListingsHeader header;
         String filename;
 
-        Listing() : valid(false) {}
+        Listing() : valid(false)
+        {
+        }
     };
 
-    static constexpr size_t kListingSize = sizeof(Listing);
-
-    ListDir() {}
     ListDir(const String &dirName, bool filterSubdirs = false, bool hiddenFiles = true);
 
     File openFile(const char *mode);
@@ -66,30 +71,30 @@ private:
     uint8_t _countSubDirs(const String &path, uint8_t limit = 2) const;
     // returns true if path should be included
     // for _hiddenFiles = true it is always true
-    bool _showPath(const String &path) const;
+    #if USE_LITTLEFS
+        bool _showPath(const char *path) const;
+    #else
+        bool _showPath(const String &path) const;
+    #endif
     // return name of the first subdirectory after _dirName, including trailing /
     String _getFirstSubDirectory(const String &path) const;
-
+    void _openDir();
 
 private:
     using DirectoryVector = std::vector<uint16_t>;
 
     String _filename;
     String _dirName;
-    File _listings;
-    Listing _listing;
+    Dir _dir;
+    File _vfsFile;
+    Listing _vfs;
     DirectoryVector _dirs;
-    bool _isDir;
+    #if !USE_LITTLEFS
+        bool _isDir;
+    #endif
     bool _filterSubdirs;
     bool _hiddenFiles;
-
-private:
-    fs::Dir _dir;
-    fs::File _file;
 };
-
-static constexpr size_t kListDir = sizeof(ListDir);
-
 
 inline __attribute__((__always_inline__))
 File ListDir::openFile(const char* mode)
@@ -99,38 +104,34 @@ File ListDir::openFile(const char* mode)
 
 inline String ListDir::fileName()
 {
-    if (_listing.valid) {
-        return _listing.filename;
+    if (_vfs.valid) {
+        return _vfs.filename;
     }
     return _filename;
 }
 
 inline size_t ListDir::fileSize()
 {
-    if (_listing.valid) {
-        return _listing.header.orgSize;
+    if (_vfs.valid) {
+        return _vfs.header.orgSize;
     }
-#if ESP8266
     return _dir.fileSize();
-#elif ESP32
-    return _file.size();
-#endif
 }
 
 inline time_t ListDir::fileTime()
 {
-    if (_listing.valid) {
-        return _listing.header.mtime;
+    if (_vfs.valid) {
+        return _vfs.header.mtime;
     }
-#if ESP8266
-    auto time = _dir.fileTime();
-    if (time == 0) {
-        time = _dir.fileCreationTime();
-    }
-    return time;
-#elif ESP32
-    return 0;
-#endif
+    #if ESP32 || USE_LITTLEFS
+        return _dir.fileTime();
+    #elif ESP8266
+        auto time = _dir.fileTime();
+        if (time == 0) {
+            time = _dir.fileCreationTime();
+        }
+        return time;
+    #endif
 }
 
 inline __attribute__((__always_inline__))
@@ -141,7 +142,7 @@ bool ListDir::isFile() const
 
 inline bool ListDir::isMapping() const
 {
-    return _listing.valid && (_listing.header.uuid != kDirectoryUUID);
+    return _vfs.valid && (_vfs.header.uuid != kDirectoryUUID);
 }
 
 inline __attribute__((__always_inline__))
@@ -152,31 +153,36 @@ bool ListDir::showHiddenFiles() const
 
 inline bool ListDir::rewind()
 {
-    _listings = KFCFS.open(FSPGM(fs_mapping_listings), fs::FileOpenMode::read);
-    _listing = Listing();
-    _isDir = false;
-#if ESP8266
+    _vfsFile = KFCFS.open(FSPGM(fs_mapping_listings), fs::FileOpenMode::read);
+    _vfs = Listing();
+    #if !USE_LITTLEFS
+        _isDir = false;
+    #endif
     return _dir.rewind();
-#elif ESP32
-    _dir.rewindDirectory();
-    return true;
-#endif
 }
 
 inline bool ListDir::isDirectory() const
 {
-    if (_listing.valid) {
-        return _listing.header.isDir;
-    }
-    if (_isDir) {
-        return true;
-    }
-#if ESP8266
-    return _dir.isDirectory();
-#elif ESP32
-    return false;
-#endif
-
+    return _vfs.valid ? _vfs.header.isDir : (
+        #if !USE_LITTLEFS
+            _isDir ||
+        #endif
+        _dir.isDirectory());
 }
 
-#include <pop_pack.h>
+inline void ListDir::_openDir()
+{
+    // read file system
+    _vfsFile.close();
+    _vfs.valid = false;
+    _dir = KFCFS_openDir(_dirName);
+}
+
+#if USE_LITTLEFS
+
+inline bool ListDir::_showPath(const char *path) const
+{
+    return _hiddenFiles || (*path != '.');
+}
+
+#endif

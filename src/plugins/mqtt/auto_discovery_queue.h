@@ -64,9 +64,11 @@ namespace MQTT {
             std::unique_ptr<RemoveTopicsComponent> _remove;
             List _entities;
             List::iterator _iterator;
+            StatusCallback _callback;
+            SemaphoreMutex _lock;
+            MutexLock _mutexLock;
             uint16_t _packetId;
             RunFlags _runFlags;
-            StatusCallback _callback;
         };
 
     }

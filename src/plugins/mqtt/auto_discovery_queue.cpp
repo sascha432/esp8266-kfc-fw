@@ -26,7 +26,8 @@ Queue::Queue(Client &client) :
     Component(ComponentType::AUTO_DISCOVERY),
     _client(client),
     _packetId(0),
-    _runFlags(RunFlags::DEFAULTS)
+    _runFlags(RunFlags::DEFAULTS),
+    _mutexLock(_lock, false)
 {
     MQTT::Client::registerComponent(this);
 }
@@ -105,12 +106,7 @@ void Queue::clear()
     __LDBG_printf("clear entities=%u done=%u", _entities.size(), _iterator == _entities.end());
     _timer.remove();
     _crcs.clear();
-
-    {
-        InterruptLock lock;
-        _iterator = _entities.end();
-    }
-
+    _iterator = _entities.end();
     // stop proxies if still running
     _remove->stop(_remove);
     _collect->stop(_collect);
@@ -131,6 +127,8 @@ void Queue::runPublish(uint32_t delayMillis)
         delayMillis = _client._config.auto_discovery_delay * 1000U; // 0 = disable
     }
     __LDBG_printf("components=%u delay=%u", _client._components.size(), delayMillis);
+    bool run;
+    _mutexLock.lock();
     if (!_client._components.empty() && delayMillis) {
         uint32_t initialDelay;
 
@@ -145,6 +143,7 @@ void Queue::runPublish(uint32_t delayMillis)
         clear();
         _diff = {};
         _entities = List(_client._components, FormatType::JSON);
+        _mutexLock.unlock();
 
         __LDBG_printf("starting broadcast in %u ms", std::max<uint32_t>(1000, initialDelay));
 
@@ -245,6 +244,7 @@ void Queue::runPublish(uint32_t delayMillis)
         });
     }
     else {
+        _mutexLock.unlock();
         __LDBG_printf("auto discovery not executed");
 
         Logger_notice(F("MQTT auto discovery deferred"));
@@ -253,6 +253,7 @@ void Queue::runPublish(uint32_t delayMillis)
         }
 
         // cleanup before deleteing
+        _mutexLock.lock();
         clear();
         _client._autoDiscoveryQueue.reset(); // deletes itself and the timer
         return;
@@ -387,7 +388,10 @@ void Queue::_publishDone(StatusType result, uint16_t onErrorDelay)
     Logger_notice(message);
 
     // cleanup before deleteing
+    if (!_mutexLock._locked) {
+        _mutexLock.lock();
+    }
     clear();
-    _client._autoDiscoveryQueue.reset(); // deletes itself and the timer
+    _client._autoDiscoveryQueue.reset(); // deletes itself, the timer and releases the lock
     return;
 }

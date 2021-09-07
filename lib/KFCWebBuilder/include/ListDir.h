@@ -73,6 +73,7 @@ private:
     // for _hiddenFiles = true it is always true
     #if USE_LITTLEFS
         bool _showPath(const char *path) const;
+        bool _showPath(const String &path) const;
     #else
         bool _showPath(const String &path) const;
     #endif
@@ -89,9 +90,6 @@ private:
     File _vfsFile;
     Listing _vfs;
     DirectoryVector _dirs;
-    #if !USE_LITTLEFS
-        bool _isDir;
-    #endif
     bool _filterSubdirs;
     bool _hiddenFiles;
 };
@@ -155,19 +153,12 @@ inline bool ListDir::rewind()
 {
     _vfsFile = KFCFS.open(FSPGM(fs_mapping_listings), fs::FileOpenMode::read);
     _vfs = Listing();
-    #if !USE_LITTLEFS
-        _isDir = false;
-    #endif
     return _dir.rewind();
 }
 
 inline bool ListDir::isDirectory() const
 {
-    return _vfs.valid ? _vfs.header.isDir : (
-        #if !USE_LITTLEFS
-            _isDir ||
-        #endif
-        _dir.isDirectory());
+    return _vfs.valid ? _vfs.header.isDir : _dir.isDirectory();
 }
 
 inline void ListDir::_openDir()
@@ -183,6 +174,11 @@ inline void ListDir::_openDir()
 inline bool ListDir::_showPath(const char *path) const
 {
     return _hiddenFiles || (*path != '.');
+}
+
+inline bool ListDir::_showPath(const String &path) const
+{
+    return _showPath(path.c_str());
 }
 
 #endif

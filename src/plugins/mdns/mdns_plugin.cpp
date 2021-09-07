@@ -161,7 +161,7 @@ MDNSPlugin &MDNSPlugin::getInstance()
 
 void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
 {
-    bool wasEmpty;
+    bool wasEmpty = false;
     MUTEX_LOCK_BLOCK(_lock) {
         wasEmpty = _queries.empty();
         __LDBG_printf("query=%p running=%u queries=%u", query, _isRunning(), _queries.size());
@@ -194,7 +194,7 @@ MDNSResolver::Query *MDNSPlugin::findQuery(void *query) const
 
 void MDNSPlugin::_removeQuery(MDNSResolver::Query *query)
 {
-    bool empty;
+    bool empty = true;
     MUTEX_LOCK_BLOCK(_lock) {
         __LDBG_printf("remove=%p size=%u", query, _queries.size());
         _queries.erase(std::remove_if(_queries.begin(), _queries.end(), [query](const MDNSResolver::QueryPtr queryPtr) {

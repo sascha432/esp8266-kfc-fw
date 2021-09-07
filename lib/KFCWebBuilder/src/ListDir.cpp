@@ -111,27 +111,20 @@ bool ListDir::next()
             }
         }
     }
-    // #if defined(ESP8266)
-        bool next;
-        if (_listing.valid && _listing.header.uuid == kDirectoryUUID) {
-            next = true;
-            _listing.valid = false;
-        }
-        else {
-            next = _dir.next();
-        }
-        while (next) {
-            #if USE_LITTLEFS
-                _filename = _dirName + _dir.fileName();
-            #else
-                _filename = _dir.fullName();
-            #endif
-
-    // #elif defined(ESP32)
-    //     File next;
-    //     while((next = _dir.openNextFile())) {
-    //         _filename = next.name();
-    // #endif
+    bool next;
+    if (_listing.valid && _listing.header.uuid == kDirectoryUUID) {
+        next = true;
+        _listing.valid = false;
+    }
+    else {
+        next = _dir.next();
+    }
+    while (next) {
+        #if USE_LITTLEFS
+            _filename = _dirName + _dir.fileName();
+        #else
+            _filename = _dir.fullName();
+        #endif
 
         while(true) {
             if (_filename.startsWithIgnoreCase(FSPGM(fs_mapping_dir))) {

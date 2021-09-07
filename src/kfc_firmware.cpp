@@ -44,7 +44,7 @@
 #endif
 
 #ifndef DEBUG_BOOT_PRINT
-#    define DEBUG_BOOT_PRINT 1
+#    define DEBUG_BOOT_PRINT 0
 #endif
 #if DEBUG_BOOT_PRINT
     static uint32_t debugBootHaveSerial = 0;
@@ -136,7 +136,7 @@ void setup()
         #if ESP8266 && DEBUG_RESET_DETECTOR
             // serial has been initialized in preinit()
             debugBootHaveSerial = 0;
-        #else
+        #elif ESP32
             KFC_SAFE_MODE_SERIAL_PORT.begin(115200);
             debugBootHaveSerial = 1;
         #endif
@@ -151,6 +151,9 @@ void setup()
     #endif
 
     DEBUG_BOOT_PRINT_POS();
+    #if ESP32 && DEBUG_BOOT_PRINT
+        KFC_SAFE_MODE_SERIAL_PORT.end();
+    #endif
     resetDetector.begin(&KFC_SAFE_MODE_SERIAL_PORT, KFC_SERIAL_RATE); // release uart and call Serial.begin()
     #if DEBUG_BOOT_PRINT
         debugBootHaveSerial = 1;

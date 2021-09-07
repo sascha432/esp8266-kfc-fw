@@ -82,15 +82,7 @@ void ResetDetector::begin(HardwareSerial *serial, int baud)
         __LDBG_printf("serial=%p begin=%u", serial, baud);
         serial->begin(baud);
     #elif ESP32
-        #if DEBUG_RESET_DETECTOR
-            if (&Serial0 != serial || baud != KFC_SERIAL_RATE) {
-                __LDBG_printf("ending Serial0, begin serial baud=%u", baud);
-                Serial0.end();
-                serial->begin(baud);
-            }
-        #else
-            serial->begin(baud);
-        #endif
+        serial->begin(baud);
     #endif
 }
 

@@ -506,7 +506,7 @@ private:
                 __DBG_printf_E("cannot open NVS name=%s err=%08x", _name, err);
             }
             else {
-                __DBG_printf_N("NVS name=%s handle=%08x", _name, _handle);
+                __LDBG_printf_N("NVS name=%s handle=%08x", _name, _handle);
             }
         }
 

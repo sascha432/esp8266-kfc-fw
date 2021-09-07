@@ -2112,7 +2112,6 @@ void at_mode_serial_handle_event(String &commandString)
         }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(PLG))) {
-
         if (args.requireArgs(1, 2)) {
             auto cmds = PSTR("list|start|stop|add-blacklist|add|remove");
             int cmd = stringlist_find_P_P(cmds, args.get(0), '|');

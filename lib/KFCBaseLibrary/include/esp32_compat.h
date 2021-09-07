@@ -142,7 +142,7 @@ namespace fs {
     public:
         using File::File;
 
-        Dir(const File &file) : _file(file) {
+        Dir(const File &file) : File(file) {
         }
         Dir() {
         }
@@ -165,19 +165,16 @@ namespace fs {
         }
 
         const char *fullName() const {
-            return _file.path();
+            return path();
         }
 
         const char *fileName() const {
-            return _file.path();
+            return path();
         }
 
         File openFile(const char *mode) {
-            return KFCFS.open(_file.fullName(), mode);
+            return KFCFS.open(fullName(), mode);
         }
-
-    private:
-        File _file;
     };
 
 };

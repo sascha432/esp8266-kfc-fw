@@ -44,7 +44,7 @@
 #endif
 
 #ifndef DEBUG_BOOT_PRINT
-#    define DEBUG_BOOT_PRINT 0
+#    define DEBUG_BOOT_PRINT 1
 #endif
 #if DEBUG_BOOT_PRINT
     static uint32_t debugBootHaveSerial = 0;

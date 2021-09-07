@@ -15,48 +15,47 @@
 
 // enable debug outout
 #ifndef DEBUG_RESET_DETECTOR
-    #define DEBUG_RESET_DETECTOR 0
+#    define DEBUG_RESET_DETECTOR 0
 #endif
 
 // include methods in source code = 0, or in header as always inline = 1
 // use 1 for production, speeds everything up and reduces code size
 // use 0 for development to avoid recompiling half the program for every change
 #ifndef RESET_DETECTOR_INCLUDE_HPP_INLINE
-    #if DEBUG_RESET_DETECTOR
-        #define RESET_DETECTOR_INCLUDE_HPP_INLINE 1
-    #else
-        #define RESET_DETECTOR_INCLUDE_HPP_INLINE 1
-    #endif
+#    if DEBUG_RESET_DETECTOR
+#        define RESET_DETECTOR_INCLUDE_HPP_INLINE 1
+#    else
+#        define RESET_DETECTOR_INCLUDE_HPP_INLINE 1
+#    endif
 #endif
-
 
 #include <Arduino_compat.h>
 #include <HardwareSerial.h>
 
-#if defined(ESP8266)
-#include <osapi.h>
-#include <user_interface.h>
-#elif defined(ESP32)
-#elif _WIN32 || _WIN64
+#if ESP8266
+#    include <osapi.h>
+#    include <user_interface.h>
+#elif ESP32 || _WIN32 || _WIN64
 #else
-#error Platform not supported
+#    error Platform not supported
 #endif
 
 #include <push_pack.h>
 
 #define RESET_DETECTOR_TIMEOUT 5000
+
 #ifndef USE_ESP_GET_RESET_REASON
-#if defined(ESP8266)
-#define USE_ESP_GET_RESET_REASON 1
-#else
-#define USE_ESP_GET_RESET_REASON 0
-#endif
+#    if ESP8266
+#        define USE_ESP_GET_RESET_REASON 1
+#    else
+#        define USE_ESP_GET_RESET_REASON 0
+#    endif
 #endif
 
-#include <debug_helper.h>
-#include <plugins.h>
 #include <PluginComponent.h>
 #include <RTCMemoryManager.h>
+#include <debug_helper.h>
+#include <plugins.h>
 
 class ResetDetector {
 public:
@@ -178,7 +177,7 @@ class HardwareSerial;
 extern ResetDetector &resetDetector;
 
 #if RESET_DETECTOR_INCLUDE_HPP_INLINE
-#include "reset_detector.hpp"
+#    include "reset_detector.hpp"
 #endif
 
 #include <pop_pack.h>

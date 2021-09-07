@@ -16,9 +16,9 @@
 #endif
 
 #if DEBUG_RESET_DETECTOR
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 // ------------------------------------------------------------------------
@@ -75,7 +75,7 @@ void ResetDetector::setSafeMode(bool safeMode)
 __RESET_DETECTOR_INLINE__
 bool ResetDetector::hasCrashDetected() const
 {
-    #if defined(ESP32)
+    #if ESP32
         switch(_data.getReason()) {
             case ESP_RST_UNKNOWN:
             case ESP_RST_PANIC:
@@ -86,12 +86,11 @@ bool ResetDetector::hasCrashDetected() const
             default:
                 return false;
         }
-    #elif defined(ESP8266)
+    #elif ESP8266
 
         // REASON_WDT_RST          = 1,    /* hardware watch dog reset */
         // REASON_EXCEPTION_RST    = 2,    /* exception reset, GPIO status won’t change */
         // REASON_SOFT_WDT_RST     = 3,    /* software watch dog reset, GPIO status won’t change */
-
 
         return (
             _data.getReason() != REASON_DEFAULT_RST &&
@@ -106,13 +105,13 @@ __RESET_DETECTOR_INLINE__
 bool ResetDetector::hasResetDetected() const
 {
     switch(_data.getReason()) {
-    #if defined(ESP32)
+    #if ESP32
         case ESP_RST_UNKNOWN:
         case ESP_RST_EXT:
         case ESP_RST_BROWNOUT:
         case ESP_RST_SDIO:
             return true;
-    #elif defined(ESP8266)
+    #elif ESP8266
         case REASON_DEFAULT_RST:
         case REASON_EXT_SYS_RST:
             return true;
@@ -127,10 +126,10 @@ __RESET_DETECTOR_INLINE__
 bool ResetDetector::hasRebootDetected() const
 {
     switch(_data.getReason()) {
-    #if defined(ESP32)
+    #if ESP32
         case ESP_RST_SW:
             return true;
-    #elif defined(ESP8266)
+    #elif ESP8266
         case REASON_SOFT_RESTART:
             return true;
     #endif
@@ -144,10 +143,10 @@ __RESET_DETECTOR_INLINE__
 bool ResetDetector::hasWakeUpDetected() const
 {
     switch(_data.getReason()) {
-    #if defined(ESP32)
+    #if ESP32
         case ESP_RST_DEEPSLEEP:
             return true;
-    #elif defined(ESP8266)
+    #elif ESP8266
         case REASON_DEEP_SLEEP_AWAKE:
             return true;
     #endif
@@ -186,7 +185,7 @@ void ResetDetector::armTimer()
 __RESET_DETECTOR_INLINE__
 const String ResetDetector::getResetInfo() const
 {
-    #if defined(ESP32)
+    #if ESP32
         return getResetReason();
     #else
         return ESP.getResetInfo();

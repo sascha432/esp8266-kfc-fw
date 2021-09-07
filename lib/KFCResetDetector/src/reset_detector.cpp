@@ -69,17 +69,19 @@ void ResetDetector::end()
 
 void ResetDetector::begin(HardwareSerial *serial, int baud)
 {
-    #if ESP8266 && DEBUG_RESET_DETECTOR
-        __LDBG_printf("rd::begin(), _uart=%p, serial=%p", _uart, serial, baud);
+    #if ESP8266
+        #if DEBUG_RESET_DETECTOR
+            __LDBG_printf("rd::begin(), _uart=%p, serial=%p", _uart, serial, baud);
 
-        if (_uart) {
-            __LDBG_printf("\r\n");
-            uart_flush(_uart);
-            uart_uninit(_uart);
-            _uart = nullptr;
-            __LDBG_printf("_uart=%p", _uart);
-        }
-        __LDBG_printf("serial=%p begin=%u", serial, baud);
+            if (_uart) {
+                __LDBG_printf("\r\n");
+                uart_flush(_uart);
+                uart_uninit(_uart);
+                _uart = nullptr;
+                __LDBG_printf("_uart=%p", _uart);
+            }
+            __LDBG_printf("serial=%p begin=%u", serial, baud);
+        #endif
         serial->begin(baud);
     #elif ESP32
         serial->begin(baud);
@@ -88,20 +90,15 @@ void ResetDetector::begin(HardwareSerial *serial, int baud)
 
 void ResetDetector::begin()
 {
-    #if ESP8266 && DEBUG_RESET_DETECTOR
+    #if ESP8266
         #if DEBUG_RESET_DETECTOR
             auto oldUart = _uart;
             __LDBG_printf("rd::begin(), _uart=%p", _uart);
-        #endif
-
-        #if DEBUG_RESET_DETECTOR
             if (_uart) {
                 __LDBG_printf("begin() called multiple times without end()");
                 end();
             }
-        #endif
-        _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
-        #if DEBUG_RESET_DETECTOR
+            _uart = uart_init(UART0, 115200, (int) SERIAL_8N1, (int) SERIAL_FULL, 1, 64, false);
             __LDBG_printf("rd::begin() has been called, old_uart=%p _uart=%p", oldUart, _uart);
         #endif
 
@@ -110,28 +107,22 @@ void ResetDetector::begin()
         _readData();
         ++_data;
 
-        #if defined(ESP32)
-            _data.pushReason(esp_reset_reason());
-        #elif defined(ESP8266)
-            struct rst_info &resetInfo = *system_get_rst_info();
-            _data.pushReason(resetInfo.reason);
-            __LDBG_printf("depc=%08x epc1=%08x epc2=%08x epc3=%08x exccause=%08x excvaddr=%08x reason=%u", resetInfo.depc, resetInfo.epc1, resetInfo.epc2, resetInfo.epc3, resetInfo.exccause, resetInfo.excvaddr, resetInfo.reason);
+        struct rst_info &resetInfo = *system_get_rst_info();
+        _data.pushReason(resetInfo.reason);
+        __LDBG_printf("depc=%08x epc1=%08x epc2=%08x epc3=%08x exccause=%08x excvaddr=%08x reason=%u", resetInfo.depc, resetInfo.epc1, resetInfo.epc2, resetInfo.epc3, resetInfo.exccause, resetInfo.excvaddr, resetInfo.reason);
 
-            #if ENABLE_DEEP_SLEEP == 0
-                __DBG_printf("WIFI mode=%u default=%u", wifi_get_opmode(), wifi_get_opmode_default());
-                if (wifi_get_opmode() != WIFI_OFF) {
-                    wifi_set_opmode_current(WIFI_OFF);
-                }
-                if (wifi_get_opmode_default() != WIFI_OFF) {
-                    wifi_set_opmode(WIFI_OFF);
-                }
-            #endif
-
+        #if ENABLE_DEEP_SLEEP == 0
+            __DBG_printf("WIFI mode=%u default=%u", wifi_get_opmode(), wifi_get_opmode_default());
+            if (wifi_get_opmode() != WIFI_OFF) {
+                wifi_set_opmode_current(WIFI_OFF);
+            }
+            if (wifi_get_opmode_default() != WIFI_OFF) {
+                wifi_set_opmode(WIFI_OFF);
+            }
         #endif
+
         __LDBG_printf("valid=%d safe_mode=%u counter=%u new=%u", !!_storedData, _storedData.isSafeMode(), _storedData.getResetCounter(), _data.getResetCounter());
-        __LDBG_printf("info=%s crash=%u reset=%u reboot=%u wakeup=%u",
-            getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected()
-        );
+        __LDBG_printf("info=%s crash=%u reset=%u reboot=%u wakeup=%u", getResetInfo().c_str(), hasCrashDetected(), hasResetDetected(), hasRebootDetected(), hasWakeUpDetected());
 
     #elif ESP32
 

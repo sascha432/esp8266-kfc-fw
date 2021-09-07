@@ -146,10 +146,9 @@ typedef struct {
 namespace fs {
 
     // ESP8266 compat
-    class Dir : public fs::FS {
+    class Dir {
     public:
         Dir() :
-            FS(nullptr),
             _dir(nullptr),
             _entry(nullptr)
         {
@@ -162,11 +161,10 @@ namespace fs {
 
         Dir(const char *path) :
             #if USE_LITTLEFS
-                FS(LittleFS),
+                _path(LittleFS.mountpoint()),
             #else
-                FS(SPIFFS),
+                _path(SPIFFS.mountpoint()),
             #endif
-            _path(_impl->mountpoint()),
             _entry(nullptr),
             _stats({})
         {
@@ -287,7 +285,11 @@ namespace fs {
             if (!isFile()) {
                 return File();
             }
-            return open(fullName(), mode);
+            #if USE_LITTLEFS
+                return LittleFS.open(fullName(), mode);
+            #else
+                return SPIFFS.open(fullName(), mode);
+            #endif
         }
 
     private:

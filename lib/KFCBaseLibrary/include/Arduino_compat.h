@@ -109,17 +109,21 @@ class __FlashStringHelper;
 #        include <LittleFS.h>
 #        define KFCFS LittleFS
 #        define KFCFS_begin()      KFCFS.begin()
-#        define KFCFS_openDir(dir) Dir(KFCFS.open(dir, fs::FileOpenMode::read))
 #        define KFCFS_MAX_FILE_LEN 31
 #        define KFCFS_MAX_PATH_LEN 127
 #    else
 #        include <FS.h>
 #        define KFCFS              SPIFFS
 #        define KFCFS_begin()      KFCFS.begin()
-#        define KFCFS_openDir(dir) Dir(KFCFS.open(dir, fs::FileOpenMode::read))
 #        define KFCFS_MAX_FILE_LEN 31
 // includes directory slashes and filename
 #        define KFCFS_MAX_PATH_LEN KFCFS_MAX_FILE_LEN
+#    endif
+
+#   if ESP32
+#        define KFCFS_openDir(dir) Dir(dir)
+#    else
+#        define KFCFS_openDir(dir) Dir(KFCFS.open(dir, fs::FileOpenMode::read))
 #    endif
 
 #include "esp32_compat.h"

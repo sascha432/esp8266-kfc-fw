@@ -22,6 +22,13 @@
 #include <sys/queue.h>
 #include <freertos/portmacro.h>
 
+extern "C" {
+    #include <sys/unistd.h>
+    #include <sys/stat.h>
+    #include <dirent.h>
+}
+#include <FSImpl.h>
+
 #ifndef ARDUINO_ESP32_RELEASE
 #include <esp_arduino_version.h>
 #define ARDUINO_ESP32_RELEASE _STRINGIFY(ESP_ARDUINO_VERSION_MAJOR) "." _STRINGIFY(ESP_ARDUINO_VERSION_MINOR) "." _STRINGIFY(ESP_ARDUINO_VERSION_PATCH)
@@ -138,48 +145,160 @@ typedef struct {
 
 namespace fs {
 
-    class Dir : public File {
+    class Dir : public fs::FS {
     public:
-        using File::File;
-
-        Dir(const File &file) : File(file) {
+        Dir() : FS(nullptr)
+        {
         }
-        Dir() {
+        Dir(const String &path) :
+            Dir(path.c_str())
+        {
+        }
+        Dir(const char *path) :
+            #if USE_LITTLEFS
+                FS(LittleFS),
+            #else
+                FS(SPIFFS),
+            #endif
+            _path(_impl->mountpoint()),
+            _entry(nullptr)
+        {
+            if (!_path.endsWith('/') && *path != '/') {
+                _path += '/';
+            }
+            // start of the path without the mount point
+            _pathStart = _path.length();
+            _path += path;
+            if (!_path.endsWith('/')) {
+                _path += '/';
+            }
+            _dir = opendir(_path.c_str());
+        }
+        ~Dir() {
+            if (_dir) {
+                closedir(_dir);
+            }
+        }
+
+        operator bool() const {
+            return _dir != nullptr && _entry != nullptr;
         }
 
         bool rewind() {
-            rewindDirectory();
+            _fullname = String();
+            _entry = nullptr;
+            if (!_dir) {
+                return false;
+            }
+            rewinddir(_dir);
             return true;
         }
 
+        bool rewindDirectory() {
+            return rewind();
+        }
+
         bool next() {
-            return openNextFile();
+            _fullname = String();
+            if (!_dir) {
+                return false;
+            }
+            _entry = readdir(_dir);
+            if (_entry) {
+                _fullname = _path.c_str();
+                _fullname += _entry->d_name;
+                return true;
+            }
+            return false;
         }
 
         size_t fileSize() const {
-            return size();
+            if (!isFile()) {
+                return 0;
+            }
+            struct stat stats;
+            if (stat(_fullname.c_str(), &stats) == 0) {
+                return stats.st_size;
+            }
+            return 0;
         }
 
-        bool isFile() {
+        bool isDirectory() const {
+            if (!_entry) {
+                return false;
+            }
+            return _entry->d_type == DT_DIR;
+        }
+
+        bool isFile() const {
+            if (!_entry) {
+                return false;
+            }
             return !isDirectory();
         }
 
         const char *fullName() const {
-            return path();
+            if (!_entry) {
+                return nullptr;
+            }
+            return _fullname.c_str() + _pathStart;
+        }
+
+        const char *name() const {
+            if (!_entry) {
+                return nullptr;
+            }
+            return _entry->d_name;
+        }
+
+        const char *path() const {
+            if (!_entry) {
+                return nullptr;
+            }
+            return _path.c_str() + _pathStart;
         }
 
         const char *fileName() const {
-            return path();
+            return name();
         }
 
         File openFile(const char *mode) {
-            return KFCFS.open(fullName(), mode);
+            if (!isFile()) {
+                return File();
+            }
+            return open(fullName(), mode);
         }
+
+    private:
+        String _path;
+        size_t _pathStart;
+        String _fullname;
+        DIR *_dir;
+        struct dirent *_entry;
     };
 
 };
 
 using Dir = fs::Dir;
+
+// {
+//     Serial.println("dir=/");
+//     auto dir = KFCFS_openDir("/");
+//     while(dir.next()) {
+//         Serial.printf("dir=%u file=%u filename=%s path=%s name=%s  size=%d\n", dir.isDirectory(), dir.isFile(), __S(dir.fullName()), __S(dir.path()), __S(dir.name()), dir.fileSize());
+//     }
+// }
+// {
+//     Serial.println("dir=/.logs");
+//     auto dir = KFCFS_openDir("/.logs");
+//     while(dir.next()) {
+//         Serial.printf("dir=%u file=%u filename=%s path=%s name=%s size=%d\n", dir.isDirectory(), dir.isFile(), __S(dir.fullName()), __S(dir.path()), __S(dir.name()), dir.fileSize());
+//     }
+// }
+
+// for(;;) {
+//     delay(100);
+// }
 
 inline void ets_timer_arm_new(ETSTimer *timer, uint32_t tmout, bool repeat, bool millis)
 {

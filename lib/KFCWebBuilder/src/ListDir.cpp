@@ -18,14 +18,8 @@ ListDir::ListDir(const String &dirName, bool filterSubdirs, bool hiddenFiles) :
     _filterSubdirs(filterSubdirs),
     _hiddenFiles(hiddenFiles)
 {
-    #if ESP8266
-        _dir = KFCFS.openDir(dirName);
-        append_slash(_dirName);
-    #endif
-    #if ESP32
-        append_slash(_dirName);
-        _dir = Dir(KFCFS.open(_dirName));
-    #endif
+    append_slash(_dirName);
+    _dir = KFCFS_openDir(_dirName);
     __LDBG_printf("dirName=%s", _dirName.c_str());
 }
 

@@ -25,9 +25,9 @@ using namespace MQTT::AutoDiscovery;
 Queue::Queue(Client &client) :
     Component(ComponentType::AUTO_DISCOVERY),
     _client(client),
+    _mutexLock(_lock, false),
     _packetId(0),
-    _runFlags(RunFlags::DEFAULTS),
-    _mutexLock(_lock, false)
+    _runFlags(RunFlags::DEFAULTS)
 {
     MQTT::Client::registerComponent(this);
 }
@@ -127,7 +127,6 @@ void Queue::runPublish(uint32_t delayMillis)
         delayMillis = _client._config.auto_discovery_delay * 1000U; // 0 = disable
     }
     __LDBG_printf("components=%u delay=%u", _client._components.size(), delayMillis);
-    bool run;
     _mutexLock.lock();
     if (!_client._components.empty() && delayMillis) {
         uint32_t initialDelay;

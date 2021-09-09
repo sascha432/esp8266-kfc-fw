@@ -2,7 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#define __POSIX_VISIBLE 200810
 #include <../include/time.h>
 #include <time.h>
 #include <sys/time.h>

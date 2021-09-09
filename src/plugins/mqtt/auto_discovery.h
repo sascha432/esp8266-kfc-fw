@@ -9,6 +9,10 @@
 #include "mqtt_base.h"
 #include "mqtt_strings.h"
 
+#if 0
+#include <debug_helper_disable_ptr_validation.h>
+#endif
+
 namespace MQTT {
 
     namespace AutoDiscovery {
@@ -31,38 +35,68 @@ namespace MQTT {
 
         public:
             inline void addParameter(NameType name, const char *value) { // PROGMEM safe
+                __DBG_validatePointerCheck(name, VP_HPS);
+                __DBG_validatePointerCheck(value, VP_HPS);
                 __addParameter(name, value, true);
             }
 
             inline void addParameter(NameType name, NameType value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
+                __DBG_validatePointerCheck(value, VP_HPS);
                 __addParameter(name, value, true);
             }
 
             inline void addParameter(NameType name, const String &value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, value, true);
             }
 
             inline void addParameter(NameType name, char value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), true);
             }
 
-            inline void addParameter(NameType name, int value) {
+            inline void addParameter(NameType name, int32_t value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
+                __addParameter(name, String(value), false);
+            }
+
+            inline void addParameter(NameType name, uint32_t value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
+                __addParameter(name, String(value), false);
+            }
+
+            inline void addParameter(NameType name, float value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), false);
             }
 
             inline void addParameter(NameType name, double value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), false);
             }
 
-            template<typename _Ta, typename std::enable_if<!std::is_same<_Ta, bool>::value && std::is_arithmetic<_Ta>::value, int>::type = 0>
-            void addParameter(NameType name, _Ta value) {
-                PrintString str; // support for uint64_t
-                str.print(value);
-                __addParameter(name, static_cast<String &>(str), false);
+            inline void addParameter(NameType name, int64_t value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
+                __addParameter(name, String(value), false);
             }
+
+            inline void addParameter(NameType name, uint64_t value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
+                __addParameter(name, String(value), false);
+            }
+
+            // template<typename _Ta, typename std::enable_if<!std::is_same<_Ta, bool>::value && std::is_arithmetic<_Ta>::value, int>::type = 0>
+            // void addParameter(NameType name, _Ta value) {
+            //     __DBG_validatePointerCheck(name, VP_HPS);
+            //     PrintString str; // support for uint64_t
+            //     str.print(value);
+            //     __addParameter(name, static_cast<String &>(str), false);
+            // }
 
             template<typename _Ta, typename std::enable_if<std::is_same<_Ta, bool>::value, int>::type = 0>
             void addParameter(NameType name, _Ta value) {
+                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, value ? FSPGM(mqtt_bool_true) : FSPGM(mqtt_bool_false), false);
             }
 
@@ -166,9 +200,13 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_expire_after), value);
             }
 
-            void addValueTemplate(const char *value) { // PROGMEM safe
+            void addValueTemplate(PGM_P value) { // PROGMEM safe
                 PrintString value_json(F("{{ value_json.%s }}"), value);
                 addParameter(FSPGM(mqtt_value_template), value_json.c_str());
+            }
+
+            void addValueTemplate(const __FlashStringHelper *value) {
+                addValueTemplate(reinterpret_cast<PGM_P>(value));
             }
 
             void addValueTemplate(const String &value) {

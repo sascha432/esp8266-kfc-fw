@@ -244,7 +244,9 @@ inline void ETSTimerEx::end()
 
 inline void ICACHE_FLASH_ATTR ETSTimerEx::_EtsTimerLockedCallback(OSTimer *timer)
 {
-    timer->_etsTimer._calledWhileLocked++;
+    #if DEBUG_OSTIMER
+        timer->_etsTimer._calledWhileLocked++;
+    #endif
 }
 
 #endif

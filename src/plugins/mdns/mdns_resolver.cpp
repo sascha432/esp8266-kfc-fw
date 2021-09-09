@@ -10,7 +10,7 @@
 #include "async_web_response.h"
 #include <lwip/dns.h>
 
-#if DEBUG_MDNS_SD || 1
+#if DEBUG_MDNS_SD
 #    include <debug_helper_enable.h>
 #else
 #    include <debug_helper_disable.h>
@@ -439,6 +439,13 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
     }
     __LDBG_printf("result=%d", RESPONSE_TRY_AGAIN);
     return RESPONSE_TRY_AGAIN;
+}
+
+AsyncMDNSResponse::~AsyncMDNSResponse()
+{
+    MUTEX_LOCK_BLOCK(_output->_lock) {
+        delete _output;
+    }
 }
 
 #endif

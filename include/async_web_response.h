@@ -74,9 +74,8 @@ public:
     {
         _contentLength = 0;
     }
-    ~AsyncMDNSResponse() {
-        delete _output;
-    }
+    // src/plugins/mdns/mdns_resolver.cpp
+    ~AsyncMDNSResponse();
 
     virtual bool _sourceValid() const override {
         return true;

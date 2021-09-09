@@ -7,9 +7,10 @@
 #include <Arduino_compat.h>
 #include "mdns_plugin.h"
 #include "mdns_resolver.h"
+#include "async_web_response.h"
 #include <lwip/dns.h>
 
-#if DEBUG_MDNS_SD
+#if DEBUG_MDNS_SD || 1
 #    include <debug_helper_enable.h>
 #else
 #    include <debug_helper_disable.h>
@@ -329,9 +330,14 @@ void MDNSResolver::Query::poll()
                 }
 
                 if (cur->hostname && _isAddress) {
-                    __LDBG_printf("domain=%s", cur->hostname);
+                    String hostname = cur->hostname;
+                    if (hostname.indexOf('.') == -1) {
+                        hostname += F(".local");
+                    }
+                    __LDBG_printf("domain=%s", hostname.c_str());
                     ip_addr_t addr;
-                    auto result = dns_gethostbyname(cur->hostname, &addr, reinterpret_cast<dns_found_callback>(dnsFoundCallback), this); // try to resolve before marking as collected
+                    // try to resolve before marking as collected
+                    auto result = dns_gethostbyname_addrtype(hostname.c_str(), &addr, reinterpret_cast<dns_found_callback>(dnsFoundCallback), this, LWIP_DNS_ADDRTYPE_IPV4);
                     if (result == ERR_OK) {
                         _hostname = IPAddress(addr).toString();
                         _dataCollected |= DATA_COLLECTED_HOSTNAME;
@@ -375,6 +381,64 @@ void MDNSResolver::Query::createZeroConf(Print &output) const
         output.print(_fallback);
     }
     output.print('}');
+}
+
+size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
+{
+    bool end = false;
+    MUTEX_LOCK_BLOCK(_output->_lock) {
+        uint32_t runtime = millis() - _startTime;
+        __LDBG_printf("runtime=%u timeout=%u", runtime, _output->_timeout);
+        if (runtime >= _output->_timeout) {
+            end = true;
+        }
+
+        #if ESP32
+            if (!end && !_output->poll(1000, false)) {
+                __LDBG_printf("poll without response, retrying");
+                return RESPONSE_TRY_AGAIN;
+            }
+        #endif
+
+        auto outputLen = _output->_output.length();
+        if (!end && outputLen) {
+            // we need to keep the last "," in the buffer to remove it if it was the last response
+            outputLen--;
+        }
+        else if (end) {
+            // terminate json output and update length
+            _output->end();
+            outputLen = _output->_output.length();
+        }
+        auto space = std::min(outputLen, len);
+        __LDBG_printf("end=%u space=%u output=%u send=%*.*s", end, space, _output->_output.length(), space, space, _output->_output.c_str());
+        if (space) {
+            memcpy(data, _output->_output.c_str(), space);
+            outputLen -= space;
+            if (_output->_output.capacity() - outputLen > 64) {
+                // create new string to release the memory
+                _output->_output = _output->_output.c_str() + space;
+            }
+            else {
+                _output->_output.remove(0, space);
+            }
+            _sentSize += space;
+            return space;
+        }
+    }
+    if (end) {
+        if (_sentSize == 0 && len >= 2) {
+            data[0] = '{';
+            data[1] = '}';
+            _sentSize = 2;
+            __LDBG_printf("end=%u send=%*.*s", end, 2, 2, data);
+            return 2;
+        }
+        __LDBG_printf("result=%d", 0);
+        return 0;
+    }
+    __LDBG_printf("result=%d", RESPONSE_TRY_AGAIN);
+    return RESPONSE_TRY_AGAIN;
 }
 
 #endif

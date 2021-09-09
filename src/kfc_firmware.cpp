@@ -43,9 +43,11 @@
 #include "PluginComponent.h"
 #endif
 
+// set to 1 to enable debugging the boot sequence
 #ifndef DEBUG_BOOT_PRINT
-#    define DEBUG_BOOT_PRINT 1
+#    define DEBUG_BOOT_PRINT 0
 #endif
+
 #if DEBUG_BOOT_PRINT
     static uint32_t debugBootHaveSerial = 0;
     inline void debugBootPrintf(PGM_P file, int line, PGM_P msg)
@@ -80,7 +82,6 @@
 
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
-
 
 void delayedSetup(bool delayed)
 {

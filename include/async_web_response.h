@@ -69,7 +69,8 @@ public:
     AsyncMDNSResponse(MDNSPlugin::Output *output) :
         AsyncBaseResponse(true),
         _output(output),
-        _startTime(millis())
+        _startTime(millis()),
+        _sentSize(0)
     {
         _contentLength = 0;
     }
@@ -81,11 +82,13 @@ public:
         return true;
     }
 
+    // src/plugins/mdns/mdns_resolver.cpp
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
 private:
     MDNSPlugin::Output *_output;
     uint32_t _startTime;
+    size_t _sentSize;
 };
 
 #endif

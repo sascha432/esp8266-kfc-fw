@@ -13,11 +13,9 @@
 #if DEBUG_ASYNC_WEB_RESPONSE
 #include <debug_helper_enable.h>
 #else
-
 #include <debug_helper_disable.h>
 // enable partial debugging here
 #define DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE       0
-
 #endif
 
 AsyncBaseResponse::AsyncBaseResponse(bool chunked)
@@ -161,56 +159,6 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
     }
     return 0;
 }
-
-#if MDNS_PLUGIN
-
-size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
-{
-    bool end = false;
-    MUTEX_LOCK_BLOCK(_output->_lock) {
-        uint32_t runtime = millis() - _startTime;
-        __LDBG_printf("runtime=%u timeout=%u", runtime, _output->_timeout);
-        if (runtime >= _output->_timeout) {
-            end = true;
-        }
-
-        #if ESP32
-            if (!end && !_output->poll(1000, false)) {
-                __LDBG_printf("poll without response, retrying");
-                return RESPONSE_TRY_AGAIN;
-            }
-        #endif
-
-        auto outputLen = _output->_output.length();
-        if (!end && outputLen) {
-            // we need to keep the last "," in the buffer to remove it if it was the last response
-            outputLen--;
-        }
-        else if (end) {
-            // terminate json output and update length
-            _output->end();
-            outputLen = _output->_output.length();
-        }
-        auto space = std::min(outputLen, len);
-        __LDBG_printf("end=%u space=%u output=%u send=%*.*s", end, space, _output->_output.length(), space, space, _output->_output.c_str());
-        if (space) {
-            memcpy(data, _output->_output.c_str(), space);
-            outputLen -= space;
-            if (_output->_output.capacity() - outputLen > 64) {
-                // create new string to release the memory
-                _output->_output = _output->_output.c_str() + space;
-            }
-            else {
-                _output->_output.remove(0, space);
-            }
-            return space;
-        }
-    }
-    __LDBG_printf("result=%d", end ? 0 : RESPONSE_TRY_AGAIN);
-    return end ? 0 : RESPONSE_TRY_AGAIN;
-}
-
-#endif
 
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const File &file, TemplateDataProvider::ResolveCallback callback) :
     AsyncBaseResponse(false),

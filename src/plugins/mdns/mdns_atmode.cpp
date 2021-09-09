@@ -149,6 +149,9 @@ bool MDNSPlugin::Output::poll(uint32_t timeout, bool lock)
                     buffer = JsonTools::Utf8Buffer();
                     _output.print(F("\"h\":\""));
                     JsonTools::printToEscaped(_output, cur->hostname, strlen(cur->hostname), &buffer);
+                    if (!strchr(cur->hostname, '.')) {
+                        _output.print(F(".local"));
+                    }
                     _output.printf_P(PSTR("\",\"p\":%u,"), cur->port);
 
                     __LDBG_printf("instance=%s if=%u hostname=%s port=%u txt_count=%u",

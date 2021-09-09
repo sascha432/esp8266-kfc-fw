@@ -85,15 +85,19 @@ NTPPlugin::NTPPlugin() :
 #if SNTP_STARTUP_DELAY
 
 #ifndef SNTP_STARTUP_DELAY_MAX_TIME
-#define SNTP_STARTUP_DELAY_MAX_TIME         30000
+#define SNTP_STARTUP_DELAY_MAX_TIME         15000
 #endif
 
 #ifndef SNTP_STARTUP_DELAY_MIN_TIME
-#define SNTP_STARTUP_DELAY_MIN_TIME         15000
+#define SNTP_STARTUP_DELAY_MIN_TIME         10000
 #endif
 
-#if SNTP_STARTUP_DELAY_MIN_TIME >= SNTP_STARTUP_DELAY_MAX_TIME
+#if (SNTP_STARTUP_DELAY_MAX_TIME - SNTP_STARTUP_DELAY_MIN_TIME) < 0
 #error invalid range SNTP_STARTUP_DELAY_MIN_TIME - SNTP_STARTUP_DELAY_MAX_TIME
+#endif
+
+#if SNTP_STARTUP_DELAY_MIN_TIME < 500
+#error invalid SNTP_STARTUP_DELAY_MIN_TIME
 #endif
 
 inline static uint32_t plusMinusPercent(uint32_t value, uint8_t pct)
@@ -109,7 +113,7 @@ static uint32_t _startUpDelay = SNTP_STARTUP_DELAY_MAX_TIME;
 
 uint32_t sntp_startup_delay_MS_rfc_not_less_than_60000()
 {
-    _startUpDelay = (rand() % SNTP_STARTUP_DELAY_MAX_TIME) + SNTP_STARTUP_DELAY_MIN_TIME;
+    _startUpDelay = (rand() % (SNTP_STARTUP_DELAY_MAX_TIME - SNTP_STARTUP_DELAY_MIN_TIME)) + SNTP_STARTUP_DELAY_MIN_TIME;
     if (plugin._callbackState == NTPPlugin::CallbackState::STARTUP) {
         if (_startUpDelay - (int32_t)millis() > 1000) {
             _startUpDelay -= millis();
@@ -118,7 +122,7 @@ uint32_t sntp_startup_delay_MS_rfc_not_less_than_60000()
             _startUpDelay = 1000;
         }
     }
-    __DBG_printf("sntp_startup_delay_MS_rfc_not_less_than_60000=%u", _startUpDelay);
+    __LDBG_printf("sntp_startup_delay_MS_rfc_not_less_than_60000=%u", _startUpDelay);
     return _startUpDelay;
 }
 

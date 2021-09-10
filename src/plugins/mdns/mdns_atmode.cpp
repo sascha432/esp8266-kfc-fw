@@ -238,9 +238,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                             args.getStream().println(output->_output);
                         }
 
-                        MUTEX_LOCK_BLOCK(output->_lock) {
-                            delete output;
-                        }
+                        delete output;
                     });
                 }
                 else {

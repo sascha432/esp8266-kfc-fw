@@ -140,7 +140,7 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
 
         if (headLen) {
             memcpy(buf, _head.c_str(), headLen);
-            _head.~String();
+            _head = String();
         }
         _writtenLength += request->client()->write(reinterpret_cast<char *>(buf), outLen);
 
@@ -189,10 +189,10 @@ size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
 
 AsyncDirResponse::AsyncDirResponse(const String &dirName, bool showHiddenFiles) :
     AsyncBaseResponse(true),
-    _state(0),
     _dir(dirName, true, showHiddenFiles),
-    _next(_dir.next()),
-    _dirName(dirName)
+    _dirName(dirName),
+    _state(StateType::FILL),
+    _next(_dir.next())
 {
     _code = 200;
     _contentType = FSPGM(mime_application_json);
@@ -251,7 +251,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         __LDBG_printf("state=%u capacity=%u space=%u", _state, len, space);
     }
 
-    if (_state == 0) { // fill _buffer
+    if (_state == StateType::FILL) { // fill _buffer
         FSInfo info;
         KFCFS.info(info);
 
@@ -262,16 +262,16 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         _buffer.printf_P(PSTR("{\"total\":\"%s\",\"total_b\":%d,\"used\":\"%s\",\"used_b\":%d,\"usage\":\"%.2f%%\",\"dir\":\"%s\",\"files\":["),
             formatBytes(info.totalBytes).c_str(), info.totalBytes,
             formatBytes(info.usedBytes).c_str(), info.usedBytes,
-            (float)info.usedBytes / (float)info.totalBytes * 100.0,
+            (info.usedBytes * 100) / static_cast<float>(info.totalBytes),
             _dirName.c_str()
         );
 
         if (_next) {
-            _state = 1; // read directory
+            _state = StateType::READ_DIR;
             __LDBG_printf("set state=%u", _state);
         }
         else {
-            _state = 2; // end
+            _state = StateType::END;
             __LDBG_printf("set state=%u", _state);
             _buffer.print(F("]}")); // empty directory
         }
@@ -281,12 +281,11 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         }
     }
 
-    if (_state == 1) {
+    if (_state == StateType::READ_DIR) {
         __LDBG_IF(auto maxDirs = 0xff);
         auto tmp_dir = sys_get_temp_dir();
-        String path;
         while (_next) {
-            path = std::move(_dir.fileName());
+            String path = _dir.fileName();
             String name = path.substring(_dirName.length());
             String location = urlEncode(path);
             __LDBG_printf("dir=%s dir=%u file=%u name=%s", path.c_str(), _dir.isDirectory(), _dir.isFile(), name.c_str());
@@ -298,7 +297,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                 _buffer.printf_P(PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"m\":%d,\"d\":1"),
                     location.c_str(),
                     name.c_str(),
-                    path.startsWith(tmp_dir) ? TYPE_TMP_DIR : (_dir.isMapping() ? TYPE_MAPPED_DIR : TYPE_REGULAR_DIR)
+                    path.startsWith(tmp_dir) ? PathType::TMP_DIR : (_dir.isMapping() ? PathType::MAPPED_DIR : PathType::DIR)
                 );
             }
             else if (_dir.isFile()) {
@@ -308,7 +307,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                     name.c_str(),
                     formatBytes(_dir.fileSize()).c_str(),
                     _dir.fileSize(),
-                    _dir.isMapping() ? TYPE_MAPPED_FILE : TYPE_REGULAR_FILE
+                    _dir.isMapping() ? PathType::MAPPED_FILE : PathType::FILE
                 );
 
             }
@@ -316,15 +315,15 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
             // add file creation time for directories and files, if available
             if (_dir.isMapping() || _dir.fileTime()) {
                 _buffer.print(F(",\"t\":\""));
-                _buffer.strftime_P(PSTR("%Y-%m-%d %H:%M"), _dir.fileTime());
-                _buffer.print('"');
+                _buffer.strftime_P(PSTR("%Y-%m-%d %H:%M\""), _dir.fileTime());
             }
 
             _next = _dir.next();
             if (_next) {
                 _buffer.print(F("},"));
-            } else {
-                _state = 2; // end
+            }
+            else {
+                _state = StateType::END;
                 __LDBG_printf("set state=%u", _state);
                 _buffer.print(F("}]}"));
             }
@@ -401,7 +400,7 @@ uint16_t AsyncNetworkScanResponse::_strcpy_P_safe(char *&dst, PGM_P str, int16_t
 size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
 {
     if (_position == (uint8_t)-1) {
-        _debug_println(F("AsyncNetworkScanResponse pos == -1, EOF"));
+        __LDBG_printf("AsyncNetworkScanResponse pos == -1, EOF");
         return 0;
     }
     int8_t n = WiFi.scanComplete();
@@ -411,14 +410,14 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             WiFi.scanNetworks(true, _hidden);
         }
         _position = -1;
-        _debug_println(F("Scan running"));
+        __LDBG_printf("Scan running");
         int16_t space = (int16_t)len;
         auto dst = reinterpret_cast<char *>(data);
         return _strcpy_P_safe(dst, PSTR("{\"pending\":true,\"msg\":\"Network scan still running\"}"), space);
     }
     else if (n == 0) {
         _position = -1;
-        _debug_println(F("No networks in range"));
+        __LDBG_printf("No networks in range");
         int16_t space = (int16_t)len;
         auto dst = reinterpret_cast<char *>(data);
         return _strcpy_P_safe(dst, PSTR("{\"msg\":\"No WiFi networks in range\"}"), space);
@@ -439,7 +438,8 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             _strcpy_P_safe(ptr, PSTR("{\"tr_class\":\""), space);
             if (WiFi_isHidden(_position)) {
                 _strcpy_P_safe(ptr, PSTR("table-secondary"), space);
-            } else {
+            }
+            else {
                 _strcpy_P_safe(ptr, PSTR("has-network-name\",\"td_class\":\"network-name"), space);
             }
             _strcpy_P_safe(ptr, PSTR("\",\"ssid\":\""), space);
@@ -449,7 +449,7 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             else {
                 String tmp = WiFi.SSID(_position);
                 tmp.replace(String('"'), F("\\\""));
-                if ((int16_t)tmp.length() >= space) {
+                if (static_cast<int16_t>(tmp.length()) >= space) {
                     break;
                 }
                 strcpy(ptr, tmp.c_str());

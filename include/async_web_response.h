@@ -141,12 +141,21 @@ private:
 
 class AsyncDirResponse : public AsyncBaseResponse {
 public:
-    static const uint8_t TYPE_TMP_DIR =         2;
-    static const uint8_t TYPE_MAPPED_DIR =      1;
-    static const uint8_t TYPE_REGULAR_DIR =     0;
-    static const uint8_t TYPE_MAPPED_FILE =     1;
-    static const uint8_t TYPE_REGULAR_FILE =    0;
+    enum class StateType : uint8_t {
+        FILL,
+        READ_DIR,
+        END
+    };
 
+    enum class PathType : uint8_t {
+        FILE = 0,
+        DIR = FILE,
+        MAPPED_FILE = 1,
+        MAPPED_DIR = MAPPED_FILE,
+        TMP_DIR = 2,
+    };
+
+public:
     AsyncDirResponse(const String &dirName, bool showHiddenFiles);
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
@@ -155,11 +164,11 @@ private:
     size_t _sendBufferPartially(uint8_t *data, uint8_t *dataPtr, size_t len);
 
 private:
-    uint8_t _state;
     ListDir _dir;
-    bool _next;
     String _dirName;
     PrintString _buffer;
+    StateType _state;
+    bool _next;
 };
 
 class AsyncNetworkScanResponse : public AsyncBaseResponse {

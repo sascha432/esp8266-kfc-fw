@@ -443,9 +443,7 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 
 AsyncMDNSResponse::~AsyncMDNSResponse()
 {
-    MUTEX_LOCK_BLOCK(_output->_lock) {
-        delete _output;
-    }
+    delete _output;
 }
 
 #endif

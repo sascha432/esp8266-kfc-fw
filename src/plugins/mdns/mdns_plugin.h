@@ -68,12 +68,14 @@ public:
         }
 
         ~Output() {
-            if (_serviceQuery) {
-                #if ESP8266
-                    MDNS.removeServiceQuery(_serviceQuery);
-                #elif ESP32
-                    mdns_query_async_delete(_serviceQuery);
-                #endif
+            MUTEX_LOCK_BLOCK(_lock) {
+                if (_serviceQuery) {
+                    #if ESP8266
+                        MDNS.removeServiceQuery(_serviceQuery);
+                    #elif ESP32
+                        mdns_query_async_delete(_serviceQuery);
+                    #endif
+                }
             }
         }
 

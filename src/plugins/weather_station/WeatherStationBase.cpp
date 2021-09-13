@@ -11,6 +11,12 @@
 #include <StreamString.h>
 #endif
 
+#if DEBUG_IOT_WEATHER_STATION
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 WeatherStationBase::WeatherStationBase() :
     _pollDataLastMillis(0),
     _pollDataRetries(0),
@@ -84,10 +90,10 @@ uint32_t WeatherStationBase::_pollDataGetNextUpdate() const
     uint32_t diff;
     uint32_t next;
     if ((diff = get_time_diff(_pollDataLastMillis, millis())) < Event::minutes(_config.weather_poll_interval).count()) {
-        next = (uint32_t)Event::minutes(_config.weather_poll_interval).count() - diff;
+        next = static_cast<uint32_t>(Event::minutes(_config.weather_poll_interval).count()) - diff;
     }
     else {
-        next = (uint32_t)Event::minutes(_config.weather_poll_interval).count();
+        next = Event::minutes(_config.weather_poll_interval).count();
     }
     return (next < kMinPollDataInterval) ? kMinPollDataInterval : next;
 }
@@ -142,12 +148,19 @@ void WeatherStationBase::_loop()
         return;
     }
 
+    #if 0
+        _tft.setCursor(0, 0);
+        _tft.setTextSize(1);
+        _tft.setTextColor(COLORS_WHITE);
+        _tft.printf_P(PSTR("%u"), millis());
+    #endif
+
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         if (_touchpadDebug) {
             const auto &coords = _touchpad.get();
-            uint16_t colorTouched = ST77XX_RED;
-            uint16_t colorPredict = ST77XX_YELLOW;
-            uint16_t colorGrid = ST77XX_WHITE;
+            uint16_t colorTouched = COLORS_RED;
+            uint16_t colorPredict = COLORS_YELLOW;
+            uint16_t colorGrid = COLORS_WHITE;
             _canvas->fillScreen(COLORS_BACKGROUND);
             for(int yy = 1; yy <= 8; yy++) {
                 _canvas->drawLine(10, yy * 10, 8 * 14, yy * 10, yy == coords.y ? colorTouched : (yy == _touchpad._event._predict.y ? colorPredict : colorGrid));
@@ -199,7 +212,7 @@ void WeatherStationBase::_loop()
         }
 
         if (_toggleScreenTimer && millis() > _toggleScreenTimer) {
-            // __LDBG_printf("_toggleScreenTimer %u", _toggleScreenTimer);
+            __LDBG_printf("toggle_screen_timer=%u", _toggleScreenTimer);
             _setScreen((_getCurrentScreen() + 1) % kNumScreens);
             _draw();
             return;

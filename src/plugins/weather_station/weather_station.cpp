@@ -319,6 +319,8 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         }
     });
     */
+
+   _attachCanvas();
 }
 
 void WeatherStationPlugin::reconfigure(const String &source)

@@ -7,6 +7,12 @@
 #include "WSDraw.h"
 #include "WSScreen.h"
 
+#if DEBUG_IOT_WEATHER_STATION
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
+#endif
+
 #if 1
 #include "fonts/fonts_includes.h"
 #else
@@ -71,14 +77,10 @@ const unsigned char icon_house[] PROGMEM = {
     0xfc, 0x03, 0xfe, 0x00, 0x03, 0xfc, 0x03, 0xfe, 0x00
 };
 
-#include <debug_helper_enable.h>
-
 #define __LDBG_isCanvasAttached() \
         if (!isCanvasAttached()) { \
             __DBG_panic("canvas not attached"); \
         }
-
-// using namespace WeatherStation::Screen;
 
 namespace WSDraw {
 
@@ -103,7 +105,7 @@ namespace WSDraw {
         // _screenTimer.remove();
         // delete _screen;
         // _displayMessageTimer.remove();
-        //ScrollCanvas::destroy(this);
+        ScrollCanvas::destroy(this);
         if (_canvas) {
             delete _canvas;
         }
@@ -114,14 +116,14 @@ namespace WSDraw {
         if (_canvasLocked > 0) {
             _canvasLocked--;
         }
-        // __DBG_printf("locked=%u canvas=%p", _canvasLocked, _canvas);
+        __LDBG_printf("locked=%u canvas=%p", _canvasLocked, _canvas);
         if (_canvasLocked == 0) {
             if (!_canvas) {
                 _canvas = new CanvasType(_tft.width(), _tft.height());
-                __DBG_printf("new canvas=%p invoking redraw", _canvas);
+                __LDBG_printf("new canvas=%p invoking redraw", _canvas);
             }
             else {
-                __DBG_printf("canvas=%p invoking redraw", _canvas);
+                __LDBG_printf("canvas=%p invoking redraw", _canvas);
             }
             redraw();
         }
@@ -131,16 +133,17 @@ namespace WSDraw {
     bool Base::_detachCanvas(bool release)
     {
         if (_canvasLocked++ == 0 && release) {
-            __DBG_printf("canvas released=%p", _canvas);
+            __LDBG_printf("canvas released=%p", _canvas);
             delete _canvas;
             _canvas = nullptr;
         }
-        __DBG_printf("locked=%d release=%u canvas=%p", _canvasLocked, release, _canvas);
+        __LDBG_printf("locked=%d release=%u canvas=%p", _canvasLocked, release, _canvas);
         return (_canvasLocked == 1);
     }
 
     bool Base::isCanvasAttached() const
     {
+        // __LDBG_printf("canvas=%p locked=%u", _canvas, _canvasLocked);
         return (_canvas != nullptr) && _canvasLocked == 0;
     }
 
@@ -167,16 +170,13 @@ namespace WSDraw {
         else {
             ScrollCanvas::destroy(this);
 
-            _tft.fillScreen(COLORS_BACKGROUND);
             _tft.setTextColor(color);
             _tft.setFont(font);
-            DisplayType::Position_t pos;
             if (clear) {
-                _tft.drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, DisplayType::CENTER, DisplayType::MIDDLE, &pos);
+                _tft.fillScreen(COLORS_BACKGROUND);
             }
-            else {
-                _tft.drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, DisplayType::CENTER, DisplayType::MIDDLE, &pos);
-            }
+            DisplayType::Position_t pos;
+            _tft.drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, DisplayType::CENTER, DisplayType::MIDDLE, &pos);
         }
     }
 

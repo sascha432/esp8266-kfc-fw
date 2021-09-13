@@ -145,9 +145,9 @@ const __FlashStringHelper *getContentType(const String &path)
 void Plugin::executeDelayed(AsyncWebServerRequest *request, std::function<void()> callback)
 {
     request->onDisconnect([callback]() {
-#if IOT_WEATHER_STATION
-        __weatherStationAttachCanvas();
-#endif
+        #if IOT_WEATHER_STATION
+            __weatherStationAttachCanvas();
+        #endif
         _Scheduler.add(2000, false, [callback](Event::CallbackTimerPtr timer) {
             callback();
         });

@@ -11,7 +11,7 @@
 #include "WSDraw.h"
 
 #ifndef DEBUG_IOT_WEATHER_STATION
-#    define DEBUG_IOT_WEATHER_STATION 1
+#    define DEBUG_IOT_WEATHER_STATION 0
 #endif
 
 #ifndef IOT_WEATHER_STATION_HAS_TOUCHPAD
@@ -48,6 +48,12 @@
 
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
 #    include "Mpr121Touchpad.h"
+#endif
+
+#if DEBUG_IOT_WEATHER_STATION
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
 
 class WeatherStationBase : public WSDraw::Base
@@ -161,3 +167,7 @@ inline WeatherStationBase &WeatherStationBase::_getInstance()
 {
     return *reinterpret_cast<WeatherStationBase *>(&ws_plugin);
 }
+
+#if DEBUG_IOT_WEATHER_STATION
+#include <debug_helper_disable.h>
+#endif

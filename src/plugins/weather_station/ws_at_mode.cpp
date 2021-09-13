@@ -49,13 +49,13 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("metrics=%u"), state);
             }
             else if (args.equalsIgnoreCase(0, F("screen"))) {
-                _setScreen((_currentScreen + 1) % NUM_SCREENS);
+                _setScreen((_currentScreen + 1) % kNumScreens);
                 redraw();
                 args.printf_P(PSTR("screen=%u"), _currentScreen);
             }
             else if (args.equalsIgnoreCase(0, F("tft"))) {
                 _tft.initR(INITR_BLACKTAB);
-                _tft.fillScreen(state ? ST77XX_YELLOW : ST77XX_RED);
+                _tft.fillScreen(state ? COLORS_YELLOW : COLORS_RED);
                 _tft.setRotation(0);
                 args.printf_P(PSTR("set color"));
             }
@@ -124,18 +124,18 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSU))) {
         if (args.equals(0, 'f')) {
-            args.print(F("Updating forecast..."));
-            _getWeatherForecast([this, args](bool status) mutable {
-                args.printf_P(SPGM(status__u), status);
-                redraw();
-            });
+            // args.print(F("Updating forecast..."));
+            // _getWeatherForecast([this, args](bool status) mutable {
+            //     args.printf_P(SPGM(status__u), status);
+            //     redraw();
+            // });
         }
         else {
-            args.print(F("Updating info..."));
-            _getWeatherInfo([this, args](bool status) mutable {
-                args.printf_P(SPGM(status__u), status);
-                redraw();
-            });
+            // args.print(F("Updating info..."));
+            // _getWeatherInfo([this, args](bool status) mutable {
+            //     args.printf_P(SPGM(status__u), status);
+            //     redraw();
+            // });
         }
         return true;
     }

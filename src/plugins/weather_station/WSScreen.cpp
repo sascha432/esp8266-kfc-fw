@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if 0
+
 #include <Arduino_compat.h>
 #include "WSScreen.h"
 
@@ -40,3 +42,5 @@ BaseScreen *IndoorScreen::getNextScreen()
 {
     return new MainScreen();
 }
+
+#endif

@@ -19,12 +19,19 @@ namespace GFXCanvas {
     public:
         using data_type_ptr = data_type *;
 
-        inline BufferTemplate() : _data(nullptr), _size(0), _capacity(0) {
+        inline BufferTemplate() :
+            _data(nullptr),
+            _size(0),
+            _capacity(0)
+        {
         }
 
-        BufferTemplate(const BufferTemplate &copy) : _data(copy._size ? new data_type[copy._size] : nullptr), _size(copy._size), _capacity(_size) {
+        BufferTemplate(const BufferTemplate &copy) :
+            _data(copy._size ? new data_type[copy._size] : nullptr),
+            _size(copy._size),
+            _capacity(_size)
+        {
             if (_data) {
-                __LDBG_track_new(copy._size * sizeof(data_type));
                 std::copy(copy.begin(), copy.end(), begin());
             }
             else {
@@ -41,14 +48,14 @@ namespace GFXCanvas {
 
         BufferTemplate &operator=(BufferPool &&pool) noexcept {
             __releaseData();
-#if 0
-            auto &b = pool.getTemp();
-            _fp_size = b.length();
-            _capacity = b.size();
-            b.move(&_data);
-#else
-            pool.moveTempTo(*this);
-#endif
+            #if 0
+                auto &b = pool.getTemp();
+                _fp_size = b.length();
+                _capacity = b.size();
+                b.move(&_data);
+            #else
+                pool.moveTempTo(*this);
+            #endif
             return *this;
         }
 
@@ -79,7 +86,6 @@ namespace GFXCanvas {
         {
             if (_data != nullptr) {
                 if (_capacity != 0) {
-                    __LDBG_track_delete(_capacity * sizeof(data_type));
                     delete[] _data;
                     _data = nullptr;
                 }

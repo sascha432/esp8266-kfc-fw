@@ -18,8 +18,7 @@
 
 class WeatherStationPlugin : public PluginComponent, public WeatherStationBase {
 public:
-    using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStation;
-    using MainConfig = KFCConfigurationClasses::MainConfig;
+    using ScreenType = WSDraw::ScreenType;
 
 // PluginComponent
 public:
@@ -35,8 +34,8 @@ public:
 
 // WebUI
 public:
-    virtual void createWebUI(v &webUI) override;
-    virtual void getValues(JsonArray &array) override;
+    virtual void createWebUI(WebUINS::Root &webUI) override;
+    virtual void getValues(WebUINS::Events &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 public:
@@ -76,20 +75,21 @@ private:
 #endif
 
 private:
-    void _setScreen(uint8_t screen);
-    uint8_t _getNextScreen(uint8_t screen);
+    void _setScreen(ScreenType screen);
+    ScreenType _getNextScreen(ScreenType screen);
 
     uint32_t _toggleScreenTimer;
     uint32_t _lockCanvasUpdateEvents;
 
 #if IOT_ALARM_PLUGIN_ENABLED
 public:
-    using Alarm = KFCConfigurationClasses::Plugins::Alarm;
+    using ModeType = KFCConfigurationClasses::Plugins::AlarmConfigNS::ModeType;
+    static constexpr auto STOP_ALARM = KFCConfigurationClasses::Plugins::AlarmConfigNS::AlarmConfigType::STOP_ALARM;
 
-    static void alarmCallback(Alarm::ModeType mode, uint16_t maxDuration);
+    static void alarmCallback(ModeType mode, uint16_t maxDuration);
 
 private:
-    void _alarmCallback(Alarm::ModeType mode, uint16_t maxDuration);
+    void _alarmCallback(ModeType mode, uint16_t maxDuration);
     bool _resetAlarm(); // returns true if alarm was reset
 
     Event::Timer _alarmTimer;

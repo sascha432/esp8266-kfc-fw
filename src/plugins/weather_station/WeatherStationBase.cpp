@@ -91,21 +91,18 @@ uint32_t WeatherStationBase::_pollDataGetNextUpdate() const
     return (next < kMinPollDataInterval) ? kMinPollDataInterval : next;
 }
 
-
-
 void WeatherStationBase::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, HttpRequestCallback callback)
 {
-#if DEBUG_IOT_WEATHER_STATION && 0
-    auto prev = callback;
-    callback = [this, prev](int16_t httpCode, const String &error) {
-        _weatherApi.dump(DEBUG_OUTPUT);
-        prev(httpCode, error);
-    };
-#endif
+    #if DEBUG_IOT_WEATHER_STATION && 0
+        auto prev = callback;
+        callback = [this, prev](int16_t httpCode, const String &error) {
+            _weatherApi.dump(DEBUG_OUTPUT);
+            prev(httpCode, error);
+        };
+    #endif
     auto rest = new ::WeatherStation::RestAPI(url);
     rest->call(jsonReader, std::max(15, timeout), callback);
 }
-
 
 void WeatherStationBase::_getWeatherInfo(HttpRequestCallback callback)
 {
@@ -119,8 +116,8 @@ void WeatherStationBase::_getWeatherForecast(HttpRequestCallback callback)
 
 void WeatherStationBase::begin()
 {
-    _screenTimer.remove();
-    setScreen(new WeatherStation::Screen::MainScreen());
+    // _screenTimer.remove();
+    // setScreen(new WeatherStation::Screen::MainScreen());
     _weatherApi.clear();
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
     if (WiFi.isConnected()) {
@@ -132,7 +129,7 @@ void WeatherStationBase::begin()
 void WeatherStationBase::end()
 {
     LoopFunctions::remove(loop);
-    _screenTimer.remove();
+    // _screenTimer.remove();
     _pollDataTimer.remove();
     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
     _weatherApi.clear();
@@ -144,48 +141,44 @@ void WeatherStationBase::_loop()
         return;
     }
 
-#if IOT_WEATHER_STATION_HAS_TOUCHPAD
-    if (_touchpadDebug) {
-        SpeedBooster speedBooster;
+    #if IOT_WEATHER_STATION_HAS_TOUCHPAD
+        if (_touchpadDebug) {
+            const auto &coords = _touchpad.get();
+            uint16_t colorTouched = ST77XX_RED;
+            uint16_t colorPredict = ST77XX_YELLOW;
+            uint16_t colorGrid = ST77XX_WHITE;
+            _canvas->fillScreen(COLORS_BACKGROUND);
+            for(int yy = 1; yy <= 8; yy++) {
+                _canvas->drawLine(10, yy * 10, 8 * 14, yy * 10, yy == coords.y ? colorTouched : (yy == _touchpad._event._predict.y ? colorPredict : colorGrid));
+            }
+            for(int xx = 1; xx <= 13; xx++) {
+                _canvas->drawLine(xx * 8, 10, xx * 8, 8 * 10, xx == coords.x ? colorTouched : (xx == _touchpad._event._predict.x ? colorPredict : colorGrid));
+            }
 
-        const auto &coords = _touchpad.get();
-        uint16_t colorTouched = ST77XX_RED;
-        uint16_t colorPredict = ST77XX_YELLOW;
-        uint16_t colorGrid = ST77XX_WHITE;
-        _canvas->fillScreen(COLORS_BACKGROUND);
-        for(int yy = 1; yy <= 8; yy++) {
-            _canvas->drawLine(10, yy * 10, 8 * 14, yy * 10, yy == coords.y ? colorTouched : (yy == _touchpad._event._predict.y ? colorPredict : colorGrid));
+            _displayScreen(0, 0, TFT_WIDTH, 85);
+            return;
         }
-        for(int xx = 1; xx <= 13; xx++) {
-            _canvas->drawLine(xx * 8, 10, xx * 8, 8 * 10, xx == coords.x ? colorTouched : (xx == _touchpad._event._predict.x ? colorPredict : colorGrid));
-        }
-
-        _displayScreen(0, 0, TFT_WIDTH, 85);
-        return;
-    }
-#endif
+    #endif
 
 
     time_t now = time(nullptr);
     if (_redrawFlag || _screenLastUpdateTime == ~0) {
-        SpeedBooster speedBooster;
         //__DBG_printf("redraw=%u update=%d", _redrawFlag, _screenLastUpdateTime);
         _canvas->fillScreen(COLORS_BACKGROUND);
         _screenLastUpdateTime = (uint32_t)now;
-        _screen->drawScreen(*_canvas);
+        // _screen->drawScreen(*_canvas);
         _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
         _redrawFlag = false;
     }
     else {
-        SpeedBooster speedBooster;
         if (_screenLastUpdateTime != now) {
             _screenLastUpdateTime = (uint32_t)now;
             //__DBG_printf("update_time=%d", _screenLastUpdateTime);
-            _screen->updateTime(*_canvas);
+            // _screen->updateTime(*_canvas);
         }
         else {
             //__DBG_printf("update_screen=%d", _screenLastUpdateTime);
-            _screen->updateScreen(*_canvas);
+            // _screen->updateScreen(*_canvas);
         }
         _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
     }

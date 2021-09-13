@@ -13,7 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-using Plugins = KFCConfigurationClasses::PluginsType;
+using WeatherStationX = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
 
 void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
@@ -21,7 +21,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         return;
     }
 
-    auto &cfg = Plugins::WeatherStation::getWriteableConfig();
+    auto &cfg = WeatherStationX::getWriteableConfig();
 
     auto &ui = form.createWebUI();
     ui.setTitle(F("Weather Station Configuration"));
@@ -30,51 +30,38 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
 
     auto &mainGroup = form.addCardGroup(FSPGM(config));
 
-    form.add(F("tf"), _H_W_STRUCT_VALUE(cfg, time_format_24h));
+    form.addObjectGetterSetter(F("tf"), FormGetterSetter(cfg, time_format_24h));
     form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));
 
-    form.add(F("im"), _H_W_STRUCT_VALUE(cfg, is_metric));
+    form.addObjectGetterSetter(F("im"), FormGetterSetter(cfg, is_metric));
     form.addFormUI(F("Units"), FormUI::BoolItems(F("Metric"), F("Imperial")));
 
-    form.add(F("api"), _H_W_STRUCT_VALUE(cfg, weather_poll_interval));
+    form.addObjectGetterSetter(F("api"), FormGetterSetter(cfg, weather_poll_interval));
     form.addFormUI(F("Weather Poll Interval"), FormUI::Suffix(FSPGM(minutes)));
     form.addValidator(FormUI::Validator::Range(5, 240));
 
-    form.add(F("ato"), _H_W_STRUCT_VALUE(cfg, api_timeout));
+    form.addObjectGetterSetter(F("ato"), FormGetterSetter(cfg, api_timeout));
     form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));
     form.addValidator(FormUI::Validator::Range(30, 900));
 
-    form.add(F("bll"), _H_W_STRUCT_VALUE(cfg, backlight_level));
-    form.addFormUI(F("Backlight Level"), FormUI::Suffix('%'));
+    form.addObjectGetterSetter(F("bll"), FormGetterSetter(cfg, backlight_level));
+    form.addFormUI(F("Backlight Level"), FormUI::Suffix(F("%")));
     form.addValidator(FormUI::Validator::Range(0, 100));
 
-    form.add(F("tth"), _H_W_STRUCT_VALUE(cfg, touch_threshold));
+    form.addObjectGetterSetter(F("tth"), FormGetterSetter(cfg, touch_threshold));
     form.addFormUI(F("Touch Threshold"));
 
-    form.add(F("trt"), _H_W_STRUCT_VALUE(cfg, released_threshold));
+    form.addObjectGetterSetter(F("trt"), FormGetterSetter(cfg, released_threshold));
     form.addFormUI(F("Release Threshold"));
 
-    // form.add(F("t_ofs"), _H_W_STRUCT_VALUE(cfg, temp_offset));
-    // form.addFormUI(F("BMP280 Temperature Offset"), FormUI::Suffix('%'));
 
-    // form.add(F("h_ofs"), _H_W_STRUCT_VALUE(cfg, humidity_offset));
-    // form.addFormUI(F("Humidity Offset"), FormUI::Suffix('%'));
-
-    // form.add(F("p_ofs"), _H_W_STRUCT_VALUE(cfg, pressure_offset));
-    // form.addFormUI(F("Pressure Offset"), FormUI::Suffix(FSPGM(hPa)));
-
-    for(uint8_t i = 0; i < WeatherStationPlugin::ScreenEnum_t::NUM_SCREENS; i++) {
-        PrintString str;
-        if (i == 0) {
-            str = F("Display screen for the specified time and switch to next one.<br>");
-        }
-        str.printf_P(PSTR("Screen #%u, %s:"), i + 1, WeatherStationPlugin::getScreenName(i));
-
-        form.add(PrintString(F("st_%u"), i), _H_W_STRUCT_VALUE_TYPE(cfg, screenTimer[i], uint8_t, i));
-        form.addFormUI(FormUI::Label(str, true), FormUI::Suffix(FSPGM(seconds)));
+    for(uint8_t i = 0; i < WSDraw::kNumScreens; i++) {
+        PrintString str(F("Screen #%u, %s:"), i + 1, WeatherStationPlugin::getScreenName(i));
+        // form.add(PrintString(F("st_%u"), i), _H_W_STRUCT_VALUE_TYPE(cfg, screenTimer[i], uint8_t, i));
+        // form.addFormUI(FormUI::Label(str, true), FormUI::Suffix(FSPGM(seconds)));
     }
 
-    form.add(F("stft"), _H_W_STRUCT_VALUE(cfg, show_webui));
+    form.addObjectGetterSetter(F("stft"), FormGetterSetter(cfg, show_webui));
     form.addFormUI(F("Show TFT Contents In WebUI"), FormUI::BoolItems(FSPGM(Yes), FSPGM(No)));
 
     mainGroup.end();

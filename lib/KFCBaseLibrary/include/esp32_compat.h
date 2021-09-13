@@ -182,7 +182,10 @@ namespace fs {
 
         ~Dir() {
             if (_dir) {
-                closedir(_dir);
+                // TODO causes a crash, corrupted heap
+                #if !CONFIG_HEAP_CORRUPTION_DETECTION
+                    closedir(_dir);
+                #endif
             }
         }
 
@@ -343,9 +346,23 @@ inline void ets_timer_arm_new(ETSTimer *timer, uint32_t tmout, bool repeat, bool
     }
 }
 
-#define PWMRANGE 1023
+#if HAVE_ANALOGWRITE
 
-void analogWrite(uint8_t pin, uint16_t value);
+    #include <esp32-hal.h>
+    #include <esp32-hal-ledc.h>
+    #include <analogWrite.h>
+
+    #define PWMRANGE 255
+
+#else
+
+    #define PWMRANGE 1023
+
+    inline void analogWrite(uint8_t pin, uint16_t value)
+    {
+    }
+
+#endif
 
 inline void panic() {
     for(;;) {
@@ -364,6 +381,7 @@ inline void settimeofday_cb(settimeofday_cb_t cb)
 extern "C" {
 
     uint32_t crc32_le(uint32_t crc, uint8_t const *buf, uint32_t len);
+
     bool can_yield();
 
 }

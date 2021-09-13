@@ -299,6 +299,7 @@ DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameClockConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNamePingConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameWeatherStationConfig_t);
 DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameRemoteConfig_t);
+DECLARE_CONFIG_HANDLE_PROGMEM_STR(handleNameDisplayConfig_t);
 
 
 #define CIF_DEBUG(...) __VA_ARGS__

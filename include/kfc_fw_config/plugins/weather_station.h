@@ -16,7 +16,7 @@ namespace KFCConfigurationClasses {
 
             class WeatherStationConfig {
             public:
-                typedef struct __attribute__packed__ Config_t {
+                struct __attribute__packed__ Config_t {
                     using Type = Config_t;
 
                     uint8_t weather_poll_interval;                      // minutes
@@ -27,13 +27,12 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT8_BITFIELD(is_metric, 1);
                     CREATE_UINT8_BITFIELD(time_format_24h, 1);
                     CREATE_UINT8_BITFIELD(show_webui, 1);
-                    // float temp_offset; // moved to BME280 sensor
-                    // float humidity_offset;
-                    // float pressure_offset;
                     uint8_t screenTimer[8];                             // seconds
 
+                    uint32_t getPollIntervalMillis() const;
+
                     Config_t();
-                } Config_t;
+                };
             };
 
             class WeatherStation : public WeatherStationConfig, public KFCConfigurationClasses::ConfigGetterSetter<WeatherStationConfig::Config_t, _H(MainConfig().plugins.weatherstation.cfg) CIF_DEBUG(, &handleNameWeatherStationConfig_t)> {

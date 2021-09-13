@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#if 0
+
 #pragma once
 
 #include <Arduino_compat.h>
@@ -14,7 +16,7 @@ extern WeatherStationBase &__weatherStationGetPlugin();
 
 namespace WeatherStation {
 
-    using ConfigType = WSDraw::WeatherStationConfigType;
+    using ConfigType = WSDraw::ConfigType;
 
     namespace Screen {
 
@@ -29,7 +31,7 @@ namespace WeatherStation {
             }
 
         protected:
-            friend WSDraw;
+            friend WSDraw::Base;
             friend WeatherStationBase;
 
             virtual void deletePrevScreen(BaseScreen *&screen) {
@@ -57,12 +59,12 @@ namespace WeatherStation {
                 drawScreen(canvas);
             }
             // called to update screen partially
-            virtual void updateTime(WeatherStationCanvas &canvas) {
+            virtual void updateTime(CanvasType &canvas) {
                 drawScreen(canvas);
             }
 
         protected:
-            WSDraw &_wsDraw;
+            Base &_wsDraw;
             ConfigType &_config;
             uint32_t _timeout;
             BaseScreen *_nextScreen;
@@ -134,3 +136,5 @@ namespace WeatherStation {
     }
 
 }
+
+#endif

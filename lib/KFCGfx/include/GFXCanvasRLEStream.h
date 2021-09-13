@@ -21,6 +21,8 @@ public:
     virtual int available();
     virtual int read();
     virtual int peek();
+    virtual void flush() {}
+
     virtual size_t readBytes(char *buffer, size_t length) {
         return readBytes(reinterpret_cast<uint8_t *>(buffer), length);
     }

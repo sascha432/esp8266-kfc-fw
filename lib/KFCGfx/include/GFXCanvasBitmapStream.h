@@ -18,6 +18,7 @@ public:
 
     virtual int available();
     virtual int read();
+    virtual void flush() {}
 
     operator bool() const {
         return _available != 0;

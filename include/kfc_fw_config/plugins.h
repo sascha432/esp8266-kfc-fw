@@ -24,6 +24,7 @@
 #include "plugins/ping.h"
 #include "plugins/mdns.h"
 #include "plugins/weather_station.h"
+#include "plugins/display.h"
 
 namespace KFCConfigurationClasses {
 
@@ -43,6 +44,7 @@ namespace KFCConfigurationClasses {
         using Alarm = Plugins::AlarmConfigNS::Alarm;
         using Sensor = Plugins::SensorConfigNS::Sensor;
         using Clock = Plugins::ClockConfigNS::Clock;
+        using Display = Plugins::DisplayConfigNS::Display;
 
         // --------------------------------------------------------------------
         // Plugin Structure
@@ -61,6 +63,7 @@ namespace KFCConfigurationClasses {
         Clock clock;
         Ping ping;
         MDNS mdns;
+        Display display;
     };
 
 }

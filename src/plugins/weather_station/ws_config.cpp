@@ -7,7 +7,7 @@
 
 namespace KFCConfigurationClasses {
 
-    Plugins::WeatherStationConfig::Config_t::Config_t() :
+    Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::Config_t() :
         weather_poll_interval(15),
         api_timeout(30),
         backlight_level(100),
@@ -16,22 +16,18 @@ namespace KFCConfigurationClasses {
         is_metric(true),
         time_format_24h(true),
         show_webui(false),
-        temp_offset(0),
-        humidity_offset(0),
-        pressure_offset(0),
         screenTimer{ 10, 10 }
     {
     }
 
-    uint32_t Plugins::WeatherStationConfig::Config_t::getPollIntervalMillis() const
+    uint32_t Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::getPollIntervalMillis() const
     {
         return weather_poll_interval * 60000UL;
     }
 
-    void Plugins::WeatherStation::defaults()
+    void Plugins::WeatherStationConfigNS::WeatherStation::defaults()
     {
-        Config_t cfg = {};
-        setConfig(cfg);
+        setConfig(Config_t());
         setApiKey(F("GET_YOUR_API_KEY_openweathermap.org"));
         setApiQuery(F("New York,US"));
     }

@@ -78,14 +78,14 @@ bool OpenWeatherMapAPI::parseForecastData(Stream &stream)
 
 JsonBaseReader *OpenWeatherMapAPI::getWeatherInfoParser()
 {
-    auto parser = __DBG_new(OpenWeatherInfoJsonReader, _info);
+    auto parser = new OpenWeatherInfoJsonReader(_info);
     parser->initParser();
     return parser;
 }
 
 JsonBaseReader *OpenWeatherMapAPI::getWeatherForecastParser()
 {
-    auto parser = __DBG_new(OpenWeatherForecastJsonReader, _forecast);
+    auto parser = new OpenWeatherForecastJsonReader(_forecast);
     parser->initParser();
     return parser;
 }

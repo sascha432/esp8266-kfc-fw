@@ -42,9 +42,6 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT8_BITFIELD(is_metric, 1);
                     CREATE_UINT8_BITFIELD(time_format_24h, 1);
                     CREATE_UINT8_BITFIELD(show_webui, 1);
-                    float temp_offset;
-                    float humidity_offset;
-                    float pressure_offset;
                     uint8_t screenTimer[8];
                     Config_t() : weather_poll_interval(15),
                         api_timeout(30),
@@ -54,9 +51,6 @@ namespace KFCConfigurationClasses {
                         is_metric(true),
                         time_format_24h(true),
                         show_webui(false),
-                        temp_offset(0),
-                        humidity_offset(0),
-                        pressure_offset(0),
                         screenTimer{ 10, 10 }
                     {
                     }

@@ -442,7 +442,7 @@ public:
      inline size_t copy(const Ta first, const Ta last) {
          return write(
             reinterpret_cast<const uint8_t *>(first),
-            reinterpret_cast<const uint8_t *>(last) - reinterpret_cast<const uint8_t *>(first) + sizeof(std::remove_pointer<Ta>::type) - 1
+            reinterpret_cast<const uint8_t *>(last) - reinterpret_cast<const uint8_t *>(first) + sizeof(std::remove_pointer_t<Ta>) - 1
          );
      }
 

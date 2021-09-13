@@ -25,12 +25,12 @@
 KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Callback_t callback) : _json(json), _callback(callback), _message(F("None")), _code(0), _api(api)
 {
     _json->initParser();
-    _request = __DBG_new(HttpClient);
+    _request = new HttpClient();
 
     String token;
     _api.getBearerToken(token);
     if (token.length()) {
-        _api._headers.add(new HttpAuthorization(HttpAuthorization::BEARER, token));
+        _api._headers.add(new HttpAuthorization(HttpAuthorization::AuthorizationType::BEARER, token));
     }
     _api._headers.add(new HttpContentType(FSPGM(mime_application_json)));
 }
@@ -38,8 +38,8 @@ KFCRestAPI::HttpRequest::HttpRequest(KFCRestAPI &api, JsonBaseReader *json, Call
 KFCRestAPI::HttpRequest::~HttpRequest()
 {
     __LDBG_printf("httpRequestPtr=%p", this);
-    __DBG_delete(_request);
-    __DBG_delete(_json);
+    delete _request;
+    delete _json;
 }
 
 const String &KFCRestAPI::HttpRequest::getMessage() const
@@ -156,7 +156,7 @@ void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
 
     auto &api = httpRequestPtr->getApi();
     api._requests.erase(std::remove(api._requests.begin(), api._requests.end(), httpRequestPtr), api._requests.end());
-    __DBG_delete(httpRequestPtr);
+    delete httpRequestPtr;
 
     if (api._requests.empty()) {
         __DBG_printf("calling auto delete api=%p", &api);
@@ -167,7 +167,7 @@ void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
 void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &body, JsonBaseReader *json, HttpRequest::Callback_t callback)
 {
     __LDBG_printf("endpoint=%s payload=%s timeout=%u", endPointUri.c_str(), body.c_str(), _timeout);
-    auto httpRequestPtr = __DBG_new(HttpRequest, *this, json, callback);
+    auto httpRequestPtr = new HttpRequest(*this, json, callback);
     __LDBG_printf("httpRequestPtr=%p", httpRequestPtr);
 
     auto &httpRequest = *httpRequestPtr;
@@ -179,10 +179,10 @@ void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &bod
     request.setTimeout(_timeout);
     httpRequest.setUri(endPointUri);
 
-    if (request.open(body.length() ? "POST" : "GET", httpRequest.getUrl())) {
+    if (request.open(body.length() ? F("POST") : F("GET"), httpRequest.getUrl())) {
 
         _headers.setHeadersCallback([&request](const String &name, const String &header) {
-            request.setReqHeader(name.c_str(), header.c_str());
+            request.setReqHeader(name, header);
         }, true);
 
         if (request.send(body.c_str())) {

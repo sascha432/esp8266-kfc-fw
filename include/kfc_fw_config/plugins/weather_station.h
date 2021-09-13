@@ -19,19 +19,33 @@ namespace KFCConfigurationClasses {
                 struct __attribute__packed__ Config_t {
                     using Type = Config_t;
 
-                    uint8_t weather_poll_interval;                      // minutes
-                    uint16_t api_timeout;                               // seconds
-                    uint8_t backlight_level;                            // PWM level 0-1023
-                    uint8_t touch_threshold;
-                    uint8_t released_threshold;
-                    CREATE_UINT8_BITFIELD(is_metric, 1);
-                    CREATE_UINT8_BITFIELD(time_format_24h, 1);
-                    CREATE_UINT8_BITFIELD(show_webui, 1);
-                    uint8_t screenTimer[8];                             // seconds
+                    static constexpr size_t kMaxScreens = 2;
 
-                    uint32_t getPollIntervalMillis() const;
+                    CREATE_UINT32_BITFIELD_MIN_MAX(weather_poll_interval, 8, 5, 240, 15); // minutes
+                    CREATE_UINT32_BITFIELD_MIN_MAX(api_timeout, 9, 10, 300, 30); // seconds
+                    CREATE_UINT32_BITFIELD_MIN_MAX(backlight_level, 7, 0, 100, 100); // level in %
+                    CREATE_UINT32_BITFIELD_MIN_MAX(touch_threshold, 6, 0, 63, 5);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(released_threshold, 6, 0, 63, 8);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(is_metric, 1, false, true, true);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(time_format_24h, 1, false, true, true);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(show_webui, 1, false, true, false);
+                    uint8_t screenTimer[kMaxScreens]; // seconds
 
-                    Config_t();
+                    uint32_t getPollIntervalMillis() const {
+                        return weather_poll_interval * 60000U;
+                    }
+
+                    Config_t() :
+                        weather_poll_interval(kDefaultValueFor_weather_poll_interval),
+                        api_timeout(kDefaultValueFor_api_timeout),
+                        backlight_level(kDefaultValueFor_backlight_level),
+                        touch_threshold(kDefaultValueFor_touch_threshold),
+                        released_threshold(kDefaultValueFor_released_threshold),
+                        is_metric(kDefaultValueFor_is_metric),
+                        time_format_24h(kDefaultValueFor_time_format_24h),
+                        show_webui(kDefaultValueFor_show_webui),
+                        screenTimer{ 10, 10 }
+                    {}
                 };
             };
 

@@ -50,10 +50,6 @@
 #    include "Mpr121Touchpad.h"
 #endif
 
-class WeatherStationBase;
-
-extern WeatherStationBase &__weatherStationGetPlugin();
-
 class WeatherStationBase : public WSDraw::Base
 {
 public:
@@ -62,15 +58,18 @@ public:
     // if an error occurs, retry after 60 seconds for 10 times, then retry every 15min.
 
     // delay after boot or if any error occured
-    static constexpr uint32_t kPollDataErrorDelay = (uint32_t)Event::seconds(60).count();
+    static constexpr auto kPollDataErrorDelay = static_cast<uint32_t>(Event::seconds(60).count());
     // retries before pausing
     static constexpr uint16_t kPollDataRetries = 10;
     // pause for some time after too many errors
-    static constexpr uint32_t kPollDataErrorPauseDelay = (uint32_t)Event::minutes(15).count();
+    static constexpr auto kPollDataErrorPauseDelay = static_cast<uint32_t>(Event::minutes(15).count());
     // min. delay between updates in case the configuration is invalid
-    static constexpr uint32_t kMinPollDataInterval = (uint32_t)Event::minutes(5).count();
+    static constexpr auto kMinPollDataInterval = static_cast<uint32_t>(Event::minutes(5).count());
+
+    static constexpr auto kNumScreens = WSDraw::kNumScreens;
 
     using HttpRequestCallback = KFCRestAPI::HttpRequest::Callback_t;
+    using ScreenType = WSDraw::ScreenType;
 
 public:
     WeatherStationBase();
@@ -78,6 +77,8 @@ public:
     static void loop();
     static void wifiCallback(WiFiCallbacks::EventType event, void *payload);
     static void pollDataTimer(Event::CallbackTimerPtr timer);
+
+    static WeatherStationBase &_getInstance();
 
 #if !_MSC_VER
 protected:
@@ -95,30 +96,68 @@ protected:
     void begin();
     void end();
 
+
+protected:
+    void _setScreen(ScreenType screen);
+    void _setScreen(uint32_t screen);
+    ScreenType _getNextScreen(ScreenType screen);
+    ScreenType _getNextScreen(uint32_t screen);
+    uint32_t _getCurrentScreen() const;
+
 protected:
     Event::Timer _pollDataTimer;
     uint32_t _pollDataLastMillis;
     uint16_t _pollDataRetries;
 
+    // uint32_t _updateTimer;
+    uint32_t _updateCounter;
+    uint16_t _backlightLevel;
+    Event::Timer _fadeTimer;
+
+    uint32_t _toggleScreenTimer;
+    uint32_t _lockCanvasUpdateEvents;
+
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         Mpr121Touchpad _touchpad;
-    #endif
-    #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-        bool _touchpadDebug: 1;
+        bool _touchpadDebug{false};
     #endif
 };
 
 inline void WeatherStationBase::loop()
 {
-    __weatherStationGetPlugin()._loop();
+    _getInstance()._loop();
 }
 
 inline void WeatherStationBase::wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
-    __weatherStationGetPlugin()._wifiCallback(event, payload);
+    _getInstance()._wifiCallback(event, payload);
 }
 
 inline void WeatherStationBase::pollDataTimer(Event::CallbackTimerPtr timer)
 {
-    __weatherStationGetPlugin()._pollDataTimerCallback(timer);
+    _getInstance()._pollDataTimerCallback(timer);
+}
+
+inline void WeatherStationBase::_setScreen(uint32_t screen)
+{
+    _setScreen(static_cast<ScreenType>(screen));
+}
+
+inline WeatherStationBase::ScreenType WeatherStationBase::_getNextScreen(uint32_t screen)
+{
+    return _getNextScreen(static_cast<ScreenType>(screen));
+}
+
+inline uint32_t WeatherStationBase::_getCurrentScreen() const
+{
+    return static_cast<uint32_t>(_currentScreen);
+}
+
+class WeatherStationPlugin;
+
+extern WeatherStationPlugin ws_plugin;
+
+inline WeatherStationBase &WeatherStationBase::_getInstance()
+{
+    return *reinterpret_cast<WeatherStationBase *>(&ws_plugin);
 }

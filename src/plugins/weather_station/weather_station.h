@@ -17,9 +17,6 @@
 #endif
 
 class WeatherStationPlugin : public PluginComponent, public WeatherStationBase {
-public:
-    using ScreenType = WSDraw::ScreenType;
-
 // PluginComponent
 public:
     WeatherStationPlugin();
@@ -44,10 +41,11 @@ public:
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
+    static WeatherStationPlugin &_getInstance();
+
 private:
     void _readConfig();
     void _init();
-    static WeatherStationPlugin &_getInstance();
     static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);
     void _installWebhooks();
 
@@ -61,25 +59,12 @@ private:
     virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) override;
 
 private:
-    // uint32_t _updateTimer;
-    uint32_t _updateCounter;
-    uint16_t _backlightLevel;
-    Event::Timer _fadeTimer;
-
-private:
     asyncHTTPrequest *_httpClient;
 
 #if IOT_WEATHER_STATION_WS2812_NUM
     Event::Timer _pixelTimer;
     uint8_t _pixels[IOT_WEATHER_STATION_WS2812_NUM * 3];
 #endif
-
-private:
-    void _setScreen(ScreenType screen);
-    ScreenType _getNextScreen(ScreenType screen);
-
-    uint32_t _toggleScreenTimer;
-    uint32_t _lockCanvasUpdateEvents;
 
 #if IOT_ALARM_PLUGIN_ENABLED
 public:
@@ -96,3 +81,10 @@ private:
     Event::Callback _resetAlarmFunc;
 #endif
 };
+
+extern WeatherStationPlugin ws_plugin;
+
+inline WeatherStationPlugin &WeatherStationPlugin::_getInstance()
+{
+    return ws_plugin;
+}

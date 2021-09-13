@@ -16,7 +16,7 @@ partitions1 = [
     # Name          Type        SubType      Size   Flags
     [ 'nvs',        'data',     'nvs',          20, '' ],
     [ 'otadata',    'data',     'ota',           8, '' ],
-    [ 'uf2',        'app',      'factory',    1920, '' ],
+    [ 'uf2',        'app',      'factory',    2048, '' ],
     [ 'eeprom',     'data',     'fat',           4, '' ],
     [ 'savecrash',  'data',     'fat',          64, '' ],
     [ 'kfcfw',      'data',     'fat',          64, '' ],

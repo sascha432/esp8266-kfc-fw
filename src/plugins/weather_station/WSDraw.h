@@ -88,6 +88,10 @@ namespace KFCConfigurationClasses {
 #    define TFT_HEIGHT 160
 #endif
 
+#ifndef SPI_FREQUENCY
+#    define SPI_FREQUENCY 0
+#endif
+
 #if TFT_WIDTH == 128 && TFT_HEIGHT == 160
 #    include "./themes/theme1_160x240.h"
 #elif TFT_WIDTH == 240 && TFT_HEIGHT == 320
@@ -96,59 +100,12 @@ namespace KFCConfigurationClasses {
 #    error No theme available for TFT dimensions
 #endif
 
-// // using WeatherStationCanvas = GFXCanvasCompressedPalette;
-// // using Canvas = WeatherStationCanvas;
-// // using WeatherStationCanvas = GFXCanvasCompressed;
-
-// namespace WeatherStation {
-//     namespace Screen {
-//         class BaseScreen;
-//     }
-// }
-
-#if 0
-
-class CanvasObject {
-public:
-    CanvasObject() {}
-    virtual void draw(Canvas *canvas, int x, int y) = 0;
-
-    int width() const{
-        return TFT_WIDTH;
-    }
-    int height() const{
-        return TFT_HEIGHT;
-    }
-};
-
-class TextObject : public CanvasObject
-{
-public:
-    TextObject(const String &text, const GFXfont *font, ColorType color) : _text(text), _font(font), _color(color) {}
-
-    virtual void draw(Canvas *canvas, int x, int y) {
-        canvas->fillScreen(COLORS_BACKGROUND);
-        canvas->setTextColor(_color);
-        canvas->setFont(_font);
-        GFXCanvasCompressed::Position_t pos;
-        canvas->drawTextAligned(width() / 2, height() / 2, _text, GFXCanvasCompressed::CENTER, GFXCanvasCompressed::MIDDLE, &pos);
-        _displayScreen(0, 0, width(), height());
-    }
-
-private:
-    String _text;
-    const GFXfont *_font;
-    ColorType _color;
-};
-#endif
-
 namespace WSDraw {
 
     using DisplayType = GFXExtension<DISPLAY_PLUGIN_TFT_TYPE>;
     using CanvasType = GFXCanvasCompressedPalette;
     using ConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t;
     using WSConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
-    // using BaseScreen = WeatherStation::Screen::BaseScreen;
 
     class ScrollCanvas;
 
@@ -210,16 +167,8 @@ namespace WSDraw {
         CanvasType *getCanvas();
 
     public:
-        void _initScreen() {
-            if (isCanvasAttached()) {
-                redraw();
-            }
-        }
-
-        void setText(const String &text, const GFXfont *textFont) {
-           _text = text;
-           _textFont = textFont;
-        }
+        void _initScreen();
+        void setText(const String &text, const GFXfont *textFont);
 
     protected:
         DisplayType _tft;
@@ -259,20 +208,10 @@ namespace WSDraw {
     public:
 
         static const __FlashStringHelper *getScreenName(ScreenType screen);
-        static const __FlashStringHelper *getScreenName(uint8_t screen) {
-            return getScreenName(static_cast<ScreenType>(screen));
-        }
+        static const __FlashStringHelper *getScreenName(uint8_t screen);
 
     public:
-        // friend WeatherStation::Screen::BaseScreen;
-        ConfigType &getConfig() {
-            return _config;
-        }
-
-        // void setScreen(BaseScreen *screen);
-
-        // BaseScreen *_screen;
-        // Event::Timer _screenTimer;
+        ConfigType &getConfig();
 
     protected:
         String _getTemperature(float value, bool kelvin = false);
@@ -284,6 +223,7 @@ namespace WSDraw {
         Event::Timer _displayMessageTimer;
         String _text;
         const GFXfont *_textFont;
+        SemaphoreMutex _lock;
 
         time_t _lastTime;
         uint32_t _screenLastUpdateTime;
@@ -342,6 +282,36 @@ namespace WSDraw {
         CanvasType _canvas;
         Event::Timer _timer;
     };
+
+    inline void Base::redraw()
+    {
+        MUTEX_LOCK_BLOCK(_lock) {
+            _redrawFlag = true;
+        }
+    }
+
+    inline ConfigType &Base::getConfig()
+    {
+        return _config;
+    }
+
+    inline const __FlashStringHelper *Base::getScreenName(uint8_t screen)
+    {
+        return getScreenName(static_cast<ScreenType>(screen));
+    }
+
+    inline void Base::_initScreen()
+    {
+        if (isCanvasAttached()) {
+            redraw();
+        }
+    }
+
+    inline void Base::setText(const String &text, const GFXfont *textFont)
+    {
+        _text = text;
+        _textFont = textFont;
+    }
 
 }
 

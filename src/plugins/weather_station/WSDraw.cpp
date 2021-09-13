@@ -109,11 +109,6 @@ namespace WSDraw {
         }
     }
 
-    void Base::redraw()
-    {
-        _redrawFlag = true;
-    }
-
     bool Base::_attachCanvas()
     {
         if (_canvasLocked > 0) {
@@ -163,8 +158,6 @@ namespace WSDraw {
 
         }
     }
-
-#if 1
 
     void Base::drawText(const String &text, const GFXfont *font, uint16_t color, bool clear)
     {
@@ -641,10 +634,9 @@ namespace WSDraw {
         #endif
     }
 
-    #endif
-
     void Base::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
     {
+        __DBG_printf("x=%d y=%d w=%d h=%d", x, y, w, h);
         __LDBG_isCanvasAttached();
 
         // copy canvas into tft memory

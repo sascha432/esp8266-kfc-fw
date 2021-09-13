@@ -44,21 +44,16 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 #error invalid built-in LED
 #endif
 
-static WeatherStationPlugin plugin;
-
-WeatherStationBase &__weatherStationGetPlugin()
-{
-    return static_cast<WeatherStationBase &>(plugin);
-}
+WeatherStationPlugin ws_plugin;
 
 void __weatherStationDetachCanvas(bool release)
 {
-    plugin._detachCanvas(release);
+    WeatherStationPlugin::_getInstance()._detachCanvas(release);
 }
 
 void __weatherStationAttachCanvas()
 {
-    plugin._attachCanvas();
+    WeatherStationPlugin::_getInstance()._attachCanvas();
 }
 
 
@@ -89,12 +84,8 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 WeatherStationPlugin::WeatherStationPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WeatherStationPlugin)),
-    _updateCounter(0),
-    _backlightLevel(1023),
     // _pollTimer(0),
-    _httpClient(nullptr),
-    _toggleScreenTimer(0),
-    _lockCanvasUpdateEvents(0)
+    _httpClient(nullptr)
 {
     REGISTER_PLUGIN(this, "WeatherStationPlugin");
 }
@@ -104,7 +95,7 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
     // __LDBG_printf("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u", WebServerPlugin::getInstance().isAuthenticated(request) == true);
 
     if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
-        auto canvas = plugin.getCanvasAndLock();
+        auto canvas = WeatherStationPlugin::_getInstance().getCanvasAndLock();
         if (canvas) {
             #if 1
                 auto response = new AsyncBitmapStreamResponse(*canvas, __weatherStationAttachCanvas);
@@ -391,17 +382,12 @@ void WeatherStationPlugin::_init()
 
     __LDBG_printf("cs=%d dc=%d rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
     #if ILI9341_DRIVER
-        _tft.begin();
+        _tft.begin(SPI_FREQUENCY);
     #else
         _tft.initR(INITR_BLACKTAB);
     #endif
     _tft.fillScreen(0);
     _tft.setRotation(0);
-}
-
-WeatherStationPlugin &WeatherStationPlugin::_getInstance()
-{
-    return plugin;
 }
 
 void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
@@ -503,31 +489,31 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
 
 void WeatherStationPlugin::_fadeStatusLED()
 {
-#if IOT_WEATHER_STATION_WS2812_NUM
+    #if IOT_WEATHER_STATION_WS2812_NUM
 
-    int32_t color = 0x001500;
-    int16_t dir = 0x100;
-
-    NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
-    NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
-
-    _Timer(_pixelTimer).add(Event::milliseconds(50), true, [this, color, dir](::Event::CallbackTimerPtr timer) mutable {
-        color += dir;
-        if (color >= 0x003000) {
-            dir = -dir;
-            color = 0x003000;
-        }
-        else if (color <= 0) {
-            color = 0;
-            timer->disarm();
-        }
+        int32_t color = 0x001500;
+        int16_t dir = 0x100;
 
         NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
         NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
 
-    }, ::Event::PriorityType::TIMER);
+        _Timer(_pixelTimer).add(Event::milliseconds(50), true, [this, color, dir](::Event::CallbackTimerPtr timer) mutable {
+            color += dir;
+            if (color >= 0x003000) {
+                dir = -dir;
+                color = 0x003000;
+            }
+            else if (color <= 0) {
+                color = 0;
+                timer->disarm();
+            }
 
-#endif
+            NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
+            NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
+
+        }, ::Event::PriorityType::TIMER);
+
+    #endif
 }
 
 void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h)
@@ -615,41 +601,11 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
     }
 }
 
-void WeatherStationPlugin::_setScreen(ScreenType screen)
-{
-    if (screen < ScreenType::NUM_SCREENS) {
-        auto time = _config.screenTimer[static_cast<uint8_t>(screen)];
-        auto next = _getNextScreen(screen);
-        // __LDBG_printf("set screen=%u time=%u next=%u", screen, time, next);
-        if (time && next != screen) {
-            _currentScreen = screen;
-            _toggleScreenTimer = millis() + (time * 1000UL);
-            return;
-        }
-        // else ... current screen has no timer or no other screens are available
-    }
-    // else ... no screen active
-
-    __LDBG_printf("timer removed screen=%u current=%u", screen, _currentScreen);
-    _currentScreen = screen;
-    _toggleScreenTimer = 0;
-}
-
-WeatherStationPlugin::ScreenType WeatherStationPlugin::_getNextScreen(ScreenType screen)
-{
-    for(uint8_t i = static_cast<uint8_t>(screen) + 1; i < static_cast<uint8_t>(screen) + WSDraw::kNumScreens; i++) {
-        if (_config.screenTimer[i % WSDraw::kNumScreens]) {
-            return static_cast<ScreenType>(i % WSDraw::kNumScreens);
-        }
-    }
-    return screen;
-}
-
 #if IOT_ALARM_PLUGIN_ENABLED
 
 void WeatherStationPlugin::alarmCallback(ModeType mode, uint16_t maxDuration)
 {
-    plugin._alarmCallback(mode, maxDuration);
+    _getInstance()._alarmCallback(mode, maxDuration);
 }
 
 void WeatherStationPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
@@ -685,7 +641,7 @@ void WeatherStationPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 bool WeatherStationPlugin::_resetAlarm()
 {
-    debug_printf_P(PSTR("alarm_func=%u alarm_state=%u"), _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
+    __LDBG_printf("reset=%u state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
     if (_resetAlarmFunc) {
         _resetAlarmFunc(*_alarmTimer);
         AlarmPlugin::resetAlarm();

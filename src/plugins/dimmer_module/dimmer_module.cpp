@@ -73,7 +73,7 @@ void Module::getStatus(Print &out)
     for(uint8_t i = 0; i < _channels.size(); i++) {
         out.printf_P(PSTR("Channel %u: "), i);
         if (_channels[i].getOnState()) {
-            out.printf_P(PSTR("on - %.1f%%"), static_cast<float>(_channels[i].getLevel() * 100) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+            out.printf_P(PSTR("on - %.1f%%"), (_channels[i].getLevel() * 100) / static_cast<float>(IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
         }
         else {
             out.print(F("off" ));

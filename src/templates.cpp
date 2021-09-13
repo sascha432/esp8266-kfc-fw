@@ -143,7 +143,7 @@ void WebTemplate::printFileSystemInfo(Print &output)
                 "Page size %d" HTML_S(br)
                 "Total bytes %d" HTML_S(br)
                 "Used bytes %d (%.2f%%)" HTML_S(br)
-            ), info.blockSize, info.maxOpenFiles, info.maxPathLength, info.pageSize, info.totalBytes, info.usedBytes, info.usedBytes * 100.0 / info.totalBytes
+            ), info.blockSize, info.maxOpenFiles, info.maxPathLength, info.pageSize, info.totalBytes, info.usedBytes, (info.usedBytes * 100) / static_cast<float>(info.totalBytes)
         );
     #else
         output.print(F("SPIFFS is deprecated." HTML_S(br) "Please consider to upgrade to LittleFS or another file system"));

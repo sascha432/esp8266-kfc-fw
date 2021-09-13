@@ -106,19 +106,19 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
     if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
         auto canvas = plugin.getCanvasAndLock();
         if (canvas) {
-#if 1
-            auto response = new AsyncBitmapStreamResponse(*canvas, __weatherStationAttachCanvas);
-#else
-            __LDBG_IF(
-                auto mem = ESP.getFreeHeap()
+            #if 1
+                auto response = new AsyncBitmapStreamResponse(*canvas, __weatherStationAttachCanvas);
+            #else
+                __LDBG_IF(
+                    auto mem = ESP.getFreeHeap()
+                    );
+                auto response = new AsyncClonedBitmapStreamResponse(lock.getCanvas().clone());
+                __LDBG_IF(
+                    auto usage = mem - ESP.getFreeHeap();
+                    __DBG_printf("AsyncClonedBitmapStreamResponse memory usage %u", usage);
                 );
-            auto response = new AsyncClonedBitmapStreamResponse(lock.getCanvas().clone());
-            __LDBG_IF(
-                auto usage = mem - ESP.getFreeHeap();
-                __DBG_printf("AsyncClonedBitmapStreamResponse memory usage %u", usage);
-            );
-            plugin.releaseCanvasLock();
-#endif
+                plugin.releaseCanvasLock();
+            #endif
             HttpHeaders httpHeaders;
             httpHeaders.addNoCache();
             httpHeaders.setResponseHeaders(response);
@@ -302,22 +302,6 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         });
     #endif
 
-//     auto compensationCallback = [this](Sensor_BME280::SensorDataType &sensor) {
-//         sensor.humidity += _config.humidity_offset;
-//         sensor.pressure += _config.pressure_offset;
-// #if IOT_WEATHER_STATION_COMP_RH
-//         float temp = sensor.temperature + _config.temp_offset;
-//         sensor.humidity = EnvComp::getCompensatedRH(sensor.temperature, sensor.humidity, temp);
-// #else
-//         sensor.temperature += _config.temp_offset;
-// #endif
-//     };
-    // for(auto sensor: SensorPlugin::getSensors()) {
-    //     if (sensor->getType() == MQTT::SensorType::ENUM::BME280) {
-    //         reinterpret_cast<Sensor_BME280 *>(sensor)->setCompensationCallback(compensationCallback);
-    //     }
-    // }
-
     LoopFunctions::add(loop);
 
     #if IOT_WEATHER_STATION_WS2812_NUM
@@ -396,19 +380,24 @@ void WeatherStationPlugin::getStatus(Print &output)
     #endif
 }
 
-
 void WeatherStationPlugin::_init()
 {
-    pinMode(TFT_PIN_LED, OUTPUT);
-    digitalWrite(TFT_PIN_LED, LOW);
-    __LDBG_printf("tft: cs=%d dc=%d rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
-    #if !ILI9341_DRIVER
+    #if ESP32
+        analogWrite(TFT_PIN_LED, 0);
+    #else
+        pinMode(TFT_PIN_LED, OUTPUT);
+        digitalWrite(TFT_PIN_LED, LOW);
+    #endif
+
+    __LDBG_printf("cs=%d dc=%d rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
+    #if ILI9341_DRIVER
+        _tft.begin();
+    #else
         _tft.initR(INITR_BLACKTAB);
     #endif
     _tft.fillScreen(0);
     _tft.setRotation(0);
 }
-
 
 WeatherStationPlugin &WeatherStationPlugin::_getInstance()
 {
@@ -417,18 +406,11 @@ WeatherStationPlugin &WeatherStationPlugin::_getInstance()
 
 void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
-    #if 0
-    auto row = &webUI.addRow();
-    row->addGroup(F("Weather Station"), false);
-
-    row = &webUI.addRow();
-    row->addSlider(F("bl_brightness"), F("Backlight Brightness"), 0, 1023);
-
+    webUI.addRow(WebUINS::Group(F("Weather Station"), false));
+    webUI.addRow(WebUINS::Slider(F("bl_brightness"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), 1023)));
     if (_config.show_webui && isCanvasAttached()) {
-        row = &webUI.addRow();
-        row->addScreen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas->width(), _canvas->height());
-   }
-   #endif
+        webUI.addRow(WebUINS::Screen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas->width(), _canvas->height()));
+    }
 }
 
 // void WeatherStationPlugin::serialHandler(uint8_t type, const uint8_t *buffer, size_t len)
@@ -440,9 +422,7 @@ void WeatherStationPlugin::getValues(WebUINS::Events &array)
 {
     __DBG_printf("show tft=%u", _config.show_webui);
 
-    // auto obj = &array.addObject(2);
-    // obj->add(JJ(id), F("bl_brightness"));
-    // obj->add(JJ(value), _backlightLevel);
+    array.append(WebUINS::Values(F("bl_brightness"), _backlightLevel, true));
 
     if (_config.show_webui) {
         __DBG_printf("adding callOnce this=%p", this);
@@ -494,7 +474,11 @@ void WeatherStationPlugin::_getIndoorValues(float *data)
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step)
 {
-    analogWrite(TFT_PIN_LED, fromLevel);
+    #if ESP32
+        analogWrite(TFT_PIN_LED, fromLevel, 1023);
+    #else
+        analogWrite(TFT_PIN_LED, fromLevel);
+    #endif
     int8_t direction = fromLevel > toLevel ? -step : step;
 
     //TODO sometimes fading does not work...
@@ -508,7 +492,11 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
             fromLevel = toLevel;
             timer->disarm();
         }
-        analogWrite(TFT_PIN_LED, fromLevel);
+        #if ESP32
+            analogWrite(TFT_PIN_LED, fromLevel, 1023);
+        #else
+            analogWrite(TFT_PIN_LED, fromLevel);
+        #endif
 
     }, Event::PriorityType::TIMER);
 }

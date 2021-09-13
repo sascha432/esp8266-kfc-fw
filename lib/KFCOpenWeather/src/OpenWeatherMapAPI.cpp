@@ -7,7 +7,7 @@
 #include "OpenWeatherForecastJsonReader.h"
 #include <misc.h>
 
-PROGMEM_STRING_DEF(openweathermap_api_url, "http://api.openweathermap.org/data/2.5/{api_type}?q={query}&appid={api_key}");
+// PROGMEM_STRING_DEF(openweathermap_api_url, "http://api.openweathermap.org/data/2.5/{api_type}?q={query}&appid={api_key}");
 
 OpenWeatherMapAPI::OpenWeatherMapAPI()
 {

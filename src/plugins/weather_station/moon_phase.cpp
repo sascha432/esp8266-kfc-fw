@@ -4,11 +4,13 @@
 
 #include "moon_phase.h"
 
-float unixTimeToJulianDate(time_t time) {
+float unixTimeToJulianDate(time_t time)
+{
     return (time / 86400.0) + 2440587.5;
 }
 
-void calcMoon(time_t time, float &moonDay, uint8_t &moonPhase,char &moonPhaseFont, bool upperCase) {
+void calcMoon(time_t time, float &moonDay, uint8_t &moonPhase,char &moonPhaseFont, bool upperCase)
+{
     const float moonCycle = 29.53;
     float value = (unixTimeToJulianDate(time) - 2244116.75) / moonCycle;
     value -= floor(value);
@@ -24,17 +26,18 @@ void calcMoon(time_t time, float &moonDay, uint8_t &moonPhase,char &moonPhaseFon
     }
 }
 
-PROGMEM_STRING_DEF(moon_phase_0, "Full Moon");
-PROGMEM_STRING_DEF(moon_phase_1, "Waning Gibbous");
-PROGMEM_STRING_DEF(moon_phase_2, "Last Quarter");
-PROGMEM_STRING_DEF(moon_phase_3, "Old Crescent");
-PROGMEM_STRING_DEF(moon_phase_4, "New Moon");
-PROGMEM_STRING_DEF(moon_phase_5, "New Crescent");
-PROGMEM_STRING_DEF(moon_phase_6, "First Quarter");
-PROGMEM_STRING_DEF(moon_phase_7, "Waxing Gibbous");
+static PGM_P moon_phases[] PROGMEM = {
+    PSPGM(moon_phase_0, "Full Moon"),
+    PSPGM(moon_phase_1, "Waning Gibbous"),
+    PSPGM(moon_phase_2, "Last Quarter"),
+    PSPGM(moon_phase_3, "Old Crescent"),
+    PSPGM(moon_phase_4, "New Moon"),
+    PSPGM(moon_phase_5, "New Crescent"),
+    PSPGM(moon_phase_6, "First Quarter"),
+    PSPGM(moon_phase_7, "Waxing Gibbous")
+};
 
-static PGM_P moon_phases[] PROGMEM = { PSPGM(moon_phase_0), PSPGM(moon_phase_1), PSPGM(moon_phase_2), PSPGM(moon_phase_3), PSPGM(moon_phase_4), PSPGM(moon_phase_5), PSPGM(moon_phase_6), PSPGM(moon_phase_7) };
-
-const __FlashStringHelper *moonPhaseName(uint8_t moonPhase) {
+const __FlashStringHelper *moonPhaseName(uint8_t moonPhase)
+{
     return reinterpret_cast<const __FlashStringHelper *>(moon_phases[moonPhase & 0x07]);
 }

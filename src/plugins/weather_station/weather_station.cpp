@@ -46,16 +46,15 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 
 WeatherStationPlugin ws_plugin;
 
-void __weatherStationDetachCanvas(bool release)
-{
-    WeatherStationPlugin::_getInstance()._detachCanvas(release);
-}
+// void __weatherStationDetachCanvas(bool release)
+// {
+//     WeatherStationPlugin::_getInstance()._detachCanvas(release);
+// }
 
-void __weatherStationAttachCanvas()
-{
-    WeatherStationPlugin::_getInstance()._attachCanvas();
-}
-
+// void __weatherStationAttachCanvas()
+// {
+//     WeatherStationPlugin::_getInstance()._attachCanvas();
+// }
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     WeatherStationPlugin,
@@ -95,10 +94,9 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
     // __LDBG_printf("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u", WebServerPlugin::getInstance().isAuthenticated(request) == true);
 
     if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
-        auto canvas = WeatherStationPlugin::_getInstance().getCanvasAndLock();
-        if (canvas) {
+        if (WeatherStationPlugin::_getInstance().lock()) {
             #if 1
-                auto response = new AsyncBitmapStreamResponse(*canvas, __weatherStationAttachCanvas);
+                auto response = new AsyncBitmapStreamResponse(*WeatherStationPlugin::_getInstance().getCanvas());
             #else
                 __LDBG_IF(
                     auto mem = ESP.getFreeHeap()
@@ -280,9 +278,9 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
             // else {
             //     return false;
             // }
-            _currentScreen = (_currentScreen + 1) % NUM_SCREENS;
+            _currentScreen = static_cast<ScreenType>((_getCurrentScreen() + 1) % kNumScreens);
             // check if screen is supposed to change automatically
-            if (_config.screenTimer[_currentScreen]) {
+            if (_config.screenTimer[_getCurrentScreen()]) {
                 _toggleScreenTimer = millis() + 60000;  // leave screen on for 60 seconds
             }
             else {
@@ -319,8 +317,6 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         }
     });
     */
-
-   _attachCanvas();
 }
 
 void WeatherStationPlugin::reconfigure(const String &source)
@@ -353,7 +349,7 @@ void WeatherStationPlugin::shutdown()
         _touchpad.end();
     #endif
     _fadeTimer.remove();
-    _canvasLocked++;
+    lock();
     delete _canvas;
     _canvas = nullptr;
     LoopFunctions::remove(loop);
@@ -396,7 +392,7 @@ void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F("Weather Station"), false));
     webUI.addRow(WebUINS::Slider(F("bl_brightness"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), 1023)));
-    if (_config.show_webui && isCanvasAttached()) {
+    if (_config.show_webui) {
         webUI.addRow(WebUINS::Screen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas->width(), _canvas->height()));
     }
 }
@@ -538,7 +534,7 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
 
     auto webSocketUI = WebUISocket::getServerSocket();
     // __DBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
-    if (webSocketUI && isCanvasAttached() && !webSocketUI->getClients().isEmpty()) {
+    if (webSocketUI && !isLocked() && !webSocketUI->getClients().isEmpty()) {
         Buffer buffer;
 
         WsClient::BinaryPacketType packetIdentifier = WsClient::BinaryPacketType::RGB565_RLE_COMPRESSED_BITMAP;
@@ -554,15 +550,14 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
         // takes 42ms for 128x160 using GFXCanvasCompressedPalette
         // auto start = micros();
 
-        auto canvas = getCanvasAndLock();
-        if (canvas) {
-            GFXCanvasRLEStream stream(*canvas, x, y, w, h);
+        if (lock()) {
+            GFXCanvasRLEStream stream(*getCanvas(), x, y, w, h);
             char buf[128];
             size_t read;
             while((read = stream.readBytes(buf, sizeof(buf))) != 0) {
                 buffer.write(buf, read);
             }
-            releaseCanvasLock();
+            unlock();
         }
         else {
             __DBG_printf("could not lock canvas");
@@ -629,7 +624,7 @@ void WeatherStationPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
     // check if an alarm is already active
     if (!_alarmTimer) {
         #if IOT_WEATHER_STATION_WS2812_NUM
-            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::FAST, 0xff0000);
+            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::BlinkType::FAST, 0xff0000);
         #endif
     }
 
@@ -653,5 +648,12 @@ bool WeatherStationPlugin::_resetAlarm()
 }
 
 #endif
+
+extern "C" void WeatherStationPlugin_unlock();
+
+void WeatherStationPlugin_unlock()
+{
+    WeatherStationPlugin::_getInstance().unlock();
+}
 
 #endif

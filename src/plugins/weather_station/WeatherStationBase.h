@@ -86,9 +86,7 @@ public:
 
     static WeatherStationBase &_getInstance();
 
-#if !_MSC_VER
-protected:
-#endif
+public:
     void _loop();
     void _wifiCallback(WiFiCallbacks::EventType event, void *payload);
     void _pollDataTimerCallback(Event::CallbackTimerPtr timer);
@@ -101,7 +99,6 @@ protected:
 
     void begin();
     void end();
-
 
 protected:
     void _setScreen(ScreenType screen);
@@ -157,15 +154,6 @@ inline WeatherStationBase::ScreenType WeatherStationBase::_getNextScreen(uint32_
 inline uint32_t WeatherStationBase::_getCurrentScreen() const
 {
     return static_cast<uint32_t>(_currentScreen);
-}
-
-class WeatherStationPlugin;
-
-extern WeatherStationPlugin ws_plugin;
-
-inline WeatherStationBase &WeatherStationBase::_getInstance()
-{
-    return *reinterpret_cast<WeatherStationBase *>(&ws_plugin);
 }
 
 #if DEBUG_IOT_WEATHER_STATION

@@ -15,12 +15,13 @@
 
 #include "../src/plugins/http2serial/http2serial.h"
 
-#ifndef DEBUG_TOUCHPAD
-#define DEBUG_TOUCHPAD                      0
-#endif
+#    ifndef DEBUG_TOUCHPAD
+#        define DEBUG_TOUCHPAD 0
+#    endif
 
 class Mpr121Touchpad;
 class WeatherStationPlugin;
+class WeatherStationBase;
 
 class Mpr121Timer : public OSTimer {
 public:
@@ -84,7 +85,7 @@ public:
         };
     };
 
-    using ReadBuffer = FixedCircularBuffer<TouchpadEvent_t, 64, NUllMutex>;
+    using ReadBuffer = stdex::fixed_circular_buffer<TouchpadEvent_t, 64>;
 
     class Coordinates {
     public:
@@ -242,6 +243,8 @@ public:
 
     private:
         friend Mpr121Touchpad;
+        friend WeatherStationPlugin;
+        friend WeatherStationBase;
 
         Mpr121Touchpad &_pad;
 
@@ -308,6 +311,7 @@ private:
 
 private:
     friend WeatherStationPlugin;
+    friend WeatherStationBase;
     friend Mpr121Timer;
 
     Adafruit_MPR121 _mpr121;

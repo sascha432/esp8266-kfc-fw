@@ -59,26 +59,32 @@ namespace GFXCanvas {
             _flags = 0;
             _y = kYInvalid;
         }
+
         // if the y position is changed, flags are cleared. in case the write flag is set, the cache must be written before
-        inline bool isValid() const {
+        inline bool isValid() const
+        {
             return _y != kYInvalid;
         }
 
-        inline bool hasWriteFlag() const {
+        inline bool hasWriteFlag() const
+        {
             return _write;
         }
 
         // indicates that the cache has not been written
-        inline void setWriteFlag(bool value) {
+        inline void setWriteFlag(bool value)
+        {
             _write = value;
         }
 
-        inline bool hasReadFlag() const {
+        inline bool hasReadFlag() const
+        {
             return _read;
         }
 
         // indicates that the cache contains a copy
-        inline void setReadFlag(bool value) {
+        inline void setReadFlag(bool value)
+        {
             _read = value;
         }
 
@@ -94,11 +100,13 @@ namespace GFXCanvas {
         // deprecated
         void setPixel(sXType x, ColorType color);
 
-        inline ColorType *begin() const {
+        inline ColorType *begin() const
+        {
             return _buffer;
         }
 
-        inline ColorType *end() const {
+        inline ColorType *end() const
+        {
             return &_buffer[_width];
         }
 
@@ -173,10 +181,11 @@ namespace GFXCanvas {
     {
         return 1;
     }
-#if GFXCANVAS_MAX_CACHED_LINES < 2
-    using LinesCache = SingleLineCache;
-#else
-    #error missing
-#endif
+
+    #if GFXCANVAS_MAX_CACHED_LINES < 2
+        using LinesCache = SingleLineCache;
+    #else
+        #error missing
+    #endif
 
 }

@@ -31,7 +31,7 @@
 #endif
 
 class BlinkLEDTimer : public OSTimer {
-private:
+protected:
     using OSTimer::startTimer;
 
 public:

@@ -40,11 +40,46 @@ namespace GFXCanvas {
         using BufferList = std::list<Buffer>;
         using BufferType = ByteBuffer;
         using BufferTypePtr = ByteBuffer *;
-#if GFXCANVAS_BUFFER_POOL_PACK_PTR
-        using BufferIdType = uint16_t;
-#else
-        using BufferIdType = BufferTypePtr;
-#endif
+        #if GFXCANVAS_BUFFER_POOL_PACK_PTR
+            struct BufferIdType {
+
+                BufferIdType(BufferTypePtr ptr) : _value(__pack_id(ptr)) {}
+                BufferIdType(nullptr_t) : _value(0) {}
+
+                operator BufferTypePtr() const {
+                    return __unpack_id(_value);
+                }
+
+                operator BufferTypePtr() {
+                    return __unpack_id(_value);
+                }
+
+                BufferIdType &operator =(BufferTypePtr ptr) {
+                    _value = __pack_id(ptr);
+                    return *this;
+                }
+
+                bool operator==(BufferTypePtr ptr) const {
+                    return ptr == __unpack_id(_value);
+                }
+
+                bool operator!=(BufferTypePtr ptr) const {
+                    return ptr != __unpack_id(_value);
+                }
+
+                uint16_t __pack_id(BufferTypePtr id) const {
+                    return ((int32_t)id) - UMM_MALLOC_CFG_HEAP_ADDR;
+                }
+
+                BufferTypePtr __unpack_id(uint16_t id) const {
+                    return id ? (BufferTypePtr)(((uint32_t)id) + UMM_MALLOC_CFG_HEAP_ADDR) : nullptr;
+                }
+
+                uint16_t _value;
+            };
+        #else
+            using BufferIdType = BufferTypePtr;
+        #endif
 
         // size per allocated buffer pool
         // 256 - 512 seems to be a good compromise between overhead, unusable space and free space
@@ -65,33 +100,31 @@ namespace GFXCanvas {
     protected:
         BufferPool() {}
 
-    private:
 #if _MSC_VER
     public:
+#else
+    private:
 #endif
-        typedef struct __attribute__packed__ BufferHeader_t {
+        struct BufferHeader_t {
 
         private:
             BufferIdType _id;                       // pointer to BufferType
-
-#if GFXCANVAS_BUFFER_POOL_PACK_PTR
-            static constexpr BufferIdType __pack_id(nullptr_t) {
-                return 0;
-            }
-            BufferIdType __pack_id(BufferTypePtr id) const {
-                return (int32_t)id - UMM_MALLOC_CFG_HEAP_ADDR;
-            }
-            BufferTypePtr __unpack_id(BufferIdType id) const {
-                return id ? (BufferTypePtr)((uint32_t)id + UMM_MALLOC_CFG_HEAP_ADDR) : nullptr;
-            }
-#endif
 
         public:
             ByteBufferSizeType _dataSize;           // size of the data following
 
         public:
-            BufferHeader_t() : _id(nullptr), _dataSize(0) {}
-            BufferHeader_t(BufferTypePtr id, size_t dataSize) : _id(id), _dataSize((ByteBufferSizeType)dataSize) {}
+            BufferHeader_t() :
+                _id(nullptr),
+                _dataSize(0)
+            {
+            }
+
+            BufferHeader_t(BufferTypePtr id, size_t dataSize) :
+                _id(id),
+                _dataSize(static_cast<ByteBufferSizeType>(dataSize))
+            {
+            }
 
             BufferTypePtr getId() const {
                 return _id;
@@ -100,6 +133,7 @@ namespace GFXCanvas {
             bool operator==(BufferTypePtr id) const {
                 return getId() == id;
             }
+
             bool operator==(const BufferType &id) const {
                 return getId() == &id;
             }
@@ -107,28 +141,36 @@ namespace GFXCanvas {
             ByteBufferSizeType dataSize() const {
                 return _dataSize;
             }
+
             size_t size() const {
                 return _dataSize + sizeof(*this);
             }
+
             struct BufferHeader_t &header() {
                 return *reinterpret_cast<struct BufferHeader_t *>(this);
             }
+
             uint8_t *data() {
                 return reinterpret_cast<uint8_t *>(this) + sizeof(*this);
             }
+
             const uint8_t *begin() const {
                 return reinterpret_cast<const uint8_t *>(this);
             }
+
             const uint8_t *end() const {
                 return reinterpret_cast<const uint8_t *>(this) + size();
             }
+
             uint8_t *begin() {
                 return reinterpret_cast<uint8_t *>(this);
             }
+
             uint8_t *end() {
                 return reinterpret_cast<uint8_t *>(this) + size();
             }
-        } BufferHeader_t;
+
+        };
 
         class BufferIterator {
         public:
@@ -246,9 +288,10 @@ namespace GFXCanvas {
         bool remove(BufferTypePtr id);
         BufferIterator add(BufferTypePtr id);
 
-    private:
 #if _MSC_VER
     public:
+#else
+    private:
 #endif
         static BufferPool *_instance;
         BufferList _list;

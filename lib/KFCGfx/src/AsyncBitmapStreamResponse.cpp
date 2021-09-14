@@ -3,12 +3,14 @@
 */
 
 #include "AsyncBitmapStreamResponse.h"
-
 #include "GFXCanvasConfig.h"
-
 #include <debug_helper_disable.h>
 
-AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas, Callback callback) : AsyncAbstractResponse(nullptr), _stream(canvas), _callback(callback)
+extern "C" void WeatherStationPlugin_unlock();
+
+AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas) :
+    AsyncAbstractResponse(nullptr),
+    _stream(canvas)
 {
 	_code = 200;
 	_contentLength = _stream.size();
@@ -17,9 +19,7 @@ AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas
 
 AsyncBitmapStreamResponse::~AsyncBitmapStreamResponse()
 {
-    if (_callback) {
-        _callback();
-    }
+    WeatherStationPlugin_unlock();
 }
 
 bool AsyncBitmapStreamResponse::_sourceValid() const

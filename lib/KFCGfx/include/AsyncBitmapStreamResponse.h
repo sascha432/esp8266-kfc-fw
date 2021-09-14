@@ -15,14 +15,13 @@ public:
 
 public:
     // callback is invoked in the destructor
-    AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas, Callback callback = nullptr);
+    AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas);
     virtual ~AsyncBitmapStreamResponse();
     bool _sourceValid() const;
     virtual size_t _fillBuffer(uint8_t* buf, size_t maxLen) override;
 
 private:
     GFXCanvasBitmapStream _stream;
-    Callback _callback;
 };
 
 // use GFXCanvasCompressed::clone() to create the object

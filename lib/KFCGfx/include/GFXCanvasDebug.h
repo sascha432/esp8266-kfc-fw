@@ -52,5 +52,6 @@ bool __debug_GFXCanvasBounds_printf(const DebugContext &p, const char *format, .
 #define __DBG_BOUNDS_buffer(...)
 #define __DBG_BOUNDS_buffer_end(...)
 #define __DBG_BOUNDS_assert(...)
+#define __DBG_BOUNDS_assertp(...)
 
 #endif

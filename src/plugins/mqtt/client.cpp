@@ -22,6 +22,7 @@
 
 using KFCConfigurationClasses::System;
 using Plugins = KFCConfigurationClasses::PluginsType;
+using MqttClient = KFCConfigurationClasses::Plugins::MQTTConfigNS::MqttClient;
 
 namespace MQTT {
 
@@ -177,16 +178,16 @@ namespace MQTT {
         else {
             _client->setServer(_hostname.c_str(), _port);
         }
-    #if ASYNC_TCP_SSL_ENABLED
-        if (ConfigType::cast_enum_mode(_config.mode) == ModeType::SECURE) {
-            _client->setSecure(true);
-            uint16_t size = ClientConfig::kFingerprintMaxSize;
-            auto fingerPrint = ClientConfig::getFingerPrint(size);
-            if (fingerPrint && size == ClientConfig::kFingerprintMaxSize) {
-                _client->addServerFingerprint(fingerPrint); // addServerFingerprint supports multiple fingerprints
+        #if ASYNC_TCP_SSL_ENABLED
+            if (_config._get_enum_mode() == ModeType::SECURE) {
+                _client->setSecure(true);
+                uint16_t size = MqttClient::kFingerprintMaxSize;
+                auto fingerPrint = MqttClient::getFingerPrint(size);
+                if (fingerPrint && size == MqttClient::kFingerprintMaxSize) {
+                    _client->addServerFingerprint(fingerPrint); // addServerFingerprint supports multiple fingerprints
+                }
             }
-        }
-    #endif
+        #endif
         _client->setCredentials(_username.c_str(), _password.c_str());
         _client->setKeepAlive(_config.keepalive);
 

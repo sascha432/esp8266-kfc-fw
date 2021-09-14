@@ -103,7 +103,11 @@ namespace KFCConfigurationClasses {
 namespace WSDraw {
 
     using DisplayType = GFXExtension<DISPLAY_PLUGIN_TFT_TYPE>;
-    using CanvasType = GFXCanvasCompressedPalette;
+    #if ESP32
+        using CanvasType = GFXCanvasCompressed;
+    #else
+        using CanvasType = GFXCanvasCompressedPalette;
+    #endif
     using ConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t;
     using WSConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
 
@@ -133,17 +137,6 @@ namespace WSDraw {
         // safely redraw in next main loop
         void redraw();
 
-        // reattach canvas object
-        bool _attachCanvas();
-        // detach canvas object and free memory
-        // calling it multiple times will lock the object until attachCanvas has been called the same amount of times
-        bool _detachCanvas(bool release = true);
-
-        // check if canvas is attached
-        bool isCanvasAttached() const;
-        CanvasType *getCanvasAndLock();
-        void releaseCanvasLock();
-
         //// can be called while the canvas is detached
         //// without a canvas, it is using the TFT directly and clear is forced true
         void drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
@@ -170,10 +163,15 @@ namespace WSDraw {
         void _initScreen();
         void setText(const String &text, const GFXfont *textFont);
 
+        bool lock();
+        void unlock();
+        bool isLocked() const {
+            return _locked;
+        }
+
     protected:
         DisplayType _tft;
         CanvasType *_canvas;
-        uint16_t _canvasLocked;
 
     public:
         void _drawTime();
@@ -232,6 +230,7 @@ namespace WSDraw {
         uint8_t _scrollPosition;
         ScreenType _currentScreen;
         bool _redrawFlag;
+        bool _locked;
 
     #if WSDRAW_STATS
     public:
@@ -302,15 +301,23 @@ namespace WSDraw {
 
     inline void Base::_initScreen()
     {
-        if (isCanvasAttached()) {
-            redraw();
-        }
+        redraw();
     }
 
     inline void Base::setText(const String &text, const GFXfont *textFont)
     {
         _text = text;
         _textFont = textFont;
+    }
+
+    inline DisplayType &Base::getDisplay()
+    {
+        return _tft;
+    }
+
+    inline CanvasType *Base::getCanvas()
+    {
+        return _canvas;
     }
 
 }

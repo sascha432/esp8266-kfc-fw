@@ -30,10 +30,10 @@
 class FileMapping;
 class FailureCounterContainer;
 
-#if IOT_WEATHER_STATION
-extern void __weatherStationDetachCanvas(bool release);
-extern void __weatherStationAttachCanvas();
-#endif
+// #if IOT_WEATHER_STATION
+// extern void __weatherStationDetachCanvas(bool release);
+// extern void __weatherStationAttachCanvas();
+// #endif
 
 class WebTemplate;
 

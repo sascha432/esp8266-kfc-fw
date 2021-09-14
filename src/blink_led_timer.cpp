@@ -36,7 +36,7 @@ public:
         NeoPixel_espShow(__LED_BUILTIN_WS2812_PIN, _pixels, sizeof(_pixels), true);
     }
 
-    void set(uint32_t delay, uint8_t pin, dynamic_bitset &pattern)
+    void set(uint32_t delay, uint8_t pin, Bitset &pattern)
     {
         off();
         _pattern = pattern;
@@ -150,21 +150,22 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
 #if __LED_BUILTIN == NEOPIXEL_PIN_ID
     if (pin == NEOPIXEL_PIN) {
         auto timer = new WS2812LEDTimer();
-        if (delay == BlinkLEDTimer::OFF) {
+        if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::OFF) {
             timer->off();
         }
-        else if (delay == BlinkLEDTimer::SOLID) {
+        else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOLID) {
             timer->solid(color == -1 ? 0x001500 : color);  // green
         }
         else {
             Bitset pattern;
-            if (delay == BlinkLEDTimer::SOS) {
+            if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOS) {
                 timer->setColor(color == -1 ? 0x300000 : color);  // red
                 pattern.set<uint64_t>(0b000000010101000011110000111100001111010101ULL, 42);
                 delay = 200;
-            } else {
+            }
+            else {
                 pattern.set<uint8_t>(0b10, 2);
-                delay = std::max<uint16_t>(50, std::min<uint16_t>(delay, 5000));
+                delay = std::clamp<uint16_t>(delay, 50, 5000);
                 timer->setColor(color == -1 ? ((delay < 100) ? 0x050500 : 0x000010) : color);  // yellow / blue
             }
             timer->set(delay, pin, pattern);
@@ -175,11 +176,11 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
 #endif
     {
 
-        if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::OFF)) {
+        if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::OFF) {
             // reset pin
             digitalWrite(pin, BUILTIN_LED_STATE(false));
         }
-        else if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOLID)) {
+        else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOLID) {
             digitalWrite(pin, BUILTIN_LED_STATE(true));
         }
         else {

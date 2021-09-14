@@ -3,6 +3,7 @@
  */
 
 #include <Arduino_compat.h>
+#include "weather_station.h"
 #include "WeatherStationBase.h"
 #include "WSScreen.h"
 #include "Logger.h"
@@ -144,11 +145,11 @@ void WeatherStationBase::end()
 
 void WeatherStationBase::_loop()
 {
-    if (!isCanvasAttached()) {
+    if (isLocked()) {
         return;
     }
 
-    #if 0
+    #if 1
         _tft.setCursor(0, 0);
         _tft.setTextSize(1);
         _tft.setTextColor(COLORS_WHITE);
@@ -279,3 +280,7 @@ WeatherStationBase::ScreenType WeatherStationBase::_getNextScreen(ScreenType scr
     return screen;
 }
 
+WeatherStationBase &WeatherStationBase::_getInstance()
+{
+    return ws_plugin;
+}

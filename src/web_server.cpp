@@ -145,9 +145,9 @@ const __FlashStringHelper *getContentType(const String &path)
 void Plugin::executeDelayed(AsyncWebServerRequest *request, std::function<void()> callback)
 {
     request->onDisconnect([callback]() {
-        #if IOT_WEATHER_STATION
-            __weatherStationAttachCanvas();
-        #endif
+        // #if IOT_WEATHER_STATION
+        //     __weatherStationAttachCanvas();
+        // #endif
         _Scheduler.add(2000, false, [callback](Event::CallbackTimerPtr timer) {
             callback();
         });
@@ -919,10 +919,11 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                 webTemplate = plugin->getWebTemplate(formName);
             }
             else if (nullptr != (plugin = PluginComponent::getForm(formName))) {
-                #if IOT_WEATHER_STATION
-                    __weatherStationDetachCanvas(true);
-                    request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
-                #endif
+                // #if IOT_WEATHER_STATION
+                //     // free memory for the form
+                //     __weatherStationDetachCanvas(true);
+                //     request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
+                // #endif
                 FormUI::Form::BaseForm *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);
@@ -1110,9 +1111,9 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
             auto plugin = PluginComponent::getForm(formName);
             if (plugin) {
                 __LDBG_printf("found=%p", plugin);
-                #if IOT_WEATHER_STATION
-                    __weatherStationDetachCanvas(true);
-                #endif
+                // #if IOT_WEATHER_STATION
+                //     __weatherStationDetachCanvas(true);
+                // #endif
                 FormUI::Form::BaseForm *form = new SettingsForm(request);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);
@@ -1129,9 +1130,9 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                 else {
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
                     config.discard();
-                    #if IOT_WEATHER_STATION
-                        request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
-                    #endif
+                    // #if IOT_WEATHER_STATION
+                    //     request->onDisconnect(__weatherStationAttachCanvas); // unlock on disconnect
+                    // #endif
                 }
             }
             else { // no plugin found

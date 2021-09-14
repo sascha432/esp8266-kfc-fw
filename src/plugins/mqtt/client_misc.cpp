@@ -21,11 +21,11 @@ StringVector MQTT::Client::_createAutoDiscoveryTopics() const
 String MQTT::Client::connectionDetailsString()
 {
     auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (IPAddress_isValid(_address) ? _address.toString().c_str() : _hostname.c_str()), _port);
-#if ASYNC_TCP_SSL_ENABLED
-    if (ConfigType::cast_enum_mode(_config.mode) == ModeType::SECURE) {
-        message += F(", Secure MQTT");
-    }
-#endif
+    #if ASYNC_TCP_SSL_ENABLED
+        if (_config._get_enum_mode() == ModeType::SECURE) {
+            message += F(", Secure MQTT");
+        }
+    #endif
     return message;
 }
 
@@ -61,13 +61,13 @@ String MQTT::Client::connectionStatusString()
     message += F("topic ");
 
     message += formatTopic(emptyString);
-#if MQTT_AUTO_DISCOVERY
-    if (_config.auto_discovery) {
-        message += F(HTML_S(br) "Auto discovery prefix '");
-        message += Plugins::MqttClient::getAutoDiscoveryPrefix();
-        message += '\'';
-    }
-#endif
+    #if MQTT_AUTO_DISCOVERY
+        if (_config.auto_discovery) {
+            message += F(HTML_S(br) "Auto discovery prefix '");
+            message += Plugins::MqttClient::getAutoDiscoveryPrefix();
+            message += '\'';
+        }
+    #endif
     return message;
 }
 

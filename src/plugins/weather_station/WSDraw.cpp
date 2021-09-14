@@ -77,17 +77,11 @@ const unsigned char icon_house[] PROGMEM = {
     0xfc, 0x03, 0xfe, 0x00, 0x03, 0xfc, 0x03, 0xfe, 0x00
 };
 
-#define __LDBG_isCanvasAttached() \
-        if (!isCanvasAttached()) { \
-            __DBG_panic("canvas not attached"); \
-        }
-
 namespace WSDraw {
 
     Base::Base() :
         _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
         _canvas(new CanvasType(_tft.width(), _tft.height())),
-        _canvasLocked(0),
         _scrollCanvas(nullptr),
         _textFont(nullptr),
         _lastTime(0),
@@ -96,7 +90,8 @@ namespace WSDraw {
         _offsetY(0),
         _scrollPosition(0),
         _currentScreen(ScreenType::MAIN),
-        _redrawFlag(false)
+        _redrawFlag(false),
+        _locked(false)
     {
     }
 
@@ -111,60 +106,27 @@ namespace WSDraw {
         }
     }
 
-    bool Base::_attachCanvas()
+    bool Base::lock()
     {
-        if (_canvasLocked > 0) {
-            _canvasLocked--;
-        }
-        __LDBG_printf("locked=%u canvas=%p", _canvasLocked, _canvas);
-        if (_canvasLocked == 0) {
-            if (!_canvas) {
-                _canvas = new CanvasType(_tft.width(), _tft.height());
-                __LDBG_printf("new canvas=%p invoking redraw", _canvas);
+        MUTEX_LOCK_BLOCK(_lock) {
+            if (_locked) {
+                return false;
             }
-            else {
-                __LDBG_printf("canvas=%p invoking redraw", _canvas);
-            }
-            redraw();
+            _locked = true;
         }
-        return (_canvasLocked == 0);
+        return true;
     }
 
-    bool Base::_detachCanvas(bool release)
+    void Base::unlock()
     {
-        if (_canvasLocked++ == 0 && release) {
-            __LDBG_printf("canvas released=%p", _canvas);
-            delete _canvas;
-            _canvas = nullptr;
-        }
-        __LDBG_printf("locked=%d release=%u canvas=%p", _canvasLocked, release, _canvas);
-        return (_canvasLocked == 1);
-    }
-
-    bool Base::isCanvasAttached() const
-    {
-        // __LDBG_printf("canvas=%p locked=%u", _canvas, _canvasLocked);
-        return (_canvas != nullptr) && _canvasLocked == 0;
-    }
-
-    CanvasType *Base::getCanvasAndLock()
-    {
-        return _canvasLocked++ == 0 ? _canvas : nullptr;
-    }
-
-    void Base::releaseCanvasLock()
-    {
-        if (_canvasLocked) {
-            _canvasLocked--;
-        }
-        if (_canvasLocked == 0) {
-
+        MUTEX_LOCK_BLOCK(_lock) {
+            _locked = false;
         }
     }
 
     void Base::drawText(const String &text, const GFXfont *font, uint16_t color, bool clear)
     {
-        if (isCanvasAttached()) {
+        if (!isLocked()) {
             _drawText(text, font, color, clear);
         }
         else {
@@ -238,8 +200,6 @@ namespace WSDraw {
 
     void Base::_updateTime()
     {
-        __LDBG_isCanvasAttached();
-
     #if WSDRAW_STATS
         _statsBegin();
     #endif
@@ -258,7 +218,6 @@ namespace WSDraw {
 
     void Base::_drawIndoor()
     {
-        __LDBG_isCanvasAttached();
         _drawIndoor(_canvas, Y_START_POSITION_WEATHER);
     }
 
@@ -289,7 +248,6 @@ namespace WSDraw {
 
     void Base::_drawWeather()
     {
-        __LDBG_isCanvasAttached();
         _drawWeather(_canvas, Y_START_POSITION_WEATHER);
     }
 
@@ -372,8 +330,6 @@ namespace WSDraw {
 
     void Base::_updateWeatherIndoor()
     {
-        __LDBG_isCanvasAttached();
-
         #if WSDRAW_STATS
             _statsBegin();
         #endif
@@ -390,7 +346,6 @@ namespace WSDraw {
 
     void Base::_drawSunAndMoon()
     {
-        __LDBG_isCanvasAttached();
         // __LDBG_printf("WSDraw::_drawSunAndMoon()");
 
         _offsetY = Y_START_POSITION_SUN_MOON;
@@ -431,8 +386,6 @@ namespace WSDraw {
 
     void Base::_drawScreenMain()
     {
-        __LDBG_isCanvasAttached();
-
         _drawTime();
         _drawWeather();
         _drawSunAndMoon();
@@ -441,8 +394,6 @@ namespace WSDraw {
 
     void Base::_drawScreenIndoor()
     {
-        __LDBG_isCanvasAttached();
-
         _drawTime();
         _drawIndoor();
         _drawSunAndMoon();
@@ -451,8 +402,6 @@ namespace WSDraw {
 
     void Base::_updateScreenIndoor()
     {
-        __LDBG_isCanvasAttached();
-
         #if WSDRAW_STATS
             _statsBegin();
         #endif
@@ -468,8 +417,6 @@ namespace WSDraw {
 
     void Base::_drawScreenForecast()
     {
-        __LDBG_isCanvasAttached();
-
         _drawTime();
         _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
     }
@@ -514,8 +461,6 @@ namespace WSDraw {
 
     void Base::_displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout)
     {
-        __LDBG_isCanvasAttached();
-
         ScrollCanvas::destroy(this);
         _Timer(_displayMessageTimer).add(Event::seconds(timeout), false, [this](Event::CallbackTimerPtr timer) {
             redraw();
@@ -550,8 +495,6 @@ namespace WSDraw {
 
     void Base::_drawText(const String &text, const GFXfont *font, uint16_t color, bool clear)
     {
-        __LDBG_isCanvasAttached();
-
         ScrollCanvas::destroy(this);
         _canvas->fillScreen(COLORS_BACKGROUND);
         _canvas->setTextColor(color);
@@ -569,8 +512,6 @@ namespace WSDraw {
 
     void Base::_draw()
     {
-        __LDBG_isCanvasAttached();
-
         if (_displayMessageTimer) {
             return;
         }
@@ -637,7 +578,6 @@ namespace WSDraw {
     void Base::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
     {
         __DBG_printf("x=%d y=%d w=%d h=%d", x, y, w, h);
-        __LDBG_isCanvasAttached();
 
         // copy canvas into tft memory
         _tft.startWrite();
@@ -651,19 +591,6 @@ namespace WSDraw {
 
     void Base::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h)
     {
-    }
-
-    DisplayType &Base::getDisplay()
-    {
-        return _tft;
-    }
-
-    CanvasType *Base::getCanvas()
-    {
-        if (isCanvasAttached()) {
-            return _canvas;
-        }
-        return nullptr;
     }
 
     // void Base::setScreen(BaseScreen *screen)
@@ -760,6 +687,8 @@ namespace WSDraw {
                 return F("Indoor Climate");
             case ScreenType::FORECAST:
                 return F("Weather Forecast");
+            default:
+                break;
         }
         return nullptr;
     }

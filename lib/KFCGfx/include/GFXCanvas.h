@@ -18,21 +18,21 @@ namespace GFXCanvas {
         if (x < 0) {
             return 0;
         }
-        else if (x >= (sWidthType)maxWidth) {
-            return maxWidth - 1;
+        else if (x >= static_cast<sWidthType>(maxWidth)) {
+            return static_cast<uXType>(maxWidth - 1);
         }
-        return x;
+        return static_cast<uXType>(x);
     }
 
     inline uXType getClippedX(sXType x, uWidthType minWidth, uWidthType maxWidth)
     {
-        if (x < (sWidthType)minWidth) {
+        if (x < static_cast<sWidthType>(minWidth)) {
             x = minWidth;
         }
-        if (x >= (sWidthType)maxWidth) {
-            return (uXType)(maxWidth - 1);
+        if (x >= static_cast<sWidthType>(maxWidth)) {
+            return static_cast<uXType>(maxWidth - 1);
         }
-        return (uXType)x;
+        return static_cast<uXType>(x);
     }
 
     inline uYType getClippedY(sXType y, uHeightType maxHeight)
@@ -40,21 +40,21 @@ namespace GFXCanvas {
         if (y < 0) {
             return 0;
         }
-        else if (y >= (sHeightType)maxHeight) {
-            return (uYType)(maxHeight - 1);
+        else if (y >= static_cast<sHeightType>(maxHeight)) {
+            return static_cast<uYType>(maxHeight - 1);
         }
-        return (uYType)y;
+        return static_cast<uYType>(y);
     }
 
     inline uYType getClippedY(sXType y, uHeightType minHeight, uHeightType maxHeight)
     {
-        if (y < (sHeightType)minHeight) {
+        if (y < static_cast<sHeightType>(minHeight)) {
             y = minHeight;
         }
-        if (y >= (sHeightType)maxHeight) {
-            return (uYType)(maxHeight - 1);
+        if (y >= static_cast<sHeightType>(maxHeight)) {
+            return static_cast<uYType>(maxHeight - 1);
         }
-        return (uYType)y;
+        return static_cast<uYType>(y);
     }
 
     inline uPositionType getClippedXY(sXType x, sYType y, uWidthType maxWidth,uHeightType maxHeight)
@@ -67,25 +67,33 @@ namespace GFXCanvas {
         return uPositionType({ getClippedX(x, minWidth, maxWidth), getClippedY(y, minHeight, maxHeight) });
     }
 
-    inline bool isValidX(sXType x, uWidthType width) {
-        return ((uXType)x < width);
+    inline bool isValidX(sXType x, uWidthType width)
+    {
+        return (static_cast<uXType>(x) < width);
     }
-    inline bool isValidX(sXType x, sXType startX, sXType endX) {
+
+    inline bool isValidX(sXType x, sXType startX, sXType endX)
+    {
         return (x >= startX) && (x < endX);
     }
 
-    inline bool isValidY(sYType y, uHeightType height) {
-        return ((uYType)y < height);
+    inline bool isValidY(sYType y, uHeightType height)
+    {
+        return (static_cast<uYType>(y) < height);
     }
-    inline bool isValidY(sYType y, sYType startY, sYType endY) {
+
+    inline bool isValidY(sYType y, sYType startY, sYType endY)
+    {
         return (y >= startY) && (y < endY);
     }
 
-    inline bool isValidXY(sXType x, sXType y, uWidthType width, uHeightType height) {
+    inline bool isValidXY(sXType x, sXType y, uWidthType width, uHeightType height)
+    {
         return isValidX(x, width) && isValidY(y, height);
     }
 
-    inline bool isFullLine(sXType startX, sXType endX, uWidthType width) {
+    inline bool isFullLine(sXType startX, sXType endX, uWidthType width)
+    {
         return startX <= 0 && endX >= width;
     }
 

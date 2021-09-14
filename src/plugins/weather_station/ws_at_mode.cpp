@@ -13,7 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad|timeformat24h|metrics|tft|scroll|stats|attach|detach>,<on|off|options>", "Enable/disable function");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad|timeformat24h|metrics|tft|scroll|stats|lock|unlock>,<on|off|options>", "Enable/disable function");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSBL, "WSBL", "<level=0-1023>", "Set backlight level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSU, "WSU", "<i|f>", "Update weather info/forecast");
 
@@ -49,7 +49,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("metrics=%u"), state);
             }
             else if (args.equalsIgnoreCase(0, F("screen"))) {
-                _setScreen((_currentScreen + 1) % kNumScreens);
+                _setScreen((_getCurrentScreen() + 1) % kNumScreens);
                 redraw();
                 args.printf_P(PSTR("screen=%u"), _currentScreen);
             }
@@ -70,42 +70,42 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             // }
             else if (args.equalsIgnoreCase(0, F("text"))) {
                 setText(args.get(1), FONTS_DEFAULT_MEDIUM);
-                _setScreen(TEXT_CLEAR);
+                _setScreen(ScreenType::TEXT_CLEAR);
             }
             else if (args.equalsIgnoreCase(0, F("dump"))) {
                 BufferPool::getInstance().dump(args.getStream());
             }
-            else if (args.equalsIgnoreCase(0, F("attach"))) {
+            else if (args.equalsIgnoreCase(0, F("lock"))) {
                 int mem = ESP.getFreeHeap();
-                if (_canvasLocked > 0) {
-                    _attachCanvas();
+                bool state = lock();
+                args.print(F("locked=%d %s heap=%d"), isLocked(), state ? PSTR("locked") : PSTR("locking failed"), mem - (int)ESP.getFreeHeap());
+            }
+            else if (args.equalsIgnoreCase(0, F("unlock"))) {
+                int mem = ESP.getFreeHeap();
+                if (isLocked()) {
+                    unlock();
                 }
-                args.printf_P(PSTR("canvasLocked=%d %s heap=%d"), _canvasLocked, _canvasLocked > 0 ? PSTR("attached") : PSTR("attaching failed"), mem - (int)ESP.getFreeHeap());
+                args.print(F("locked=%d deattached heap=%d"), isLocked(), mem - (int)ESP.getFreeHeap());
             }
-            else if (args.equalsIgnoreCase(0, F("detach"))) {
-                int mem = ESP.getFreeHeap();
-                _detachCanvas(true);
-                args.printf_P(PSTR("canvasLocked=%d deattached heap=%d"), _canvasLocked, mem - (int)ESP.getFreeHeap());
-            }
-#if WSDRAW_STATS
-            else if (args.equalsIgnoreCase(0, F("stats"))) {
-                if (args.equalsIgnoreCase(1, F("print"))) {
-                    for(const auto &item: _stats) {
-                        PrintString str;
-                        str.printf_P(PSTR("%s: "), item.first.c_str());
-                        auto iterator = item.second.begin();
-                        while(iterator != item.second.end()) {
-                            str.printf_P(PSTR("%.2f "), *iterator);
-                            ++iterator;
+            #if WSDRAW_STATS
+                else if (args.equalsIgnoreCase(0, F("stats"))) {
+                    if (args.equalsIgnoreCase(1, F("print"))) {
+                        for(const auto &item: _stats) {
+                            PrintString str;
+                            str.printf_P(PSTR("%s: "), item.first.c_str());
+                            auto iterator = item.second.begin();
+                            while(iterator != item.second.end()) {
+                                str.printf_P(PSTR("%.2f "), *iterator);
+                                ++iterator;
+                            }
+                            args.print(str.c_str());
                         }
-                        args.print(str.c_str());
+                    }
+                    else {
+                        _debug_stats = state;
                     }
                 }
-                else {
-                    _debug_stats = state;
-                }
-            }
-#endif
+            #endif
             else {
                 args.print("Invalid type");
             }

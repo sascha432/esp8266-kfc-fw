@@ -13,17 +13,15 @@ struct SemaphoreMutex {
     }
 
     ~SemaphoreMutex() {
-        _ASSERT_EXPR(_locked == false, "destroyed locked SemaphoreMutex");
+        _ASSERT(_locked == false); // "destroyed locked SemaphoreMutex"
     }
 
     void lock() {
-        _ASSERT_EXPR(_locked == false, "SemaphoreMutex already locked");
         _locked = true;
         _mutex.lock();
     }
 
     void unlock() {
-        _ASSERT_EXPR(_locked == true, "SemaphoreMutex not locked");
         _mutex.unlock();
         _locked = false;
     }

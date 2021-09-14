@@ -56,9 +56,9 @@ void dumpTimers(Print &output)
         auto timeUnit = emptyString.c_str();
         if (cur->timer_period) {
             timeUnit = PSTR("s");
-            period_in_s = cur->timer_period / 312500.0;
+            period_in_s = cur->timer_period / 312500.0f;
             if (period_in_s < 1) {
-                period_in_s /= 1000.0;
+                period_in_s /= 1000.0f;
                 timeUnit = PSTR("ms");
             }
         }

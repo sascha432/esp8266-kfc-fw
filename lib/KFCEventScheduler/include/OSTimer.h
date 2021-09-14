@@ -89,7 +89,7 @@ inline void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const String &msg)
 // EventScheduler
 
 struct ETSTimerEx
-    #if ESP8266
+    #if ESP8266 || _MSC_VER
         : ETSTimer
     #endif
 {
@@ -182,7 +182,7 @@ struct ETSTimerEx
 
         static std::list<ETSTimerEx *> _timers;
 
-    #elif ESP8266
+    #elif ESP8266 || _MSC_VER
 
         using ETSTimerExCallback = ETSTimerFunc *;
 

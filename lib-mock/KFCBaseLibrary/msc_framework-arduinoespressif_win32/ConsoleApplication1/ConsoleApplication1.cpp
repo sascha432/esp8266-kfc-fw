@@ -679,10 +679,10 @@ void setup()
 {
     Serial.begin(115200);
 
-    nvs_handle_t handle;
-    if (nvs_open("test", nvs_open_mode_t::NVS_READWRITE, &handle) == ESP_OK) {
-        nvs_close(handle);
-    }
+    //nvs_handle_t handle;
+    //if (nvs_open("test", nvs_open_mode_t::NVS_READWRITE, &handle) == ESP_OK) {
+    //    nvs_close(handle);
+    //}
 
     // ETSTimer/OSTimer test
     testTimer1.startTimer(15000, true);
@@ -712,6 +712,7 @@ void loop()
     delay(50);
 }
 
+#if 0
 
 #include "section_defines.h"
 #include "push_pack.h"
@@ -885,8 +886,8 @@ namespace NVSFlashStorage {
     };
 
     Container::Container(const char *name, nvs_open_mode_t mode) :
-        _mode(mode),
-        _index(name)
+        _mode(mode)
+        //_index(name)
     {
     }
 
@@ -958,23 +959,23 @@ namespace NVSFlashStorage {
 
     void Container::createIndex()
     {
-        _sectors.clear();
-        _sectors.resize(_getNumSectors());
+        //_sectors.clear();
+        //_sectors.resize(_getNumSectors());
 
-        auto startAddress = _getStartAddress();
-        _index._address = startAddress + _index.size();
-        _index.finalize();
-        if (!ESP.flashEraseSector(startAddress)) {
-            __DBG_printf("failed to erase sector %u", _index._sector);
-            return;
-        }
-        if (!ESP.flashWrite(startAddress, _index, _index.size())) {
-            __DBG_printf("failed to write index %08x (%u)", startAddress, 0);
-            return;
-        }
-        IndexHeader header;
-        strncpy(header._name, _name, NVS_PART_NAME_MAX_SIZE - 1);
-        header.finalize();
+        //auto startAddress = _getStartAddress();
+        //_index._address = startAddress + _index.size();
+        //_index.finalize();
+        //if (!ESP.flashEraseSector(startAddress)) {
+        //    __DBG_printf("failed to erase sector %u", _index._sector);
+        //    return;
+        //}
+        //if (!ESP.flashWrite(startAddress, _index, _index.size())) {
+        //    __DBG_printf("failed to write index %08x (%u)", startAddress, 0);
+        //    return;
+        //}
+        //IndexHeader header;
+        //strncpy(header._name, _name, NVS_PART_NAME_MAX_SIZE - 1);
+        //header.finalize();
     }
 
 };
@@ -1009,3 +1010,5 @@ void nvs_close(nvs_handle_t handle)
 }
 
 #include "pop_pack.h"
+
+#endif

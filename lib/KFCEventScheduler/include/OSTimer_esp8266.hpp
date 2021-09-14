@@ -69,14 +69,14 @@ inline ETSTimerEx::~ETSTimerEx()
 inline void ETSTimerEx::create(ETSTimerFunc *callback, void *arg)
 {
     if (!isNew()) {
-        ets_timer_disarm(this);
+        ets_timer_disarm(reinterpret_cast<ETSTimer *>(this));
     }
-    ets_timer_setfn(this, callback, arg);
+    ets_timer_setfn(reinterpret_cast<ETSTimer *>(this), callback, arg);
 }
 
 inline void ETSTimerEx::arm(int32_t delay, bool repeat, bool millis)
 {
-    ets_timer_arm_new(this, delay, repeat, millis);
+    ets_timer_arm_new(reinterpret_cast<ETSTimer *>(this), delay, repeat, millis);
 }
 
 inline bool ETSTimerEx::isNew() const

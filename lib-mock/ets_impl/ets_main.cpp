@@ -11,7 +11,6 @@
 #include <eagle_soc.h>
 #include <Serial.h>
 
-//volatile bool __ets_is_running = true;
 std::atomic_bool __ets_is_running = true;
 std::chrono::steady_clock::time_point micros_start_time = std::chrono::high_resolution_clock::now();
 
@@ -59,6 +58,7 @@ static void ets_main_thread_stop()
 void __ets_end_loop()
 {
     __ets_is_running = false;
+    ETSTimerEx::end();
     //__DBG_printf("__ets_end_loop invoked=1");
     ets_timer_deinit();
     ets_main_thread_stop();

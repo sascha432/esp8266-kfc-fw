@@ -48,14 +48,16 @@ int __xt_wsr_ps(int state)
 }
 
 // Replace ets_intr_(un)lock with nestable versions
-void ets_intr_lock() {
+void ets_intr_lock() 
+{
 	if (ets_intr_lock_stack_ptr < ETS_INTR_LOCK_NEST_MAX)
 		ets_intr_lock_stack[ets_intr_lock_stack_ptr++] = xt_rsil(3);
 	else
 		xt_rsil(3);
 }
 
-void ets_intr_unlock() {
+void ets_intr_unlock() 
+{
 	if (ets_intr_lock_stack_ptr > 0)
 		xt_wsr_ps(ets_intr_lock_stack[--ets_intr_lock_stack_ptr]);
 	else

@@ -19,6 +19,8 @@
 
 static constexpr uint32_t __ETSTimerInitVal = 0xa23542f3;
 
+extern std::atomic_bool __ets_is_running;
+
 ETSTimer *timer_list = nullptr;
 using ETSTimerList = std::vector<ETSTimer *>;
 
@@ -280,6 +282,9 @@ void ets_timer_arm_new(ETSTimer *ptimer, int time_ms, int repeat_flag, int isMil
 
 void ets_timer_done(ETSTimer *ptimer)
 {
+    if (!__ets_is_running) {
+        return;
+    }
     std::lock_guard<std::mutex> lock(__ets_timer_list_mutex);
     assert(timer_list);
     if (timer_initialized(ptimer)) {
@@ -291,6 +296,9 @@ void ets_timer_done(ETSTimer *ptimer)
 
 void ets_timer_disarm(ETSTimer *ptimer)
 {
+    if (!__ets_is_running) {
+        return;
+    }
     std::lock_guard<std::mutex> lock(__ets_timer_list_mutex);
     assert(timer_list);
     if (timer_initialized(ptimer)) {

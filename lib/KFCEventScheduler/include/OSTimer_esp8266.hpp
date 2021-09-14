@@ -236,7 +236,9 @@ inline void ETSTimerEx::end()
         auto next = cur->timer_next;
         if (cur->timer_func == reinterpret_cast<ETSTimerFunc *>(_EtsTimerLockedCallback) || cur->timer_func == reinterpret_cast<ETSTimerFunc *>(OSTimer::_OSTimerCallback)) {
             ets_timer_disarm(cur);
-            //ets_timer_done(cur);
+            #if _MSC_VER
+                ets_timer_done(cur);
+            #endif
         }
         cur = next;
     }

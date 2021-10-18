@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
+#include <functional>
 #include "Stream.h"
 
 class Stdout : public Stream {
@@ -114,8 +115,10 @@ private:
     uint16_t _size;
 };
 
-
 class HardwareSerial : public Stdout {
+public:
+    using WriteCallback = std::function<void(const uint8_t *, size_t)>;
+
 public:
     HardwareSerial(const HardwareSerial &fake) = delete;
 
@@ -131,6 +134,12 @@ public:
     virtual void flush(void) override;
     virtual size_t write(uint8_t c) override;
     virtual size_t write(const uint8_t *buffer, size_t size) override;
+
+    void setWriteCallback(const WriteCallback &callback) {
+        _writeCallback = callback;
+    }
+
+    WriteCallback _writeCallback;
 };
 
 using FakeSerial = HardwareSerial;

@@ -124,7 +124,9 @@ size_t StreamWrapper::write(const uint8_t *buffer, size_t size)
                     if (written < len) {
                         ptr += written;
                         #if ESP8266
-                            delay(1);
+                            if (canYield) {
+                                delay(1);
+                            }
                         #endif
                     }
                     #if DEBUG

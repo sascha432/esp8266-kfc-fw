@@ -20,9 +20,6 @@
 #include "blink_led_timer.h"
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_BME280.h"
-// #if IOT_WEATHER_STATION_COMP_RH
-// #include "./plugins/sensor/EnvComp.h"
-// #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
 
@@ -46,16 +43,6 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 
 WeatherStationPlugin ws_plugin;
 
-// void __weatherStationDetachCanvas(bool release)
-// {
-//     WeatherStationPlugin::_getInstance()._detachCanvas(release);
-// }
-
-// void __weatherStationAttachCanvas()
-// {
-//     WeatherStationPlugin::_getInstance()._attachCanvas();
-// }
-
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     WeatherStationPlugin,
     // name
@@ -67,7 +54,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     // config_forms
     "weather",
     // reconfigure_dependencies
-    "",
+    "http",
     PluginComponent::PriorityType::WEATHER_STATION,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
@@ -233,11 +220,14 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     _initScreen();
 
     _fadeBacklight(0, _backlightLevel);
+
+    // show progress bar during firmware updates
     int progressValue = -1;
     WebServer::Plugin::getInstance().setUpdateFirmwareCallback([this, progressValue](size_t position, size_t size) mutable {
         int progress = position * 100 / size;
         if (progressValue != progress) {
             if (progressValue == -1) {
+                _setBacklightLevel(1023);
                 _setScreen(ScreenType::TEXT_UPDATE);
             }
             setText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM);
@@ -321,11 +311,10 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
 void WeatherStationPlugin::reconfigure(const String &source)
 {
-    // if (String_equals(source, SPGM(http))) {
-    //     _installWebhooks();
-    // }
-    // else
-    {
+    if (source.equals(FSPGM(http))) {
+        _installWebhooks();
+    }
+    else {
         auto oldLevel = _backlightLevel;
         _readConfig();
 
@@ -355,12 +344,13 @@ void WeatherStationPlugin::shutdown()
     LoopFunctions::remove(loop);
     // SerialHandler::getInstance().removeHandler(serialHandler);
 
+    _setBacklightLevel(1023);
     drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
 }
 
 void WeatherStationPlugin::getStatus(Print &output)
 {
-    output.printf_P(PSTR("%ux%u TFT"), TFT_WIDTH, TFT_HEIGHT);
+    output.printf_P(PSTR("%ux%u TFT " IOT_WEATHER_STATION_DRIVER), TFT_WIDTH, TFT_HEIGHT);
     #if IOT_WEATHER_STATION_WS2812_NUM
         output.printf_P(PSTR(HTML_S(br) "%ux WS2812 RGB LED"), IOT_WEATHER_STATION_WS2812_NUM);
     #endif
@@ -371,17 +361,13 @@ void WeatherStationPlugin::getStatus(Print &output)
 
 void WeatherStationPlugin::_init()
 {
-    #if ESP32
-        analogWrite(TFT_PIN_LED, 0);
-    #else
-        pinMode(TFT_PIN_LED, OUTPUT);
-        digitalWrite(TFT_PIN_LED, LOW);
-    #endif
+    _setBacklightLevel(0);
 
-    __LDBG_printf("cs=%d dc=%d rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
     #if ILI9341_DRIVER
+        __LDBG_printf("cs=%d dc=%d rst=%d spi=%u", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY);
         _tft.begin(SPI_FREQUENCY);
     #else
+        __LDBG_printf("cs=%d dc=%d rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
         _tft.initR(INITR_BLACKTAB);
     #endif
     _tft.fillScreen(0);
@@ -458,29 +444,22 @@ void WeatherStationPlugin::_getIndoorValues(float *data)
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step)
 {
-    #if ESP32
-        analogWrite(TFT_PIN_LED, fromLevel, 1023);
-    #else
-        analogWrite(TFT_PIN_LED, fromLevel);
-    #endif
+    _setBacklightLevel(fromLevel);
     int8_t direction = fromLevel > toLevel ? -step : step;
 
     //TODO sometimes fading does not work...
     //probably when called multiple times before its done
 
-    _Timer(_fadeTimer).add(Event::milliseconds(30), true, [fromLevel, toLevel, step, direction](Event::CallbackTimerPtr timer) mutable {
+    _Timer(_fadeTimer).add(Event::milliseconds(30), true, [fromLevel, toLevel, step, direction, this](Event::CallbackTimerPtr timer) mutable {
 
         if (abs(toLevel - fromLevel) > step) {
             fromLevel += direction;
-        } else {
+        }
+        else {
             fromLevel = toLevel;
             timer->disarm();
         }
-        #if ESP32
-            analogWrite(TFT_PIN_LED, fromLevel, 1023);
-        #else
-            analogWrite(TFT_PIN_LED, fromLevel);
-        #endif
+        _setBacklightLevel(fromLevel);
 
     }, Event::PriorityType::TIMER);
 }

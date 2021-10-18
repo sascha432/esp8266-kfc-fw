@@ -55,6 +55,7 @@ private:
 
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step = 8);
     void _fadeStatusLED();
+    void _setBacklightLevel(uint16_t level);
 
     virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) override;
 
@@ -87,4 +88,13 @@ extern WeatherStationPlugin ws_plugin;
 inline WeatherStationPlugin &WeatherStationPlugin::_getInstance()
 {
     return ws_plugin;
+}
+
+inline void WeatherStationPlugin::_setBacklightLevel(uint16_t level)
+{
+    #if ESP32
+        analogWrite(TFT_PIN_LED, level, 1023);
+    #else
+        analogWrite(TFT_PIN_LED, level);
+    #endif
 }

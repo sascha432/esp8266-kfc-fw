@@ -18,12 +18,7 @@
 #    define IOT_WEATHER_STATION_HAS_TOUCHPAD 1
 #endif
 
-// calculate RH from compensated temperature
-#ifndef IOT_WEATHER_STATION_COMP_RH
-#    define IOT_WEATHER_STATION_COMP_RH 0
-#endif
-
-// IRC pin
+// IRQ pin
 #ifndef IOT_WEATHER_STATION_MPR121_PIN
 #    define IOT_WEATHER_STATION_MPR121_PIN 12
 #endif
@@ -46,14 +41,26 @@
 #    endif
 #endif
 
+// set to 1 to enable ILI9341 driver default is ST7735
+#ifndef ILI9341_DRIVER
+#    define ILI9341_DRIVER 0
+#endif
+
+#if ILI9341_DRIVER
+#    define IOT_WEATHER_STATION_DRIVER "ILI9341"
+#else
+#    define IOT_WEATHER_STATION_DRIVER "ST7735"
+#endif
+
+
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
 #    include "Mpr121Touchpad.h"
 #endif
 
 #if DEBUG_IOT_WEATHER_STATION
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 class WeatherStationBase : public WSDraw::Base
@@ -112,7 +119,6 @@ protected:
     uint32_t _pollDataLastMillis;
     uint16_t _pollDataRetries;
 
-    // uint32_t _updateTimer;
     uint32_t _updateCounter;
     uint16_t _backlightLevel;
     Event::Timer _fadeTimer;

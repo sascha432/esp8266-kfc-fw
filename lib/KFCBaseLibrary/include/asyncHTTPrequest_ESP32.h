@@ -19,8 +19,8 @@ public:
     typedef std::function<void(void *, asyncHTTPrequest *, int readyState)> readyStateChangeCB;
     typedef std::function<void(void *, asyncHTTPrequest *, size_t available)> onDataCB;
 
-    bool open(const __FlashStringHelper *method, const char *url) {
-        _method = method;
+    bool open(PGM_P method, const char *url) {
+        _method = FPSTR(method);
         begin(url);
         return true;
     }

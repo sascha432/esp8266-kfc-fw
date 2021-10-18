@@ -17,6 +17,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConfigV2Test", "ConfigV2Tes
 		{6582A005-B269-430F-909E-8B79CD1FB280} = {6582A005-B269-430F-909E-8B79CD1FB280}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WeatherStation", "WeatherStation\WeatherStation.vcxproj", "{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6582A005-B269-430F-909E-8B79CD1FB280} = {6582A005-B269-430F-909E-8B79CD1FB280}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -54,6 +59,14 @@ Global
 		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Release|x64.Build.0 = Release|x64
 		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Release|x86.ActiveCfg = Release|Win32
 		{B1F22761-51FB-4045-933A-10ABDD6328E6}.Release|x86.Build.0 = Release|Win32
+		{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}.Debug|x64.ActiveCfg = Debug|x64
+		{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}.Debug|x64.Build.0 = Debug|x64
+		{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}.Debug|x86.ActiveCfg = Debug|Win32
+		{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}.Debug|x86.Build.0 = Debug|Win32
+		{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}.Release|x64.ActiveCfg = Release|x64
+		{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}.Release|x64.Build.0 = Release|x64
+		{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}.Release|x86.ActiveCfg = Release|Win32
+		{AAE18E4D-66AB-483E-A91A-59E5E7DF2FDC}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

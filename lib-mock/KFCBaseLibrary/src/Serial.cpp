@@ -125,7 +125,12 @@ size_t FakeSerial::write(uint8_t c)
 
 size_t HardwareSerial::write(const uint8_t *buffer, size_t size)
 {
-    ::printf("%*.*s", size, size, buffer);
+    if (_writeCallback) {
+        _writeCallback(buffer, size);
+    }
+    else {
+        ::printf("%*.*s", size, size, buffer);
+    }
     _RPTN(_CRT_WARN, "%*.*s", size, size, buffer);
     return size;
 }

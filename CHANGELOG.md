@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.0.6
+
+ - Auto installation of custom framework-arduinoespressif for ESP9266 and ESP32
+
 ## Version 0.0.5
 
 - ESP32: Syslog and SSDP

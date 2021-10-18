@@ -14,6 +14,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 ### ESP32
 
 4M and 8M with OTA
+
 **OTA for 4M is work in progress**
 
 ## ChangeLog

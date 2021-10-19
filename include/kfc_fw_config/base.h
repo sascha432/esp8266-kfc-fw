@@ -6,7 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <session.h>
-#include <buffer.h>
+#include <Buffer.h>
 #include <crc16.h>
 #include <KFCForms.h>
 #include <KFCSerialization.h>

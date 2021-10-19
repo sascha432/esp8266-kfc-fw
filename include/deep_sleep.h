@@ -73,10 +73,25 @@ namespace DeepSleep {
 
     struct __attribute__packed__ WiFiQuickConnect
     {
-        int16_t channel: 15;                    //  0
-        int16_t use_static_ip: 1;               // +2 byte
+        int16_t channel;
+        uint8_t wifi_config_num;
+        bool use_static_ip;
+
+        // additional 12 bits are available using bitfields
+        // int16_t channel;
+        // uint8_t wifi_config_num: 3;
+        // bool use_static_ip: 1;
+        // uint16_t __reserved: 12;
+        //
+        // additional 16 bit are available if _alignedData is removed from Uint8Array
+        // uint16_t __reserved2;
+
         struct Uint8Array {
-            uint8_t _data[WL_MAC_ADDR_LENGTH];      // +6 byte
+            union {
+                uint8_t _data[WL_MAC_ADDR_LENGTH];
+                uint32_t _alignedData[(WL_MAC_ADDR_LENGTH + 3) / 4];
+            };
+
             operator uint8_t *() {
                 return _data;
             }
@@ -87,7 +102,7 @@ namespace DeepSleep {
                 std::copy_n(data, WL_MAC_ADDR_LENGTH, _data);
                 return *this;
             }
-            Uint8Array() = default;
+            Uint8Array() : _alignedData{} {}
         } bssid;
 
         uint32_t local_ip;
@@ -98,8 +113,11 @@ namespace DeepSleep {
 
         WiFiQuickConnect() :
             channel(0),
-            use_static_ip(0),
-            bssid({}),
+            wifi_config_num(0),
+            use_static_ip(false),
+            // __alignment1(0),
+            // __alignment2(0),
+            bssid(),
             local_ip(0),
             dns1(0),
             dns2(0),

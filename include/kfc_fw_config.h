@@ -56,6 +56,9 @@ public:
     using milliseconds = std::chrono::duration<uint32_t, std::milli>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using minutes = std::chrono::duration<uint32_t, std::ratio<60>>;
+    using StationConfigType = KFCConfigurationClasses::Network::WiFi::StationConfigType;
+
+    static constexpr auto kInvalidStation = KFCConfigurationClasses::Network::WiFi::kNumStations;
 
     // static constexpr auto test1 = std::chrono::duration_cast<seconds>(KFCFWConfiguration::minutes(300)).count();
 
@@ -82,8 +85,8 @@ public:
     bool isConfigDirty() const;
 
     void setup();
-    bool reconfigureWiFi(const __FlashStringHelper *msg = nullptr);
-    bool connectWiFi();
+    bool reconfigureWiFi(const __FlashStringHelper *msg = nullptr, StationConfigType configNum = StationConfigType::CFG_KEEP);
+    bool connectWiFi(StationConfigType configNum = StationConfigType::CFG_KEEP);
     void read(bool wakeup = false);
     void write();
 
@@ -138,6 +141,8 @@ public:
 
     static void apStandbyModehandler(WiFiCallbacks::EventType event, void *payload);
 
+    StationConfigType getWiFiConfigurationNum() const;
+
 private:
     void _setupWiFiCallbacks();
     void _apStandbyModehandler(WiFiCallbacks::EventType event);
@@ -176,10 +181,11 @@ private:
     friend void WiFi_get_status(Print &out);
 
     String _lastError;
-    uint32_t _wifiConnected;        // time of connection
-    uint32_t _wifiUp;               // time of receiving IP address
+    uint32_t _wifiConnected;            // time of connection
+    uint32_t _wifiUp;                   // time of receiving IP address
     uint32_t _wifiFirstConnectionTime;
     int16_t _garbageCollectionCycleDelay;
+    StationConfigType _wifiNumActive;   // wifi # connected
     bool _dirty;
     bool _safeMode;
 
@@ -225,6 +231,11 @@ inline void KFCFWConfiguration::_apStandbyModehandler(WiFiCallbacks::EventType e
 inline void KFCFWConfiguration::apStandbyModehandler(WiFiCallbacks::EventType event, void *payload)
 {
     config._apStandbyModehandler(event);
+}
+
+inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getWiFiConfigurationNum() const
+{
+    return _wifiNumActive;
 }
 
 inline void KFCFWConfiguration::setLastError(const String &error)

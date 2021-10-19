@@ -8,6 +8,7 @@
 #include <stl_ext/type_traits.h>
 #include <KFCForms.h>
 #include <templates.h>
+#include "Utility/ProgMemHelper.h"
 
 using KFCConfigurationClasses::MainConfig;
 using KFCConfigurationClasses::System;
@@ -65,6 +66,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
         if (formName.equals(FSPGM(wifi))) {
 
+            auto &network = Network::Settings::getWriteableConfig();
             auto &softAp = Network::SoftAP::getWriteableConfig();
             FormUI::Container::List wifiModes(createWifiModes());
 
@@ -112,13 +114,31 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &stationGroup = modeGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode), true);
 
-            form.addStringGetterSetter(F("wssid"), Network::WiFi::getSSID, Network::WiFi::setSSID);
-            Network::WiFi::addSSIDLengthValidator(form);
-            form.addFormUI(FSPGM(SSID), FormUI::SuffixHtml(F("<button class=\"btn btn-default\" type=\"button\" id=\"wifi_scan_button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>")));
+            auto scanWiFiSuffix = F("<button class=\"btn btn-default\" type=\"button\" id=\"wifi_scan_button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>");
+            PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WIFI_STATION_MAX_NUM, en, prio, ssid, pass);
 
-            form.addStringGetterSetter(F("st_pass"), Network::WiFi::getPassword, Network::WiFi::setPassword);
-            Network::WiFi::addPasswordLengthValidator(form);
-            form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase, "Passphrase"));
+            for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
+
+                auto &enabled = form.addObjectGetterSetter(F_VAR(en, i), FormGetterSetter(network.stations[i], enabled));
+                form.addFormUI(FormUI::Type::HIDDEN);
+
+                form.addObjectGetterSetter(F_VAR(prio, i), FormGetterSetter(network.stations[i], priority)).setOptional(true);
+                form.addFormUI(F("Priority"), FormUI::PlaceHolder(F("Auto")), FormUI::CheckboxButtonSuffix(enabled, F("Enabled")));
+                network.stations[i].addRangeValidatorFor_priority(form, true);
+
+                form.addCallbackSetter<String>(F_VAR(ssid, i), String(Network::WiFi::getSSID(i)), [i](const String &value, Field::BaseField &) {
+                    Network::WiFi::setSSID(i, value);
+                }).setOptional(true);
+                Network::WiFi::addSSID0LengthValidator(form);
+                form.addFormUI(FSPGM(SSID), FormUI::SuffixHtml(scanWiFiSuffix));
+
+                form.addCallbackSetter(F_VAR(pass, i), String(Network::WiFi::getPassword(i)), [i](const String &value, Field::BaseField &) {
+                    Network::WiFi::setPassword(i, value);
+                }).setOptional(true);
+                Network::WiFi::addPassword0LengthValidator(form);
+                form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase, "Passphrase"));
+
+            }
 
             stationGroup.end();
             auto &apModeGroup = form.addCardGroup(F("softap"), FSPGM(Access_Point), true);
@@ -168,30 +188,49 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(Title));
             System::Device::addTitleLengthValidator(form);
 
-            auto &stationGroup = deviceGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode));
+            auto &globalGroup = deviceGroup.end().addCardGroup(F("global"), F("Global DNS"));
+
+            form.addObjectGetterSetter(F("st_dns1"), FormGetterSetter(network, global_dns1)).setOptional(true);
+            form.addFormUI(FSPGM(DNS_1));
+            network.addHostnameValidatorFor_global_dns1(form);
+
+            form.addObjectGetterSetter(F("st_dns2"), FormGetterSetter(network, global_dns2)).setOptional(true);
+            form.addFormUI(FSPGM(DNS_2));
+            network.addHostnameValidatorFor_global_dns2(form);
+
+            auto &stationGroup = globalGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode));
 
             form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
             form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
 
-            form.addObjectGetterSetter(F("st_ip"), FormGetterSetter(network, local_ip)).setOptional(true);
-            form.addFormUI(FSPGM(IP_Address));
-            network.addHostnameValidatorFor_local_ip(form);
+            PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WIFI_STATION_MAX_NUM, dhcp, ip, sn, gw, dns1, dns2);
 
-            form.addObjectGetterSetter(F("st_subnet"), FormGetterSetter(network, subnet)).setOptional(true);
-            form.addFormUI(FSPGM(Subnet));
-            network.addHostnameValidatorFor_subnet(form);
+            for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
 
-            form.addObjectGetterSetter(F("st_gw"), FormGetterSetter(network, gateway)).setOptional(true);
-            form.addFormUI(FSPGM(Gateway));
-            network.addHostnameValidatorFor_gateway(form);
+                form.addObjectGetterSetter(F_VAR(dhcp, i), FormGetterSetter(network.stations[i], dhcp)).setOptional(true);
+                form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
 
-            form.addObjectGetterSetter(F("st_dns1"), FormGetterSetter(network, dns1)).setOptional(true);
-            form.addFormUI(FSPGM(DNS_1));
-            network.addHostnameValidatorFor_dns1(form);
+                form.addObjectGetterSetter(F_VAR(ip, i), FormGetterSetter(network.stations[i], local_ip)).setOptional(true);
+                form.addFormUI(FSPGM(IP_Address));
+                network.stations[i].addHostnameValidatorFor_local_ip(form);
 
-            form.addObjectGetterSetter(F("st_dns2"), FormGetterSetter(network, dns2)).setOptional(true);
-            form.addFormUI(FSPGM(DNS_2));
-            network.addHostnameValidatorFor_dns2(form);
+                form.addObjectGetterSetter(F_VAR(sn, i), FormGetterSetter(network.stations[i], subnet)).setOptional(true);
+                form.addFormUI(FSPGM(Subnet));
+                network.stations[i].addHostnameValidatorFor_subnet(form);
+
+                form.addObjectGetterSetter(F_VAR(gw, i), FormGetterSetter(network.stations[i], gateway)).setOptional(true);
+                form.addFormUI(FSPGM(Gateway));
+                network.stations[i].addHostnameValidatorFor_gateway(form);
+
+                form.addObjectGetterSetter(F_VAR(dns1, i), FormGetterSetter(network.stations[i], dns1)).setOptional(true);
+                form.addFormUI(FSPGM(DNS_1));
+                network.stations[i].addHostnameValidatorFor_dns1(form);
+
+                form.addObjectGetterSetter(F_VAR(dns2, i), FormGetterSetter(network.stations[i], dns2)).setOptional(true);
+                form.addFormUI(FSPGM(DNS_2));
+                network.stations[i].addHostnameValidatorFor_dns2(form);
+
+            }
 
             auto &apGroup = stationGroup.end().addCardGroup(FSPGM(ap_mode), FSPGM(Access_Point));
 

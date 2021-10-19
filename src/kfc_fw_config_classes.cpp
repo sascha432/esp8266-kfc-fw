@@ -15,7 +15,7 @@
 
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameDeviceConfig_t, "MainConfig().system.device.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameWebServerConfig_t, "MainConfig().system.webserver.cfg");
-DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSettingsConfig_t, "MainConfig().network.settings.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleStationsConfig, "MainConfig().network.settings.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameAlarm_t, "MainConfig().plugins.alarm.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSerial2TCPConfig_t, "MainConfig().plugins.serial2tcp.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameMqttConfig_t, "MainConfig().plugins.mqtt.cfg");
@@ -23,7 +23,7 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSyslogConfig_t, "MainConfig().plugins
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameNtpClientConfig_t, "MainConfig().plugins.ntpclient.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSensorConfig_t, "MainConfig().plugins.sensor.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameFlagsConfig_t, "MainConfig().system.flags.cfg");
-DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig_t, "MainConfig().network.softap.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSoftAPConfig, "MainConfig().network.softap.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameBlindsConfig_t, "MainConfig().plugins.blinds.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameDimmerConfig_t, "MainConfig().plugins.dimmer.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameClockConfig_t, "MainConfig().plugins.clock.cfg");
@@ -203,11 +203,14 @@ namespace KFCConfigurationClasses {
     // --------------------------------------------------------------------
     // Settings
 
-    Network::Settings::SettingsConfig_t::SettingsConfig_t() :
+    Network::Settings::StationModeSettings::StationModeSettings() :
         subnet(kDefaultValueFor_subnet),
         gateway(kDefaultValueFor_gateway),
         dns1(kDefaultValueFor_dns1),
-        dns2(kDefaultValueFor_dns2)
+        dns2(kDefaultValueFor_dns2),
+        priority(0),
+        enabled(false),
+        dhcp(true)
     {
         uint8_t mac[6];
         ::WiFi.macAddress(mac);
@@ -217,8 +220,7 @@ namespace KFCConfigurationClasses {
 
     void Network::Settings::defaults()
     {
-        SettingsConfig_t cfg = {};
-        setConfig(cfg);
+        setConfig(StationsConfig());
         // auto flags = System::Flags::getConfig();
         // flags.setWifiMode(WIFI_AP);
         // flags.is_softap_standby_mode_enabled = true;
@@ -229,7 +231,7 @@ namespace KFCConfigurationClasses {
     // --------------------------------------------------------------------
     // SoftAP
 
-    Network::SoftAP::SoftAPConfig_t::SoftAPConfig_t() :
+    Network::SoftAP::SoftAPConfig::SoftAPSettings::SoftAPSettings() :
         address(kDefaultValueFor_address),
         subnet(kDefaultValueFor_subnet),
         gateway(kDefaultValueFor_gateway),
@@ -242,7 +244,7 @@ namespace KFCConfigurationClasses {
 
     void Network::SoftAP::defaults()
     {
-        SoftAPConfig_t cfg = {};
+        SoftAPSettings cfg = {};
         setConfig(cfg);
     }
 

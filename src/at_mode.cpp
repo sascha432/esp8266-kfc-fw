@@ -2021,7 +2021,7 @@ void at_mode_serial_handle_event(String &commandString)
         args.print(F("station mode %s, DHCP %s, SSID %s, connected %s, IP %s"),
             (WiFi.getMode() & WIFI_STA) ? SPGM(on) : SPGM(off),
             flags.is_station_mode_dhcp_enabled ? SPGM(on) : SPGM(off),
-            Network::WiFi::getSSID(),
+            WiFi.SSID().c_str(),
             WiFi.isConnected() ? SPGM(yes) : SPGM(no),
             WiFi.localIP().toString().c_str()
         );

@@ -180,6 +180,7 @@ KFCFWConfiguration::KFCFWConfiguration() :
     _wifiUp(0),
     _wifiFirstConnectionTime(0),
     _garbageCollectionCycleDelay(5000),
+    _wifiNumActive(StationConfigType::CFG_DEFAULT),
     _dirty(false),
     _safeMode(false)
 {
@@ -205,7 +206,7 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
             _wifiFirstConnectionTime = _wifiConnected;
             append = PrintString(F(" after %ums"), _wifiConnected);
         }
-        Logger_notice(F("WiFi connected to %s%s"), event.ssid.c_str(), append.c_str());
+        Logger_notice(F("WiFi(#%u) connected to %s%s"), config.getWiFiConfigurationNum() + 1, event.ssid.c_str(), append.c_str());
         #if ENABLE_DEEP_SLEEP
             config.storeQuickConnect(event.bssid, event.channel);
 
@@ -634,8 +635,8 @@ void KFCFWConfiguration::restoreFactorySettings()
     System::Device::setTitle(FSPGM(KFC_Firmware, "KFC Firmware"));
     System::Device::setPassword(FSPGM(defaultPassword, "12345678"));
     System::WebServer::defaults();
-    Network::WiFi::setSSID(deviceName);
-    Network::WiFi::setPassword(FSPGM(defaultPassword));
+    Network::WiFi::setSSID0(deviceName);
+    Network::WiFi::setPassword0(FSPGM(defaultPassword));
     Network::WiFi::setSoftApSSID(deviceName);
     Network::WiFi::setSoftApPassword(FSPGM(defaultPassword));
     Network::Settings::defaults();
@@ -1282,7 +1283,7 @@ const __FlashStringHelper *KFCFWConfiguration::getWiFiEncryptionType(uint8_t typ
     return F("N/A");
 }
 
-bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg)
+bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg, StationConfigType configNum)
 {
     if (msg) {
         Logger_notice(msg);
@@ -1297,12 +1298,15 @@ bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg)
     WiFi.disconnect(true);
     WiFi.softAPdisconnect(true);
 
-    return connectWiFi();
+    return connectWiFi(configNum);
 }
 
-bool KFCFWConfiguration::connectWiFi()
+bool KFCFWConfiguration::connectWiFi(StationConfigType configNum)
 {
     setLastError(String());
+    if (configNum != StationConfigType::CFG_KEEP) {
+        _wifiNumActive = configNum;
+    }
 
     bool station_mode_success = false;
     bool ap_mode_success = false;
@@ -1313,7 +1317,7 @@ bool KFCFWConfiguration::connectWiFi()
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
 
-        auto network = Network::Settings::getConfig();
+        auto network = Network::WiFi::getNetworkConfig(_wifiNumActive);
         bool result;
         if (flags.is_station_mode_dhcp_enabled) {
             result = WiFi.config(0U, 0U, 0U, 0U, 0U);
@@ -1327,12 +1331,12 @@ bool KFCFWConfiguration::connectWiFi()
         }
         else {
 
-            if (WiFi.begin(Network::WiFi::getSSID(), Network::WiFi::getPassword()) == WL_CONNECT_FAILED) {
+            if (WiFi.begin(Network::WiFi::getSSID(_wifiNumActive), Network::WiFi::getPassword(_wifiNumActive)) == WL_CONNECT_FAILED) {
                 setLastError(F("Failed to start Station Mode"));
                 Logger_error(F("%s"), getLastError());
             }
             else {
-                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID());
+                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(_wifiNumActive));
                 station_mode_success = true;
             }
         }
@@ -1475,7 +1479,7 @@ void KFCFWConfiguration::printInfo(Print &output)
         output.printf_P(PSTR("AP Mode SSID %s\n"), Network::WiFi::getSoftApSSID());
     }
     if (flags.is_station_mode_enabled) {
-        output.printf_P(PSTR("Station Mode SSID %s\n"), Network::WiFi::getSSID());
+        output.printf_P(PSTR("Station Mode SSID %s\n"), Network::WiFi::getSSID(_wifiNumActive));
     }
     if (flags.is_factory_settings) {
         output.println(F("Running on factory settings"));

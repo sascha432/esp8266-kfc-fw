@@ -1,5 +1,5 @@
 /**
- * Author: sascha_lammers@gmx.de
+ * ;:
  */
 
 #include <Arduino_compat.h>
@@ -198,14 +198,16 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(DNS_2));
             network.addHostnameValidatorFor_global_dns2(form);
 
-            auto &stationGroup = globalGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode));
+            auto stationGroup = &globalGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode), true);
 
-            form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
-            form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
+            // form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
+            // form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
 
             PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WIFI_STATION_MAX_NUM, dhcp, ip, sn, gw, dns1, dns2);
 
             for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
+
+                stationGroup = &stationGroup->end().addCardGroup(FSPGM(station), FSPGM(Station_Mode), network.stations[i].isEnabled());
 
                 form.addObjectGetterSetter(F_VAR(dhcp, i), FormGetterSetter(network.stations[i], dhcp)).setOptional(true);
                 form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
@@ -232,7 +234,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             }
 
-            auto &apGroup = stationGroup.end().addCardGroup(FSPGM(ap_mode), FSPGM(Access_Point));
+            auto &apGroup = stationGroup->end().addCardGroup(FSPGM(ap_mode), FSPGM(Access_Point));
 
             form.addObjectGetterSetter(F("ap_dhcpd"), flags, flags.get_bit_is_softap_dhcpd_enabled, flags.set_bit_is_softap_dhcpd_enabled);
             form.addFormUI(FSPGM(DHCP_Server), FormUI::BoolItems());

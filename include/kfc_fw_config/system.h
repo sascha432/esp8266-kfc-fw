@@ -24,21 +24,21 @@ namespace KFCConfigurationClasses {
                 CREATE_BOOL_BITFIELD(is_softap_standby_mode_enabled);
                 CREATE_BOOL_BITFIELD(is_softap_dhcpd_enabled);
                 CREATE_BOOL_BITFIELD(is_station_mode_enabled);
-                CREATE_BOOL_BITFIELD(is_station_mode_dhcp_enabled); // 7
-                CREATE_BOOL_BITFIELD(use_static_ip_during_wakeup);
+                // CREATE_BOOL_BITFIELD(is_station_mode_dhcp_enabled); // 7
+                CREATE_BOOL_BITFIELD(use_static_ip_during_wakeup); // 7
                 CREATE_BOOL_BITFIELD(is_at_mode_enabled);
                 CREATE_BOOL_BITFIELD(is_mdns_enabled);
                 CREATE_BOOL_BITFIELD(is_ntp_client_enabled);
                 CREATE_BOOL_BITFIELD(is_syslog_enabled);
                 CREATE_BOOL_BITFIELD(is_web_server_enabled);
                 CREATE_BOOL_BITFIELD(is_mqtt_enabled);
-                CREATE_BOOL_BITFIELD(is_rest_api_enabled); // 15
-                CREATE_BOOL_BITFIELD(is_serial2tcp_enabled);
+                CREATE_BOOL_BITFIELD(is_rest_api_enabled);
+                CREATE_BOOL_BITFIELD(is_serial2tcp_enabled); // 15
                 CREATE_BOOL_BITFIELD(is_webui_enabled);
                 CREATE_BOOL_BITFIELD(is_ssdp_enabled);
                 CREATE_BOOL_BITFIELD(is_netbios_enabled);
-                CREATE_BOOL_BITFIELD(is_log_login_failures_enabled); // 20
-                uint32_t _reserved: 11; // 31
+                CREATE_BOOL_BITFIELD(is_log_login_failures_enabled); // 19
+                uint32_t _reserved: 12; // 31
 
                 uint8_t getWifiMode() const {
                     return get_wifi_mode(*this);

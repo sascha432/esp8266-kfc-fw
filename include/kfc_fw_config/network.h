@@ -80,12 +80,14 @@ namespace KFCConfigurationClasses {
         class SettingsConfig {
         public:
             struct __attribute__packed__ StationModeSettings {
+                static constexpr uint32_t kGlobalDNS = ~0U;
+
                 using Type = StationModeSettings;
                 CREATE_IPV4_ADDRESS(local_ip, 0);
                 CREATE_IPV4_ADDRESS(subnet, kCreateIPv4Address(255, 255, 255, 0));
                 CREATE_IPV4_ADDRESS(gateway, kCreateIPv4Address(192, 168, 4, 1));
-                CREATE_IPV4_ADDRESS(dns1, kCreateIPv4Address(8, 8, 8, 8));
-                CREATE_IPV4_ADDRESS(dns2, kCreateIPv4Address(8, 8, 4, 4));
+                CREATE_IPV4_ADDRESS(dns1, kGlobalDNS);
+                CREATE_IPV4_ADDRESS(dns2, kGlobalDNS);
                 CREATE_UINT8_BITFIELD_MIN_MAX(priority, 6, 0, 63, 1, 1);
                 CREATE_UINT8_BITFIELD_MIN_MAX(enabled, 1, false, true, 1, false);
                 CREATE_UINT8_BITFIELD_MIN_MAX(dhcp, 1, false, true, 1, false);
@@ -100,13 +102,19 @@ namespace KFCConfigurationClasses {
                     return gateway;
                 }
                 IPAddress getDns1() const {
-                    return dns1;
+                    return (dns1 == kGlobalDNS) ? Network::Settings::getConfig().global_dns1 : dns1;
                 }
                 IPAddress getDns2() const {
-                    return dns2;
+                    return (dns2 == kGlobalDNS) ? Network::Settings::getConfig().global_dns2 : dns2;
                 }
                 uint8_t getPriority() const {
                     return priority;
+                }
+                String getPriorityStr() const {
+                    if (getPriority() == 0) {
+                        return F("AUTO");
+                    }
+                    return String(getPriority());
                 }
                 bool isEnabled() const {
                     return enabled;
@@ -125,10 +133,12 @@ namespace KFCConfigurationClasses {
                 CREATE_IPV4_ADDRESS(global_dns1, kCreateIPv4Address(8, 8, 8, 8));
                 CREATE_IPV4_ADDRESS(global_dns2, kCreateIPv4Address(8, 8, 4, 4));
                 StationModeSettings stations[kNumStations];
+                uint8_t activeNetwork;
 
                 StationsConfig() {
                     stations[0].enabled = true;
                     for(uint8_t i = 0; i < kNumStations; i++) {
+                        stations[i].local_ip = createIPv4Address(192, 168, 4, (i * 10) + 10);
                         stations[i].priority = (i * 7) + 1;
                     }
                 }
@@ -139,6 +149,8 @@ namespace KFCConfigurationClasses {
 
 
         class Settings : public SettingsConfig, public ConfigGetterSetter<SettingsConfig::StationsConfig, _H(MainConfig().network.settings.cfg) CIF_DEBUG(, &handleStationsConfig)> {
+        public:
+            static constexpr uint32_t kGlobalDNS = SettingsConfig::StationModeSettings::kGlobalDNS;
         public:
             static void defaults();
         };

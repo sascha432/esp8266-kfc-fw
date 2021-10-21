@@ -283,7 +283,9 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     }
     // __LDBG_printf("%s", ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str(), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
 
-    PrintString msg = System::Flags::getConfig().is_station_mode_dhcp_enabled ? F("DHCP") : F("Static configuration");
+    auto networkCfg = Network::Settings::getConfig().stations[getWiFiConfigurationNum()];
+
+    PrintString msg = networkCfg.isDHCPEnabled() ? F("DHCP") : F("Static configuration");
     msg.print(F(": IP/Net "));
     if (IPAddress_isValid(event.ip)) {
         event.ip.printTo(msg);
@@ -1317,26 +1319,26 @@ bool KFCFWConfiguration::connectWiFi(StationConfigType configNum)
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
 
-        auto network = Network::WiFi::getNetworkConfig(_wifiNumActive);
+        auto network = Network::WiFi::getNetworkConfig(getWiFiConfigurationNum());
         bool result;
-        if (flags.is_station_mode_dhcp_enabled) {
+        if (network.isDHCPEnabled()) {
             result = WiFi.config(0U, 0U, 0U, 0U, 0U);
         }
         else {
             result = WiFi.config(network.getLocalIp(), network.getGateway(), network.getSubnet(), network.getDns1(), network.getDns2());
         }
         if (!result) {
-            setLastError(PrintString(F("Failed to configure Station Mode with %s"), flags.is_station_mode_dhcp_enabled ? PSTR("DHCP") : PSTR("static address")));
+            setLastError(PrintString(F("Failed to configure Station Mode with %s"), network.isDHCPEnabled() ? PSTR("DHCP") : PSTR("static address")));
             Logger_error(F("%s"), getLastError());
         }
         else {
 
-            if (WiFi.begin(Network::WiFi::getSSID(_wifiNumActive), Network::WiFi::getPassword(_wifiNumActive)) == WL_CONNECT_FAILED) {
+            if (WiFi.begin(Network::WiFi::getSSID(getWiFiConfigurationNum()), Network::WiFi::getPassword(getWiFiConfigurationNum())) == WL_CONNECT_FAILED) {
                 setLastError(F("Failed to start Station Mode"));
                 Logger_error(F("%s"), getLastError());
             }
             else {
-                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(_wifiNumActive));
+                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(getWiFiConfigurationNum()));
                 station_mode_success = true;
             }
         }

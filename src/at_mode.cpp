@@ -334,7 +334,34 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<filename>", "Delete file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<filename>,<new filename>", "Rename file");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|false>,<subdirs=true|false>]]", "List files and directories");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using FS.openDir()");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off|ap_standby|wimo>][,<wimo-mode 0=off|1=STA|2=AP|3=STA+AP>|clear[_flash]|diag[nostics]]", "Modify WiFi settings, wimo sets mode and reboots");
+
+// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "[<reset|on|off|ap_on|ap_off|ap_standby|wimo|list|cfg>][,<wimo-mode 0=off|1=STA|2=AP|3=STA+AP>|clear[_flash]|diag[nostics]]", "Modify WiFi settings, wimo sets mode and reboots");
+
+enum class WiFiCommandsType : uint8_t {
+    RESET = 0,
+    ST_ON,
+    ST_OFF,
+    ST_LIST,
+    ST_CFG,
+    AP_ON,
+    AP_OFF,
+    AP_STBY,
+    DIAG,
+};
+
+#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag"
+
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Manage WiFi\n"
+    "    reset                                       Reset WiFi connection\n"
+    "    on                                          Enable WiFi station mode\n"
+    "    off                                         Disable WiFi station mode\n"
+    "    list[,<show passwords>]                     List WiFi networks. \n"
+    "    cfg,[<...>]                                 Configure WiFi network\n"
+    "    ap_on                                       Enable WiFi AP mode\n"
+    "    ap_off                                      Disable WiFi AP mode\n"
+    "    ap_standby                                  Set AP to stand-by mode (turns AP mode on if station mode cannot connect)\n"
+    "    diag                                        Print diagnostic information\n"
+);
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
@@ -1255,6 +1282,47 @@ static uintptr_t translateAddress(String str) {
     return (uintptr_t)~0;
 }
 
+void at_mode_print_WiFi_info(AtModeArgs &args, uint8_t num, const Network::WiFi::StationModeSettings &cfg, bool showPassword = false)
+{
+    auto ssid = Network::WiFi::getSSID(num);
+    bool isConfigured = (ssid && *ssid && cfg.isEnabled());
+    bool isActive = (config.getWiFiConfigurationNum() == num);
+
+    constexpr size_t kLineLength = 42;
+    char line[kLineLength + 1];
+    std::fill(std::begin(line), std::end(line), '-');
+    line[kLineLength] = 0;
+    args.print(F("%s"), line);
+
+    args.print(F("Connection #%u%s"),
+        num,
+        isConfigured ? PrintString(F(" (Priority %s%s)"), cfg.getPriorityStr().c_str(), isActive ? (WiFi.isConnected() ? PSTR(", connected") : PSTR(", active")) : emptyString.c_str()).c_str() : PSTR(" (not configured)")
+    );
+    if (isConfigured) {
+        if (ssid && *ssid) {
+            args.print(    F("SSID      %s"), (ssid && *ssid) ? ssid : PSTR("<none>"));
+            args.print(    F("Password  %s"), showPassword ? Network::WiFi::getPassword(num) : PSTR("*********"));
+        }
+        if (cfg.isDHCPEnabled()) {
+            if (isActive && WiFi.isConnected()) {
+                args.print(F("DHCP IP   %s"), WiFi.localIP().toString().c_str());
+                args.print(F("Subnet    %s"), WiFi.subnetMask().toString().c_str());
+                args.print(F("Gateway   %s"), WiFi.gatewayIP().toString().c_str());
+                args.print(F("DNS       %s, %s"), WiFi.dnsIP(0).toString().c_str(), WiFi.dnsIP(1).toString().c_str());
+            }
+            else {
+                args.print(F("DHCP client enabled"));
+            }
+        }
+        else {
+            args.print(    F("Static IP %s"), cfg.getLocalIp().toString().c_str());
+            args.print(    F("Subnet    %s"), cfg.getSubnet().toString().c_str());
+            args.print(    F("Gateway   %s"), cfg.getGateway().toString().c_str());
+            args.print(    F("DNS       %s, %s"), cfg.getDns1().toString().c_str(), cfg.getDns2().toString().c_str());
+        }
+    }
+}
+
 void at_mode_serial_handle_event(String &commandString)
 {
     auto &output = Serial;
@@ -1965,74 +2033,140 @@ void at_mode_serial_handle_event(String &commandString)
         }
     #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
-        if (!args.empty()) {
-            auto arg0 = args.toString(0);
-            if (arg0.endsWithIgnoreCase(F("wimo"))) {
-                args.print(F("Setting WiFi mode and restarting device..."));
-                System::Flags::getWriteableConfig().setWifiMode(args.toUint8(1));
-                config.write();
-                config.restartDevice();
-            }
-            else if (arg0.equalsIgnoreCase(FSPGM(on))) {
-                args.print(F("enabling station mode"));
-                WiFi.enableSTA(true);
-                WiFi.reconnect();
-            }
-            else if (arg0.equalsIgnoreCase(FSPGM(off))) {
-                args.print(F("disabling station mode"));
-                WiFi.enableSTA(false);
-            }
-            else if (arg0.equalsIgnoreCase(F("ap_on"))) {
-                args.print(F("enabling AP mode"));
-                WiFi.enableAP(true);
-            }
-            else if (arg0.equalsIgnoreCase(F("ap_off"))) {
-                args.print(F("disabling AP mode"));
-                WiFi.enableAP(false);
-            }
-            else if (arg0.equalsIgnoreCase(F("ap_standby"))) {
-                args.print(F("disabling AP mode (standby is on)"));
-                WiFi.enableAP(false);
-                auto &flags = System::Flags::getWriteableConfig();
-                flags.is_softap_standby_mode_enabled = true;
-                flags.is_softap_enabled = false;
-                config.write();
-                WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModehandler);
-            }
-            else if (arg0.startsWithIgnoreCase(F("clear"))) {
-                #if ESP8266
-                    station_config wifiConfig;
-                    auto result = wifi_station_set_config(&wifiConfig);
-                    args.print(F("clearing default config from flash... %s"), result ? PSTR("success") : PSTR("failure"));
-                #endif
-                config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
-                config.printDiag(args.getStream(), F("+WIFI: "));
-            }
-            else if (arg0.startsWithIgnoreCase(F("diag"))) {
-                config.printDiag(args.getStream(), F("+WIFI: "));
-            }
-            else if (arg0.equalsIgnoreCase(F("reset"))) {
-                config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
-                config.printDiag(args.getStream(), F("+WIFI: "));
+
+        if (args.requireArgs(1)) {
+            auto cmd = static_cast<WiFiCommandsType>(stringlist_find_P_P(PSTR(WIFI_COMMANDS), args.get(0), '|'));
+            switch(cmd) {
+                case WiFiCommandsType::RESET:
+                    config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
+                    break;
+                case WiFiCommandsType::ST_ON:
+                    args.print(F("enabling station mode"));
+                    WiFi.enableSTA(true);
+                    WiFi.reconnect();
+                    break;
+                case WiFiCommandsType::ST_OFF:
+                    args.print(F("disabling station mode"));
+                    WiFi.enableSTA(false);
+                    break;
+                case WiFiCommandsType::ST_LIST: {
+                        auto network = Network::Settings::getConfig();
+                        for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
+                            at_mode_print_WiFi_info(args, i, network.stations[i], args.isTrue(1));
+                        }
+                    }
+                    break;
+                case WiFiCommandsType::ST_CFG: {
+                        if (args.size() < 3) {
+                            args.print(F("+WIFI=cfg,<connection=%u-%u>,<enable=1|disable=0|remove>,<SSID>,<password>[,<DHCP>|<IP>,<subnet>,<gateway>[,<DNS1|global>,<DNS2|global>]"),
+                                Network::WiFi::StationConfigType::CFG_0, Network::WiFi::StationConfigType::CFG_LAST
+                            );
+                            auto num = args.toIntMinMax<uint8_t>(1, 0, Network::WiFi::kNumStations - 1, config.getWiFiConfigurationNum());
+                            auto &network = Network::Settings::getWriteableConfig();
+                            auto &cfg = network.stations[num];
+                            if (args.startsWithIgnoreCase(2, F("remove"))) {
+                                args.print(F("removed SSID %s"), Network::WiFi::getSSID(num));
+                                cfg.enabled = false;
+                                Network::WiFi::setSSID(num, emptyString);
+                                Network::WiFi::setPassword(num, emptyString);
+                            }
+                            else {
+                                auto SSID = args.toString(3);
+                                auto password = args.toString(4);
+                                auto ip = args.toString(5);
+                                cfg.enabled = args.isTrue(2);
+                                if (ip.startsWithIgnoreCase(F("dhcp"))) {
+                                    cfg.dhcp = true;
+                                }
+                                else {
+                                    auto subnet = args.toString(6);
+                                    auto gateway = args.toString(7);
+                                    auto dns1 = args.toString(8);
+                                    auto dns2 = args.toString(9);
+                                    cfg.dhcp = false;
+                                    cfg.local_ip = IPAddress().fromString(ip);
+                                    cfg.subnet = IPAddress().fromString(subnet);
+                                    cfg.gateway = IPAddress().fromString(gateway);
+                                    cfg.dns1 = dns1.startsWithIgnoreCase(F("glob")) ? Network::Settings::kGlobalDNS : IPAddress().fromString(dns1);
+                                    cfg.dns2 = dns2.startsWithIgnoreCase(F("glob")) ? Network::Settings::kGlobalDNS : IPAddress().fromString(dns2);
+                                }
+                                Network::WiFi::setSSID(num, SSID);
+                                Network::WiFi::setPassword(num, password);
+                                network.activeNetwork = num;
+                                config.write();
+
+                                at_mode_print_WiFi_info(args, num, network.stations[num]);
+                                config.reconfigureWiFi(F("reconfiguring WiFi adapter"), static_cast<Network::WiFi::StationConfigType>(network.activeNetwork));
+                            }
+                        }
+                    }
+                    break;
+                case WiFiCommandsType::AP_ON:
+                    args.print(F("enabling AP mode"));
+                    WiFi.enableAP(true);
+                    break;
+                case WiFiCommandsType::AP_OFF:
+                    args.print(F("disabling AP mode"));
+                    WiFi.enableAP(false);
+                    break;
+                case WiFiCommandsType::AP_STBY: {
+                        args.print(F("disabling AP mode (stand-by is enabled)"));
+                        WiFi.enableAP(false);
+                        auto &flags = System::Flags::getWriteableConfig();
+                        flags.is_softap_standby_mode_enabled = true;
+                        flags.is_softap_enabled = false;
+                        config.write();
+                        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModehandler);
+                    }
+                    break;
+                case WiFiCommandsType::DIAG:
+                    config.printDiag(args.getStream(), F("+WIFI: "));
+                    break;
             }
         }
 
-        auto flags = System::Flags::getConfig();
-        args.print(F("station mode %s, DHCP %s, SSID %s, connected %s, IP %s"),
-            (WiFi.getMode() & WIFI_STA) ? SPGM(on) : SPGM(off),
-            flags.is_station_mode_dhcp_enabled ? SPGM(on) : SPGM(off),
-            WiFi.SSID().c_str(),
-            WiFi.isConnected() ? SPGM(yes) : SPGM(no),
-            WiFi.localIP().toString().c_str()
-        );
-        args.print(F("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s"),
-            (flags.is_softap_enabled) ? ((flags.is_softap_standby_mode_enabled) ? ((WiFi.getMode() & WIFI_AP) ? SPGM(on) : PSTR("stand-by")) : SPGM(on)) : SPGM(off),
-            flags.is_softap_dhcpd_enabled ? SPGM(on) : SPGM(off),
-            Network::WiFi::getSoftApSSID(),
-            WiFi.softAPgetStationNum(),
-            Network::SoftAP::getConfig().getAddress().toString().c_str()
-        );
-    }
+
+            // // auto arg0 = args.toString(0);
+            // // if (arg0.endsWithIgnoreCase(F("wimo"))) {
+            // //     args.print(F("Setting WiFi mode and restarting device..."));
+            // //     System::Flags::getWriteableConfig().setWifiMode(args.toUint8(1));
+            // //     config.write();
+            // //     config.restartDevice();
+            // // }
+            // else if (arg0.startsWithIgnoreCase(F("clear"))) {
+            //     #if ESP8266
+            //         station_config wifiConfig;
+            //         auto result = wifi_station_set_config(&wifiConfig);
+            //         args.print(F("clearing default config from flash... %s"), result ? PSTR("success") : PSTR("failure"));
+            //     #endif
+            //     config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
+            //     config.printDiag(args.getStream(), F("+WIFI: "));
+            // }
+            // else if (arg0.startsWithIgnoreCase(F("diag"))) {
+
+            // }
+            // else if (arg0.equalsIgnoreCase(F("reset"))) {
+            //     config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
+            //     config.printDiag(args.getStream(), F("+WIFI: "));
+            // }
+        }
+
+        // auto flags = System::Flags::getConfig();
+        // args.print(F("station mode %s, DHCP %s, SSID %s, connected %s, IP %s"),
+        //     (WiFi.getMode() & WIFI_STA) ? SPGM(on) : SPGM(off),
+        //     flags.is_station_mode_dhcp_enabled ? SPGM(on) : SPGM(off),
+        //     WiFi.SSID().c_str(),
+        //     WiFi.isConnected() ? SPGM(yes) : SPGM(no),
+        //     WiFi.localIP().toString().c_str()
+        // );
+        // args.print(F("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s"),
+        //     (flags.is_softap_enabled) ? ((flags.is_softap_standby_mode_enabled) ? ((WiFi.getMode() & WIFI_AP) ? SPGM(on) : PSTR("stand-by")) : SPGM(on)) : SPGM(off),
+        //     flags.is_softap_dhcpd_enabled ? SPGM(on) : SPGM(off),
+        //     Network::WiFi::getSoftApSSID(),
+        //     WiFi.softAPgetStationNum(),
+        //     Network::SoftAP::getConfig().getAddress().toString().c_str()
+        // );
+    // }
     #if RTC_SUPPORT
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
             if (!args.empty()) {

@@ -8,8 +8,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 ### ESP8266
 
-1M with most features activated, no OTA updates
-2M with OTA
+1M with most features activated, no OTA updates<br>2M with OTA
 
 ### ESP32
 

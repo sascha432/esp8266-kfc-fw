@@ -96,7 +96,10 @@ void WiFi_get_status(Print &out)
 
             // if (wifi_station_dhcpc_status() == DHCP_STARTED) {
 
-            if (KFCConfigurationClasses::System::Flags::getConfig().is_station_mode_dhcp_enabled) {
+            auto network = KFCConfigurationClasses::Network::Settings::getConfig().stations[config.getWiFiConfigurationNum()];
+
+            if (network.isDHCPEnabled()) {
+            // if (KFCConfigurationClasses::System::Flags::getConfig().is_station_mode_dhcp_enabled) {
                 out.print(F(HTML_S(br) "DHCP client running"));
             }
     #elif defined(ESP32)

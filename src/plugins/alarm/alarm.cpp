@@ -45,7 +45,7 @@ AlarmPlugin::AlarmPlugin() :
     MQTTComponent(MQTT::ComponentType::LIGHT),
     _nextAlarm(0),
     _alarmState(false),
-    _color(-1)
+    _color(0xff0000)
 {
     REGISTER_PLUGIN(this, "AlarmPlugin");
 }

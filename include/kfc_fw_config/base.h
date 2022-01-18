@@ -355,7 +355,7 @@ namespace KFCConfigurationClasses {
             storeBinaryConfig(kConfigStructHandle, &params, sizeof(ConfigStructType));
         }
 
-        static ConfigStructType & getWriteableConfig()
+        static ConfigStructType &getWriteableConfig()
         {
             __CDBG_printf("getWriteableConfig=%04x name=%s size=%u", kConfigStructHandle, *handleName, sizeof(ConfigStructType));
             REGISTER_HANDLE_NAME(*handleName, __DBG__TYPE_W_GET);

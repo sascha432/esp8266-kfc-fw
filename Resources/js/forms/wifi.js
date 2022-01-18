@@ -23,11 +23,18 @@ $(function () {
             }
         }).trigger('change');
 
+    }
+
+    // wifi.html and network.html
+    if ($('#network_dialog').length) {
+
         $('#network_dialog').on('show.bs.modal', function () {
             var SID = $.getSessionId();
             var modal = $(this)
             var reload_timer = null;
-            var selected_network = $('#wssid').val();
+            var input_field = $('.wifi_scan_button').closest('.form-group').find('input');
+            var password_field = $('.wifi_scan_button').closest('.form-group').next().find('input');
+            var selected_network = input_field.val();
             var mbody = modal.find('.modal-body');
             modal.find('.btn-primary').prop('disabled', true);
             mbody.find('.networks').hide();
@@ -43,7 +50,7 @@ $(function () {
             }
             function check_scan() {
                 $.get('/scan-wifi?SID=' + SID + '&id=' + random_str(), function (data) {
-                    console.log(data);
+                    // console.log(data);
                     if (data.pending) {
                         window.setTimeout(check_scan, 1000);
                     } else {
@@ -110,10 +117,10 @@ $(function () {
                                     window.clearTimeout(reload_timer);
                                     reload_timer = null;
                                     if (selected_network) {
-                                        $('#wssid').val(selected_network);
-                                        $('#wpwd').focus().select();
+                                        input_field.val(selected_network);
+                                        password_field.focus().select();
                                     }
-                                    selected_network = $('#wssid').val();
+                                    selected_network = input_field.val();
                                 });
                                 modal.modal('hide');
                             });

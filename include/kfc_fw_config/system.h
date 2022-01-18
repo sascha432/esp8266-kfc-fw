@@ -84,7 +84,11 @@ namespace KFCConfigurationClasses {
                 using Type = DeviceConfig_t;
 
                 uint32_t config_version;
+                // time in seconds before the system reboots after entering safe mode either due to series of crashes or many short power failures
                 CREATE_UINT16_BITFIELD_MIN_MAX(safe_mode_reboot_timeout_minutes, 10, 5, 900, 0, 1);
+                // time in minutes until the build reboots, if the devices was reset quickly 3 or 5 times in a row. some might have a reset button that
+                // triggers the config mode if pressed for mor then 5-10 seconds
+                CREATE_UINT16_BITFIELD_MIN_MAX(init_config_ap_mode_timeout, 6, 0, 63, 0, 60);
                 CREATE_UINT16_BITFIELD_MIN_MAX(zeroconf_timeout, 16, 1000, 60000, 15000, 1000);
                 CREATE_UINT16_BITFIELD_MIN_MAX(webui_cookie_lifetime_days, 10, 3, 720, 90, 30);
                 CREATE_UINT16_BITFIELD(zeroconf_logging, 1);

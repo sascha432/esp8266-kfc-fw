@@ -119,6 +119,9 @@ namespace KFCConfigurationClasses {
                 bool isEnabled() const {
                     return enabled;
                 }
+                bool isEnabled(int8_t num) const {
+                    return enabled && *Network::WiFi::getSSID(num);
+                }
                 bool isDHCPEnabled() const {
                     return dhcp;
                 }
@@ -135,7 +138,12 @@ namespace KFCConfigurationClasses {
                 StationModeSettings stations[kNumStations];
                 uint8_t activeNetwork;
 
-                StationsConfig() {
+                StationsConfig() :
+                    global_dns1(kDefaultValueFor_global_dns1),
+                    global_dns2(kDefaultValueFor_global_dns2),
+                    stations{},
+                    activeNetwork(0)
+                {
                     stations[0].enabled = true;
                     for(uint8_t i = 0; i < kNumStations; i++) {
                         stations[i].local_ip = createIPv4Address(192, 168, 4, (i * 10) + 10);

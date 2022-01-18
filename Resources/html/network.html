@@ -29,7 +29,37 @@
     <div class="container">
         <form method="POST" action="%SELF_URI%">
             %FORM_HTML%
-        </form>
+
+            <div class="form-help-block">
+                <div data-target="#prio_0">1 is the highest priority, 63 the lowest. 0 is auto detect link quality, which increases the time to connect</div>
+            </div>
+
+            <div class="modal" tabindex="-1" role="dialog" id="network_dialog">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">WiFi Networks <span id="wifi_networks_title"></span></h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="networks">
+                            </div>
+                            <div class="scanning text-center">
+                                <p>Scanning for available networks...</p>
+                                <img src="images/spinner.gif" width="64" height="64">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary">Select Network</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            </form>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>

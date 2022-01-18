@@ -62,11 +62,12 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
     }
     else if (isCreateFormCallbackType(type)) {
 
+        auto scanWiFiSuffix = F("<button class=\"btn btn-default wifi_scan_button\" type=\"button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>");
         auto &flags = System::Flags::getWriteableConfig();
 
         if (formName.equals(FSPGM(wifi))) {
 
-            auto &network = Network::Settings::getWriteableConfig();
+            // auto &network = Network::Settings::getWriteableConfig();
             auto &softAp = Network::SoftAP::getWriteableConfig();
             FormUI::Container::List wifiModes(createWifiModes());
 
@@ -114,31 +115,13 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &stationGroup = modeGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode), true);
 
-            auto scanWiFiSuffix = F("<button class=\"btn btn-default\" type=\"button\" id=\"wifi_scan_button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>");
-            PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WIFI_STATION_MAX_NUM, en, prio, ssid, pass);
+            form.addStringGetterSetter(F("st_ssid"), Network::WiFi::getSSID0, Network::WiFi::setSSID0);
+            Network::WiFi::addSSID0LengthValidator(form);
+            form.addFormUI(FSPGM(SSID), FormUI::SuffixHtml(scanWiFiSuffix));
 
-            for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
-
-                auto &enabled = form.addObjectGetterSetter(F_VAR(en, i), FormGetterSetter(network.stations[i], enabled));
-                form.addFormUI(FormUI::Type::HIDDEN);
-
-                form.addObjectGetterSetter(F_VAR(prio, i), FormGetterSetter(network.stations[i], priority)).setOptional(true);
-                form.addFormUI(F("Priority"), FormUI::PlaceHolder(F("Auto")), FormUI::CheckboxButtonSuffix(enabled, F("Enabled")));
-                network.stations[i].addRangeValidatorFor_priority(form, true);
-
-                form.addCallbackSetter<String>(F_VAR(ssid, i), String(Network::WiFi::getSSID(i)), [i](const String &value, Field::BaseField &) {
-                    Network::WiFi::setSSID(i, value);
-                }).setOptional(true);
-                Network::WiFi::addSSID0LengthValidator(form);
-                form.addFormUI(FSPGM(SSID), FormUI::SuffixHtml(scanWiFiSuffix));
-
-                form.addCallbackSetter(F_VAR(pass, i), String(Network::WiFi::getPassword(i)), [i](const String &value, Field::BaseField &) {
-                    Network::WiFi::setPassword(i, value);
-                }).setOptional(true);
-                Network::WiFi::addPassword0LengthValidator(form);
-                form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase, "Passphrase"));
-
-            }
+            form.addStringGetterSetter(F("st_pass"), Network::WiFi::getPassword0, Network::WiFi::setPassword0);
+            Network::WiFi::addPassword0LengthValidator(form);
+            form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase, "Passphrase"));
 
             stationGroup.end();
             auto &apModeGroup = form.addCardGroup(F("softap"), FSPGM(Access_Point), true);
@@ -198,16 +181,50 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(DNS_2));
             network.addHostnameValidatorFor_global_dns2(form);
 
-            auto stationGroup = &globalGroup.end().addCardGroup(FSPGM(station), FSPGM(Station_Mode), true);
+            PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WIFI_STATION_MAX_NUM, stm, en, prio, ssid, pass, dhcp, ip, sn, gw, dns1, dns2);
+
+            auto stationGroup = &globalGroup.end().addCardGroup(F_VAR(stm, 0), F("Station Mode - ") + String(Network::WiFi::getSSID0()), true);
 
             // form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
             // form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
 
-            PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WIFI_STATION_MAX_NUM, dhcp, ip, sn, gw, dns1, dns2);
-
             for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
 
-                stationGroup = &stationGroup->end().addCardGroup(FSPGM(station), FSPGM(Station_Mode), network.stations[i].isEnabled());
+                if (i > 0) {
+                    stationGroup = &stationGroup->end().addCardGroup(F_VAR(stm, i), F("Station Mode - ") + String(Network::WiFi::getSSID(i)), network.stations[i].isEnabled(i));
+                }
+
+                auto &stationEnabled = form.addObjectGetterSetter(F_VAR(en, i), FormGetterSetter(network.stations[i], enabled));
+                stationEnabled.setOptional(true);
+                form.addFormUI(FormUI::Type::HIDDEN);
+
+                form.addObjectGetterSetter(F_VAR(prio, i), FormGetterSetter(network.stations[i], priority)).setOptional(true);
+                form.addFormUI(F("Priority"), FormUI::Suffix(F("0-63")), FormUI::CheckboxButtonSuffix(stationEnabled, F("Enabled")));
+                network.stations[i].addRangeValidatorFor_priority(form, true);
+
+                form.addCallbackGetterSetter<String>(F_VAR(ssid, i), [i](String &str, Field::BaseField &, bool store) {
+                    if (store) {
+                        Network::WiFi::setSSID(i, str);
+                    }
+                    else {
+                        str = Network::WiFi::getSSID(i);
+                    }
+                    return true;
+                }, InputFieldType::TEXT).setOptional(true);
+                Network::WiFi::addSSID0LengthValidator(form);
+                form.addFormUI(FSPGM(SSID), FormUI::SuffixHtml(scanWiFiSuffix));
+
+                form.addCallbackGetterSetter<String>(F_VAR(pass, i), [i](String &str, Field::BaseField &, bool store) {
+                    if (store) {
+                        Network::WiFi::setPassword(i, str);
+                    }
+                    else {
+                        str = Network::WiFi::getPassword(i);
+                    }
+                    return true;
+                }, InputFieldType::TEXT).setOptional(true);
+                Network::WiFi::addPassword0LengthValidator(form);
+                form.addFormUI(FormUI::Type::PASSWORD, FSPGM(Passphrase));
 
                 form.addObjectGetterSetter(F_VAR(dhcp, i), FormGetterSetter(network.stations[i], dhcp)).setOptional(true);
                 form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());

@@ -127,34 +127,34 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
         #endif
         #if PING_MONITOR_SUPPORT
             case AutoDiscoveryENum::PING_MOINOTOR_SUCCESS:
-                if (discovery->create(this, F("monitor_success"), format)) {
+                if (discovery->create(this, F("success"), format)) {
                     discovery->addStateTopic(_getTopic());
-                    discovery->addValueTemplate(F("monitor_success"));
+                    discovery->addValueTemplate(F("success"));
                 }
                 break;
             case AutoDiscoveryENum::PING_MOINOTOR_FAILED:
-                if (discovery->create(this, F("monitor_failure"), format)) {
+                if (discovery->create(this, F("failure"), format)) {
                     discovery->addStateTopic(_getTopic());
-                    discovery->addValueTemplate(F("monitor_failure"));
+                    discovery->addValueTemplate(F("failure"));
                 }
                 break;
             case AutoDiscoveryENum::PING_MOINOTOR_AVG_RESP_TIME:
-                if (discovery->create(this, F("monitor_avg_resp_time"), format)) {
+                if (discovery->create(this, F("avg_resp_time"), format)) {
                     discovery->addStateTopic(_getTopic());
-                    discovery->addValueTemplate(F("monitor_avg_resp_time"));
+                    discovery->addValueTemplate(F("avg_resp_time"));
                     discovery->addUnitOfMeasurement(F("ms"));
                 }
                 break;
             case AutoDiscoveryENum::PING_MOINOTOR_RCVD_PACKETS:
-                if (discovery->create(this, F("monitor_rcvd_pkts"), format)) {
+                if (discovery->create(this, F("rcvd_pkts"), format)) {
                     discovery->addStateTopic(_getTopic());
-                    discovery->addValueTemplate(F("monitor_rcvd_pkts"));
+                    discovery->addValueTemplate(F("rcvd_pkts"));
                 }
                 break;
             case AutoDiscoveryENum::PING_MOINOTOR_LOST_PACKETS:
-                if (discovery->create(this, F("monitor_lost_pkts"), format)) {
+                if (discovery->create(this, F("lost_pkts"), format)) {
                     discovery->addStateTopic(_getTopic());
-                    discovery->addValueTemplate(F("monitor_lost_pkts"));
+                    discovery->addValueTemplate(F("lost_pkts"));
                 }
                 break;
         #endif

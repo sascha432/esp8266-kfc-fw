@@ -149,7 +149,11 @@ void SyslogTCP::_connect()
         _freeClient();
         return;
     }
-    __LDBG_printf("connected=%u port=%u connecting=%u can_send=%u state=%s", _client->connected(), _port, _client->connecting(), _client->canSend(), _client->stateToString());
+    #if DEBUG_SYSLOG
+        if (_client) {
+            __LDBG_printf("connected=%u port=%u connecting=%u can_send=%u state=%s", _client->connected(), _port, _client->connecting(), _client->canSend(), _client->stateToString());
+        }
+    #endif
     _allocClient();
 
     #if ASYNC_TCP_SSL_ENABLED

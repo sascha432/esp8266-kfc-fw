@@ -134,13 +134,14 @@ void WiFi_get_status(Print &out)
         #error Platform not supported
     #endif
 
-            out.printf_P(PSTR(HTML_S(br) "IP Address/Network %s / %s " HTML_S(br) "Gateway %s DNS %s, %s"),
+            out.printf_P(PSTR(HTML_S(br) "IP Address/Network %s / %s " HTML_S(br) "Gateway %s DNS %s, %s" HTML_S(br) "MAC Address "),
                 WiFi.localIP().toString().c_str(),
                 WiFi.subnetMask().toString().c_str(),
                 WiFi.gatewayIP().toString().c_str(),
                 WiFi.dnsIP().toString().c_str(),
                 WiFi.dnsIP(1).toString().c_str()
             );
+            out.print(WiFi.macAddress());
     }
 
     if (mode & WIFI_AP_STA) {

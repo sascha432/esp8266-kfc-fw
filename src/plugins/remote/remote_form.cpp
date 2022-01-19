@@ -107,7 +107,8 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
                 form.addCallbackGetterSetter<String>(F_VAR(bn, i), [i](String &str, Field::BaseField &, bool store) {
                     if (store) {
                         Plugins::RemoteControl::setName(i, str.c_str());
-                    } else {
+                    }
+                    else {
                         str = Plugins::RemoteControl::getName(i);
                     }
                     return true;

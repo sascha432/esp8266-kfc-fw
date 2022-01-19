@@ -70,8 +70,8 @@ namespace RemoteControl {
     };
 
     //using ComboActionType = Plugins::RemoteControl::ComboAction_t;
-    using MultiClickType = KFCConfigurationClasses::Plugins::RemoteControl::MultiClick_t;
-    using ActionType = KFCConfigurationClasses::Plugins::RemoteControl::Action_t;
+    using MultiClickType = KFCConfigurationClasses::Plugins::RemoteControlConfigNS::RemoteControlConfig::MultiClick_t;
+    using ActionType = KFCConfigurationClasses::Plugins::RemoteControlConfigNS::RemoteControlConfig::Action_t;
 
     class Base;
 

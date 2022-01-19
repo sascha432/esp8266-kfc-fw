@@ -609,6 +609,9 @@ namespace MQTT {
             // set availability topic
             publish(MQTT_AVAILABILITY_TOPIC, true, MQTT_AVAILABILITY_TOPIC_ONLINE);
         #endif
+        #if MQTT_SET_LAST_WILL_MODE != 2 && IOT_REMOTE_CONTROL == 1
+            #error remote control requires MQTT_SET_LAST_WILL_MODE == 2 for MQTT_AVAILABILITY_TOPIC
+        #endif
 
         #if MQTT_AUTO_DISCOVERY
             _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();

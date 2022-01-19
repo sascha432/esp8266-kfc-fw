@@ -512,7 +512,7 @@ namespace PinMonitor {
                                     eventNum++;
                                 #endif
                                 auto &pin = *reinterpret_cast<SimpleHardwarePin *>(pinPtr.get());
-                                SimpleHardwarePin::Events event;
+                                SimpleHardwarePin::SimpleEventType event;
                                 {
                                     InterruptLock lock;
                                     event = pin.getEventsClear();

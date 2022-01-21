@@ -106,17 +106,17 @@ namespace ConfigurationHelper {
 
         // required capacity for length
         inline size_type sizeOf(size_type length) const {
-            return type() == ParameterType::STRING ? length + 1 : length;
+            return isString() ? (length + 1) : length;
         };
 
         // return length of data stored in eeprom
         // 32 bit aligned
         inline size_type next_offset() const {
-            return (_length + 3) & ~3;
+            return (size() + 3) & ~3;
         }
 
         inline size_type next_offset_unaligned() const {
-            return _length;
+            return size();
         }
 
         inline void setHandle(HandleType handle) {
@@ -231,6 +231,10 @@ public:
 
     inline ParameterType getType() const {
         return _param.type();
+    }
+
+    inline bool isString() const {
+        return _param.type() == ParameterType::STRING;
     }
 
     inline uint16_t getLength() const {

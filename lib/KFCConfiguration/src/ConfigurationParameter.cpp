@@ -187,11 +187,6 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
     }
     __LDBG_assert_panic(static_cast<const void *>(&(*iterator)) == static_cast<const void *>(this), "*iterator=%p this=%p", &(*iterator), this);
 
-    if (_param.length() != _param.next_offset_unaligned()) {
-        __DBG_printf_E("%s length changed", toString().c_str());
-        return true;
-    }
-
     #if ESP32
 
         size_t requiredSize = _param.length();

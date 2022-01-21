@@ -15,6 +15,9 @@
 #include <vector>
 #include <stl_ext/chunked_list.h>
 #include <stl_ext/is_trivially_copyable.h>
+#if HAVE_EMBEDIS
+#include <Embedis.h>
+#endif
 #if ESP8266
 #include <coredecls.h>
 #endif
@@ -480,7 +483,8 @@ private:
             return ESP.flashRead(offset, data, size);
         }
 
-        bool flashEraseSector(uint32_t sector) {
+        bool flashEraseSector(uint32_t sector)
+        {
             return ESP.flashEraseSector(sector);
         }
 
@@ -528,6 +532,7 @@ public:
     unsigned long getLastReadAccess() const {
         return _readAccess;
     }
+
     void setLastReadAccess() {
         _readAccess = millis();
     }

@@ -170,7 +170,7 @@ Configuration::WriteResultType Configuration::write()
         }
 
         if (header) {
-            __DBG_printf("copying existing copy");
+            __DBG_printf("copying existing data");
             // check dirty data for changes
             bool dirty = false;
             for (auto &parameter : _params) {
@@ -196,17 +196,17 @@ Configuration::WriteResultType Configuration::write()
                 auto param = parameter._getParam();
                 if (parameter._getParam().isWriteable()) {
                     // update length and remove writeable flag
-                    __LDBG_printf("writable: len=%u next_offset=%u", param._writeable->length(),  parameter._getParam().next_offset());
+                    __LDBG_printf("writable: len=%u size=%u next_offset=%u", param._writeable->length(), param._writeable->size(), parameter._getParam().next_offset());
                     param._length = param._writeable->length();
                     param._is_writeable = false;
                 }
                 // write parameter headers
-                __LDBG_printf("write_header: %s ofs=%d", parameter.toString().c_str(), buffer.length() + kParamsOffset);
+                __LDBG_printf("write_header: %s ofs=%d buflen=%u", parameter.toString().c_str(), kParamsOffset, buffer.length());
                 buffer.push_back(param._header);
             }
 
             #if DEBUG_CONFIGURATION
-                if ((buffer.length() & 3)) {
+                if ((buffer.length() & 3) != 0) {
                     __DBG_panic("buffer=%u not aligned", buffer.length());
                 }
             #endif
@@ -222,11 +222,21 @@ Configuration::WriteResultType Configuration::write()
                     // write new data
                     auto len = param._writeable->length();
                     buffer.write(param._writeable->begin(), len);
+                    // fill up to size
+                    auto size = param._writeable->size();
+                    while (len < size) {
+                        buffer.write(0);
+                        len++;
+                    }
+
+// __LDBG_printf("write_data: len=%u size=%u ofs=%u", len, param._writeable->size(), (len & 3));
+
                     // align to match param.next_offset()
                     while((len & 3) != 0) {
                         buffer.write(0);
                         len++;
                     }
+                    oldAddress += len;
                 }
                 else {
                     // data did not change
@@ -242,11 +252,11 @@ Configuration::WriteResultType Configuration::write()
                         __DBG_panic("failed to read flash address=%u len=%u", oldAddress, len);
                         return WriteResultType::READING_PREV_CONF_FAILED;
                     }
+                    // next_offset() returns the offset of the data stored in the flash memory, not the current data in param
+                    oldAddress += param.next_offset();
                 }
-                // next_offset() returns the offset of the data stored in the flash memory, not the current data in param
-                oldAddress += param.next_offset();
                 ConfigurationHelper::deallocate(parameter);
-                parameter._getParam() = {};
+                parameter._getParam() = ConfigurationHelper::ParameterInfo();
             }
 
             if (buffer.length() > _size) {
@@ -356,7 +366,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
     #endif
 
     uint16_t dataOffset = getDataOffset(_params.size());
-    output.printf_P(PSTR("Configuration:\noffset=%d data_ofs=%u params=%d len=%d version=%u\n"),
+    output.printf_P(PSTR("Configuration:\noffset=%d data_ofs=%u size=%d len=%d version=%u\n"),
         kHeaderOffset,
         dataOffset,
         _params.size(),
@@ -392,8 +402,8 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
             #else
                 output.printf_P(PSTR("%04x: "), param.getHandle());
             #endif
-            output.printf_P(PSTR("type=%s ofs=%d[+%u] len=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()),
-                dataOffset, param.next_offset(), parameter.getLength(), parameter.isWriteable()
+            output.printf_P(PSTR("type=%s ofs=%d[+%u] size=%d dirty=%u value: "), (const char *)parameter.getTypeString(parameter.getType()),
+                dataOffset, param.next_offset(), parameter._param.size(), parameter.isWriteable()
             );
             parameter.dump(output);
         }
@@ -532,7 +542,7 @@ bool Configuration::_readParams()
             auto endAddress = address + header.length();
             auto crc = header.initCrc();
             uint16_t paramIdx = 0;
-            uint32_t buf[128 / sizeof(uint32_t)];
+            uint32_t buf[512 / sizeof(uint32_t)]; // max. argument length 512 byte
             while(address < endAddress) {
                 auto read = std::min<size_t>(endAddress - address, sizeof(buf));
                 if (!flashRead(address, buf, read)) { // using uint32_t * since buf is aligned
@@ -551,7 +561,7 @@ bool Configuration::_readParams()
                         param._header = *reinterpret_cast<uint32_t *>(ptr);
                     }
                     else {
-                        memcpy(&param._header, ptr, sizeof(param._header));
+                        memmove_P(&param._header, ptr, sizeof(param._header));
                     }
                     ptr += sizeof(param._header);
 

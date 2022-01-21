@@ -13,7 +13,7 @@ namespace ConfigurationHelper {
         _buffer_start_words{},
         _buffer_end_word(0),
         _length(getParameterLength(parameter.getType(), length)),
-        _is_string(parameter.getType() == ParameterType::STRING),
+        _is_string(parameter.isString()),
         _is_allocated(false)
     {
         if (_length > _buffer_length()) {
@@ -36,7 +36,7 @@ namespace ConfigurationHelper {
 
     inline size_type WriteableData::size() const
     {
-        return _length + _is_string;
+        return _length + (_is_string ? 1 : 0);
     }
 
     inline size_type WriteableData::length() const
@@ -86,7 +86,7 @@ namespace ConfigurationHelper {
     inline void WriteableData::freeData()
     {
         // free _data pointer or clear _buffer
-        __LDBG_printf("free data=%p size=%u _is_allocated=%u", _data, size(), _is_allocated);
+        // __LDBG_printf("free data=%p size=%u _is_allocated=%u", _data, size(), _is_allocated);
         if (_is_allocated) {
             free(_data);
             _is_allocated = false;
@@ -97,7 +97,7 @@ namespace ConfigurationHelper {
 
     inline uint8_t *WriteableData::_buffer_begin() const
     {
-        return (uint8_t *)&_buffer_start_words[0];
+        return reinterpret_cast<uint8_t *>(const_cast<uint16_t *>(&_buffer_start_words[0]));
     }
 
     inline uint8_t *WriteableData::_buffer_end() const

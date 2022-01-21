@@ -2557,9 +2557,13 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
 
         auto version = System::Device::getConfig().config_version;
-        args.print(F("stored config version 0x%08x, %s"), version, SaveCrash::Data::FirmwareVersion(version).toString().c_str());
+        auto versionStr = SaveCrash::Data::FirmwareVersion(version).toString();
+        args.print(F("stored config version 0x%08x, %s"), version, versionStr.c_str());
 
-        if (args.equals(0, F("dirty"))) {
+        if (args.equalsIgnoreCase(0, F("json"))) {
+            config.exportAsJson(output, versionStr);
+        }
+        else if (args.equalsIgnoreCase(0, F("dirty"))) {
             config.dump(output, true);
         }
         else if (args.size() == 1) {

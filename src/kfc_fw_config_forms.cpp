@@ -185,9 +185,6 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto stationGroup = &globalGroup.end().addCardGroup(F_VAR(stm, 0), F("Station Mode - ") + String(Network::WiFi::getSSID0()), true);
 
-            // form.addObjectGetterSetter(F("st_dhcp"), flags, flags.get_bit_is_station_mode_dhcp_enabled, flags.set_bit_is_station_mode_dhcp_enabled);
-            // form.addFormUI(FSPGM(DHCP_Client), FormUI::BoolItems());
-
             for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
 
                 if (i > 0) {

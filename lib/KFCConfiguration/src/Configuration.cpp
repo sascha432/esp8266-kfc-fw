@@ -542,7 +542,8 @@ bool Configuration::_readParams()
             auto endAddress = address + header.length();
             auto crc = header.initCrc();
             uint16_t paramIdx = 0;
-            uint32_t buf[512 / sizeof(uint32_t)]; // max. argument length 512 byte
+            static constexpr size_t kMaxParameterSize = 512; // max. argument length 512 byte
+            uint32_t buf[kMaxParameterSize / sizeof(uint32_t)];
             while(address < endAddress) {
                 auto read = std::min<size_t>(endAddress - address, sizeof(buf));
                 if (!flashRead(address, buf, read)) { // using uint32_t * since buf is aligned

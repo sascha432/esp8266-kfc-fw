@@ -5,11 +5,34 @@
 $(function() {
     // network.html
     if ($('#network_settings').length) {
-        $('#st_dhcp').off('change').on('change', function() {
-            form_set_disabled($('#st_ip,#st_subnet,#st_gw,#st_dns1,#st_dns2'), parseInt($(this).val()) != 0);
-        }).trigger('change');
-        $('#ap_dhcpd').on('change', function() {
-            form_set_disabled($('#ap_dhcpds,#ap_dhcpde'), parseInt($(this).val()) == 0);
-        }).trigger('change');
+        function update_fields(num) {
+            var update_fields1 = function() {
+                var state = $('#en_' + num).val() == 1 ? false : true;
+                $('#prio_' + num).prop('disabled', state).next('input').prop('disabled', state);
+                $('#ssid_' + num + ',#pass_' + num + ',#dhcp_' + num).prop('disabled', state);
+                if (!state) {
+                    state = $('#dhcp_' + num).val() == 1 ? true : false;
+                }
+                $('#ip_' + num + ',#sn_' + num + ',#gw_' + num + ',#dns1_' + num + ',#dns2_' + num).prop('disabled', state);
+            };
+            $('#en_' + num).on('change', function() {
+                    update_fields1();
+                }
+            );
+            $('#_en_' + num).on('click', function() {
+                    update_fields1();
+                }
+            );
+            $('#dhcp_' + num).on('change', function() {
+                    update_fields1();
+                }
+            );
+            update_fields1();
+        }
+        for(var n = 0; n < 8; n++) {
+            if ($('#en_' + n).length) {
+                update_fields(n);
+            }
+        }
     }
 });

@@ -242,11 +242,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
                 network.stations[i].addHostnameValidatorFor_gateway(form);
 
                 form.addObjectGetterSetter(F_VAR(dns1, i), FormGetterSetter(network.stations[i], dns1)).setOptional(true);
-                form.addFormUI(FSPGM(DNS_1));
+                form.addFormUI(FSPGM(DNS_1), FormUI::PlaceHolder(F("Global DNS 1")));
                 network.stations[i].addHostnameValidatorFor_dns1(form);
 
                 form.addObjectGetterSetter(F_VAR(dns2, i), FormGetterSetter(network.stations[i], dns2)).setOptional(true);
-                form.addFormUI(FSPGM(DNS_2));
+                form.addFormUI(FSPGM(DNS_2), FormUI::PlaceHolder(F("Global DNS 2")));
                 network.stations[i].addHostnameValidatorFor_dns2(form);
 
             }

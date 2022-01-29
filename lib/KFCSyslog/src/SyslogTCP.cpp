@@ -16,6 +16,9 @@
 #include <debug_helper_disable.h>
 #endif
 
+// 876849
+// 876865
+
 SyslogTCP::SyslogTCP(const char *hostname, SyslogQueue *queue, const String &host, uint16_t port, bool useTLS) :
     Syslog(hostname, queue),
     _client(nullptr),
@@ -97,13 +100,14 @@ void SyslogTCP::clear()
         _disconnect();
     }
     _queueId = 0;
-    _buffer.clear();
     _ack = 0;
+    _buffer.clear();
     _queue.clear();
 }
 
 bool SyslogTCP::setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port)
 {
+    __DBG_printf("hostname=%s address=%s port=%u", hostname.c_str(), address.toString().c_str(), port);
     if (_host) {
         free(_host);
         _host = nullptr;
@@ -161,6 +165,7 @@ void SyslogTCP::_connect()
     #else
     #   define USE_TLS
     #endif
+
     bool result;
     if (_host) {
         result = _client->connect(_host, _port USE_TLS);
@@ -177,6 +182,7 @@ void SyslogTCP::_connect()
 void SyslogTCP::_allocClient()
 {
     _freeClient();
+
     _client = new AsyncClient();
     _client->onConnect(__onPoll, this);
     _client->onPoll(__onPoll, this);
@@ -216,14 +222,14 @@ void SyslogTCP::_freeClient()
 
 void SyslogTCP::_status(bool success, const __FlashStringHelper *reason)
 {
-#if DEBUG_SYSLOG
-    if (success) {
-        __DBG_printf("success queue_id=%u", _queueId);
-    }
-    else {
-        __DBG_printf("failure queue_id=%u reason=%s", _queueId, reason);
-    }
-#endif
+    #if DEBUG_SYSLOG
+        if (success) {
+            __DBG_printf("success queue_id=%u", _queueId);
+        }
+        else {
+            __DBG_printf("failure queue_id=%u reason=%s", _queueId, reason);
+        }
+    #endif
     if (hasQueue()) {
         if (!success) {
             /*
@@ -231,12 +237,20 @@ TODO fix memory leak
 D11616589 (SyslogTCP.cpp:225 <2448:1> _status): failed to send syslog message queue_id=18 reason=connect failed buffer=<5>Jul 13 18:50:17 KFCE12138 kfcfw: Disconnected from MQTT serve (119)
 D11617713 (SyslogTCP.cpp:225 <2256:1> _status): failed to send syslog message queue_id=18 reason=connect failed buffer=<5>Jul 13 18:50:17 KFCE12138 kfcfw: Disconnected from MQTT serve (119)
 D11618839 (SyslogTCP.cpp:225 <2064:1> _status): failed to send syslog message queue_id=18 reason=connect failed buffer=<5>Jul 13 18:50:17 KFCE12138 kfcfw: Disconnected from MQTT serve (119)            */
-            __DBG_printf("failed to send syslog message queue_id=%u reason=%s buffer=%s (%u)", _queueId, reason, printable_string(_buffer.c_str(), _buffer.length(), 64).c_str(), _buffer.length());
+            // __DBG_printf("failed to send syslog message size=%u queue_id=%u len=%u", _queue.size(), _queueId, reason, _buffer.length());
+            // __DBG_printf("failed to send syslog message size=%u queue_id=%u reason=%s buffer=%s (%u)", _queue.size(), _queueId, reason, printable_string(_buffer.c_str(), _buffer.length(), 64).c_str(), _buffer.length());
         }
-        _queue.remove(_queueId, success);
+        // _queue.remove(_queueId, success);
+        // TODO remove needs to update the queueid
+        // workaround is to clear the entire queue to avoid a memory leak
+        // _queueId = XXX
+
+        // clear entire queue
+        _queue.clear();
         _queueId = 0;
-        _ack = 0;
+
         _buffer.clear();
+        _ack = 0;
     }
 }
 
@@ -305,4 +319,3 @@ void SyslogTCP::_onDisconnect()
         _freeClient();
     }
 }
-

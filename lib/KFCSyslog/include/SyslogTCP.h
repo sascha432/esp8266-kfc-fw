@@ -73,9 +73,9 @@ private:
     IPAddress _address;
     Buffer _buffer;                     // data to write for _queueid
     uint32_t _queueId;                  // queue id
-    uint32_t _port: 16;
-    uint32_t _ack: 15;                  // number of bytes waiting for ack
-    uint32_t _useTLS: 1;
+    uint16_t _port;
+    uint16_t _ack: 15;                  // number of bytes waiting for ack
+    uint16_t _useTLS: 1;
 };
 
 inline void SyslogTCP::_reconnect()
@@ -97,6 +97,7 @@ inline SyslogTCP::~SyslogTCP()
     _freeClient();
     if (_host) {
         free(_host);
+        _host = nullptr;
     }
 }
 

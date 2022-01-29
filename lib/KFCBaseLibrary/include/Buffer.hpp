@@ -63,7 +63,7 @@ inline void Buffer::remove(size_t index, size_t count)
     if (!count || index >= _length) {
         return;
     }
-    if(count > _length - index) {
+    if (count > _length - index) {
         count = _length - index;
     }
     _remove(index, count);
@@ -240,7 +240,7 @@ inline Buffer &Buffer::operator =(Buffer &&buffer) noexcept
 inline void Buffer::removeAndShrink(size_t index, size_t count, size_t minFree)
 {
     remove(index, count);
-    if (_length + minFree < _size) {
+    if (_length + minFree < _size || !_length) {
         shrink(_length);
     }
 }

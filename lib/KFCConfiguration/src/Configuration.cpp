@@ -236,7 +236,7 @@ Configuration::WriteResultType Configuration::write()
                         buffer.write(0);
                         len++;
                     }
-                    oldAddress += len;
+                    // oldAddress += len;
                 }
                 else {
                     // data did not change
@@ -253,8 +253,9 @@ Configuration::WriteResultType Configuration::write()
                         return WriteResultType::READING_PREV_CONF_FAILED;
                     }
                     // next_offset() returns the offset of the data stored in the flash memory, not the current data in param
-                    oldAddress += param.next_offset();
+                    // oldAddress += param.next_offset();
                 }
+                oldAddress += param.next_offset();
                 ConfigurationHelper::deallocate(parameter);
                 parameter._getParam() = ConfigurationHelper::ParameterInfo();
             }
@@ -274,7 +275,7 @@ Configuration::WriteResultType Configuration::write()
             std::unique_ptr<uint8_t[]> data;
             if __CONSTEXPR17 (kHeaderOffset != 0) {
                 // load data before the offset
-                auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kHeaderOffset]); // copying the previous data could be done before allocating "buffer" after the interrupt lock
+                data.reset(new uint8_t[kHeaderOffset]); // copying the previous data could be done before allocating "buffer" after the interrupt lock
                 if (!data) {
                     __DBG_printf("failed to allocate memory=%u (preoffset data)", kHeaderOffset);
                     return WriteResultType::OUT_OF_MEMORY;
@@ -302,10 +303,10 @@ Configuration::WriteResultType Configuration::write()
                 // if this fails, we cannot do anything anymore
                 // the sector has been erased already
                 data.reset();
-            }
 
-            // write header
-            address += kHeaderOffset;
+                // move header offset
+                address += kHeaderOffset;
+            }
 
             if (!flashWrite(address, header, sizeof(header))) {
                 __DBG_printf("failed to write configuration (write header, address=0x%08x, size=%u, aligned=%u)", address, sizeof(header), (address % sizeof(uint32_t)) == 0);
@@ -456,8 +457,6 @@ void Configuration::exportAsJson(Print &output, const String &version)
 
     output.print(F("\n\t}\n}\n"));
 }
-
-
 
 bool Configuration::_readParams()
 {

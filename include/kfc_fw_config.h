@@ -59,6 +59,7 @@ public:
     using StationConfigType = KFCConfigurationClasses::Network::WiFi::StationConfigType;
 
     static constexpr auto kInvalidStation = KFCConfigurationClasses::Network::WiFi::kNumStations;
+    static constexpr uint8_t kKeepWiFiNetwork = 0xff;
 
     // static constexpr auto test1 = std::chrono::duration_cast<seconds>(KFCFWConfiguration::minutes(300)).count();
 
@@ -85,8 +86,8 @@ public:
     bool isConfigDirty() const;
 
     void setup();
-    bool reconfigureWiFi(const __FlashStringHelper *msg = nullptr, StationConfigType configNum = StationConfigType::CFG_KEEP);
-    bool connectWiFi(StationConfigType configNum = StationConfigType::CFG_KEEP);
+    bool reconfigureWiFi(const __FlashStringHelper *msg = nullptr, uint8_t configNum = kKeepWiFiNetwork);
+    bool connectWiFi(uint8_t configNum = kKeepWiFiNetwork, bool ignoreSoftAP = false);
     void read(bool wakeup = false);
     void write();
 
@@ -141,6 +142,7 @@ public:
 
     static void apStandbyModehandler(WiFiCallbacks::EventType event, void *payload);
 
+    // return id of the active wifi configuration
     StationConfigType getWiFiConfigurationNum() const;
 
 private:
@@ -176,6 +178,15 @@ public:
     bool rtcLostPower() ;
     void printRTCStatus(Print &output, bool plain = true);
 
+    // using StationConfig = KFCConfigurationClasses::Network::WiFi::StationConfig;
+    // using StationVector = KFCConfigurationClasses::Network::WiFi::StationVector;
+    // StationVector getStations() const;
+    // static void scanWifiSignalLevel(StationVector &list);
+
+    bool registerWiFiError();
+    void setWiFiErrors(uint8_t num);
+    uint8_t getWiFiErrors() const;
+
 private:
     friend class KFCConfigurationPlugin;
     friend void WiFi_get_status(Print &out);
@@ -185,7 +196,8 @@ private:
     uint32_t _wifiUp;                   // time of receiving IP address
     uint32_t _wifiFirstConnectionTime;
     int16_t _garbageCollectionCycleDelay;
-    StationConfigType _wifiNumActive;   // wifi # connected
+    uint8_t _wifiNumActive;   // wifi # connected
+    uint8_t _wifiErrorCount;
     bool _dirty;
     bool _safeMode;
 
@@ -235,7 +247,8 @@ inline void KFCFWConfiguration::apStandbyModehandler(WiFiCallbacks::EventType ev
 
 inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getWiFiConfigurationNum() const
 {
-    return _wifiNumActive;
+    auto stations = KFCConfigurationClasses::Network::WiFi::getStations(nullptr);
+    return stations.at(_wifiNumActive)._id;
 }
 
 inline void KFCFWConfiguration::setLastError(const String &error)
@@ -248,8 +261,39 @@ inline const char *KFCFWConfiguration::getLastError() const
     return _lastError.c_str();
 }
 
+inline bool KFCFWConfiguration::registerWiFiError()
+{
+    __DBG_printf("_wifiErrorCount=%u _wifiNumActive=%u", _wifiErrorCount, _wifiNumActive);
+    // change wifi network after WIFI_MAX_ERRORS errors
+    if (++_wifiErrorCount > WIFI_MAX_ERRORS) {
+        // reset errors
+        _wifiErrorCount = 0;
+
+        // find next available network
+        auto stations = KFCConfigurationClasses::Network::WiFi::getStations(nullptr);
+        if (++_wifiNumActive >= stations.size()) {
+            _wifiNumActive = 0;
+        }
+
+        // the WiFi needs to be reconnected
+        __DBG_printf("new _wifiNumActive=%u", _wifiNumActive);
+        return true;
+    }
+    return false;
+}
+
+inline void KFCFWConfiguration::setWiFiErrors(uint8_t num)
+{
+    _wifiErrorCount = num;
+}
+
+inline uint8_t KFCFWConfiguration::getWiFiErrors() const
+{
+    return _wifiErrorCount;
+}
+
 #ifndef HAVE_IMPERIAL_MARCH
-#    define HAVE_IMPERIAL_MARCH 1
+#    define HAVE_IMPERIAL_MARCH 0
 #endif
 
 #if HAVE_IMPERIAL_MARCH

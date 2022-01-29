@@ -347,9 +347,11 @@ enum class WiFiCommandsType : uint8_t {
     AP_OFF,
     AP_STBY,
     DIAG,
+    AVAIL_ST_LIST,
+    NEXT,
 };
 
-#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag"
+#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Manage WiFi\n"
     "    reset                                       Reset WiFi connection\n"
@@ -361,6 +363,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Mana
     "    ap_off                                      Disable WiFi AP mode\n"
     "    ap_standby                                  Set AP to stand-by mode (turns AP mode on if station mode cannot connect)\n"
     "    diag                                        Print diagnostic information\n"
+    "    stl                                         List available WiFi stations\n"
+    "    next                                        Switch to next WiFi station\n"
 );
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
@@ -2121,6 +2125,18 @@ void at_mode_serial_handle_event(String &commandString)
                     break;
                 case WiFiCommandsType::DIAG:
                     config.printDiag(args.getStream(), F("+WIFI: "));
+                    break;
+                case WiFiCommandsType::AVAIL_ST_LIST: {
+                        for(const auto &station: KFCConfigurationClasses::Network::WiFi::getStations(nullptr)) {
+                            args.print(F("%02u: %-32.32s %03u %s"), station._id, station._SSID.c_str(), station._priority, mac2String(station._bssid).c_str());
+                        }
+                    }
+                    break;
+                case WiFiCommandsType::NEXT:
+                    config.setWiFiErrors(0xff - 2);
+                    config.registerWiFiError();
+                    args.print(F("switching WiFi network"));
+                    config.reconfigureWiFi(nullptr);
                     break;
             }
         }

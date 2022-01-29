@@ -239,6 +239,47 @@ namespace KFCConfigurationClasses {
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, SoftApSSID, 1, 32);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().network.wifi, SoftApPassword, 8, 32);
 
+            struct StationConfig {
+                StationConfigType _id;
+                String _SSID;
+                uint32_t _priority;
+                uint8_t _bssid[6];
+
+                StationConfig(StationConfigType id, const char *ssid, uint32_t priority) :
+                    _id(id),
+                    _SSID(ssid),
+                    _priority(priority),
+                    _bssid{}
+                {
+                }
+
+                bool operator < (const StationConfig &station) const {
+                    return _priority < station._priority;
+                }
+            };
+            using StationVector = std::vector<StationConfig>;
+            using ScanCallback = std::function<void (StationVector &list)>;
+
+            static StationVector getStations(const ScanCallback &scanCallback)
+            {
+                StationVector list;
+                bool scan = false;
+                for(uint8_t i = 0; i < kNumStations; i++) {
+                    auto config = Network::Settings::getConfig().stations[i];
+                    if (config.isEnabled()) {
+                        list.emplace_back(static_cast<StationConfigType>(i), getSSID(i), config._get_priority());
+                        if (config._get_priority() == 0) {
+                            scan = true;
+                        }
+                    }
+                }
+                if (scan && scanCallback) {
+                    scanCallback(list);
+                }
+                std::sort(list.begin(), list.end());
+                return list;
+            }
+
             static StationModeSettings getNetworkConfig(StationConfigType num)
             {
                 return Network::Settings::getConfig().stations[static_cast<uint8_t>(num)];

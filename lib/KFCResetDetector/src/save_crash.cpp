@@ -173,14 +173,14 @@ namespace SaveCrash {
 
     void Data::printMD5(Print &output) const {
         auto ptr = _md5;
-        auto endPtr = ptr + 16;
+        auto endPtr = ptr + sizeof(_md5);
         while (ptr < endPtr) {
             output.printf_P(PSTR("%02x"), (uint32_t)*ptr++);
         }
     }
 
     bool Data::setMD5(const char *str) {
-        if (strlen(str) != 32) {
+        if (strlen(str) != (sizeof(_md5) * 2)) {
             std::fill(std::begin(_md5), std::end(_md5), 0);
             return false;
         }

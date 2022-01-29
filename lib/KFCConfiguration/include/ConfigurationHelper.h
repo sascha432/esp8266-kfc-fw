@@ -8,12 +8,65 @@
 #include <EEPROM.h>
 
 #ifndef DEBUG_CONFIGURATION
-#    define DEBUG_CONFIGURATION 0
+#    define DEBUG_CONFIGURATION 1
 #endif
 
 #ifndef DEBUG_CONFIGURATION_GETHANDLE
 #    define DEBUG_CONFIGURATION_GETHANDLE 0
 #endif
+
+/*
+http://192.168.0.10/file_manager/view?filename=%2F%2Epvt%2Fcfg%5Fhandles
+
+<EEPROM>
+<INVALID>
+MainConfig().system.device.cfg
+MainConfig().system.webserver.cfg
+MainConfig().network.settings.cfg
+MainConfig().plugins.alarm.cfg
+MainConfig().plugins.serial2tcp.cfg
+MainConfig().plugins.mqtt.cfg
+MainConfig().plugins.syslog.cfg
+MainConfig().plugins.ntpclient.cfg
+MainConfig().plugins.sensor.cfg
+MainConfig().system.flags.cfg
+MainConfig().network.softap.cfg
+MainConfig().plugins.blinds.cfg
+MainConfig().plugins.dimmer.cfg
+MainConfig().plugins.clock.cfg
+MainConfig().plugins.ping.cfg
+MainConfig().plugins.weatherstation.cfg
+MainConfig().plugins.remote.cfg
+MainConfig().system.firmware.MD5
+MainConfig().system.firmware.PluginBlacklist
+MainConfig().network.wifi.SoftApSSID
+MainConfig().network.wifi.SSID0
+MainConfig().system.device.Name
+MainConfig().network.wifi.SSID1
+MainConfig().network.wifi.SSID2
+MainConfig().network.wifi.SSID3
+MainConfig().network.wifi.SSID4
+MainConfig().network.wifi.Password0
+MainConfig().network.wifi.SoftApPassword
+MainConfig().system.device.Title
+MainConfig().plugins.ntpclient.Server1
+MainConfig().plugins.ntpclient.Server2
+MainConfig().plugins.ntpclient.Server3
+MainConfig().plugins.ntpclient.PosixTimezone
+MainConfig().plugins.mqtt.Hostname
+MainConfig().plugins.mqtt.Username
+MainConfig().plugins.mqtt.Password
+MainConfig().plugins.mqtt.BaseTopic
+MainConfig().system.device.Password
+MainConfig().plugins.mqtt.AutoDiscoveryPrefix
+MainConfig().plugins.syslog.Hostname
+MainConfig().plugins.ntpclient.TimezoneName
+MainConfig().network.wifi.Password1
+MainConfig().network.wifi.Password2
+MainConfig().network.wifi.Password3
+MainConfig().network.wifi.Password4
+MainConfig().system.device.Token
+*/
 
 #if DEBUG_CONFIGURATION
 #    include <debug_helper_enable.h>

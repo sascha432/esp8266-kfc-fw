@@ -95,13 +95,22 @@ void delayedSetup(bool delayed)
     _Scheduler.add(Event::seconds(60), true, [](Event::CallbackTimerPtr timer) {
         if (System::Flags::getConfig().is_station_mode_enabled) {
             if (!WiFi.isConnected()) {
-                if (timer->updateInterval(Event::seconds(60)) == false) {
-                    timer->setInterval(Event::seconds(30)); // change interval to 30 seconds if it is 60
-                }
-                else {
-                    // restart entire wifi subsystem. the interval was reset back to 60 seconds
+                // register error
+                config.registerWiFiError();
+                if (timer->updateInterval(Event::seconds(15))) {
+                    // restart entire wifi subsystem
+                    // starts AP if enabled
                     config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
                 }
+                else {
+                    // reconnect station mode only if reconfigure was executed before
+                    Logger_notice(F("reconnecting WiFi station mode"));
+                    config.connectWiFi(config.kKeepWiFiNetwork, true);
+                }
+            }
+            else {
+                // reset timer if wifi is connected
+                timer->updateInterval(Event::seconds(60));
             }
         }
     });

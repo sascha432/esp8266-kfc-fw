@@ -5,6 +5,7 @@
  - Auto installation of custom framework-arduinoespressif for ESP8266 and ESP32
  - Support for up to 8 WiFi networks (5 = default)
  - Global DNS servers shared across all WiFi networks
+ - Support for home assistant object id
 
 ## Version 0.0.5
 

@@ -287,6 +287,10 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(Title));
             System::Device::addTitleLengthValidator(form);
 
+            form.addStringGetterSetter(F("objid"), System::Device::getObjectId, System::Device::setObjectId);
+            form.addFormUI(F("Object Id"), FormUI::PlaceHolder(System::Device::getName()));
+            System::Device::addObjectIdLengthValidator(form);
+
             form.addObjectGetterSetter(F("safem_to"), cfg, cfg.get_bits_safe_mode_reboot_timeout_minutes, cfg.set_bits_safe_mode_reboot_timeout_minutes);
             form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)), FormUI::IntAttribute(F("disabled-value"), 0));
             cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form, true);

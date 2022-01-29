@@ -117,6 +117,7 @@ namespace KFCConfigurationClasses {
 
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Name, 3, 16);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Title, 3, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, ObjectId, 3, 32);
 
             // username is device name
             // in case this changes one day, this function will return the username

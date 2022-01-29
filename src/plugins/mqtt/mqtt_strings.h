@@ -106,6 +106,7 @@ PROGMEM_STRING_DECL(mqtt_mode_command_topic);
 PROGMEM_STRING_DECL(mqtt_mode_state_template);
 PROGMEM_STRING_DECL(mqtt_mode_state_topic);
 PROGMEM_STRING_DECL(mqtt_name);
+PROGMEM_STRING_DECL(mqtt_object_id);
 PROGMEM_STRING_DECL(mqtt_off_delay);
 PROGMEM_STRING_DECL(mqtt_on_command_type);
 PROGMEM_STRING_DECL(mqtt_optimistic);

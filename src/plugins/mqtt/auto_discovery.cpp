@@ -30,7 +30,10 @@ bool Entity::create(ComponentPtr component, const String &componentName, FormatT
 
 bool Entity::create(ComponentType componentType, const String &componentName, FormatType format)
 {
-    String suffix = System::Device::getName();
+    String suffix = System::Device::getObjectId();
+    if (!suffix.length()) {
+        suffix = System::Device::getName();
+    }
     if (componentName.length()) {
         if (!componentName.startsWith('/')) {
             suffix += '/';

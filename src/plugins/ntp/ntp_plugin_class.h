@@ -80,5 +80,6 @@ public:
     Event::Timer _checkTimer;
     CallbackState _callbackState;
     std::array<char *, Plugins::NTPClient::kServersMax> _servers;
+    uint32_t _lastUpdateSeconds;
 };
 

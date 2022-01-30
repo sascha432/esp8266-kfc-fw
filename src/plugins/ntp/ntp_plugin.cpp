@@ -76,7 +76,8 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 NTPPlugin::NTPPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(NTPPlugin)),
-    _callbackState(CallbackState::STARTUP)
+    _callbackState(CallbackState::STARTUP),
+    _lastUpdateSeconds(0)
 {
     REGISTER_PLUGIN(this, "NTPPlugin");
 }
@@ -195,7 +196,15 @@ void NTPPlugin::getStatus(Print &output)
                 output.print(server);
             }
         }
-        output.printf_P(PSTR(HTML_S(br) "RTC status: %s, NTP Status: %s"), RTCMemoryManager::RtcTime::getStatus(RTCMemoryManager::getSyncStatus()), getCallbackState());
+
+        output.printf_P(PSTR(HTML_S(br) "RTC status: %s" HTML_S(br) "NTP Status: %s"), RTCMemoryManager::RtcTime::getStatus(RTCMemoryManager::getSyncStatus()), getCallbackState());
+        if (_lastUpdateSeconds) {
+            output.print(F(", last update "));
+            auto time = (millis64() / 1000) - _lastUpdateSeconds;
+            output.print(formatTimeShort(F(", "), F(" and "), false, time % 60, (time / 60) % 60, (time / 3600) % 24, time / 86400));
+            output.print(F(" ago"));
+        }
+
     }
     else {
         output.print(FSPGM(Disabled));
@@ -286,6 +295,8 @@ void NTPPlugin::_updateNtpCallback()
             __DBG_printf("reachability server %s=%u", __S(sntp_getservername(i)), sntp_getreachability(i));
         }
     #endif
+
+    _lastUpdateSeconds = millis64() / 1000;
 
 }
 

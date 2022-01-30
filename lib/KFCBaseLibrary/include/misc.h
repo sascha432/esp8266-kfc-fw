@@ -53,6 +53,11 @@ extern "C" {
     #include <interrupts.h>
     using InterruptLock = esp8266::InterruptLock;
 
+    inline uint64_t millis64()
+    {
+        return micros64() / 1000;
+    }
+
 #elif ESP32
 
     #include <freertos/portmacro.h>
@@ -70,6 +75,11 @@ extern "C" {
         portMUX_TYPE _mux;
     };
 
+    inline uint64_t millis64()
+    {
+        return esp_timer_get_time() / 1000;
+    }
+
 #else
 
     struct InterruptLock {
@@ -81,6 +91,12 @@ extern "C" {
             return 0;
         }
     };
+
+    inline uint64_t millis64()
+    {
+        #error TODO
+        return 0;
+    }
 
 #endif
 

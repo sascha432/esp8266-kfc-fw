@@ -162,7 +162,7 @@ void WebTemplate::printSSDPUUID(Print &output)
 
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    __LDBG_printf("key=%s %p form=%p authenticated=%u", __S(key), std::addressof(key), std::addressof(_form), isAuthenticated());
+    __DBG_printf("key=%s %p form=%p authenticated=%u", __S(key), std::addressof(key), std::addressof(_form), isAuthenticated());
     // ------------------------------------------------------------------------------------
     // public variables
     // ------------------------------------------------------------------------------------

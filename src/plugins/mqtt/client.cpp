@@ -408,6 +408,13 @@ namespace MQTT {
         if (topic.indexOf(F("${device_name}")) != -1) {
             topic.replace(F("${device_name}"), _filterString(System::Device::getName()));
         }
+        if (topic.indexOf(F("${object_id}")) != -1) {
+            auto objectId = System::Device::getObjectId();
+            if (!*objectId) {
+                objectId = System::Device::getName();
+            }
+            topic.replace(F("${object_id}"), _filterString(objectId));
+        }
         if (topic.indexOf(F("${device_title}")) != -1) {
             topic.replace(F("${device_title}"), _filterString(System::Device::getTitle()));
         }

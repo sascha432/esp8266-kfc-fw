@@ -1320,7 +1320,8 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
 
-        auto network = Network::WiFi::getNetworkConfig(getWiFiConfigurationNum());
+        auto wifiId = getWiFiConfigurationNum();
+        auto network = Network::WiFi::getNetworkConfig(wifiId);
         bool result;
         if (network.isDHCPEnabled()) {
             result = WiFi.config(0U, 0U, 0U, 0U, 0U);
@@ -1334,12 +1335,12 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
         }
         else {
 
-            if (WiFi.begin(Network::WiFi::getSSID(getWiFiConfigurationNum()), Network::WiFi::getPassword(getWiFiConfigurationNum())) == WL_CONNECT_FAILED) {
+            if (WiFi.begin(Network::WiFi::getSSID(wifiId), Network::WiFi::getPassword(wifiId)) == WL_CONNECT_FAILED) {
                 setLastError(F("Failed to start Station Mode"));
                 Logger_error(F("%s"), getLastError());
             }
             else {
-                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(getWiFiConfigurationNum()));
+                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(wifiId));
                 station_mode_success = true;
             }
         }

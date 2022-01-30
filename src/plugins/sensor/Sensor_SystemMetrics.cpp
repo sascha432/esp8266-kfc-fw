@@ -78,6 +78,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
             if (discovery->create(this, F("uptime_hr"), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(F("uptime_hr"));
+                discovery->addIcon(F("mdi:hours-24"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
                     discovery->addName(MQTT::Client::getAutoDiscoveryName(F("System Uptime")));
                 #endif
@@ -88,6 +89,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addStateTopic(_getTopic());
                 discovery->addUnitOfMeasurement(FSPGM(bytes));
                 discovery->addValueTemplate(FSPGM(heap));
+                discovery->addIcon(F("mdi:memory"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
                     discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Free Heap")));
                 #endif
@@ -99,6 +101,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addStateTopic(_getTopic());
                     discovery->addUnitOfMeasurement(FSPGM(bytes));
                     discovery->addValueTemplate(F("psram"));
+                    discovery->addIcon(F("mdi:memory"));
                     #if MQTT_AUTO_DISCOVERY_USE_NAME
                         discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Free PSRAM")));
                     #endif
@@ -109,6 +112,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
             if (discovery->create(this, FSPGM(version), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addValueTemplate(FSPGM(version));
+                discovery->addIcon(F("mdi:wrench"));
                 #if MQTT_AUTO_DISCOVERY_USE_NAME
                     discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Firmware Version")));
                 #endif

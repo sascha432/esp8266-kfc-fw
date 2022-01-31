@@ -170,7 +170,7 @@ Configuration::WriteResultType Configuration::write()
         }
 
         if (header) {
-            __DBG_printf("copying existing data");
+            __LDBG_printf("copying existing data");
             // check dirty data for changes
             bool dirty = false;
             for (const auto &parameter : _params) {
@@ -292,7 +292,7 @@ Configuration::WriteResultType Configuration::write()
                 }
             #endif
 
-            __DBG_printf("flash write %08x sector %u", address, address / SPI_FLASH_SEC_SIZE);
+            __LDBG_printf("flash write %08x sector %u", address, address / SPI_FLASH_SEC_SIZE);
 
             // erase sector
             // TODO if something goes wrong here, all data is lost

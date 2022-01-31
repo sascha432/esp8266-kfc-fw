@@ -3,6 +3,7 @@
 ## Version 0.0.6
 
  - Fixed issue with corrupting the configuration during saving changes
+ - Fixed memory leak with syslog (TCP only) with no WiFi connection
  - Support for home assistant object id
  - Global DNS servers shared across all WiFi networks
  - Support for up to 8 WiFi networks (5 = default)

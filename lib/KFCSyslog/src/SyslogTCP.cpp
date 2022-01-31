@@ -16,9 +16,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-// 876849
-// 876865
-
 SyslogTCP::SyslogTCP(const char *hostname, SyslogQueue *queue, const String &host, uint16_t port, bool useTLS) :
     Syslog(hostname, queue),
     _client(nullptr),
@@ -107,7 +104,7 @@ void SyslogTCP::clear()
 
 bool SyslogTCP::setupZeroConf(const String &hostname, const IPAddress &address, uint16_t port)
 {
-    __DBG_printf("hostname=%s address=%s port=%u", hostname.c_str(), address.toString().c_str(), port);
+    __LDBG_printf("hostname=%s address=%s port=%u", hostname.c_str(), address.toString().c_str(), port);
     if (_host) {
         free(_host);
         _host = nullptr;

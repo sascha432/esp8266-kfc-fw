@@ -25,7 +25,8 @@ extern "C" {
 
 #if ESP8266
 
-static void ets_printf_P(const char *str, ...) {
+static void ets_printf_P(const char *str, ...)
+{
     char destStr[160];
     char *c = destStr;
     va_list argPtr;
@@ -114,7 +115,8 @@ namespace SaveCrash {
 
 #if ESP8266
 
-    inline static const __FlashStringHelper *getExceptionFPStr(uint32_t execption) {
+    inline static const __FlashStringHelper *getExceptionFPStr(uint32_t execption)
+    {
         switch(execption) {
             case 0: return F("IllegalInstructionCause");
             case 1: return F("SyscallCause");
@@ -171,7 +173,8 @@ namespace SaveCrash {
 
 #endif
 
-    void Data::printMD5(Print &output) const {
+    void Data::printMD5(Print &output) const
+    {
         auto ptr = _md5;
         auto endPtr = ptr + sizeof(_md5);
         while (ptr < endPtr) {
@@ -179,7 +182,8 @@ namespace SaveCrash {
         }
     }
 
-    bool Data::setMD5(const char *str) {
+    bool Data::setMD5(const char *str)
+    {
         if (strlen(str) != (sizeof(_md5) * 2)) {
             std::fill(std::begin(_md5), std::end(_md5), 0);
             return false;

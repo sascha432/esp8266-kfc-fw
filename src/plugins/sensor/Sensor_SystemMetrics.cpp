@@ -15,6 +15,8 @@
 #include "../src/plugins/ping_monitor/ping_monitor.h"
 #endif
 
+#include <save_crash.h>
+
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
 #else
@@ -48,6 +50,7 @@ enum class AutoDiscoveryENum {
     #endif
     VERSION,
     #if ESP8266
+        SAVE_CRASH,
         HEAP_FRAGMENTATION,
     #endif
     #if PING_MONITOR_SUPPORT
@@ -119,6 +122,16 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
             }
             break;
         #if ESP8266
+            case AutoDiscoveryENum::SAVE_CRASH:
+                if (discovery->create(this, F("savecrash_cnt"), format)) {
+                    discovery->addStateTopic(_getTopic());
+                    discovery->addValueTemplate(F("savecrash_cnt"));
+                    discovery->addIcon(F("mdi:math-log"));
+                    #if MQTT_AUTO_DISCOVERY_USE_NAME
+                        discovery->addName(MQTT::Client::getAutoDiscoveryName(F("SaveCrash Log Count")));
+                    #endif
+                }
+                break;
             case AutoDiscoveryENum::HEAP_FRAGMENTATION:
                 if (discovery->create(this, F("heap_frag"), format)) {
                     discovery->addStateTopic(_getTopic());
@@ -254,6 +267,12 @@ String Sensor_SystemMetrics::_getTopic() const
 String Sensor_SystemMetrics::_getMetricsJson() const
 {
     using namespace MQTT::Json;
+
+    #if ESP8266
+        auto fs = SaveCrash::createFlashStorage();
+        auto saveCrashInfo = fs.getInfo();
+    #endif
+
     UnnamedObject jsonObj(
         NamedUint32(FSPGM(uptime), getSystemUptime()),
         NamedStoredString(F("uptime_hr"), _getUptime(F("\n"))),
@@ -262,6 +281,7 @@ String Sensor_SystemMetrics::_getMetricsJson() const
             NamedUint32(F("psram"), ESP.getFreePsram()),
         #endif
         #if ESP8266
+            NamedShort(F("savecrash_cnt"), saveCrashInfo.numTraces()),
             NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
         #endif
         NamedString(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()))

@@ -209,6 +209,10 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
 
     #else
 
+        if (_param.size() != _param.old_size()) {
+            return true;
+        }
+
         size_t requiredSize = _param.length();
         if (requiredSize < 128) {
             uint8_t buffer[128];

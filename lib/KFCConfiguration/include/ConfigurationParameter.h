@@ -104,6 +104,14 @@ namespace ConfigurationHelper {
             return _is_writeable ? _writeable->length() : _readable ? _length : 0;
         }
 
+        inline size_type old_size() const {
+            return sizeOf(_length);
+        };
+
+        inline size_type old_length() const {
+            return _length;
+        }
+
         // required capacity for length
         inline size_type sizeOf(size_type length) const {
             return isString() ? (length + 1) : length;
@@ -113,6 +121,10 @@ namespace ConfigurationHelper {
         // 32 bit aligned
         inline size_type next_offset() const {
             return (size() + 3) & ~3;
+        }
+
+        inline size_type old_next_offset() const {
+            return (old_size() + 3) & ~3;
         }
 
         inline size_type next_offset_unaligned() const {
@@ -131,13 +143,7 @@ namespace ConfigurationHelper {
             return _handle;
         }
 
-
     public:
-        // struct Usage {
-        //     uint16_t _counter;
-        //     uint16_t _counter2;
-        //     Usage() : _counter(0), _counter2(0) {}
-        // };
         struct {
             union {
                 struct {
@@ -153,12 +159,9 @@ namespace ConfigurationHelper {
                 WriteableData *_writeable;
             };
         };
-        // Usage _usage;
     };
 
     static constexpr size_t kParameterInfoSize = sizeof(ParameterInfo);
-    // static_assert(ParameterInfoSize == 8, "invalid size");
-
     static_assert((sizeof(ParameterHeaderType) & 3) == 0, "not dword aligned");
 
 }
@@ -279,6 +282,10 @@ protected:
 
 public:
     inline ParameterInfo &_getParam() {
+        return _param;
+    }
+
+    inline ParameterInfo _getParam() const {
         return _param;
     }
 };

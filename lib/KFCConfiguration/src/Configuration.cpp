@@ -173,7 +173,7 @@ Configuration::WriteResultType Configuration::write()
             __DBG_printf("copying existing data");
             // check dirty data for changes
             bool dirty = false;
-            for (auto &parameter : _params) {
+            for (const auto &parameter : _params) {
                 if (parameter.hasDataChanged(*this)) {
                     dirty = true;
                     break;
@@ -191,12 +191,17 @@ Configuration::WriteResultType Configuration::write()
             InterruptLock lock;
             Buffer buffer;
 
-            for (auto &parameter : _params) {
+            for (const auto &parameter : _params) {
                 // create copy
                 auto param = parameter._getParam();
                 if (parameter._getParam().isWriteable()) {
                     // update length and remove writeable flag
-                    __LDBG_printf("writable: len=%u size=%u next_offset=%u", param._writeable->length(), param._writeable->size(), parameter._getParam().next_offset());
+                    __LDBG_printf("writable: len=%u size=%u old_next_ofs=%u data=%s",
+                        param._writeable->length(),
+                        param._writeable->size(),
+                        parameter._getParam().next_offset(),
+                        printable_string(parameter._param.data(), param._writeable->length(), 32).c_str()
+                    );
                     param._length = param._writeable->length();
                     param._is_writeable = false;
                 }
@@ -228,19 +233,18 @@ Configuration::WriteResultType Configuration::write()
                         buffer.write(0);
                         len++;
                     }
-
-// __LDBG_printf("write_data: len=%u size=%u ofs=%u", len, param._writeable->size(), (len & 3));
-
                     // align to match param.next_offset()
                     while((len & 3) != 0) {
                         buffer.write(0);
                         len++;
                     }
-                    // oldAddress += len;
+                    __LDBG_printf("len=%u next_ofs=%u old_next_ofs=%u", len, param.next_offset(), param.old_next_offset());
+                    // update old address for the next parameter
+                    oldAddress += param.old_next_offset();
                 }
                 else {
                     // data did not change
-                    // read from flash
+                    // reserve memory and read from flash
                     auto len = param.next_offset();
                     if (!buffer.reserve(buffer.length() + len)) {
                         __DBG_printf("out of memory: buffer=%u size=%u", buffer.length(), _size);
@@ -252,10 +256,10 @@ Configuration::WriteResultType Configuration::write()
                         __DBG_panic("failed to read flash address=%u len=%u", oldAddress, len);
                         return WriteResultType::READING_PREV_CONF_FAILED;
                     }
+                    __LDBG_printf("oldAddress=%u data=%s len=%u", oldAddress, printable_string(ptr, len, 32).c_str(), len);
                     // next_offset() returns the offset of the data stored in the flash memory, not the current data in param
-                    // oldAddress += param.next_offset();
+                    oldAddress += param.next_offset();
                 }
-                oldAddress += param.next_offset();
                 ConfigurationHelper::deallocate(parameter);
                 parameter._getParam() = ConfigurationHelper::ParameterInfo();
             }
@@ -272,19 +276,21 @@ Configuration::WriteResultType Configuration::write()
             // format flash and copy stored data
             address = ConfigurationHelper::getFlashAddress();
 
-            std::unique_ptr<uint8_t[]> data;
-            if __CONSTEXPR17 (kHeaderOffset != 0) {
-                // load data before the offset
-                data.reset(new uint8_t[kHeaderOffset]); // copying the previous data could be done before allocating "buffer" after the interrupt lock
-                if (!data) {
-                    __DBG_printf("failed to allocate memory=%u (preoffset data)", kHeaderOffset);
-                    return WriteResultType::OUT_OF_MEMORY;
+            #if CONFIGURATION_HEADER_OFFSET
+                std::unique_ptr<uint8_t[]> data;
+                if __CONSTEXPR17 (kHeaderOffset != 0) {
+                    // load data before the offset
+                    data.reset(new uint8_t[kHeaderOffset]); // copying the previous data could be done before allocating "buffer" after the interrupt lock
+                    if (!data) {
+                        __DBG_printf("failed to allocate memory=%u (preoffset data)", kHeaderOffset);
+                        return WriteResultType::OUT_OF_MEMORY;
+                    }
+                    if (!flashRead(address, data.get(), kHeaderOffset)) {
+                        __DBG_printf("failed to read flash (preoffset data, address=0x%08x size=%u)", address, kHeaderOffset);
+                        return WriteResultType::FLASH_READ_ERROR;
+                    }
                 }
-                if (!flashRead(address, data.get(), kHeaderOffset)) {
-                    __DBG_printf("failed to read flash (preoffset data, address=0x%08x size=%u)", address, kHeaderOffset);
-                    return WriteResultType::FLASH_READ_ERROR;
-                }
-            }
+            #endif
 
             __DBG_printf("flash write %08x sector %u", address, address / SPI_FLASH_SEC_SIZE);
 
@@ -297,16 +303,18 @@ Configuration::WriteResultType Configuration::write()
                 return WriteResultType::FLASH_ERASE_ERROR;
             }
 
-            if __CONSTEXPR17 (kHeaderOffset != 0) {
-                // restore data before the offset
-                flashWrite(address, data.get(), kHeaderOffset);
-                // if this fails, we cannot do anything anymore
-                // the sector has been erased already
-                data.reset();
+            #if CONFIGURATION_HEADER_OFFSET
+                if __CONSTEXPR17 (kHeaderOffset != 0) {
+                    // restore data before the offset
+                    flashWrite(address, data.get(), kHeaderOffset);
+                    // if this fails, we cannot do anything anymore
+                    // the sector has been erased already
+                    data.reset();
 
-                // move header offset
-                address += kHeaderOffset;
-            }
+                    // move header offset
+                    address += kHeaderOffset;
+                }
+            #endif
 
             if (!flashWrite(address, header, sizeof(header))) {
                 __DBG_printf("failed to write configuration (write header, address=0x%08x, size=%u, aligned=%u)", address, sizeof(header), (address % sizeof(uint32_t)) == 0);

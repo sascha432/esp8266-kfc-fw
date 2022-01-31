@@ -23,7 +23,7 @@ namespace ConfigurationHelper {
 
         if (parameter.hasData()) {
             auto &param = parameter._getParam();
-            memcpy(data(), param._readable, std::min(_length, param.length()));
+            memmove(data(), param._readable, std::min(_length, param.length()));
             free(param._readable);
             param._readable = nullptr;
         }

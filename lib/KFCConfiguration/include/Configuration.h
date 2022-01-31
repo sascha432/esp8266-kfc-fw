@@ -203,7 +203,9 @@ public:
     //  data record 1
     //  data record 2 ...
 
-    static constexpr uint16_t kHeaderOffset = 0;
+    #define CONFIGURATION_HEADER_OFFSET 0
+
+    static constexpr uint16_t kHeaderOffset = CONFIGURATION_HEADER_OFFSET;
     static_assert((kHeaderOffset & 3) == 0, "not dword aligned");
     #if ESP32
         static_assert(kHeaderOffset == 0, "offset not supported");

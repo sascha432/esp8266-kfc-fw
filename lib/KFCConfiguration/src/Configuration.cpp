@@ -2,7 +2,7 @@
 * Author: sascha_lammers@gmx.de
 */
 
-// ESP8266 configuration is stored in flash memory
+// ESP8266 configuration is stored in flash memory (EEPROM sector)
 // ESP32 configuration is stored in NVS
 
 #include <Buffer.h>

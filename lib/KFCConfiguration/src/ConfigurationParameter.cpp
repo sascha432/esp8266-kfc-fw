@@ -209,10 +209,12 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
 
     #else
 
+        // if the size changed, we do not need to compare contents
         if (_param.size() != _param.old_size()) {
             return true;
         }
 
+        // compare if the content has been changed
         size_t requiredSize = _param.length();
         if (requiredSize < 128) {
             uint8_t buffer[128];

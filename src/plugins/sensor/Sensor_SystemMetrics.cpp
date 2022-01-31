@@ -268,9 +268,15 @@ String Sensor_SystemMetrics::_getMetricsJson() const
 {
     using namespace MQTT::Json;
 
+    String version = config.getShortFirmwareVersion_P();
     #if ESP8266
         auto fs = SaveCrash::createFlashStorage();
         auto saveCrashInfo = fs.getInfo();
+        version += F(" / ESP8266@");
+        version += ESP.getCpuFreqMHz();
+        version += F("MHz");
+    #elif ESP32
+        version += F(" / ESP32");
     #endif
 
     UnnamedObject jsonObj(
@@ -284,7 +290,7 @@ String Sensor_SystemMetrics::_getMetricsJson() const
             NamedShort(F("savecrash_cnt"), saveCrashInfo.numTraces()),
             NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
         #endif
-        NamedString(FSPGM(version), FPSTR(config.getShortFirmwareVersion_P()))
+        NamedStoredString(FSPGM(version), version)
     );
 
     #if PING_MONITOR_SUPPORT

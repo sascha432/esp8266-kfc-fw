@@ -372,7 +372,7 @@ namespace SPIFlash {
             for(auto i = _firstSector; i <= _lastSector; i++) {
                 auto offset = FlashResult::headerOffset(i);
                 auto rc = _spi_flash_read(offset, hdr, sizeof(hdr));
-                __DBG_printf("sector=0x%04x ofs=%u read=%d", i, offset, rc);
+                __LDBG_printf("sector=0x%04x ofs=%u read=%d", i, offset, rc);
 
                 if (rc != SPI_FLASH_RESULT_OK) {
                     __DBG_printf("sector=0x%04x read failure", i);

@@ -90,7 +90,11 @@ inline NVSStorage::NVSStorage(const String &name) :
 {
 }
 
-inline NVSStorage::NVSStorage(const __FlashStringHelper *name) : NVSStorage(name)
+inline NVSStorage::NVSStorage(const __FlashStringHelper *name) :
+    #if ESP32
+        _handle(0),
+    #endif
+    _name(name)
 {
 }
 
@@ -161,7 +165,7 @@ inline bool NVSStorage::read(uint8_t *data, size_t size)
 {
     AutoClose close(this);
     #if ESP8266
-        if (_file.read(data, size) != size) {
+        if (static_cast<size_t>(_file.read(data, size)) != size) {
             return false;
         }
         uint32_t crc;

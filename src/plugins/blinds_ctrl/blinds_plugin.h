@@ -5,9 +5,6 @@
 // controller
 // https://easyeda.com/sascha23095123423/iot_blinds_controller
 
-// optional position tracking/rpm sensing/improved stall detection
-// https://easyeda.com/sascha23095123423/rpm-sensing-for-iot-blinds-controller
-
 #pragma once
 
 #include <Arduino_compat.h>
@@ -46,10 +43,6 @@ public:
     static void loopMethod();
 
     static BlindsControlPlugin &getInstance();
-
-#if IOT_BLINDS_CTRL_RPM_PIN
-    static void rpmIntCallback(InterruptInfo info);
-#endif
 };
 
 inline __attribute__((__always_inline__))

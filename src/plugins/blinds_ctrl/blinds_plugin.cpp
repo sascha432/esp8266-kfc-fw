@@ -92,9 +92,6 @@ void BlindsControlPlugin::shutdown()
 void BlindsControlPlugin::getStatus(Print &output)
 {
     output.printf_P(PSTR("PWM %.2fkHz" HTML_S(br)), _config.pwm_frequency / 1000.0);
-#if IOT_BLINDS_CTRL_RPM_PIN
-    output.print(F("Position sensing and stall protection" HTML_S(br)));
-#endif
 
     for(const auto channel: _states.channels()) {
         auto &channelConfig = _config.channels[*channel];
@@ -148,14 +145,6 @@ void BlindsControlPlugin::createWebUI(WebUINS::Root &webUI)
     webUI.addRow(row2);
     webUI.addRow(row3);
 }
-
-#if IOT_BLINDS_CTRL_RPM_PIN
-
-void BlindsControl::rpmIntCallback(InterruptInfo info) {
-    _rpmIntCallback(info);
-}
-
-#endif
 
 BlindsControlPlugin &BlindsControlPlugin::getInstance()
 {

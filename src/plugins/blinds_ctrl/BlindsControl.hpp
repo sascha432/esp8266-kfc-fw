@@ -338,11 +338,6 @@ inline void BlindsControl::_setup()
         digitalWrite(pin, LOW);
         pinMode(pin, OUTPUT);
     }
-
-    #if IOT_BLINDS_CTRL_RPM_PIN
-        attachScheduledInterrupt(digitalPinToInterrupt(IOT_BLINDS_CTRL_RPM_PIN), BlindsControl::rpmIntCallback, RISING);
-        pinMode(IOT_BLINDS_CTRL_RPM_PIN, INPUT);
-    #endif
 }
 
 inline void BlindsControl::_startTone()

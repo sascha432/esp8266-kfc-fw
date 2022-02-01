@@ -384,20 +384,6 @@ protected:
     MicrosTimer _currentTimer;
     Event::Timer _toneTimer;
 
-#if IOT_BLINDS_CTRL_RPM_PIN
-protected:
-    void _rpmReset();
-    void _rpmIntCallback(const InterruptInfo &info);
-    uint16_t _getRpm();
-    bool _hasStalled() const;
-
-protected:
-    MicrosTimer _rpmTimer;
-    MicrosTimer _rpmLastInterrupt;
-    uint32_t _rpmTimeIntegral;
-    uint32_t _rpmCounter;
-#endif
-
 private:
     ADCManager &_adc;
 };

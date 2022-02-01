@@ -305,12 +305,6 @@ bool BlindsControl::_checkMotor()
         Logger_notice("Channel %u, motor stopped after %ums timeout, peak current %umA (%.2f/%.2f)", _activeChannel, _motorTimeout.getDelay(), (uint32_t)(_adcIntegralPeak * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegralPeak, _currentLimit);
         return true;
     }
-#if IOT_BLINDS_CTRL_RPM_PIN
-    if (_hasStalled()) {
-        __LDBG_printf("stalled");
-        return false;
-    }
-#endif
     return false;
 }
 
@@ -533,10 +527,6 @@ void BlindsControl::_clearAdc()
     _adcIntegral = 0;
     _adcIntegralPeak = 0;
     _currentTimer.start();
-
-#if IOT_BLINDS_CTRL_RPM_PIN
-    _rpmReset();
-#endif
 }
 
 void BlindsControl::_updateAdc()
@@ -601,35 +591,3 @@ void BlindsControl::_setMotorSpeed(ChannelType channelType, uint16_t speed, bool
     digitalWrite(pin2, LOW);
     interrupts();
 }
-
-#if IOT_BLINDS_CTRL_RPM_PIN
-
-void BlindsControl::_rpmReset()
-{
-    _rpmTimer.start();
-    _rpmLastInterrupt.start();
-    _rpmCounter = 0;
-}
-
-void BlindsControl::_rpmIntCallback(const InterruptInfo &info)
-{
-    const uint8_t multiplier = IOT_BLINDS_CTRL_RPM_PULSES * 10;
-    auto time = _rpmTimer.getTime(info.micro);
-    _rpmLastInterrupt.start();
-    _rpmTimer.start(info.micro);
-    _rpmTimeIntegral = ((_rpmTimeIntegral * multiplier) + time) / (multiplier + 1);
-    _rpmCounter++;
-}
-
-uint16_t BlindsControl::_getRpm()
-{
-    return (uint16_t)((1000000UL * 60UL / IOT_BLINDS_CTRL_RPM_PULSES) / _rpmTimeIntegral);
-}
-
-bool BlindsControl::_hasStalled()
-{
-    // interval for 500 rpm = ~40ms with 3 pulses
-    return (_rpmLastInterrupt.getTime() > (1000000UL / 500UL/*rpm*/ * 60UL / IOT_BLINDS_CTRL_RPM_PULSES));
-}
-
-#endif

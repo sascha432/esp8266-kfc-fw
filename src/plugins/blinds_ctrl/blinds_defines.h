@@ -23,11 +23,6 @@
 #    error 2 channels supported only
 #endif
 
-// enable RPM sensing, 0 = disable
-#ifndef IOT_BLINDS_CTRL_RPM_PIN
-#    define IOT_BLINDS_CTRL_RPM_PIN 0
-#endif
-
 // number of pulses per rotation
 #ifndef IOT_BLINDS_CTRL_RPM_PULSES
 #    define IOT_BLINDS_CTRL_RPM_PULSES 3

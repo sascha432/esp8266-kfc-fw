@@ -147,15 +147,21 @@ namespace ConfigurationHelper {
         struct {
             union {
                 struct {
+                    // crc16 of the config. name
                     HandleType _handle;
-                    uint16_t _type : 4;                              // type of data
-                    uint16_t _length : 11;                           // stores the length of the data currently stored in the EEPROM
+                    // type of data
+                    uint16_t _type : 4;
+                    // stores the length of the data currently stored in the EEPROM
+                    uint16_t _length : 11;
+                    // indicates that the parameter is writeable using the _writeable object
                     uint16_t _is_writeable: 1;
                 };
                 ParameterHeaderType _header;
             };
             union {
+                // if not null, it points to read only data
                 uint8_t *_readable;
+                // if not null and _is_writeable is true, it provides writable access to the stored data
                 WriteableData *_writeable;
             };
         };

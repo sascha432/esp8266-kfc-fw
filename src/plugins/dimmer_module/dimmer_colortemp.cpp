@@ -186,7 +186,7 @@ namespace Dimmer {
             publish(_createTopics(TopicType::MAIN_STATE), true, UnnamedObject(
                 State(_brightness != 0),
                 Brightness(_brightness),
-                MQTT::Json::ColorTemperature(_color),
+                MQTT::Json::ColorTemperature(static_cast<uint16_t>(_color)),
                 Transition(_base._getConfig()._base._fadetime())).toString()
             );
         }

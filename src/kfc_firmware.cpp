@@ -257,12 +257,12 @@ void setup()
             delayTime *= 1000;
             while(start - millis() < delayTime) {
                 for(auto i = 0; i < 3; i++) {
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
                     delay(100);
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                     delay(100);
                 }
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                 delay(400);
             }
             DEBUG_BOOT_PRINT_POS();
@@ -270,11 +270,11 @@ void setup()
         }
 
         DEBUG_BOOT_PRINT_POS();
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 
     #if DEBUG_PRE_INIT_SERIAL2TCP
         #include "../include/retracted/custom_wifi.h"
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
         WiFi.setAutoConnect(true);
         WiFi.setAutoReconnect(true);
         WiFi.enableSTA(true);
@@ -288,10 +288,10 @@ void setup()
             auto instance = Serial2TcpBase::createInstance(cfg, CUSTOM_SERIAL2TCP_SERVER);
             instance->begin();
             delay(1000);
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
         }
         else {
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         }
     #endif
 
@@ -311,20 +311,20 @@ void setup()
             auto start = millis();
             uint8_t mode = 0;
             DEBUG_BOOT_PRINT_POS();
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
             while(isSystemKeyComboPressed()) {
                 auto duration = millis() - start;
                 if (duration > 20000) {
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                     mode = 0;
                     break;
                 }
                 if (mode == 1 && duration > 12000) {
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
                     mode++;
                 }
                 else if (mode == 0 && duration > 1000) {
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
                     mode++;
                 }
             }
@@ -355,9 +355,9 @@ void setup()
                 DEBUG_BOOT_PRINT_POS();
                 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
                     for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
-                        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
+                        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
                         delay(100);
-                        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                         delay(250);
                     }
                 #else
@@ -415,7 +415,7 @@ void setup()
                 KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Press reset %ux times to restore factory defaults. A blinking LED indicates success and the normal boot process continues after %u seconds.\n\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT, RESET_DETECTOR_TIMEOUT / 1000U);
 
                 DEBUG_BOOT_PRINT_POS();
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
                 resetDetector.setSafeMode(1);
 
                 static_assert(KFC_BOOT_MENU_TIMEOUT >= 3, "timeout should be at least 3 seconds");

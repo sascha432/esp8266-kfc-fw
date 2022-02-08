@@ -247,7 +247,7 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
 {
     __LDBG_printf("reason=%d error=%s wifi_connected=%u wifi_up=%u is_connected=%u ip=%s", event.reason, WiFi_disconnect_reason(event.reason), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
     if (_wifiConnected) {
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
 
         Logger_notice(F("WiFi disconnected, SSID %s, reason %s, had %sIP address"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason), _wifiUp ? emptyString.c_str() : PSTR("no "));
         _wifiConnected = 0;
@@ -323,16 +323,16 @@ void KFCFWConfiguration::setWiFiConnectLedMode()
 {
     #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
         if (config.isSafeMode()) {
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         }
         else {
             auto mode = System::Device::getConfig().getStatusLedMode();
             if (mode != System::Device::StatusLEDModeType::OFF) {
                 if (WiFi.isConnected()) {
-                    BUILDIN_LED_SET(mode == System::Device::StatusLEDModeType::OFF_WHEN_CONNECTED ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
+                    BUILTIN_LED_SET(mode == System::Device::StatusLEDModeType::OFF_WHEN_CONNECTED ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
                 }
                 else {
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
                 }
             }
         }
@@ -347,7 +347,7 @@ void KFCFWConfiguration::_onWiFiOnDHCPTimeoutCb()
     #else
         Logger_error(F("DHCP timeout"));
     #endif
-    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
 }
 
 void KFCFWConfiguration::_softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event)
@@ -799,7 +799,7 @@ void KFCFWConfiguration::setup()
     #endif
     {
         Logger_notice(F("Starting KFCFW %s"), version.c_str());
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
     }
 
     LoopFunctions::add(KFCFWConfiguration::loop);
@@ -1098,7 +1098,7 @@ void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t
     __LDBG_printf("Entering deep sleep for %u milliseconds, RF mode %d", time.count(), mode);
 
 #if __LED_BUILTIN == NEOPIXEL_PIN_ID
-    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
 #endif
 
     DeepSleep::DeepSleepParam::enterDeepSleep(time, mode);
@@ -1168,7 +1168,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
         msg += F(" in SAFE MODE");
     }
     Logger_notice(msg);
-    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
 
     delay(500);
 
@@ -1434,7 +1434,7 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
 
     #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID || ENABLE_BOOT_LOG
         if (!station_mode_success || !ap_mode_success) {
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
         }
     #endif
 
@@ -1742,7 +1742,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
 
     if (WiFi.isConnected() && !resetDetector.hasWakeUpDetected()) {
         __DBG_assert_printf(false, "WiFi up, skipping init.");
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         return;
     }
 

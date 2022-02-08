@@ -16,15 +16,15 @@
 MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(num) {
         case 0:
             if (discovery->create(this, F("int_temp"), format)) {
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(F("int_temp"));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("MCU Temperature")));
-                #endif
+                discovery->addName(F("MCU Temperature"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("MCU Temperature"), true));
             }
             break;
         case 1:
@@ -32,9 +32,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(F("ntc_temp"));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("NTC Temperature")));
-                #endif
+                discovery->addName(F("NTC Temperature"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("NTC Temperature"), true));
             }
             break;
         case 2:
@@ -42,9 +41,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(F("vcc"));
                 discovery->addDeviceClass(F("voltage"), 'V');
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("MCU VCC")));
-                #endif
+                discovery->addName(F("MCU VCC"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("MCU VCC"), true));
             }
             break;
         case 3:
@@ -52,9 +50,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(FSPGM(frequency));
                 discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Mains Frequency")));
-                #endif
+                discovery->addName(F("Mains Frequency"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Mains Frequency"), true));
             }
             break;
     }

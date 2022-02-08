@@ -53,6 +53,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name, MQTT::SensorType type) :
 MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     String topic = _getTopic();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
@@ -61,9 +62,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement('W');
                 discovery->addValueTemplate(FSPGM(power));
                 discovery->addDeviceClass(F("power"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Power")));
-                #endif
+                discovery->addName(F("Power"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Power"), true));
             }
             break;
         case 1:
@@ -72,9 +72,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement(FSPGM(kWh));
                 discovery->addValueTemplate(FSPGM(energy_total));
                 discovery->addDeviceClass(F("energy"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Energy Total")));
-                #endif
+                discovery->addName(F("Energy Total"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Energy Total"), true));
             }
             break;
         case 2:
@@ -83,9 +82,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement(FSPGM(kWh));
                 discovery->addValueTemplate(FSPGM(energy));
                 discovery->addDeviceClass(F("energy"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Energy")));
-                #endif
+                discovery->addName(F("Energy"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Energy"), true));
             }
             break;
         case 3:
@@ -94,9 +92,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement('V');
                 discovery->addValueTemplate(FSPGM(voltage));
                 discovery->addDeviceClass(F("voltage"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Voltage")));
-                #endif
+                discovery->addName(F("Voltage"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Voltage"), true));
             }
             break;
         case 4:
@@ -105,9 +102,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement('A');
                 discovery->addValueTemplate(FSPGM(current));
                 discovery->addDeviceClass(F("current"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Current")));
-                #endif
+                discovery->addName(F("Current"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Current"), true));
             }
             break;
         case 5:
@@ -116,9 +112,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addUnitOfMeasurement('%');
                 discovery->addValueTemplate(FSPGM(pf));
                 discovery->addDeviceClass(F("power_factor"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Power Factor")));
-                #endif
+                discovery->addName(F("Power Factor"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Power Factor"), true));
             }
             break;
     }

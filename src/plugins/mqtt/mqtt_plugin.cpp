@@ -81,7 +81,10 @@ void Plugin::getStatus(Print &output)
     auto client = Client::getClient();
     if (client) {
         output.print(client->connectionStatusString());
-        output.printf_P(PSTR(HTML_S(br) "%u components, %u entities" HTML_S(br)), client->_components.size(), AutoDiscovery::List::size(client->_components));
+        output.printf_P(PSTR(HTML_S(br) "%u components, %u entities" HTML_S(br)),
+            client->_components.size(),
+            AutoDiscovery::List::size(client->_components)
+        );
     }
     else {
         output.print(FSPGM(Disabled));
@@ -212,6 +215,8 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                         else {
                             FormatType format = args.equalsIgnoreCase(1, F("full")) ? FormatType::JSON : FormatType::TOPIC;
                             auto &stream = args.getStream();
+                            stream.printf_P(PSTR("Prefix: %s\n"), Plugins::MqttClient::getAutoDiscoveryPrefix());
+                            stream.printf_P(PSTR("Base topic: %s\n"), client._getBaseTopic().c_str());
                             auto list = client.getAutoDiscoveryList(format);
                             if (list.empty()) {
                                 args.printf_P(PSTR("No components available"));
@@ -219,7 +224,6 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                             else {
                                 for(auto iterator = list.begin(); iterator != list.end(); ++iterator) {
                                     const auto &entity = *iterator;
-                                // for(const auto &entity: list) {
                                     if (entity) {
                                         if (format == FormatType::TOPIC) {
                                             stream.println(entity->getTopic());

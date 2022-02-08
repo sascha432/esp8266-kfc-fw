@@ -87,8 +87,9 @@ namespace KFCConfigurationClasses {
                 // time in seconds before the system reboots after entering safe mode either due to series of crashes or many short power failures
                 CREATE_UINT16_BITFIELD_MIN_MAX(safe_mode_reboot_timeout_minutes, 10, 5, 900, 0, 1);
                 // time in minutes until the build reboots, if the devices was reset quickly 3 or 5 times in a row. some might have a reset button that
-                // triggers the config mode if pressed for mor then 5-10 seconds
+                // triggers the config mode if pressed for more then 5-10 seconds
                 CREATE_UINT16_BITFIELD_MIN_MAX(init_config_ap_mode_timeout, 6, 0, 63, 0, 60);
+                CREATE_UINT16_BITFIELD_MIN_MAX(erase_eeprom_fs_counter_minutes, 8, 5, 255, 0, 15);
                 CREATE_UINT16_BITFIELD_MIN_MAX(zeroconf_timeout, 16, 1000, 60000, 15000, 1000);
                 CREATE_UINT16_BITFIELD_MIN_MAX(webui_cookie_lifetime_days, 10, 3, 720, 90, 30);
                 CREATE_UINT16_BITFIELD(zeroconf_logging, 1);
@@ -96,6 +97,9 @@ namespace KFCConfigurationClasses {
 
                 uint16_t getSafeModeRebootTimeout() const {
                     return safe_mode_reboot_timeout_minutes;
+                }
+                uint16_t getCrashCounterFactoryReset() const {
+                    return erase_eeprom_fs_counter_minutes;
                 }
                 uint16_t getWebUICookieLifetime() const {
                     return webui_cookie_lifetime_days;
@@ -117,7 +121,15 @@ namespace KFCConfigurationClasses {
 
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Name, 3, 16);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Title, 3, 32);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, ObjectId, 3, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, _ObjectId, 3, 32); // private, use getObjectIdOrName()
+
+            static const char *getObjectIdOrName() {
+                auto id = get_ObjectId();
+                if (*id) {
+                    return id;
+                }
+                return getName();
+            }
 
             // username is device name
             // in case this changes one day, this function will return the username

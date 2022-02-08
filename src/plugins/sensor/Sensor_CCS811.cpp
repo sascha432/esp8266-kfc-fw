@@ -44,15 +44,15 @@ Sensor_CCS811::~Sensor_CCS811()
 MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(F("eco2")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(F("ppm"));
                 discovery->addValueTemplate(F("eCO2"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("eCO2")));
-                #endif
+                discovery->addName(F("eCO2"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("eCO2"), true));
             }
             break;
         case 1:
@@ -60,9 +60,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addUnitOfMeasurement(F("ppb"));
                 discovery->addValueTemplate(F("TVOC"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("TVOC")));
-                #endif
+                discovery->addName(F("TVOC"));
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("TVOC"), true));
             }
             break;
     }
@@ -153,7 +152,7 @@ Sensor_CCS811::SensorData &Sensor_CCS811::_readSensor()
     _state.baseline = _ccs811.getBaseline();
     _writeStateFile();
 
-    __LDBG_printf("CCS811 0x%02x: available=%d/%d eCO2 %uppm TVOC %uppb error=%d baseline=%u",
+    __LDBG_printf("CCS811 0x%02x: available=%d/%d eCO2 %u ppm TVOC %u ppb error=%d baseline=%u",
         _address, _sensor.available, available, _sensor.eCO2, _sensor.TVOC, _ccs811.checkError(), _state.baseline
     );
 

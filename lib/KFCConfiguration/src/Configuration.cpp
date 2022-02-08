@@ -65,7 +65,16 @@ void Configuration::release()
 
 Configuration::WriteResultType Configuration::erase()
 {
-    #if ESP32
+    #if ESP8266
+        #if CONFIGURATION_HEADER_OFFSET
+            #error not implemented
+        #endif
+        auto address = ConfigurationHelper::getFlashAddress(kHeaderOffset);
+        if (!flashEraseSector(address / SPI_FLASH_SEC_SIZE)) {
+            __DBG_printf("failed to erase configuration");
+            return WriteResultType::FLASH_ERASE_ERROR;
+        }
+    #elif ESP32
         _nvs_open();
         // clear previous configuration
         esp_err_t err;

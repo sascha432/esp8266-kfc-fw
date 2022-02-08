@@ -21,12 +21,12 @@
 #endif
 
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-#    define BUILDIN_LED_SET(mode)                  BlinkLEDTimer::setBlink(__LED_BUILTIN, mode);
-#    define forceTimeBUILDIN_LED_SETP(delay, patt) BlinkLEDTimer::setPattern(__LED_BUILTIN, delay, patt);
+#    define BUILTIN_LED_SET(mode)                  BlinkLEDTimer::setBlink(__LED_BUILTIN, mode);
+#    define forceTimeBUILTIN_LED_SETP(delay, patt) BlinkLEDTimer::setPattern(__LED_BUILTIN, delay, patt);
 #    define BUILDIN_LED_GET(mode)                  BlinkLEDTimer::isBlink(__LED_BUILTIN, mode)
 #else
-#    define BUILDIN_LED_SET(...)
-#    define BUILDIN_LED_SETP(...)
+#    define BUILTIN_LED_SET(...)
+#    define BUILTIN_LED_SETP(...)
 #    define BUILDIN_LED_GET(mode) true
 #endif
 

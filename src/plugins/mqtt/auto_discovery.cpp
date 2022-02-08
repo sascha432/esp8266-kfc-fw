@@ -14,13 +14,12 @@
 #include "JsonTools.h"
 
 #if DEBUG_MQTT_CLIENT
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using KFCConfigurationClasses::System;
-
 using namespace MQTT::AutoDiscovery;
 
 bool Entity::create(ComponentPtr component, const String &componentName, FormatType format)
@@ -30,10 +29,7 @@ bool Entity::create(ComponentPtr component, const String &componentName, FormatT
 
 bool Entity::create(ComponentType componentType, const String &componentName, FormatType format)
 {
-    String suffix = System::Device::getObjectId();
-    if (!suffix.length()) {
-        suffix = System::Device::getName();
-    }
+    String suffix = System::Device::getObjectIdOrName();
     if (componentName.length()) {
         if (!componentName.startsWith('/')) {
             suffix += '/';
@@ -45,17 +41,17 @@ bool Entity::create(ComponentType componentType, const String &componentName, Fo
 
 String Entity::getWildcardTopic()
 {
-    return PrintString(F("%s/+/%s/#"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getName());
+    return PrintString(F("%s/+/%s/#"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
 }
 
 String Entity::getConfigWildcardTopic()
 {
-    return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getName());
+    return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
 }
 
 String Entity::getConfig2ndLevelWildcardTopic()
 {
-    return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getName());
+    return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
 }
 
 String Entity::getTriggersTopic()
@@ -75,6 +71,7 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
         _topic += '/';
     }
     _topic += name;
+
     if (!_topic.endsWith('/')) {
         _topic += '/';
     }

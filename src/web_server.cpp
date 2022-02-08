@@ -759,7 +759,7 @@ void Plugin::ArduinoOTAbegin()
     ArduinoOTA.setPassword(System::Device::getPassword());
     ArduinoOTA.onStart([this]() {
         Logger_notice(F("Firmware upload started"));
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
         __DBG_printf("ArduinoOTA start");
         _AOTAInfo.start();
     });
@@ -768,7 +768,7 @@ void Plugin::ArduinoOTAbegin()
         if (_AOTAInfo) {
             _AOTAInfo.stop();
             Logger_security(F("Firmware upgrade successful, rebooting device"));
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
             _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {
                 config.restartDevice();
             });
@@ -787,7 +787,7 @@ void Plugin::ArduinoOTAbegin()
         if (_AOTAInfo) {
             _AOTAInfo.stop(err);
             if (!_AOTAInfo) {
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
                 Logger_error(F("Firmware upgrade failed: %s"), ArduinoOTAErrorStr(_AOTAInfo._error));
             }
         }

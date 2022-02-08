@@ -118,6 +118,18 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_name), value);
             }
 
+            void addFriendlyName(const String &value) {
+                if (value.length() == 0) {
+                    return;
+                }
+                addParameter(FSPGM(mqtt_friendly_name), value);
+            }
+
+            template<typename _T>
+            void addFriendlyName(_T value) {
+                addParameter(FSPGM(mqtt_friendly_name), value);
+            }
+
             template<typename _T>
             void addObjectId(_T value) {
                 addParameter(FSPGM(mqtt_object_id), value);

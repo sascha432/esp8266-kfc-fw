@@ -5,6 +5,10 @@
 #include "BlindsControl.h"
 #include "WebUISocket.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
+
+using KFCConfigurationClasses::System;
+using Plugins = KFCConfigurationClasses::PluginsType;
 
 // ------------------------------------------------------------------------
 // BlindsControl::ChannelState
@@ -411,41 +415,50 @@ inline void BlindsControl::_publishState()
 inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     if (num < kChannelCount) {
         ChannelType channel = (ChannelType)num;
-        if (discovery->create(this, PrintString(FSPGM(channel__u, "channel_%u"), channel), format)) {
+        if (discovery->create(this, baseTopic + PrintString(FSPGM(channel__u, "channel_%u"), channel), format)) {
             discovery->addStateTopic(_getTopic(channel, TopicType::STATE));
             discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
-            discovery->addName(String(Plugins::Blinds::getChannelName(static_cast<size_t>(channel))));
+            auto name = Plugins::Blinds::getChannelName(static_cast<size_t>(channel));
+            discovery->addName(name);
+            discovery->addObjectId(baseTopic + MQTT::Client::filterString(name, true));
         }
     }
     else if (num == kChannelCount) {
-        if (discovery->create(this, FSPGM(channels), format)) {
+        if (discovery->create(this, baseTopic + FSPGM(channels), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::ALL, TopicType::STATE));
             discovery->addCommandTopic(_getTopic(ChannelType::ALL, TopicType::SET));
             discovery->addName(F("Both Channels"));
+            discovery->addObjectId(baseTopic + MQTT::Client::filterString(String(F("Both Channels")).c_str(), true));
+
         }
     }
     else if (num == kChannelCount + 1) {
-        if (discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(binary), format)) {
+        if (discovery->create(MQTTComponent::ComponentType::SENSOR, baseTopic + FSPGM(binary), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
             discovery->addValueTemplate(FSPGM(binary));
             discovery->addName(F("Binary Status"));
+            discovery->addObjectId(baseTopic + MQTT::Client::filterString(String(F("Binary Status")).c_str(), true));
         }
     }
     else if (num == kChannelCount + 2) {
-        if (discovery->create(MQTTComponent::ComponentType::SENSOR, FSPGM(busy, "busy"), format)) {
+        if (discovery->create(MQTTComponent::ComponentType::SENSOR, baseTopic + FSPGM(busy, "busy"), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
             discovery->addValueTemplate(FSPGM(busy));
             discovery->addName(F("Status"));
+            discovery->addObjectId(baseTopic + MQTT::Client::filterString(String(F("Status")).c_str(), true));
         }
     }
     else if (num >= kChannelCount + 3) {
         ChannelType channel = (ChannelType)(num - (kChannelCount + 3));
-        if (discovery->create(MQTTComponent::ComponentType::SENSOR, PrintString(FSPGM(channel__u), channel), format)) {
+        if (discovery->create(MQTTComponent::ComponentType::SENSOR, baseTopic + PrintString(FSPGM(channel__u), channel), format)) {
             discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::CHANNELS));
             discovery->addValueTemplate(PrintString(FSPGM(channel__u), channel));
-            discovery->addName(Plugins::Blinds::getChannelName(static_cast<size_t>(channel)));
+            auto name = Plugins::Blinds::getChannelName(static_cast<size_t>(channel));
+            discovery->addName(name);
+            discovery->addObjectId(baseTopic + MQTT::Client::filterString(name, true));
         }
     }
     return discovery;

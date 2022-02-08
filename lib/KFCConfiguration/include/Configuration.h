@@ -294,7 +294,7 @@ public:
     // read data from EEPROM
     bool read();
 
-    // erase NVS data, not implemented for EEPROM since it gets erased during each write
+    // erase NVS data or EEPROM
     WriteResultType erase();
 
     // write data to EEPROM

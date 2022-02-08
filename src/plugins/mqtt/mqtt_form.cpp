@@ -155,13 +155,9 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
     form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)), FormUI::IntAttribute(F("disabled-value"), 0));
     cfg.addRangeValidatorFor_auto_discovery_rebroadcast_interval(form, true);
 
-    #if MQTT_AUTO_DISCOVERY_USE_NAME
-
-        form.addStringGetterSetter(F("adn"), MqttClient::getAutoDiscoveryName, MqttClient::setAutoDiscoveryName);
-        form.addFormUI(F("Auto Discovery Name"), FormUI::PlaceHolder(F("Disabled")));
-        MqttClient::addAutoDiscoveryNameLengthValidator(form, true);
-
-    #endif
+    form.addStringGetterSetter(F("adn"), MqttClient::getAutoDiscoveryName, MqttClient::setAutoDiscoveryName);
+    form.addFormUI(F("Auto Discovery Name"), FormUI::PlaceHolder(F("Disabled")));
+    MqttClient::addAutoDiscoveryNameLengthValidator(form, true);
 
     autoDiscoveryGroup.end();
     hassGroup.end();

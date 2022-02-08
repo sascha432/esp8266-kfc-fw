@@ -83,6 +83,13 @@ namespace WebServer {
         }
     };
 
+    enum class ResetOptionsType {
+        NONE,
+        FSR,
+        FFS,
+        FSR_FFS
+    };
+
     struct UploadStatus
     {
         AsyncWebServerResponse *response;
@@ -91,8 +98,18 @@ namespace WebServer {
         size_t size;
         bool authenticated;
         uint16_t progress;
+        ResetOptionsType resetOptions;
 
-        UploadStatus() : response(nullptr), error(0), command(0), size(0), authenticated(false), progress(~0) {}
+        UploadStatus() :
+            response(nullptr),
+            error(0),
+            command(0),
+            size(0),
+            authenticated(false),
+            progress(~0),
+            resetOptions(ResetOptionsType::NONE)
+        {
+        }
     };
 
     class RestHandler {

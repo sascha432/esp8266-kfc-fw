@@ -18,6 +18,7 @@ namespace KFCConfigurationClasses {
                 setHostname(CREATE_ZERO_CONF(F("mqtt"), FSPGM(tcp), FSPGM(address), F("192.168.4.1")));
                 setBaseTopic(F("home/${object_id}"));
                 setAutoDiscoveryPrefix(F("homeassistant"));
+                setAutoDiscoveryName(F("${device_name}"));
                 // setSharedTopic(F("home/kfcfw/shared"));
             }
 

@@ -611,15 +611,39 @@ public:
 
     private:
         static String _getBaseTopic();
-    #if MQTT_GROUP_TOPIC
-        static bool _getGroupTopic(ComponentPtr component, String groupTopic, String &topic);
-    #endif
+        #if MQTT_GROUP_TOPIC
+            static bool _getGroupTopic(ComponentPtr component, String groupTopic, String &topic);
+        #endif
         // a slash is inserted between base topic and suffix or format, if there is none
         // there is no slash inserted between suffix and format
         static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
-        static String _filterString(const char *str, bool replaceSpace = false);
+        static String _filterString(PGM_P str, bool replaceSpace = false);
 
     public:
+        inline static String filterString(PGM_P str, bool replaceSpace = false)
+        {
+            return _filterString(str, replaceSpace);
+        }
+
+        inline static String filterString(const String &str, bool replaceSpace = false)
+        {
+            return _filterString(str.c_str(), replaceSpace);
+        }
+
+        inline static String filterString(const __FlashStringHelper *fstr, bool replaceSpace = false)
+        {
+            return _filterString(reinterpret_cast<PGM_P>(fstr), replaceSpace);
+        }
+
+        inline static String getBaseTopicPrefix()
+        {
+            String baseTopic = _filterString(KFCConfigurationClasses::System::Device::getObjectIdOrName(), true);
+            if (!baseTopic.endsWith('_')) {
+                baseTopic += '_';
+            }
+            return baseTopic;
+        }
+
         inline const __FlashStringHelper *getConnectionState()
         {
             switch(_connState) {
@@ -858,7 +882,8 @@ public:
     #endif
 
     inline __attribute__((__always_inline__))
-    AutoDiscovery::QueuePtr &Client::getAutoDiscoveryQueue() {
+    AutoDiscovery::QueuePtr &Client::getAutoDiscoveryQueue()
+    {
         return _autoDiscoveryQueue;
     }
 

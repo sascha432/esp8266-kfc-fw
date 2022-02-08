@@ -25,7 +25,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-
 using KFCConfigurationClasses::System;
 using Plugins = KFCConfigurationClasses::PluginsType;
 
@@ -41,40 +40,55 @@ void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
 
 void WebTemplate::printUniqueId(Print &output, const String &name, int8_t dashPos)
 {
+    #if defined(ESP8266)
+
+        struct __attribute__packed__ {
+            uint32_t chip_id;
+            uint32_t flash_chip_id;
+            union __attribute__packed__ {
+                uint8_t mac[2 * WL_MAC_ADDR_LENGTH];
+                struct __attribute__packed__ {
+                    uint8_t mac_station[WL_MAC_ADDR_LENGTH];
+                    uint8_t mac_softap[WL_MAC_ADDR_LENGTH];
+                };
+            };
+        } info = {
+            system_get_chip_id(),
+            ESP.getFlashChipId() /* cached version of spi_flash_get_id() */
+        };
+        wifi_get_macaddr(STATION_IF, info.mac_station);
+        wifi_get_macaddr(SOFTAP_IF, info.mac_softap);
+
+    #elif defined(ESP32)
+
+        struct __attribute__packed__ {
+            esp_chip_info_t chip_id;
+            uint32_t flash_chip_id;
+            union __attribute__packed__ {
+                uint8_t mac[4 * WL_MAC_ADDR_LENGTH];
+                struct __attribute__packed__ {
+                    uint8_t mac_wifi_sta[WL_MAC_ADDR_LENGTH];
+                    uint8_t mac_wifi_soft_ap[WL_MAC_ADDR_LENGTH];
+                    uint8_t mac_bt[WL_MAC_ADDR_LENGTH];
+                    uint8_t mac_eth[WL_MAC_ADDR_LENGTH];
+                };
+            };
+        } info;
+
+        esp_chip_info(&info.chip_id);
+        info.flash_chip_id = ESP.getFlashChipSize();
+        esp_read_mac(info.mac_wifi_sta, ESP_MAC_WIFI_STA);
+        esp_read_mac(info.mac_wifi_soft_ap, ESP_MAC_WIFI_SOFTAP);
+        esp_read_mac(info.mac_bt, ESP_MAC_BT);
+        esp_read_mac(info.mac_eth, ESP_MAC_ETH);
+
+    #else
+
+        #error Platform not supported
+
+    #endif
+
     uint16_t crc[4];
-
-#if defined(ESP8266)
-
-    typedef struct __attribute__packed__ {
-        uint32_t chip_id;
-        uint32_t flash_chip_id;
-        uint8_t mac[2 * 6];
-    } unique_device_info_t;
-    unique_device_info_t info = { system_get_chip_id(), ESP.getFlashChipId()/* cached version of spi_flash_get_id() */ };
-    wifi_get_macaddr(STATION_IF, info.mac);
-    wifi_get_macaddr(SOFTAP_IF, info.mac + 6);
-
-#elif defined(ESP32)
-
-    typedef struct __attribute__packed__ {
-        esp_chip_info_t chip_id;
-        uint32_t flash_chip_id;
-        uint8_t mac[4 * 6];
-    } unique_device_info_t;
-    unique_device_info_t info;
-
-    esp_chip_info(&info.chip_id);
-    info.flash_chip_id = ESP.getFlashChipSize();
-    esp_read_mac(info.mac, ESP_MAC_WIFI_STA);
-    esp_read_mac(info.mac + 6, ESP_MAC_WIFI_SOFTAP);
-    esp_read_mac(info.mac + 12, ESP_MAC_BT);
-    esp_read_mac(info.mac + 18, ESP_MAC_ETH);
-
-#else
-
-    #error Platform not supported
-
-#endif
 
     crc[0] = crc16_update(~0, &info, sizeof(info));
     crc[1] = crc16_update(crc[0], &info.chip_id, sizeof(info.chip_id));
@@ -112,7 +126,7 @@ void WebTemplate::printWebInterfaceUrl(Print &output)
 void WebTemplate::printModel(Print &output)
 {
     #if defined(MQTT_AUTO_DISCOVERY_MODEL)
-            output.print(F(MQTT_AUTO_DISCOVERY_MODEL));
+        output.print(F(MQTT_AUTO_DISCOVERY_MODEL));
     #elif IOT_SWITCH
         #if IOT_SWITCH_CHANNEL_NUM>1
             output.print(F(_STRINGIFY(IOT_SWITCH_CHANNEL_NUM) " Channel Switch"));
@@ -162,7 +176,20 @@ void WebTemplate::printSSDPUUID(Print &output)
 
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    __LDBG_printf("key=%s %p form=%p authenticated=%u", __S(key), std::addressof(key), std::addressof(_form), isAuthenticated());
+    #if DEBUG
+        struct OnReturn {
+            OnReturn(const String &key) : _key(key) {
+            }
+            ~OnReturn() {
+                __DBG_printf("key=%s", __S(_key));
+            }
+            const String &_key;
+        } onReturn(key);
+    #endif
+    __DBG_validatePointer(&key, VP_HPS);
+    __DBG_validatePointer(&output, VP_HPS);
+    __DBG_validatePointer(_form, VP_HPS);
+    __DBG_printf("key=%s %p form=%p auth=%u", __S(key), std::addressof(key), std::addressof(_form), isAuthenticated());
     // ------------------------------------------------------------------------------------
     // public variables
     // ------------------------------------------------------------------------------------
@@ -173,6 +200,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(System::Device::getTitle());
     }
     else if (key == F("SELF_URI")) {
+        __DBG_validatePointer(&_selfUri, VP_HPS);
+        __DBG_validatePointer(_selfUri.c_str(), VP_HPS);
         output.print(_selfUri);
     }
     else if (key == F("ALIVE_REDIRECTION")) {
@@ -324,7 +353,8 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
         if (config.isConfigDirty()) {
             output.print(F("alert alert-dismissible alert-danger fade show"));
-        } else {
+        }
+        else {
             output.print(FSPGM(hidden));
         }
     }
@@ -363,20 +393,16 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(FSPGM(Not_supported, "Not supported"));
     }
     else {
-
-
-    __DBG_printf("strlist check key='%s'", key.c_str());
-
-    // else
-    if (stringlist_find_P_P(PSTR("PCF8574_STATUS,PCF8575_STATUS,TINYPWM_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',') != -1) {
-        // strings that have not been replaced yet
-        __DBG_printf("return strlist check key='%s'", key.c_str());
-        return;
-    }
-    else {
-        __DBG_printf("return asssert failed check key='%s'", key.c_str());
-        __DBG_assert_printf(F("key not found") == nullptr, "key not found '%s'", key.c_str());
-    }
+        __DBG_printf("strlist check key='%s'", key.c_str());
+        if (stringlist_find_P_P(PSTR("PCF8574_STATUS,PCF8575_STATUS,TINYPWM_STATUS,PCA9685_STATUS,MCP23017_STATUS,RTC_STATUS"), key.c_str(), ',') != -1) {
+            // strings that have not been replaced yet
+            __DBG_printf("return strlist check key='%s'", key.c_str());
+            return;
+        }
+        else {
+            __DBG_printf("return assert failed check key='%s'", key.c_str());
+            __DBG_assert_printf(F("key not found") == nullptr, "key not found '%s'", key.c_str());
+        }
     }
 }
 

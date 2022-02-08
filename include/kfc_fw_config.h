@@ -114,7 +114,7 @@ public:
     void storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway);
 
     inline static void wakeUpFromDeepSleep() {
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
         wifiQuickConnect();
     }
     void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);

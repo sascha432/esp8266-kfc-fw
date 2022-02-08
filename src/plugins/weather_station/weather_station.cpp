@@ -593,7 +593,7 @@ void WeatherStationPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
     if (!_resetAlarmFunc) {
         _resetAlarmFunc = [this](Event::CallbackTimerPtr timer) {
             #if IOT_WEATHER_STATION_WS2812_NUM
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
             #endif
             _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler
             _resetAlarmFunc = nullptr;

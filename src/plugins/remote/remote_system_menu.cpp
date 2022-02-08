@@ -129,7 +129,7 @@ namespace RemoteControl {
     void Base::_systemComboNextState(ComboButtonStateType state)
     {
         _systemButtonComboState = state;
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
     }
 
     #define SYSTEM_MAINTENANCE_MENU "System maintenance: "
@@ -141,14 +141,14 @@ namespace RemoteControl {
                 // buttons still down, restart
                 if (_systemButtonComboState == ComboButtonStateType::PRESSED) {
                     Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Rebooting device"));
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                     delay(750);
                     config.restartDevice();
                 }
                 _systemButtonComboTimeout = 0;
                 _systemButtonComboState = ComboButtonStateType::NONE;
                 Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Menu timeout"));
-                BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                 KFCFWConfiguration::setWiFiConnectLedMode();
                 return;
             }
@@ -156,7 +156,7 @@ namespace RemoteControl {
                 case ComboButtonStateType::RELEASED:
                 case ComboButtonStateType::RESET_MENU_TIMEOUT:
                     // update menu timeout
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
                     _systemButtonComboTimeout = millis() + kSystemComboMenuTimeout;
                     _systemButtonComboState = ComboButtonStateType::TIMEOUT;
                     break;
@@ -209,14 +209,14 @@ namespace RemoteControl {
             case ComboButtonStateType::CONFIRM_DEEP_SLEEP:
             case ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON:
                 if (!BUILDIN_LED_GET(BlinkLEDTimer::BlinkType::FLICKER)) {
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
                 }
                 break;
             case ComboButtonStateType::RELEASED:
             case ComboButtonStateType::RESET_MENU_TIMEOUT:
             case ComboButtonStateType::TIMEOUT:
                 if (!BUILDIN_LED_GET(BlinkLEDTimer::BlinkType::MEDIUM)) {
-                    BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
                 }
                 break;
             case ComboButtonStateType::EXIT_MENU_TIMEOUT:

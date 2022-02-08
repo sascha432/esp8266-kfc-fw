@@ -33,6 +33,7 @@ strings = {
     'avty':                'availability',
     'avty_mode':           'availability_mode',
     'avty_t':              'availability_topic',
+    'avty_tpl':            'availability_template',
     'away_mode_cmd_t':     'away_mode_command_topic',
     'away_mode_stat_tpl':  'away_mode_state_template',
     'away_mode_stat_t':    'away_mode_state_topic',
@@ -59,12 +60,14 @@ strings = {
     'cmd_tpl':             'command_template',
     'cod_arm_req':         'code_arm_required',
     'cod_dis_req':         'code_disarm_required',
+    'cod_trig_req':        'code_trigger_required',
     'curr_temp_t':         'current_temperature_topic',
     'curr_temp_tpl':       'current_temperature_template',
     'dev':                 'device',
     'dev_cla':             'device_class',
     'dock_t':              'docked_topic',
     'dock_tpl':            'docked_template',
+    'e':                   'encoding',
     'err_t':               'error_topic',
     'err_tpl':             'error_template',
     'fanspd_t':            'fan_speed_topic',
@@ -93,6 +96,10 @@ strings = {
     'hs_val_tpl':          'hs_value_template',
     'ic':                  'icon',
     'init':                'initial',
+    'hum_cmd_t':           'target_humidity_command_topic',
+    'hum_cmd_tpl':         'target_humidity_command_template',
+    'hum_stat_t':          'target_humidity_state_topic',
+    'hum_stat_tpl':        'target_humidity_state_template',
     'json_attr':           'json_attributes',
     'json_attr_t':         'json_attributes_topic',
     'json_attr_tpl':       'json_attributes_template',
@@ -100,11 +107,15 @@ strings = {
     'min_mirs':            'min_mireds',
     'max_temp':            'max_temp',
     'min_temp':            'min_temp',
+    'max_hum':             'max_humidity',
+    'min_hum':             'min_humidity',
     'mode_cmd_tpl':        'mode_command_template',
     'mode_cmd_t':          'mode_command_topic',
     'mode_stat_tpl':       'mode_state_template',
     'mode_stat_t':         'mode_state_topic',
+    'modes':               'modes',
     'name':                'name',
+    'obj_id':              'object_id',
     'off_dly':             'off_delay',
     'on_cmd_type':         'on_command_type',
     'opt':                 'optimistic',
@@ -140,8 +151,13 @@ strings = {
     'pl_strt':             'payload_start',
     'pl_stpa':             'payload_start_pause',
     'pl_ret':              'payload_return_to_base',
+    'pl_rst_hum':          'payload_reset_humidity',
+    'pl_rst_mode':         'payload_reset_mode',
+    'pl_rst_pct':          'payload_reset_percentage',
+    'pl_rst_pr_mode':      'payload_reset_preset_mode',
     'pl_toff':             'payload_turn_off',
     'pl_ton':              'payload_turn_on',
+    'pl_trig':             'payload_trigger',
     'pl_unlk':             'payload_unlock',
     'pos_clsd':            'position_closed',
     'pos_open':            'position_open',
@@ -169,6 +185,7 @@ strings = {
     'spd_rng_min':         'speed_range_min',
     'spd_rng_max':         'speed_range_max',
     'src_type':            'source_type',
+    'stat_cla':            'state_class',
     'stat_clsd':           'state_closed',
     'stat_closing':        'state_closing',
     'stat_off':            'state_off',
@@ -225,7 +242,7 @@ strings = {
 
 header = '// AUTOMATICALLY GENERATED FILE. DO NOT MODIFY\n// GENERATOR: ./scripts/tools/create_mqtt_strings.py\n//\n'
 
-with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.h')), 'w') as f:
+with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.h')), 'w', newline = '\n') as f:
 
     f.write(header)
     f.write('#pragma once\n')
@@ -252,6 +269,7 @@ with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.h')), 'w') as f:
     f.write('PROGMEM_STRING_DECL(mqtt_schema_json);\n')
     f.write('PROGMEM_STRING_DECL(mqtt_type);\n')
     f.write('PROGMEM_STRING_DECL(mqtt_component_device_automation);\n')
+    f.write('PROGMEM_STRING_DECL(mqtt_friendly_name);\n')
     for key, val in strings.items():
         f.write('PROGMEM_STRING_DECL(mqtt_%s);\n' % val)
 
@@ -277,6 +295,7 @@ with open(path.abspath(path.join(mqtt_plugin_dir, 'mqtt_strings.cpp')), 'w') as 
     f.write('PROGMEM_STRING_DEF(mqtt_schema_json, "json");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_type, "type");\n')
     f.write('PROGMEM_STRING_DEF(mqtt_component_device_automation, "device_automation");\n')
+    f.write('PROGMEM_STRING_DEF(mqtt_friendly_name, "friendly_name");\n')
     f.write('#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS\n')
 
     for key, val in strings.items():

@@ -9,6 +9,7 @@
 #include "web_server.h"
 #if ESP8266
 #include <Updater.h>
+#include <save_crash.h>
 #endif
 #include "../src/plugins/plugins.h"
 
@@ -155,19 +156,43 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
         #if STK500V1
         errorResponse: ;
         #endif
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         Plugin::message(request, MessageType::DANGER, errorStr, F("Firmware Upgrade Failed"));
 
     }
     else {
         Logger_security(F("Firmware upgrade successful"));
 
-        BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
         Logger_notice(F("Rebooting after upgrade"));
 
         Plugin::message(request, MessageType::SUCCESS, F("Device is rebooting after firmware upload...."), F("Firmware Upgrade"));
 
         if (status) {
+            switch (status->resetOptions) {
+                case WebServer::ResetOptionsType::FSR:
+                    if (config.erase() != Configuration::WriteResultType::SUCCESS) {
+                        __DBG_printf("Failed to erase config.");
+                    }
+                    break;
+                case WebServer::ResetOptionsType::FFS:
+                    KFCFS.end();
+                    if (!KFCFS.format()) {
+                        __DBG_printf("FS format failed");
+                    }
+                    break;
+                case WebServer::ResetOptionsType::FSR_FFS:
+                    KFCFS.end();
+                    if (!KFCFS.format()) {
+                        __DBG_printf("FS format failed");
+                    }
+                    if (config.erase() != Configuration::WriteResultType::SUCCESS) {
+                        __DBG_printf("Failed to erase config.");
+                    }
+                    break;
+                case WebServer::ResetOptionsType::NONE:
+                    break;
+            }
             delete status;
             request->_tempObject = nullptr;
             status = nullptr;
@@ -232,23 +257,45 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
     if (status && !status->error) {
         PrintString out;
         if (!index) {
-            BUILDIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+
+            auto resetOptionsArg = request->arg(F("rst_opts"));
+            auto imageTypeArg = request->arg(FSPGM(image_type));
+
+            if (resetOptionsArg == F("fsr")) { // clear EEPROM to restore factory settings during reboot
+                status->resetOptions = WebServer::ResetOptionsType::FSR;
+            }
+            else if (resetOptionsArg == F("ffs")) { // format file system
+                status->resetOptions = WebServer::ResetOptionsType::FFS;
+            }
+            else if (resetOptionsArg == F("fsr_ffs")) { // fsr + ffs
+                status->resetOptions = WebServer::ResetOptionsType::FSR_FFS;
+            }
+
+            #if ESP8266
+                if (imageTypeArg == F("u_flash")) {
+                    // clear save crash, the stack traces are invalid after a firmware upgrade
+                    // this needs to be done before the upload in case the partitioning changes
+                    auto fs = SaveCrash::createFlashStorage();
+                    fs.clear(SaveCrash::ClearStorageType::REMOVE_MAGIC);
+                }
+            #endif
 
             size_t size;
             uint8_t command;
             uint8_t imageType = 0;
             PGM_P imageTypeStr = PSTR("U_UNKNOWN");
 
-            if (request->arg(FSPGM(image_type)) == F("u_flash")) { // firmware selected
+            if (imageTypeArg == F("u_flash")) { // firmware selected
                 imageType = 0;
                 imageTypeStr = PSTR("U_FLASH");
             }
-            else if (request->arg(FSPGM(image_type)) == F("u_fs")) { // filesystem selected
+            else if (imageTypeArg == F("u_fs")) { // filesystem selected
                 imageType = 1;
                 imageTypeStr = PSTR("U_FS");
             }
             #if STK500V1
-                else if (request->arg(FSPGM(image_type)) == F("u_atmega")) { // atmega selected
+                else if (imageTypeArg == F("u_atmega")) { // atmega selected
                     imageType = 3;
                     imageTypeStr = PSTR("U_ATMEGA");
                 }

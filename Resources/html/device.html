@@ -31,8 +31,9 @@
                 <div data-target="#scookie_lt"><span class="oi oi-shield p-2"></span>If the cookie is stolen, it is not going to expire and changing the password is the only options to invalidate it.
                 </div>
                 <div data-target="#dev_title">Set friendly name for the WebUI, MQTT auto discovery and SSDP</div>
-                <div data-target="#objid">Used instead of hostname for automatic generation of the MQTT/home assistant entity_id</div>
+                <div data-target="#objid">Used instead of hostname for automatic generation of the MQTT topic/Home Assistant entity_id</div>
                 <div data-target="#safem_to">Reboot device automatically after entering safe mode</div>
+                <div data-target="#crfrst">Automatically reset device to factory settings if the number of crashes in a row exceeds this number wthin an hour. The counter is reset as soon as the device is running stable for at least 15min. This prevents the device to become inaccessible if the EEPROM got corrupted during a crash. The file system is also erased and the device needs to be updated using the OTA tool. 0 disables this feature. To reset factory settings only, reset the device 4x in a row by pressing reset or unplugging and plugging it in quickly</div>
                 <div data-target="#schet">The task scheduler executes AT commands at a given time or in intervals. To disable a task, add "!" as prefix or change the time to 0 or "off". Time format:
                     [amount unit] [amount unit] [&lt;"now"|"startup"|"every" [amount unit]&gt;]</div>
                 <div data-target="#dslpsip">Using a static IP address during wakeup reduces the time to connect to WiFi significantly. The first data can be sent out after ~270ms, while obtaining an IP address from DHCP may take several seconds</div>

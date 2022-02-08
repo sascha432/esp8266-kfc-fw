@@ -79,18 +79,18 @@ namespace MQTT {
         _config(Plugins::MqttClient::getConfig()),
         _client(new AsyncMqttClient()),
         _port(_config.getPort()),
-    #if MQTT_SET_LAST_WILL_MODE != 0
-        _lastWillPayloadOffline(MQTT_LAST_WILL_TOPIC_ONLINE),
-        _lastWillTopic(formatTopic(MQTT_LAST_WILL_TOPIC)),
-    #endif
+        #if MQTT_SET_LAST_WILL_MODE != 0
+            _lastWillPayloadOffline(MQTT_LAST_WILL_TOPIC_ONLINE),
+            _lastWillTopic(formatTopic(MQTT_LAST_WILL_TOPIC)),
+        #endif
         _connState(ConnectionState::NONE),
-    #if MQTT_AUTO_DISCOVERY
-    #if IOT_REMOTE_CONTROL
-        _startAutoDiscovery(false),
-    #else
-        _startAutoDiscovery(true),
-    #endif
-    #endif
+        #if MQTT_AUTO_DISCOVERY
+            #if IOT_REMOTE_CONTROL
+                _startAutoDiscovery(false),
+            #else
+                _startAutoDiscovery(true),
+            #endif
+        #endif
         _messageProperties(nullptr)
     {
         constexpr size_t clientIdLength = 18;
@@ -343,29 +343,21 @@ namespace MQTT {
         return topic;
     }
 
-    String MQTT::Client::_filterString(const char *str, bool replaceSpace)
+    String MQTT::Client::_filterString(PGM_P str, bool replaceSpace)
     {
-        String out = str;
+        String out = FPSTR(str);
         for(size_t i = 0; i < out.length(); i++) {
             auto ch = out.charAt(i);
-            if (ch == '#' || ch == '+' || ch == '/' || !isprint(ch)) {
-                out.remove(i--, 1);
-            }
-            else if (replaceSpace && ch == ' ') {
+            if (replaceSpace && ch == ' ') {
                 out.setCharAt(i, '_');
             }
+            else if (!isalnum(ch) || !isprint(ch)) {
+                out.remove(i--, 1);
+            }
+            if (replaceSpace) {
+                out.setCharAt(i, tolower(ch));
+            }
         }
-        // while(*str) {
-        //     if (*str == '#' || *str == '+' || *str == '/') {
-        //     }
-        //     else if (replaceSpace && *str == ' ') {
-        //         out += '_';
-        //     }
-        //     else if (isprint(*str)) {
-        //         out += *str;
-        //     }
-        //     str++;
-        // }
         return out;
     }
 
@@ -403,17 +395,12 @@ namespace MQTT {
 
     String MQTT::Client::_getBaseTopic()
     {
-        PrintString topic;
-        topic = Plugins::MqttClient::getBaseTopic();
+        PrintString topic = Plugins::MqttClient::getBaseTopic();
         if (topic.indexOf(F("${device_name}")) != -1) {
             topic.replace(F("${device_name}"), _filterString(System::Device::getName()));
         }
         if (topic.indexOf(F("${object_id}")) != -1) {
-            auto objectId = System::Device::getObjectId();
-            if (!*objectId) {
-                objectId = System::Device::getName();
-            }
-            topic.replace(F("${object_id}"), _filterString(objectId));
+            topic.replace(F("${object_id}"), _filterString(System::Device::getObjectIdOrName()));
         }
         if (topic.indexOf(F("${device_title}")) != -1) {
             topic.replace(F("${device_title}"), _filterString(System::Device::getTitle()));

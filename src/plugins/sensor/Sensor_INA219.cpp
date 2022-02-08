@@ -55,52 +55,42 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
     switch(num) {
         case 0:
             if (discovery->create(this, _getId(SensorInputType::VOLTAGE), format)) {
+                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Voltage")));
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::VOLTAGE)));
                 discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Voltage")));
-                #endif
             }
             break;
         case 1:
             if (discovery->create(this, _getId(SensorInputType::CURRENT), format)) {
+                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Current")));
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::CURRENT)));
                 discovery->addUnitOfMeasurement(_getCurrentUnit());
                 discovery->addDeviceClass(F("current"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Current")));
-                #endif
             }
             break;
         case 2:
             if (discovery->create(this, _getId(SensorInputType::POWER), format)) {
+                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Power")));
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::POWER)));
                 discovery->addUnitOfMeasurement(_getPowerUnit());
                 discovery->addDeviceClass(F("power"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Power")));
-                #endif
             }
             break;
         case 3:
             if (discovery->create(this, _getId(SensorInputType::PEAK_CURRENT), format)) {
+                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Peak Current")));
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_CURRENT)));
                 discovery->addUnitOfMeasurement(_getCurrentUnit());
                 discovery->addDeviceClass(F("current"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Peak Current")));
-                #endif
             }
             break;
         case 4:
             if (discovery->create(this, _getId(SensorInputType::PEAK_POWER), format)) {
+                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Peak Power")));
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_POWER)));
                 discovery->addUnitOfMeasurement(_getPowerUnit());
                 discovery->addDeviceClass(F("power"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Peak Power")));
-                #endif
             }
             break;
     }

@@ -462,7 +462,7 @@ void RemoteControlPlugin::_loop()
 
                     // start blinking after the timeout or 10 seconds
                     if (!_signalWarning && (_millis > std::max((_config.auto_sleep_time * 1000U), 10000U))) {
-                        // BUILDIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
+                        // BUILTIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
                         BlinkLEDTimer::setPattern(__LED_BUILTIN, 100, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
                         _signalWarning = true;
                         __DBG_printf("signal warning");

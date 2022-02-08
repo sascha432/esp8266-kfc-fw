@@ -7,6 +7,7 @@
 #include <WebUISocket.h>
 #include <stl_ext/algorithm.h>
 #include <stl_ext/utility.h>
+#include <../src/plugins/mqtt/mqtt_client.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
 #include <debug_helper_enable.h>
@@ -33,6 +34,7 @@ Channel::Channel(Module *dimmer, uint8_t channel) :
 MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(num) {
         case 0:
             if (discovery->createJsonSchema(this, PrintString(FSPGM(channel__u), _channel), format)) {
@@ -40,22 +42,22 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
                 discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
                 discovery->addBrightnessScale(getMaxLevel());
                 discovery->addParameter(F("brightness"), true);
+                String fullname;
                 auto name = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::getChannelName(_channel);
                 if (*name) {
-                    String fullname = KFCConfigurationClasses::System::Device::getName();
+                    fullname = KFCConfigurationClasses::System::Device::getName();
                     fullname += ' ';
                     fullname += name;
-                    discovery->addName(fullname);
                 }
                 else {
-                    #if MQTT_AUTO_DISCOVERY_USE_NAME
-                        #if IOT_DIMMER_MODULE_CHANNELS > 1
-                            discovery->addName(MQTT::Client::getAutoDiscoveryName(FPSTR(PrintString(F("Dimmer Channel %u"), _channel + 1).c_str())));
-                        #else
-                            discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Dimmer")));
-                        #endif
+                    #if IOT_DIMMER_MODULE_CHANNELS > 1
+                        fullname = PrintString(F("Dimmer Channel %u"), _channel + 1);
+                    #else
+                        fullname = F("Dimmer");
                     #endif
                 }
+                discovery->addName(fullname);
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(fullname, true));
             }
             break;
     }

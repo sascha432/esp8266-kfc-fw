@@ -273,19 +273,19 @@ void Queue::_publishNextMessage()
             _publishDone(StatusType::FAILURE);
             return;
         }
-        const auto &entitiy = *_iterator;
-        if (!entitiy) {
+        const auto &entity = *_iterator;
+        if (!entity) {
             __LDBG_printf_E("entity nullptr");
             ++_iterator;
             continue;
         }
-        auto topic = entitiy->getTopic().c_str();
-        auto size = entitiy->getMessageSize();
+        auto topic = entity->getTopic().c_str();
+        auto size = entity->getMessageSize();
         if (Client::_isMessageSizeExceeded(size, topic)) {
             // skip message that does not fit into the tcp buffer
             ++_iterator;
-            __LDBG_printf_E("max size exceeded topic=%s payload=%u size=%u", topic, entitiy->getPayload().length(), size);
-            __LDBG_printf("%s", printable_string(entitiy->getPayload().c_str(), entitiy->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+            __LDBG_printf_E("max size exceeded topic=%s payload=%u size=%u", topic, entity->getPayload().length(), size);
+            __LDBG_printf("%s", printable_string(entity->getPayload().c_str(), entity->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
             continue;
         }
         if (size >= _client.getClientSpace()) {
@@ -296,14 +296,14 @@ void Queue::_publishNextMessage()
             break;
         }
         __LDBG_printf("topic=%s size=%u/%u", topic, size, _client.getClientSpace());
-        // __LDBG_printf("%s", printable_string(entitiy->getPayload().c_str(), entitiy->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
-        __LDBG_printf("%s", entitiy->getPayload().c_str());
+        // __LDBG_printf("%s", printable_string(entity->getPayload().c_str(), entity->getPayload().length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+        __LDBG_printf("%s", entity->getPayload().c_str());
 
         // we can assign a packet id before in case the acknowledgment arrives before setting _packetId after the call
         // pretty unlikely with WiFI a a few ms lag, but with enough debug code in between it is possible ;)
         _packetId = _client.getNextInternalPacketId();
         __LDBG_printf("auto discovery packet id=%u", _packetId);
-        auto queue = _client.publishWithId(nullptr, entitiy->getTopic(), true, entitiy->getPayload(), QosType::AUTO_DISCOVERY, _packetId);
+        auto queue = _client.publishWithId(nullptr, entity->getTopic(), true, entity->getPayload(), QosType::AUTO_DISCOVERY, _packetId);
         if (!queue) {
             __LDBG_printf("failed to publish topic=%s", topic);
             _publishDone(StatusType::FAILURE);

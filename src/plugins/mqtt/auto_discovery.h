@@ -346,7 +346,7 @@ namespace MQTT {
 
         private:
             bool _create(ComponentType componentType, const String &name, FormatType format, NameType platform = FSPGM(mqtt));
-            const String _getUnqiueId(const String &name);
+            const String _getUniqueId(const String &name);
 
             FormatType _format;
             PrintString _discovery;

@@ -96,7 +96,7 @@ public:
         Item() : _label(), _uri(), _id(InvalidMenuId), _parentMenuId(InvalidMenuId) {
         }
         Item(BootstrapMenu &menu, StaticString &&label, StaticString &&uri, menu_item_parent_id_t parentMenuId = InvalidMenuId) :
-            _label(std::move(label)), _uri(std::move(uri)), _id(menu._getUnqiueId()), _parentMenuId(parentMenuId) {
+            _label(std::move(label)), _uri(std::move(uri)), _id(menu._getUniqueId()), _parentMenuId(parentMenuId) {
         }
 
         bool operator ==(const FindHelper &helper) const {
@@ -224,7 +224,7 @@ private:
 
     // menu_item_id_t _add(const Item &item, menu_item_id_t afterId);
     menu_item_id_t _add(Item &&item, menu_item_id_t afterId);
-    menu_item_id_t _getUnqiueId();
+    menu_item_id_t _getUniqueId();
 
 private:
     ItemsVector _items;

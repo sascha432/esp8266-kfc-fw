@@ -252,7 +252,7 @@ void BlindsControl::_startMotor(ChannelType channel, bool open)
     _activeChannel = channel;
 
     auto &cfg = _config.channels[*channel];
-    _currentLimit = cfg.current_limit_mA * BlindsControllerConversion::kConvertCurrentToADCValueMulitplier;
+    _currentLimit = cfg.current_limit_mA * BlindsControllerConversion::kConvertCurrentToADCValueMultiplier;
 
     _states[channel] = open ? StateType::OPEN : StateType::CLOSED;
 
@@ -297,12 +297,12 @@ bool BlindsControl::_checkMotor()
     _updateAdc();
     if (_adcIntegral > _currentLimit) {
         __LDBG_printf("current limit time=%.2f @ %u ms", _adcIntegral, _motorTimeout.getDelay() - _motorTimeout.getTimeLeft());
-        Logger_notice("Channel %u, current limit %umA (%.2f/%.2f) triggered after %ums (max. %ums)", _activeChannel, (uint32_t)(_adcIntegral * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegral, _currentLimit, _motorTimeout.getDelay() - _motorTimeout.getTimeLeft(), _motorTimeout.getDelay());
+        Logger_notice("Channel %u, current limit %umA (%.2f/%.2f) triggered after %ums (max. %ums)", _activeChannel, (uint32_t)(_adcIntegral * BlindsControllerConversion::kConvertADCValueToCurrentMultiplier), _adcIntegral, _currentLimit, _motorTimeout.getDelay() - _motorTimeout.getTimeLeft(), _motorTimeout.getDelay());
         return true;
     }
     if (_motorTimeout.reached()) {
         __LDBG_printf("timeout");
-        Logger_notice("Channel %u, motor stopped after %ums timeout, peak current %umA (%.2f/%.2f)", _activeChannel, _motorTimeout.getDelay(), (uint32_t)(_adcIntegralPeak * BlindsControllerConversion::kConvertADCValueToCurrentMulitplier), _adcIntegralPeak, _currentLimit);
+        Logger_notice("Channel %u, motor stopped after %ums timeout, peak current %umA (%.2f/%.2f)", _activeChannel, _motorTimeout.getDelay(), (uint32_t)(_adcIntegralPeak * BlindsControllerConversion::kConvertADCValueToCurrentMultiplier), _adcIntegralPeak, _currentLimit);
         return true;
     }
     return false;

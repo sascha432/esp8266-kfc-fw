@@ -152,7 +152,7 @@ BootstrapMenu::menu_item_id_t BootstrapMenu::_add(Item &&item, menu_item_id_t af
 	return _items.emplace(insertAfter, std::move(item))->getId();
 }
 
-BootstrapMenu::menu_item_id_t BootstrapMenu::_getUnqiueId()
+BootstrapMenu::menu_item_id_t BootstrapMenu::_getUniqueId()
 {
 	return ++_unqiueId;
 }

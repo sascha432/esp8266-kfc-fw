@@ -87,10 +87,10 @@ namespace BlindsControllerConversion {
     // ADC value = (kADCMaxValue * I * Rs) / kADCMaxVoltage
     static constexpr double kConvertCurrentToADCValueMulitplierAmps = (kADCMaxValue * kShuntValue) / kADCMaxVoltage;
 
-    static constexpr float kConvertCurrentToADCValueMulitplier = kConvertCurrentToADCValueMulitplierAmps / 1000.0; // mA
-    static constexpr float kConvertADCValueToCurrentMulitplier = 1000.0 / kConvertCurrentToADCValueMulitplierAmps;
-    static constexpr uint16_t kMinCurrent = (0 * kConvertADCValueToCurrentMulitplier);
-    static constexpr uint32_t __kMaxCurrent = (kADCMaxValue * kConvertADCValueToCurrentMulitplier);
+    static constexpr float kConvertCurrentToADCValueMultiplier = kConvertCurrentToADCValueMulitplierAmps / 1000.0; // mA
+    static constexpr float kConvertADCValueToCurrentMultiplier = 1000.0 / kConvertCurrentToADCValueMulitplierAmps;
+    static constexpr uint16_t kMinCurrent = (0 * kConvertADCValueToCurrentMultiplier);
+    static constexpr uint32_t __kMaxCurrent = (kADCMaxValue * kConvertADCValueToCurrentMultiplier);
     static constexpr uint16_t kMaxCurrent = __kMaxCurrent;
 
     static_assert(__kMaxCurrent == kMaxCurrent, "max. current cannot be stored in uint16_t");

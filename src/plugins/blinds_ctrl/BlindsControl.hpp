@@ -423,7 +423,7 @@ inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType
             discovery->addCommandTopic(_getTopic(channel, TopicType::SET));
             auto name = Plugins::Blinds::getChannelName(static_cast<size_t>(channel));
             discovery->addName(name);
-            discovery->addObjectId(baseTopic + MQTT::Client::filterString(name, true));
+            discovery->addObjectId(baseTopic + PrintString(FSPGM(channel__u, "channel_%u"), channel));
         }
     }
     else if (num == kChannelCount) {
@@ -431,8 +431,7 @@ inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType
             discovery->addStateTopic(_getTopic(ChannelType::ALL, TopicType::STATE));
             discovery->addCommandTopic(_getTopic(ChannelType::ALL, TopicType::SET));
             discovery->addName(F("Both Channels"));
-            discovery->addObjectId(baseTopic + MQTT::Client::filterString(String(F("Both Channels")).c_str(), true));
-
+            discovery->addObjectId(baseTopic + F("both_channels"));
         }
     }
     else if (num == kChannelCount + 1) {
@@ -440,7 +439,7 @@ inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType
             discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
             discovery->addValueTemplate(FSPGM(binary));
             discovery->addName(F("Binary Status"));
-            discovery->addObjectId(baseTopic + MQTT::Client::filterString(String(F("Binary Status")).c_str(), true));
+            discovery->addObjectId(baseTopic + F("binary_status"));
         }
     }
     else if (num == kChannelCount + 2) {
@@ -448,7 +447,7 @@ inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType
             discovery->addStateTopic(_getTopic(ChannelType::NONE, TopicType::METRICS));
             discovery->addValueTemplate(FSPGM(busy));
             discovery->addName(F("Status"));
-            discovery->addObjectId(baseTopic + MQTT::Client::filterString(String(F("Status")).c_str(), true));
+            discovery->addObjectId(baseTopic + F("status"));
         }
     }
     else if (num >= kChannelCount + 3) {
@@ -458,7 +457,7 @@ inline MQTT::AutoDiscovery::EntityPtr BlindsControl::getAutoDiscovery(FormatType
             discovery->addValueTemplate(PrintString(FSPGM(channel__u), channel));
             auto name = Plugins::Blinds::getChannelName(static_cast<size_t>(channel));
             discovery->addName(name);
-            discovery->addObjectId(baseTopic + MQTT::Client::filterString(name, true));
+            discovery->addObjectId(baseTopic + MQTT::Client::filterString(baseTopic + PrintString(FSPGM(channel__u), channel), true));
         }
     }
     return discovery;
@@ -590,7 +589,7 @@ inline void BlindsControl::_setDac(uint16_t pwm)
 
 inline void BlindsControl::_playNote(uint8_t pin, uint16_t pwm, uint8_t note)
 {
-    uint8_t tmp = note + MPERIAL_MARCH_NOTE_OFFSET;
+    uint8_t tmp = note + IMPERIAL_MARCH_NOTE_OFFSET;
     if (tmp < NOTE_TO_FREQUENCY_COUNT) {
         uint8_t pins[2] = { pin, kInvalidPin };
         _playTone(pins, pwm, NOTE_FP_TO_INT(pgm_read_word(note_to_frequency + tmp)));

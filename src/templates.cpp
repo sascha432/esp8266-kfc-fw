@@ -176,7 +176,7 @@ void WebTemplate::printSSDPUUID(Print &output)
 
 void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    #if DEBUG
+    #if DEBUG_TEMPLATES
         struct OnReturn {
             OnReturn(const String &key) : _key(key) {
             }
@@ -188,8 +188,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     #endif
     __DBG_validatePointer(&key, VP_HPS);
     __DBG_validatePointer(&output, VP_HPS);
-    __DBG_validatePointer(_form, VP_HPS);
-    __DBG_printf("key=%s %p form=%p auth=%u", __S(key), std::addressof(key), std::addressof(_form), isAuthenticated());
+    __DBG_validatePointer(&_form, VP_HPS);
+    __DBG_validatePointer(_form, VP_NHPS);
+    __LDBG_printf("key=%s %p form=%p auth=%u", __S(key), std::addressof(key), _form, isAuthenticated());
     // ------------------------------------------------------------------------------------
     // public variables
     // ------------------------------------------------------------------------------------
@@ -200,8 +201,6 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(System::Device::getTitle());
     }
     else if (key == F("SELF_URI")) {
-        __DBG_validatePointer(&_selfUri, VP_HPS);
-        __DBG_validatePointer(_selfUri.c_str(), VP_HPS);
         output.print(_selfUri);
     }
     else if (key == F("ALIVE_REDIRECTION")) {

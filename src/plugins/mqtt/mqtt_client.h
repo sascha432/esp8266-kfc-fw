@@ -617,9 +617,15 @@ public:
         // a slash is inserted between base topic and suffix or format, if there is none
         // there is no slash inserted between suffix and format
         static String _formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg);
+        // replaceSpace = true replaces spaces with underscore and changes the name to lowercase
         static String _filterString(PGM_P str, bool replaceSpace = false);
 
     public:
+        inline static String getBaseTopic()
+        {
+            return _getBaseTopic();
+        }
+
         inline static String filterString(PGM_P str, bool replaceSpace = false)
         {
             return _filterString(str, replaceSpace);

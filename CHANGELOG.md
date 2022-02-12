@@ -2,9 +2,11 @@
 
 ## Version 0.0.6
 
+ - Fixed issues with Home Assistant's name/friendly_name for templates
+ - Option to reset factory settings and format file system, if the device keeps crashing and cannot be accessed anymore
  - Fixed issue with corrupting the configuration during saving changes
  - Fixed memory leak with syslog (TCP only) with no WiFi connection
- - Support for home assistant object id
+ - Support for Home Assistant object id
  - Global DNS servers shared across all WiFi networks
  - Support for up to 8 WiFi networks (5 = default)
  - Auto installation of custom framework-arduinoespressif for ESP8266 and ESP32

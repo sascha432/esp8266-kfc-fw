@@ -12,6 +12,7 @@
 #include "mqtt_client.h"
 #include "templates.h"
 #include "JsonTools.h"
+#include <debug_helper.h>
 
 #if DEBUG_MQTT_CLIENT
 #    include <debug_helper_enable.h>
@@ -86,14 +87,16 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
     if (_format == FormatType::JSON) {
         _discovery += '{';
         #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-            _baseTopic = MQTT::Client::formatTopic(emptyString);
+            _baseTopic = MQTT::Client::getBaseTopic();
+            __DBG_printf("base_topic=%s", __S(_baseTopic));
             addParameter(F("~"), _baseTopic);
         #endif
-    } else {
+    }
+    else {
         _discovery += Component::getNameByType(componentType);
         _discovery += F(":\n  - ");
     }
-    uniqueId = _getUnqiueId(name);
+    uniqueId = _getUniqueId(name);
     if (componentType != ComponentType::DEVICE_AUTOMATION) {
         addParameter(FSPGM(name), name);
         addParameter(F("platform"), platform);
@@ -141,6 +144,8 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
 
 void Entity::__addParameter(NameType name, const char *str, bool quotes)
 {
+    __DBG_validatePointer(name, VP_HPS);
+    __DBG_validatePointer(str, VP_HPS);
     if (_format == FormatType::TOPIC) {
         return;
     }
@@ -154,7 +159,7 @@ void Entity::__addParameter(NameType name, const char *str, bool quotes)
         #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
                 auto len = strlen_P(RFPSTR(name));
                 if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) { // check if the name ends with "_t"
-                    if (strncmp_P(_baseTopic.c_str(), str, _baseTopic.length()) == 0) { // replace _baseTopic withj ~
+                    if (strncmp_P(_baseTopic.c_str(), str, _baseTopic.length()) == 0) { // replace _baseTopic with ~
                         str += _baseTopic.length();
                         _discovery.print('~');
                     }
@@ -184,13 +189,14 @@ void Entity::finalize()
     if (_format == FormatType::JSON) {
         _discovery.remove(_discovery.length() - 1);
         _discovery += '}';
-    } else {
+    }
+    else {
         _discovery.remove(_discovery.length() - 4);
     }
     __LDBG_printf("MQTT auto discovery payload '%s'", printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
 }
 
-const String Entity::_getUnqiueId(const String &name)
+const String Entity::_getUniqueId(const String &name)
 {
     PrintString tmp;
     WebTemplate::printUniqueId(tmp, name);

@@ -64,7 +64,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             ChannelConfigType::addRangeValidatorFor_close_time_ms(form);
 
             form.addObjectGetterSetter(F_VAR(il, i), cfg.channels[i], ChannelConfigType::get_bits_current_limit_mA, ChannelConfigType::set_bits_current_limit_mA);
-            form.addFormUI(F("Current Limit"), FormUI::Suffix(FSPGM(mA)), FormUI::IntAttribute(F("data-adc-multiplier"), BlindsControllerConversion::kConvertADCValueToCurrentMulitplier * 0xffff));
+            form.addFormUI(F("Current Limit"), FormUI::Suffix(FSPGM(mA)), FormUI::IntAttribute(F("data-adc-multiplier"), BlindsControllerConversion::kConvertADCValueToCurrentMultiplier * 0xffff));
             ChannelConfigType::addRangeValidatorFor_current_limit_mA(form);
 
             form.addObjectGetterSetter(F_VAR(ip, i), cfg.channels[i], ChannelConfigType::get_bits_current_avg_period_us, ChannelConfigType::set_bits_current_avg_period_us);

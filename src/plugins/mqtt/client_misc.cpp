@@ -60,7 +60,12 @@ String MQTT::Client::connectionStatusString()
     // }
     message += F("topic ");
 
-    message += formatTopic(emptyString);
+    #if MQTT_AUTO_DISCOVERY
+        message += MQTT::Client::_getBaseTopic();
+    #else
+        message += formatTopic(emptyString);
+    #endif
+
     #if MQTT_AUTO_DISCOVERY
         if (_config.auto_discovery) {
             message += F(HTML_S(br) "Auto discovery prefix '");

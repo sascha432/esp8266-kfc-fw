@@ -299,7 +299,7 @@ inline uint8_t KFCFWConfiguration::getWiFiErrors() const
 #if HAVE_IMPERIAL_MARCH
 
 #    define IMPERIAL_MARCH_NOTES_COUNT 66
-#    define MPERIAL_MARCH_NOTE_OFFSET  19
+#    define IMPERIAL_MARCH_NOTE_OFFSET  19
 #    define NOTE_TO_FREQUENCY_COUNT    56
 #    define NOTE_FP_TO_INT(freq)       ((uint16_t)(freq >> 5))
 #    define NOTE_FP_TO_FLOAT(freq)     ((float)(freq / 32.0f))

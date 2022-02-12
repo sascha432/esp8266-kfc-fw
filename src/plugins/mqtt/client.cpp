@@ -348,14 +348,16 @@ namespace MQTT {
         String out = FPSTR(str);
         for(size_t i = 0; i < out.length(); i++) {
             auto ch = out.charAt(i);
-            if (replaceSpace && ch == ' ') {
-                out.setCharAt(i, '_');
+            if (replaceSpace) {
+                if (ch == ' ') {
+                    out.setCharAt(i, '_');
+                }
+                else {
+                    out.setCharAt(i, tolower(ch));
+                }
             }
             else if (!isalnum(ch) || !isprint(ch)) {
                 out.remove(i--, 1);
-            }
-            if (replaceSpace) {
-                out.setCharAt(i, tolower(ch));
             }
         }
         return out;
@@ -395,12 +397,20 @@ namespace MQTT {
 
     String MQTT::Client::_getBaseTopic()
     {
-        PrintString topic = Plugins::MqttClient::getBaseTopic();
+        String topic = Plugins::MqttClient::getBaseTopic();
+        __LDBG_printf("base_topic=%s ${device_name}=%d ${object_id}=%d ${device_title}=%d ${device_title_no_space}=%d",
+            __S(topic),
+            topic.indexOf(F("${device_name}")),
+            topic.indexOf(F("${object_id}")),
+            topic.indexOf(F("${device_title}")),
+            topic.indexOf(F("${device_title}")),
+            topic.indexOf(F("${device_title_no_space}"))
+        );
         if (topic.indexOf(F("${device_name}")) != -1) {
             topic.replace(F("${device_name}"), _filterString(System::Device::getName()));
         }
         if (topic.indexOf(F("${object_id}")) != -1) {
-            topic.replace(F("${object_id}"), _filterString(System::Device::getObjectIdOrName()));
+            topic.replace(F("${object_id}"), _filterString(System::Device::getObjectIdOrName(), true));
         }
         if (topic.indexOf(F("${device_title}")) != -1) {
             topic.replace(F("${device_title}"), _filterString(System::Device::getTitle()));
@@ -408,25 +418,31 @@ namespace MQTT {
         if (topic.indexOf(F("${device_title_no_space}")) != -1) {
             topic.replace(F("${device_title_no_space}"), _filterString(System::Device::getTitle(), true));
         }
-        return topic.rtrim('/');
+        #if DEBUG_MQTT_CLIENT
+            topic.rtrim('/');
+            __DBG_printf("base_topic=%s replaced", __S(topic));
+            return topic;
+        #else
+            return topic.rtrim('/');
+        #endif
     }
 
     #if MQTT_GROUP_TOPIC
 
-    bool MQTT::Client::_getGroupTopic(ComponentPtr component, String groupTopic, String &topic)
-    {
-        String deviceTopic = MQTT::Client::_getBaseTopic();
-        if (!topic.startsWith(deviceTopic) || topic.startsWith(groupTopic)) {
-            return false;
+        bool MQTT::Client::_getGroupTopic(ComponentPtr component, String groupTopic, String &topic)
+        {
+            String deviceTopic = MQTT::Client::_getBaseTopic();
+            if (!topic.startsWith(deviceTopic) || topic.startsWith(groupTopic)) {
+                return false;
+            }
+            if (topic.indexOf(F("${component_name}")) != -1) {
+                topic.replace(F("${component_name}"), component->getName());
+            }
+            groupTopic += &topic.c_str()[deviceTopic.length() - 1];
+            topic = std::move(groupTopic);
+            String_rtrim(topic, '/');
+            return true;
         }
-        if (topic.indexOf(F("${component_name}")) != -1) {
-            topic.replace(F("${component_name}"), component->getName());
-        }
-        groupTopic += &topic.c_str()[deviceTopic.length() - 1];
-        topic = std::move(groupTopic);
-        String_rtrim(topic, '/');
-        return true;
-    }
 
     #endif
 
@@ -452,44 +468,43 @@ namespace MQTT {
 
     #if DEBUG_MQTT_CLIENT
 
-    const __FlashStringHelper *MQTT::Client::_getConnStateStr()
-    {
-        switch(_connState) {
-            case ConnectionState::AUTO_RECONNECT_DELAY:
-                return F("AUTO_RECONNECT_DELAY");
-            case ConnectionState::PRE_CONNECT:
-                return F("PRE_CONNECT");
-            case ConnectionState::CONNECTING:
-                return F("CONNECTING");
-            case ConnectionState::CONNECTED:
-                return F("CONNECTED");
-            case ConnectionState::DISCONNECTED:
-                return F("DISCONNECTED");
-            case ConnectionState::DISCONNECTING:
-                return F("DISCONNECTING");
-            case ConnectionState::IDLE:
-                return F("IDLE");
-            case ConnectionState::NONE:
-                break;
+        const __FlashStringHelper *MQTT::Client::_getConnStateStr()
+        {
+            switch(_connState) {
+                case ConnectionState::AUTO_RECONNECT_DELAY:
+                    return F("AUTO_RECONNECT_DELAY");
+                case ConnectionState::PRE_CONNECT:
+                    return F("PRE_CONNECT");
+                case ConnectionState::CONNECTING:
+                    return F("CONNECTING");
+                case ConnectionState::CONNECTED:
+                    return F("CONNECTED");
+                case ConnectionState::DISCONNECTED:
+                    return F("DISCONNECTED");
+                case ConnectionState::DISCONNECTING:
+                    return F("DISCONNECTING");
+                case ConnectionState::IDLE:
+                    return F("IDLE");
+                case ConnectionState::NONE:
+                    break;
+            }
+            return F("NONE");
         }
-        return F("NONE");
-    }
 
-    const char *MQTT::Client::_connection()
-    {
-        DEBUG_HELPER_PUSH_STATE();
-        DEBUG_HELPER_SILENT();
-        PrintString str(F("%s state=%s auto_reconnect=%u timer=%u"), _client->getAsyncClient().stateToString(), RFPSTR(_getConnStateStr()), _autoReconnectTimeout, (bool)_timer);
-        _connectionStr = std::move(str);
-        DEBUG_HELPER_POP_STATE();
-        return _connectionStr.c_str();
-    }
+        const char *MQTT::Client::_connection()
+        {
+            DEBUG_HELPER_PUSH_STATE();
+            DEBUG_HELPER_SILENT();
+            PrintString str(F("%s state=%s auto_reconnect=%u timer=%u"), _client->getAsyncClient().stateToString(), RFPSTR(_getConnStateStr()), _autoReconnectTimeout, (bool)_timer);
+            _connectionStr = std::move(str);
+            DEBUG_HELPER_POP_STATE();
+            return _connectionStr.c_str();
+        }
 
     #endif
 
     void MQTT::Client::connect()
     {
-
         if ((_connState == ConnectionState::CONNECTING || _connState == ConnectionState::CONNECTED) && _client->connected()) {
             __LDBG_printf("aborting connect, conn=%s", _connection());
             return;
@@ -609,6 +624,7 @@ namespace MQTT {
 
         #if MQTT_AUTO_DISCOVERY
             _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();
+            __DBG_printf("subscribe=%s", __S(_autoDiscoveryStatusTopic));
             subscribe(nullptr, _autoDiscoveryStatusTopic, QosType::AT_LEAST_ONCE);
         #endif
 

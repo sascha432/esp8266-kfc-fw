@@ -3,7 +3,7 @@
 #
 
 # requires:
-# pip3 install requests-toolbelt progressbar2 websocket
+# pip3 install requests-toolbelt progressbar2 websocket-client
 
 import os
 import time
@@ -11,15 +11,12 @@ import argparse
 # import progressbar
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
 import requests
-import re
-import json
 import hashlib
 import shutil
 import subprocess
 from os import path
-
-from os import path
 import sys
+
 libs_dir = path.realpath(path.join(path.dirname(__file__), '../libs'))
 sys.path.insert(0, libs_dir)
 

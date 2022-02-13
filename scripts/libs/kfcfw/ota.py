@@ -4,7 +4,7 @@ import requests
 import json
 import websocket
 import _thread as thread
-from . import Session, Configuration
+from . import Configuration
 
 
 class OTASerialConsole(object):

@@ -5,7 +5,7 @@
 import websocket
 import _thread as thread
 import struct
-from  .base import BaseConnection
+from .base import BaseConnection
 import time
 
 class WebSocket(BaseConnection):

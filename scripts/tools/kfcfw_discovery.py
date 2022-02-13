@@ -1,7 +1,7 @@
 from zeroconf import ServiceBrowser, Zeroconf
 
 TYPE = "_kfcmdns._udp.local."
-FORMAT = "%-16.16s | %-22.22s | %s | %-16.16s | %-24.24s | %-19.19s | %s"
+FORMAT = "%-16.16s | %-22.22s | %s | %-16.16s | %-24.24s | %-19.19s | %-12.12s"
 
 class MyListener:
 
@@ -40,8 +40,10 @@ listener = MyListener()
 browser = ServiceBrowser(zeroconf, TYPE, listener)
 
 try:
+    print("----------------------")
     print("Press enter to exit...")
-    title  = FORMAT % ('name', 'server', 'port ', 'addresses', 'device title', 'version', 'device')
+    print("----------------------")
+    title  = FORMAT % ('Name', 'Server', 'Port ', 'Addresses', 'Device Title', 'Version', 'Device')
     print(title)
     print('-' * len(title))
     input("")

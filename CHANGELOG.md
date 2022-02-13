@@ -2,6 +2,7 @@
 
 ## Version 0.0.6
 
+ - New auto discovery script ``./scripts/tools/kfcfw_discovery.py``
  - Fixed issues with Home Assistant's name/friendly_name for templates
  - Option to reset factory settings and format file system, if the device keeps crashing and cannot be accessed anymore
  - Fixed issue with corrupting the configuration during saving changes

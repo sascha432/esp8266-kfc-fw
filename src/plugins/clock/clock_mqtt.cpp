@@ -55,6 +55,9 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
                     discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Clock")));
                 #endif
             #endif
+            #if IOT_LED_MATRIX_HEXAGON_PANEL
+                discovery->addIcon(F("mdi:hexagon-multiple-outline"));
+            #endif
         }
         break;
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION

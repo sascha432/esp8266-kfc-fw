@@ -198,44 +198,44 @@ bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
                         _config.tone_frequency = args.toIntMinMax(2, _config.kMinValueFor_tone_frequency, _config.kMaxValueFor_tone_frequency, _config.tone_frequency);;
                         _config.tone_pwm_value = args.toIntMinMax(3, _config.kMinValueFor_tone_pwm_value, _config.kTypeMaxValueFor_tone_pwm_value, _config.tone_pwm_value);;
                         args.printf_P(PSTR("testing tone timer for 15 seconds: channel=%u frequency=%u pwm_value=%u"), _config.play_tone_channel - 1, _config.tone_frequency, _config.tone_pwm_value);
-#if HAVE_IMPERIAL_MARCH
-                        if (cmd == 4) {
-                            uint16_t speed = args.toIntMinMax<uint16_t>(4, 50, 1000, 80);
-                            int8_t zweiklang = args.toIntMinMax<int8_t>(5, -15, 15, 0);
-                            uint8_t repeat = args.toIntMinMax<uint8_t>(6, 0, 255, 1);
-                            uint8_t delaySync =  args.toIntMinMax<uint8_t>(7, 30, 180, 0);
-                            if (delaySync) {
-                                uint32_t now = ((time(nullptr) / delaySync) * delaySync) + delaySync + 5;
+                        #if HAVE_IMPERIAL_MARCH
+                            if (cmd == 4) {
+                                uint16_t speed = args.toIntMinMax<uint16_t>(4, 50, 1000, 80);
+                                int8_t zweiklang = args.toIntMinMax<int8_t>(5, -15, 15, 0);
+                                uint8_t repeat = args.toIntMinMax<uint8_t>(6, 0, 255, 1);
+                                uint8_t delaySync =  args.toIntMinMax<uint8_t>(7, 30, 180, 0);
+                                if (delaySync) {
+                                    uint32_t now = ((time(nullptr) / delaySync) * delaySync) + delaySync + 5;
 
-                                PrintString str;
-                                str.strftime_P(PSTR("%H:%M:%S"), now);
-                                str.strftime_P(PSTR(" now=%H:%M:%S"), time(nullptr));
-                                args.printf_P(PSTR("Imperial march @ %s in=%u seconds)"), str.c_str(), (uint32_t)(now - time(nullptr)));
+                                    PrintString str;
+                                    str.strftime_P(PSTR("%H:%M:%S"), now);
+                                    str.strftime_P(PSTR(" now=%H:%M:%S"), time(nullptr));
+                                    args.printf_P(PSTR("Imperial march @ %s in=%u seconds)"), str.c_str(), (uint32_t)(now - time(nullptr)));
 
-                                _Scheduler.add(10, true, [this, now, speed, zweiklang, repeat, resetConfig](Event::CallbackTimerPtr timer) {
-                                    if ((uint32_t)time(nullptr) <= now) {
-                                        return;
-                                    }
-                                    timer->disarm();
+                                    _Scheduler.add(10, true, [this, now, speed, zweiklang, repeat, resetConfig](Event::CallbackTimerPtr timer) {
+                                        if ((uint32_t)time(nullptr) <= now) {
+                                            return;
+                                        }
+                                        timer->disarm();
+                                        _playImperialMarch(speed, zweiklang, repeat);
+                                        resetConfig();
+                                    }, Event::PriorityType::HIGHEST);
+                                }
+                                else {
+                                    args.print(F("Imperial march"));
                                     _playImperialMarch(speed, zweiklang, repeat);
                                     resetConfig();
-                                }, Event::PriorityType::HIGHEST);
+                                }
+
                             }
                             else {
-                                args.print(F("Imperial march"));
-                                _playImperialMarch(speed, zweiklang, repeat);
+                                _startToneTimer(_config.tone_pwm_value * 1000U);
                                 resetConfig();
                             }
-
-                        }
-                        else {
+                        #else
                             _startToneTimer(_config.tone_pwm_value * 1000U);
                             resetConfig();
-                        }
-#else
-                        _startToneTimer(_config.tone_pwm_value * 1000U);
-                        resetConfig();
-#endif
+                        #endif
                     } break;
                 case 5:
                     if (args.size() < 3) {

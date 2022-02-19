@@ -19,9 +19,9 @@
 #include <stl_ext/algorithm.h>
 
 #if DEBUG_IOT_BLINDS_CTRL
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
@@ -102,9 +102,7 @@ protected:
         uint8_t isOpenInt() const;
         bool isClosed() const;
 
-        explicit operator unsigned() const {
-            return static_cast<unsigned>(_state);
-        }
+        explicit operator unsigned() const;
 
         NameType _getFPStr() const;
         static NameType __getFPStr(StateType state);
@@ -220,9 +218,9 @@ public:
     }
 
     static void startToneTimer(uint32_t timeout = 0);
-#if HAVE_IMPERIAL_MARCH
-    static void playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
-#endif
+    #if HAVE_IMPERIAL_MARCH
+        static void playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
+    #endif
     static void stopToneTimer(ActionStateType state = ActionStateType::NONE);
 
 protected:
@@ -327,36 +325,13 @@ protected:
         uint16_t interval;
         std::array<uint8_t, 2> pin;
 
-        ToneSettings(uint16_t _frequency, uint16_t _pwmValue, uint8_t _pins[2], uint32_t _timeout = 0) :
-            counter(0),
-            loop(0),
-            runtime(_timeout ? get_time_diff(millis(), _timeout) : 0),
-            frequency(_frequency),
-            pwmValue(_pwmValue),
-            interval(kToneInterval),
-            pin({_pins[0], _pins[1]})
-        {
-            __LDBG_assert_panic(!(_pins[0] == kInvalidPin && _pins[1] != kInvalidPin), "pin1=%u not set, pin2=%u set", _pins[0], _pins[1]);
-        }
-
-        bool hasPin(uint8_t num) const {
-            return (num < pin.size()) && (pin[num] != kInvalidPin);
-        }
-
-        // returns if first pin is available
-        // if the first pin is invalid, the second pin is invalid as well
-        bool hasPin1() const {
-            return pin[0] != kInvalidPin;
-        }
-
-        // returns true if second pin is available
-        bool hasPin2() const {
-            return pin[1] != kInvalidPin;
-        }
+        ToneSettings(uint16_t _frequency, uint16_t _pwmValue, uint8_t _pins[2], uint32_t _timeout = 0);
+        bool hasPin(uint8_t num) const;
+        bool hasPin1() const;
+        bool hasPin2() const;
     };
 
     static constexpr auto kToneSettingsSize = sizeof(ToneSettings);
-
 
     bool _cleanQueue();
 
@@ -371,9 +346,9 @@ protected:
     uint32_t _motorStartTime;
     uint8_t _motorPin;
     uint16_t _motorPWMValue;
-#if DEBUG_IOT_BLINDS_CTRL
-    uint32_t _softStartUpdateCount;
-#endif
+    #if DEBUG_IOT_BLINDS_CTRL
+        uint32_t _softStartUpdateCount;
+    #endif
     MillisTimer _motorTimeout;
     float _currentLimit;
 

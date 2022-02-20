@@ -115,9 +115,9 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
             PlayToneType::NONE, F("None"),
             PlayToneType::INTERVAL, F("Tone, 2 second interval"),
             PlayToneType::INTERVAL_SPEED_UP, F("Tone, decreasing interval"),
-#if HAVE_IMPERIAL_MARCH
-            PlayToneType::IMPERIAL_MARCH, F("Imperial March")
-#endif
+            #if HAVE_IMPERIAL_MARCH
+                PlayToneType::IMPERIAL_MARCH, F("Imperial March")
+            #endif
         );
 
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, BLINDS_CONFIG_MAX_OPERATIONS, ot, od, or, op, ct, cd, cr, cp);

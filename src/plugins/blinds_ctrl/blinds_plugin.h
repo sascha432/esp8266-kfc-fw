@@ -67,7 +67,12 @@ void BlindsControlPlugin::loopMethod()
 // BlindsControl
 // ------------------------------------------------------------------------
 
-inline void BlindsControl:: startToneTimer(uint32_t timeout)
+inline uint16_t BlindsControl::getCurrent()  const
+{
+    return std::clamp<uint32_t>(_adcIntegral * 64.0, 0, 0xffff);
+}
+
+inline void BlindsControl::startToneTimer(uint32_t timeout)
 {
     __LDBG_printf("timeout=%u", timeout);
     BlindsControlPlugin::getInstance()._startToneTimer(timeout);
@@ -75,10 +80,10 @@ inline void BlindsControl:: startToneTimer(uint32_t timeout)
 
 #if HAVE_IMPERIAL_MARCH
 
-inline void BlindsControl::playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
-{
-    BlindsControlPlugin::getInstance()._playImperialMarch(speed, zweiklang, repeat);
-}
+    inline void BlindsControl::playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
+    {
+        BlindsControlPlugin::getInstance()._playImperialMarch(speed, zweiklang, repeat);
+    }
 
 #endif
 

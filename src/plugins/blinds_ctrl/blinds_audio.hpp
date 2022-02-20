@@ -2,9 +2,99 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#pragma once
+
 #include "BlindsControl.h"
 
-void BlindsControl::_startToneTimer(uint32_t timeout)
+inline BlindsControl::ToneSettings::ToneSettings(uint16_t _frequency, uint16_t _pwmValue, uint8_t _pins[2], uint32_t _timeout)  :
+    counter(0),
+    loop(0),
+    runtime(_timeout ? get_time_diff(millis(), _timeout) : 0),
+    frequency(_frequency),
+    pwmValue(_pwmValue),
+    interval(kToneInterval),
+    pin({_pins[0], _pins[1]})
+{
+    __LDBG_assert_panic(!(_pins[0] == kInvalidPin && _pins[1] != kInvalidPin), "pin1=%u not set, pin2=%u set", _pins[0], _pins[1]);
+}
+
+inline bool BlindsControl::ToneSettings::hasPin(uint8_t num) const
+{
+    return (num < pin.size()) && (pin[num] != kInvalidPin);
+}
+
+// returns if first pin is available
+// if the first pin is invalid, the second pin is invalid as well
+inline bool BlindsControl::ToneSettings::hasPin1() const
+{
+    return pin[0] != kInvalidPin;
+}
+
+// returns true if second pin is available
+inline bool BlindsControl::ToneSettings::hasPin2() const
+{
+    return pin[1] != kInvalidPin;
+}
+
+inline void BlindsControl::_startTone()
+{
+    __LDBG_printf("start=%u tone=%d", !_queue.empty() && _queue.getAction().getState() == ActionStateType::DELAY, _queue.empty() ? -1 : (int)_queue.getAction().getPlayTone());
+    if (!_queue.empty() && _queue.getAction().getState() == ActionStateType::DELAY) {
+        switch(_queue.getAction().getPlayTone()) {
+            case PlayToneType::INTERVAL:
+                BlindsControl::startToneTimer();
+                break;
+            case PlayToneType::INTERVAL_SPEED_UP:
+                BlindsControl::startToneTimer(_queue.getAction().getTimeout());
+                break;
+            #if HAVE_IMPERIAL_MARCH
+                case PlayToneType::IMPERIAL_MARCH:
+                    BlindsControl::playImperialMarch(80, 0, 1);
+                    break;
+            #endif
+            default:
+                break;
+        }
+    }
+    else if (_toneTimer) {
+        __LDBG_printf("tone timer running");
+        _stopToneTimer();
+    }
+}
+
+inline void BlindsControl::_playTone(uint8_t *pins, uint16_t pwm, uint32_t frequency)
+{
+    if (*pins == kInvalidPin) {
+        return;
+    }
+    __LDBG_printf("tone pins=%u,%u pwm=%u freq=%u", pins[0], pins[1], pwm, frequency);
+    analogWriteFreq(frequency);
+    analogWrite(pins[0], pwm);
+    #if !defined(ESP8266)
+        if (pins[1] != kInvalidPin)
+    #endif
+    {
+        analogWrite(pins[1], pwm);
+    }
+}
+
+inline void BlindsControl::_playNote(uint8_t pin, uint16_t pwm, uint8_t note)
+{
+    uint8_t tmp = note + IMPERIAL_MARCH_NOTE_OFFSET;
+    if (tmp < NOTE_TO_FREQUENCY_COUNT) {
+        uint8_t pins[2] = { pin, kInvalidPin };
+        _playTone(pins, pwm, NOTE_FP_TO_INT(pgm_read_word(note_to_frequency + tmp)));
+    }
+}
+
+inline void BlindsControl::_stopToneTimer()
+{
+    __LDBG_printf("stopping tone timer and disabling motors");
+    _toneTimer.remove();
+    _disableMotors();
+}
+
+inline void BlindsControl::_startToneTimer(uint32_t timeout)
 {
     _stopToneTimer();
     if ((_config.play_tone_channel & 0x03) == 0) {
@@ -51,10 +141,10 @@ void BlindsControl::_startToneTimer(uint32_t timeout)
             // stop tone
             // __LDBG_printf("_toneTimer OFF loop=%u/%u", settings.loop, (interval / ToneSettings::kTimerInterval));
             analogWrite(settings.pin[0], 0);
-#if !defined(ESP8266)
-            // analogWrite checks the pin
-            if (settings.hasPin2())
-#endif
+            #if !defined(ESP8266)
+                // analogWrite checks the pin
+                if (settings.hasPin2())
+            #endif
             {
                 analogWrite(settings.pin[1], 0);
             }
@@ -77,7 +167,7 @@ void BlindsControl::_startToneTimer(uint32_t timeout)
 
 #if HAVE_IMPERIAL_MARCH
 
-    void BlindsControl::_playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
+    inline void BlindsControl::_playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat)
     {
         _stopToneTimer();
         if ((_config.play_tone_channel & 0x03) == 0) {

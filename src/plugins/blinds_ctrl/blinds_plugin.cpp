@@ -23,8 +23,6 @@
 
 // Plugin
 
-extern "C" std::underlying_type<BlindsControl::ChannelType>::type operator *(const BlindsControl::ChannelType type);
-
 static BlindsControlPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(

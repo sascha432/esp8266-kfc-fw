@@ -6,11 +6,6 @@
 
 #include "BlindsControl.h"
 
-inline BlindsControl::ChannelState::operator unsigned() const
-{
-    return static_cast<unsigned>(_state);
-}
-
 inline BlindsControl::ChannelState::ChannelState() :
     _state(StateType::UNKNOWN)
 {
@@ -50,6 +45,11 @@ inline uint8_t BlindsControl::ChannelState::isOpenInt() const
 inline bool BlindsControl::ChannelState::isClosed() const
 {
     return _state == StateType::CLOSED;
+}
+
+inline BlindsControl::ChannelState::operator unsigned() const
+{
+    return static_cast<unsigned>(_state);
 }
 
 inline BlindsControl::NameType BlindsControl::ChannelState::_getFPStr() const

@@ -199,6 +199,18 @@ protected:
 
     static constexpr auto kChannelActionSize = sizeof(ChannelAction);
 
+private:
+    static_assert(kChannelCount <= 2, "Only 2 channels supported");
+
+    enum class AutoDiscoveryType : uint8_t {
+        CHANNEL_0,
+        CHANNEL_1,
+        CHANNELS_ALL /* = kChannelCount * 2 */,
+        BINARY_STATUS,
+        BUSY_STATUS,
+        MAX
+    };
+
 public:
     BlindsControl();
 
@@ -213,9 +225,7 @@ public:
     // void setChannel(ChannelType channel, StateType state);
 
     // returns ADC value * 64.0 of the current measurement
-    uint16_t getCurrent() {
-        return std::clamp<uint32_t>(_adcIntegral * 64.0, 0, 0xffff);
-    }
+    uint16_t getCurrent() const;
 
     static void startToneTimer(uint32_t timeout = 0);
     #if HAVE_IMPERIAL_MARCH
@@ -228,10 +238,10 @@ protected:
     void _startToneTimer(uint32_t timeout = 0);
     void _playTone(uint8_t *pins, uint16_t pwm, uint32_t frequency);
     void _setDac(uint16_t pwm);
-#if HAVE_IMPERIAL_MARCH
-    void _playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
-    void _playNote(uint8_t pin, uint16_t pwm, uint8_t note);
-#endif
+    #if HAVE_IMPERIAL_MARCH
+        void _playImperialMarch(uint16_t speed, int8_t zweiklang, uint8_t repeat);
+        void _playNote(uint8_t pin, uint16_t pwm, uint8_t note);
+    #endif
     void _stopToneTimer();
 
 protected:
@@ -242,7 +252,9 @@ protected:
 
     void _publishState();
     void _executeAction(ChannelType channel, bool open);
+
     void _startTone();
+
     void _startMotor(ChannelType channel, bool open);
     void _monitorMotor(ChannelAction &action);
     bool _checkMotor();
@@ -363,6 +375,20 @@ private:
     ADCManager &_adc;
 };
 
-#include "BlindsControl.hpp"
+inline std::underlying_type<BlindsControl::ChannelType>::type operator *(const BlindsControl::ChannelType type)
+{
+    return static_cast<std::underlying_type<BlindsControl::ChannelType>::type>(type);
+}
 
-#include <debug_helper_disable.h>
+#include "blinds_control.hpp"
+#include "blinds_audio.hpp"
+#include "blinds_channelstate.hpp"
+#include "blinds_channelaction.hpp"
+#include "blinds_channeltoaction.hpp"
+#include "blinds_channelstate.hpp"
+#include "blinds_channelqueue.hpp"
+#include "blinds_motor.hpp"
+
+#if DEBUG_IOT_BLINDS_CTRL
+#    include <debug_helper_disable.h>
+#endif

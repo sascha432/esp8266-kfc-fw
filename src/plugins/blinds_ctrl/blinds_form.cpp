@@ -10,9 +10,9 @@
 #include "Utility/ProgMemHelper.h"
 
 #if DEBUG_IOT_BLINDS_CTRL
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using KFCConfigurationClasses::System;

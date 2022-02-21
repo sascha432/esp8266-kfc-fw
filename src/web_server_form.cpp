@@ -10,7 +10,8 @@
 
 using KFCConfigurationClasses::System;
 
-struct WebServerConfigCombo {
+struct WebServerConfigCombo
+{
     using Type = WebServerConfigCombo;
     using ModeType = WebServerTypes::ModeType;
 
@@ -20,7 +21,8 @@ struct WebServerConfigCombo {
     WebServerConfigCombo(System::FlagsConfig::ConfigFlags_t *_flags, System::WebServerConfig::WebServerConfig_t *_cfg) :
         flags(_flags),
         cfg(_cfg)
-    {}
+    {
+    }
 
     static ModeType get_webserver_mode(const Type &obj)
     {
@@ -92,6 +94,7 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &name, Form
         form.add(new FormObject<File2String>(F("ssl_key"), File2String(FSPGM(server_key)), nullptr));
 
     #endif
+
     form.addStringGetterSetter(F("btok"), System::Device::getToken, System::Device::setToken);
     form.addValidator(FormUI::Validator::Length(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 

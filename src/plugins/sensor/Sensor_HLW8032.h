@@ -6,6 +6,8 @@
 
 #if IOT_SENSOR_HAVE_HLW8032
 
+#error this sensor is not implemented
+
 #include <Arduino_compat.h>
 #include <SoftwareSerial.h>
 #include <vector>

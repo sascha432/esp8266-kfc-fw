@@ -69,7 +69,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addUnitOfMeasurement(String('W'));
             discovery->addDeviceClass(F("power"));
             #if MQTT_AUTO_DISCOVERY_USE_NAME
-                discovery->addName(name + F("Estimated Power"));
+                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Estimated Power")));
             #endif
         }
         break;

@@ -11,11 +11,11 @@
 #include "MicrosTimer.h"
 #include "web_socket.h"
 
-#if DEBUG_IOT_SENSOR
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
+#    if DEBUG_IOT_SENSOR
+#        include <debug_helper_enable.h>
+#    else
+#        include <debug_helper_disable.h>
+#    endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
 
@@ -23,7 +23,7 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 // Low level interrupt handling
 // ------------------------------------------------------------------------
 
-static Sensor_HLW8012 *sensor = nullptr;
+Sensor_HLW8012 *hlwSensor = nullptr;
 static volatile uint32_t energyCounter = 0;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF;
 static Sensor_HLW8012::InterruptBuffer _interruptBufferCF1;
@@ -94,21 +94,6 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     LoopFunctions::add(Sensor_HLW8012::loop);
     attachInterrupt(digitalPinToInterrupt(_pinCF), Sensor_HLW8012_callbackCF, CHANGE);
     attachInterrupt(digitalPinToInterrupt(_pinCF1), Sensor_HLW8012_callbackCF1, CHANGE);
-}
-
-Sensor_HLW8012::~Sensor_HLW8012()
-{
-    LoopFunctions::remove(Sensor_HLW8012::loop);
-    sensor = nullptr;
-    detachInterrupt(digitalPinToInterrupt(_pinCF));
-    detachInterrupt(digitalPinToInterrupt(_pinCF1));
-    UNREGISTER_SENSOR_CLIENT(this);
-}
-
-
-void Sensor_HLW8012::loop()
-{
-    sensor->_loop();
 }
 
 void Sensor_HLW8012::_loop()
@@ -308,7 +293,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         buffer.shrink(iterator, buffer.end());                              // <1µs
     }
 
-#if IOT_SENSOR_HLW80xx_DATA_PLOT
+    #if IOT_SENSOR_HLW80xx_DATA_PLOT
         // send every 100ms or 400 data points to keep the packets small
         // required RAM = (data points * 4 + 32) * 8
         // tested up to 1KHz which works without dropping any packet with good WiFi
@@ -361,12 +346,11 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
             }
             _plotData.clear();
         }
-#endif
+    #endif
         return true;
     }
     return false;
 }
-
 
 void Sensor_HLW8012::getStatus(Print &output)
 {
@@ -377,16 +361,6 @@ void Sensor_HLW8012::getStatus(Print &output)
     #if DEBUG_IOT_SENSOR
         output.printf_P(PSTR(HTML_S(br) "PINS: sel=%u cf=%u cf1=%u"), _pinSel, _pinCF, _pinCF1);
     #endif
-}
-
-String Sensor_HLW8012::_getId(const __FlashStringHelper *type)
-{
-    PrintString id(F("hlw8012_0x%04x"), (_pinSel << 10) | (_pinCF << 5) | (_pinCF1));
-    if (type) {
-        id.write('_');
-        id.print(FPSTR(type));
-    }
-    return id;
 }
 
 void Sensor_HLW8012::_setOutputMode(OutputTypeEnum_t outputMode, int delay)

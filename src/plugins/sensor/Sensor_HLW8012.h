@@ -152,13 +152,9 @@ private:
     void _toggleOutputMode(int delay = -1);
     bool _processInterruptBuffer(InterruptBuffer &buffer, SensorInput &input);
 
-    uint8_t _getCFPin() const {
-        return _pinCF;
-    }
-
-    uint8_t _getCF1Pin() const {
-        return _pinCF1;
-    }
+    String _getId(const __FlashStringHelper *type) const;
+    uint8_t _getCFPin() const;
+    uint8_t _getCF1Pin() const;
 
     uint8_t _pinSel;
     uint8_t _pinCF;
@@ -172,19 +168,11 @@ private:
     SensorInput _inputCFI;
     SensorInput _inputCFU;
 
-    char _getOutputMode(SensorInput *input) const {
-        if (input == &_inputCF) {
-            return 'P';
-        }
-        else if (input == &_inputCFU) {
-            return 'U';
-        }
-        else if (input == &_inputCFI) {
-            return 'I';
-        }
-        return '?';
-    }
-
+    char _getOutputMode(SensorInput *input) const;
 };
+
+extern Sensor_HLW8012 *hlwSensor;
+
+#include "Sensor_HLW8012.hpp"
 
 #endif

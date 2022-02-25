@@ -918,17 +918,34 @@ void KFCFWConfiguration::printDiag(Print &output, const String &prefix)
     #if ESP8266
         station_config wifiConfig;
         wifi_station_get_config_default(&wifiConfig);
-        output.printf_P(PSTR("%s default ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s\n"), prefix.c_str(), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode_default()));
+        output.print(prefix);
+        output.printf_P(PSTR("default cfg ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s\n"), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode_default()));
         wifi_station_get_config(&wifiConfig);
-        output.printf_P(PSTR("%s config ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s\n"), prefix.c_str(), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode()));
-        output.printf_P(PSTR("%s sleep=%s phy=%s channel=%u AP_id=%u auto_connect=%u reconnect=%u\n"), prefix.c_str(), KFCFWConfiguration::getSleepTypeStr(wifi_get_sleep_type()), KFCFWConfiguration::getWiFiPhyModeStr(wifi_get_phy_mode()), wifi_get_channel(), wifi_station_get_current_ap_id(), wifi_station_get_auto_connect(), wifi_station_get_reconnect_policy());
+        output.print(prefix);
+        output.printf_P(PSTR("config ssid=%.32s password=%.64s bssid_set=%u bssid=%s mode=%s\n"), wifiConfig.ssid, wifiConfig.password, wifiConfig.bssid_set, mac2String(wifiConfig.bssid).c_str(), KFCFWConfiguration::getWiFiOpModeStr(wifi_get_opmode()));
+        output.print(prefix);
+        output.printf_P(PSTR("sleep=%s phy=%s channel=%u AP_id=%u auto_connect=%u reconnect=%u persistent=%u\n"), KFCFWConfiguration::getSleepTypeStr(wifi_get_sleep_type()), KFCFWConfiguration::getWiFiPhyModeStr(wifi_get_phy_mode()), wifi_get_channel(), wifi_station_get_current_ap_id(), wifi_station_get_auto_connect(), wifi_station_get_reconnect_policy(), WiFi.getPersistent());
 
-        if (WiFi.isConnected()) {
-            output.printf_P(PSTR("ip=%s gw=%s\n"), WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str());
+        auto lastError = config.getLastErrorStr();
+        if (lastError.length()) {
+            output.print(prefix);
+            output.printf_P(PSTR("last_error=%s\n"), lastError.c_str());
         }
-        auto clients = WiFi.softAPgetStationNum();
-        if (clients) {
-            output.printf_P(PSTR("ap_mode_clients=%u\n"), clients);
+
+        if ((WiFi.getMode() & WiFiMode_t::WIFI_STA)) {
+            if (WiFi.isConnected()) {
+                output.print(prefix);
+                output.printf_P(PSTR("station_ip=%s gw=%s dns=%s, %s\n"), WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str(), WiFi.dnsIP(0).toString().c_str(), WiFi.dnsIP(1).toString().c_str());
+            }
+            else {
+                output.print(prefix);
+                output.println(F("station not connected"));
+            }
+        }
+
+        if ((WiFi.getMode() & WiFiMode_t::WIFI_AP)) {
+            output.print(prefix);
+            output.printf_P(PSTR("softap_ip=%s ssid=%s clients=%u\n"), WiFi.softAPIP().toString().c_str(), WiFi.softAPSSID().c_str(), WiFi.softAPgetStationNum());
         }
     #elif ESP32
         WiFi.printDiag(output);

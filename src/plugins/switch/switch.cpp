@@ -175,7 +175,7 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
         SwitchWebUIEnum::NEW_ROW, F("New Row After Switch")
     );
 
-    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_SWITCH_CHANNEL_NUM, chan, name, state, webui);
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_SWITCH_CHANNEL_NUM, chan, name, ico, state, webui);
 
     for (uint8_t i = 0; i < _pins.size(); i++) {
         auto &group = form.addCardGroup(F_VAR(chan, i), PrintString(F("Channel %u"), i), true);
@@ -189,6 +189,20 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 
         form.addObjectGetterSetter(F_VAR(webui, i), FormGetterSetter(_configs[i]._data, webUI));
         form.addFormUI(F("WebUI"), webUI);
+
+        form.addCallbackGetterSetter<String>(F_VAR(ico, i), [i](String &str, Field::BaseField &, bool store) {
+            if (store) {
+                if (str.trim().length()) {
+                    Plugins::IotSwitch::setIcon(i, str.c_str());
+                }
+            }
+            else {
+                str = Plugins::IotSwitch::getIcon(i);
+            }
+            return true;
+        }, InputFieldType::TEXT).setOptional(true);
+        Plugins::IotSwitch::addIcon0LengthValidator(form);
+        form.addFormUI(F("Channel Icon"), FormUI::PlaceHolder(F("Default Icon")));
 
         group.end();
     }
@@ -241,7 +255,8 @@ MQTT::AutoDiscovery::EntityPtr SwitchPlugin::getAutoDiscovery(MQTT::FormatType f
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
     auto channel = PrintString(FSPGM(channel__u), num);
-    if (!discovery->create(this, channel, format)) {
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
+    if (!discovery->create(this, baseTopic + channel, format)) {
         return discovery;
     }
     #if MQTT_AUTO_DISCOVERY_USE_NAME
@@ -249,11 +264,18 @@ MQTT::AutoDiscovery::EntityPtr SwitchPlugin::getAutoDiscovery(MQTT::FormatType f
     #else
         String fullname = KFCConfigurationClasses::System::Device::getName();
         fullname += ' ';
-        fullname += _names[num].toString(num);
+        fullname += _names[num].toString(num); // if no name is set, it returns Channel #n
         discovery->addName(fullname);
     #endif
     discovery->addStateTopic(_formatTopic(num, true));
     discovery->addCommandTopic(_formatTopic(num, false));
+    discovery->addObjectId(baseTopic + channel);
+
+    // check if channel has a custom icon
+    auto icon = Plugins::IotSwitch::getIcon(num);
+    if (icon && *icon) {
+        discovery->addIcon(icon);
+    }
     return discovery;
 }
 

@@ -68,6 +68,7 @@ public:
 
     void setLastError(const String &error);
     const char *getLastError() const;
+    const String &getLastErrorStr() const;
 
     // get default device name based on its MAC address
     static String defaultDeviceName();
@@ -261,6 +262,11 @@ inline const char *KFCFWConfiguration::getLastError() const
     return _lastError.c_str();
 }
 
+inline const String &KFCFWConfiguration::getLastErrorStr() const
+{
+    return _lastError;
+}
+
 inline bool KFCFWConfiguration::registerWiFiError()
 {
     __DBG_printf("_wifiErrorCount=%u _wifiNumActive=%u", _wifiErrorCount, _wifiNumActive);
@@ -271,8 +277,14 @@ inline bool KFCFWConfiguration::registerWiFiError()
 
         // find next available network
         auto stations = KFCConfigurationClasses::Network::WiFi::getStations(nullptr);
+        auto lastStation = stations.at(_wifiNumActive);
         if (++_wifiNumActive >= stations.size()) {
             _wifiNumActive = 0;
+        }
+
+        if (stations.size() > 1) {
+            setLastError(PrintString(F("Failed to connect to %s, trying %s"), lastStation._SSID.c_str(), stations.at(_wifiNumActive)._SSID.c_str()));
+            Logger_error(F("%s"), getLastError());
         }
 
         // the WiFi needs to be reconnected

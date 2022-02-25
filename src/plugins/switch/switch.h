@@ -211,12 +211,12 @@ private:
 private:
     std::array<ChannelName, IOT_SWITCH_CHANNEL_NUM> _names;
     std::array<SwitchConfig, IOT_SWITCH_CHANNEL_NUM> _configs;
-#if IOT_SWITCH_STORE_STATES_RTC_MEM
-    static PinArrayType &_pins;
-    static States &_states;
-#else
-    static PinArrayType _pins;
-    static States _states;
-#endif
+    #if IOT_SWITCH_STORE_STATES_RTC_MEM
+        static PinArrayType &_pins;
+        static States &_states;
+    #else
+        static PinArrayType _pins;
+        static States _states;
+    #endif
     static bool _statesInitialized;
 };

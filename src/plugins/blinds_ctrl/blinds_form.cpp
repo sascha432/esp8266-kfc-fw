@@ -114,9 +114,9 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         FormUI::Container::List playToneItems(
             PlayToneType::NONE, F("None"),
             PlayToneType::INTERVAL, F("Tone, 2 second interval"),
-            PlayToneType::INTERVAL_SPEED_UP, F("Tone, decreasing interval"),
+            PlayToneType::INTERVAL_SPEED_UP, F("Tone, decreasing interval")
             #if HAVE_IMPERIAL_MARCH
-                PlayToneType::IMPERIAL_MARCH, F("Imperial March")
+                , PlayToneType::IMPERIAL_MARCH, F("Imperial March")
             #endif
         );
 

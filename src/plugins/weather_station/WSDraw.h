@@ -123,7 +123,7 @@ namespace WSDraw {
     static constexpr auto kNumScreens = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kNumScreens;
     static constexpr auto kSkipScreen = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kSkipScreen;
 
-    static constexpr int16_t _offsetX = 2;
+    static constexpr int16_t _offsetX = -2;
 
     class Base {
     public:
@@ -166,6 +166,8 @@ namespace WSDraw {
         bool lock();
         void unlock();
         bool isLocked();
+
+        void printDebugInfo(Print &output);
 
     protected:
         DisplayType _tft;
@@ -213,7 +215,6 @@ namespace WSDraw {
         #endif
 
         void _updateScreenTime();
-
 
         void _doScroll();
         void _scrollTimer(Base &draw);
@@ -316,7 +317,6 @@ namespace WSDraw {
         const GFXfont *_textFont;
         SemaphoreMutex _lock;
         time_t _lastTime;
-        uint32_t _screenLastUpdateTime;
         uint8_t _scrollPosition;
         ScreenType _currentScreen;
         volatile bool _redrawFlag;
@@ -407,6 +407,11 @@ namespace WSDraw {
     inline void Base::_initScreen()
     {
         redraw();
+    }
+
+    inline void printDebugInfo(Print &output)
+    {
+
     }
 
     inline bool Base::_clearPartially(int16_t minY, int16_t maxY, ColorType color)

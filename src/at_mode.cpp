@@ -35,6 +35,10 @@
 #include <IOExpander.h>
 #include "../src/plugins/plugins.h"
 
+#if SPI_FREQUENCY
+#include <SPI.h>
+#endif
+
 #if ESP8266
 #    include <umm_malloc/umm_malloc.h>
      extern "C" {
@@ -1787,6 +1791,9 @@ void at_mode_serial_handle_event(String &commandString)
                 args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
                 args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
                 args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
+            #endif
+            #if SPI_FREQUENCY
+                args.print(F("SPI freq: %u"), SPI.lastSetFrequency);
             #endif
             args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
             args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);

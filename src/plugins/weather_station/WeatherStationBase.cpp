@@ -32,71 +32,63 @@ WeatherStationBase::WeatherStationBase() :
     #endif
 }
 
+void WeatherStationBase::_pollDataTimerCallback(Event::CallbackTimerPtr timer)
+{
+    ws_plugin._getWeatherInfo([](int16_t code, KFCRestAPI::HttpRequest &request) {
+        ws_plugin._openWeatherAPICallback(code, request);
+    });
+}
+
+void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request)
+{
+    __LDBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
+    if (code != 200) {
+        PrintString message(F("OpenWeatherAPI http status=%d error=%s url=%s"), code, request.getMessage().c_str(), request.getUrl());
+        Logger_error(message);
+        _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
+        _pollDataUpdateLastTime(false);
+    }
+    else if (!_weatherApi.getWeatherInfo().hasData()) {
+        PrintString message(F("OpenWeatherAPI data=invalid message=%s url=%s"), request.getMessage().c_str(), request.getUrl());
+        Logger_error(message);
+        _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nInvalid Data"));
+        _pollDataUpdateLastTime(false);
+    }
+    else {
+        _pollDataUpdateLastTime(true);
+    }
+}
+
 void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
     if (event == WiFiCallbacks::EventType::DISCONNECTED) {
+        __LDBG_printf("poll weather stopped");
         _Timer(_pollDataTimer).remove();
     }
     else if (event == WiFiCallbacks::EventType::CONNECTED) {
-        _Timer(_pollDataTimer).add(_pollDataGetNextUpdate(), false, [this](Event::CallbackTimerPtr timer) {
-           _getWeatherInfo([this](int16_t code, KFCRestAPI::HttpRequest &request) {
-               __LDBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
-               if (code != 200) {
-                   PrintString message(F("OpenWeatherAPI http status=%d error=%s url=%s"), code, request.getMessage().c_str(), request.getUrl());
-                   Logger_error(message);
-                   _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
-                   _pollDataUpdateLastTime(false);
-               }
-               else if (!_weatherApi.getWeatherInfo().hasData()) {
-                   PrintString message(F("OpenWeatherAPI data=invalid message=%s url=%s"), request.getMessage().c_str(), request.getUrl());
-                   Logger_error(message);
-                   _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nInvalid Data"));
-                   _pollDataUpdateLastTime(false);
-               }
-               else {
-                   _pollDataUpdateLastTime(true);
-               }
-           });
-        });
+        auto next = 10000;
+        __LDBG_printf("poll weather next=%u", next);
+        _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
     }
 }
-
-// void WeatherStationBase::_pollDataTimerCallback(Event::CallbackTimerPtr timer)
-// {
-// }
 
 void WeatherStationBase::_pollDataUpdateLastTime(bool success)
 {
-    __LDBG_printf("success=%u", success);
-    if (success) {
-        _pollDataLastMillis = millis();
-        if (!_pollDataLastMillis) {
-            _pollDataLastMillis++;          // lucky day
-        }
-        _pollDataRetries = 0;
-    }
-    else {
-        _pollDataLastMillis = 0;            // use kPollDataErrorDelay
-        _pollDataRetries++;
-    }
-}
-
-uint32_t WeatherStationBase::_pollDataGetNextUpdate() const
-{
-    __LDBG_printf("last_poll=%u retries=%u/%u", _pollDataLastMillis, _pollDataRetries, kPollDataRetries);
-    if (_pollDataLastMillis == 0) {
-        return (_pollDataRetries > kPollDataRetries) ? kPollDataErrorPauseDelay : kPollDataErrorDelay;
-    }
-    uint32_t diff;
+    _pollDataLastMillis = millis();
     uint32_t next;
-    if ((diff = get_time_diff(_pollDataLastMillis, millis())) < Event::minutes(_config.weather_poll_interval).count()) {
-        next = static_cast<uint32_t>(Event::minutes(_config.weather_poll_interval).count()) - diff;
+    if (success) {
+        _pollDataRetries = 0;
+        next = _config.getPollIntervalMillis();
     }
     else {
-        next = Event::minutes(_config.weather_poll_interval).count();
+        _pollDataRetries++;
+        next = _config.getPollIntervalMillis();
     }
-    __LDBG_printf("next=%u min_next=%u", next, kMinPollDataInterval);
-    return (next < kMinPollDataInterval) ? kMinPollDataInterval : next;
+    if (_pollDataRetries > kPollDataRetries) {
+        next = 3600 * (kPollDataRetries - _pollDataRetries);
+    }
+    __LDBG_printf("success=%u retries=%u next=%u", success, _pollDataRetries, next);
+    _Timer(_pollDataTimer).add(std::max(kMinPollDataInterval, next), false, _pollDataTimerCallback);
 }
 
 void WeatherStationBase::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, HttpRequestCallback callback)
@@ -131,10 +123,8 @@ void WeatherStationBase::begin()
         _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr);
     }
     LoopFunctions::add(loop);
-    _toggleScreenTimer = millis();
-    _toggleScreenTimeout = 0;
     // forces a redraw and updates timeouts
-    _setScreen(_getNextScreen(kNumScreens - 2));
+    _setScreen(_getScreen(0));
 }
 
 void WeatherStationBase::end()
@@ -228,6 +218,7 @@ void WeatherStationBase::_loop()
                 else if (_currentScreen == ScreenType::DEBUG_INFO) {
                     // update debug screen every second
                     _updateScreenDebug();
+                    return;
                 }
                 else if (do5secUpdate) {
                     // update forecast section every 5 seconds

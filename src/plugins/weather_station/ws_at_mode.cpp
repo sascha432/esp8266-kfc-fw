@@ -32,7 +32,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
 {
 #if IOT_WEATHER_STATION_HAS_TOUCHPAD
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSSET))) {
-        if (args.requireArgs(1, 2)) {
+        if (args.requireArgs(1)) {
             bool state = !args.isFalse(1);
             if (args.equalsIgnoreCase(0, F("touchpad"))) {
                 _touchpadDebug = state;
@@ -49,8 +49,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("metric=%u"), state);
             }
             else if (args.equalsIgnoreCase(0, F("screen"))) {
-                _setScreen(args.toIntMinMax<uint8_t>(1, 0, kNumScreens - 1, _getCurrentScreen() + 1));
-                redraw();
+                _setScreen(args.toIntMinMax<uint8_t>(1, 0, kNumScreens - 1, _getCurrentScreen() + 1), args.toIntMinMax(2, -1, 300, -1));
                 args.printf_P(PSTR("screen=%u timeout=60s"), _currentScreen);
             }
             else if (args.equalsIgnoreCase(0, F("screens"))) {
@@ -110,7 +109,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             uint16_t level = args.toIntMinMax<uint16_t>(0, 0, 1023);
             _fadeBacklight(_backlightLevel, level);
             _backlightLevel = level;
-            args.printf_P(PSTR("backlight=%d"), level);
+            args.printf_P(PSTR("backlight=%d/1023"), level);
         }
         return true;
     }
@@ -120,8 +119,8 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("Updating forecast..."));
             _getWeatherForecast([this, stream](bool status, KFCRestAPI::HttpRequest &request) {
                 auto msg = request.getMessage();
-                LoopFunctions::callOnce([&]() {
-                    const_cast<Stream *>(stream)->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, msg.c_str());
+                LoopFunctions::callOnce([this, status, msg, stream]() {
+                    stream->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, msg.c_str());
                     redraw();
                 });
             });
@@ -130,8 +129,8 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("Updating info..."));
             _getWeatherInfo([this, stream](bool status, KFCRestAPI::HttpRequest &request) {
                 auto msg = request.getMessage();
-                LoopFunctions::callOnce([&]() {
-                    const_cast<Stream *>(stream)->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, request.getMessage().c_str());
+                LoopFunctions::callOnce([this, status, msg, stream]() {
+                    stream->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, msg.c_str());
                     redraw();
                 });
             });

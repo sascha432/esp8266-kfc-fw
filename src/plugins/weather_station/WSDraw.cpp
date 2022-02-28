@@ -84,7 +84,6 @@ namespace WSDraw {
         _scrollCanvas(nullptr),
         _textFont(nullptr),
         _lastTime(0),
-        _screenLastUpdateTime(~0),
         _scrollPosition(0),
         _currentScreen(ScreenType::MAIN),
         _redrawFlag(false),
@@ -116,72 +115,13 @@ namespace WSDraw {
             if (clear) {
                 _tft.fillScreen(COLORS_BACKGROUND);
             }
-            DisplayType::Position_t pos;
-            _tft.drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, DisplayType::CENTER, DisplayType::MIDDLE, &pos);
+            // DisplayType::Position_t pos;
+            _tft.drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, DisplayType::CENTER, DisplayType::MIDDLE); //, &pos);
         }
     }
 
-    // void Base::_drawTime()
-    // {
-    //     __LDBG_isCanvasAttached();
-    //     // __LDBG_printf("_drawTime()");
-
-    //     _offsetY = 0;
-
-    // #if 0
-    //     int n = 0;
-    //     for (uint16_t y = 0; y < 45; y++) {
-    //         for (uint16_t x = 0; x < 128; x++) {
-    //             uint8_t br = 0xff;// - (0xff * y / 45);
-    //             int ww = 128 * 5;
-    //             auto color = GFXCanvas::convertRGBtoRGB565(
-    //                 (n / ww) % 3 == 0 ? br : 0,
-    //                 (n / ww) % 3 == 1 ? br : 0,
-    //                 (n / ww) % 3 == 2 ? br : 0
-    //                 );
-    //             _canvas->drawPixel(x, y, color);
-    //             n++;
-    //         }
-    //     }
-    //     _lastTime = time(nullptr);
-    //     return;
-    // #endif
-
-    //     char buf[32];
-    //     _lastTime = time(nullptr);
-    //     struct tm *tm = localtime(&_lastTime);
-
-    //     _canvas->setFont(FONTS_DATE);
-    //     _canvas->setTextColor(COLORS_DATE);
-    //     strftime_P(buf, sizeof(buf), PSTR("%a %b %d %Y"), tm);
-    //     _canvas->drawTextAligned(X_POSITION_DATE, Y_POSITION_DATE, buf, H_POSITION_DATE);
-
-    //     _canvas->setFont(FONTS_TIME);
-    //     _canvas->setTextColor(COLORS_TIME);
-    //     if (_config.time_format_24h) {
-    //         strftime_P(buf, sizeof(buf), PSTR("%H:%M:%S"), tm);
-    //     }
-    //     else {
-    //         strftime_P(buf, sizeof(buf), PSTR("%I:%M:%S"), tm);
-    //     }
-    //     _canvas->drawTextAligned(X_POSITION_TIME, Y_POSITION_TIME, buf, H_POSITION_TIME);
-
-    //     _canvas->setFont(FONTS_TIMEZONE);
-    //     _canvas->setTextColor(COLORS_TIMEZONE);
-    //     if (_config.time_format_24h) {
-    //         strftime_P(buf, sizeof(buf), PSTR("%Z"), tm);
-    //     }
-    //     else {
-    //         strftime_P(buf, sizeof(buf), PSTR("%p - %Z"), tm);
-    //     }
-    //     _canvas->drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, buf, H_POSITION_TIMEZONE);
-    // }
-
-
     void Base::_drawSunAndMoon()
     {
-        // __LDBG_printf("WSDraw::_drawSunAndMoon()");
-
         constexpr int16_t _offsetY = Y_START_POSITION_SUN_MOON;
 
         float moonDay;
@@ -385,22 +325,24 @@ namespace WSDraw {
 
     #if DEBUG
 
+        void Base::printDebugInfo(Print &output)
+        {
+            _canvas->printf_P(PSTR("Unixtime " TIME_T_FMT "\nUptime %us\n"), time(nullptr), getSystemUptime());
+            _canvas->printf_P(PSTR("Free Heap %u\n"), ESP.getFreeHeap(), getSystemUptime());
+            _canvas->printf_P(PSTR("WiFi IP %s\nSSID %s (%d dBm)\n"), WiFi.localIP().toString().c_str(), WiFi.SSID().c_str(), WiFi.RSSI());
+            _canvas->printf_P(PSTR("Avg. FPS %.3f\n Pixels %.0f/s\nFrame time %.0fus\n"), 1000000.0 / _debugFPS, _debugPPS, _debugDrawTime);
+        }
+
         void Base::_drawDebugInfo()
         {
-            PrintString str;
-            str.printf_P(PSTR("Time " TIME_T_FMT " Up %us\n"), time(nullptr), getSystemUptime());
-            str.printf_P(PSTR("Free Heap %u\n"), ESP.getFreeHeap(), getSystemUptime());
-            str.printf_P(PSTR("WiFi IP %s\nSSID %s (%d dBm)\n"), WiFi.localIP().toString().c_str(), WiFi.SSID().c_str(), WiFi.RSSI());
-            str.printf_P(PSTR("FPS %.3f\nPixel/s %.0f\nFrame %.0fus"), _debugFPS, _debugPPS, _debugDrawTime);
-
             _canvas->setFont(FONTS_DEFAULT_SMALL);
             _canvas->setTextColor(COLORS_WHITE);
-            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_DEBUG, str, AdafruitGFXExtension::CENTER);
+            _canvas->setCursor(0, 0);
+            printDebugInfo(*_canvas);
         }
 
         void Base::_drawScreenDebug()
         {
-            _drawTime();
             _drawDebugInfo();
         }
 
@@ -555,15 +497,16 @@ namespace WSDraw {
     void Base::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
     {
         #if DEBUG
-            auto diff = micros() - _debugLastUpdate;
-            float multiplier = diff > 0 ? ((1000 * 10000UL) / diff) : 0;
-            // fps 10s avg
-            // pixels per second
-            _debugFPS = (_debugFPS * multiplier) + 1;
-            _debugPPS = (_debugPPS * multiplier) + ((w - x) * (h - y));
-            multiplier++;
-            _debugFPS /= (multiplier);
-            _debugPPS /= (multiplier);
+            if (_debugLastUpdate) {
+                auto diff = micros() - _debugLastUpdate;
+                float multiplier = diff > 0 ? ((1000U * 1000U) / diff) : 0;
+                // _debugFPS = time in microseconds per frame
+                _debugFPS = (_debugFPS * multiplier) + diff;
+                _debugPPS = (_debugPPS * multiplier) + ((w - x) * (h - y));
+                multiplier++;
+                _debugFPS /= (multiplier);
+                _debugPPS /= (multiplier);
+            }
             uint32_t start = micros();
         #endif
         // __DBG_printf("x=%d y=%d w=%d h=%d", x, y, w, h);
@@ -574,13 +517,14 @@ namespace WSDraw {
         _canvas->drawInto(_tft, x, y, w, h);
         _tft.endWrite();
 
-        // promote full or partial update
-        canvasUpdatedEvent(x, y, w, h);
         #if DEBUG
             uint32_t dur = micros() -  start;
             _debugDrawTime = (_debugDrawTime + dur) / 2.0;
             _debugLastUpdate = micros();
         #endif
+
+        // promote full or partial update
+        canvasUpdatedEvent(x, y, w, h);
     }
 
     String Base::_getTemperature(float value, bool kelvin)

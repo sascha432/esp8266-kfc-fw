@@ -268,7 +268,8 @@ void GFXCanvasCompressed::_decodeLine(Cache &cache)
     __DBG_BOUNDS_sy(cache.getY(), _height);
     if (line.length() == 0) {
         cache.fill(line.getFillColor());
-    } else {
+    }
+    else {
         _RLEdecode(line.getBuffer(), cache.getBuffer());
     }
     cache.setReadFlag(true);
@@ -291,7 +292,9 @@ Cache &GFXCanvasCompressed::_decodeLine(sYType y)
     __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert(cache.hasWriteFlag() == false), return cache);
 
     // if (can_yield()) {
-    optimistic_yield(1000);
+    // if ((y & 0xf) == 0) {
+    //     optimistic_yield(1000);
+    // }
     // }
 
     _decodeLine(cache);

@@ -96,14 +96,14 @@ public:
 
 public:
     void _loop();
+    static void _pollDataTimerCallback(Event::CallbackTimerPtr timer);
     void _wifiCallback(WiFiCallbacks::EventType event, void *payload);
-    // void _pollDataTimerCallback(Event::CallbackTimerPtr timer);
     void _pollDataUpdateLastTime(bool success);
-    uint32_t _pollDataGetNextUpdate() const;
 
     void _httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, HttpRequestCallback callback);
     void _getWeatherInfo(HttpRequestCallback callback);
     void _getWeatherForecast(HttpRequestCallback callback);
+    void _openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request);
 
     void begin();
     void end();

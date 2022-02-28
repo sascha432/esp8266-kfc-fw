@@ -23,7 +23,7 @@
 
 using Plugins = KFCConfigurationClasses::PluginsType;
 
-// web accesss for screen capture
+// web access for screen capture
 //
 // screen capture
 // http://192.168.0.95/images/screen_capture.bmp
@@ -313,7 +313,7 @@ void WeatherStationPlugin::reconfigure(const String &source)
             _touchpad.getMPR121().setThresholds(_config.touch_threshold, _config.released_threshold);
         #endif
         _fadeBacklight(oldLevel, _backlightLevel);
-        _setScreen(_getNextScreen(kNumScreens - 1));
+        _setScreen(_getScreen(_currentScreen));
     }
 }
 
@@ -361,6 +361,9 @@ void WeatherStationPlugin::_init()
     #else
         __LDBG_printf("cs=%d dc=%d rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
         _tft.initR(INITR_BLACKTAB);
+        #if SPI_FREQUENCY
+            _tft.setSPISpeed(SPI_FREQUENCY);
+        #endif
     #endif
     _tft.fillScreen(0);
     _tft.setRotation(0);
@@ -369,7 +372,7 @@ void WeatherStationPlugin::_init()
 void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F("Weather Station"), false));
-    webUI.addRow(WebUINS::Slider(F("bl_brightness"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), 1023)));
+    webUI.addRow(WebUINS::Slider(F("bl_br"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), 1023)));
     if (_config.show_webui) {
         webUI.addRow(WebUINS::Screen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas->width(), _canvas->height()));
     }
@@ -384,7 +387,7 @@ void WeatherStationPlugin::getValues(WebUINS::Events &array)
 {
     __DBG_printf("show tft=%u", _config.show_webui);
 
-    array.append(WebUINS::Values(F("bl_brightness"), _backlightLevel, true));
+    array.append(WebUINS::Values(F("bl_br"), _backlightLevel, true));
 
     if (_config.show_webui) {
         __DBG_printf("adding callOnce this=%p", this);
@@ -398,7 +401,7 @@ void WeatherStationPlugin::getValues(WebUINS::Events &array)
 void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     __LDBG_printf("id=%s value=%s has=%u", __S(id), __S(value), hasValue);
-    if (hasValue && id.equals(F("bl_brightness"))) {
+    if (hasValue && id.equals(F("bl_br"))) {
         int level =  value.toInt();
         _fadeBacklight(_backlightLevel, level);
         _backlightLevel = level;
@@ -459,7 +462,7 @@ void WeatherStationPlugin::_fadeStatusLED()
         __LDBG_printf("pin=%u", IOT_WEATHER_STATION_WS2812_PIN);
 
         int32_t color = 0x001500;
-        int16_t dir = 0x100;
+        int16_t dir = 0x000100;
 
         NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
         NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);

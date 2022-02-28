@@ -173,7 +173,7 @@ void Mpr121Touchpad::Event::addMovement()
 
 void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
 {
-    auto wsSerialConsole = Http2Serial::getServerSocket();
+    // auto wsSerialConsole = Http2Serial::getServerSocket();
     if (Http2Serial::hasAuthenticatedClients) {
         typedef struct {
             WsClient::BinaryPacketType packetId;

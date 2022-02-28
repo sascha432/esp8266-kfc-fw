@@ -3780,30 +3780,42 @@ const char miniunknown[] PROGMEM = {
 
 
 // Helper function, should be part of the weather station library and should disappear soon
-const char* getMeteoconIconFromProgmem(String iconText) {
-
-  if (iconText == "01d" || iconText == "01n") return sunny;
-  if (iconText == "02d" || iconText == "02n") return partlysunny;
-  if (iconText == "03d" || iconText == "03n") return partlycloudy;
-  if (iconText == "04d" || iconText == "04n") return mostlycloudy;
-  if (iconText == "09d" || iconText == "09n") return rain;
-  if (iconText == "10d" || iconText == "10n") return rain;
-  if (iconText == "11d" || iconText == "11n") return tstorms;
-  if (iconText == "13d" || iconText == "13n") return snow;
-  if (iconText == "50d" || iconText == "50n") return fog;
+inline const char* getIconFromProgmem(String iconText)
+{
+    char ch;
+    if ((iconText.length() == 3) && (((ch = iconText.charAt(2)) == 'd') || (ch == 'n'))) {
+        switch(iconText.toInt()) {
+            case 1: return sunny;
+            case 2: return partlysunny;
+            case 3: return partlycloudy;
+            case 4: return mostlycloudy;
+            case 9: return rain;
+            case 10: return rain;
+            case 11: return tstorms;
+            case 13: return snow;
+            case 50: return fog;
+        }
+    }
   return unknown;
 }
-const char* getMiniMeteoconIconFromProgmem(String iconText) {
-  if (iconText == "01d" || iconText == "01n") return minisunny;
-  if (iconText == "02d" || iconText == "02n") return minipartlysunny;
-  if (iconText == "03d" || iconText == "03n") return minipartlycloudy;
-  if (iconText == "04d" || iconText == "04n") return minimostlycloudy;
-  if (iconText == "09d" || iconText == "09n") return minirain;
-  if (iconText == "10d" || iconText == "10n") return minirain;
-  if (iconText == "11d" || iconText == "11n") return minitstorms;
-  if (iconText == "13d" || iconText == "13n") return minisleet;
-  if (iconText == "50d" || iconText == "50n") return minifog;
-  return miniunknown;
+
+inline const char *getMiniIconFromProgmem(String iconText)
+{
+    char ch;
+    if ((iconText.length() == 3) && (((ch = iconText.charAt(2)) == 'd') || (ch == 'n'))) {
+        switch(iconText.toInt()) {
+            case 1: return minisunny;
+            case 2: return minipartlysunny;
+            case 3: return minipartlycloudy;
+            case 4: return minimostlycloudy;
+            case 9: return minirain;
+            case 10: return minirain;
+            case 11: return minitstorms;
+            case 13: return minisleet;
+            case 50: return minifog;
+        }
+    }
+    return miniunknown;
 }
 
 

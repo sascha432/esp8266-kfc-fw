@@ -52,7 +52,7 @@ namespace GFXCanvas {
 
     inline uWidthType LineBuffer::length() const
     {
-        return (uWidthType)_buffer.length();
+        return (uWidthType)_buffer.size();
     }
 
     inline ByteBuffer &LineBuffer::getBuffer()

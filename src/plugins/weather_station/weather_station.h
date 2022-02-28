@@ -50,37 +50,43 @@ private:
     void _installWebhooks();
 
 private:
-    void _drawEnvironmentalSensor(GFXCanvasCompressed& canvas, uint8_t top);
-    virtual void _getIndoorValues(float *data) override;
+    void _drawEnvironmentalSensor(GFXCanvasCompressed& canvas, int16_t top);
+    virtual IndoorValues _getIndoorValues();
 
-    void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step = 8);
+    // pulses the status LEDs
     void _fadeStatusLED();
-    void _setBacklightLevel(uint16_t level);
 
-    virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) override;
+    // set backlight level
+    void _setBacklightLevel(uint16_t level);
+    // sets the backlight level by slowly/decreasing increased it
+    void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step = 8);
+
+    // sends updates areas to the webui
+    // 16bit colors, RLE compression
+    virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h);
 
 private:
     asyncHTTPrequest *_httpClient;
 
-#if IOT_WEATHER_STATION_WS2812_NUM
-    Event::Timer _pixelTimer;
-    uint8_t _pixels[IOT_WEATHER_STATION_WS2812_NUM * 3];
-#endif
+    #if IOT_WEATHER_STATION_WS2812_NUM
+        Event::Timer _pixelTimer;
+        uint8_t _pixels[IOT_WEATHER_STATION_WS2812_NUM * 3];
+    #endif
 
-#if IOT_ALARM_PLUGIN_ENABLED
-public:
-    using ModeType = KFCConfigurationClasses::Plugins::AlarmConfigNS::ModeType;
-    static constexpr auto STOP_ALARM = KFCConfigurationClasses::Plugins::AlarmConfigNS::AlarmConfigType::STOP_ALARM;
+    #if IOT_ALARM_PLUGIN_ENABLED
+    public:
+        using ModeType = KFCConfigurationClasses::Plugins::AlarmConfigNS::ModeType;
+        static constexpr auto STOP_ALARM = KFCConfigurationClasses::Plugins::AlarmConfigNS::AlarmConfigType::STOP_ALARM;
 
-    static void alarmCallback(ModeType mode, uint16_t maxDuration);
+        static void alarmCallback(ModeType mode, uint16_t maxDuration);
 
-private:
-    void _alarmCallback(ModeType mode, uint16_t maxDuration);
-    bool _resetAlarm(); // returns true if alarm was reset
+    private:
+        void _alarmCallback(ModeType mode, uint16_t maxDuration);
+        bool _resetAlarm(); // returns true if alarm was reset
 
-    Event::Timer _alarmTimer;
-    Event::Callback _resetAlarmFunc;
-#endif
+        Event::Timer _alarmTimer;
+        Event::Callback _resetAlarmFunc;
+    #endif
 };
 
 extern WeatherStationPlugin ws_plugin;

@@ -10,6 +10,8 @@
 
 #include <debug_helper.h>
 
+#if 0
+
 namespace GFXCanvas {
 
     // read only buffer
@@ -46,18 +48,18 @@ namespace GFXCanvas {
             _capacity(std::exchange(move._capacity, 0)) {
         }
 
-        BufferTemplate &operator=(BufferPool &&pool) noexcept {
-            __releaseData();
-            #if 0
-                auto &b = pool.getTemp();
-                _fp_size = b.length();
-                _capacity = b.size();
-                b.move(&_data);
-            #else
-                pool.moveTempTo(*this);
-            #endif
-            return *this;
-        }
+        // BufferTemplate &operator=(BufferPool &&pool) noexcept {
+        //     __releaseData();
+        //     #if 0
+        //         auto &b = pool.getTemp();
+        //         _fp_size = b.length();
+        //         _capacity = b.size();
+        //         b.move(&_data);
+        //     #else
+        //         pool.moveTempTo(*this);
+        //     #endif
+        //     return *this;
+        // }
 
         BufferTemplate &operator=(BufferTemplate &&move) noexcept {
             __releaseData();
@@ -140,10 +142,9 @@ namespace GFXCanvas {
 
     private:
         data_type *_data;
-        struct __attribute__packed__ {
-            size_type _size;
-            size_type _capacity;
-        };
+        size_type _size;
+        size_type _capacity;
     };
 }
 
+#endif

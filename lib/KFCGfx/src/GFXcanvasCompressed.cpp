@@ -290,9 +290,9 @@ Cache &GFXCanvasCompressed::_decodeLine(sYType y)
     }
     __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert(cache.hasWriteFlag() == false), return cache);
 
-    if (can_yield()) {
-        yield();
-    }
+    // if (can_yield()) {
+    optimistic_yield(1000);
+    // }
 
     _decodeLine(cache);
 
@@ -312,11 +312,11 @@ void GFXCanvasCompressed::_encodeLine(Cache &cache)
     );
 
     auto &lineBuffer = _lines.getBuffer(cache.getY());
-    auto &pool = BufferPool::getInstance();
-    _RLEencode(cache.getBuffer(), pool.get());
+    Buffer buffer;
+    _RLEencode(cache.getBuffer(), buffer);
 
     // move encoded buffer to the line
-    lineBuffer = std::move(pool);
+    lineBuffer = std::move(buffer);
 
     cache.setWriteFlag(false);
 

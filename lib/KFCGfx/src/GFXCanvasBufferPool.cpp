@@ -8,6 +8,8 @@
 #include "GFXCanvasBufferPool.h"
 #include "GFXCanvasByteBuffer.h"
 
+#if 0
+
 #pragma GCC push_options
 #if DEBUG_GFXCANVAS
 #include <debug_helper_enable.h>
@@ -20,29 +22,35 @@ using namespace GFXCanvas;
 
 BufferPool *BufferPool::_instance = nullptr;
 
-void BufferPool::moveTempTo(ByteBuffer &buffer)
-{
-    auto iterator = add(&buffer);
-    auto &header = *iterator;
-    buffer._capacity = 0;
-    buffer._size = header.dataSize();
-    buffer._data = header.data();
-    _temp.setLength(0);
-    _temp.resize(kTempBufferInitSize);
-#if _MSC_VER
-    std::fill_n(_temp.begin(), _temp.size(), 0xcc);
-#endif
-}
+// void BufferPool::moveTempTo(ByteBuffer &buffer)
+// {
+//     auto iterator = add(&buffer);
+//     __LDBG_printf("iterator ptr=%p", &(*iterator));
+//     auto &header = *iterator;
+//     buffer._capacity = 0;
+//     buffer._size = header.dataSize();
+//     buffer._data = header.data();
+//     _temp.setLength(0);
+//     _temp.resize(kTempBufferInitSize);
+//     // #if _MSC_VER || DEBUG_GFXCANVAS
+//     //     std::fill_n(_temp.begin(), _temp.size(), 0xcc);
+//     // #endif
+//     // std::fill(_temp.begin(), _temp.end(), 0);
+// }
 
 BufferPool::BufferIterator BufferPool::find(BufferTypePtr id)
 {
+    __LDBG_printf("ptr=%p", id);
     for (auto &buffer : _list) {
+        __LDBG_printf("buffer_ptr=%p begin=%p size=%u", &buffer, buffer.begin(), buffer.size());
         for(auto iterator = BufferIterator(buffer); iterator; ++iterator) {
+            __LDBG_printf("iter_ptr=%p iter=%u", *iterator, (bool)iterator);
             if (*iterator == id) {
                 return iterator;
             }
         }
     }
+    __LDBG_printf("not found");
     return BufferIterator();
 }
 
@@ -67,17 +75,19 @@ bool BufferPool::remove(BufferTypePtr id)
 
 BufferPool::BufferIterator BufferPool::add(BufferTypePtr id)
 {
+    __LDBG_printf("ptr=%p", id);
     auto iterator = find(id);
     while (iterator) {
         // old buffer length greater or equal, reuse
         auto &header = *iterator;
-        int diff = header.dataSize() - _temp.length();
+        int diff = header.dataSize() - 0;//_temp.length();
         if (diff >= 0) {
             if (diff != 0) {
                 // shrink data after header
                 iterator->remove(header.data() - iterator->begin(), diff);
                 // update size
                 header._dataSize -= diff;
+                __LDBG_printf("diff=%d", diff);
             }
         }
         else if (
@@ -87,24 +97,26 @@ BufferPool::BufferIterator BufferPool::add(BufferTypePtr id)
             !(iterator + 1)
         ) {
             header._dataSize -= diff; // extend size
+            __LDBG_printf("diff=%d", diff);
             iterator->setLength(iterator->length() - diff); // update buffer length as well
         }
         else {
             // no match, remove old buffer
+            __LDBG_printf("remove=%p", id);
             remove(id);
             iterator = BufferIterator();
             break;
         }
         // copy new data
-        std::copy(_temp.begin(), _temp.end(), header.data());
-#if _MSC_VER
-        std::fill(iterator->end(), iterator->begin() + iterator->size(), 0xcc);
-#endif
+        // std::copy(_temp.begin(), _temp.end(), header.data());
+        #if _MSC_VER || DEBUG_GFXCANVAS
+            std::fill(iterator->end(), iterator->begin() + iterator->size(), 0xcc);
+        #endif
         return iterator;
     }
 
     // find space, now we need a little extra for the header
-    BufferHeader_t header(id, _temp.length());
+    BufferHeader_t header(id, (size_t)0);//_temp.length());
 
     for (auto &buffer : _list) {
         if (buffer.available() >= header.size()) {
@@ -114,16 +126,16 @@ BufferPool::BufferIterator BufferPool::add(BufferTypePtr id)
     }
     // no space left, add new buffer
     if (!iterator) {
-        __DBG_printf("new pool %u", _list.size());
+        __LDBG_printf("new pool %u", _list.size());
         _list.emplace_back(kBufferPoolSize);
         iterator = BufferIterator(_list.back());
     }
 
     iterator->push_back(header);
-    iterator->write(_temp.begin(), _temp.length());
-#if _MSC_VER
-    std::fill(iterator->end(), iterator->begin() + iterator->size(), 0xcc);
-#endif
+    // iterator->write(_temp.begin(), _temp.length());
+    #if _MSC_VER || DEBUG_GFXCANVAS
+        std::fill(iterator->end(), iterator->begin() + iterator->size(), 0xcc);
+    #endif
     return iterator;
 }
 
@@ -140,17 +152,17 @@ void GFXCanvas::BufferPool::destroyInstance()
     }
 }
 
-Buffer &BufferPool::getTemp()
-{
-    return _temp;
-}
+// Buffer &BufferPool::getTemp()
+// {
+//     return _temp;
+// }
 
-Buffer &BufferPool::get()
-{
-    _temp.setLength(0);
-    _temp.resize(kTempBufferInitSize);
-    return _temp;
-}
+// Buffer &BufferPool::get()
+// {
+//     _temp.setLength(0);
+//     _temp.resize(kTempBufferInitSize);
+//     return _temp;
+// }
 
 void BufferPool::dump(Print &output)
 {
@@ -188,3 +200,4 @@ void BufferPool::dump(Print &output)
 }
 
 #pragma GCC pop_options
+#endif

@@ -14,12 +14,26 @@ namespace KFCConfigurationClasses {
 
         namespace WeatherStationConfigNS {
 
+            enum class ScreenType : uint8_t {
+                MAIN = 0,
+                INDOOR,
+                FORECAST,
+                #if DEBUG
+                    DEBUG_INFO,
+                #endif
+                NUM_SCREENS,
+                TEXT_CLEAR,
+                TEXT_UPDATE,
+                TEXT,
+            };
+
             class WeatherStationConfig {
             public:
                 struct __attribute__packed__ Config_t {
                     using Type = Config_t;
 
-                    static constexpr size_t kMaxScreens = 2;
+                    static constexpr auto kNumScreens = static_cast<uint8_t>(ScreenType::NUM_SCREENS);
+                    static constexpr uint8_t kSkipScreen = 0xff;
 
                     CREATE_UINT32_BITFIELD_MIN_MAX(weather_poll_interval, 8, 5, 240, 15); // minutes
                     CREATE_UINT32_BITFIELD_MIN_MAX(api_timeout, 9, 10, 300, 30); // seconds
@@ -29,7 +43,7 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(is_metric, 1, false, true, true);
                     CREATE_UINT32_BITFIELD_MIN_MAX(time_format_24h, 1, false, true, true);
                     CREATE_UINT32_BITFIELD_MIN_MAX(show_webui, 1, false, true, false);
-                    uint8_t screenTimer[kMaxScreens]; // seconds
+                    uint8_t screenTimer[kNumScreens]; // seconds
 
                     uint32_t getPollIntervalMillis() const {
                         return weather_poll_interval * 60000U;
@@ -44,7 +58,7 @@ namespace KFCConfigurationClasses {
                         is_metric(kDefaultValueFor_is_metric),
                         time_format_24h(kDefaultValueFor_time_format_24h),
                         show_webui(kDefaultValueFor_show_webui),
-                        screenTimer{ 10, 10 }
+                        screenTimer{ 10, 10, kSkipScreen, 0 }
                     {}
                 };
             };

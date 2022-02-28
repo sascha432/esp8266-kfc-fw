@@ -6,6 +6,7 @@
 #include "weather_station.h"
 #include <KFCForms.h>
 #include <kfc_fw_config.h>
+#include "Utility/ProgMemHelper.h"
 
 #if DEBUG_IOT_WEATHER_STATION
 #include <debug_helper_enable.h>
@@ -23,7 +24,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
 
     auto &ui = form.createWebUI();
     ui.setTitle(F("Weather Station Configuration"));
-    ui.setContainerId(F("dimmer_settings"));
+    ui.setContainerId(F("ws_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     auto &mainGroup = form.addCardGroup(FSPGM(config));
@@ -54,19 +55,45 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
     form.addFormUI(F("Release Threshold"));
     cfg.addRangeValidatorFor_released_threshold(form);
 
+    #define NUM_SCREENS 4
+    static_assert(NUM_SCREENS == WSDraw::kNumScreens, "number does not match");
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, NUM_SCREENS, st, ds);
+    #undef NUM_SCREENS
+
     for(uint8_t i = 0; i < WSDraw::kNumScreens; i++) {
-        static_assert(WSDraw::kNumScreens <= 2, "missing screens");
-        form.addCallbackGetterSetter<uint8_t>(i == 0 ? F("st_0") : i == 1 ? F("st_1") : F("st_2"), [&cfg, i](uint8_t &value, Field::BaseField &field, bool store) {
+        auto &checkbox = form.addCallbackGetterSetter<bool>(F_VAR(ds, i), [&cfg, i](bool &value, Field::BaseField &field, bool store) {
+            if (store) {
+                if (value) {
+                    cfg.screenTimer[i] = 255;
+                }
+                else if (cfg.screenTimer[i] == 255) {
+                    cfg.screenTimer[i] = 0;
+                }
+            }
+            else {
+                value = (cfg.screenTimer[i] == 255);
+            }
+            __LDBG_printf("i=%u checked=%u store=%u", i, value, store);
+            return true;
+        });
+        form.addFormUI(FormUI::Type::HIDDEN);
+        bool isSkipChecked = checkbox.getValue().toInt();
+        __LDBG_printf("i=%u checkedbox_value=%s", i, checkbox.getValue().c_str());
+
+        form.addCallbackGetterSetter<uint8_t>(F_VAR(st, i), [&cfg, i, isSkipChecked](uint8_t &value, Field::BaseField &field, bool store) {
             if (store) {
                 cfg.screenTimer[i] = value;
             }
             else {
                 value = cfg.screenTimer[i];
             }
+            __LDBG_printf("i=%u value=%u store=%u", i, value, store);
             return true;
         });
-        form.addFormUI(FormUI::Label(WSDraw::Base::getScreenName(i)), FormUI::Suffix(FSPGM(seconds)));
-        form.addValidator(FormUI::Validator::Range(0, 240));
+        form.addFormUI(FormUI::Label(WSDraw::Base::getScreenName(i)), FormUI::Suffix(FSPGM(seconds)), FormUI::CheckboxButtonSuffix(checkbox, F("Skip Screen")));
+        // if (cfg.screenTimer[i] != 255 && !isSkipChecked) {
+        //     form.addValidator(FormUI::Validator::Range(0, 240));
+        // }
     }
 
     form.addObjectGetterSetter(F("stft"), FormGetterSetter(cfg, show_webui));

@@ -43,29 +43,29 @@ public:
         BOTTOM,
     } TextVAlignEnum_t;
 
-    typedef struct {
+    struct Position_t {
         int16_t x;
         int16_t y;
         uint16_t w;
         uint16_t h;
-    } Position_t;
+    };
 
-    typedef struct {
+    struct Dimensions_t {
         uint16_t w;
         uint16_t h;
-    } Dimensions_t;
+    };
 
     uint8_t getFontHeight(const GFXfont *f) const
     {
         return pgm_read_byte(&f->yAdvance);
     }
 
-    void drawTextAligned(int16_t x, int16_t y, const String& text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t* pos = nullptr)
+    int16_t drawTextAligned(int16_t x, int16_t y, const String& text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t* pos = nullptr)
     {
-        drawTextAligned(x, y, text.c_str(), align, valign, pos);
+        return drawTextAligned(x, y, text.c_str(), align, valign, pos);
     }
 
-    void drawTextAligned(int16_t x, int16_t y, const char* text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t* pos = nullptr)
+    int16_t drawTextAligned(int16_t x, int16_t y, const char* text, TextAlignEnum_t align = LEFT, TextVAlignEnum_t valign = TOP, Position_t* pos = nullptr)
     {
         int16_t x1, y1, sy;
         uint16_t w, h, lineH;
@@ -78,21 +78,22 @@ public:
                 lines++;
             }
         }
+
         lineH = (int16_t)T::textsize_y * (uint8_t)pgm_read_byte(&T::gfxFont->yAdvance);
         if (lines) {
-            if (valign == BOTTOM) {
+            if (valign == TextVAlignEnum_t::BOTTOM) {
                 y += lines * lineH;
             }
-            else {
+            else if (valign == TextVAlignEnum_t::MIDDLE) {
                 y -= ((lines * lineH) / 2);
             }
         }
         y -= lineH;
 
         int16_t maxX = 0, maxY = 0;
-        int16_t minX = 0x7fff, minY = 0x7fff;
+        int16_t minX = std::numeric_limits<int16_t>::max(), minY = std::numeric_limits<int16_t>::max();
 
-        auto buf = strdup(text);
+        auto buf = strdup_P(text);
         auto bufPtr = buf;
         char *endPos;
         do {
@@ -153,6 +154,7 @@ public:
 
         free(buf);
 
+        return maxY - minY;
     }
 
     // draw bitmaps with header, supports 2 bit/4 colors using the rgb565 colors passed in palette

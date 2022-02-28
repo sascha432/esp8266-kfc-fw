@@ -66,8 +66,6 @@ namespace KFCConfigurationClasses {
 #    define DISPLAY_PLUGIN_TFT_TYPE Adafruit_ST7735
 #endif
 
-#define WSDRAW_STATS 0
-
 #ifndef TFT_PIN_CS
 #    define TFT_PIN_CS -1
 #endif
@@ -100,6 +98,14 @@ namespace KFCConfigurationClasses {
 #    error No theme available for TFT dimensions
 #endif
 
+#define CLEAR_AND_DISPLAY_HEIGHT(minY, maxY) ((maxY) - (minY))
+
+// execute block between clear and display helper
+#define CLEAR_AND_DISPLAY(minY, maxY) \
+    for(bool init = _clearPartially(minY, CLEAR_AND_DISPLAY_HEIGHT(minY, maxY), COLORS_BACKGROUND); \
+        init; \
+        init = _displayScreenFalse(0, minY, TFT_WIDTH, CLEAR_AND_DISPLAY_HEIGHT(minY, maxY)))
+
 namespace WSDraw {
 
     using DisplayType = GFXExtension<DISPLAY_PLUGIN_TFT_TYPE>;
@@ -110,20 +116,14 @@ namespace WSDraw {
     #endif
     using ConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t;
     using WSConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
+    using ScreenType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::ScreenType;
 
     class ScrollCanvas;
 
-    enum class ScreenType : uint8_t {
-        MAIN = 0,
-        INDOOR,
-        FORECAST,
-        NUM_SCREENS = FORECAST, //forecast=disabled
-        TEXT_CLEAR,
-        TEXT_UPDATE,
-        TEXT,
-    };
+    static constexpr auto kNumScreens = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kNumScreens;
+    static constexpr auto kSkipScreen = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kSkipScreen;
 
-    static constexpr auto kNumScreens = static_cast<uint8_t>(ScreenType::NUM_SCREENS);
+    static constexpr int16_t _offsetX = 2;
 
     class Base {
     public:
@@ -154,7 +154,7 @@ namespace WSDraw {
 
     public:
         // called for partial or full updates of the screen
-        virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h);
+        virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
 
         DisplayType &getDisplay();
         CanvasType *getCanvas();
@@ -165,32 +165,55 @@ namespace WSDraw {
 
         bool lock();
         void unlock();
-        bool isLocked() const {
-            return _locked;
-        }
+        bool isLocked();
 
     protected:
         DisplayType _tft;
         CanvasType *_canvas;
 
     public:
+        // update date, time and timezone at the top
         void _drawTime();
-        void _updateTime();
 
-        void _drawWeather();
-        void _drawWeather(GFXCanvasCompressed *canvas, int16_t top);
-        void _drawWeatherIndoor(GFXCanvasCompressed *canvas, int16_t top);
-        void _updateWeatherIndoor();
-        void _drawIndoor();
-        void _drawIndoor(GFXCanvasCompressed *canvas, int16_t top);
+        // display local weather info
+        void _drawLocalWeather();
+
+        // draw temperature, humidity and pressure in one line
+        void _drawIndoorClimate();
+
+        // calls _drawIndoorClimate() after clearing the part of the screen and then displays it
+        void _updateIndoorClimate();
+
+        // displays indoor as main screen
+        void _drawIndoorClimateBottom();
+
+        // draws sun and moon info
         void _drawSunAndMoon();
 
-        void _drawScreenMain();
+        // draw weather forcast
+        void _drawForecast();
 
-        void _drawScreenIndoor();
-        void _updateScreenIndoor();
+        // drawScreen does not clear or display the changes. this is usually used in _draw() where
+        // the entire display is cleared and displayed
+        // updateScreen will only clear and display the content
+
+        void _drawScreenMain();
+        void _updateScreenMain();
+
+        void _drawScreenIndoorClimate();
+        void _updateScreenIndoorClimate();
 
         void _drawScreenForecast();
+        void _updateScreenForecast();
+
+        #if DEBUG
+            void _drawDebugInfo();
+            void _drawScreenDebug();
+            void _updateScreenDebug();
+        #endif
+
+        void _updateScreenTime();
+
 
         void _doScroll();
         void _scrollTimer(Base &draw);
@@ -199,21 +222,91 @@ namespace WSDraw {
         void _displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout);
 
         void _drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
+
+        // clears display, calls the custom screen method and displays the canvas
         void _draw();
 
+        // sends the canvas area to the screen
         void _displayScreen(int16_t x, int16_t y, int16_t w, int16_t h);
 
+        inline bool _displayScreenFalse(int16_t x, int16_t y, int16_t w, int16_t h) {
+            _displayScreen(x, y, w, h);
+            return false;
+        }
+
+        // clear/fill partial screen
+        bool _clearPartially(int16_t y, int16_t endY, ColorType color = COLORS_BACKGROUND);
+
     public:
+        ScreenType _getScreen(ScreenType screen, bool allowZeroTimeout = false) const;
+        ScreenType _getScreen(uint32_t screen, bool allowZeroTimeout = false) const;
+        ScreenType _getNextScreen(ScreenType screen, bool allowZeroTimeout = false) const;
+        ScreenType _getNextScreen(uint32_t screen, bool allowZeroTimeout = false) const;
+        ScreenType _getPrevScreen(ScreenType screen, bool allowZeroTimeout = false) const;
+        ScreenType _getPrevScreen(uint32_t screen, bool allowZeroTimeout = false) const;
+        uint8_t _getCurrentScreen() const;
+        bool _isScreenValid(ScreenType screen, bool allowZeroTimeout = false) const;
+        bool _isScreenValid(uint8_t screen, bool allowZeroTimeout = false) const;
 
         static const __FlashStringHelper *getScreenName(ScreenType screen);
         static const __FlashStringHelper *getScreenName(uint8_t screen);
 
-    public:
         ConfigType &getConfig();
 
     protected:
-        String _getTemperature(float value, bool kelvin = false);
-        virtual void _getIndoorValues(float *data);
+        struct IndoorValues {
+
+            static constexpr float kFactor = 100; // fixed point factor for temperature and humidity
+
+            IndoorValues(float temperature, float humidity, float pressure) :
+                _temperature(temperature * kFactor),
+                _humidity(humidity * kFactor),
+                _pressure(pressure)
+            {
+            }
+
+            void setTemperature(float temperature) {
+                _temperature = temperature * kFactor;
+            }
+            void setHumidity(float humidity) {
+                _humidity *= humidity * kFactor;
+            }
+            void setPressure(float pressure) {
+                _pressure = pressure;
+            }
+
+            // °C
+            float getTemperature() const {
+                return _temperature / kFactor;
+            }
+            // %
+            float getHumidity() const {
+                return _humidity / kFactor;
+            }
+            // hPa
+            float getPressure() const {
+                return _pressure;
+            }
+
+        private:
+            int16_t _temperature;
+            uint16_t _humidity;
+            float _pressure;
+        };
+
+        // get temperature as string das °C or F, depending on the user setting
+        // if kelvin is true, valueInCelsius will be treated as K instead C
+        String _getTemperature(float valueInCelsius, bool kelvin = false);
+
+        // read indoor values
+        virtual IndoorValues _getIndoorValues() = 0;
+
+       #if DEBUG
+            uint32_t _debugLastUpdate{0};
+            float _debugFPS{0.0f};
+            float _debugPPS{0.0f};
+            float _debugDrawTime{0.0f};
+        #endif
 
         ScrollCanvas *_scrollCanvas;
         OpenWeatherMapAPI _weatherApi;
@@ -222,26 +315,12 @@ namespace WSDraw {
         String _text;
         const GFXfont *_textFont;
         SemaphoreMutex _lock;
-
         time_t _lastTime;
         uint32_t _screenLastUpdateTime;
-        uint16_t _offsetX;
-        int16_t _offsetY;
         uint8_t _scrollPosition;
         ScreenType _currentScreen;
-        bool _redrawFlag;
-        bool _locked;
-
-    #if WSDRAW_STATS
-    public:
-        void _statsBegin();
-        void _statsEnd(const __FlashStringHelper *name);
-        MicrosTimer _statsTimer;
-
-        bool _debug_stats;
-        using StatsBuffer = FixedCircularBuffer<float, 10>;
-        std::map<String, StatsBuffer> _stats;
-    #endif
+        volatile bool _redrawFlag;
+        volatile bool _locked;
     };
 
     class ScrollCanvas {
@@ -289,6 +368,32 @@ namespace WSDraw {
         }
     }
 
+    inline bool Base::lock()
+    {
+        MUTEX_LOCK_BLOCK(_lock) {
+            if (_locked) {
+                return false;
+            }
+            _locked = true;
+        }
+        return true;
+    }
+
+    inline void Base::unlock()
+    {
+        MUTEX_LOCK_BLOCK(_lock) {
+            _locked = false;
+        }
+    }
+
+    inline bool Base::isLocked()
+    {
+        MUTEX_LOCK_BLOCK(_lock) {
+            return _locked;
+        }
+        __builtin_unreachable();
+    }
+
     inline ConfigType &Base::getConfig()
     {
         return _config;
@@ -302,6 +407,12 @@ namespace WSDraw {
     inline void Base::_initScreen()
     {
         redraw();
+    }
+
+    inline bool Base::_clearPartially(int16_t minY, int16_t maxY, ColorType color)
+    {
+        _canvas->fillScreenPartial(minY, maxY - minY, color);
+        return true;
     }
 
     inline void Base::setText(const String &text, const GFXfont *textFont)
@@ -318,6 +429,75 @@ namespace WSDraw {
     inline CanvasType *Base::getCanvas()
     {
         return _canvas;
+    }
+
+    inline uint8_t Base::_getCurrentScreen() const
+    {
+        return static_cast<uint8_t>(_currentScreen);
+    }
+
+    inline bool Base::_isScreenValid(ScreenType screen, bool allowZeroTimeout) const
+    {
+        return _isScreenValid(static_cast<uint8_t>(screen), allowZeroTimeout);
+    }
+
+    inline bool Base::_isScreenValid(uint8_t screen, bool allowZeroTimeout) const
+    {
+        if (screen >= kNumScreens) {
+            return false;
+        }
+        if (_config.screenTimer[screen] == kSkipScreen) {
+            return false;
+        }
+        else if (_config.screenTimer[screen] == 0) {
+            if (!allowZeroTimeout) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    inline ScreenType Base::_getScreen(uint32 screen, bool allowZeroTimeout) const
+    {
+        return _getScreen(static_cast<ScreenType>(screen), allowZeroTimeout);
+    }
+
+    inline ScreenType Base::_getNextScreen(uint32_t screen, bool allowZeroTimeout) const
+    {
+        return _getNextScreen(static_cast<ScreenType>(screen), allowZeroTimeout);
+    }
+
+    inline ScreenType Base::_getPrevScreen(uint32_t screen, bool allowZeroTimeout) const
+    {
+        return _getPrevScreen(static_cast<ScreenType>(screen), allowZeroTimeout);
+    }
+
+
+    inline ScreenType Base::_getScreen(ScreenType screen, bool allowZeroTimeout) const
+    {
+        return _isScreenValid(screen, allowZeroTimeout) ? screen : _getNextScreen(screen, allowZeroTimeout);
+    }
+
+    inline ScreenType Base::_getNextScreen(ScreenType screen, bool allowZeroTimeout) const
+    {
+        for(uint8_t i = static_cast<uint8_t>(screen) + 1; i < static_cast<uint8_t>(screen) + kNumScreens; i++) {
+            uint8_t n = i % kNumScreens;
+            if (_isScreenValid(n, allowZeroTimeout)) {
+                return static_cast<ScreenType>(n);
+            }
+        }
+        return screen;
+    }
+
+    inline ScreenType Base::_getPrevScreen(ScreenType screen, bool allowZeroTimeout) const
+    {
+        for(uint8_t i = static_cast<uint8_t>(screen) + kNumScreens - 1; i > static_cast<uint8_t>(screen); i--) {
+            uint8_t n = i % kNumScreens;
+            if (_isScreenValid(n, allowZeroTimeout)) {
+                return static_cast<ScreenType>(n);
+            }
+        }
+        return screen;
     }
 
 }

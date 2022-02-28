@@ -5,7 +5,6 @@
 #include <LoopFunctions.h>
 #include <GFXCanvasConfig.h>
 #include "WSDraw.h"
-#include "WSScreen.h"
 
 #if DEBUG_IOT_WEATHER_STATION
 #include <debug_helper_enable.h>
@@ -86,8 +85,6 @@ namespace WSDraw {
         _textFont(nullptr),
         _lastTime(0),
         _screenLastUpdateTime(~0),
-        _offsetX(0),
-        _offsetY(0),
         _scrollPosition(0),
         _currentScreen(ScreenType::MAIN),
         _redrawFlag(false),
@@ -103,24 +100,6 @@ namespace WSDraw {
         ScrollCanvas::destroy(this);
         if (_canvas) {
             delete _canvas;
-        }
-    }
-
-    bool Base::lock()
-    {
-        MUTEX_LOCK_BLOCK(_lock) {
-            if (_locked) {
-                return false;
-            }
-            _locked = true;
-        }
-        return true;
-    }
-
-    void Base::unlock()
-    {
-        MUTEX_LOCK_BLOCK(_lock) {
-            _locked = false;
         }
     }
 
@@ -198,157 +177,12 @@ namespace WSDraw {
     //     _canvas->drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, buf, H_POSITION_TIMEZONE);
     // }
 
-    void Base::_updateTime()
-    {
-    #if WSDRAW_STATS
-        _statsBegin();
-    #endif
-
-        _canvas->fillScreenPartial(Y_START_POSITION_TIME, Y_END_POSITION_TIME - Y_START_POSITION_TIME, COLORS_BACKGROUND);
-        _offsetX = 0;
-        _offsetY = 0;
-        _drawTime();
-
-        _displayScreen(0, Y_START_POSITION_TIME, TFT_WIDTH, Y_END_POSITION_TIME - Y_START_POSITION_TIME);
-
-    #if WSDRAW_STATS
-        _statsEnd(F("updateTime"));
-    #endif
-    }
-
-    void Base::_drawIndoor()
-    {
-        _drawIndoor(_canvas, Y_START_POSITION_WEATHER);
-    }
-
-    void Base::_drawIndoor(GFXCanvasCompressed *canvas, int16_t top)
-    {
-        _offsetY = top;
-
-        float data[3];
-        _getIndoorValues(data);
-
-        _offsetY += 5;
-
-        canvas->drawBitmap(6, _offsetY + 10, icon_house, 36, 37, 0xD6DA, COLORS_BACKGROUND);
-
-        canvas->setFont(FONTS_TEMPERATURE);
-        canvas->setTextColor(COLORS_WHITE);
-        canvas->drawTextAligned(TFT_WIDTH - 2, _offsetY, _getTemperature(data[0]), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
-        _offsetY += canvas->getFontHeight(FONTS_TEMPERATURE);
-
-        canvas->setTextColor(COLORS_CYAN);
-        canvas->drawTextAligned(TFT_WIDTH - 2, _offsetY, PrintString(F("%.0f%%"), data[1]), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
-        _offsetY += canvas->getFontHeight(FONTS_TEMPERATURE);
-
-        canvas->setTextColor(COLORS_WHITE);
-        canvas->setFont(&DejaVuSans_Bold_7pt8b);
-        canvas->drawTextAligned(TFT_WIDTH - 2, _offsetY, PrintString(F("%.1fhPa"), data[2]), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
-    }
-
-    void Base::_drawWeather()
-    {
-        _drawWeather(_canvas, Y_START_POSITION_WEATHER);
-    }
-
-    void Base::_drawWeather(GFXCanvasCompressed *canvas, int16_t top)
-    {
-        _offsetY = top;
-
-        auto &info = _weatherApi.getWeatherInfo();
-        if (info.hasData()) {
-
-            // --- location
-            static const uint16_t palette[] PROGMEM = { COLORS_LOCATION };
-            canvas->drawBitmap(X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniMeteoconIconFromProgmem(info.weather[0].icon), palette);
-
-            // create kind of shadow effect in case the text is drawn over the icon
-            canvas->setFont(FONTS_CITY);
-            canvas->setTextColor(COLORS_BACKGROUND);
-            for(int8_t x = -2; x <= 2; x++) {
-                for(int8_t y = 0; y < 2; y++) {
-                    if (!(y == 0 && x == 0)) {
-                        canvas->drawTextAligned(X_POSITION_CITY + x, Y_POSITION_CITY + y, info.location, H_POSITION_CITY, AdafruitGFXExtension::TOP);
-                    }
-                }
-            }
-            canvas->setTextColor(COLORS_CITY);
-            canvas->drawTextAligned(X_POSITION_CITY, Y_POSITION_CITY, info.location, H_POSITION_CITY);
-
-            // --- temperature
-
-            canvas->setFont(FONTS_TEMPERATURE);
-            canvas->setTextColor(COLORS_TEMPERATURE);
-            canvas->drawTextAligned(X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, _getTemperature(info.val.temperature, true), H_POSITION_TEMPERATURE, AdafruitGFXExtension::TOP);
-
-            // --- weather description
-
-            canvas->setFont(FONTS_WEATHER_DESCR);
-            canvas->setTextColor(COLORS_WEATHER_DESCR);
-
-            AdafruitGFXExtension::Position_t pos;
-            String tmp = info.weather[0].descr;
-            if (tmp.length() > 10) {
-                auto idx = tmp.indexOf(' ', 7); // wrap after first word thats longer than 7 characters and align to the right
-                if (idx != -1) {
-                    canvas->drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp.substring(0, idx), H_POSITION_WEATHER_DESCR, AdafruitGFXExtension::TOP, &pos);
-                    canvas->drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR + pos.h + 2, tmp.substring(idx + 1), H_POSITION_WEATHER_DESCR, AdafruitGFXExtension::TOP);
-                    tmp = String();
-                }
-            }
-            if (tmp.length()) {
-                canvas->drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp, H_POSITION_WEATHER_DESCR);
-            }
-
-        }
-        else {
-            canvas->setFont(FONTS_DEFAULT_MEDIUM);
-            canvas->setTextColor(COLORS_DEFAULT_TEXT);
-            canvas->drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER), _weatherApi.getWeatherInfo().getError(), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::MIDDLE);
-        }
-
-        _drawWeatherIndoor(canvas, Y_START_POSITION_WEATHER);
-    }
-
-    void Base::_drawWeatherIndoor(GFXCanvasCompressed *canvas, int16_t top)
-    {
-        float data[3];
-        _getIndoorValues(data);
-
-        _offsetY = top;
-
-        canvas->setFont(FONTS_WEATHER_INDOOR);
-        canvas->setTextColor(COLORS_WHITE);
-        canvas->drawTextAligned(X_POSITION_WEATHER_INDOOR_TEMP, Y_POSITION_WEATHER_INDOOR_TEMP, _getTemperature(data[0]), AdafruitGFXExtension::LEFT, AdafruitGFXExtension::TOP);
-
-        canvas->setTextColor(COLORS_CYAN);
-        canvas->drawTextAligned(X_POSITION_WEATHER_INDOOR_HUMIDITY, Y_POSITION_WEATHER_INDDOR_HUMIDITY, PrintString(F("%.1f%%"), data[1]), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP);
-
-        canvas->setTextColor(COLORS_WHITE);
-        canvas->drawTextAligned(X_POSITION_WEATHER_INDOOR_PRESSURE, Y_POSITION_WEATHER_INDDOR_PRESSURE, PrintString(F("%.0fhPa"), data[2]), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
-    }
-
-    void Base::_updateWeatherIndoor()
-    {
-        #if WSDRAW_STATS
-            _statsBegin();
-        #endif
-        int height = _canvas->getFontHeight(FONTS_WEATHER_INDOOR);
-
-        _canvas->fillScreenPartial(Y_START_POSITION_WEATHER, height, COLORS_BACKGROUND);
-        _drawWeatherIndoor(_canvas, Y_START_POSITION_WEATHER);
-        _displayScreen(0, Y_POSITION_WEATHER_INDOOR_TEMP, TFT_WIDTH, height);
-
-        #if WSDRAW_STATS
-            _statsEnd(F("updateWeatherIndoor"));
-        #endif
-    }
 
     void Base::_drawSunAndMoon()
     {
         // __LDBG_printf("WSDraw::_drawSunAndMoon()");
 
-        _offsetY = Y_START_POSITION_SUN_MOON;
+        constexpr int16_t _offsetY = Y_START_POSITION_SUN_MOON;
 
         float moonDay;
         uint8_t moonPhase;
@@ -368,7 +202,7 @@ namespace WSDraw {
             _canvas->drawBitmap(X_POSITION_SUN_SET_ICON, Y_POSITION_SUN_SET_ICON, icon_sunset, 7, 9, COLORS_BACKGROUND, COLORS_SUN_RISE_SET);
 
             char buf[8];
-            PGM_P timeFormat = PSTR("%H:%M");
+            auto timeFormat = PSTR("%H:%M");
             time_t time = info.getSunRiseAsGMT();
             struct tm *tm = gmtime(&time);
             strftime_P(buf, sizeof(buf), timeFormat, tm);
@@ -384,42 +218,201 @@ namespace WSDraw {
         _canvas->drawTextAligned(X_POSITION_MOON_PHASE, Y_POSITION_MOON_PHASE, String(moonPhaseFont), H_POSITION_MOON_PHASE);
     }
 
+    void Base::_drawIndoorClimateBottom()
+    {
+        int16_t _offsetY = Y_START_POSITION_WEATHER + 5;
+
+        _canvas->drawBitmap(6, _offsetY + 10, icon_house, 36, 37, 0xD6DA, COLORS_BACKGROUND);
+
+        auto data = _getIndoorValues();
+
+        _canvas->setFont(FONTS_TEMPERATURE);
+        _canvas->setTextColor(COLORS_WHITE);
+        _canvas->drawTextAligned(TFT_WIDTH - 2, _offsetY, _getTemperature(data.getTemperature()), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
+        _offsetY += _canvas->getFontHeight(FONTS_TEMPERATURE);
+
+        _canvas->setTextColor(COLORS_CYAN);
+        _canvas->drawTextAligned(TFT_WIDTH - 2, _offsetY, PrintString(F("%.1f%%"), data.getHumidity()), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
+        _offsetY += _canvas->getFontHeight(FONTS_TEMPERATURE);
+
+        _canvas->setTextColor(COLORS_WHITE);
+        _canvas->setFont(FONTS_PRESSURE);
+        _canvas->drawTextAligned(TFT_WIDTH - 2, _offsetY, PrintString(F("%.1fhPa"), data.getPressure()), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
+    }
+
+    void Base::_drawLocalWeather()
+    {
+        constexpr int16_t _offsetY = Y_START_POSITION_WEATHER;
+        auto &info = _weatherApi.getWeatherInfo();
+        if (info.hasData()) {
+
+            // --- location
+            static const uint16_t palette[] PROGMEM = { COLORS_LOCATION };
+            _canvas->drawBitmap(X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniIconFromProgmem(info.weather[0].icon), palette);
+
+            // create kind of shadow effect in case the text is drawn over the icon
+            _canvas->setFont(FONTS_CITY);
+            _canvas->setTextColor(COLORS_BACKGROUND);
+            for(int8_t x = -2; x <= 2; x++) {
+                for(int8_t y = 0; y < 2; y++) {
+                    if (!(y == 0 && x == 0)) {
+                        _canvas->drawTextAligned(X_POSITION_CITY + x, Y_POSITION_CITY + y, info.location, H_POSITION_CITY);
+                    }
+                }
+            }
+            _canvas->setTextColor(COLORS_CITY);
+            _canvas->drawTextAligned(X_POSITION_CITY, Y_POSITION_CITY, info.location, H_POSITION_CITY);
+
+            // --- temperature
+
+            _canvas->setFont(FONTS_TEMPERATURE);
+            _canvas->setTextColor(COLORS_TEMPERATURE);
+            _canvas->drawTextAligned(X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, _getTemperature(info.val.temperature, true), H_POSITION_TEMPERATURE);
+
+            // --- weather description
+
+            _canvas->setFont(FONTS_WEATHER_DESCR);
+            _canvas->setTextColor(COLORS_WEATHER_DESCR);
+
+            AdafruitGFXExtension::Position_t pos;
+            String tmp = info.weather[0].descr;
+            if (tmp.length() > 10) {
+                auto idx = tmp.indexOf(' ', 7); // wrap after first word thats longer than 7 characters and align to the right
+                if (idx != -1) {
+                    _canvas->drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp.substring(0, idx), H_POSITION_WEATHER_DESCR, AdafruitGFXExtension::TOP, &pos);
+                    _canvas->drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR + pos.h + 2, tmp.substring(idx + 1), H_POSITION_WEATHER_DESCR);
+                    tmp = String();
+                }
+            }
+            if (tmp.length()) {
+                _canvas->drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp, H_POSITION_WEATHER_DESCR);
+            }
+
+        }
+        else {
+            // __LDBG_printf("invalid data");
+            // _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+            // _canvas->setTextColor(COLORS_DEFAULT_TEXT);
+            // _canvas->drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER) / 2 + Y_START_POSITION_WEATHER,
+
+            _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+            _canvas->setTextColor(COLORS_RED);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 2, F("WEATHER\nN/A YET"), AdafruitGFXExtension::CENTER);
+
+            _canvas->setFont(FONTS_DEFAULT_SMALL);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 30, _weatherApi.getWeatherInfo().getError(), AdafruitGFXExtension::CENTER);
+        }
+    }
+
+    void Base::_drawIndoorClimate()
+    {
+        constexpr int16_t _offsetY = Y_START_POSITION_WEATHER;
+        auto data = _getIndoorValues();
+
+        _canvas->setFont(FONTS_WEATHER_INDOOR);
+        _canvas->setTextColor(COLORS_WHITE);
+        _canvas->drawTextAligned(X_POSITION_WEATHER_INDOOR_TEMP, Y_POSITION_WEATHER_INDOOR_TEMP, _getTemperature(data.getTemperature()), AdafruitGFXExtension::LEFT);
+
+        _canvas->setTextColor(COLORS_CYAN);
+        _canvas->drawTextAligned(X_POSITION_WEATHER_INDOOR_HUMIDITY, Y_POSITION_WEATHER_INDDOR_HUMIDITY, PrintString(F("%.1f%%"), data.getHumidity()), AdafruitGFXExtension::CENTER);
+
+        _canvas->setTextColor(COLORS_WHITE);
+        _canvas->drawTextAligned(X_POSITION_WEATHER_INDOOR_PRESSURE, Y_POSITION_WEATHER_INDDOR_PRESSURE, PrintString(F("%.0fhPa"), data.getPressure()), AdafruitGFXExtension::RIGHT);
+    }
+
+    void Base::_updateIndoorClimate()
+    {
+        constexpr int16_t _offsetY = Y_START_POSITION_WEATHER;
+        uint16_t height = _canvas->getFontHeight(FONTS_WEATHER_INDOOR);
+        _canvas->fillScreenPartial(Y_POSITION_WEATHER_INDOOR_TEMP, height, COLORS_BACKGROUND);
+        _drawIndoorClimate();
+        _displayScreen(0, Y_POSITION_WEATHER_INDOOR_TEMP, TFT_WIDTH, height);
+    }
+
+    void Base::_drawForecast()
+    {
+        _canvas->setFont(FONTS_DEFAULT_BIG);
+        _canvas->setTextColor(COLORS_RED);
+        _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST, F("FORECAST\nN/A"), AdafruitGFXExtension::CENTER);
+    }
+
+    // SCREEN METHODS
+
     void Base::_drawScreenMain()
     {
         _drawTime();
-        _drawWeather();
+        _drawLocalWeather();
+        _drawIndoorClimate();
         _drawSunAndMoon();
-        _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
     }
 
-    void Base::_drawScreenIndoor()
+    void Base::_updateScreenMain()
+    {
+        CLEAR_AND_DISPLAY(Y_START_POSITION_WEATHER, Y_END_POSITION_SUN_MOON) {
+            _drawLocalWeather();
+            _drawIndoorClimate();
+            _drawSunAndMoon();
+        }
+    }
+
+    void Base::_drawScreenIndoorClimate()
     {
         _drawTime();
-        _drawIndoor();
+        _drawIndoorClimateBottom();
         _drawSunAndMoon();
-        _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
     }
 
-    void Base::_updateScreenIndoor()
+    void Base::_updateScreenIndoorClimate()
     {
-        #if WSDRAW_STATS
-            _statsBegin();
-        #endif
-
-        _canvas->fillScreenPartial(Y_START_POSITION_WEATHER, Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER, COLORS_BACKGROUND);
-        _drawIndoor();
-        _displayScreen(0, Y_START_POSITION_WEATHER, TFT_WIDTH, Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER);
-
-        #if WSDRAW_STATS
-            _statsEnd(F("updateScreenIndoor"));
-        #endif
+        CLEAR_AND_DISPLAY(Y_START_POSITION_INDOOR, Y_END_POSITION_SUN_MOON) {
+            _drawIndoorClimateBottom();
+            _drawSunAndMoon();
+        }
     }
 
     void Base::_drawScreenForecast()
     {
         _drawTime();
-        _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+        _drawForecast();
     }
+
+    void Base::_updateScreenForecast()
+    {
+        CLEAR_AND_DISPLAY(Y_START_POSITION_FORECAST, Y_END_POSITION_FORECAST) {
+            _drawForecast();
+        }
+    }
+
+    #if DEBUG
+
+        void Base::_drawDebugInfo()
+        {
+            PrintString str;
+            str.printf_P(PSTR("Time " TIME_T_FMT " Up %us\n"), time(nullptr), getSystemUptime());
+            str.printf_P(PSTR("Free Heap %u\n"), ESP.getFreeHeap(), getSystemUptime());
+            str.printf_P(PSTR("WiFi IP %s\nSSID %s (%d dBm)\n"), WiFi.localIP().toString().c_str(), WiFi.SSID().c_str(), WiFi.RSSI());
+            str.printf_P(PSTR("FPS %.3f\nPixel/s %.0f\nFrame %.0fus"), _debugFPS, _debugPPS, _debugDrawTime);
+
+            _canvas->setFont(FONTS_DEFAULT_SMALL);
+            _canvas->setTextColor(COLORS_WHITE);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_DEBUG, str, AdafruitGFXExtension::CENTER);
+        }
+
+        void Base::_drawScreenDebug()
+        {
+            _drawTime();
+            _drawDebugInfo();
+        }
+
+        void Base::_updateScreenDebug()
+        {
+            CLEAR_AND_DISPLAY(Y_START_POSITION_DEBUG, Y_END_POSITION_DEBUG) {
+                _drawDebugInfo();
+            };
+        }
+
+    #endif
+
 
     void Base::_doScroll()
     {
@@ -513,71 +506,67 @@ namespace WSDraw {
     void Base::_draw()
     {
         if (_displayMessageTimer) {
+            // __LDBG_printf("display_msg_timer=%u repeat=%u", _displayMessageTimer->getShortInterval(), _displayMessageTimer->_repeat);
             return;
         }
         if (_isScrolling()) {
+            // __LDBG_printf("is_scrolling");
             return;
         }
-        #if WSDRAW_STATS
-            _statsBegin();
-        #endif
+        // __LDBG_printf("screen=%s num=%u", getScreenName(_currentScreen), _currentScreen);
 
         _canvas->fillScreen(COLORS_BACKGROUND);
 
-        #if 0
-            int n = 0;
-            for (uint16_t y = 0; y < 160; y++) {
-                uint8_t br = 0xff;// - (0xff * y / 45);
-                int ww = 5;
-                auto color = GFXCanvas::convertRGBtoRGB565(
-                    (n / ww) % 3 == 0 ? br : 0,
-                    (n / ww) % 3 == 1 ? br : 0,
-                    (n / ww) % 3 == 2 ? br : 0
-                );
-                _canvas->fillScreenPartial(y, 1, color);
-                n++;
-            }
-        #endif
-
-        _offsetX = 0;
-        _offsetY = 0;
         switch(_currentScreen) {
             case ScreenType::MAIN:
                 _drawScreenMain();
                 break;
             case ScreenType::INDOOR:
-                _drawScreenIndoor();
+                _drawScreenIndoorClimate();
                 break;
             case ScreenType::FORECAST:
                 _drawScreenForecast();
                 break;
+            #if DEBUG
+                case ScreenType::DEBUG_INFO:
+                    _drawScreenDebug();
+                    break;
+            #endif
+            case ScreenType::TEXT:
             case ScreenType::TEXT_CLEAR:
             case ScreenType::TEXT_UPDATE:
                 _drawText(_text, _textFont, COLORS_DEFAULT_TEXT, true);
+                // _Scheduler.add(100, true, [this](Event::CallbackTimerPtr timer) {
+                //     if (_currentScreen != ScreenType::TEXT) {
+                //         timer->disarm();
+                //     }
+                //     else {
+                //         _drawText(_text, _textFont, COLORS_DEFAULT_TEXT);
+                //     }
+                // });
                 _currentScreen = ScreenType::TEXT;
-                #ifndef _WIN32
-                    _Scheduler.add(150, true, [this](Event::CallbackTimerPtr timer) {
-                        if (_currentScreen != ScreenType::TEXT) {
-                            timer->disarm();
-                        }
-                        else {
-                            _drawText(_text, _textFont, COLORS_DEFAULT_TEXT);
-                        }
-                    });
-                #endif
                 break;
             default:
                 break;
         }
-
-        #if WSDRAW_STATS
-            _statsEnd(F("draw"));
-        #endif
+        _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
     }
 
     void Base::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
     {
-        __DBG_printf("x=%d y=%d w=%d h=%d", x, y, w, h);
+        #if DEBUG
+            auto diff = micros() - _debugLastUpdate;
+            float multiplier = diff > 0 ? ((1000 * 10000UL) / diff) : 0;
+            // fps 10s avg
+            // pixels per second
+            _debugFPS = (_debugFPS * multiplier) + 1;
+            _debugPPS = (_debugPPS * multiplier) + ((w - x) * (h - y));
+            multiplier++;
+            _debugFPS /= (multiplier);
+            _debugPPS /= (multiplier);
+            uint32_t start = micros();
+        #endif
+        // __DBG_printf("x=%d y=%d w=%d h=%d", x, y, w, h);
 
         // copy canvas into tft memory
         _tft.startWrite();
@@ -587,51 +576,12 @@ namespace WSDraw {
 
         // promote full or partial update
         canvasUpdatedEvent(x, y, w, h);
+        #if DEBUG
+            uint32_t dur = micros() -  start;
+            _debugDrawTime = (_debugDrawTime + dur) / 2.0;
+            _debugLastUpdate = micros();
+        #endif
     }
-
-    void Base::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h)
-    {
-    }
-
-    // void Base::setScreen(BaseScreen *screen)
-    // {
-    //     if (_screen) {
-    //         screen->deletePrevScreen(_screen);
-    //     }
-    //     _screen = screen;
-    //     if (_screen) {
-    //         _screen->initNextScreen();
-    //     }
-    //     _screenLastUpdateTime = ~0;
-    //     redraw();
-    // }
-
-    #if WSDRAW_STATS
-
-    void Base::_statsBegin()
-    {
-        __DBG_STATS(_canvas->clearStats());
-        _statsTimer.start();
-    }
-
-    void Base::_statsEnd(const __FlashStringHelper *name)
-    {
-        if (_debug_stats) {
-            float time = _statsTimer.getTime() / 1000.0f;
-            PrintString str(F("redraw %s %.2fms - "), name, time);
-            str += _canvas->getDetails();
-            str.replace(String('\n'), String(' '));
-            debug_println(str);
-
-            auto iterator = _stats.find(name);
-            if (iterator == _stats.end()) {
-                _stats[name] = StatsBuffer();
-            }
-            _stats[name].push_back(time);
-        }
-    }
-
-    #endif
 
     String Base::_getTemperature(float value, bool kelvin)
     {
@@ -643,50 +593,54 @@ namespace WSDraw {
         }
     }
 
-    void Base::_getIndoorValues(float *data)
-    {
-        // dummy data
-        data[0] = 23.38f;
-        data[1] = 49.13f;
-        data[2] = 1022.17f;
-    }
-
+    // draws the date, time and timezone at the top
+    // the area must be cleared before
     void Base::_drawTime()
     {
-        _offsetY = 0;
-        _offsetX = 0;
+        constexpr int16_t _offsetY = 0;
 
-        PrintString timeStr;
+        _lastTime = time(nullptr);
         auto tm = localtime(&_lastTime);
 
         _canvas->setFont(FONTS_DATE);
         _canvas->setTextColor(COLORS_DATE);
+        PrintString timeStr;
         timeStr.strftime(F("%a %b %d %Y"), tm);
         _canvas->drawTextAligned(X_POSITION_DATE, Y_POSITION_DATE, timeStr.c_str(), H_POSITION_DATE);
 
         _canvas->setFont(FONTS_TIME);
         _canvas->setTextColor(COLORS_TIME);
-        timeStr = PrintString();
+        timeStr.clear();
         timeStr.strftime(_config.time_format_24h ? F("%H:%M:%S") : F("%I:%M:%S"), tm);
         _canvas->drawTextAligned(X_POSITION_TIME, Y_POSITION_TIME, timeStr.c_str(), H_POSITION_TIME);
 
         _canvas->setFont(FONTS_TIMEZONE);
         _canvas->setTextColor(COLORS_TIMEZONE);
-        timeStr = PrintString();
+        timeStr.clear();
         timeStr.strftime(_config.time_format_24h ? F("%Z") : F("%p - %Z"), tm);
         _canvas->drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, timeStr.c_str(), H_POSITION_TIMEZONE);
     }
 
+    void Base::_updateScreenTime()
+    {
+        CLEAR_AND_DISPLAY(Y_START_POSITION_TIME, Y_END_POSITION_TIME) {
+            _drawTime();
+        }
+    }
 
     const __FlashStringHelper *Base::getScreenName(ScreenType screen)
     {
         switch(screen) {
             case ScreenType::MAIN:
-                return F("Current Weather, Sun and Moon");
+                return F("Local Weather");
             case ScreenType::INDOOR:
                 return F("Indoor Climate");
             case ScreenType::FORECAST:
                 return F("Weather Forecast");
+            #if DEBUG
+                case ScreenType::DEBUG_INFO:
+                    return F("Debug Info");
+            #endif
             default:
                 break;
         }

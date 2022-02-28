@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <vector>
+#include <Buffer.h>
 
 #ifndef DEBUG_GFXCANVAS
 #    define DEBUG_GFXCANVAS 1
@@ -41,8 +42,9 @@ namespace GFXCanvas {
     using ColorType = uint16_t;
     using ColorPaletteType = ColorType;
     using RGBColorType = uint32_t;
-    using ByteBufferSizeType = uint8_t;
+    // using ByteBufferSizeType = uint8_t;
     using ByteBufferDataType = uint8_t;
+    using ByteBuffer = Buffer;
 
     using uXType = uint16_t;
     using sXType = int16_t;

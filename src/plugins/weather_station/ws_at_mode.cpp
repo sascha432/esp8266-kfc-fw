@@ -13,7 +13,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad|timeformat24h|metrics|tft|scroll|stats|lock|unlock>,<on|off|options>", "Enable/disable function");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>", "Enable/disable function");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSBL, "WSBL", "<level=0-1023>", "Set backlight level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSU, "WSU", "<i|f>", "Update weather info/forecast");
 
@@ -43,15 +43,25 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 redraw();
                 args.printf_P(PSTR("time format 24h=%u"), state);
             }
-            else if (args.equalsIgnoreCase(0, FSPGM(metrics))) {
+            else if (args.equalsIgnoreCase(0, F("metric"))) {
                 _config.is_metric = state;
                 redraw();
-                args.printf_P(PSTR("metrics=%u"), state);
+                args.printf_P(PSTR("metric=%u"), state);
             }
             else if (args.equalsIgnoreCase(0, F("screen"))) {
-                _setScreen((_getCurrentScreen() + 1) % kNumScreens);
+                _setScreen(args.toIntMinMax<uint8_t>(1, 0, kNumScreens - 1, _getCurrentScreen() + 1));
                 redraw();
-                args.printf_P(PSTR("screen=%u"), _currentScreen);
+                args.printf_P(PSTR("screen=%u timeout=60s"), _currentScreen);
+            }
+            else if (args.equalsIgnoreCase(0, F("screens"))) {
+                for(uint8_t n = 0; n < kNumScreens; n++) {
+                    args.print(F("screen=%u name=%s timeout=%us valid=%u screen=%u prev=%u next=%u"),
+                        n, getScreenName(n), _config.screenTimer[n], _config.screenTimer[n] != 255,
+                        _getScreen(n, true),
+                        _getPrevScreen(n, true),
+                        _getNextScreen(n, true)
+                    );
+                }
             }
             else if (args.equalsIgnoreCase(0, F("tft"))) {
                 _tft.initR(INITR_BLACKTAB);
@@ -72,9 +82,10 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 setText(args.get(1), FONTS_DEFAULT_MEDIUM);
                 _setScreen(ScreenType::TEXT_CLEAR);
             }
-            else if (args.equalsIgnoreCase(0, F("dump"))) {
-                BufferPool::getInstance().dump(args.getStream());
-            }
+
+            // else if (args.equalsIgnoreCase(0, F("dump"))) {
+            //     BufferPool::getInstance().dump(args.getStream());
+            // }
             else if (args.equalsIgnoreCase(0, F("lock"))) {
                 int mem = ESP.getFreeHeap();
                 bool state = lock();
@@ -85,27 +96,8 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 if (isLocked()) {
                     unlock();
                 }
-                args.print(F("locked=%d deattached heap=%d"), isLocked(), mem - (int)ESP.getFreeHeap());
+                args.print(F("locked=%d detached heap=%d"), isLocked(), mem - (int)ESP.getFreeHeap());
             }
-            #if WSDRAW_STATS
-                else if (args.equalsIgnoreCase(0, F("stats"))) {
-                    if (args.equalsIgnoreCase(1, F("print"))) {
-                        for(const auto &item: _stats) {
-                            PrintString str;
-                            str.printf_P(PSTR("%s: "), item.first.c_str());
-                            auto iterator = item.second.begin();
-                            while(iterator != item.second.end()) {
-                                str.printf_P(PSTR("%.2f "), *iterator);
-                                ++iterator;
-                            }
-                            args.print(str.c_str());
-                        }
-                    }
-                    else {
-                        _debug_stats = state;
-                    }
-                }
-            #endif
             else {
                 args.print("Invalid type");
             }
@@ -123,19 +115,26 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSU))) {
+        auto stream = &args.getStream();
         if (args.equals(0, 'f')) {
-            // args.print(F("Updating forecast..."));
-            // _getWeatherForecast([this, args](bool status) mutable {
-            //     args.printf_P(SPGM(status__u), status);
-            //     redraw();
-            // });
+            args.print(F("Updating forecast..."));
+            _getWeatherForecast([this, stream](bool status, KFCRestAPI::HttpRequest &request) {
+                auto msg = request.getMessage();
+                LoopFunctions::callOnce([&]() {
+                    const_cast<Stream *>(stream)->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, msg.c_str());
+                    redraw();
+                });
+            });
         }
         else {
-            // args.print(F("Updating info..."));
-            // _getWeatherInfo([this, args](bool status) mutable {
-            //     args.printf_P(SPGM(status__u), status);
-            //     redraw();
-            // });
+            args.print(F("Updating info..."));
+            _getWeatherInfo([this, stream](bool status, KFCRestAPI::HttpRequest &request) {
+                auto msg = request.getMessage();
+                LoopFunctions::callOnce([&]() {
+                    const_cast<Stream *>(stream)->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, request.getMessage().c_str());
+                    redraw();
+                });
+            });
         }
         return true;
     }

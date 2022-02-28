@@ -11,6 +11,8 @@
 #include "GFXCanvasConfig.h"
 #include "GFXCanvasBufferPool.h"
 
+#if 0
+
 #include <debug_helper.h>
 
 #ifndef GFXCANVAS_BUFFER_POOL_PACK_PTR
@@ -20,7 +22,7 @@
 #        define GFXCANVAS_BUFFER_POOL_PACK_PTR      0
 #    elif defined(ESP8266)
 #        include "umm_malloc/umm_malloc_cfg.h"
-#        define GFXCANVAS_BUFFER_POOL_PACK_PTR      1
+#        define GFXCANVAS_BUFFER_POOL_PACK_PTR      0
 #    else
 #        define GFXCANVAS_BUFFER_POOL_PACK_PTR      0
 #    endif
@@ -30,21 +32,28 @@
 
 namespace GFXCanvas {
 
-    template<typename data_type, typename size_type = uint8_t>
+    template<typename data_type, typename size_type>
     class BufferTemplate;
 
-    using ByteBuffer = BufferTemplate<ByteBufferDataType, ByteBufferSizeType>;
+    // using ByteBuffer = BufferTemplate<ByteBufferDataType, ByteBufferSizeType>;
+    using ByteBuffer = std::vector<ByteBufferDataType>;
 
     class BufferPool {
     public:
         using BufferList = std::list<Buffer>;
         using BufferType = ByteBuffer;
         using BufferTypePtr = ByteBuffer *;
+
         #if GFXCANVAS_BUFFER_POOL_PACK_PTR
             struct BufferIdType {
 
-                BufferIdType(BufferTypePtr ptr) : _value(__pack_id(ptr)) {}
-                BufferIdType(nullptr_t) : _value(0) {}
+                BufferIdType(BufferTypePtr ptr) : _value(__pack_id(ptr))
+                {
+                }
+
+                BufferIdType(nullptr_t) : _value(0)
+                {
+                }
 
                 operator BufferTypePtr() const {
                     return __unpack_id(_value);
@@ -64,15 +73,18 @@ namespace GFXCanvas {
                 }
 
                 bool operator!=(BufferTypePtr ptr) const {
-                    return ptr != __unpack_id(_value);
+                    return !this->operator==(ptr);
                 }
 
                 uint16_t __pack_id(BufferTypePtr id) const {
-                    return ((int32_t)id) - UMM_MALLOC_CFG_HEAP_ADDR;
+                    return reinterpret_cast<const uint32_t>(id) - UMM_MALLOC_CFG_HEAP_ADDR;
                 }
 
                 BufferTypePtr __unpack_id(uint16_t id) const {
-                    return id ? (BufferTypePtr)(((uint32_t)id) + UMM_MALLOC_CFG_HEAP_ADDR) : nullptr;
+                    if (!id) {
+                        return nullptr;
+                    }
+                    return reinterpret_cast<BufferTypePtr>(static_cast<const uint32_t>(id) + UMM_MALLOC_CFG_HEAP_ADDR);
                 }
 
                 uint16_t _value;
@@ -83,7 +95,8 @@ namespace GFXCanvas {
 
         // size per allocated buffer pool
         // 256 - 512 seems to be a good compromise between overhead, unusable space and free space
-        static constexpr size_t kBufferPoolSize = 512;
+        // static constexpr size_t kBufferPoolSize = 512;
+        static constexpr size_t kBufferPoolSize = 244;
 
         // recommended size is the 95th rule of the length of compressed canvas lines
         // if not available, use 25-50% of the uncompressed size
@@ -93,7 +106,7 @@ namespace GFXCanvas {
         static BufferPool &getInstance();
         static void destroyInstance();
 
-        Buffer &get();
+        // Buffer &get();
 
         void dump(Print &output);
 
@@ -127,7 +140,7 @@ namespace GFXCanvas {
             }
 
             BufferTypePtr getId() const {
-                return _id;
+                return static_cast<BufferTypePtr>(_id);
             }
 
             bool operator==(BufferTypePtr id) const {
@@ -154,20 +167,20 @@ namespace GFXCanvas {
                 return reinterpret_cast<uint8_t *>(this) + sizeof(*this);
             }
 
-            const uint8_t *begin() const {
-                return reinterpret_cast<const uint8_t *>(this);
-            }
-
-            const uint8_t *end() const {
-                return reinterpret_cast<const uint8_t *>(this) + size();
-            }
-
             uint8_t *begin() {
                 return reinterpret_cast<uint8_t *>(this);
             }
 
+            const uint8_t *begin() const {
+                return const_cast<BufferHeader_t *>(this)->begin();
+            }
+
             uint8_t *end() {
                 return reinterpret_cast<uint8_t *>(this) + size();
+            }
+
+            const uint8_t *end() const {
+                return const_cast<BufferHeader_t *>(this)->end();
             }
 
         };
@@ -191,13 +204,13 @@ namespace GFXCanvas {
                 return _buffer && _iterator;
             }
 
-            inline bool operator==(nullptr_t) const {
-                return !operator bool();
-            }
+            // inline bool operator==(nullptr_t) const {
+            //     return !operator bool();
+            // }
 
-            inline bool operator!=(nullptr_t) const {
-                return operator bool();
-            }
+            // inline bool operator!=(nullptr_t) const {
+            //     return operator bool();
+            // }
 
             inline bool operator==(const BufferIterator &iterator) const {
                 return
@@ -244,7 +257,9 @@ namespace GFXCanvas {
             }
 
             inline BufferIterator &operator++() {
-#if 0
+#if 1
+                _iterator = this->operator+(1)._iterator;
+#elif 0
                 // safe version
                 _iterator = (*this + 1)._iterator;
 #else
@@ -258,7 +273,8 @@ namespace GFXCanvas {
             }
 
             inline BufferIterator &operator--() {
-                _iterator = (*this - 1)._iterator;
+                _iterator = this->operator-(1)._iterator;
+                // _iterator = (*this - 1)._iterator;
                 return *this;
             }
 
@@ -282,8 +298,8 @@ namespace GFXCanvas {
     private:
         friend ByteBuffer;
 
-        Buffer &getTemp();
-        void moveTempTo(ByteBuffer &buffer);
+        // Buffer &getTemp();
+        // void moveTempTo(ByteBuffer &buffer);
         BufferIterator find(BufferTypePtr id);
         bool remove(BufferTypePtr id);
         BufferIterator add(BufferTypePtr id);
@@ -295,9 +311,11 @@ namespace GFXCanvas {
 #endif
         static BufferPool *_instance;
         BufferList _list;
-        Buffer _temp;
+        // Buffer _temp;
     };
 
 }
 
 #include <pop_pack.h>
+
+#endif

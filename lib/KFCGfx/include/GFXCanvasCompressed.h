@@ -32,7 +32,7 @@ class GFXCanvasBitmapStream;
 
 class GFXCanvasCompressed : public AdafruitGFXExtension {
 public:
-    typedef std::function<void(uXType x, uYType y, uWidthType width, ColorType *pcolors)> DrawLineCallback_t;
+    typedef std::function<void(uXType x, uYType y, uWidthType width, ColorType *colorsPtr)> DrawLineCallback_t;
 
     static constexpr size_t kCachedLinesMax = GFXCANVAS_MAX_CACHED_LINES;
 
@@ -63,8 +63,8 @@ public:
     //
     // _canvas.drawInto(_tft, 0, 0, 128, 160);
     // ***OR***
-    // _canvas.drawInto(0, 0, 128, 160, [_tft](uint16_t x, uint16_t y, uint16_t width, uint16_t *pcolors) {
-    //     _tft.writePixels(pcolors, width);
+    // _canvas.drawInto(0, 0, 128, 160, [_tft](uint16_t x, uint16_t y, uint16_t width, uint16_t *colorsPtr) {
+    //     _tft.writePixels(colorsPtr, width);
     // });
     //
     // _tft.endWrite();
@@ -73,10 +73,6 @@ public:
 
     template<class T>
     void drawInto(T &target, sXType x, sYType y, sWidthType width, sHeightType height) {
-        __DBG_STATS(
-            MicrosTimer timer;
-            timer.start();
-        );
         sXType xOfs;
         sYType yOfs;
         if (_drawIntoClipping(x, y, width, height, xOfs, yOfs)) {
@@ -91,7 +87,6 @@ public:
         }
 
         _cache.release(*this);
-        __DBG_STATS(stats.drawInto += timer.getTime());
     }
 
     template<class T>
@@ -149,6 +144,7 @@ private:
             endX = _width - 1;
         }
     }
+
     inline void clipY(sXType &startY, sXType &endY) {
         if (startY < 0) {
             startY = 0;
@@ -163,18 +159,5 @@ private:
             endY = _height - 1;
         }
     }
-
-#if DEBUG_GFXCANVASCOMPRESSED_STATS
-
-public:
-    void clearStats() {
-        auto tmp = stats.cache_max;
-        stats = Stats();
-        stats.cache_max = tmp;
-    }
-protected:
-    Stats stats;
-
-#endif
 
 };

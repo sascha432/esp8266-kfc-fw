@@ -256,7 +256,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 2, [this](const Mpr121Touchpad::Event &event) {
-            // __LDBG_printf("event %u", event.getType());
+            __LDBG_printf("event %u", event.getType());
             // if (event.isSwipeLeft() || event.isDoublePress()) {
             //     _debug_println(F("left"));
             //     _setScreen((_currentScreen + NUM_SCREENS - 1) % NUM_SCREENS);
@@ -268,15 +268,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
             // else {
             //     return false;
             // }
-            _currentScreen = static_cast<ScreenType>((_getCurrentScreen() + 1) % kNumScreens);
-            // check if screen is supposed to change automatically
-            if (_config.screenTimer[_getCurrentScreen()]) {
-                _toggleScreenTimer = millis() + 60000;  // leave screen on for 60 seconds
-            }
-            else {
-                _toggleScreenTimer = 0;
-            }
-            redraw();
+            this->_setScreen(_getNextScreen(_getCurrentScreen()));
             return true;
         });
     #endif
@@ -317,11 +309,11 @@ void WeatherStationPlugin::reconfigure(const String &source)
     else {
         auto oldLevel = _backlightLevel;
         _readConfig();
-
         #if IOT_WEATHER_STATION_HAS_TOUCHPAD
             _touchpad.getMPR121().setThresholds(_config.touch_threshold, _config.released_threshold);
         #endif
         _fadeBacklight(oldLevel, _backlightLevel);
+        _setScreen(_getNextScreen(kNumScreens - 1));
     }
 }
 
@@ -413,10 +405,9 @@ void WeatherStationPlugin::setValue(const String &id, const String &value, bool 
     }
 }
 
-void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas, uint8_t top)
+void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas, int16_t _offsetY)
 {
     // __LDBG_printf("WSDraw::_drawEnvironmentalSensor()");
-    _offsetY = top;
 
     auto sensor = SensorPlugin::getSensor<Sensor_BME280>(MQTT::SensorType::BME280);
     if (!sensor) {
@@ -430,16 +421,14 @@ void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas,
     canvas.drawTextAligned(0, _offsetY, str, AdafruitGFXExtension::LEFT);
 }
 
-void WeatherStationPlugin::_getIndoorValues(float *data)
+WeatherStationPlugin::IndoorValues WeatherStationPlugin::_getIndoorValues()
 {
     auto sensor = SensorPlugin::getSensor<Sensor_BME280>(MQTT::SensorType::BME280);
     if (!sensor) {
-        return;
+        return IndoorValues(0, 0, 0);
     }
     auto values = sensor->readSensor();
-    data[0] = values.temperature;
-    data[1] = values.humidity;
-    data[2] = values.pressure;
+    return IndoorValues(values.temperature, values.humidity, values.pressure);
 }
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step)
@@ -467,6 +456,7 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
 void WeatherStationPlugin::_fadeStatusLED()
 {
     #if IOT_WEATHER_STATION_WS2812_NUM
+        __LDBG_printf("pin=%u", IOT_WEATHER_STATION_WS2812_PIN);
 
         int32_t color = 0x001500;
         int16_t dir = 0x100;

@@ -13,6 +13,26 @@
 
 namespace GFXCanvas {
 
+    inline uint16_t getIconWidth(const char *icon)
+    {
+        return (pgm_read_byte(icon + 2) << 8) | pgm_read_byte(icon + 3);
+    }
+
+    inline uint16_t getIconHeight(const char *icon)
+    {
+        return (pgm_read_byte(icon + 4) << 8) | pgm_read_byte(icon + 5);
+    }
+
+    inline uint16_t getBitmapWidth(const char *icon)
+    {
+        return getIconWidth(icon);
+    }
+
+    inline uint16_t getBitmapHeight(const char *icon)
+    {
+        return getIconHeight(icon);
+    }
+
     inline uXType getClippedX(sXType x, uWidthType maxWidth)
     {
         if (x < 0) {
@@ -96,7 +116,6 @@ namespace GFXCanvas {
     {
         return startX <= 0 && endX >= width;
     }
-
 
     inline void convertToRGB(ColorType color, uint8_t& r, uint8_t& g, uint8_t& b)
     {

@@ -4,6 +4,9 @@
 
 #include <LoopFunctions.h>
 #include <GFXCanvasConfig.h>
+#if DEBUG_GFXCANVAS_STATS
+#include <GFXCanvasStats.h>
+#endif
 #include "WSDraw.h"
 
 #if DEBUG_IOT_WEATHER_STATION
@@ -330,7 +333,7 @@ namespace WSDraw {
             _canvas->printf_P(PSTR("Unixtime " TIME_T_FMT "\nUptime %us\n"), time(nullptr), getSystemUptime());
             _canvas->printf_P(PSTR("Free Heap %u\n"), ESP.getFreeHeap(), getSystemUptime());
             _canvas->printf_P(PSTR("WiFi IP %s\nSSID %s (%d dBm)\n"), WiFi.localIP().toString().c_str(), WiFi.SSID().c_str(), WiFi.RSSI());
-            _canvas->printf_P(PSTR("Avg. FPS %.3f\n Pixels %.0f/s\nFrame time %.0fus\n"), 1000000.0 / _debugFPS, _debugPPS, _debugDrawTime);
+            _canvas->printf_P(PSTR("Avg. FPS %.3f\nPixels %.0f/s\nFrame time %.0fus\n"), 1000000.0 / _debugFPS, _debugPPS, _debugDrawTime);
         }
 
         void Base::_drawDebugInfo()
@@ -339,6 +342,27 @@ namespace WSDraw {
             _canvas->setTextColor(COLORS_WHITE);
             _canvas->setCursor(0, 0);
             printDebugInfo(*_canvas);
+
+            static const uint16_t palette[] PROGMEM = { COLORS_LOCATION };
+            switch(_mode) {
+                case DebugMode::ICON:
+                    _icon = getIconFromProgmem(rand() % 9);
+                    _pos = 0;
+                    _mode = DebugMode::LEFT;
+                    break;
+                case DebugMode::LEFT:
+                    if (++_pos >= TFT_WIDTH - GFXCanvas::getBitmapWidth(_icon) - 1) {
+                        _mode = DebugMode::RIGHT;
+                    }
+                    break;
+                case DebugMode::RIGHT:
+                    if (--_pos == 0) {
+                        _mode = DebugMode::ICON;
+                    }
+                    break;
+            }
+
+            _canvas->drawBitmap(_pos, _canvas->getCursorY(), _icon, palette);
         }
 
         void Base::_drawScreenDebug()
@@ -373,7 +397,7 @@ namespace WSDraw {
                 for (uint8_t y = 0; y < height; y++) {
                     auto &canvasLine = _canvas->getLine(y + Y_START_POSITION_WEATHER);
                     memmove(canvasLine.getBuffer(), &canvasLine.getBuffer()[numScroll], (TFT_WIDTH - numScroll) * sizeof(uint16_t)); // move content to the left
-                    canvasLine.setWriteFlag(true);
+                    canvasLine.setDirty(true);
                     // copy new content
                     auto scrollCanvasLine = _scrollCanvas->getCanvas().getLine(y).getBuffer();
                     for (uint8_t x = 0; x < numScroll; x++) {
@@ -457,6 +481,10 @@ namespace WSDraw {
         }
         // __LDBG_printf("screen=%s num=%u", getScreenName(_currentScreen), _currentScreen);
 
+        #if DEBUG_GFXCANVAS_STATS
+            uint32_t start = micros();
+        #endif
+
         _canvas->fillScreen(COLORS_BACKGROUND);
 
         switch(_currentScreen) {
@@ -491,7 +519,18 @@ namespace WSDraw {
             default:
                 break;
         }
-        _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+       _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+
+        #if DEBUG_GFXCANVAS_STATS
+            uint32_t dur = micros() - start;
+            static uint32_t time = 0;
+            if (millis() - time > 5000) {
+                time = millis();
+                Serial.printf_P(PSTR("redraw %.3fms "), dur / 1000.0);
+                _canvas->getDetails(Serial);
+                stats.clear();
+            }
+        #endif
     }
 
     void Base::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)

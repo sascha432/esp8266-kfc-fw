@@ -3778,8 +3778,25 @@ const char miniunknown[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   };
 
-
 // Helper function, should be part of the weather station library and should disappear soon
+inline const char* getIconFromProgmem(int index)
+{
+    switch(index) {
+        case 0: return sunny;
+        case 1: return partlysunny;
+        case 2: return partlycloudy;
+        case 3: return mostlycloudy;
+        case 4: return rain;
+        case 5: return rain;
+        case 6: return tstorms;
+        case 7: return snow;
+        case 8: return fog;
+        default:
+            break;
+    }
+    return unknown;
+}
+
 inline const char* getIconFromProgmem(String iconText)
 {
     char ch;
@@ -3796,7 +3813,7 @@ inline const char* getIconFromProgmem(String iconText)
             case 50: return fog;
         }
     }
-  return unknown;
+    return unknown;
 }
 
 inline const char *getMiniIconFromProgmem(String iconText)

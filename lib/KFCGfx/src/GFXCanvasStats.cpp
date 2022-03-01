@@ -6,7 +6,7 @@
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
 
-#if DEBUG_GFXCANVASCOMPRESSED_STATS
+#if DEBUG_GFXCANVAS_STATS
 
 #pragma GCC push_options
 #if DEBUG_GFXCANVAS
@@ -18,22 +18,29 @@
 
 #include "GFXCanvasStats.h"
 
-using namespace GFXCanvas;
+namespace GFXCanvas {
 
-void Stats::dump(Print &output) const {
-#if !DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS
-    output.printf_P(PSTR("drawInto %.3fms\n"),
-        drawInto / 1000.0
-    );
-#else
-    output.printf_P(PSTR("de/encode %u/%.2fms %u/%.2fms mops %u cacheR %u F %u D %u max %ub drawInto %.3fms\n"),
-        decode_count, decode_time, encode_count, encode_time,
-        malloc,
-        cache_read, cache_flush, cache_drop, cache_max, drawInto / 1000.0
-    );
-#endif
+    void Stats::dump(Print &output) const
+    {
+        #if DEBUG_GFXCANVAS_STATS_DETAILS
+            output.printf_P(PSTR("de/encode %u/%.2fms %u/%.2fms mops %u/%u cache hits/miss %u/%u flush %u/%u drawInto avg %.3fms free %u low %u\n"),
+                decode_count, decode_time, encode_count, encode_time,
+                malloc, free,
+                cache_hits, cache_miss, cache_flush, cache_writes,
+                drawInto / drawIntoCount / 1000.0,
+                ESP.getFreeHeap(),
+                heap_low
+            );
+        #else
+            output.printf_P(PSTR("drawInto avg %.3fms heap free %u low %u\n"),
+                drawInto / drawIntoCount / 1000.0, ESP.getFreeHeap(), heap_low
+            );
+        #endif
+    }
+
+    Stats stats;
+
 }
-
 
 #pragma GCC pop_options
 

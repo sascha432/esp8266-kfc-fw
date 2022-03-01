@@ -121,20 +121,21 @@ const ColorPalette *GFXCanvasCompressedPalette::getPalette() const
     return &_palette;
 }
 
-String GFXCanvasCompressedPalette::getDetails() const
+void GFXCanvasCompressedPalette::getDetails(Print &output, bool displayPalette) const
 {
-    PrintString str = GFXCanvasCompressed::getDetails();
-    str.printf_P(PSTR("palette %u="), _palette.length());
+    GFXCanvasCompressed::getDetails(output, displayPalette);
 
-    uint8_t i = 0;
-    for(const auto color: _palette) {
-        str.printf("%06x", GFXCanvas::convertToRGB(color));
-        if (++i < _palette.length()) {
-            str.print(',');
+    if (displayPalette) {
+        output.printf_P(PSTR("palette %u="), _palette.length());
+        uint8_t i = 0;
+        for(const auto color: _palette) {
+            output.printf("%06x", GFXCanvas::convertToRGB(color));
+            if (++i < _palette.length()) {
+                output.print(',');
+            }
         }
+        output.print('\n');
     }
-    str.print('\n');
-    return str;
 }
 
 #pragma GCC pop_options

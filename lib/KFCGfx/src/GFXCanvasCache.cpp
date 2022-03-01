@@ -17,10 +17,15 @@
 #endif
 
 #include "GFXCanvasCache.h"
+#include "GFXCanvasStats.h"
 
 using namespace GFXCanvas;
 
-Cache::Cache(Cache &&cache) noexcept : _buffer(std::exchange(cache._buffer, nullptr)), _y(std::exchange(cache._y, kYInvalid)), _width(std::exchange(cache._width, 0)), _flags(std::exchange(cache._flags, 0))
+Cache::Cache(Cache &&cache) noexcept :
+    _buffer(std::exchange(cache._buffer, nullptr)),
+    _y(std::exchange(cache._y, kYInvalid)),
+    _width(std::exchange(cache._width, 0)),
+    _flags(std::exchange(cache._flags, 0))
 {
 }
 
@@ -29,10 +34,16 @@ Cache::Cache(uWidthType width, sYType y) : _buffer(new ColorType[width]()), _y(y
     if (!_buffer) {
         __DBG_panic("alloc failed, width=%u", width);
         invalidate();
+        return;
     }
+    __DBG_ASTATS(stats.malloc++);
 }
 
-Cache::Cache(uWidthType width, nullptr_t) : _buffer(nullptr), _y(kYInvalid), _width(width), _flags(0)
+Cache::Cache(uWidthType width, nullptr_t) :
+    _buffer(nullptr),
+    _y(kYInvalid),
+    _width(width),
+    _flags(0)
 {
 }
 
@@ -40,6 +51,7 @@ Cache::~Cache()
 {
     if (_buffer) {
         delete[] _buffer;
+        __DBG_ASTATS(stats.free++);
     }
 }
 
@@ -47,6 +59,7 @@ Cache &Cache::operator=(Cache &&cache) noexcept
 {
     if (_buffer) {
         delete[] _buffer;
+        __DBG_ASTATS(stats.free++);
     }
     _buffer = std::exchange(cache._buffer, nullptr);
     _y = std::exchange(cache._y, kYInvalid);
@@ -60,6 +73,7 @@ void Cache::allocate()
 {
     if (!_buffer) {
         _buffer = new ColorType[_width];
+        __DBG_ASTATS(stats.malloc++);
     }
     _y = kYInvalid;
     _flags = 0;
@@ -69,8 +83,9 @@ void Cache::release()
 {
     if (_buffer) {
         delete[]  _buffer;
+        _buffer = nullptr;
+        __DBG_ASTATS(stats.free++);
     }
-    _buffer = nullptr;
     _y = kYInvalid;
     _flags = 0;
 }
@@ -103,7 +118,9 @@ SingleLineCache::SingleLineCache(uWidthType width, uHeightType height, size_t) :
 
 void SingleLineCache::flush(GFXCanvasCompressed &canvas)
 {
-    if (hasWriteFlag()) {
+    __DBG_ASTATS(stats.cache_flush++);
+    if (isDirty()) {
+        __DBG_ASTATS(stats.cache_writes++);
         __DBG_BOUNDS_RETURN(__DBG_check_alloc_aligned(_buffer));
         canvas._encodeLine(*this);
     }
@@ -118,7 +135,16 @@ Cache &SingleLineCache::get(GFXCanvasCompressed &canvas, sYType y)
     if (!isY(y)) {
         flush(canvas);
         setY(y);
+        __DBG_ASTATS(
+            stats.cache_miss++;
+        );
+    }
+    else {
+        __DBG_ASTATS(
+            stats.cache_hits++;
+        );
     }
     return *this;
 }
+
 #pragma GCC pop_options

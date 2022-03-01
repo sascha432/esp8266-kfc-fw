@@ -25,7 +25,7 @@ public:
     virtual ColorType getPaletteColor(ColorType color) const;
     virtual const ColorPalette *getPalette() const;
 
-    virtual String getDetails() const;
+    virtual void getDetails(Print &output, bool displayPalette = false) const;
 
 private:
     ColorPalette _palette;

@@ -66,13 +66,13 @@ namespace GFXCanvas {
             return _y != kYInvalid;
         }
 
-        inline bool hasWriteFlag() const
+        inline bool isDirty() const
         {
             return _write;
         }
 
         // indicates that the cache has not been written
-        inline void setWriteFlag(bool value)
+        inline void setDirty(bool value)
         {
             _write = value;
         }
@@ -139,8 +139,6 @@ namespace GFXCanvas {
         );
         _buffer[x] = color;
     }
-
-
 
     class SingleLineCache : public Cache
     {

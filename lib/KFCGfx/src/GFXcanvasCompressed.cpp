@@ -26,7 +26,10 @@ extern "C" {
 
 using namespace GFXCanvas;
 
-GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height) : AdafruitGFXExtension(width, height), _lines(height), _cache(width, height, kCachedLinesMax)
+GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height) :
+    AdafruitGFXExtension(width, height),
+    _lines(height),
+    _cache(width, height, kCachedLinesMax)
 {
 }
 
@@ -55,7 +58,7 @@ void GFXCanvasCompressed::drawPixel(int16_t x, int16_t y, uint16_t color)
         auto &cache = _decodeLine(y);
         __DBG_BOUNDS_RETURN(__DBG_BOUNDS_sx(x, _width));
         cache.setPixel(x, color);
-        cache.setWriteFlag(true);
+        cache.setDirty(true);
     }
 }
 
@@ -89,7 +92,7 @@ void GFXCanvasCompressed::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, u
         while (start.y < end.y) {
             __DBG_BOUNDS_RETURN(__DBG_BOUNDS_sy(start.y, _height));
             auto &cache = _decodeLine(start.y);
-            cache.setWriteFlag(true);
+            cache.setDirty(true);
             cache.fill(color, start.x, end.x);
             start.y++;
         }
@@ -110,7 +113,7 @@ void GFXCanvasCompressed::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_
             __DBG_BOUNDS_sx(x, _width);
             __DBG_BOUNDS_ex(endX, x, _width);
             auto &cache = _decodeLine(y);
-            cache.setWriteFlag(true);
+            cache.setDirty(true);
             cache.fill(color, x, endX);
         }
     }
@@ -156,8 +159,7 @@ bool GFXCanvasCompressed::_drawIntoClipping(sXType &x, sYType &y, sWidthType &w,
 void GFXCanvasCompressed::drawInto(sXType x, sYType y, sWidthType w, sHeightType h, DrawLineCallback_t callback)
 {
     __DBG_STATS(
-        MicrosTimer timer;
-        timer.start();
+        uint32_t start = micros();
     );
 
     sXType xOfs;
@@ -181,13 +183,9 @@ void GFXCanvasCompressed::drawInto(sXType x, sYType y, sWidthType w, sHeightType
 
     _cache.release(*this);
     __DBG_STATS(
-        stats.drawInto += timer.getTime();
+        stats.drawIntoCount++;
+        stats.drawInto += micros() - start;
     );
-}
-
-void GFXCanvasCompressed::drawInto(DrawLineCallback_t callback)
-{
-    drawInto(0, 0, _width, _height, callback);
 }
 
 void GFXCanvasCompressed::flushCache()
@@ -251,16 +249,6 @@ void GFXCanvasCompressed::_RLEencode(ColorType *data, Buffer &buffer)
     __DBG_BOUNDS_assert(count == _width);
 }
 
-ColorType GFXCanvasCompressed::getPaletteColor(ColorType color) const
-{
-    return color;
-}
-
-const ColorPalette *GFXCanvasCompressed::getPalette() const
-{
-    return nullptr;
-}
-
 void GFXCanvasCompressed::_decodeLine(Cache &cache)
 {
     __DBG_BOUNDS_sy(cache.getY(), _height);
@@ -286,10 +274,13 @@ Cache &GFXCanvasCompressed::_decodeLine(sYType y)
     auto &cache = _cache.get(*this, y);
     __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert(cache.getY() == y), return cache);
     if (cache.hasReadFlag()) {
-        __DBG_ASTATS(stats.cache_read++);
+        __DBG_ASTATS(stats.cache_hits++);
         return cache;
     }
-    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert(cache.hasWriteFlag() == false), return cache);
+    else {
+        __DBG_ASTATS(stats.cache_miss++);
+    }
+    __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert(cache.isDirty() == false), return cache);
 
     // if (can_yield()) {
     // if ((y & 0xf) == 0) {
@@ -300,6 +291,7 @@ Cache &GFXCanvasCompressed::_decodeLine(sYType y)
     _decodeLine(cache);
 
     __DBG_STATS(
+        stats.heap_low = std::min(stats.heap_low, ESP.getFreeHeap());
         stats.decode_time += timer.getTime() / 1000.0;
         stats.decode_count++;
     );
@@ -316,35 +308,20 @@ void GFXCanvasCompressed::_encodeLine(Cache &cache)
 
     auto &lineBuffer = _lines.getBuffer(cache.getY());
     Buffer buffer;
-    _RLEencode(cache.getBuffer(), buffer);
-
-    // move encoded buffer to the line
+    _RLEencode(cache.getBuffer(),  buffer);
     lineBuffer = std::move(buffer);
 
-    cache.setWriteFlag(false);
-
-    // __dump_binary(cache.getBuffer(), 256, 256 / 4, PSTR("in"));
-
-    // __dump_binary(lineBuffer.begin(), lineBuffer.length(), 0, PSTR("RLE"));
-
-
-    // ColorType out[128];
-    // memset(out,0xcc,sizeof(out));
-    // _RLEdecode(lineBuffer, out);
-
-    // __dump_binary(out, 256, 256 / 4, PSTR("out"));
-
+    cache.setDirty(false);
 
     __DBG_STATS(
+        stats.heap_low = std::min(stats.heap_low, ESP.getFreeHeap());
         stats.encode_time += timer.getTime() / 1000.0;
         stats.encode_count++;
     );
 }
 
-String GFXCanvasCompressed::getDetails() const
+void GFXCanvasCompressed::getDetails(Print &output, bool displayPalette) const
 {
-    PrintString str;
-
     size_t size = 0;
     auto count = _height;
     while(count--) {
@@ -357,11 +334,10 @@ String GFXCanvasCompressed::getDetails() const
             empty++;
         }
     }
-    str.printf_P(PSTR("%ux%ux16 mem %u/%u (%.2f%%) empty=%d\n"), _width, _height, size, rawSize, 100.0 - (size * 100.0 / (float)rawSize), empty);
+    output.printf_P(PSTR("%ux%ux16 mem %u/%u (%.2f%%) empty=%d\n"), _width, _height, size, rawSize, 100.0 - (size * 100.0 / (float)rawSize), empty);
     __DBG_STATS(
-        stats.dump(str);
+        stats.dump(output);
     );
-    return str;
 }
 
 GFXCanvasBitmapStream GFXCanvasCompressed::getBitmap()

@@ -110,6 +110,11 @@ namespace GFXCanvas {
 
         void dump(Print &output);
 
+        size_t size() const {
+            _list.s
+        }
+        size_t poolCount() const;
+
     protected:
         BufferPool() {}
 

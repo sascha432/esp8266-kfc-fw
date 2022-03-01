@@ -14,6 +14,7 @@
 #endif
 
 #include "GFXCanvasLines.h"
+#include "GFXCanvasStats.h"
 
 using namespace GFXCanvas;
 
@@ -21,9 +22,14 @@ Lines::Lines() : _height(0), _lines(nullptr)
 {
 }
 
-Lines::Lines(uHeightType height) : _height(height), _lines(new LineBuffer[height])
+Lines::Lines(uHeightType height) : _height(height), _lines(new LineBuffer[height]())
 {
     assert(_lines != nullptr);
+    #if DEBUG_GFXCANVAS_STATS_DETAILS
+        if (_lines != nullptr) {
+            stats.malloc++;
+        }
+    #endif
 }
 
 Lines::Lines(const Lines &lines) : Lines(lines._height)
@@ -34,15 +40,10 @@ Lines::Lines(const Lines &lines) : Lines(lines._height)
 Lines::~Lines()
 {
     if (_lines) {
+        __DBG_ASTATS(
+            stats.free++;
+        );
         delete[]  _lines;
-    }
-}
-
-void Lines::fill(ColorType color, uYType start, uYType end)
-{
-    for(uYType i = start; i < end; i++) {
-        __DBG_BOUNDS_RETURN(__DBG_BOUNDS_sy(i, _height));
-        _lines[i].clear(color);
     }
 }
 

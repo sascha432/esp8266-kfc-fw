@@ -7,6 +7,7 @@
 #include <Arduino_compat.h>
 #include "GFXCanvasConfig.h"
 #include "GFXCanvasByteBuffer.h"
+#include "GFXCanvasStats.h"
 
 namespace GFXCanvas {
 
@@ -15,11 +16,13 @@ namespace GFXCanvas {
 
         LineBuffer(const LineBuffer &) = delete;
         LineBuffer(LineBuffer &&) = delete;
-        LineBuffer &operator=(LineBuffer &&source) = delete;
+        // LineBuffer &operator=(LineBuffer &&source) = delete;
 
         LineBuffer();
-
         LineBuffer &operator=(const LineBuffer &source);
+        LineBuffer &operator=(LineBuffer &&source);
+
+        ~LineBuffer();
 
         void clear(ColorType fillColor);
         uWidthType length() const;
@@ -37,9 +40,20 @@ namespace GFXCanvas {
     {
     }
 
+    inline LineBuffer::~LineBuffer()
+    {
+    }
+
     inline LineBuffer &LineBuffer::operator=(const LineBuffer &source)
     {
         _buffer = source._buffer;
+        _fillColor = source._fillColor;
+        return *this;
+    }
+
+    inline LineBuffer &LineBuffer::operator=(LineBuffer &&source)
+    {
+        _buffer = std::move(source._buffer);
         _fillColor = source._fillColor;
         return *this;
     }

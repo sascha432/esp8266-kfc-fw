@@ -73,6 +73,9 @@ public:
 
     template<class T>
     void drawInto(T &target, sXType x, sYType y, sWidthType width, sHeightType height) {
+        __DBG_STATS(
+            uint32_t start = micros();
+        );
         sXType xOfs;
         sYType yOfs;
         if (_drawIntoClipping(x, y, width, height, xOfs, yOfs)) {
@@ -87,6 +90,10 @@ public:
         }
 
         _cache.release(*this);
+        __DBG_STATS(
+            stats.drawIntoCount++;
+            stats.drawInto += micros() - start;
+        );
     }
 
     template<class T>
@@ -94,10 +101,11 @@ public:
         drawInto(target, 0, 0, _width, _height);
     }
 
-    void drawInto(sXType x, sYType y, sWidthType width, sHeightType height, DrawLineCallback_t callback);
     void drawInto(DrawLineCallback_t callback);
 
-    virtual String getDetails() const;
+    void drawInto(sXType x, sYType y, sWidthType width, sHeightType height, DrawLineCallback_t callback);
+
+    virtual void getDetails(Print &output, bool displayPalette = false) const;
 
     GFXCanvasBitmapStream getBitmap();
     GFXCanvasBitmapStream getBitmap(uXType x, uYType y, uWidthType width, uHeightType height);
@@ -130,34 +138,53 @@ protected:
 private:
     LinesCache _cache;
 
-    inline void clipX(sXType &startX, sXType &endX) {
-        if (startX < 0) {
-            startX = 0;
-        }
-        else if (startX >= _width) {
-            startX = _width - 1;
-        }
-        if (endX < startX) {
-            endX = startX;
-        }
-        else if (endX >= _width) {
-            endX = _width - 1;
-        }
-    }
-
-    inline void clipY(sXType &startY, sXType &endY) {
-        if (startY < 0) {
-            startY = 0;
-        }
-        else if (startY >= _height) {
-            startY = _height - 1;
-        }
-        if (endY < startY) {
-            endY = startY;
-        }
-        else if (endY >= _height) {
-            endY = _height - 1;
-        }
-    }
-
+    void clipX(sXType &startX, sXType &endX);
+    void clipY(sXType &startY, sXType &endY);
 };
+
+inline void GFXCanvasCompressed::clipX(sXType &startX, sXType &endX)
+{
+    if (startX < 0) {
+        startX = 0;
+    }
+    else if (startX >= _width) {
+        startX = _width - 1;
+    }
+    if (endX < startX) {
+        endX = startX;
+    }
+    else if (endX >= _width) {
+        endX = _width - 1;
+    }
+}
+
+inline void GFXCanvasCompressed::clipY(sXType &startY, sXType &endY)
+{
+    if (startY < 0) {
+        startY = 0;
+    }
+    else if (startY >= _height) {
+        startY = _height - 1;
+    }
+    if (endY < startY) {
+        endY = startY;
+    }
+    else if (endY >= _height) {
+        endY = _height - 1;
+    }
+}
+
+inline void GFXCanvasCompressed::drawInto(DrawLineCallback_t callback)
+{
+    drawInto(0, 0, _width, _height, callback);
+}
+
+inline ColorType GFXCanvasCompressed::getPaletteColor(ColorType color) const
+{
+    return color;
+}
+
+inline const ColorPalette *GFXCanvasCompressed::getPalette() const
+{
+    return nullptr;
+}

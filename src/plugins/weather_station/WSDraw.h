@@ -86,10 +86,6 @@ namespace KFCConfigurationClasses {
 #    define TFT_HEIGHT 160
 #endif
 
-#ifndef SPI_FREQUENCY
-#    define SPI_FREQUENCY 0
-#endif
-
 #if TFT_WIDTH == 128 && TFT_HEIGHT == 160
 #    include "./themes/theme1_160x240.h"
 #elif TFT_WIDTH == 240 && TFT_HEIGHT == 320
@@ -123,7 +119,7 @@ namespace WSDraw {
     static constexpr auto kNumScreens = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kNumScreens;
     static constexpr auto kSkipScreen = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kSkipScreen;
 
-    static constexpr int16_t _offsetX = -2;
+    static constexpr int16_t _offsetX = 2;
 
     class Base {
     public:
@@ -212,6 +208,15 @@ namespace WSDraw {
             void _drawDebugInfo();
             void _drawScreenDebug();
             void _updateScreenDebug();
+
+            enum class DebugMode : uint8_t {
+                ICON,
+                LEFT,
+                RIGHT
+            };
+            const char  *_icon{nullptr};
+            int16_t _pos{0};
+            DebugMode _mode{DebugMode::ICON};
         #endif
 
         void _updateScreenTime();
@@ -270,7 +275,7 @@ namespace WSDraw {
                 _temperature = temperature * kFactor;
             }
             void setHumidity(float humidity) {
-                _humidity *= humidity * kFactor;
+                _humidity = humidity * kFactor;
             }
             void setPressure(float pressure) {
                 _pressure = pressure;
@@ -295,9 +300,9 @@ namespace WSDraw {
             float _pressure;
         };
 
-        // get temperature as string das °C or F, depending on the user setting
-        // if kelvin is true, valueInCelsius will be treated as K instead C
-        String _getTemperature(float valueInCelsius, bool kelvin = false);
+        // get temperature as string (°C or °F), depending on the user setting
+        // if kelvin is true, value be treated as K instead C
+        String _getTemperature(float value, bool kelvin = false);
 
         // read indoor values
         virtual IndoorValues _getIndoorValues() = 0;

@@ -9,19 +9,21 @@
 #include <Buffer.h>
 
 #ifndef DEBUG_GFXCANVAS
-#    define DEBUG_GFXCANVAS 1
+#    define DEBUG_GFXCANVAS 0
 #endif
 
 #ifndef DEBUG_GFXCANVAS_BOUNDS
-#    define DEBUG_GFXCANVAS_BOUNDS 1
+#    define DEBUG_GFXCANVAS_BOUNDS 0
 #endif
 
-// #define DEBUG_GFXCANVASCOMPRESSED_STATS         1
-// #define DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS 1
+#ifndef DEBUG_GFXCANVAS_STATS
+#   define DEBUG_GFXCANVAS_STATS 1
+#   define DEBUG_GFXCANVAS_STATS_DETAILS 1
+#endif
 
 #if _MSC_VER
-#    define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK 1
-#    define GFXCANVAS_MAX_CACHED_LINES             1
+#    define DEBUG_GFXCANVAS_BOUNDS_CHECK 1
+#    define GFXCANVAS_MAX_CACHED_LINES 1
 //#define GFXCANVAS_MAX_CACHED_LINES                  16
 #endif
 
@@ -31,8 +33,8 @@
 #endif
 
 // enable for debugging only
-#ifndef DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK
-#    define DEBUG_GFXCANVASCOMPRESSED_BOUNDS_CHECK DEBUG_GFXCANVAS_BOUNDS
+#ifndef DEBUG_GFXCANVAS_BOUNDS_CHECK
+#    define DEBUG_GFXCANVAS_BOUNDS_CHECK DEBUG_GFXCANVAS_BOUNDS
 #endif
 
 #include <push_pack.h>
@@ -42,7 +44,7 @@ namespace GFXCanvas {
     using ColorType = uint16_t;
     using ColorPaletteType = ColorType;
     using RGBColorType = uint32_t;
-    // using ByteBufferSizeType = uint8_t;
+    using ByteBufferSizeType = int16_t;
     using ByteBufferDataType = uint8_t;
     using ByteBuffer = Buffer;
 

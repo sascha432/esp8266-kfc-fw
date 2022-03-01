@@ -56,5 +56,5 @@ public:
 
 private:
     timer_t _start;
-    bool _valid: 1;
+    bool _valid;
 };

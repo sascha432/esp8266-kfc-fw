@@ -49,8 +49,9 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P(PSTR("metric=%u"), state);
             }
             else if (args.equalsIgnoreCase(0, F("screen"))) {
-                _setScreen(args.toIntMinMax<uint8_t>(1, 0, kNumScreens - 1, _getCurrentScreen() + 1), args.toIntMinMax(2, -1, 300, -1));
-                args.printf_P(PSTR("screen=%u timeout=60s"), _currentScreen);
+                auto timeout = args.toIntMinMax(2, -1, 300, -1);
+                _setScreen(args.toIntMinMax<uint8_t>(1, 0, kNumScreens - 1,_getCurrentScreen() + 1), timeout);
+                args.printf_P(PSTR("screen=%u timeout=%ds"), _currentScreen, timeout);
             }
             else if (args.equalsIgnoreCase(0, F("screens"))) {
                 for(uint8_t n = 0; n < kNumScreens; n++) {
@@ -106,10 +107,10 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
 #endif
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSBL))) {
         if (args.requireArgs(1, 1)) {
-            uint16_t level = args.toIntMinMax<uint16_t>(0, 0, 1023);
-            _fadeBacklight(_backlightLevel, level);
+            uint16_t level = args.toIntMinMax<uint16_t>(0, 0, PWMRANGE);
+            _fadeBacklight(_backlightLevel, level, 1);
             _backlightLevel = level;
-            args.printf_P(PSTR("backlight=%d/1023"), level);
+            args.printf_P(PSTR("backlight=%u/%u"), level, PWMRANGE);
         }
         return true;
     }

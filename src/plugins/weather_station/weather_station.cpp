@@ -219,6 +219,15 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     _setScreen(ScreenType::MAIN); // TODO add config options for initial screen
     _initScreen();
 
+    #if ESP32
+        analogWriteFreq(10000);
+    #elif ESP8266
+        analogWriteRange(PWMRANGE);
+        analogWriteFreq(10000);
+    #else
+    not supported
+    #endif
+
     _fadeBacklight(0, _backlightLevel);
 
     // show progress bar during firmware updates
@@ -355,15 +364,16 @@ void WeatherStationPlugin::_init()
 {
     _setBacklightLevel(0);
 
+    __LDBG_printf("spi0 clk %u, spi1 clk %u\n", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
+
     #if ILI9341_DRIVER
         __LDBG_printf("cs=%d dc=%d rst=%d spi=%u", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY);
         _tft.begin(SPI_FREQUENCY);
     #else
-        __LDBG_printf("cs=%d dc=%d rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
+        __LDBG_printf("cs=%d dc=%d rst=%d speed=%uMHz", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY / 1000000);
+        // SPI_FREQUENCY is 40Mhz by default
+        _tft.setSPISpeed(SPI_FREQUENCY);
         _tft.initR(INITR_BLACKTAB);
-        #if SPI_FREQUENCY
-            _tft.setSPISpeed(SPI_FREQUENCY);
-        #endif
     #endif
     _tft.fillScreen(0);
     _tft.setRotation(0);

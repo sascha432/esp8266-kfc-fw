@@ -103,4 +103,12 @@ namespace GFXCanvas {
         return getLine(y).length();
     }
 
+    inline void Lines::fill(ColorType color, uYType start, uYType end)
+    {
+        for(uYType i = start; i < end; i++) {
+            __DBG_BOUNDS_RETURN(__DBG_BOUNDS_sy(i, _height));
+            _lines[i].clear(color);
+        }
+    }
+
 }

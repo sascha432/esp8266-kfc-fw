@@ -4,9 +4,9 @@
 
 #pragma once
 
-#if DEBUG_GFXCANVASCOMPRESSED_STATS
+#if DEBUG_GFXCANVAS_STATS
 #    define __DBG_STATS(...)                                __VA_ARGS__
-#    if DEBUG_GFXCANVASCOMPRESSED_STATS_DETAILS
+#    if DEBUG_GFXCANVAS_STATS_DETAILS
 #        define __DBG_ASTATS(...)                           __VA_ARGS__
 #    else
 #        define __DBG_ASTATS(...)

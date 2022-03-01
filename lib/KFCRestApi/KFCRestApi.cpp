@@ -179,7 +179,7 @@ void KFCRestAPI::_createRestApiCall(const String &endPointUri, const String &bod
     request.setTimeout(_timeout);
     httpRequest.setUri(endPointUri);
 
-    if (request.open(body.length() ? PSTR("POST") : PSTR("GET"), httpRequest.getUrl())) {
+    if (request.open(String(body.length() ? F("POST") : F("GET")).c_str(), httpRequest.getUrl())) {
 
         _headers.setHeadersCallback([&request](const String &name, const String &header) {
             #if ESP32

@@ -101,7 +101,7 @@ enum class AutoDiscoveryNumHelperType {
 #ifdef IOT_SENSOR_BATTERY_CHARGING
     CHARGING,
 #endif
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+#if IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
     POWER,
 #endif
     MAX
@@ -110,15 +110,15 @@ enum class AutoDiscoveryNumHelperType {
 MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(static_cast<AutoDiscoveryNumHelperType>(num)) {
         case AutoDiscoveryNumHelperType::VOLTAGE:
             if (discovery->create(this, _getId(TopicType::VOLTAGE), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::VOLTAGE));
                 discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(FPSTR(_name.c_str())));
-                #endif
+                discovery->addName(_name);
+                discovery->addObjectId(baseTopic + MQTT::Client::filterString(_name, true));
             }
             break;
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
@@ -127,9 +127,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
                 discovery->addStateTopic(_getTopic(TopicType::LEVEL));
                 discovery->addUnitOfMeasurement('%');
                 discovery->addDeviceClass(F("battery"));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Battery Level")));
-                #endif
+                discovery->addName(F("Battery Level"));
+                discovery->addObjectId(baseTopic + F("battery_level"));
             }
             break;
 #endif
@@ -137,24 +136,22 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
         case AutoDiscoveryNumHelperType::CHARGING:
             if (discovery->create(ComponentType::SENSOR, _getId(TopicType::CHARGING), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::CHARGING));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Charging Status")));
-                #endif
+                discovery->addName(F("Charging Status"));
+                discovery->addObjectId(baseTopic + F("charging_status"));
             }
             break;
 #endif
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+#if IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
         case AutoDiscoveryNumHelperType::POWER:
             if (discovery->create(this, _getId(TopicType::POWER), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::POWER));
-                #if MQTT_AUTO_DISCOVERY_USE_NAME
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Power Status")));
-                #endif
+                discovery->addName(F("Power Status"));
+                discovery->addObjectId(baseTopic + F("power_status"));
             }
             break;
 #endif
         case AutoDiscoveryNumHelperType::MAX:
-            __DBG_panic("getAutoDiscovery() out of range");
+            break;
     }
     return discovery;
 }
@@ -175,7 +172,7 @@ void Sensor_Battery::getValues(WebUINS::Events &array, bool timer)
 #ifdef IOT_SENSOR_BATTERY_CHARGING
         , Values(_getId(TopicType::CHARGING), _status.getChargingStatus(), true)
 #endif
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+#if IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
         , Values(_getId(TopicType::POWER), _status.getPowerStatus(), true)
         )
 #endif
@@ -192,7 +189,7 @@ void Sensor_Battery::createWebUI(WebUINS::Root &webUI)
 #ifdef IOT_SENSOR_BATTERY_CHARGING
         , WebUINS::Sensor(_getId(TopicType::CHARGING), F("Charging"), F("")).setConfig(_renderConfig)
 #endif
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+#if IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
         , WebUINS::Sensor(_getId(TopicType::POWER), F("Status"), F("")).setConfig(_renderConfig)
 #endif
     );
@@ -214,7 +211,7 @@ void Sensor_Battery::publishState()
 #ifdef IOT_SENSOR_BATTERY_CHARGING
         publish(_getTopic(TopicType::CHARGING), true, _status.getChargingStatus());
 #endif
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+#if IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
         publish(_getTopic(TopicType::POWER), true, _status.getPowerStatus());
 #endif
     }
@@ -229,7 +226,7 @@ void Sensor_Battery::getStatus(Print &output)
 #ifdef IOT_SENSOR_BATTERY_CHARGING
     output.print(F(", Charging Status"));
 #endif
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+#if IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
     output.print(F(", Power Status"));
 #endif
     output.printf_P(PSTR(", calibration %f" HTML_S(br)), _config.calibration);
@@ -244,7 +241,7 @@ bool Sensor_Battery::getSensorData(String &name, StringVector &values)
 #ifdef IOT_SENSOR_BATTERY_CHARGING
     values.emplace_back(PrintString(F("Charging: %s"), status.isCharging() ? SPGM(Yes) : SPGM(No)));
 #endif
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+#if IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
     values.emplace_back(PrintString(F("Status: %s"), status.getPowerStatus()));
 #endif
     return true;
@@ -374,7 +371,7 @@ void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
 // #endif
 
 
-#if IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
+#if IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
     _state = IOT_SENSOR_BATTERY_ON_EXTERNAL ? StateType::RUNNING_ON_EXTERNAL_POWER : StateType::RUNNING;
 #endif
 

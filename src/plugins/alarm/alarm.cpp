@@ -55,12 +55,15 @@ MQTT::AutoDiscovery::EntityPtr AlarmPlugin::getAutoDiscovery(FormatType format, 
     auto discovery = new AutoDiscovery::Entity();
     switch(num) {
         case 0:
-            discovery->create(this, FSPGM(alarm), format);
-            discovery->addStateTopic(_formatTopic(FSPGM(_state)));
-            discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
-            discovery->addRGBStateTopic(_formatTopic(F("/rgb/state")));
-            discovery->addRGBCommandTopic(_formatTopic(F("/rgb/set")));
-            discovery->addName(F("Alarm"));
+            if (discovery->create(this, FSPGM(alarm), format)) {
+                discovery->addStateTopic(_formatTopic(FSPGM(_state)));
+                discovery->addCommandTopic(_formatTopic(FSPGM(_set)));
+                discovery->addRGBStateTopic(_formatTopic(F("/rgb/state")));
+                discovery->addRGBCommandTopic(_formatTopic(F("/rgb/set")));
+                discovery->addName(F("Alarm"));
+                discovery->addObjectId(MQTT::Client::getBaseTopicPrefix() + F("alarm"));
+                discovery->addIcon(F("mdi:alarm-light-outline"));
+            }
             break;
     }
     return discovery;

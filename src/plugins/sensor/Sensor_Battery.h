@@ -67,8 +67,8 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 // #define IOT_SENSOR_BATTERY_ON_BATTERY_DECL                      extern bool onBattery()
 #endif
 
-#ifndef IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS
-#define IOT_SENSOR_BATTERY_DSIPLAY_POWER_STATUS                 0
+#ifndef IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS
+#define IOT_SENSOR_BATTERY_DISPLAY_POWER_STATUS                 0
 #endif
 
 // condition for running on external power

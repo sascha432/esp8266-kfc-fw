@@ -34,6 +34,35 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSSET))) {
         if (args.requireArgs(1)) {
             bool state = !args.isFalse(1);
+            #if HAVE_GFX_READLINE
+            if (args.equalsIgnoreCase(0, F("rwtest"))) {//wsset rwtest
+                LoopFunctions::callOnce([this]() {
+                    _canvas->writeLine(0, 0, TFT_WIDTH, 0, COLORS_RED);
+                    _canvas->writeLine(0, 1, TFT_WIDTH, 1, COLORS_BLUE);
+                    _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+                    uint16_t buf[TFT_WIDTH];
+                    std::fill(std::begin(buf), std::end(buf), 0xcf);
+                    uint32_t start = micros();
+                    _canvas->readLine(0, buf);
+                    uint32_t dur = micros() - start;
+                    Serial.printf_P(PSTR("readLine %uus\n"), dur);
+                    Serial.flush();
+                    delay(10);
+                    for(uint16_t len = 0; len < TFT_WIDTH; len++) {
+                        Serial.printf_P(PSTR("%02x "), buf[len]);
+                        delay(1);
+                    }
+                    Serial.println();
+                    _canvas->readLine(1, buf);
+                    for(uint16_t len = 0; len < TFT_WIDTH; len++) {
+                        Serial.printf_P(PSTR("%02x "), buf[len]);
+                        delay(1);
+                    }
+                    Serial.println();
+                });
+            }
+            else
+            #endif
             if (args.equalsIgnoreCase(0, F("touchpad"))) {
                 _touchpadDebug = state;
                 args.printf_P(PSTR("touchpad debug=%u"), state);

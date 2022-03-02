@@ -161,9 +161,9 @@ namespace WSDraw {
         _canvas->drawTextAligned(X_POSITION_MOON_PHASE, Y_POSITION_MOON_PHASE, String(moonPhaseFont), H_POSITION_MOON_PHASE);
     }
 
-    void Base::_drawIndoorClimateBottom()
+    void Base::_drawIndoorClimate()
     {
-        int16_t _offsetY = Y_START_POSITION_WEATHER + 5;
+        int16_t _offsetY = Y_START_POSITION_INDOOR + 5;
 
         _canvas->drawBitmap(6, _offsetY + 10, icon_house, 36, 37, 0xD6DA, COLORS_BACKGROUND);
 
@@ -203,6 +203,7 @@ namespace WSDraw {
                     }
                 }
             }
+
             _canvas->setTextColor(COLORS_CITY);
             _canvas->drawTextAligned(X_POSITION_CITY, Y_POSITION_CITY, info.location, H_POSITION_CITY);
 
@@ -247,9 +248,9 @@ namespace WSDraw {
         }
     }
 
-    void Base::_drawIndoorClimate()
+    void Base::_drawIndoorClimateBottom()
     {
-        constexpr int16_t _offsetY = Y_START_POSITION_WEATHER;
+        constexpr int16_t _offsetY = Y_START_POSITION_INDOOR_BOTTOM;
         auto data = _getIndoorValues();
 
         _canvas->setFont(FONTS_WEATHER_INDOOR);
@@ -263,13 +264,11 @@ namespace WSDraw {
         _canvas->drawTextAligned(X_POSITION_WEATHER_INDOOR_PRESSURE, Y_POSITION_WEATHER_INDDOR_PRESSURE, PrintString(F("%.0fhPa"), data.getPressure()), AdafruitGFXExtension::RIGHT);
     }
 
-    void Base::_updateIndoorClimate()
+    void Base::_updateIndoorClimateBottom()
     {
-        constexpr int16_t _offsetY = Y_START_POSITION_WEATHER;
-        uint16_t height = _canvas->getFontHeight(FONTS_WEATHER_INDOOR);
-        _canvas->fillScreenPartial(Y_POSITION_WEATHER_INDOOR_TEMP, height, COLORS_BACKGROUND);
-        _drawIndoorClimate();
-        _displayScreen(0, Y_POSITION_WEATHER_INDOOR_TEMP, TFT_WIDTH, height);
+        CLEAR_AND_DISPLAY(Y_START_POSITION_INDOOR_BOTTOM, Y_END_POSITION_INDOOR_BOTTOM) {
+            _drawIndoorClimateBottom();
+        }
     }
 
     void Base::_drawForecast()
@@ -285,31 +284,29 @@ namespace WSDraw {
     {
         _drawTime();
         _drawLocalWeather();
-        _drawIndoorClimate();
+        _drawIndoorClimateBottom();
         _drawSunAndMoon();
     }
 
     void Base::_updateScreenMain()
     {
-        CLEAR_AND_DISPLAY(Y_START_POSITION_WEATHER, Y_END_POSITION_SUN_MOON) {
+        CLEAR_AND_DISPLAY(Y_START_POSITION_WEATHER, Y_END_POSITION_WEATHER) {
             _drawLocalWeather();
-            _drawIndoorClimate();
-            _drawSunAndMoon();
+            _drawIndoorClimateBottom();
         }
     }
 
     void Base::_drawScreenIndoorClimate()
     {
         _drawTime();
-        _drawIndoorClimateBottom();
+        _drawIndoorClimate();
         _drawSunAndMoon();
     }
 
     void Base::_updateScreenIndoorClimate()
     {
-        CLEAR_AND_DISPLAY(Y_START_POSITION_INDOOR, Y_END_POSITION_SUN_MOON) {
-            _drawIndoorClimateBottom();
-            _drawSunAndMoon();
+        CLEAR_AND_DISPLAY(Y_START_POSITION_INDOOR, Y_END_POSITION_INDOOR) {
+            _drawIndoorClimate();
         }
     }
 

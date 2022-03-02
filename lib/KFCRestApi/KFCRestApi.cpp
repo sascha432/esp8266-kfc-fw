@@ -159,7 +159,6 @@ void KFCRestAPI::_removeHttpRequest(KFCRestAPI::HttpRequest *httpRequestPtr)
     delete httpRequestPtr;
 
     if (api._requests.empty()) {
-        __DBG_printf("calling auto delete api=%p", &api);
         api.autoDelete(&api);
     }
 }

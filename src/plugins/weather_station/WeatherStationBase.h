@@ -105,8 +105,7 @@ public:
     void _getWeatherForecast(HttpRequestCallback callback);
     void _openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request);
 
-    void begin();
-    void end();
+    virtual void _fadeStatusLED() = 0;
 
 protected:
     // timeout in seconds, -1 default, 0 no timeout

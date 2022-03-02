@@ -62,11 +62,11 @@
 #define X_POSITION_WEATHER_ICON         (2 + _offsetX)
 #define Y_POSITION_WEATHER_ICON         (0 + _offsetY)
 
-#define X_POSITION_CITY                 (TFT_WIDTH - 2 + _offsetX)
+#define X_POSITION_CITY                 (TFT_WIDTH - 3 + _offsetX)
 #define Y_POSITION_CITY                 (3 + _offsetY)
 #define H_POSITION_CITY                 AdafruitGFXExtension::RIGHT
 
-#define X_POSITION_TEMPERATURE          (X_POSITION_CITY - 2)
+#define X_POSITION_TEMPERATURE          (X_POSITION_CITY - 1)
 #define Y_POSITION_TEMPERATURE          (17 + _offsetY)
 #define H_POSITION_TEMPERATURE          AdafruitGFXExtension::RIGHT
 
@@ -110,24 +110,31 @@
 #define Y_START_POSITION_TIME           (0)
 #define Y_END_POSITION_TIME             (45 + Y_START_POSITION_TIME)
 
+// main
 #define Y_START_POSITION_WEATHER        (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_WEATHER          (70 + Y_START_POSITION_WEATHER)
 
+// indoor climate
 #define Y_START_POSITION_INDOOR         (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_INDOOR           (70 + Y_START_POSITION_WEATHER)
 
+// weather forecast
 #define Y_START_POSITION_FORECAST       (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_FORECAST         (TFT_HEIGHT - 1)
 
 #define Y_START_POSITION_DEBUG          0
 #define Y_END_POSITION_DEBUG            (TFT_HEIGHT - 1)
 
+// sun and moon @ bottom
 #define Y_START_POSITION_SUN_MOON       (Y_END_POSITION_WEATHER + 2)
 #define Y_END_POSITION_SUN_MOON         (TFT_HEIGHT - 1)
 
-#define X_POSITION_WEATHER_INDOOR_TEMP                  (_offsetX)
-#define X_POSITION_WEATHER_INDOOR_HUMIDITY              (TFT_WIDTH / 2 - (3 + _offsetX))
-#define X_POSITION_WEATHER_INDOOR_PRESSURE              (128 - _offsetX)
-#define Y_POSITION_WEATHER_INDOOR_TEMP                  (60 + _offsetY)
-#define Y_POSITION_WEATHER_INDDOR_HUMIDITY              (60 + _offsetY)
-#define Y_POSITION_WEATHER_INDDOR_PRESSURE              (60 + _offsetY)
+// indoor climate bottom
+#define Y_START_POSITION_INDOOR_BOTTOM     (60 + Y_START_POSITION_WEATHER)
+#define Y_END_POSITION_INDOOR_BOTTOM       (Y_START_POSITION_SUN_MOON - 1)
+#define X_POSITION_WEATHER_INDOOR_TEMP     (_offsetX)
+#define X_POSITION_WEATHER_INDOOR_HUMIDITY (TFT_WIDTH / 2 - (3 + _offsetX))
+#define X_POSITION_WEATHER_INDOOR_PRESSURE (128 - _offsetX)
+#define Y_POSITION_WEATHER_INDOOR_TEMP     (_offsetY)
+#define Y_POSITION_WEATHER_INDDOR_HUMIDITY (_offsetY)
+#define Y_POSITION_WEATHER_INDDOR_PRESSURE (_offsetY)

@@ -27,7 +27,7 @@ namespace WeatherStation {
 
         void call(JsonBaseReader *reader, int timeout, HttpRequest::Callback_t callback) {
             _timeout = timeout;
-            __DBG_printf("callback=%p timeout=%u", &callback, _timeout);
+            __LDBG_printf("callback=%p timeout=%u", &callback, _timeout);
             _createRestApiCall(emptyString, emptyString, reader, callback);
             //  [callback](int16_t code, KFCRestAPI::HttpRequest &request) {
             //     if (code == 200) {

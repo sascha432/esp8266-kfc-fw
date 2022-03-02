@@ -30,6 +30,9 @@ public:
     using T::T;
     using T::drawBitmap;
     using T::drawPixel;
+    #if HAVE_GFX_READLINE
+        using T::readLine;
+    #endif
 
     typedef enum {
         LEFT,

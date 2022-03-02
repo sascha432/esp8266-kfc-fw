@@ -11,7 +11,7 @@
 #include <HeapStream.h>
 
 #ifndef DEBUG_KFC_REST_API
-#define DEBUG_KFC_REST_API                                  1
+#define DEBUG_KFC_REST_API                                  0
 #endif
 
 #ifndef KFC_REST_API_USE_HTTP_CLIENT

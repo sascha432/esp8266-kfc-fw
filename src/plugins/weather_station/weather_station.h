@@ -36,10 +36,10 @@ public:
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
 
 public:
-#if AT_MODE_SUPPORTED
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+    #if AT_MODE_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        virtual bool atModeHandler(AtModeArgs &args) override;
+    #endif
 
     static WeatherStationPlugin &_getInstance();
 
@@ -99,7 +99,7 @@ inline WeatherStationPlugin &WeatherStationPlugin::_getInstance()
 inline void WeatherStationPlugin::_setBacklightLevel(uint16_t level)
 {
     #if ESP32
-        analogWrite(TFT_PIN_LED, level, 1023);
+        analogWrite(TFT_PIN_LED, level, PWMRANGE);
     #else
         analogWrite(TFT_PIN_LED, level);
     #endif

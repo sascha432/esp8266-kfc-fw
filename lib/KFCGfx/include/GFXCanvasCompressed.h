@@ -45,6 +45,11 @@ public:
     virtual void setRotation(uint8_t r);
 
     virtual void drawPixel(int16_t x, int16_t y, uint16_t color);
+    #if HAVE_GFX_READLINE
+        virtual void readLine(int16_t y, uint16_t *colors) {
+            AdafruitGFXExtension::readLine(y, colors);
+        }
+    #endif
     virtual void fillScreen(uint16_t color);
     void fillScreenPartial(int16_t y, int16_t height, uint16_t color);
     virtual void fillRect(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t color);

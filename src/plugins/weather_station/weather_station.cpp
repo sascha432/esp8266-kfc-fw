@@ -161,7 +161,7 @@ void WeatherStationPlugin::_installWebhooks()
         else if (rest.isUriMatch(F("backlight"))) {
             auto levelVar = reader.get(F("level"));
             int level = levelVar.getValue().toInt();
-            if (levelVar.getType() != JsonBaseReader::JSON_TYPE_INT || level < 0 || level > 1023) {
+            if (levelVar.getType() != JsonBaseReader::JSON_TYPE_INT || level < 0 || level > PWMRANGE) {
                 json.add(FSPGM(status), 400);
                 json.add(FSPGM(message), F("Backlight level out of range (0-1023)"));
             }
@@ -205,19 +205,19 @@ void WeatherStationPlugin::_installWebhooks()
 void WeatherStationPlugin::_readConfig()
 {
     _config = Plugins::WeatherStation::getConfig();
-    _backlightLevel = std::min(1024 * _config.backlight_level / 100, 1023);
+    _backlightLevel = std::min(PWMRANGE * _config.backlight_level / 100, PWMRANGE);
 }
 
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
+    __LDBG_printf("setup");
     _readConfig();
-    _init();
 
     _weatherApi.setAPIKey(WSDraw::WSConfigType::getApiKey());
     _weatherApi.setQuery(WSDraw::WSConfigType::getApiQuery());
 
-    _setScreen(ScreenType::MAIN); // TODO add config options for initial screen
-    _initScreen();
+    _setScreen(_getScreen(ScreenType::INDOOR));
+    _init();
 
     #if ESP32
         analogWriteFreq(10000);
@@ -236,7 +236,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         int progress = position * 100 / size;
         if (progressValue != progress) {
             if (progressValue == -1) {
-                _setBacklightLevel(1023);
+                _setBacklightLevel(PWMRANGE);
                 _setScreen(ScreenType::TEXT_UPDATE);
             }
             setText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM);
@@ -284,15 +284,11 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
     LoopFunctions::add(loop);
 
-    #if IOT_WEATHER_STATION_WS2812_NUM
-        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
-            _fadeStatusLED();
-        }, this);
-
-        if (WiFi.isConnected()) {
-            _fadeStatusLED();
-        }
-    #endif
+    _weatherApi.clear();
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
+    if (WiFi.isConnected()) {
+        _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr);
+    }
 
     // SerialHandler::getInstance().addHandler(serialHandler, SerialHandler::RECEIVE);
 
@@ -312,6 +308,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
 void WeatherStationPlugin::reconfigure(const String &source)
 {
+    __LDBG_printf("reconfigure src=%s", source.c_str());
     if (source.equals(FSPGM(http))) {
         _installWebhooks();
     }
@@ -328,24 +325,26 @@ void WeatherStationPlugin::reconfigure(const String &source)
 
 void WeatherStationPlugin::shutdown()
 {
+    __LDBG_printf("shutdown");
     #if IOT_ALARM_PLUGIN_ENABLED
         _resetAlarm();
         AlarmPlugin::setCallback(nullptr);
     #endif
     #if IOT_WEATHER_STATION_WS2812_NUM
-        _pixelTimer.remove();
+        _Timer(_pixelTimer).remove();
     #endif
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         _touchpad.end();
     #endif
-    _fadeTimer.remove();
+    _Timer(_fadeTimer).remove();
+    _Timer(_pollDataTimer).remove();
     lock();
     delete _canvas;
     _canvas = nullptr;
     LoopFunctions::remove(loop);
     // SerialHandler::getInstance().removeHandler(serialHandler);
 
-    _setBacklightLevel(1023);
+    _setBacklightLevel(PWMRANGE);
     drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
 }
 
@@ -364,19 +363,23 @@ void WeatherStationPlugin::_init()
 {
     _setBacklightLevel(0);
 
-    __LDBG_printf("spi0 clk %u, spi1 clk %u\n", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
+    // __LDBG_printf("spi0 clk %u, spi1 clk %u", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
 
     #if ILI9341_DRIVER
         __LDBG_printf("cs=%d dc=%d rst=%d spi=%u", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY);
         _tft.begin(SPI_FREQUENCY);
     #else
-        __LDBG_printf("cs=%d dc=%d rst=%d speed=%uMHz", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY / 1000000);
-        // SPI_FREQUENCY is 40Mhz by default
-        _tft.setSPISpeed(SPI_FREQUENCY);
+        #if SPI_FREQUENCY
+            __LDBG_printf("cs=%d dc=%d rst=%d spi=%uMHz", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY / 1000000);
+            _tft.setSPISpeed(SPI_FREQUENCY);
+        #else
+            __LDBG_printf("cs=%d dc=%d rst=%d", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST);
+        #endif
         _tft.initR(INITR_BLACKTAB);
     #endif
     _tft.fillScreen(0);
     _tft.setRotation(0);
+    redraw();
 }
 
 void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
@@ -469,7 +472,11 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
 void WeatherStationPlugin::_fadeStatusLED()
 {
     #if IOT_WEATHER_STATION_WS2812_NUM
-        __LDBG_printf("pin=%u", IOT_WEATHER_STATION_WS2812_PIN);
+        __LDBG_printf("pin=%u px_timer=%u", IOT_WEATHER_STATION_WS2812_PIN, (bool)_pixelTimer);
+
+        if (_pixelTimer) {
+            return;
+        }
 
         int32_t color = 0x001500;
         int16_t dir = 0x000100;

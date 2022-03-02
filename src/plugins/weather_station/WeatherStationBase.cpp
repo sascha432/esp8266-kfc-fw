@@ -69,6 +69,9 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
         auto next = 10000;
         __LDBG_printf("poll weather next=%u", next);
         _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
+        #if IOT_WEATHER_STATION_WS2812_NUM
+            _fadeStatusLED();
+        #endif
     }
 }
 
@@ -115,26 +118,26 @@ void WeatherStationBase::_getWeatherForecast(HttpRequestCallback callback)
     _httpRequest(_weatherApi.getForecastApiUrl(), _config.api_timeout, _weatherApi.getWeatherForecastParser(), callback);
 }
 
-void WeatherStationBase::begin()
-{
-    _weatherApi.clear();
-    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
-    if (WiFi.isConnected()) {
-        _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr);
-    }
-    LoopFunctions::add(loop);
-    // forces a redraw and updates timeouts
-    _setScreen(_getScreen(0));
-}
+// void WeatherStationBase::begin()
+// {
+//     _weatherApi.clear();
+//     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
+//     if (WiFi.isConnected()) {
+//         _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr);
+//     }
+//     LoopFunctions::add(loop);
+//     // forces a redraw and updates timeouts
+//     _setScreen(_getScreen(0));
+// }
 
-void WeatherStationBase::end()
-{
-    LoopFunctions::remove(loop);
-    // _screenTimer.remove();
-    _pollDataTimer.remove();
-    WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
-    _weatherApi.clear();
-}
+// void WeatherStationBase::end()
+// {
+//     LoopFunctions::remove(loop);
+//     // _screenTimer.remove();
+//     _pollDataTimer.remove();
+//     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
+//     _weatherApi.clear();
+// }
 
 void WeatherStationBase::_draw()
 {
@@ -195,7 +198,6 @@ void WeatherStationBase::_loop()
             }
         }
 
-
         time_t _time = time(nullptr);
         if (_currentScreen < ScreenType::NUM_SCREENS && _lastTime != _time) {
             _updateCounter++;
@@ -212,7 +214,7 @@ void WeatherStationBase::_loop()
                         _updateScreenMain();
                     }
                     else {
-                        _updateIndoorClimate();
+                        _updateIndoorClimateBottom();
                     }
                 }
                 else if (_currentScreen == ScreenType::DEBUG_INFO) {
@@ -220,13 +222,13 @@ void WeatherStationBase::_loop()
                     _updateScreenDebug();
                     return;
                 }
+                else if (_currentScreen == ScreenType::INDOOR) {
+                    _updateScreenIndoorClimate();
+                }
                 else if (do5secUpdate) {
                     // update forecast section every 5 seconds
                     if (_currentScreen == ScreenType::FORECAST) {
                         _updateScreenForecast();
-                    }
-                    else if (_currentScreen == ScreenType::INDOOR) {
-                        _updateScreenIndoorClimate();
                     }
                 }
 

@@ -94,13 +94,11 @@ namespace KFCConfigurationClasses {
 #    error No theme available for TFT dimensions
 #endif
 
-#define CLEAR_AND_DISPLAY_HEIGHT(minY, maxY) ((maxY) - (minY))
-
 // execute block between clear and display helper
 #define CLEAR_AND_DISPLAY(minY, maxY) \
-    for(bool init = _clearPartially(minY, CLEAR_AND_DISPLAY_HEIGHT(minY, maxY), COLORS_BACKGROUND); \
+    for(bool init = _clearPartially(minY, maxY, COLORS_BACKGROUND); \
         init; \
-        init = _displayScreenFalse(0, minY, TFT_WIDTH, CLEAR_AND_DISPLAY_HEIGHT(minY, maxY)))
+        init = _displayScreenFalse(0, minY, TFT_WIDTH, ((maxY) - (minY))))
 
 namespace WSDraw {
 
@@ -156,7 +154,6 @@ namespace WSDraw {
         CanvasType *getCanvas();
 
     public:
-        void _initScreen();
         void setText(const String &text, const GFXfont *textFont);
 
         bool lock();
@@ -179,11 +176,11 @@ namespace WSDraw {
         // draw temperature, humidity and pressure in one line
         void _drawIndoorClimate();
 
-        // calls _drawIndoorClimate() after clearing the part of the screen and then displays it
-        void _updateIndoorClimate();
-
         // displays indoor as main screen
         void _drawIndoorClimateBottom();
+
+        // calls _drawIndoorClimate() after clearing the part of the screen and then displays it
+        void _updateIndoorClimateBottom();
 
         // draws sun and moon info
         void _drawSunAndMoon();
@@ -214,6 +211,7 @@ namespace WSDraw {
                 LEFT,
                 RIGHT
             };
+
             const char  *_icon{nullptr};
             int16_t _pos{0};
             DebugMode _mode{DebugMode::ICON};
@@ -407,16 +405,6 @@ namespace WSDraw {
     inline const __FlashStringHelper *Base::getScreenName(uint8_t screen)
     {
         return getScreenName(static_cast<ScreenType>(screen));
-    }
-
-    inline void Base::_initScreen()
-    {
-        redraw();
-    }
-
-    inline void printDebugInfo(Print &output)
-    {
-
     }
 
     inline bool Base::_clearPartially(int16_t minY, int16_t maxY, ColorType color)

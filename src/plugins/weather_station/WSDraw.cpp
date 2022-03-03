@@ -203,7 +203,6 @@ namespace WSDraw {
                     }
                 }
             }
-
             _canvas->setTextColor(COLORS_CITY);
             _canvas->drawTextAligned(X_POSITION_CITY, Y_POSITION_CITY, info.location, H_POSITION_CITY);
 
@@ -231,20 +230,20 @@ namespace WSDraw {
             if (tmp.length()) {
                 _canvas->drawTextAligned(X_POSITION_WEATHER_DESCR, Y_POSITION_WEATHER_DESCR, tmp, H_POSITION_WEATHER_DESCR);
             }
-
         }
         else {
-            // __LDBG_printf("invalid data");
-            // _canvas->setFont(FONTS_DEFAULT_MEDIUM);
-            // _canvas->setTextColor(COLORS_DEFAULT_TEXT);
-            // _canvas->drawTextAligned(TFT_WIDTH / 2, (Y_END_POSITION_WEATHER - Y_START_POSITION_WEATHER) / 2 + Y_START_POSITION_WEATHER,
-
-            _canvas->setFont(FONTS_DEFAULT_MEDIUM);
-            _canvas->setTextColor(COLORS_RED);
-            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 2, F("WEATHER\nN/A YET"), AdafruitGFXExtension::CENTER);
-
-            _canvas->setFont(FONTS_DEFAULT_SMALL);
-            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 30, _weatherApi.getWeatherInfo().getError(), AdafruitGFXExtension::CENTER);
+            auto error = _weatherApi.getWeatherInfo().getError();
+            if (error.length()) {
+                _canvas->setFont(FONTS_DEFAULT_SMALL);
+                _canvas->setTextColor(COLORS_RED);
+                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("LOADING WEATHER FAILED"), AdafruitGFXExtension::CENTER);
+                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 30, error, AdafruitGFXExtension::CENTER);
+            }
+            else {
+                _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+                _canvas->setTextColor(COLORS_ORANGE);
+                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("WEATHER\nLOADING"), AdafruitGFXExtension::CENTER);
+            }
         }
     }
 
@@ -275,7 +274,36 @@ namespace WSDraw {
     {
         _canvas->setFont(FONTS_DEFAULT_BIG);
         _canvas->setTextColor(COLORS_RED);
-        _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST, F("FORECAST\nN/A"), AdafruitGFXExtension::CENTER);
+        _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 5, F("FORECAST\nN/A"), AdafruitGFXExtension::CENTER);
+    }
+
+    void Base::_drawInfo()
+    {
+        int16_t y = Y_START_POSITION_INFO + 5;
+
+        _canvas->setTextColor(COLORS_ORANGE);
+        _canvas->setFont(FONTS_DEFAULT_SMALL);
+        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Hostname"), AdafruitGFXExtension::CENTER) + 2;
+        _canvas->setTextColor(COLORS_WHITE);
+        _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, KFCConfigurationClasses::System::Device::getName(), AdafruitGFXExtension::CENTER) + 4;
+
+        _canvas->setTextColor(COLORS_ORANGE);
+        _canvas->setFont(FONTS_DEFAULT_SMALL);
+        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("WiFi"), AdafruitGFXExtension::CENTER) + 2;
+        _canvas->setTextColor(COLORS_WHITE);
+        _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+        if (WiFi.isConnected()) {
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.SSID(), AdafruitGFXExtension::CENTER) + 2;
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.localIP().toString(), AdafruitGFXExtension::CENTER) + 2;
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("GW: ")) + WiFi.gatewayIP().toString(), AdafruitGFXExtension::CENTER) + 2;
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("DNS: ")) + WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + 2;
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + 2;
+        }
+        else {
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Not connected"), AdafruitGFXExtension::CENTER) + 2;
+        }
+        y += 2;
     }
 
     // SCREEN METHODS
@@ -320,6 +348,19 @@ namespace WSDraw {
     {
         CLEAR_AND_DISPLAY(Y_START_POSITION_FORECAST, Y_END_POSITION_FORECAST) {
             _drawForecast();
+        }
+    }
+
+    void Base::_drawScreenInfo()
+    {
+        _drawTime();
+        _drawInfo();
+    }
+
+    void Base::_updateScreenInfo()
+    {
+        CLEAR_AND_DISPLAY(Y_START_POSITION_INFO, Y_END_POSITION_INFO) {
+            _drawInfo();
         }
     }
 
@@ -375,7 +416,6 @@ namespace WSDraw {
         }
 
     #endif
-
 
     void Base::_doScroll()
     {
@@ -493,6 +533,9 @@ namespace WSDraw {
                 break;
             case ScreenType::FORECAST:
                 _drawScreenForecast();
+                break;
+            case ScreenType::INFO:
+                _drawScreenInfo();
                 break;
             #if DEBUG
                 case ScreenType::DEBUG_INFO:
@@ -617,6 +660,8 @@ namespace WSDraw {
                 return F("Indoor Climate");
             case ScreenType::FORECAST:
                 return F("Weather Forecast");
+            case ScreenType::INFO:
+                return F("System Info");
             #if DEBUG
                 case ScreenType::DEBUG_INFO:
                     return F("Debug Info");

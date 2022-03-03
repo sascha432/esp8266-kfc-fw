@@ -118,27 +118,6 @@ void WeatherStationBase::_getWeatherForecast(HttpRequestCallback callback)
     _httpRequest(_weatherApi.getForecastApiUrl(), _config.api_timeout, _weatherApi.getWeatherForecastParser(), callback);
 }
 
-// void WeatherStationBase::begin()
-// {
-//     _weatherApi.clear();
-//     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);
-//     if (WiFi.isConnected()) {
-//         _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr);
-//     }
-//     LoopFunctions::add(loop);
-//     // forces a redraw and updates timeouts
-//     _setScreen(_getScreen(0));
-// }
-
-// void WeatherStationBase::end()
-// {
-//     LoopFunctions::remove(loop);
-//     // _screenTimer.remove();
-//     _pollDataTimer.remove();
-//     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
-//     _weatherApi.clear();
-// }
-
 void WeatherStationBase::_draw()
 {
     Base::_draw();
@@ -229,6 +208,9 @@ void WeatherStationBase::_loop()
                     // update forecast section every 5 seconds
                     if (_currentScreen == ScreenType::FORECAST) {
                         _updateScreenForecast();
+                    }
+                    else if (_currentScreen == ScreenType::INFO) {
+                        _updateScreenInfo();
                     }
                 }
 

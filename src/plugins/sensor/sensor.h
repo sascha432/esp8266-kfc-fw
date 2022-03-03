@@ -113,8 +113,8 @@ class SensorPlugin : public PluginComponent {
 public:
     using Plugins = KFCConfigurationClasses::PluginsType;
     using SensorType = MQTT::SensorType;
-    template<SensorType _SensoeType>
-    using SensorClassType = MQTT::SensorClassType<_SensoeType>;
+    template<SensorType _SensorType>
+    using SensorClassType = MQTT::SensorClassType<_SensorType>;
     using SensorConfig = WebUINS::SensorConfig;
     using SensorVector = std::vector<MQTT::SensorPtr>;
     using AddCustomSensorCallback = std::function<void(WebUINS::Root &webUI, SensorType nextType)>;

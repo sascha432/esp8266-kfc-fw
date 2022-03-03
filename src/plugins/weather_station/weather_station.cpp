@@ -216,7 +216,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     _weatherApi.setAPIKey(WSDraw::WSConfigType::getApiKey());
     _weatherApi.setQuery(WSDraw::WSConfigType::getApiQuery());
 
-    _setScreen(_getScreen(ScreenType::INDOOR));
+    _setScreen(_getScreen(ScreenType::MAIN));
     _init();
 
     #if ESP32
@@ -277,7 +277,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
             // else {
             //     return false;
             // }
-            this->_setScreen(_getNextScreen(_getCurrentScreen()));
+            this->_setScreen(_getNextScreen(_getCurrentScreen(), true));
             return true;
         });
     #endif
@@ -290,20 +290,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         _wifiCallback(WiFiCallbacks::EventType::CONNECTED, nullptr);
     }
 
-    // SerialHandler::getInstance().addHandler(serialHandler, SerialHandler::RECEIVE);
-
     _installWebhooks();
-
-/*
-    WsClient::addClientCallback([this](WsClient::ClientCallbackTypeEnum_t type, WsClient *client) {
-        if (type == WsClient::ClientCallbackTypeEnum_t::AUTHENTICATED) {
-            // draw sends the screen capture to the web socket, do it for each new client
-            _Scheduler.add(100, false, [this](Event::CallbackTimerPtr timer) {
-                _redraw();
-            });
-        }
-    });
-    */
 }
 
 void WeatherStationPlugin::reconfigure(const String &source)
@@ -342,7 +329,6 @@ void WeatherStationPlugin::shutdown()
     delete _canvas;
     _canvas = nullptr;
     LoopFunctions::remove(loop);
-    // SerialHandler::getInstance().removeHandler(serialHandler);
 
     _setBacklightLevel(PWMRANGE);
     drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
@@ -391,11 +377,6 @@ void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
     }
 }
 
-// void WeatherStationPlugin::serialHandler(uint8_t type, const uint8_t *buffer, size_t len)
-// {
-//     plugin._serialHandler(buffer, len);
-// }
-
 void WeatherStationPlugin::getValues(WebUINS::Events &array)
 {
     __DBG_printf("show tft=%u", _config.show_webui);
@@ -423,8 +404,6 @@ void WeatherStationPlugin::setValue(const String &id, const String &value, bool 
 
 void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas, int16_t _offsetY)
 {
-    // __LDBG_printf("WSDraw::_drawEnvironmentalSensor()");
-
     auto sensor = SensorPlugin::getSensor<Sensor_BME280>(MQTT::SensorType::BME280);
     if (!sensor) {
         return;
@@ -589,52 +568,52 @@ void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, i
 
 #if IOT_ALARM_PLUGIN_ENABLED
 
-void WeatherStationPlugin::alarmCallback(ModeType mode, uint16_t maxDuration)
-{
-    _getInstance()._alarmCallback(mode, maxDuration);
-}
-
-void WeatherStationPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
-{
-    if (maxDuration == STOP_ALARM) {
-        _resetAlarm();
-        return;
+    void WeatherStationPlugin::alarmCallback(ModeType mode, uint16_t maxDuration)
+    {
+        _getInstance()._alarmCallback(mode, maxDuration);
     }
-    if (!_resetAlarmFunc) {
-        _resetAlarmFunc = [this](Event::CallbackTimerPtr timer) {
+
+    void WeatherStationPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
+    {
+        if (maxDuration == STOP_ALARM) {
+            _resetAlarm();
+            return;
+        }
+        if (!_resetAlarmFunc) {
+            _resetAlarmFunc = [this](Event::CallbackTimerPtr timer) {
+                #if IOT_WEATHER_STATION_WS2812_NUM
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                #endif
+                _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler
+                _resetAlarmFunc = nullptr;
+            };
+        }
+
+        // check if an alarm is already active
+        if (!_alarmTimer) {
             #if IOT_WEATHER_STATION_WS2812_NUM
-                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::BlinkType::FAST, 0xff0000);
             #endif
-            _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler
-            _resetAlarmFunc = nullptr;
-        };
+        }
+
+        if (maxDuration == 0) {
+            maxDuration = 300; // limit time
+        }
+        // reset time if alarms overlap
+        __LDBG_printf("alarm duration %u", maxDuration);
+        _Timer(_alarmTimer).add(Event::seconds(maxDuration), false, _resetAlarmFunc);
     }
 
-    // check if an alarm is already active
-    if (!_alarmTimer) {
-        #if IOT_WEATHER_STATION_WS2812_NUM
-            BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::BlinkType::FAST, 0xff0000);
-        #endif
+    bool WeatherStationPlugin::_resetAlarm()
+    {
+        __LDBG_printf("reset=%u state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
+        if (_resetAlarmFunc) {
+            _resetAlarmFunc(*_alarmTimer);
+            AlarmPlugin::resetAlarm();
+            return true;
+        }
+        return false;
     }
-
-    if (maxDuration == 0) {
-        maxDuration = 300; // limit time
-    }
-    // reset time if alarms overlap
-    __LDBG_printf("alarm duration %u", maxDuration);
-    _Timer(_alarmTimer).add(Event::seconds(maxDuration), false, _resetAlarmFunc);
-}
-
-bool WeatherStationPlugin::_resetAlarm()
-{
-    __LDBG_printf("reset=%u state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
-    if (_resetAlarmFunc) {
-        _resetAlarmFunc(*_alarmTimer);
-        AlarmPlugin::resetAlarm();
-        return true;
-    }
-    return false;
-}
 
 #endif
 

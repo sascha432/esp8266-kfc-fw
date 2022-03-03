@@ -66,7 +66,7 @@
 #define Y_POSITION_CITY                 (3 + _offsetY)
 #define H_POSITION_CITY                 AdafruitGFXExtension::RIGHT
 
-#define X_POSITION_TEMPERATURE          (X_POSITION_CITY - 1)
+#define X_POSITION_TEMPERATURE          (X_POSITION_CITY - 2)
 #define Y_POSITION_TEMPERATURE          (17 + _offsetY)
 #define H_POSITION_TEMPERATURE          AdafruitGFXExtension::RIGHT
 
@@ -121,6 +121,10 @@
 // weather forecast
 #define Y_START_POSITION_FORECAST       (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_FORECAST         (TFT_HEIGHT - 1)
+
+// system info
+#define Y_START_POSITION_INFO           (Y_END_POSITION_TIME + 2)
+#define Y_END_POSITION_INFO             (TFT_HEIGHT - 1)
 
 #define Y_START_POSITION_DEBUG          0
 #define Y_END_POSITION_DEBUG            (TFT_HEIGHT - 1)

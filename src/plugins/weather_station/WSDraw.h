@@ -188,6 +188,9 @@ namespace WSDraw {
         // draw weather forcast
         void _drawForecast();
 
+        // draw info
+        void _drawInfo();
+
         // drawScreen does not clear or display the changes. this is usually used in _draw() where
         // the entire display is cleared and displayed
         // updateScreen will only clear and display the content
@@ -200,6 +203,9 @@ namespace WSDraw {
 
         void _drawScreenForecast();
         void _updateScreenForecast();
+
+        void _drawScreenInfo();
+        void _updateScreenInfo();
 
         #if DEBUG
             void _drawDebugInfo();
@@ -470,7 +476,6 @@ namespace WSDraw {
         return _getPrevScreen(static_cast<ScreenType>(screen), allowZeroTimeout);
     }
 
-
     inline ScreenType Base::_getScreen(ScreenType screen, bool allowZeroTimeout) const
     {
         return _isScreenValid(screen, allowZeroTimeout) ? screen : _getNextScreen(screen, allowZeroTimeout);
@@ -499,5 +504,3 @@ namespace WSDraw {
     }
 
 }
-
-// #endif

@@ -55,7 +55,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
     form.addFormUI(F("Release Threshold"));
     cfg.addRangeValidatorFor_released_threshold(form);
 
-    #define NUM_SCREENS 4
+    #define NUM_SCREENS 5
     static_assert(NUM_SCREENS == WSDraw::kNumScreens, "number does not match");
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, NUM_SCREENS, st, ds);
     #undef NUM_SCREENS

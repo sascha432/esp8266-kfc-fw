@@ -40,8 +40,11 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Motion::getAutoDiscovery(FormatType format
             if (!discovery->create(MQTTComponent::ComponentType::BINARY_SENSOR, _getId(), format)) {
                 return discovery;
             }
+            auto baseTopic = MQTT::Client::getBaseTopicPrefix();
             discovery->addStateTopic(_getTopic());
-            discovery->addName(String(KFCConfigurationClasses::System::Device::getName()) + F(" Motion Sensor"));
+            discovery->addDeviceClass(F("motion"));
+            discovery->addName(F("Occupancy"));
+            discovery->addObjectId(baseTopic + F("occupancy"));
             break;
     }
     return discovery;

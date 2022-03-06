@@ -88,7 +88,7 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
         _discovery += '{';
         #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
             _baseTopic = MQTT::Client::getBaseTopic();
-            __DBG_printf("base_topic=%s", __S(_baseTopic));
+            __LDBG_printf("base_topic=%s", __S(_baseTopic));
             addParameter(F("~"), _baseTopic);
         #endif
     }

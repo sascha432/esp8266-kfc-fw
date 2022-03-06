@@ -32,30 +32,28 @@ Sensor_DS3231::~Sensor_DS3231()
 MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch (num) {
     case 0:
         if (discovery->create(this, FSPGM(ds3231_id_temp), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_temp)));
             discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
-            #if MQTT_AUTO_DISCOVERY_USE_NAME
-                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("RTC Temperature")));
-            #endif
+            discovery->addName(F("DS3231 Temperature"));
+            discovery->addObjectId(baseTopic + F("ds3231_temp"));
         }
         break;
     case 1:
         if (discovery->create(this, FSPGM(ds3231_id_time), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_time)));
-            #if MQTT_AUTO_DISCOVERY_USE_NAME
-                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("RTC Time")));
-            #endif
+            discovery->addName(F("DS3231 Time"));
+            discovery->addObjectId(baseTopic + F("ds3231_time"));
         }
         break;
     case 2:
         if (discovery->create(this, FSPGM(ds3231_id_lost_power), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(FSPGM(ds3231_id_lost_power)));
-            #if MQTT_AUTO_DISCOVERY_USE_NAME
-                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("RTC Status")));
-            #endif
+            discovery->addName(F("DS3231 Status"));
+            discovery->addObjectId(baseTopic + F("ds3231_status"));
         }
         break;
     }

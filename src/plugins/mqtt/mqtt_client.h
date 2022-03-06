@@ -581,6 +581,7 @@ public:
         static int8_t toBool(const char *, int8_t invalid = -1);
         static const __FlashStringHelper *toBoolTrueFalse(bool value);
         static const __FlashStringHelper *toBoolOnOff(bool value);
+        static String toRGB(uint32_t color);
 
         static QosType getDefaultQos(QosType qos = QosType::DEFAULT);
 
@@ -903,6 +904,11 @@ public:
     const __FlashStringHelper *Client::toBoolOnOff(bool value)
     {
         return value ? FSPGM(mqtt_bool_on) : FSPGM(mqtt_bool_off);
+    }
+
+    inline String Client::toRGB(uint32_t color)
+    {
+        return PrintString(F("%u,%u,%u"), ((color >> 16) & 0xff), ((color >> 8) & 0xff), (color & 0xff));
     }
 
     inline __attribute__((__always_inline__))

@@ -45,6 +45,7 @@ enum class AutoDiscoveryEnum {
     UPTIME_SECONDS = 0,
     UPTIME_HUMAN,
     HEAP,
+    RSSI,
     #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
         PSRAM,
     #endif
@@ -74,7 +75,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addUnitOfMeasurement(FSPGM(seconds));
                 discovery->addValueTemplate(FSPGM(uptime));
                 discovery->addName(F("System Uptime (seconds)"));
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("System Uptime (seconds)"), true));
+                discovery->addObjectId(baseTopic + F("system_utime_seconds"));
             }
             break;
         case AutoDiscoveryEnum::UPTIME_HUMAN:
@@ -83,7 +84,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addValueTemplate(F("uptime_hr"));
                 discovery->addIcon(F("mdi:hours-24"));
                 discovery->addName(F("System Uptime"));
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("System Uptime"), true));
+                discovery->addObjectId(baseTopic + F("system_uptime"));
             }
             break;
         case AutoDiscoveryEnum::HEAP:
@@ -93,7 +94,17 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addValueTemplate(FSPGM(heap));
                 discovery->addIcon(F("mdi:memory"));
                 discovery->addName(F("Free Heap"));
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Free Heap"), true));
+                discovery->addObjectId(baseTopic + F("free_heap"));
+            }
+            break;
+        case AutoDiscoveryEnum::RSSI:
+            if (discovery->create(this, F("rssi"), format)) {
+                discovery->addStateTopic(_getTopic());
+                discovery->addUnitOfMeasurement(F("dBm"));
+                discovery->addValueTemplate(F("rssi"));
+                discovery->addIcon(F("mdi:signal"));
+                discovery->addName(F("WiFi Signal"));
+                discovery->addObjectId(baseTopic + F("signal"));
             }
             break;
         #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
@@ -104,7 +115,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addValueTemplate(F("psram"));
                     discovery->addIcon(F("mdi:memory"));
                     discovery->addName(F("Free PSRAM"));
-                    discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Free PSRAM"), true));
+                    discovery->addObjectId(baseTopic + F("free_psram"));
                 }
                 break;
         #endif
@@ -114,7 +125,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addValueTemplate(FSPGM(version));
                 discovery->addIcon(F("mdi:wrench"));
                 discovery->addName(F("Firmware Version"));
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Firmware Version"), true));
+                discovery->addObjectId(baseTopic + F("firmware_version"));
             }
             break;
         #if ESP8266
@@ -124,7 +135,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addValueTemplate(F("savecrash_cnt"));
                     discovery->addIcon(F("mdi:math-log"));
                     discovery->addName(F("SaveCrash Log Count"));
-                    discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("SaveCrash Log Count"), true));
+                    discovery->addObjectId(baseTopic + F("savecrash_log_count"));
                 }
                 break;
             case AutoDiscoveryEnum::HEAP_FRAGMENTATION:
@@ -132,7 +143,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addStateTopic(_getTopic());
                     discovery->addValueTemplate(F("heap_frag"));
                     discovery->addName(F("Heap Fragmentation"));
-                    discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Heap Fragmentation"), true));
+                    discovery->addObjectId(baseTopic + F("heap_fragmentation"));
                 }
                 break;
         #endif
@@ -142,7 +153,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addStateTopic(_getTopic());
                     discovery->addValueTemplate(F("success"));
                     discovery->addName(F("Ping Success"));
-                    discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Ping Success"), true));
+                    discovery->addObjectId(baseTopic + F("ping_success"));
                 }
                 break;
             case AutoDiscoveryEnum::PING_MONITOR_FAILED:
@@ -150,7 +161,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addStateTopic(_getTopic());
                     discovery->addValueTemplate(F("failure"));
                     discovery->addName(F("Ping Failures"));
-                    discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Ping Failures"), true));
+                    discovery->addObjectId(baseTopic + F("ping_failures"));
                 }
                 break;
             case AutoDiscoveryEnum::PING_MONITOR_AVG_RESP_TIME:
@@ -159,7 +170,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addValueTemplate(F("avg_resp_time"));
                     discovery->addUnitOfMeasurement(F("ms"));
                     discovery->addName(F("Avg. Resp. Time"));
-                    discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Avg. Resp. Time"), true));
+                    discovery->addObjectId(baseTopic + F("avg_resp_time"));
                 }
                 break;
             case AutoDiscoveryEnum::PING_MONITOR_RCVD_PACKETS:
@@ -167,7 +178,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addStateTopic(_getTopic());
                     discovery->addValueTemplate(F("rcvd_pkts"));
                     discovery->addName(F("Received Packets"));
-                    discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Received Packets"), true));
+                    discovery->addObjectId(baseTopic + F("received_packets"));
                 }
                 break;
             case AutoDiscoveryEnum::PING_MONITOR_LOST_PACKETS:
@@ -175,7 +186,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addStateTopic(_getTopic());
                     discovery->addValueTemplate(F("lost_pkts"));
                     discovery->addName(F("Lost Packets"));
-                    discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Lost Packets"), true));
+                    discovery->addObjectId(baseTopic + F("lost_packets"));
                 }
                 break;
         #endif
@@ -287,6 +298,7 @@ String Sensor_SystemMetrics::_getMetricsJson() const
         NamedUint32(FSPGM(uptime), getSystemUptime()),
         NamedStoredString(F("uptime_hr"), _getUptime(F("\n"))),
             NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
+            NamedInt32(F("rssi"), WiFi.RSSI()),
         #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
             NamedUint32(F("psram"), ESP.getFreePsram()),
         #endif

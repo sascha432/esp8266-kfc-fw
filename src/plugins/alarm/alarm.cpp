@@ -303,7 +303,7 @@ void AlarmPlugin::_publishState()
     __LDBG_printf("publish state=%s", String((int)_alarmState).c_str());
     if (isConnected()) {
         publish(_formatTopic(FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_alarmState));
-        publish(_formatTopic(F("/rgb/state")), true, PrintString(F("%06x"), _color));
+        publish(_formatTopic(F("/rgb/state")), true, MQTT::Client::toRGB(_color));
     }
 }
 

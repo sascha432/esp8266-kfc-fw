@@ -208,14 +208,14 @@ namespace RemoteControl {
             case ComboButtonStateType::CONFIRM_AUTO_SLEEP_OFF:
             case ComboButtonStateType::CONFIRM_DEEP_SLEEP:
             case ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON:
-                if (!BUILDIN_LED_GET(BlinkLEDTimer::BlinkType::FLICKER)) {
+                if (!BUILTIN_LED_GET(BlinkLEDTimer::BlinkType::FLICKER)) {
                     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
                 }
                 break;
             case ComboButtonStateType::RELEASED:
             case ComboButtonStateType::RESET_MENU_TIMEOUT:
             case ComboButtonStateType::TIMEOUT:
-                if (!BUILDIN_LED_GET(BlinkLEDTimer::BlinkType::MEDIUM)) {
+                if (!BUILTIN_LED_GET(BlinkLEDTimer::BlinkType::MEDIUM)) {
                     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
                 }
                 break;

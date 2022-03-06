@@ -8,26 +8,42 @@
 #include <OSTimer.h>
 #include <dyn_bitset.h>
 
+#ifndef DEBUG_BLINK_LED_TIMER
+#    define DEBUG_BLINK_LED_TIMER 1
+#endif
+
+#if DEBUG_BLINK_LED_TIMER
+#    include "debug_helper_enable.h"
+#else
+#    include "debug_helper_disable.h"
+#endif
+
 #define INVALID_PIN_ID            255
 #define IGNORE_BUILTIN_LED_PIN_ID 255
 #define NEOPIXEL_PIN_ID           253
 
+#if __LED_BUILTIN == NEOPIXEL_PIN_ID
+#    define BUILTIN_LED_NEOPIXEL 1
+#else
+#    define BUILTIN_LED_NEOPIXEL 0
+#endif
+
 #if INVERT_BUILTIN_LED
 #    define BUILTIN_LED_STATE(state)  (state ? LOW : HIGH)
-#    define BUILTIN_LED_STATEI(state) (state)
+#    define BUILTIN_LED_STATE_INVERTED(state) (state)
 #else
 #    define BUILTIN_LED_STATE(state)  state
-#    define BUILTIN_LED_STATEI(state) (state ? LOW : HIGH)
+#    define BUILTIN_LED_STATE_INVERTED(state) (state ? LOW : HIGH)
 #endif
 
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
 #    define BUILTIN_LED_SET(mode)                  BlinkLEDTimer::setBlink(__LED_BUILTIN, mode);
 #    define forceTimeBUILTIN_LED_SETP(delay, patt) BlinkLEDTimer::setPattern(__LED_BUILTIN, delay, patt);
-#    define BUILDIN_LED_GET(mode)                  BlinkLEDTimer::isBlink(__LED_BUILTIN, mode)
+#    define BUILTIN_LED_GET(mode)                  BlinkLEDTimer::isBlink(__LED_BUILTIN, mode)
 #else
 #    define BUILTIN_LED_SET(...)
 #    define BUILTIN_LED_SETP(...)
-#    define BUILDIN_LED_GET(mode) true
+#    define BUILTIN_LED_GET(mode) true
 #endif
 
 class BlinkLEDTimer : public OSTimer {
@@ -105,9 +121,22 @@ void BlinkLEDTimer::setBlink(uint8_t pin, BlinkType delay, int32_t color)
     setBlink(pin, static_cast<uint16_t>(delay), color);
 }
 
-inline bool BlinkLEDTimer::isPinValid(uint8_t pin)
+#if BUILTIN_LED_NEOPIXEL
+
+inline  __attribute__((__always_inline__))
+bool BlinkLEDTimer::isPinValid(uint8_t pin)
+{
+    return (pin != IGNORE_BUILTIN_LED_PIN) && (pin != INVALID_PIN);
+}
+
+#else
+
+inline  __attribute__((__always_inline__))
+bool BlinkLEDTimer::isPinValid(uint8_t pin)
 {
     return (pin != IGNORE_BUILTIN_LED_PIN) && (pin != NEOPIXEL_PIN) && (pin != INVALID_PIN);
 }
+
+#endif
 
 extern BlinkLEDTimer *ledTimer;

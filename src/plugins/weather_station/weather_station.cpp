@@ -26,7 +26,7 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 // web access for screen capture
 //
 // screen capture
-// http://192.168.0.95/images/screen_capture.bmp
+// http://192.168.0.99/images/screen_capture.bmp
 // http://192.168.0.56/images/screen_capture.bmp
 //
 //

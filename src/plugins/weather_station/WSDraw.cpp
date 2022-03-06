@@ -280,30 +280,30 @@ namespace WSDraw {
     void Base::_drawInfo()
     {
         int16_t y = Y_START_POSITION_INFO + 5;
+        constexpr uint8_t kIncr = 3;
 
         _canvas->setTextColor(COLORS_ORANGE);
         _canvas->setFont(FONTS_DEFAULT_SMALL);
-        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Hostname"), AdafruitGFXExtension::CENTER) + 2;
+        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Hostname"), AdafruitGFXExtension::CENTER) + kIncr;
         _canvas->setTextColor(COLORS_WHITE);
         _canvas->setFont(FONTS_DEFAULT_MEDIUM);
-        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, KFCConfigurationClasses::System::Device::getName(), AdafruitGFXExtension::CENTER) + 4;
+        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, KFCConfigurationClasses::System::Device::getName(), AdafruitGFXExtension::CENTER) + 2 + kIncr;
 
         _canvas->setTextColor(COLORS_ORANGE);
         _canvas->setFont(FONTS_DEFAULT_SMALL);
-        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("WiFi"), AdafruitGFXExtension::CENTER) + 2;
+        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("WiFi"), AdafruitGFXExtension::CENTER) + kIncr;
         _canvas->setTextColor(COLORS_WHITE);
         _canvas->setFont(FONTS_DEFAULT_MEDIUM);
         if (WiFi.isConnected()) {
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.SSID(), AdafruitGFXExtension::CENTER) + 2;
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.localIP().toString(), AdafruitGFXExtension::CENTER) + 2;
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("GW: ")) + WiFi.gatewayIP().toString(), AdafruitGFXExtension::CENTER) + 2;
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("DNS: ")) + WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + 2;
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + 2;
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.SSID(), AdafruitGFXExtension::CENTER) + kIncr;
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.localIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("GW: ")) + WiFi.gatewayIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("DNS: ")) + WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + kIncr;
+            _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER);
         }
         else {
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Not connected"), AdafruitGFXExtension::CENTER) + 2;
+            _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Not connected"), AdafruitGFXExtension::CENTER);
         }
-        y += 2;
     }
 
     // SCREEN METHODS

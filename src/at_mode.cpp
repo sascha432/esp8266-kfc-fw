@@ -368,6 +368,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Mana
 );
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
+#if __LED_BUILTIN_WS2812_NUM_LEDS
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NEOPX, "NEOPX", "<pin>,<num>,<r>,<g>,<b>", "Set NeoPixel color for given pin");
+#endif
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]", "Set LED mode");
 #endif
@@ -447,6 +450,9 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LSR), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(WIFI), name);
+#if __LED_BUILTIN_WS2812_NUM_LEDS
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(NEOPX), name);
+#endif
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(LED), name);
 #endif
@@ -1889,6 +1895,30 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     }
+    #if __LED_BUILTIN_WS2812_NUM_LEDS
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(NEOPX))) {
+            if (args.requireArgs(3, 5)) {
+                auto pin = static_cast<uint8_t>(args.toInt(0));
+                auto num = static_cast<uint16_t>(args.toInt(1));
+                auto red = static_cast<uint8_t>(args.toInt(2));
+                auto green = static_cast<uint8_t>(args.toInt(3, red));
+                auto blue = static_cast<uint8_t>(args.toInt(4, red));
+                if (num == 0) {
+                    args.print(F("pin=%u num=%u - invalid number"), pin, num);
+                }
+                else {
+                    auto size = num * 3;
+                    auto buf = std::unique_ptr<uint8_t>(new uint8_t[size]);
+                    uint32_t color = (red << 16) | (green << 8) | blue;
+                    args.print(F("pin=%u num=%u color=#%06x"), pin, num, color);
+                    digitalWrite(pin, LOW);
+                    pinMode(pin, OUTPUT);
+                    NeoPixel_fillColor(buf.get(), size, color);
+                    NeoPixel_espShow(pin, buf.get(), size);
+                }
+            }
+        }
+    #endif
     #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LED))) {
             if (args.requireArgs(1, 4)) {
@@ -1896,14 +1926,22 @@ void at_mode_serial_handle_event(String &commandString)
                 String mode = args.toString(0);
                 auto delay = static_cast<uint16_t>(args.toInt(2, 50));
                 auto pin = static_cast<uint8_t>(args.toInt(3, __LED_BUILTIN));
-                if (mode.equalsIgnoreCase(F("pattern")) || mode.startsWith(F("pat"))) {
-                    auto patternStr = args.toString(1);
-                    auto pattern = BlinkLEDTimer::Bitset();
-                    pattern.fromString(patternStr);
-                    args.print(F("pattern %s delay %u"), pattern.toString().c_str(), delay);
-                    BlinkLEDTimer::setPattern(pin, delay, std::move(pattern));
-                    //+led=pattern,111111111111111111111111111111111111111111111111111111,100
-                    //+led=pattern,1010,100
+                if (mode.startsWith(F("pat"))) {
+                    #if BUILTIN_LED_NEOPIXEL
+                        if (pin == BlinkLEDTimer::NEOPIXEL_PIN) {
+                            args.print(F("Pattern not supported with NeoPixel"));
+                        }
+                        else
+                    #endif
+                    {
+                        auto patternStr = args.toString(1);
+                        auto pattern = BlinkLEDTimer::Bitset();
+                        pattern.fromString(patternStr);
+                        args.print(F("pattern %s delay %u"), pattern.toString().c_str(), delay);
+                        BlinkLEDTimer::setPattern(pin, delay, std::move(pattern));
+                        //+led=pattern,111111111111111111111111111111111111111111111111111111,100
+                        //+led=pattern,1010,100
+                    }
                 }
                 else {
                     auto color = static_cast<int32_t>(args.toNumber(1, 0xff00ff));

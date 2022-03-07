@@ -302,28 +302,28 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             switch(sensor->getType()) {
     #endif
 
-                #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-                    case SensorPlugin::SensorType::AMBIENT_LIGHT: {
-                            auto lightSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
-                            if (lightSensor->getId() == 0) {
-                                #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
-                                    auto config = Sensor_AmbientLight::SensorInputConfig(Sensor_AmbientLight::SensorType::INTERNAL_ADC);
-                                    config.adc.inverted = IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED;
-                                #elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
-                                    auto config = Sensor_AmbientLight::SensorInputConfig(Sensor_AmbientLight::SensorType::TINYPWM);
-                                    config.tinyPWM = Sensor_AmbientLight::SensorInputConfig::TinyPWM(TINYPWM_I2C_ADDRESS, IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED);
-                                #endif
-                                lightSensor->begin(this, config);
-                            }
-                        }
-                        break;
-                #endif
+    #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+        case SensorPlugin::SensorType::AMBIENT_LIGHT: {
+                auto lightSensor = reinterpret_cast<Sensor_AmbientLight *>(sensor);
+                if (lightSensor->getId() == 0) {
+                    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 1
+                        auto config = Sensor_AmbientLight::SensorInputConfig(Sensor_AmbientLight::SensorType::INTERNAL_ADC);
+                        config.adc.inverted = IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED;
+                    #elif IOT_CLOCK_AMBIENT_LIGHT_SENSOR == 2
+                        auto config = Sensor_AmbientLight::SensorInputConfig(Sensor_AmbientLight::SensorType::TINYPWM);
+                        config.tinyPWM = Sensor_AmbientLight::SensorInputConfig::TinyPWM(TINYPWM_I2C_ADDRESS, IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED);
+                    #endif
+                    lightSensor->begin(this, config);
+                }
+            }
+            break;
+    #endif
 
-                #if IOT_SENSOR_HAVE_MOTION_SENSOR
-                    case SensorPlugin::SensorType::MOTION:
-                        reinterpret_cast<Sensor_Motion *>(sensor)->begin(this, IOT_CLOCK_MOTION_SENSOR_PIN, IOT_CLOCK_MOTION_SENSOR_PIN_INVERTED);
-                        break;
-                #endif
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+        case SensorPlugin::SensorType::MOTION:
+            reinterpret_cast<Sensor_Motion *>(sensor)->begin(this, IOT_CLOCK_MOTION_SENSOR_PIN, IOT_CLOCK_MOTION_SENSOR_PIN_INVERTED);
+            break;
+    #endif
 
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR || IOT_SENSOR_HAVE_MOTION_SENSOR
                 default:
@@ -422,19 +422,19 @@ void ClockPlugin::shutdown()
             switch(sensor->getType()) {
     #endif
 
-                #if IOT_SENSOR_HAVE_MOTION_SENSOR
-                    case SensorPlugin::SensorType::MOTION:
-                        reinterpret_cast<Sensor_Motion *>(sensor)->end();
-                        break;
-                #endif
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+        case SensorPlugin::SensorType::MOTION:
+            reinterpret_cast<Sensor_Motion *>(sensor)->end();
+            break;
+    #endif
 
-                #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-                    case SensorPlugin::SensorType::AMBIENT_LIGHT:
-                        if (reinterpret_cast<Sensor_AmbientLight *>(sensor)->getId() == 0) {
-                            reinterpret_cast<Sensor_AmbientLight *>(sensor)->end();
-                        }
-                        break;
-                #endif
+    #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+        case SensorPlugin::SensorType::AMBIENT_LIGHT:
+            if (reinterpret_cast<Sensor_AmbientLight *>(sensor)->getId() == 0) {
+                reinterpret_cast<Sensor_AmbientLight *>(sensor)->end();
+            }
+            break;
+    #endif
 
     #if IOT_SENSOR_HAVE_MOTION_SENSOR || IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
                 default:

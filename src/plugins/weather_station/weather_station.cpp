@@ -337,7 +337,7 @@ void WeatherStationPlugin::shutdown()
 void WeatherStationPlugin::getStatus(Print &output)
 {
     output.printf_P(PSTR("%ux%u TFT " IOT_WEATHER_STATION_DRIVER), TFT_WIDTH, TFT_HEIGHT);
-    #if IOT_WEATHER_STATION_WS2812_NUM
+    #if IOT_WEATHER_STATION_WS2812_NUM && __LED_BUILTIN == NEOPIXEL_PIN_ID
         output.printf_P(PSTR(HTML_S(br) "%ux WS2812 RGB LED"), IOT_WEATHER_STATION_WS2812_NUM);
     #endif
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
@@ -461,7 +461,7 @@ void WeatherStationPlugin::_fadeStatusLED()
         int16_t dir = 0x000100;
 
         NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
-        NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
+        NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels));
 
         _Timer(_pixelTimer).add(Event::milliseconds(50), true, [this, color, dir](::Event::CallbackTimerPtr timer) mutable {
             color += dir;
@@ -475,7 +475,7 @@ void WeatherStationPlugin::_fadeStatusLED()
             }
 
             NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
-            NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels), true);
+            NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels));
 
         }, ::Event::PriorityType::TIMER);
 

@@ -8,9 +8,9 @@
 #include "clock_base.h"
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 namespace Clock {

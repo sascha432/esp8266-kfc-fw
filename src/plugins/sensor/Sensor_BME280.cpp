@@ -40,9 +40,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature, "temperature")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-                discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
+                // discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
                 discovery->addValueTemplate(FSPGM(temperature));
-                discovery->addDeviceClass(F("temperature"));
+                discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
                 discovery->addName(F("Temperature"));
                 discovery->addObjectId(baseTopic + F("bme280_temperature"));
             }
@@ -50,9 +50,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
         case 1:
             if (discovery->create(this, _getId(FSPGM(humidity, "humidity")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-                discovery->addUnitOfMeasurement('%');
+                // discovery->addUnitOfMeasurement('%');
                 discovery->addValueTemplate(FSPGM(humidity));
-                discovery->addDeviceClass(F("humidity"));
+                discovery->addDeviceClass(F("humidity"), '%');
                 discovery->addName(F("Humidity"));
                 discovery->addObjectId(baseTopic + F("bme280_humidity"));
             }
@@ -60,9 +60,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
         case 2:
             if (discovery->create(this, _getId(FSPGM(pressure, "pressure")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-                discovery->addUnitOfMeasurement(FSPGM(hPa, "hPa"));
+                // discovery->addUnitOfMeasurement(FSPGM(hPa, "hPa"));
                 discovery->addValueTemplate(FSPGM(pressure));
-                discovery->addDeviceClass(F("pressure"));
+                discovery->addDeviceClass(F("pressure"), FSPGM(hPa, "hPa"));
                 discovery->addName(F("Pressure"));
                 discovery->addObjectId(baseTopic + F("bme280_pressure"));
             }

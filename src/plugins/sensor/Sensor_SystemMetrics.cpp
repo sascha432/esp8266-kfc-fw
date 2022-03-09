@@ -100,10 +100,11 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
         case AutoDiscoveryEnum::RSSI:
             if (discovery->create(this, F("rssi"), format)) {
                 discovery->addStateTopic(_getTopic());
-                discovery->addUnitOfMeasurement(F("dBm"));
+                // discovery->addUnitOfMeasurement(F("dBm"));
                 discovery->addValueTemplate(F("rssi"));
                 discovery->addIcon(F("mdi:signal"));
                 discovery->addName(F("WiFi Signal"));
+                discovery->addDeviceClass(F("signal_strength"), F("dBm"));
                 discovery->addObjectId(baseTopic + F("signal"));
             }
             break;

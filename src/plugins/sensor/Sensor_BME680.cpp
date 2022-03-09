@@ -30,9 +30,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     case 0:
         if (discovery->create(this, _getId(FSPGM(temperature)), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
+            // discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
             discovery->addValueTemplate(FSPGM(temperature));
-            discovery->addDeviceClass(F("temperature"));
+            discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
             discovery->addName(F("Temperature"));
             discovery->addObjectId(baseTopic + F("bme680_temp"));
         }
@@ -40,9 +40,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     case 1:
         if (discovery->create(this, _getId(FSPGM(humidity)), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement('%');
+            // discovery->addUnitOfMeasurement('%');
             discovery->addValueTemplate(FSPGM(humidity));
-            discovery->addDeviceClass(F("humidity"));
+            discovery->addDeviceClass(F("humidity"), '%');
             discovery->addName(F("Humidity"));
             discovery->addObjectId(baseTopic + F("bme680_humidity"));
         }
@@ -50,9 +50,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     case 2:
         if (discovery->create(this, _getId(FSPGM(pressure)), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(FSPGM(hPa));
+            // discovery->addUnitOfMeasurement(FSPGM(hPa));
             discovery->addValueTemplate(FSPGM(pressure));
-            discovery->addDeviceClass(F("pressure"));
+            discovery->addDeviceClass(F("pressure"), FSPGM(hPa));
             discovery->addName(F("Pressure"));
             discovery->addObjectId(baseTopic + F("bme680_pressure"));
         }
@@ -60,8 +60,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     case 3:
         if (discovery->create(this, _getId(F("gas")), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-            discovery->addUnitOfMeasurement(F("ppm"));
+            // discovery->addUnitOfMeasurement(F("ppm"));
             discovery->addValueTemplate(F("gas"));
+            discovery->addDeviceClass(F("volatile_organic_compounds"), F("ppm"));
             discovery->addName(F("VOC Gas"));
             discovery->addObjectId(baseTopic + F("bme680_gas"));
         }

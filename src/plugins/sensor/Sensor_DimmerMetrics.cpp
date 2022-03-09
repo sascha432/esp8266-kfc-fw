@@ -24,7 +24,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addValueTemplate(F("int_temp"));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
                 discovery->addName(F("MCU Temperature"));
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("MCU Temperature"), true));
+                discovery->addObjectId(baseTopic + F("mcu_temperature"));
             }
             break;
         case 1:
@@ -33,7 +33,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addValueTemplate(F("ntc_temp"));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
                 discovery->addName(F("NTC Temperature"));
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("NTC Temperature"), true));
+                discovery->addObjectId(baseTopic + F("ntc_temperature"));
             }
             break;
         case 2:
@@ -42,16 +42,17 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
                 discovery->addValueTemplate(F("vcc"));
                 discovery->addDeviceClass(F("voltage"), 'V');
                 discovery->addName(F("MCU VCC"));
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("MCU VCC"), true));
+                discovery->addObjectId(baseTopic + F("mcu_vcc"));
             }
             break;
         case 3:
             if (discovery->create(this, FSPGM(frequency), format)) {
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(FSPGM(frequency));
-                discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
+                // discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
+                discovery->addDeviceClass(F("frequency"), FSPGM(Hz, "Hz"));
                 discovery->addName(F("Mains Frequency"));
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(F("Mains Frequency"), true));
+                discovery->addObjectId(baseTopic + F("mains_frequency"));
             }
             break;
     }

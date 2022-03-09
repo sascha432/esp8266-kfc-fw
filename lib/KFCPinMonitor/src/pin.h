@@ -203,7 +203,7 @@ namespace PinMonitor {
     public:
 
 #if PIN_MONITOR_USE_POLLING == 1
-        static void callback(void *arg, uint32_t _GPI, uint32_t mask);
+        static void callback(void *arg, GPIO::type _GPI, uint32_t mask);
 #elif PIN_MONITOR_USE_GPIO_INTERRUPT == 0
         static void IRAM_ATTR callback(void *arg);
 #endif

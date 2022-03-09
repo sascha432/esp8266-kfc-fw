@@ -58,7 +58,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_AmbientLight::getAutoDiscovery(FormatType 
             }
             discovery->addStateTopic(_getTopic());
             if (_id == 1 && _sensor.type == Sensor_AmbientLight::SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
-                discovery->addUnitOfMeasurement(F("lux"));
+                // discovery->addUnitOfMeasurement(F("lux"));
+                discovery->addDeviceClass(F("illuminance"), F("lux"));
                 discovery->addName(F("Illuminance"));
                 discovery->addObjectId(baseTopic + F("illuminance"));
             }

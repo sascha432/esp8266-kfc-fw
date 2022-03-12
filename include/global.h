@@ -424,11 +424,11 @@
 #endif
 
 #if HAVE_IOEXPANDER
-#    ifndef IOEXPANDER_DEVICE_CONFIG
+#    if !defined(IOEXPANDER_DEVICE_CONFIG)
 #        error HAVE_IOEXPANDER=1 but IOEXPANDER_DEVICE_CONFIG not defined
 #    endif
 #else
-#    ifdef IOEXPANDER_DEVICE_CONFIG
+#    if defined(IOEXPANDER_DEVICE_CONFIG)
 #        error IOEXPANDER_DEVICE_CONFIG defined but HAVE_IOEXPANDER missing
 #    endif
 #endif

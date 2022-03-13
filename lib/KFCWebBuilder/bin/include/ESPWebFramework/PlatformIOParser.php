@@ -208,7 +208,7 @@ class PlatformIOParser {
                 // load extra configs and append at the end
                 $extra_files = preg_split("/\s+/", $line, -1, PREG_SPLIT_NO_EMPTY);
                 foreach($extra_files as $file) {
-                    if ($file{0} != '/') {
+                    if ($file[0] != '/') {
                         $file = $this->ini_base_dir.'/'.$file;
                         if (strchr($file, '*')) {
                             foreach(glob($file) as $filename) {
@@ -280,7 +280,7 @@ class PlatformIOParser {
         if ($cStyle) { // "//" and "/* */"
 
             $line = preg_replace_callback('/(".*?")|\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/', function($matches) {
-                if ($matches[0]{0} == '"') {
+                if ($matches[0][0] == '"') {
                     return $matches[0];
                 }
                 return @$matches[2];
@@ -289,7 +289,7 @@ class PlatformIOParser {
         } else { // "#", ";"
 
             $line = preg_replace_callback('/(".*?")|[#;].*$/', function($matches) {
-                if ($matches[0]{0} == '"') {
+                if ($matches[0][0] == '"') {
                     return $matches[0];
                 }
                 return '';

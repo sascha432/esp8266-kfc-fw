@@ -292,6 +292,8 @@ class JsonReader {
                                 }
                             }
                             $array = @array_filter($array, 'count');
+                            // $array = @array_filter($array);
+
                             $targetDirsArray[] = (object)$array;
                         }
                         $group->target_dirs = $targetDirsArray;

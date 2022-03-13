@@ -401,7 +401,7 @@ class ConfigReader {
             }
             $silent = false;
             $file = $this->resolveVariable($bin, array(), array(), "bin.$key");
-            if ($file{0} == '@') {
+            if ($file[0] == '@') {
                 $silent = true;
                 $file = substr($file, 1);
             }

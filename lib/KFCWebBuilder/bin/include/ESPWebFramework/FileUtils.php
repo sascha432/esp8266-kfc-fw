@@ -36,7 +36,7 @@ class FileUtils {
         $dir = Dir($path);
         $files = array();
         while(false !== ($entry = $dir->read())) {
-            if ($entry{0} != '.') {
+            if ($entry[0] != '.') {
                 if (preg_match($pattern, $entry)) {
                     $files[] = realpath($path.'/'.$entry);
                 }

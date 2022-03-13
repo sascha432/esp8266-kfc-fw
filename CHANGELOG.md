@@ -2,6 +2,7 @@
 
 ## Version 0.0.6
 
+ - Updates for KFCWebBuilder (requires PHP 7.4.28)
  - Updated weather station plugin for Arduino Core 3.x
  - Fixed memory leak in GFXCanvas
  - New auto discovery script ``./scripts/tools/kfcfw_discovery.py``

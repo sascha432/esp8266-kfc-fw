@@ -126,7 +126,7 @@ def mem_analyzer(source, target, env):
         args = [
             path.realpath(path.join(env.subst("$PROJECT_DIR"), "./scripts/tools/MemAnalyzer.exe")),
             which('xtensa-lx106-elf-objdump.exe', env)[0],
-            path.realpath(str(target[0]))
+            '"%s"' % path.realpath(str(target[0]))
         ]
         p = subprocess.Popen(args, text=True)
         p.wait()

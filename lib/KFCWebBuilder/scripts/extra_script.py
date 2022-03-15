@@ -17,7 +17,7 @@ def build_webui(source, target, env, force = False):
 
     php_bin = env.subst(env.GetProjectOption('custom_php_exe', env.subst('$PHPEXE')))
     if not php_bin:
-        if os.environ['PHPEXE']:
+        if 'PHPEXE' in os.environ:
             php_bin = os.environ['PHPEXE']
         else:
             php_bin = os.path.sep == '\\' and 'php.exe' or 'php'
@@ -37,7 +37,7 @@ def build_webui(source, target, env, force = False):
             file.write('%s=%s\n' % (env.subst(key), env.subst(val)))
 
     if not os.path.isfile(php_bin):
-        click.secho('cannot find php binary: %s: set custom_php_exe=<php binary>' % php_bin, fg='yellow')
+        click.secho('cannot find php binary: %s: set custom_php_exe=<php binary> or environment variable PHPEXE' % php_bin, fg='yellow')
         env.Exit(1)
     if not os.path.isfile(php_file):
         click.secho('cannot find %s' % php_file, fg='yellow')
@@ -50,12 +50,14 @@ def build_webui(source, target, env, force = False):
     if force:
         args.append('--force')
 
+    cli_cmd = subprocess.check_output(args, shell=True)
     if verbose:
-        click.echo(' '.join(args))
+        click.echo(cli_cmd)
 
     return_code = subprocess.run(args, shell=True).returncode
     if return_code!=0:
-        click.secho('failed to run: %s' % ' '.join(args))
+        # click.secho('failed to run: %s' % cli_cmd)
+        print()
         env.Exit(1)
 
 def rebuild_webui(source, target, env):

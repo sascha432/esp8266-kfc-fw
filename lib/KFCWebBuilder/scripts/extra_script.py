@@ -50,13 +50,14 @@ def build_webui(source, target, env, force = False):
     if force:
         args.append('--force')
 
-    cli_cmd = subprocess.check_output(args, shell=True)
+    # cli_cmd = subprocess.check_output(args, shell=True);
+    cli_cmd = ' '.join(args);
     if verbose:
         click.echo(cli_cmd)
 
     return_code = subprocess.run(args, shell=True).returncode
     if return_code!=0:
-        # click.secho('failed to run: %s' % cli_cmd)
+        click.secho('failed to run: %s' % cli_cmd)
         print()
         env.Exit(1)
 

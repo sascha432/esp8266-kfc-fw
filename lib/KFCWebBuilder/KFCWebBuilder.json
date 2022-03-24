@@ -64,7 +64,7 @@
             "#else": "/bin/gzip"
         },
         "uglify_js": {
-            "#if OS_WIN": "%APPDATA%/npm/node_modules/uglify-js/bin/uglifyjs",
+            "#if OS_WIN": "%USERPROFILE%/Documents/PlatformIO/Projects/kfc_fw/node_modules/uglify-js/bin/uglifyjs",
             "#else": "/usr/bin/uglifyjs"
         },
         "closure_compiler": "${path.current_config}/bin/closure-compiler-v20181210.jar",

@@ -54,7 +54,7 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
 {
     REGISTER_SENSOR_CLIENT(this);
 
-    if (sensor) {
+    if (hlwSensor) {
         __DBG_panic("Only one instance of Sensor_HLW8012 supported");
     }
 
@@ -90,7 +90,7 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     #endif
 
     // singleton
-    sensor = this;
+    hlwSensor = this;
     LoopFunctions::add(Sensor_HLW8012::loop);
     attachInterrupt(digitalPinToInterrupt(_pinCF), Sensor_HLW8012_callbackCF, CHANGE);
     attachInterrupt(digitalPinToInterrupt(_pinCF1), Sensor_HLW8012_callbackCF1, CHANGE);

@@ -13,7 +13,7 @@
 inline Sensor_HLW8012::~Sensor_HLW8012()
 {
     LoopFunctions::remove(Sensor_HLW8012::loop);
-    sensor = nullptr;
+    hlwSensor = nullptr;
     detachInterrupt(digitalPinToInterrupt(_pinCF));
     detachInterrupt(digitalPinToInterrupt(_pinCF1));
     UNREGISTER_SENSOR_CLIENT(this);

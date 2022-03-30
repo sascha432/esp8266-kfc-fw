@@ -122,6 +122,10 @@
 #define Y_START_POSITION_FORECAST       (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_FORECAST         (TFT_HEIGHT - 1)
 
+// multi timezone display
+#define Y_START_POSITION_MULTITIMEZONE  (Y_END_POSITION_TIME + 2)
+#define Y_END_POSITION_MULTITIMEZONE    (TFT_HEIGHT - 1)
+
 // system info
 #define Y_START_POSITION_INFO           (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_INFO             (TFT_HEIGHT - 1)

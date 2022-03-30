@@ -103,7 +103,8 @@
                 "./Resources/js/forms/sensor.js"
             ],
             "#if !IOT_WEATHER_STATION": [
-                "./Resources/html/weather.html"
+                "./Resources/html/weather.html",
+                "./Resources/html/multitimezone.html"
             ],
             "#if !IOT_REMOTE_CONTROL": [
                 "./Resources/html/remotectrl.html"

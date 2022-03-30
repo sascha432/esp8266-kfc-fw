@@ -18,6 +18,7 @@ namespace KFCConfigurationClasses {
                 MAIN = 0,
                 INDOOR,
                 FORECAST,
+                MULTITIMEZONE,
                 INFO,
                 #if DEBUG
                     DEBUG_INFO,

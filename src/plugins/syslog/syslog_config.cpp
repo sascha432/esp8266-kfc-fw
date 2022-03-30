@@ -17,7 +17,7 @@ void SyslogClient::defaults()
 {
     __CDBG_printf("SyslogClient::defaults handle=%04x", kConfigStructHandle);
     setConfig(SyslogClientConfig());
-    setHostname(CREATE_ZERO_CONF(F("syslog"), FSPGM(tcp), FSPGM(address)));
+    setHostname(CREATE_ZERO_CONF(F("syslog"), FSPGM(udp), FSPGM(address)));
     System::Flags::getWriteableConfig().is_syslog_enabled = false;
     __CDBG_dump(SyslogClient, cfg);
     __CDBG_dumpString(Hostname);

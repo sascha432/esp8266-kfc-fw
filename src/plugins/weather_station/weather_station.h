@@ -29,6 +29,14 @@ public:
 
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
+    virtual void createMenu() override
+    {
+        auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
+        auto subMenu = configMenu.addSubMenu(getFriendlyName());
+        subMenu.addMenuItem(getFriendlyName(), F("weather.html"));
+        subMenu.addMenuItem(F("World Clock"), F("multitimezone.html"));
+    }
+
 // WebUI
 public:
     virtual void createWebUI(WebUINS::Root &webUI) override;

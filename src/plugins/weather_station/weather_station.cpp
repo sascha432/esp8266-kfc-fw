@@ -57,7 +57,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "http",
     PluginComponent::PriorityType::WEATHER_STATION,
     PluginComponent::RTCMemoryId::NONE,
-    static_cast<uint8_t>(PluginComponent::MenuType::AUTO),
+    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
     true,               // has_get_status

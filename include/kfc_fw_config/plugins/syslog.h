@@ -18,7 +18,7 @@ namespace KFCConfigurationClasses {
                 using Type =  SyslogClientConfig;
 
                 AUTO_DEFAULT_PORT_CONST_SECURE(514, 6514);
-                CREATE_ENUM_D_BITFIELD(protocol, SyslogProtocol, SyslogProtocol::TCP);
+                CREATE_ENUM_D_BITFIELD(protocol, SyslogProtocol, SyslogProtocol::UDP);
                 AUTO_DEFAULT_PORT_GETTER_SETTER_SECURE(__port, kPortDefault, kPortDefaultSecure, _get_enum_protocol() == SyslogProtocol::TCP_TLS);
 
                 SyslogClientConfig() : protocol(kDefaultValueFor_protocol), __port(kDefaultValueFor___port) {}

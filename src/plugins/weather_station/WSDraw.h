@@ -188,6 +188,9 @@ namespace WSDraw {
         // draw weather forcast
         void _drawForecast();
 
+        // draw multiply timezones
+        void _drawMultiTimezone();
+
         // draw info
         void _drawInfo();
 
@@ -203,6 +206,9 @@ namespace WSDraw {
 
         void _drawScreenForecast();
         void _updateScreenForecast();
+
+        void _drawMultiWorldTime();
+        void _updateWorldTime();
 
         void _drawScreenInfo();
         void _updateScreenInfo();

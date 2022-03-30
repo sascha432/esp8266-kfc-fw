@@ -277,6 +277,11 @@ namespace WSDraw {
         _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 5, F("FORECAST\nN/A"), AdafruitGFXExtension::CENTER);
     }
 
+    void Base::_drawMultiTimezone()
+    {
+
+    }
+
     void Base::_drawInfo()
     {
         int16_t y = Y_START_POSITION_INFO + 5;
@@ -348,6 +353,20 @@ namespace WSDraw {
     {
         CLEAR_AND_DISPLAY(Y_START_POSITION_FORECAST, Y_END_POSITION_FORECAST) {
             _drawForecast();
+        }
+    }
+
+    void Base::_drawMultiWorldTime()
+    {
+        _drawTime();
+        _drawMultiTimezone();
+
+    }
+
+    void Base::_updateWorldTime()
+    {
+        CLEAR_AND_DISPLAY(Y_START_POSITION_MULTITIMEZONE, Y_END_POSITION_MULTITIMEZONE) {
+            _drawMultiTimezone();
         }
     }
 
@@ -537,6 +556,9 @@ namespace WSDraw {
             case ScreenType::INFO:
                 _drawScreenInfo();
                 break;
+            case ScreenType::MULTITIMEZONE:
+                _drawMultiTimezone();
+                break;
             #if DEBUG
                 case ScreenType::DEBUG_INFO:
                     _drawScreenDebug();
@@ -660,6 +682,8 @@ namespace WSDraw {
                 return F("Indoor Climate");
             case ScreenType::FORECAST:
                 return F("Weather Forecast");
+            case ScreenType::MULTITIMEZONE:
+                return F("World Time");
             case ScreenType::INFO:
                 return F("System Info");
             #if DEBUG

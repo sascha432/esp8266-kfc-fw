@@ -43,7 +43,7 @@
         },
         "mklittlefs": {
             "#if ESP8266": "~/.platformio/packages/tool-mklittlefs/mklittlefs",
-            "#elif ESP32": "~/.platformio/packages/tool-mklittlefs/mklittlefs"
+            "#else": "~/.platformio/packages/tool-mklittlefs/mklittlefs"
         },
         "mkspiffs": {
             "#if ESP8266": "@~/.platformio/packages/tool-mkspiffs/mkspiffs/mkspiffs_espressif8266_arduino",

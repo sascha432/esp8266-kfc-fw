@@ -3,6 +3,11 @@
  * Author: sascha_lammers@gmx.de
  */
 
+// tested with
+// PHP 7.4.28 (cli) (built: Feb 24 2022 02:16:32) ( ZTS Visual C++ 2017 x64 )
+// It is not compatible with PHP 8
+
+
 use ESPWebFramework\DumpConfig;
 use ESPWebFramework\WebBuilder;
 use ESPWebFramework\ConfigReader;
@@ -22,7 +27,7 @@ spl_autoload_register(
 
 $argParser = new ArgsParser();
 $argParser->addBoolOption('force', array('-f', '--force'), null, 'Force to run even if all files are up-to-date');
-$argParser->addBoolOption('dirty', array('--dirty'), null, 'Mark files as modified and exist');
+$argParser->addBoolOption('dirty', array('--dirty'), null, 'Mark files as modified');
 $argParser->addBoolOption('verbose', array('-v', '--verbose'), false, 'Be more talkative');
 $argParser->addOption('env', array('-e', '--env'), null, null, 'Specify which platformIO environment to use');
 $argParser->addMultiOption('branches', array('-b', '--branch'), array(), null, 'Specify one or more branches to execute');

@@ -2,7 +2,8 @@
 
 ## Version 0.0.2
 
-- Support for platform IO 4.0 default environment [env]
+- Replaced mappings_file with `.listings` and `.listings.txt`
+- Support for PlatformIO 4.0 default environment [env]
 - Support for variables in build_flags
 - Fixed macro resolution that caused an error in evaluateExpression()
 

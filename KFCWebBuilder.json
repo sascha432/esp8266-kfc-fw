@@ -1,11 +1,10 @@
 {
-    "name": "KFC firmware webui builder",
+    "name": "KFC Firmware WebUI Builder",
     "platformio_ini": "./platformio.ini",
     "global_defines_header": "./include/global.h",
     "spiffs": {
         "data_dir": "./data",
         "web_target_dir": "./data/webui",
-        "mappings_file": "${spiffs.web_target_dir}/.mappings",
         "listings_file": "${spiffs.web_target_dir}/.listings"
     },
     "configuration": {
@@ -18,10 +17,6 @@
         "log_level": "debug"
     },
     "web_builder": {
-        "branchesx": [
-            "spiffs",
-            "test_www"
-        ],
         "conditional_excludes": {
             "#if 100": [
                 "./Resources/html/__prototypes.html",
@@ -83,7 +78,7 @@
                 "./Resources/css/clock-led-matrix.css"
             ],
             "#if !IOT_LED_MATRIX_HEXAGON_PANEL": [
-                "./Resources/css/hexgon-panel.css"
+                "./Resources/css/hexagon-panel.css"
             ],
             "#if IOT_CLOCK || !IOT_LED_MATRIX": [
                 "./Resources/html/led_matrix.html"
@@ -104,7 +99,7 @@
             ],
             "#if !IOT_WEATHER_STATION": [
                 "./Resources/html/weather.html",
-                "./Resources/html/multitimezone.html"
+                "./Resources/html/world-clock.html"
             ],
             "#if !IOT_REMOTE_CONTROL": [
                 "./Resources/html/remotectrl.html"
@@ -197,7 +192,7 @@
                         "./Resources/css/form-help-block.css",
                         "./Resources/css/input-text-range.css",
                         "./Resources/css/clock-led-matrix.css",
-                        "./Resources/css/hexgon-panel.css",
+                        "./Resources/css/hexagon-panel.css",
                         "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css"
                     ]
                 },

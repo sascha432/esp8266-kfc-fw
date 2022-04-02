@@ -31,10 +31,6 @@ class Mapper implements PluginInterface
     /**
      * @var string
      */
-    private $mappingsFile;
-    /**
-     * @var string
-     */
     private $listingsFile;
     /**
      * @var array
@@ -75,7 +71,6 @@ class Mapper implements PluginInterface
         $spiffs = $webBuilder->getConfig()->getSpiffs();
         $this->dataDir = $spiffs->getDataDir();
         $this->webDir = $spiffs->getWebTargetDir();
-        $this->mappingsFile = $spiffs->getMappingsFile();
         $this->listingsFile = $spiffs->getListingsFile();
         $this->verbose = $webBuilder->isVerbose();
 
@@ -109,7 +104,7 @@ class Mapper implements PluginInterface
         $this->flags[self::FLAGS_GZIPPED] = 0x01;
 
         if ($this->webDir) {
-            ConfigReader::recursiveDelete($this->webDir, false, '/^([a-z0-9]{2,8}(?:\.(lnk|gz))?|'.preg_quote(basename($this->mappingsFile), '/').')$/');
+            ConfigReader::recursiveDelete($this->webDir, false, '/^([a-z0-9]{2,8}(?:\.(lnk|gz))?|'.preg_quote(basename($this->listingsFile), '/').'(\.txt)?)$/');
         }
     }
 
@@ -139,8 +134,6 @@ class Mapper implements PluginInterface
 
         }
         $totalSize += strlen($headers);
-
-        //file_put_contents($this->mappingsFile, $headers);
 
         $listing = '';
         $plain_listing = "filename:uid:file-size:original-file-size:modification-time:flags:original-filename\n";

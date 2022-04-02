@@ -1,20 +1,34 @@
 # ESPWebFramework
 
 ## Introduction
-The ESP Web Framework consists of C++ classes to improve building web sites with the ESP8266 and ESP32. It also includes a tool to create a package of optimized html templates, minified JS and CSS code and support for long filenames on SPIFFS.
+
+The ESP Web Framework consists of C++ classes to improve building web sites with the ESP8266 and ESP32. It also includes a tool to create a package of optimized html templates (with #ifdef support), minified JS and CSS code and support for long filenames on SPIFFS/LittleFS
+
+## Requirements
+
+  - PHP 7.4.28
+  - Python 3.9.10
+  - Java 8 (JRE)
+  - NodeJS 16.14.2
+  - uglify-js 3.15.3
+  - gzip 1.11
+
+Other version might work as well, but have not been tested
 
 ## Classes
 
 ### Mappings
 
-include file: _fs_mappings.h_
+include file: `fs_mapping.h`
 
-#### File format
+#### File format `.listings`
 
-<pre>
+`.listings.txt` is a human readable form of it
+
+```
 byte                            Number of entries (type defined as FS_MAPPING_COUNTER_TYPE)
 
-struct header               
+struct header
     word                        Offset of the real filename
     word                        Offset of the path on SPIFFS
     byte                        Flags bitset (0x01 = Gzipped content)
@@ -23,11 +37,11 @@ struct header
 [repeated # of entries]
 
 byte[size]
-    filename\0                  After the headers a block with the filenames starts.  
+    filename\0                  After the headers a block with the filenames starts.
     SPIFFS filename\0           Each filename is NUL terminated. The total size is
     [repeated # of entries]     <i>file size - (1 + sizeof(header) * #entries)</i>
 
-</pre> 
+```
 
 **NOTE:** To support more than 255 files, FS_MAPPING_COUNTER_TYPE can be set to uint16_t.
 
@@ -42,34 +56,34 @@ byte[size]
 The _Mapper_ plugin provides support for long filenames on SPIFFS. It renames all files to a 2 or 4* digit hexadecimal number and creates a mapping file for translating the SPIFFS filenames. It also stores a hash of the file's content to support incremental updates.
 
 *If <i>FS_MAPPING_COUNTER_TYPE</i> is uint8_t, the length of the filenames is 2
- 
+
 ##### Configuration:
 
-**NOTE:** All files in _web_target_dir_ that match "[0-9a-f]{2 or 4}" or ".mappings" get deleted by the <i>Mapper</i> plugin
+**NOTE:** All files in _web_target_dir_ that match `[0-9a-f]{2,8}` and `.listings*` get deleted by the <i>Mapper</i> plugin
 
 <pre><code>
-{ 
+{
     "spiffs": {
-        // Points to your <i>SPIFFS data</i> directory of platform IO
+        // Points to your <i>SPIFFS data</i> directory of PlatformIO
         "data_dir": "./data",
-        
+
         // Points to your data directory or a sub directory
         "web_target_dir": "./data/www",
-        
+
         // default location
-        "mappings_file": "${spiffs.web_target_dir}/.mappings",
+        "listings_file": "${spiffs.web_target_dir}/.listings",
     }
 }
 </code></pre>
 
 ##### Usage:
 
-The <i>Mapper</i> plugin runs as processor and can be either added to each group's processors, or added to several groups like shown in the example below. 
+The <i>Mapper</i> plugin runs as processor and can either be added to each group's processors, or added to several groups like shown in the example below.
 
 <pre><code>
 {
     "web_builder": {
-        "groups": 
+        "groups":
             "<i>GROUP NAME</i>": {
                 <i>// list all groups where to append this processor</i>
                 "append": [ "group a", "group b", "/.*/" ],

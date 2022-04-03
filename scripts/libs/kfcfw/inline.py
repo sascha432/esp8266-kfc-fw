@@ -1,4 +1,6 @@
-
+#
+# Author: sascha_lammers@gmx.de
+#
 
 #
 # create object from dictionary

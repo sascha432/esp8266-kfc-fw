@@ -1,3 +1,6 @@
+#
+# Author: sascha_lammers@gmx.de
+#
 
 import re
 import requests
@@ -5,7 +8,6 @@ import json
 import websocket
 import _thread as thread
 from . import Configuration
-
 
 class OTASerialConsole(object):
     def __init__(self, hostname, sid):
@@ -29,7 +31,7 @@ class OTASerialConsole(object):
         if isinstance(msg, str):
             pass
 
-    def before_auth(self, msg):
+    def before_auth(self, msg, error = None):
         # print('*>%s' % msg)
         if isinstance(msg, str):
             if not self.is_authenticated:
@@ -43,23 +45,23 @@ class OTASerialConsole(object):
                     self.ws.send('+SID %s' % self.sid)
 
     def on_error(self, error):
-        self.disconnect()
+        self.disconnect(error)
         print('Disconnected %s...' % error)
         self.is_closed = True
 
-    def on_close(self):
+    def on_close(self, error):
         self.is_closed = True
 
-    def on_open(self):
-        print("Connection to %s established" % self.hostname)
+    def on_open(self, error):
+        print("Connection to %s established" % (self.hostname))
         self.is_connected = True
 
-    def disconnect(self):
+    def disconnect(self, error):
         try:
             if self.is_connected or self.ws:
-                self.ws.disconnect()
+                self.ws.close()
         except Exception as e:
-            self.debug(e)
+            print('Disconnect failed: %s' % e)
         self.ws = None
         self.is_closed = True
 

@@ -276,7 +276,7 @@ target = args.user + ":***@" + args.hostname
 
 if args.action in("flash", "upload", "littlefs", "uploadfs", "atmega"):
     if not args.skip_safemode:
-        print("restarting device in safe mode...")
+        print("Restarting device in safe mode...")
         payload_sent = False
         timeout = time.monotonic() + 10
         socket = kfcfw.OTASerialConsole(args.hostname, sid)
@@ -286,9 +286,9 @@ if args.action in("flash", "upload", "littlefs", "uploadfs", "atmega"):
                 payload_sent = True
             time.sleep(1)
     else:
-        print("skipped restarting device in safemode...")
+        print("Skipped restarting device in safemode...")
 
-    print("starting update....")
+    print("Starting update....")
     ota.flash(url, args.action, target, sid)
 elif args.action=="factoryreset":
     payload_sent = False

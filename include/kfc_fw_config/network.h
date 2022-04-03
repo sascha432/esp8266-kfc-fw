@@ -80,7 +80,7 @@ namespace KFCConfigurationClasses {
         class SettingsConfig {
         public:
             struct __attribute__packed__ StationModeSettings {
-                static constexpr uint32_t kGlobalDNS = ~0U;
+                static constexpr uint32_t kGlobalDNS = ~0;
 
                 using Type = StationModeSettings;
                 CREATE_IPV4_ADDRESS(local_ip, 0);
@@ -245,7 +245,11 @@ namespace KFCConfigurationClasses {
                 uint32_t _priority;
                 uint8_t _bssid[6];
 
-                StationConfig(StationConfigType id, const char *ssid, uint32_t priority) :
+                StationConfig(StationConfigType id, const char *ssid, uint32_t priority) : StationConfig(id, FPSTR(ssid), priority)
+                {
+                }
+
+                StationConfig(StationConfigType id, const __FlashStringHelper *ssid, uint32_t priority) :
                     _id(id),
                     _SSID(ssid),
                     _priority(priority),
@@ -264,10 +268,11 @@ namespace KFCConfigurationClasses {
             {
                 StationVector list;
                 bool scan = false;
+                auto cfg = Network::Settings::getConfig();
                 for(uint8_t i = 0; i < kNumStations; i++) {
-                    auto config = Network::Settings::getConfig().stations[i];
+                    auto &config = cfg.stations[i];
                     if (config.isEnabled()) {
-                        list.emplace_back(static_cast<StationConfigType>(i), getSSID(i), config._get_priority());
+                        list.emplace_back(static_cast<StationConfigType>(i), getFPStrSSID(i), config._get_priority());
                         if (config._get_priority() == 0) {
                             scan = true;
                         }
@@ -293,6 +298,18 @@ namespace KFCConfigurationClasses {
             static const char *getSSID(uint8_t num)
             {
                 return getSSID(static_cast<StationConfigType>(num));
+            }
+
+            static const __FlashStringHelper *getFPStrSSID(uint8_t num)
+            {
+                auto ssid = getSSID(static_cast<StationConfigType>(num));
+                if (ssid && *ssid) {
+                    return FPSTR(ssid);
+                }
+                if (Network::Settings::getConfig().stations[num].isEnabled()) {
+                    return F("<No SSID>");
+                }
+                return F("<Disabled>");
             }
 
             static const char *getSSID(StationConfigType num)

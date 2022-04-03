@@ -196,7 +196,7 @@ Configuration::WriteResultType Configuration::write()
 
         // create new configuration in memory
         {
-            // locked skope
+            // locked scope
             InterruptLock lock;
             Buffer buffer;
 

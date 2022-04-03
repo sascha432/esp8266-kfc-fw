@@ -15,6 +15,7 @@
 #include "plugins_menu.h"
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
+#include "save_crash.h"
 #if ESP32
 #include <sdkconfig.h>
 #endif
@@ -197,6 +198,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     if (key == F("HOSTNAME")) {
         output.print(System::Device::getName());
     }
+    else if (key == F("LOGIN_USERNAME")) {
+        output.print(System::Device::getUsername());
+    }
     else if (key == F("TITLE")) {
         output.print(System::Device::getTitle());
     }
@@ -297,6 +301,17 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         printVersion(output);
         if (System::Flags::getConfig().is_default_password) {
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
+        }
+        auto cfg = System::Device::getConfig();
+        if (cfg.config_magic) {
+            output.printf_P(PSTR(HTML_S(br) "Last Factory Reset (Version %s-%08x): "), SaveCrash::Data::FirmwareVersion(cfg.config_version).toString().c_str(), cfg.config_magic);
+            auto timestamp = cfg.getLastFactoryResetTimestamp();
+            if (timestamp) {
+                output.strftime_P(SPGM(strftime_date_time_zone), timestamp);
+            }
+            else {
+                output.print(F("No time available"));
+            }
         }
     }
     #if NTP_CLIENT || RTC_SUPPORT

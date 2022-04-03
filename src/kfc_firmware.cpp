@@ -351,7 +351,7 @@ void setup()
         if (resetDetector.hasResetDetected()) {
             DEBUG_BOOT_PRINT_POS();
             if (resetDetector.getResetCounter() >= KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT) {
-                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in a 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
+                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
                 DEBUG_BOOT_PRINT_POS();
                 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
                     for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
@@ -400,7 +400,7 @@ void setup()
                 for(uint8_t i = 0; i < 76; i++) {
                     KFC_SAFE_MODE_SERIAL_PORT.print('=');
                 }
-                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrashs detected: %u\nReset counter: %u\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
+                KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("\nCrash detected: %u\nReset counter: %u\n"), resetDetector.hasCrashDetected(), resetDetector.getResetCounter());
                 KFC_SAFE_MODE_SERIAL_PORT.println(F("\nAvailable keys:\n"));
                 KFC_SAFE_MODE_SERIAL_PORT.println(F(
                     "    t: disable boot menu timeout\n"
@@ -484,7 +484,7 @@ void setup()
                     }
                 }
                 if (endTimeout) {
-                    // timeout occured, count as crash
+                    // timeout occurred, count as crash
                     // safe_mode should be false
                     #if KFC_DISABLE_CRASHCOUNTER == 0
                         increaseCrashCounter = true;

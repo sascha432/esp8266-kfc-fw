@@ -34,5 +34,11 @@ $(function() {
                 update_fields(n);
             }
         }
+        $("input[name^='dns1_'],input[name^='dns2_']").each(function() {
+            var val = $(this).val();
+            if (val === '(IP unset)' || val === '0.0.0.0') {
+                $(this).val('');
+            }
+        });
     }
 });

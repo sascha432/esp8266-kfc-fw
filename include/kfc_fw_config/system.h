@@ -84,6 +84,8 @@ namespace KFCConfigurationClasses {
                 using Type = DeviceConfig_t;
 
                 uint32_t config_version;
+                uint32_t config_magic;
+                time_t factory_reset_unixtime;
                 // time in seconds before the system reboots after entering safe mode either due to series of crashes or many short power failures
                 CREATE_UINT16_BITFIELD_MIN_MAX(safe_mode_reboot_timeout_minutes, 10, 5, 900, 0, 1);
                 // time in minutes until the build reboots, if the devices was reset quickly 3 or 5 times in a row. some might have a reset button that
@@ -111,13 +113,30 @@ namespace KFCConfigurationClasses {
                     return get_enum_status_led_mode(*this);
                 }
 
+                void setLastFactoryResetTimestamp() {
+                    factory_reset_unixtime = time(nullptr);
+                    // if we do not have a valid timestamp (RTC or NTP), use the uptime
+                    // getLastFactoryResetTimestamp() corrects it as soon as it is available
+                }
+
+                uint32_t getLastFactoryResetTimestamp() const {
+                    if (isTimeValid(factory_reset_unixtime)) {
+                        return factory_reset_unixtime;
+                    }
+                    time_t now = time(nullptr);
+                    if (isTimeValid(now)) {
+                        return factory_reset_unixtime + now;
+                    }
+                    return 0;
+                }
+
                 DeviceConfig_t();
             };
         };
 
         class Device : public DeviceConfig, public ConfigGetterSetter<DeviceConfig::DeviceConfig_t, _H(MainConfig().system.device.cfg) CIF_DEBUG(, &handleNameDeviceConfig_t)> {
         public:
-            static void defaults();
+            static void defaults(bool factoryReset = false);
 
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Name, 3, 16);
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Title, 3, 32);
@@ -131,7 +150,7 @@ namespace KFCConfigurationClasses {
                 return getName();
             }
 
-            // username is device name
+            // username is the device name
             // in case this changes one day, this function will return the username
             static const char *getUsername() {
                 return getName();

@@ -78,6 +78,8 @@ namespace KFCConfigurationClasses {
 
     System::DeviceConfig::DeviceConfig_t::DeviceConfig_t() :
         config_version(FIRMWARE_VERSION),
+        config_magic(CONFIG_MAGIC_DWORD),
+        factory_reset_unixtime(0),
         safe_mode_reboot_timeout_minutes(kDefaultValueFor_safe_mode_reboot_timeout_minutes),
         zeroconf_timeout(kDefaultValueFor_zeroconf_timeout),
         webui_cookie_lifetime_days(kDefaultValueFor_webui_cookie_lifetime_days),
@@ -180,12 +182,16 @@ namespace KFCConfigurationClasses {
     // --------------------------------------------------------------------
     // Device
 
-    void System::Device::defaults()
+    void System::Device::defaults(bool factoryReset)
     {
         DeviceConfig_t cfg = {};
         cfg.config_version = SaveCrash::Data::FirmwareVersion().__version;
+        if (factoryReset) {
+            cfg.config_magic = CONFIG_MAGIC_DWORD;
+            cfg.setLastFactoryResetTimestamp();
+        }
         setConfig(cfg);
-        setTitle(SPGM(KFC_Firmware));
+        setTitle(SPGM(KFC_Firmware, "KFC Firmware"));
     }
 
     // --------------------------------------------------------------------

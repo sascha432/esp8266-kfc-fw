@@ -2,7 +2,9 @@
 
 ## Version 0.0.6
 
- - World Clock screen
+ - Fixed issues with websocket-clients and the OTA tool
+ - Username is pre-filled at the WebUI login
+ - World Clock screen for weather station
  - Changed syslog default protocol to UDP
  - Updates for KFCWebBuilder (requires PHP 7.4.28)
  - Updated weather station plugin for Arduino Core 3.x

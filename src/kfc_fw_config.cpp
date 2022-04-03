@@ -630,12 +630,14 @@ void KFCFWConfiguration::restoreFactorySettings()
 
     erase();
     clear();
+    SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
+
     auto deviceName = defaultDeviceName();
     System::Flags::defaults();
     System::Firmware::defaults();
-    System::Device::defaults();
+    System::Device::defaults(true);
     System::Device::setName(deviceName);
-    System::Device::setTitle(FSPGM(KFC_Firmware, "KFC Firmware"));
+    // System::Device::setTitle(FSPGM(KFC_Firmware, "KFC Firmware"));
     System::Device::setPassword(FSPGM(defaultPassword, "12345678"));
     System::WebServer::defaults();
     Network::WiFi::setSSID0(deviceName);
@@ -692,8 +694,6 @@ void KFCFWConfiguration::restoreFactorySettings()
     #if SECURITY_LOGIN_ATTEMPTS
         KFCFS.remove(FSPGM(login_failure_file));
     #endif
-
-    // SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
 }
 
 #if CUSTOM_CONFIG_PRESET

@@ -109,18 +109,19 @@ public:
     // check if the hostname contains zeroconf
     bool hasZeroConf(const String &hostname) const;
 
-#if ENABLE_DEEP_SLEEP
+    #if ENABLE_DEEP_SLEEP
 
-    void storeQuickConnect(const uint8_t *bssid, int8_t channel);
-    void storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway);
+        void storeQuickConnect(const uint8_t *bssid, int8_t channel);
+        void storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway);
 
-    inline static void wakeUpFromDeepSleep() {
-        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-        wifiQuickConnect();
-    }
-    void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
+        inline static void wakeUpFromDeepSleep() {
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+            wifiQuickConnect();
+        }
+        void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
 
-#endif
+    #endif
+
 public:
     static void wifiQuickConnect();
 

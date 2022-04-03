@@ -183,12 +183,12 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WIFI_STATION_MAX_NUM, stm, en, prio, ssid, pass, dhcp, ip, sn, gw, dns1, dns2);
 
-            auto stationGroup = &globalGroup.end().addCardGroup(F_VAR(stm, 0), F("Station Mode - ") + String(Network::WiFi::getSSID0()), true);
+            auto stationGroup = &globalGroup.end().addCardGroup(F_VAR(stm, 0), F("Station Mode - ") + String(Network::WiFi::getFPStrSSID(0)), true);
 
             for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
 
                 if (i > 0) {
-                    stationGroup = &stationGroup->end().addCardGroup(F_VAR(stm, i), F("Station Mode - ") + String(Network::WiFi::getSSID(i)), network.stations[i].isEnabled(i));
+                    stationGroup = &stationGroup->end().addCardGroup(F_VAR(stm, i), F("Station Mode - ") + String(Network::WiFi::getFPStrSSID(i)), network.stations[i].isEnabled(i));
                 }
 
                 auto &stationEnabled = form.addObjectGetterSetter(F_VAR(en, i), FormGetterSetter(network.stations[i], enabled));
@@ -204,7 +204,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
                         Network::WiFi::setSSID(i, str);
                     }
                     else {
-                        str = Network::WiFi::getSSID(i);
+                        str = Network::WiFi::getFPStrSSID(i);
                     }
                     return true;
                 }, InputFieldType::TEXT).setOptional(true);
@@ -240,11 +240,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
                 form.addObjectGetterSetter(F_VAR(dns1, i), FormGetterSetter(network.stations[i], dns1)).setOptional(true);
                 form.addFormUI(FSPGM(DNS_1), FormUI::PlaceHolder(F("Global DNS 1")));
-                network.stations[i].addHostnameValidatorFor_dns1(form);
+                network.stations[i].addHostnameValidatorFor_dns1(form, true);
 
                 form.addObjectGetterSetter(F_VAR(dns2, i), FormGetterSetter(network.stations[i], dns2)).setOptional(true);
                 form.addFormUI(FSPGM(DNS_2), FormUI::PlaceHolder(F("Global DNS 2")));
-                network.stations[i].addHostnameValidatorFor_dns2(form);
+                network.stations[i].addHostnameValidatorFor_dns2(form, true);
 
             }
 

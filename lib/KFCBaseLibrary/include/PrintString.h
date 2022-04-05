@@ -46,6 +46,9 @@ public:
     PrintString(const uint8_t* buffer, size_t len);
     PrintString(const __FlashBufferHelper *buffer, size_t len);
 
+    PrintString(const __FlashStringHelper *format, struct tm *tm) {
+        strftime(format, tm);
+    }
 
     // PrintString(const char *str)
     // PrintString(const char *format, ...) with at least one argument, otherwise it is not using printf but print

@@ -32,8 +32,8 @@ PROGMEM_READ_ALIGNED_CHUNK(var)
 
 #include "WString.h"
 #include "misc_string.h"
-#include "misc_time.h"
 #include "misc_safestring.h"
+#include "misc_time.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -225,6 +225,11 @@ inline String mac2String(const void *mac, char separator = ':') {
 
 #define inet_ntoString(ip)                     IPAddress(ip).toString()
 #define inet_nto_cstr(ip)                      IPAddress(ip).toString().c_str()
+
+// for passing strings to a function that cannot read from PROGMEM
+// setenv(CStr("TZ")), CStr("UTC")). the String objects gets destroyed
+// after the function returns
+#define CStr(str)                              String(F(str)).c_str()
 
 void bin2hex_append(String &str, const void *data, size_t length);
 size_t hex2bin(void *buf, size_t length, const char *str);

@@ -57,3 +57,20 @@ uint32_t getSystemUptime();
 
 // milliseconds
 uint64_t getSystemUptimeMillis();
+
+// die maximale laenge an daten fuer dike TZ env variable
+#ifndef TZ_ENVIRONMENT_MAX_SIZE
+#   define TZ_ENVIRONMENT_MAX_SIZE 0
+#endif
+
+class __FlashStringHelper;
+class String;
+
+void safeSetTZ(const __FlashStringHelper *timezone);
+
+inline void safeSetTZ(const char *timezone)
+{
+    safeSetTZ(reinterpret_cast<const __FlashStringHelper *>(timezone));
+}
+
+void safeSetTZ(const String &timezone);

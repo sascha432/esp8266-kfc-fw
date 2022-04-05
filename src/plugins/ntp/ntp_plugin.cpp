@@ -148,7 +148,7 @@ void NTPPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies)
         _execConfigTime();
     }
     else {
-        _setTZ(_GMT);
+        safeSetTZ(_GMT);
         shutdown();
     }
 }
@@ -211,15 +211,6 @@ void NTPPlugin::getStatus(Print &output)
     }
 }
 
-extern "C" int	setenv(const char *__string, const char *__value, int __overwrite);
-extern "C" void tzset(void);
-
-void NTPPlugin::_setTZ(const char *tz)
-{
-    setenv(String(F("TZ")).c_str(), tz, 1);
-    tzset();
-}
-
 void NTPPlugin::_execConfigTime()
 {
     // set to out of sync while updating
@@ -241,7 +232,7 @@ void NTPPlugin::_execConfigTime()
     }
 
     auto timezone = Plugins::NTPClient::getPosixTimezone();
-	_setTZ(timezone ? timezone : _GMT);
+	safeSetTZ(FPSTR(timezone ? timezone : _GMT));
     sntp_init();
 
     auto interval = kCheckInterval + _startUpDelay;

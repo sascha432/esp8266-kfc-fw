@@ -2,11 +2,104 @@
   Author: sascha_lammers@gmx.de
 */
 
+#define __XSI_VISIBLE
+
+#include "misc_time.h"
 #include <Arduino_compat.h>
 #include <PrintString.h>
-#include "misc_time.h"
+#include <debug_helper.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define DEBUG_MISC_TIME 0
+
+#if DEBUG_MISC_TIME
+#    include "debug_helper_enable.h"
+#else
+#    include "debug_helper_disable.h"
+#endif
 
 static time_t ntpLastKnownTime = TIME_T_MIN;
+
+void safeSetTZ(const String &timezone)
+{
+    safeSetTZ(timezone.c_str());
+}
+
+#if ESP8266 && (TZ_ENVIRONMENT_MAX_SIZE >= 8)
+
+// optimized version that does not suffer from memory leaks using setenv quite often
+
+static constexpr size_t kMaxTZData = TZ_ENVIRONMENT_MAX_SIZE;
+
+extern "C" char **environ;
+static char *tzPtr;
+static const char tzEnv[] PROGMEM = { "TZ" };
+static const char tzEnvEquals[] PROGMEM = { "TZ=" };
+
+static char **_getTZEnvironmentEntry()
+{
+    char **ptr = environ;
+    while (*ptr) {
+        if (strncmp_P(*ptr, tzEnvEquals, sizeof(tzEnvEquals) - 1) == 0) {
+            __LDBG_printf("env %p:%s buf %p:%s", ptr ? *ptr : nullptr, __S(ptr ? *ptr : nullptr), tzPtr, __S(tzPtr));
+            return ptr;
+        }
+        ptr++;
+    }
+    return nullptr;
+}
+
+void safeSetTZ(const __FlashStringHelper *timezone)
+{
+    // find if the entry exists and matches with our buffer
+    auto entry = _getTZEnvironmentEntry();
+    __LDBG_printf("setenv %p ptr %p data %s", entry, entry ? *entry : nullptr, (entry && tzPtr == *entry) ? printable_string(*entry, kMaxTZData, kMaxTZData).c_str() : PSTR("N/A"));
+    if (!entry || (tzPtr != *entry)) {
+        // if there is no entry, create a dummy for 64 characters
+        auto bufferPtr = std::unique_ptr<char>(new char[kMaxTZData + 1]);
+        auto buf = bufferPtr.get();
+
+        std::fill_n(buf, kMaxTZData, 'A');
+        buf[kMaxTZData] = 0;
+
+        if (setenv(tzEnv, buf, 1) == 0) {
+            entry = _getTZEnvironmentEntry();
+            if (!entry) {
+                __DBG_printf("could not find TZ after setenv %p ptr %p", entry, entry ? *entry : nullptr);
+                tzPtr = nullptr;
+                return;
+            }
+            tzPtr = *entry;
+        } else {
+            // save nullptr in case of  failure
+            tzPtr = nullptr;
+        }
+    }
+
+    #if DEBUG_MISC_TIME
+        entry = _getTZEnvironmentEntry();
+        if (!entry || (tzPtr != *entry)) {
+            __DBG_panic("could not find TZ env entry %p ptr %p", entry, entry ? *entry : nullptr);
+            return;
+        }
+    #endif
+
+    // update the content of the pointer
+    snprintf_P(tzPtr, kMaxTZData + 3, PSTR("TZ=%s"), timezone);
+
+    tzset();
+}
+
+#else
+
+void safeSetTZ(const __FlashStringHelper *timezone)
+{
+    setenv("TV", String(timezone).c_str(), 1);
+    tzset();
+}
+
+#endif
 
 time_t getLastKnownTimeOfDay()
 {
@@ -38,15 +131,15 @@ String formatTime(unsigned long seconds, bool printDaysIfZero)
 }
 
 const char *formatTimeNames_long[] PROGMEM = {
-    SPGM(year),                     // 0
-    SPGM(month),                    // 1
-    SPGM(week),                     // 2
-    SPGM(day),                      // 3
-    SPGM(hour),                     // 4
-    SPGM(minute),                   // 5
-    SPGM(second),                   // 6
-    SPGM(millisecond),              // 7
-    SPGM(microsecond),              // 8
+    SPGM(year), // 0
+    SPGM(month), // 1
+    SPGM(week), // 2
+    SPGM(day), // 3
+    SPGM(hour), // 4
+    SPGM(minute), // 5
+    SPGM(second), // 6
+    SPGM(millisecond), // 7
+    SPGM(microsecond), // 8
 };
 
 const char *formatTimeNames_short[] PROGMEM = {
@@ -94,25 +187,25 @@ String __formatTime(PGM_P names[], bool isShort, const String &sep, const String
     if (microseconds >= minValue) {
         items.emplace_back(PrintString(F("%u %s%s"), microseconds, names[8], (microseconds == 1) || isShort ? emptyString.c_str() : PSTR("s")));
     }
-    switch(items.size()) {
-        case 0:
-            return F("N/A");
-        case 1:
-            return items[0];
-        case 2:
-            return items[0] + lastSep + items[1];
-        default:
+    switch (items.size()) {
+    case 0:
+        return F("N/A");
+    case 1:
+        return items[0];
+    case 2:
+        return items[0] + lastSep + items[1];
+    default:
         break;
     }
     size_t len = (sep.length() * (items.size() - 1)) + lastSep.length();
-    for(const auto &str: items) {
+    for (const auto &str : items) {
         len += str.length();
     }
     auto end = std::prev(items.end());
     auto iterator = items.begin();
     String output = std::move(items[0]);
     output.reserve(len);
-    for(++iterator; iterator != end; ++iterator) {
+    for (++iterator; iterator != end; ++iterator) {
         output += sep;
         output += *iterator;
     }

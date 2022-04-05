@@ -40,7 +40,6 @@ private:
     // void _wifiCallback(WiFiCallbacks::EventType type, void *);
     void _checkTimerCallback(Event::CallbackTimerPtr timer);
     void _execConfigTime();
-    void _setTZ(const char *tz);
 
 // private:
 public:

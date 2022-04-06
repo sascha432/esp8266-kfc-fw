@@ -226,10 +226,11 @@ inline String mac2String(const void *mac, char separator = ':') {
 #define inet_ntoString(ip)                     IPAddress(ip).toString()
 #define inet_nto_cstr(ip)                      IPAddress(ip).toString().c_str()
 
-// for passing strings to a function that cannot read from PROGMEM
-// setenv(CStr("TZ")), CStr("UTC")). the String objects gets destroyed
-// after the function returns
-#define CStr(str)                              String(F(str)).c_str()
+// CStrP is creating a copy of PGMP or __FlashStringHelper for passing strings to a function s
+// that do not support PROGMEM.
+// setenv(CStrP(F("TZ"))), CStrP(PSTR("UTC"))). the String objects get destroyed after the function returns
+// and the pointer will be invalid
+#define CStrP(str)                              String(FPSTR(str)).c_str()
 
 void bin2hex_append(String &str, const void *data, size_t length);
 size_t hex2bin(void *buf, size_t length, const char *str);

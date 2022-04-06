@@ -81,7 +81,7 @@ namespace SPIFlash {
                 }
             }
             else {
-                __DBG_printf("sector=0x%04x read error", i);
+                __LDBG_printf("sector=0x%04x read error", i);
             }
         }
         return std::distance(dst.begin(), iter);
@@ -111,11 +111,11 @@ namespace SPIFlash {
                     limit--;
                 }
                 else {
-                    __DBG_printf("sector=0x%04x not enough space: %u > %u", i, minSpace, header.space());
+                    __LDBG_printf("sector=0x%04x not enough space: %u > %u", i, minSpace, header.space());
                 }
             }
             else {
-                __DBG_printf("sector=0x%04x read error", i);
+                __LDBG_printf("sector=0x%04x read error", i);
             }
         }
         if (sort) {
@@ -375,7 +375,7 @@ namespace SPIFlash {
                 __LDBG_printf("sector=0x%04x ofs=%u read=%d", i, offset, rc);
 
                 if (rc != SPI_FLASH_RESULT_OK) {
-                    __DBG_printf("sector=0x%04x read failure", i);
+                    __LDBG_printf("sector=0x%04x read failure", i);
                     errors++;
                     continue;
                 }
@@ -383,24 +383,24 @@ namespace SPIFlash {
                 if (type == ClearStorageType::REMOVE_MAGIC) {
                     // skip invalid magic if removal is requested
                     if (!hdr.hasMagic()) {
-                        __DBG_printf("sector=0x%04x offset=0x%08x magic=%08x", i, offset, hdr._magic);
+                        __LDBG_printf("sector=0x%04x offset=0x%08x magic=%08x", i, offset, hdr._magic);
                         continue;
                     }
                     // erase only if the magic can be found or the sector contains any data
                     hdr.setPattern(0x00);
                     // try to overwrite the flash memory
-                    __DBG_printf("sector=0x%04x trying to remove magic", i);
+                    __LDBG_printf("sector=0x%04x trying to remove magic", i);
                     rc = _spi_flash_write(offset, hdr, sizeof(hdr));
                     if (rc == SPI_FLASH_RESULT_OK) {
                         rc = _spi_flash_read(offset, hdr, sizeof(hdr));
-                        __DBG_printf("sector=0x%04x offset=0x%08x magic=%08x rc=%u", i, offset, hdr._magic, rc);
+                        __LDBG_printf("sector=0x%04x offset=0x%08x magic=%08x rc=%u", i, offset, hdr._magic, rc);
                         if (rc != SPI_FLASH_RESULT_OK) {
-                            __DBG_printf("sector=0x%04x read failure", i);
+                            __LDBG_printf("sector=0x%04x read failure", i);
                             errors++;
                         }
                         else if (!hdr.hasMagic()) { // erase sector if magic is still present
                             // skip erase
-                            __DBG_printf("sector=0x%04x skip erase magic=%08x!=%08x", i, hdr._magic != kFlashMagic);
+                            __LDBG_printf("sector=0x%04x skip erase magic=%08x!=%08x", i, hdr._magic != kFlashMagic);
                             continue;
                         }
                     }
@@ -410,7 +410,7 @@ namespace SPIFlash {
                 // erase entire sector if the magic cannot be removed
                 rc = _spi_flash_erase_sector(i);
                 if (rc != SPI_FLASH_RESULT_OK) {
-                    __DBG_printf("sector=0x%04x erase failed", i);
+                    __LDBG_printf("sector=0x%04x erase failed", i);
                     errors++;
                 }
             }

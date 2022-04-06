@@ -78,7 +78,7 @@ void Sensor_DS3231::getValues(WebUINS::Events &array, bool timer)
 void Sensor_DS3231::createWebUI(WebUINS::Root &webUI)
 {
     webUI.appendToLastRow(WebUINS::Row(
-        WebUINS::Sensor(FSPGM(ds3231_id_time), _name, FSPGM(UTF8_degreeC)).setConfig(_renderConfig),
+        WebUINS::Sensor(FSPGM(ds3231_id_time), _name, F("")).setConfig(_renderConfig),
         WebUINS::Sensor(FSPGM(ds3231_id_temp), F("RTC Clock"), FSPGM(UTF8_degreeC)).setConfig(_renderConfig)
     ));
 }

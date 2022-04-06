@@ -53,7 +53,7 @@ namespace MQTT {
         __LDBG_printf("enabled=%u", System::Flags::getConfig().is_mqtt_enabled);
     #if DEBUG
         if (_mqttClient) {
-            __DBG_panic("MQTT client already exists");
+            __LDBG_panic("MQTT client already exists");
         }
     #endif
         if (System::Flags::getConfig().is_mqtt_enabled) {
@@ -461,7 +461,7 @@ namespace MQTT {
             }
             topic.vprintf_P(RFPSTR(format), arg);
         }
-        __DBG_assert_printf(topic.indexOf(F("//")) == -1, "topic '%s' contains //", topic.c_str());
+        __LDBG_assert_printf(topic.indexOf(F("//")) == -1, "topic '%s' contains //", topic.c_str());
         __LDBG_printf("topic=%s", topic.c_str());
         return topic;
     }
@@ -624,7 +624,7 @@ namespace MQTT {
 
         #if MQTT_AUTO_DISCOVERY
             _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();
-            __DBG_printf("subscribe=%s", __S(_autoDiscoveryStatusTopic));
+            __LDBG_printf("subscribe=%s", __S(_autoDiscoveryStatusTopic));
             subscribe(nullptr, _autoDiscoveryStatusTopic, QosType::AT_LEAST_ONCE);
         #endif
 
@@ -694,7 +694,7 @@ namespace MQTT {
                 return true;
             }
         }
-        __DBG_printf("publishAutoDiscovery false: enabled=%u empty=%u queue=%p", AutoDiscovery::Queue::isEnabled(), _components.empty(), _autoDiscoveryQueue.get());
+        __LDBG_printf("publishAutoDiscovery false: enabled=%u empty=%u queue=%p", AutoDiscovery::Queue::isEnabled(), _components.empty(), _autoDiscoveryQueue.get());
     #endif
         return false;
     }

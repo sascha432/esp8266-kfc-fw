@@ -116,6 +116,7 @@ namespace WSDraw {
 
     static constexpr auto kNumScreens = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kNumScreens;
     static constexpr auto kSkipScreen = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kSkipScreen;
+    static constexpr auto kManualScreen = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t::kManualScreen;
 
     static constexpr int16_t _offsetX = 2;
 
@@ -160,7 +161,9 @@ namespace WSDraw {
         void unlock();
         bool isLocked();
 
-        void printDebugInfo(Print &output);
+        #if DEBUG_IOT_WEATHER_STATION
+            void printDebugInfo(Print &output);
+        #endif
 
     protected:
         DisplayType _tft;
@@ -168,7 +171,7 @@ namespace WSDraw {
 
     public:
         // update date, time and timezone at the top
-        void _drawTime();
+        void _drawTime(bool displayTimezone = true);
 
         // display local weather info
         void _drawLocalWeather();
@@ -189,7 +192,8 @@ namespace WSDraw {
         void _drawForecast();
 
         // draw multiply timezones
-        void _drawMultiTimezone();
+        void _drawWorldClocks(int16_t offsetY);
+        void _drawWorldClock();
 
         // draw info
         void _drawInfo();
@@ -207,13 +211,13 @@ namespace WSDraw {
         void _drawScreenForecast();
         void _updateScreenForecast();
 
-        void _drawMultiWorldTime();
-        void _updateWorldTime();
+        void _drawScreenWorldClock();
+        void _updateScreenWorldClock();
 
         void _drawScreenInfo();
         void _updateScreenInfo();
 
-        #if DEBUG
+        #if DEBUG_IOT_WEATHER_STATION
             void _drawDebugInfo();
             void _drawScreenDebug();
             void _updateScreenDebug();
@@ -317,7 +321,7 @@ namespace WSDraw {
         // read indoor values
         virtual IndoorValues _getIndoorValues() = 0;
 
-       #if DEBUG
+       #if DEBUG_IOT_WEATHER_STATION
             uint32_t _debugLastUpdate{0};
             float _debugFPS{0.0f};
             float _debugPPS{0.0f};

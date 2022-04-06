@@ -196,9 +196,16 @@ void WeatherStationBase::_loop()
                         _updateIndoorClimateBottom();
                     }
                 }
-                else if (_currentScreen == ScreenType::DEBUG_INFO) {
-                    // update debug screen every second
-                    _updateScreenDebug();
+                #if DEBUG_IOT_WEATHER_STATION
+                    else if (_currentScreen == ScreenType::DEBUG_INFO) {
+                        // update debug screen every second
+                        _updateScreenDebug();
+                        return;
+                    }
+                #endif
+                else if (_currentScreen == ScreenType::WORLD_CLOCK) {
+                    // update clock screen every second
+                    _updateScreenWorldClock();
                     return;
                 }
                 else if (_currentScreen == ScreenType::INDOOR) {
@@ -218,10 +225,12 @@ void WeatherStationBase::_loop()
                 _updateScreenTime();
             }
         }
-        else if (_currentScreen == ScreenType::DEBUG_INFO) {
-            // update debug screen as often as possible
-            _updateScreenDebug();
-        }
+        #if DEBUG_IOT_WEATHER_STATION
+            else if (_currentScreen == ScreenType::DEBUG_INFO) {
+                // update debug screen as often as possible
+                _updateScreenDebug();
+            }
+        #endif
 
     }
 }

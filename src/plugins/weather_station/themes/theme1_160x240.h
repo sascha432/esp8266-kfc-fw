@@ -107,7 +107,7 @@
 #define H_POSITION_MOON_PHASE           AdafruitGFXExtension::LEFT
 
 
-#define Y_START_POSITION_TIME           (0)
+#define Y_START_POSITION_TIME           (2)
 #define Y_END_POSITION_TIME             (45 + Y_START_POSITION_TIME)
 
 // main
@@ -123,8 +123,8 @@
 #define Y_END_POSITION_FORECAST         (TFT_HEIGHT - 1)
 
 // multi timezone display
-#define Y_START_POSITION_MULTITIMEZONE  (Y_END_POSITION_TIME + 2)
-#define Y_END_POSITION_MULTITIMEZONE    (TFT_HEIGHT - 1)
+#define Y_START_POSITION_WORLD_CLOCK    (Y_END_POSITION_TIME + 2)
+#define Y_END_POSITION_WORLD_CLOCK      (TFT_HEIGHT - 1)
 
 // system info
 #define Y_START_POSITION_INFO           (Y_END_POSITION_TIME + 2)

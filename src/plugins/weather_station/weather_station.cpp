@@ -52,7 +52,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     // web_templates
     "",
     // config_forms
-    "weather",
+    "weather,world-clock",
     // reconfigure_dependencies
     "http",
     PluginComponent::PriorityType::WEATHER_STATION,

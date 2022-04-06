@@ -34,7 +34,7 @@ public:
         auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
         auto subMenu = configMenu.addSubMenu(getFriendlyName());
         subMenu.addMenuItem(getFriendlyName(), F("weather.html"));
-        subMenu.addMenuItem(F("World Clock"), F("multitimezone.html"));
+        subMenu.addMenuItem(F("World Clock"), F("world-clock.html"));
     }
 
 // WebUI

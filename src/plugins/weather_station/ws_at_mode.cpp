@@ -5,7 +5,9 @@
 #if AT_MODE_SUPPORTED
 
 #include "weather_station.h"
+#include  "moon_phase.h"
 #include "at_mode.h"
+#include "moon/moontool.h"
 
 #if DEBUG_IOT_WEATHER_STATION
 #include <debug_helper_enable.h>
@@ -13,9 +15,23 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if DEBUG_MOON_PHASE
+
+static String get_date_str(time_t unixtime)
+{
+    PrintString str;
+    str.strftime(F("%F %X %Z"), unixtime);
+    return str;
+}
+
+#endif
+
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>", "Enable/disable function");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSBL, "WSBL", "<level=0-1023>", "Set backlight level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSU, "WSU", "<i|f>", "Update weather info/forecast");
+#if DEBUG_MOON_PHASE
+    PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSM, "WSM", "<date YYYY-MM-DD>[,<days>]", "Show Moon Phase for given Date");
+#endif
 
 ATModeCommandHelpArrayPtr WeatherStationPlugin::atModeCommandHelp(size_t &size) const
 {
@@ -23,6 +39,9 @@ ATModeCommandHelpArrayPtr WeatherStationPlugin::atModeCommandHelp(size_t &size) 
         PROGMEM_AT_MODE_HELP_COMMAND(WSSET),
         PROGMEM_AT_MODE_HELP_COMMAND(WSBL),
         PROGMEM_AT_MODE_HELP_COMMAND(WSU)
+        #if DEBUG_MOON_PHASE
+            , PROGMEM_AT_MODE_HELP_COMMAND(WSM)
+        #endif
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
@@ -167,7 +186,70 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
+    #if DEBUG_MOON_PHASE
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSM))) {
+            time_t unixtime = 0;
+            uint32_t days = args.toInt(1, 1);
+            uint32_t incr = args.toInt(2, 86400);
+            if (args.startsWithIgnoreCase(0, F("ph"))) {
+                unixtime = -1;
+                auto results = calcMoonPhases(time(nullptr));
+                for(uint8_t i = 0; i < 5; i++) {
+                    args.print(F("%u %s %s"), (uint32_t)results._timestamps[i], get_date_str(results._timestamps[i]).c_str(), moonPhaseName(static_cast<uint8_t>((i * 2) % 8)));
+                }
+            }
+            else if (args.startsWithIgnoreCase(0, F("now"))) {
+                unixtime = time(nullptr);
+            }
+            else {
+                StringVector items;
+                explode_P(args.toString(0).c_str(), PSTR("-./"), items, 3);
+                if (items.size() == 3) {
+                    struct tm tm = {};
+                    tm.tm_year = items[0].toInt() - 1900;
+                    tm.tm_mon = items[1].toInt() - 1;
+                    tm.tm_mday = items[2].toInt();
+                    tm.tm_hour = 11;
+                    tm.tm_min = 59;
+                    tm.tm_sec = 59;
+                    unixtime = mktime(&tm);
+                }
+            }
+            if (unixtime == -1) {
+                // dont show
+            }
+            else if (unixtime) {
+                while(days--) {
+                    auto moon = calcMoon(unixtime);
+                    args.print(F("%s mAge=%f pPhase=%f(%s) moonFont=%c unixtime=%u"),
+                        get_date_str(moon.uTime).c_str(),
+                        moon.mAge,
+                        moon.pPhase,
+                        moonPhaseName(moon.pPhase),
+                        moon.moonPhaseFont,
+                        (uint32_t)moon.uTime
+                    );
+                    unixtime += incr;
+                }
+            }
+            else {
+                args.print(F("Invalid date, the format is YYYY-MM-DD"));
+            }
+            return true;
+        }
+    #endif
     return false;
 }
 
 #endif
+
+// wsm 2022-03-09 14
+// wsm 2022-03-28 60
+// wsm 2022-03-30 22
+// wsm 2022-03-31
+// wsm 2022-04-01
+// wsm 2022-04-08
+// wsm 2022-04-16
+// wsm 2022-02-01 365
+// wsm 2022-04-23
+// wsm ph

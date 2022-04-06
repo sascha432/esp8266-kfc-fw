@@ -23,7 +23,7 @@
 // use 0 for development to avoid recompiling half the program for every change
 #ifndef RESET_DETECTOR_INCLUDE_HPP_INLINE
 #    if DEBUG_RESET_DETECTOR
-#        define RESET_DETECTOR_INCLUDE_HPP_INLINE 1
+#        define RESET_DETECTOR_INCLUDE_HPP_INLINE 0
 #    else
 #        define RESET_DETECTOR_INCLUDE_HPP_INLINE 1
 #    endif

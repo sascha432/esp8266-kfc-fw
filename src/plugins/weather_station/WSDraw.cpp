@@ -4,6 +4,7 @@
 
 #include <LoopFunctions.h>
 #include <GFXCanvasConfig.h>
+#include <locale.h>
 #if DEBUG_GFXCANVAS_STATS
 #include <GFXCanvasStats.h>
 #endif
@@ -32,7 +33,7 @@
 // const GFXfont moon_phases24pt7b
 // const GFXfont moon_phases28pt7b
 // const GFXfont moon_phases32pt7b
-#include "moon.h"
+#include "moon/moon_font.h"
 
 // https://github.com/ThingPulse/esp8266-weather-station-color/blob/master/weathericons.h
 #include "weather_icons.h"
@@ -127,16 +128,13 @@ namespace WSDraw {
     {
         constexpr int16_t _offsetY = Y_START_POSITION_SUN_MOON;
 
-        float moonDay;
-        uint8_t moonPhase;
-        char moonPhaseFont;
-        calcMoon(time(nullptr), moonDay, moonPhase, moonPhaseFont, FONTS_MOON_PHASE_UPPERCASE);
+        auto moon = calcMoon(time(nullptr));
 
         _canvas->setFont(FONTS_SUN_AND_MOON);
         _canvas->setTextColor(COLORS_SUN_AND_MOON);
         _canvas->drawTextAligned(X_POSITION_SUN_TITLE, Y_POSITION_SUN_TITLE, F("Sun"), H_POSITION_SUN_TITLE);
-        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_NAME, Y_POSITION_MOON_PHASE_NAME, moonPhaseName(moonPhase), H_POSITION_MOON_PHASE_NAME);
-        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_DAYS, PrintString("%dd", (int)round(moonDay)), H_POSITION_MOON_PHASE_NAME);
+        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_NAME, Y_POSITION_MOON_PHASE_NAME, moonPhaseName(moon.pPhase), H_POSITION_MOON_PHASE_NAME);
+        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_DAYS, PrintString("%dd", moon.moonDay()), H_POSITION_MOON_PHASE_NAME);
 
         auto &info = _weatherApi.getWeatherInfo();
         if (info.hasData()) {
@@ -158,7 +156,7 @@ namespace WSDraw {
 
         _canvas->setFont(FONTS_MOON_PHASE);
         _canvas->setTextColor(COLORS_MOON_PHASE);
-        _canvas->drawTextAligned(X_POSITION_MOON_PHASE, Y_POSITION_MOON_PHASE, String(moonPhaseFont), H_POSITION_MOON_PHASE);
+        _canvas->drawTextAligned(X_POSITION_MOON_PHASE, Y_POSITION_MOON_PHASE, String(moon.moonPhaseFont), H_POSITION_MOON_PHASE);
     }
 
     void Base::_drawIndoorClimate()
@@ -277,9 +275,57 @@ namespace WSDraw {
         _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 5, F("FORECAST\nN/A"), AdafruitGFXExtension::CENTER);
     }
 
-    void Base::_drawMultiTimezone()
-    {
+    using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
 
+    void Base::_drawWorldClocks(int16_t _offsetY)
+    {
+        // _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+        _canvas->setFont(FONTS_DEFAULT_SMALL);
+
+        auto cfg = WeatherStation::getConfig();
+        String prevTimezone = getenv(CStrP(F("TZ")));
+        String tzStr;
+        String timeStr;
+
+        for(uint8_t num = 0; num < WEATHER_STATION_MAX_CLOCKS; num++) {
+            __LDBG_printf("%02u(%u): %s, %s", num, cfg.additionalClocks[num].isEnabled() ? 1 : 0, WeatherStation::getTZ(num).c_str(), WeatherStation::getName(num).c_str());
+            if (cfg.additionalClocks[num].isEnabled()) {
+
+                // do not allow interrupts while changing the TZ
+                {
+                    InterruptLock lock;
+
+                    safeSetTZ(WeatherStation::getTZ(num));
+                    auto tm = localtime(&_lastTime);
+                    tzStr = PrintString(cfg.additionalClocks[num]._time_format_24h ? F("%H:%M:%S %Z") : F("%I:%M:%S %p - %Z"), tm);
+                    timeStr = PrintString(F("%a %b %d %Y"), tm);
+                    safeSetTZ(prevTimezone);
+                }
+
+                _canvas->setTextColor(COLORS_CYAN);
+                _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, WeatherStation::getName(num), AdafruitGFXExtension::CENTER) + 3;
+
+                _canvas->setTextColor(COLORS_WHITE);
+                _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, timeStr, AdafruitGFXExtension::CENTER) + 1;
+
+                _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, tzStr, AdafruitGFXExtension::CENTER) + 5;
+            }
+
+        }
+    }
+
+    void Base::_drawWorldClock()
+    {
+        int16_t offsetY;
+        auto cfg = WeatherStation::getConfig();
+        if (cfg.show_regular_clock_on_world_clocks) {
+            _drawTime(false);
+            offsetY = _canvas->getCursorY() + 8;
+        }
+        else {
+            offsetY = Y_START_POSITION_TIME;
+        }
+        _drawWorldClocks(offsetY);
     }
 
     void Base::_drawInfo()
@@ -300,7 +346,12 @@ namespace WSDraw {
         _canvas->setTextColor(COLORS_WHITE);
         _canvas->setFont(FONTS_DEFAULT_MEDIUM);
         if (WiFi.isConnected()) {
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.SSID(), AdafruitGFXExtension::CENTER) + kIncr;
+            auto ssid = WiFi.SSID();
+            if (ssid.length() > 12) {
+                _canvas->setFont(FONTS_DEFAULT_SMALL);
+            }
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, ssid, AdafruitGFXExtension::CENTER) + kIncr;
+            _canvas->setFont(FONTS_DEFAULT_MEDIUM);
             y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.localIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
             y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("GW ")) + WiFi.gatewayIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
             y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("DNS ")) + WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + kIncr;
@@ -356,17 +407,15 @@ namespace WSDraw {
         }
     }
 
-    void Base::_drawMultiWorldTime()
+    void Base::_drawScreenWorldClock()
     {
-        _drawTime();
-        _drawMultiTimezone();
-
+        _drawWorldClock();
     }
 
-    void Base::_updateWorldTime()
+    void Base::_updateScreenWorldClock()
     {
-        CLEAR_AND_DISPLAY(Y_START_POSITION_MULTITIMEZONE, Y_END_POSITION_MULTITIMEZONE) {
-            _drawMultiTimezone();
+        CLEAR_AND_DISPLAY(Y_START_POSITION_TIME, Y_END_POSITION_WORLD_CLOCK) {
+            _drawWorldClock();
         }
     }
 
@@ -383,7 +432,7 @@ namespace WSDraw {
         }
     }
 
-    #if DEBUG
+    #if DEBUG_IOT_WEATHER_STATION
 
         void Base::printDebugInfo(Print &output)
         {
@@ -556,10 +605,10 @@ namespace WSDraw {
             case ScreenType::INFO:
                 _drawScreenInfo();
                 break;
-            case ScreenType::MULTITIMEZONE:
-                _drawMultiTimezone();
+            case ScreenType::WORLD_CLOCK:
+                _drawWorldClock();
                 break;
-            #if DEBUG
+            #if DEBUG_IOT_WEATHER_STATION
                 case ScreenType::DEBUG_INFO:
                     _drawScreenDebug();
                     break;
@@ -597,7 +646,7 @@ namespace WSDraw {
 
     void Base::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
     {
-        #if DEBUG
+        #if DEBUG_IOT_WEATHER_STATION
             if (_debugLastUpdate) {
                 auto diff = micros() - _debugLastUpdate;
                 float multiplier = diff > 0 ? ((1000U * 1000U) / diff) : 0;
@@ -618,7 +667,7 @@ namespace WSDraw {
         _canvas->drawInto(_tft, x, y, w, h);
         _tft.endWrite();
 
-        #if DEBUG
+        #if DEBUG_IOT_WEATHER_STATION
             uint32_t dur = micros() -  start;
             _debugDrawTime = (_debugDrawTime + dur) / 2.0;
             _debugLastUpdate = micros();
@@ -640,7 +689,7 @@ namespace WSDraw {
 
     // draws the date, time and timezone at the top
     // the area must be cleared before
-    void Base::_drawTime()
+    void Base::_drawTime(bool displayTZ)
     {
         constexpr int16_t _offsetY = 0;
 
@@ -653,17 +702,19 @@ namespace WSDraw {
         timeStr.strftime(F("%a %b %d %Y"), tm);
         _canvas->drawTextAligned(X_POSITION_DATE, Y_POSITION_DATE, timeStr.c_str(), H_POSITION_DATE);
 
-        _canvas->setFont(FONTS_TIME);
+        _canvas->setFont(displayTZ ? FONTS_TIME : FONTS_DEFAULT_MEDIUM);
         _canvas->setTextColor(COLORS_TIME);
         timeStr.clear();
         timeStr.strftime(_config.time_format_24h ? F("%H:%M:%S") : F("%I:%M:%S"), tm);
         _canvas->drawTextAligned(X_POSITION_TIME, Y_POSITION_TIME, timeStr.c_str(), H_POSITION_TIME);
 
-        _canvas->setFont(FONTS_TIMEZONE);
-        _canvas->setTextColor(COLORS_TIMEZONE);
-        timeStr.clear();
-        timeStr.strftime(_config.time_format_24h ? F("%Z") : F("%p - %Z"), tm);
-        _canvas->drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, timeStr.c_str(), H_POSITION_TIMEZONE);
+        if (displayTZ) {
+            _canvas->setFont(FONTS_TIMEZONE);
+            _canvas->setTextColor(COLORS_TIMEZONE);
+            timeStr.clear();
+            timeStr.strftime(_config.time_format_24h ? F("%Z") : F("%p - %Z"), tm);
+            _canvas->drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, timeStr.c_str(), H_POSITION_TIMEZONE);
+        }
     }
 
     void Base::_updateScreenTime()
@@ -682,16 +733,23 @@ namespace WSDraw {
                 return F("Indoor Climate");
             case ScreenType::FORECAST:
                 return F("Weather Forecast");
-            case ScreenType::MULTITIMEZONE:
-                return F("World Time");
+            case ScreenType::WORLD_CLOCK:
+                return F("World Clock");
             case ScreenType::INFO:
                 return F("System Info");
-            #if DEBUG
+            #if DEBUG_IOT_WEATHER_STATION
                 case ScreenType::DEBUG_INFO:
                     return F("Debug Info");
+                case ScreenType::NUM_SCREENS:
+                case ScreenType::TEXT_CLEAR:
+                case ScreenType::TEXT_UPDATE:
+                case ScreenType::TEXT:
+                    __DBG_panic("Invalid screen %u", screen);
+                    break;
+            #else
+                default:
+                    break;
             #endif
-            default:
-                break;
         }
         return nullptr;
     }

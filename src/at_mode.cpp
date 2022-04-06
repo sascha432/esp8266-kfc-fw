@@ -80,10 +80,11 @@ void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClient *_cli
 
 void check_if_exist_I2C(TwoWire &wire, Print &output, uint8_t startAddress, uint8_t endAddress, uint32_t delayMillis = 10)
 {
+    wire.setClock(100000);
     int nDevices = 0;
     for (auto address = startAddress; address < endAddress; address++ ) {
         // The i2c_scanner uses the return value of
-        // the Write.endTransmisstion to see if
+        // the Write.endTransmission to see if
         // a device did acknowledge to the address.
         wire.beginTransmission(address);
         uint8_t error = wire.endTransmission(true);
@@ -1944,7 +1945,12 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
                 else {
-                    auto color = static_cast<int32_t>(args.toNumber(1, 0xff00ff));
+                    // +LED=slow,200000,1000,16
+                    // +LED=slow,000000,1000,16
+                    // pwm 16 output 0
+                    // pwm 15 output 0
+                    // led off
+                    auto color = static_cast<int32_t>(args.toNumber(1, 0xff00ff, 16));
                     if (__LED_BUILTIN == pin && !BlinkLEDTimer::isPinValid(pin)) {
                         args.print(F("Invalid PIN"));
                     }

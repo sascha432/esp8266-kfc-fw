@@ -99,7 +99,8 @@
             ],
             "#if !IOT_WEATHER_STATION": [
                 "./Resources/html/weather.html",
-                "./Resources/html/world-clock.html"
+                "./Resources/html/world-clock.html",
+                "./Resources/js/forms/world-clock.js"
             ],
             "#if !IOT_REMOTE_CONTROL": [
                 "./Resources/html/remotectrl.html"

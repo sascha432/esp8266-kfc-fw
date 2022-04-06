@@ -63,7 +63,7 @@ void safeSetTZ(const __FlashStringHelper *timezone)
         std::fill_n(buf, kMaxTZData, 'A');
         buf[kMaxTZData] = 0;
 
-        if (setenv(tzEnv, buf, 1) == 0) {
+        if (setenv(CStrP(tzEnv), buf, 1) == 0) {
             entry = _getTZEnvironmentEntry();
             if (!entry) {
                 __DBG_printf("could not find TZ after setenv %p ptr %p", entry, entry ? *entry : nullptr);
@@ -95,7 +95,7 @@ void safeSetTZ(const __FlashStringHelper *timezone)
 
 void safeSetTZ(const __FlashStringHelper *timezone)
 {
-    setenv("TV", String(timezone).c_str(), 1);
+    setenv(CStrP(F("TV")), CStrP(timezone), 1);
     tzset();
 }
 

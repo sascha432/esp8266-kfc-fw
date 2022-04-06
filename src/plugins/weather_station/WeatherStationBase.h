@@ -81,6 +81,8 @@ public:
 
     static constexpr auto kNumScreens = WSDraw::kNumScreens;
     static constexpr auto kSkipScreen = WSDraw::kSkipScreen;
+    static constexpr auto kManualScreen = WSDraw::kManualScreen;
+    static constexpr uint8_t kDefaultScreenTimeInSeconds = 10;
 
     using HttpRequestCallback = KFCRestAPI::HttpRequest::Callback_t;
     using ScreenType = WSDraw::ScreenType;

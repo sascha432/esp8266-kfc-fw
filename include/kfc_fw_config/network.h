@@ -288,7 +288,7 @@ namespace KFCConfigurationClasses {
                     }
                     return a._priority < b._priority;
                 });
-                #if 1
+                #if 0
                     int n = 0;
                     for(const auto &station: list) {
                         __DBG_printf("num=%u id=%u ssid=%s prio=%u bssid=%s", n++, station._id, station._SSID.c_str(), station._priority, mac2String(station._bssid).c_str());

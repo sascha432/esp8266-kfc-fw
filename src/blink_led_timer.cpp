@@ -11,6 +11,14 @@
 #    include "debug_helper_disable.h"
 #endif
 
+#if BUILTIN_LED_NEOPIXEL
+#   if HAVE_FASTLED
+        CRGB WS2812LEDTimer::_pixels[__LED_BUILTIN_WS2812_NUM_LEDS];
+#   else
+        NeoPixelEx::Strip<__LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, NeoPixelEx::GRB, NeoPixelEx::TimingsWS2812> WS2812LEDTimer::_pixels;
+#   endif
+#endif
+
 using KFCConfigurationClasses::System;
 using Device = KFCConfigurationClasses::System::Device;
 
@@ -22,16 +30,20 @@ BlinkLEDTimer::BlinkLEDTimer(uint8_t pin) :
     _delay(BlinkType::INVALID)
 {
     if (!isPinValid(_pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+        __LDBG_printf("pin=%u valid=%u led_global_off=%u", _pin, isPinValid(_pin), System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF);
         return;
     }
-    // reset pin
-    digitalWrite(_pin, low());
-    pinMode(_pin, OUTPUT);
+    #if !BUILTIN_LED_NEOPIXEL
+        // reset pin
+        digitalWrite(_pin, low());
+        pinMode(_pin, OUTPUT);
+    #endif
 }
 
 void BlinkLEDTimer::setPattern(uint8_t pin, uint16_t delay, Bitset &&pattern)
 {
     if (!isPinValid(pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+        __LDBG_printf("pin=%u valid=%u led_global_off=%u", pin, isPinValid(pin), System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF);
         return;
     }
     if (!ledTimer) {
@@ -44,6 +56,7 @@ void BlinkLEDTimer::set(uint16_t delay, uint8_t pin, Bitset &&pattern)
 {
     // check if new pin is valid
     if (!isPinValid(pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+        __LDBG_printf("pin=%u valid=%u led_global_off=%u", pin, isPinValid(pin), System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF);
         return;
     }
     if (pin != _pin) {
@@ -61,56 +74,61 @@ void BlinkLEDTimer::set(uint16_t delay, uint8_t pin, Bitset &&pattern)
 
 void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
 {
-    if (!isPinValid(pin, INVALID_PIN) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+    if (!isPinValid(pin) || System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF) {
+        __LDBG_printf("pin=%u valid=%u led_global_off=%u", pin, isPinValid(pin), System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF);
         return;
     }
 
-#if BUILTIN_LED_NEOPIXEL
-    if (pin == NEOPIXEL_PIN) {
-        __LDBG_printf("WS2812 pin=%u, num=%u, delay=%u", __LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, delay);
-    }
-    else
-#endif
+    #if BUILTIN_LED_NEOPIXEL
+        if (pin == NEOPIXEL_PIN) {
+            __LDBG_printf("WS2812 pin=%u, num=%u, delay=%u color=%06x", __LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, delay, color);
+        }
+        else
+    #endif
     {
         __LDBG_printf("PIN %u, blink %d", pin, delay);
     }
 
     uint8_t _oldPin = 0xff;
     if (ledTimer) {
+        __LDBG_printf("removing timer pin=%u", ledTimer->_pin);
         _oldPin = ledTimer->_pin;
         __ASSERT_PTR(ledTimer);
         delete ledTimer;
         ledTimer = nullptr;
     }
 
-#if BUILTIN_LED_NEOPIXEL
-    if (pin == NEOPIXEL_PIN) {
-        auto timer = new WS2812LEDTimer();
-        if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::OFF) {
-            timer->off();
-        }
-        else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOLID) {
-            timer->solid(color == -1 ? 0x001500 : color);  // green
-        }
-        else {
-            Bitset pattern;
-            if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOS) {
-                timer->setColor(color == -1 ? 0x300000 : color);  // red
-                pattern.set<uint64_t>(0b000000010101000011110000111100001111010101ULL, 42);
-                delay = 200;
+    #if BUILTIN_LED_NEOPIXEL
+        if (pin == NEOPIXEL_PIN) {
+            __LDBG_printf("creating new WS2812 timer");
+            auto timer = new WS2812LEDTimer();
+            if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::OFF) {
+                timer->off();
+            }
+            else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOLID) {
+                timer->solid(color == -1 ? 0x001500 : color);  // green
             }
             else {
-                pattern.set<uint8_t>(0b10, 2);
-                delay = std::clamp<uint16_t>(delay, 50, 5000);
-                timer->setColor(color == -1 ? ((delay < 100) ? 0x050500 : 0x000010) : color);  // yellow / blue
+                Bitset pattern;
+                if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOS) {
+                    timer->setColor(color == -1 ? 0x300000 : color);  // red
+                    pattern.set<uint64_t>(0b000000010101000011110000111100001111010101ULL, 42);
+                    delay = 200;
+                }
+                else {
+                    pattern.set<uint8_t>(0b10, 2);
+                    delay = std::clamp<uint16_t>(delay, 50, 5000);
+                    timer->setColor(color == -1 ? ((delay < 100) ? 0x050500 : 0x000010) : color);  // yellow / blue
+                }
+                timer->set(delay, pin, pattern);
             }
-            timer->set(delay, pin, pattern);
+            ledTimer = timer;
+            __LDBG_printf("pin=%u NeoPixel active color=%06x", pin, timer->getColor());
+            return;
         }
-        ledTimer = timer;
-        return;
-    }
-    __LDBG_printf("pin=%u NeoPixel active", pin);
-#endif
+        __LDBG_printf("pin=%u invalid NeoPixel pin", pin);
+    #endif
+
     if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::OFF) {
         // reset pin
         digitalWrite(pin, BUILTIN_LED_STATE(false));

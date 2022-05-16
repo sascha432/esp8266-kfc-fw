@@ -217,6 +217,9 @@ namespace WSDraw {
         void _drawScreenInfo();
         void _updateScreenInfo();
 
+        void _drawMoonPhase();
+        void _updateMoonPhase();
+
         #if DEBUG_IOT_WEATHER_STATION
             void _drawDebugInfo();
             void _drawScreenDebug();

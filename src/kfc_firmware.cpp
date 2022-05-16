@@ -228,6 +228,10 @@ void setup()
         Serial2Udp::initWiFi(F(CUSTOM_WIFI_SSID), F(CUSTOM_WIFI_PASSWORD), IPAddress(192, 168, 0, 3), 6577);
     #endif
 
+    #if BUILTIN_LED_NEOPIXEL
+        WS2812LEDTimer::init();
+    #endif
+
     #if HAVE_IOEXPANDER
         __LDBG_printf("IOExpander::config.begin() size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
         DEBUG_BOOT_PRINT_POS();

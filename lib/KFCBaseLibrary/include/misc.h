@@ -92,10 +92,13 @@ extern "C" {
         }
     };
 
+    inline static auto __start = std::chrono::steady_clock::now();
+
     inline uint64_t millis64()
     {
-        #error TODO
-        return 0;
+        auto time = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(time - __start);
+        return elapsed.count();
     }
 
 #endif

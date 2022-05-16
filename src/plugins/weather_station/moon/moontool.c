@@ -296,9 +296,9 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
 {
 
     double Day, N, M, Ec, Lambdasun, ml, MM, MN, Ev, Ae, A3, MmP,
-	   mEc, A4, lP, V, lPP, NP, y, x, Lambdamoon, BetaM,
+	   mEc, A4, lP, V, lPP, NP, y, x, Lambdamoon, //BetaM,
 	   MoonAge, MoonPhase,
-	   MoonDist, MoonDFrac, MoonAng, MoonPar,
+	   MoonDist, MoonDFrac, MoonAng,
 	   F, SunDist, SunAng;
 
     /* Calculation of the Sun's position */
@@ -370,7 +370,7 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
     Lambdamoon += NP;
 
     /* Ecliptic latitude */
-    BetaM = todeg(asin(sin(torad(lPP - NP)) * sin(torad(minc))));
+    // BetaM = todeg(asin(sin(torad(lPP - NP)) * sin(torad(minc))));
 
     /* Calculation of the phase of the Moon */
 
@@ -392,7 +392,7 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
 
     /* Calculate Moon's parallax */
 
-    MoonPar = mparallax / MoonDFrac;
+    // MoonPar = mparallax / MoonDFrac;
 
     *pphase = MoonPhase;
     *mage = synmonth * (fixangle(MoonAge) / 360.0);

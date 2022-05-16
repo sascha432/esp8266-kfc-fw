@@ -126,9 +126,17 @@
 #define Y_START_POSITION_WORLD_CLOCK    (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_WORLD_CLOCK      (TFT_HEIGHT - 1)
 
+// moon phase screen
+#define Y_START_POSITION_MOON_PHASE     (2)
+#define Y_END_POSITION_MOON_PHASE       (TFT_HEIGHT - 1)
+
 // system info
 #define Y_START_POSITION_INFO           (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_INFO             (TFT_HEIGHT - 1)
+
+// moon phase
+#define Y_START_MOON_PHASE              (Y_END_POSITION_TIME + 2)
+#define Y_END_MOON_PHASE                (TFT_HEIGHT - 1)
 
 #define Y_START_POSITION_DEBUG          0
 #define Y_END_POSITION_DEBUG            (TFT_HEIGHT - 1)

@@ -10,7 +10,6 @@
 #include <StreamString.h>
 #include "WebUIComponent.h"
 #include "WeatherStationBase.h"
-#include <NeoPixelEx.h>
 #include "plugins.h"
 #if IOT_ALARM_PLUGIN_ENABLED
 #include "../src/plugins/alarm/alarm.h"
@@ -78,7 +77,7 @@ private:
 
     #if IOT_WEATHER_STATION_WS2812_NUM
         Event::Timer _pixelTimer;
-        uint8_t _pixels[IOT_WEATHER_STATION_WS2812_NUM * 3];
+        decltype(WS2812LEDTimer::_pixels) &_pixels;
     #endif
 
     #if IOT_ALARM_PLUGIN_ENABLED

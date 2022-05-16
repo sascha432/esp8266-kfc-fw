@@ -219,6 +219,9 @@ void WeatherStationBase::_loop()
                     else if (_currentScreen == ScreenType::INFO) {
                         _updateScreenInfo();
                     }
+                    else if (_currentScreen == ScreenType::MOON_PHASE) {
+                        _updateMoonPhase();
+                    }
                 }
 
                 // update time every second

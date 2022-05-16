@@ -19,6 +19,7 @@ namespace KFCConfigurationClasses {
                 INDOOR,
                 FORECAST,
                 WORLD_CLOCK,
+                MOON_PHASE,
                 INFO,
                 #if DEBUG_IOT_WEATHER_STATION
                     DEBUG_INFO,

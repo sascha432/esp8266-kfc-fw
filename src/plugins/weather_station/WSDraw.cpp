@@ -432,6 +432,35 @@ namespace WSDraw {
         }
     }
 
+    void Base::_drawMoonPhase()
+    {
+        constexpr int16_t _offsetY = Y_START_POSITION_MOON_PHASE;
+
+        auto phases = calcMoonPhases(time(nullptr));
+
+        _canvas->setFont(FONTS_SUN_AND_MOON);
+        _canvas->setTextColor(COLORS_SUN_AND_MOON);
+
+        __DBG_printf("---");
+        for(auto phase: phases._timestamps) {
+            auto moon = calcMoon(phase);
+            __DBG_printf("%u %s %s", (int)phase, moonPhaseName(moon.pPhase), PrintString("%dd", moon.moonDay()).c_str());
+        }
+
+        // _canvas->drawTextAligned(X_POSITION_SUN_TITLE, Y_POSITION_SUN_TITLE, F("Sun"), H_POSITION_SUN_TITLE);
+        // _canvas->drawTextAligned(X_POSITION_MOON_PHASE_NAME, Y_POSITION_MOON_PHASE_NAME, moonPhaseName(moon.pPhase), H_POSITION_MOON_PHASE_NAME);
+        // _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_DAYS, PrintString("%dd", moon.moonDay()), H_POSITION_MOON_PHASE_NAME);
+
+    }
+
+    void Base::_updateMoonPhase()
+    {
+        CLEAR_AND_DISPLAY(Y_START_POSITION_MOON_PHASE, Y_END_POSITION_MOON_PHASE) {
+            _drawMoonPhase();
+        }
+    }
+
+
     #if DEBUG_IOT_WEATHER_STATION
 
         void Base::printDebugInfo(Print &output)
@@ -607,6 +636,9 @@ namespace WSDraw {
                 break;
             case ScreenType::WORLD_CLOCK:
                 _drawWorldClock();
+                break;
+            case ScreenType::MOON_PHASE:
+                _drawMoonPhase();
                 break;
             #if DEBUG_IOT_WEATHER_STATION
                 case ScreenType::DEBUG_INFO:

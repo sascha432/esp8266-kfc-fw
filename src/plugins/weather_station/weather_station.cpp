@@ -72,6 +72,9 @@ WeatherStationPlugin::WeatherStationPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WeatherStationPlugin)),
     // _pollTimer(0),
     _httpClient(nullptr)
+    #if IOT_WEATHER_STATION_WS2812_NUM
+        , _pixels(WS2812LEDTimer::_pixels)
+    #endif
 {
     REGISTER_PLUGIN(this, "WeatherStationPlugin");
 }
@@ -460,8 +463,13 @@ void WeatherStationPlugin::_fadeStatusLED()
         int32_t color = 0x001500;
         int16_t dir = 0x000100;
 
-        NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
-        NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels));
+        #if HAVE_FASTLED
+            fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
+            FastLED.show();
+        #else
+            _pixels.fill(color);
+            _pixels.show();
+        #endif
 
         _Timer(_pixelTimer).add(Event::milliseconds(50), true, [this, color, dir](::Event::CallbackTimerPtr timer) mutable {
             color += dir;
@@ -473,9 +481,13 @@ void WeatherStationPlugin::_fadeStatusLED()
                 color = 0;
                 timer->disarm();
             }
-
-            NeoPixel_fillColor(_pixels, sizeof(_pixels), color);
-            NeoPixel_espShow(IOT_WEATHER_STATION_WS2812_PIN, _pixels, sizeof(_pixels));
+            #if HAVE_FASTLED
+                fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
+                FastLED.show();
+            #else
+                _pixels.fill(color);
+                _pixels.show();
+            #endif
 
         }, ::Event::PriorityType::TIMER);
 

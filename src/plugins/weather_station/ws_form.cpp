@@ -92,9 +92,9 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         cfg.addRangeValidatorFor_released_threshold(form);
 
         #if DEBUG_IOT_WEATHER_STATION
-        #define NUM_SCREENS 6
+        #define NUM_SCREENS 7
         #else
-        #define NUM_SCREENS 5
+        #define NUM_SCREENS 6
         #endif
         static_assert(NUM_SCREENS == WSDraw::kNumScreens, "number does not match");
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, NUM_SCREENS, st/*, ds*/);

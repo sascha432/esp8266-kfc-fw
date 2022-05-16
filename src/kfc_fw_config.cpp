@@ -1140,6 +1140,9 @@ static void invoke_ESP_restart()
     #if IOT_LED_MATRIX_OUTPUT_PIN
         ClockPluginClearPixels();
     #endif
+    #if BUILTIN_LED_NEOPIXEL
+        WS2812LEDTimer::terminate();
+    #endif
     __Scheduler.end();
     ETSTimerEx::end();
     // #if __LED_BUILTIN == NEOPIXEL_PIN_ID

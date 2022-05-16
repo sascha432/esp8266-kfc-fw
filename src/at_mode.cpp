@@ -1898,6 +1898,7 @@ void at_mode_serial_handle_event(String &commandString)
     }
     #if __LED_BUILTIN_WS2812_NUM_LEDS
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(NEOPX))) {
+            // +neopx=16,3,25,0,0
             if (args.requireArgs(3, 5)) {
                 auto pin = static_cast<uint8_t>(args.toInt(0));
                 auto num = static_cast<uint16_t>(args.toInt(1));
@@ -1908,14 +1909,21 @@ void at_mode_serial_handle_event(String &commandString)
                     args.print(F("pin=%u num=%u - invalid number"), pin, num);
                 }
                 else {
-                    auto size = num * 3;
-                    auto buf = std::unique_ptr<uint8_t>(new uint8_t[size]);
                     uint32_t color = (red << 16) | (green << 8) | blue;
                     args.print(F("pin=%u num=%u color=#%06x"), pin, num, color);
+                    if (ledTimer) {
+                        delete ledTimer;
+                        ledTimer = nullptr;
+                    }
                     digitalWrite(pin, LOW);
                     pinMode(pin, OUTPUT);
-                    NeoPixel_fillColor(buf.get(), size, color);
-                    NeoPixel_espShow(pin, buf.get(), size);
+                    #if HAVE_FASTLED
+                        fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
+                        FastLED.show();
+                    #else
+                        WS2812LEDTimer::_pixels.fill(color);
+                        WS2812LEDTimer::_pixels.show();
+                    #endif
                 }
             }
         }

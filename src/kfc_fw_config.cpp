@@ -1349,7 +1349,7 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
         WiFi.setAutoReconnect(true);
 
         auto wifiId = getWiFiConfigurationNum();
-        auto network = Network::WiFi::getNetworkConfig(wifiId);
+        auto network = Network::WiFi::getNetworkConfigOrdered(wifiId);
         bool result;
         if (network.isDHCPEnabled()) {
             result = WiFi.config(0U, 0U, 0U, 0U, 0U);

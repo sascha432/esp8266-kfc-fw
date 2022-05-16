@@ -281,8 +281,33 @@ namespace KFCConfigurationClasses {
                 if (scan && scanCallback) {
                     scanCallback(list);
                 }
-                std::sort(list.begin(), list.end());
+                srand(micros());
+                std::sort(list.begin(), list.end(), [](const StationConfig &a, const StationConfig &b) -> bool {
+                    if (a._priority == b._priority) {
+                        return rand() % 2;
+                    }
+                    return a._priority < b._priority;
+                });
+                #if 1
+                    int n = 0;
+                    for(const auto &station: list) {
+                        __DBG_printf("num=%u id=%u ssid=%s prio=%u bssid=%s", n++, station._id, station._SSID.c_str(), station._priority, mac2String(station._bssid).c_str());
+                    }
+                #endif
                 return list;
+            }
+
+            static StationModeSettings getNetworkConfigOrdered(StationConfigType num)
+            {
+                auto list = getStations(nullptr); // TODO implement scanning for strongest signal
+                auto count = static_cast<uint8_t>(num);
+                for(const auto &station: list) {
+                    if (count-- == 0) {
+                        return Network::Settings::getConfig().stations[static_cast<uint8_t>(station._id)];
+                    }
+                }
+                __DBG_printf("network out of range=%u", num);
+                return Network::Settings::getConfig().stations[0];
             }
 
             static StationModeSettings getNetworkConfig(StationConfigType num)

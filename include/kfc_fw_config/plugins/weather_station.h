@@ -88,6 +88,7 @@ namespace KFCConfigurationClasses {
                             10 /*INDOOR*/,
                             kSkipScreen /*FORECAST*/,
                             10 /*WORLD_CLOCK*/,
+                            10 /*MOON_PHASE*/,
                             kManualScreen /*INFO*/
                             #if DEBUG_IOT_WEATHER_STATION
                                 , kManualScreen /*DEBUG_INFO*/

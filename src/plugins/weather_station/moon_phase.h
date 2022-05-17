@@ -10,10 +10,19 @@
 #   define DEBUG_MOON_PHASE 0
 #endif
 
-constexpr auto kMoonDay = 29.53058868;
+const __FlashStringHelper *moonPhaseName(uint8_t moonPhase);
+
+inline const __FlashStringHelper *moonPhaseName(double moonPhase)
+{
+    return moonPhaseName(static_cast<uint8_t>(moonPhase * 8));
+}
 
 struct MoonPhaseType
 {
+    static constexpr auto kMoonDay = 29.53058868;
+    static constexpr auto kQuarterMoonDay = 29.53058868 / 4.0;
+    static constexpr auto kMoonDayToPct = 29.53058868 / 2.0;
+
     double pPhase;
     double mAge;
     char moonPhaseFont;
@@ -34,6 +43,26 @@ struct MoonPhaseType
     uint8_t moonDay() const {
         return mAge;
     }
+
+    double moonDayDouble() const {
+        return mAge;
+    }
+
+    const __FlashStringHelper *moonDayDescr() const {
+        return moonDay() == 1 ? F("day") : F("days");
+    }
+
+    const __FlashStringHelper *moonPhaseName() const {
+        return ::moonPhaseName(kMoonDay / mAge);
+    }
+
+    double moonAgePct() const {
+        auto age = mAge;
+        while(age > kQuarterMoonDay) {
+            age -= kQuarterMoonDay;
+        }
+        return 100 - (kMoonDayToPct / age);
+    }
 };
 
 struct MoonPhasesType
@@ -50,10 +79,3 @@ struct MoonPhasesType
 MoonPhasesType calcMoonPhases(time_t unixtime);
 
 MoonPhaseType calcMoon(time_t time);
-
-const __FlashStringHelper *moonPhaseName(uint8_t moonPhase);
-
-inline const __FlashStringHelper *moonPhaseName(double moonPhase)
-{
-    return moonPhaseName(static_cast<uint8_t>(moonPhase * 8));
-}

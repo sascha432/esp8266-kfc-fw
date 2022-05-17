@@ -85,8 +85,10 @@
 #define H_POSITION_MOON_PHASE_NAME      AdafruitGFXExtension::RIGHT
 
 #define X_POSITION_MOON_PHASE_DAYS      X_POSITION_MOON_PHASE_NAME
-#define Y_POSITION_MOON_PHASE_DAYS      (12 + _offsetY)
+#define Y_POSITION_MOON_PHASE_DAYS      (21 + _offsetY)
 #define H_POSITION_MOON_PHASE_DAYS      H_POSITION_MOON_PHASE_NAME
+
+#define Y_POSITION_MOON_PHASE_PCT       (12 + _offsetY)
 
 #define X_POSITION_SUN_RISE_ICON        (4)
 #define Y_POSITION_SUN_RISE_ICON        (10 + _offsetY)

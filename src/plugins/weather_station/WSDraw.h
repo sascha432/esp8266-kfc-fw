@@ -171,6 +171,7 @@ namespace WSDraw {
 
     public:
         // update date, time and timezone at the top
+        // displayTimezone = false draws it in the same line
         void _drawTime(bool displayTimezone = true);
 
         // display local weather info

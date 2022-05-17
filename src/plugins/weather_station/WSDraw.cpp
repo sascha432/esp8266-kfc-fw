@@ -133,8 +133,10 @@ namespace WSDraw {
         _canvas->setFont(FONTS_SUN_AND_MOON);
         _canvas->setTextColor(COLORS_SUN_AND_MOON);
         _canvas->drawTextAligned(X_POSITION_SUN_TITLE, Y_POSITION_SUN_TITLE, F("Sun"), H_POSITION_SUN_TITLE);
-        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_NAME, Y_POSITION_MOON_PHASE_NAME, moonPhaseName(moon.pPhase), H_POSITION_MOON_PHASE_NAME);
-        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_DAYS, PrintString("%dd", moon.moonDay()), H_POSITION_MOON_PHASE_NAME);
+        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_NAME, Y_POSITION_MOON_PHASE_NAME, moon.moonPhaseName(), H_POSITION_MOON_PHASE_NAME);
+        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_DAYS, PrintString(F("%dd"), moon.moonDay()), H_POSITION_MOON_PHASE_NAME);
+        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_PCT, PrintString(F("%.1f%%"), moon.moonAgePct()), H_POSITION_MOON_PHASE_NAME);
+
 
         auto &info = _weatherApi.getWeatherInfo();
         if (info.hasData()) {
@@ -439,25 +441,37 @@ namespace WSDraw {
         auto time = ::time(nullptr);
         auto moon = calcMoon(time);
 
+        // moon image
         _canvas->setFont(FONTS_MOON_PHASE);
         _canvas->setTextColor(COLORS_MOON_PHASE);
         auto y = _offsetY;
-        _offsetY += _canvas->drawTextAligned(10, _offsetY, String(moon.moonPhaseFont), AdafruitGFXExtension::LEFT);
-        auto x = _canvas->getCursorX() + 10;
+        _offsetY += _canvas->drawTextAligned(0, _offsetY, String(moon.moonPhaseFont), AdafruitGFXExtension::LEFT);
+        auto x = _canvas->getCursorX() + 5;
         _offsetY += 15;
 
+        // moon phase name and % position
         _canvas->setFont(&Dialog_6pt8b);
         _canvas->setTextColor(COLORS_CYAN);
+        auto phaseY = _canvas->drawTextAligned(x, y, moon.moonPhaseName(), AdafruitGFXExtension::LEFT);
+        y += phaseY;
+        phaseY = y;
+        y *= 2;
+        y += 4;
 
-        y += _canvas->drawTextAligned(x, y, moonPhaseName(moon.pPhase), AdafruitGFXExtension::LEFT);
-        y += 2;
-        y += _canvas->drawTextAligned(x, y, PrintString("%u day", moon.moonDay()), AdafruitGFXExtension::LEFT);
-        y += 2;
+        // time and timezone
+        _canvas->setTextColor(COLORS_TIME);
         PrintString timeStr;
-        timeStr.strftime(_config.time_format_24h ? F("%H:%M:%S") : F("%I:%M:%S"), time);
-        y += _canvas->drawTextAligned(x, y, timeStr, AdafruitGFXExtension::LEFT);
+        timeStr.strftime(_config.time_format_24h ? F("%H:%M:%S ") : F("%I:%M:%S "), time);
+        _canvas->drawTextAligned(x, y, timeStr, AdafruitGFXExtension::LEFT);
 
+        _canvas->setTextColor(COLORS_TIMEZONE);
+        timeStr.clear();
+        timeStr.strftime(_config.time_format_24h ? F("%Z") : F("%p - %Z"), time);
+        y += _canvas->drawTextAligned(_canvas->getCursorX(), y, timeStr, AdafruitGFXExtension::LEFT);
+
+        // the previous, current and next 2 moon phases
         auto phases = calcMoonPhases(time);
+        auto lastPhase = moon.pPhase - 0.25;
 
         _canvas->setTextColor(COLORS_WHITE);
 
@@ -465,18 +479,30 @@ namespace WSDraw {
             auto moon = calcMoon(phase);
             timeStr.clear();
             timeStr.strftime_P(PSTR("%Y-%m-%d %H:%M"), phase);
-            // __DBG_printf("%s %s %s", timeStr.c_str(), moonPhaseName(moon.pPhase), PrintString("%dd", moon.moonDay()).c_str());
 
             // _canvas->setFont(&Dialog_6pt8b);
-            _canvas->setTextColor(COLORS_WHITE);
-            _offsetY += _canvas->drawTextAligned(2, _offsetY, moonPhaseName(moon.pPhase), AdafruitGFXExtension::LEFT);
+
+            if (isnan(lastPhase) || lastPhase >= moon.pPhase) {
+                _canvas->setTextColor(COLORS_WHITE);
+            }
+            else {
+                lastPhase = NAN;
+                _canvas->setTextColor(COLORS_CYAN);
+            }
+
+            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moonPhaseName(moon.pPhase), AdafruitGFXExtension::CENTER);
             _offsetY += 2;
 
             // _canvas->setFont(&DejaVuSans_5pt8b);
             _canvas->setTextColor(COLORS_YELLOW);
-            _offsetY += _canvas->drawTextAligned(2, _offsetY, timeStr.c_str(), AdafruitGFXExtension::LEFT);
+            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, timeStr.c_str(), AdafruitGFXExtension::CENTER);
             _offsetY += 4;
         }
+
+        // moon phase name and %
+        _canvas->setFont(&Dialog_6pt8b);
+        _canvas->setTextColor(COLORS_CYAN);
+        _canvas->drawTextAligned(x, phaseY + 2, PrintString(F("%.1f%% %u %s"), moon.moonAgePct(), moon.moonDay(), moon.moonDayDescr()), AdafruitGFXExtension::LEFT);
 
     }
 
@@ -765,14 +791,17 @@ namespace WSDraw {
         _canvas->setTextColor(COLORS_TIME);
         timeStr.clear();
         timeStr.strftime(_config.time_format_24h ? F("%H:%M:%S") : F("%I:%M:%S"), tm);
-        _canvas->drawTextAligned(X_POSITION_TIME, Y_POSITION_TIME, timeStr.c_str(), H_POSITION_TIME);
+        _canvas->drawTextAligned(X_POSITION_TIME + (displayTZ ? 0 : (_config.time_format_24h ? -17 : -24)), Y_POSITION_TIME, timeStr.c_str(), H_POSITION_TIME);
 
+        _canvas->setTextColor(COLORS_TIMEZONE);
+        timeStr.clear();
+        timeStr.strftime(_config.time_format_24h ? F("%Z") : F("%p - %Z"), tm);
         if (displayTZ) {
             _canvas->setFont(FONTS_TIMEZONE);
-            _canvas->setTextColor(COLORS_TIMEZONE);
-            timeStr.clear();
-            timeStr.strftime(_config.time_format_24h ? F("%Z") : F("%p - %Z"), tm);
             _canvas->drawTextAligned(X_POSITION_TIMEZONE, Y_POSITION_TIMEZONE, timeStr.c_str(), H_POSITION_TIMEZONE);
+        }
+        else {
+            _canvas->drawTextAligned(_canvas->getCursorX() + 4, Y_POSITION_TIME, timeStr.c_str(), AdafruitGFXExtension::LEFT);
         }
     }
 

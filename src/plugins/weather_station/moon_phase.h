@@ -7,8 +7,10 @@
 #include <Arduino_compat.h>
 
 #ifndef DEBUG_MOON_PHASE
-#   define DEBUG_MOON_PHASE 1
+#   define DEBUG_MOON_PHASE 0
 #endif
+
+constexpr auto kMoonDay = 29.53058868;
 
 struct MoonPhaseType
 {

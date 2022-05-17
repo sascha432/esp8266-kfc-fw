@@ -3,18 +3,10 @@
  */
 
 #include "moon_phase.h"
+#include "moon/moontool.h"
 
-extern "C" {
-    #include "moon/julian.h"
-    #include "moon/moontool.h"
-}
-
-// float unixTimeToJulianDate(time_t time)
-// {
-//     return (time / 86400.0) + 2440587.5;
-// }
-
-static time_t utime(double jTime) {
+inline static time_t jToUnixtime(double jTime)
+{
     return (jTime - 2440587.5) * 86400;
 }
 
@@ -53,7 +45,7 @@ MoonPhasesType calcMoonPhases(time_t unixtime)
 
     MoonPhasesType result;
     for(uint8_t i = 0; i < 5; i++) {
-        result._timestamps[i] = utime(results[i]);
+        result._timestamps[i] = jToUnixtime(results[i]);
     }
 
     return result;

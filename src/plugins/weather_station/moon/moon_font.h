@@ -1,3 +1,4 @@
+
 #pragma once
 
 const uint8_t moon_phases12pt7bBitmaps[] PROGMEM = {

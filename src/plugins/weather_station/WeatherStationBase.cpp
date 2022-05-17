@@ -196,6 +196,10 @@ void WeatherStationBase::_loop()
                         _updateIndoorClimateBottom();
                     }
                 }
+                else if (_currentScreen == ScreenType::MOON_PHASE) {
+                    _updateMoonPhase();
+                    return;
+                }
                 #if DEBUG_IOT_WEATHER_STATION
                     else if (_currentScreen == ScreenType::DEBUG_INFO) {
                         // update debug screen every second
@@ -218,9 +222,6 @@ void WeatherStationBase::_loop()
                     }
                     else if (_currentScreen == ScreenType::INFO) {
                         _updateScreenInfo();
-                    }
-                    else if (_currentScreen == ScreenType::MOON_PHASE) {
-                        _updateMoonPhase();
                     }
                 }
 

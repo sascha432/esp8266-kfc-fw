@@ -1,5 +1,10 @@
-#ifndef MOONTOOL_H
-#define MOONTOOL_H
+/**
+ * Modified by: sascha_lammers@gmx.de
+ */
+
+#pragma once
+
+#include "julian.h"
 
 /*   PHASEHUNT	--  Find time of phases of the moon which surround the
 		    current date.  Five phases are found, starting and
@@ -32,4 +37,3 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
 // reduced information
 double phase_short(double pdate, double *pphase, double *mage);
 
-#endif

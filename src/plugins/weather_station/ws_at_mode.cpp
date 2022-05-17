@@ -191,7 +191,33 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             time_t unixtime = 0;
             uint32_t days = args.toInt(1, 1);
             uint32_t incr = args.toInt(2, 86400);
-            if (args.startsWithIgnoreCase(0, F("ph"))) {
+            if (args.startsWithIgnoreCase(0, F("list"))) {
+                static constexpr double moondays = 29.53058868;
+                auto &stream = args.getStream();
+                unixtime = time(nullptr);
+
+                stream.println();
+                stream.println(F("date,unixtime,phase"));
+
+                time_t lastPhase = 0;
+                for(float i = 0; i < days; i += moondays) {
+                    auto phases = calcMoonPhases(unixtime + (i * incr));
+                    for(auto phase: phases._timestamps) {
+                        if (phase <= lastPhase) {
+                            continue;
+                        }
+                        lastPhase = phase;
+                        auto moon = calcMoon(phase);
+                        PrintString dateStr;
+                        dateStr.strftime_P(PSTR("%Y-%m-%d %H:%M"), phase);
+                        stream.printf_P(PSTR("%s," TIME_T_FMT ",%s\n"), dateStr.c_str(), phase, moonPhaseName(moon.pPhase));
+                    }
+                }
+                stream.println();
+                return true;
+
+            }
+            else if (args.startsWithIgnoreCase(0, F("ph"))) {
                 unixtime = -1;
                 auto results = calcMoonPhases(time(nullptr));
                 for(uint8_t i = 0; i < 5; i++) {

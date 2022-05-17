@@ -1,9 +1,16 @@
+/**
+ * Modified by: sascha_lammers@gmx.de
+ */
 
-#include <math.h>
 #include "julian.h"
+#include <math.h>
 
-/*  JDATE  --  Convert internal GMT date and time to  Julian  day  and
-           fraction.  */
+#ifndef _MSC_VER
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+#endif
+
+// JDATE -- Convert internal GMT date and time to Julian day and fraction.
 
 long jdate(struct tm *t)
 {
@@ -13,7 +20,8 @@ long jdate(struct tm *t)
     m = t->tm_mon + 1;
     if (m > 2) {
         m = m - 3;
-    } else {
+    }
+    else {
         m = m + 9;
         y--;
     }
@@ -22,17 +30,15 @@ long jdate(struct tm *t)
     return (t->tm_mday + (c * 146097L) / 4 + (y * 1461L) / 4 + (m * 153L + 2) / 5 + 1721119L);
 }
 
-/*  JTIME  --  Convert internal GMT  date  and	time  to  astronomical
-           Julian	time  (i.e. Julian  date  plus	day  fraction,
-           expressed as a double).	*/
+// JTIME -- Convert internal GMT date and time to astronomical Julian time
+// (i.e. Julian date plus day fraction, expressed as a double).
 
 double jtime(struct tm *t)
 {
     return (jdate(t) - 0.5) + (t->tm_sec + 60 * (t->tm_min + 60 * t->tm_hour)) / 86400.0;
 }
 
-/*  JYEAR  --  Convert	Julian	date  to  year,  month, day, which are
-           returned via integer pointers to integers.  */
+// JYEAR -- Convert Julian date to year, month, day, which are returned via integer pointers to integers.
 
 void jyear(double td, int *yy, int *mm, int *dd)
 {
@@ -53,8 +59,7 @@ void jyear(double td, int *yy, int *mm, int *dd)
     y = (100.0 * y) + j;
     if (m < 10.0) {
         m = m + 3;
-    }
-    else {
+    } else {
         m = m - 9;
         y = y + 1;
     }
@@ -63,7 +68,7 @@ void jyear(double td, int *yy, int *mm, int *dd)
     *dd = d;
 }
 
-/*  JHMS  --  Convert Julian time to hour, minutes, and seconds.  */
+// JHMS -- Convert Julian time to hour, minutes, and seconds.
 
 void jhms(double j, int *h, int *m, int *s)
 {
@@ -75,3 +80,7 @@ void jhms(double j, int *h, int *m, int *s)
     *m = (ij / 60L) % 60L;
     *s = ij % 60L;
 }
+
+#ifndef _MSC_VER
+#pragma GCC pop_options
+#endif

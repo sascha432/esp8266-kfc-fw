@@ -8,34 +8,28 @@
 
 /*  Astronomical constants  */
 
-#define epoch	    2444237.5	   /* 1980 January 0.0 */
+#define epoch	    2444237.5	    /* 1980 January 0.0 */
 
 /*  Constants defining the Sun's apparent orbit  */
 
-#define elonge	    278.833540	   /* Ecliptic longitude of the Sun
-				      at epoch 1980.0 */
-#define elongp	    282.596403	   /* Ecliptic longitude of the Sun at
-				      perigee */
-#define eccent      0.016718       /* Eccentricity of Earth's orbit */
-#define sunsmax     1.495985e8     /* Semi-major axis of Earth's orbit, km */
-#define sunangsiz   0.533128       /* Sun's angular size, degrees, at
-				      semi-major axis distance */
+#define elonge	    278.833540	    /* Ecliptic longitude of the Sun at epoch 1980.0 */
+#define elongp	    282.596403	    /* Ecliptic longitude of the Sun at perigee */
+#define eccent      0.016718        /* Eccentricity of Earth's orbit */
+#define sunsmax     1.495985e8      /* Semi-major axis of Earth's orbit, km */
+#define sunangsiz   0.533128        /* Sun's angular size, degrees, at semi-major axis distance */
 
 /*  Elements of the Moon's orbit, epoch 1980.0  */
 
-#define mmlong      64.975464      /* Moon's mean lonigitude at the epoch */
-#define mmlongp     349.383063	   /* Mean longitude of the perigee at the
-				      epoch */
-#define mlnode	    151.950429	   /* Mean longitude of the node at the
-				      epoch */
-#define minc        5.145396       /* Inclination of the Moon's orbit */
-#define mecc        0.054900       /* Eccentricity of the Moon's orbit */
-#define mangsiz     0.5181         /* Moon's angular size at distance a
-				      from Earth */
-#define msmax       384401.0       /* Semi-major axis of Moon's orbit in km */
-#define mparallax   0.9507	   /* Parallax at distance a from Earth */
-#define synmonth    29.53058868    /* Synodic month (new Moon to new Moon) */
-#define lunatbase   2423436.0      /* Base date for E. W. Brown's numbered
+#define mmlong      64.975464       /* Moon's mean longitude at the epoch */
+#define mmlongp     349.383063	    /* Mean longitude of the perigee at the epoch */
+#define mlnode	    151.950429	    /* Mean longitude of the node at the epoch */
+#define minc        5.145396        /* Inclination of the Moon's orbit */
+#define mecc        0.054900        /* Eccentricity of the Moon's orbit */
+#define mangsiz     0.5181          /* Moon's angular size at distance a from Earth */
+#define msmax       384401.0        /* Semi-major axis of Moon's orbit in km */
+#define mparallax   0.9507	        /* Parallax at distance a from Earth */
+#define synmonth    29.53058868     /* Synodic month (new Moon to new Moon) */
+#define lunatbase   2423436.0       /* Base date for E. W. Brown's numbered
 				      series of lunations (1923 January 16) */
 
 /*  Properties of the Earth  */
@@ -43,77 +37,59 @@
 #define earthrad    6378.16	   /* Radius of Earth in kilometres */
 
 
-#define PI 3.14159265358979323846  /* Assume not near black hole nor in
-				      Tennessee */
+#define PI 3.14159265358979323846  /* Assume not near black hole nor in Tennessee */
 
 /*  Handy mathematical functions  */
 
+// 1032445
+// 1031037
+
+static double fixangle(double a)
+{
+    return ((a) - 360.0 * (floor((a) / 360.0)));
+}
+
+/* Deg->Rad	  */
+static double torad(double d)
+{
+    return ((d) * (PI / 180.0));
+}
+
+/* Rad->Deg	  */
+static double todeg(double d)
+{
+    return ((d) * (180.0 / PI));
+}
+
+/* Sin from deg */
+static double dsin(double x)
+{
+    return (sin(torad((x))));
+}
+
+/* Cos from deg */
+static double dcos(double x)
+{
+    return (cos(torad((x))));
+}
+
+
+
 #define sgn(x) (((x) < 0) ? -1 : ((x) > 0 ? 1 : 0))	  /* Extract sign */
 #define abs(x) ((x) < 0 ? (-(x)) : (x)) 		  /* Absolute val */
-#define fixangle(a) ((a) - 360.0 * (floor((a) / 360.0)))  /* Fix angle	  */
-#define torad(d) ((d) * (PI / 180.0))			  /* Deg->Rad	  */
-#define todeg(d) ((d) * (180.0 / PI))			  /* Rad->Deg	  */
-#define dsin(x) (sin(torad((x))))			  /* Sin from deg */
-#define dcos(x) (cos(torad((x))))			  /* Cos from deg */
+// #define fixangle(a) ((a) - 360.0 * (floor((a) / 360.0)))  /* Fix angle	  */
+// #define torad(d) ((d) * (PI / 180.0))			  /* Deg->Rad	  */
+// #define todeg(d) ((d) * (180.0 / PI))			  /* Rad->Deg	  */
+// #define dsin(x) (sin(torad((x))))			  /* Sin from deg */
+// #define dcos(x) (cos(torad((x))))			  /* Cos from deg */
 
 #define TRUE 1
 #define FALSE 0
 
-double nptime = 0.0;	      /* Next new moon time */
-
-char *moname[] = {
-    "January", "February", "March", "April", "May",
-    "June", "July", "August", "September",
-    "October", "November", "December"
-};
-
-char *labels[] = {
-    "Julian date:",
-    "Universal time:",
-    "Local time:",
-    "",
-    "Age of moon:",
-    "Moon phase:",
-    "Moon's distance:",
-    "Moon subtends:",
-    "",
-    "Sun's distance:",
-    "Sun subtends:",
-    "",
-    "Last new moon:",
-    "First quarter:",
-    "Full moon:",
-    "Last quarter:",
-    "Next new moon:"
-};
-#define Nlabels ((sizeof labels) / sizeof(char *))
-
-char olabel[Nlabels][60];      /* Old label values */
-char luabel[2][60];	      /* Old lunation values */
-
 /*  Forward functions  */
 
 double phase();
-void phasehunt(), fmt_phase_time();
-
-// extern long time();
-// extern char *icongeom();
-
-/*  FMT_PHASE_TIME  --	Format	the  provided  julian  date  into  the
-			provided  buffer  in  UTC  format  for	screen
-			display  */
-
-void fmt_phase_time(double utime, char *buf)
-{
-    int yy, mm, dd, hh, mmm, ss;
-
-    jyear(utime, &yy, &mm, &dd);
-    jhms(utime, &hh, &mmm, &ss);
-    sprintf(buf, "%2d:%02d UTC %2d %s %d",
-	hh, mmm, dd, moname [mm - 1], yy);
-}
-
-
+void phasehunt();
 
 /*  MEANPHASE  --  Calculates  time  of  the mean new Moon for a given
 		   base date.  This argument K to this function is the
@@ -148,36 +124,29 @@ double meanphase(double sdate, double k)
 double truephase(double k, double phase)
 {
     double t, t2, t3, pt, m, mprime, f;
-    int apcor = FALSE;
 
-    k += phase; 		      /* Add phase to new moon time */
-    t = k / 1236.85;		      /* Time in Julian centuries from
-					 1900 January 0.5 */
-    t2 = t * t; 		      /* Square for frequent use */
-    t3 = t2 * t;		      /* Cube for frequent use */
-    pt = 2415020.75933		      /* Mean time of phase */
-	 + synmonth * k
-	 + 0.0001178 * t2
-	 - 0.000000155 * t3
-	 + 0.00033 * dsin(166.56 + 132.87 * t - 0.009173 * t2);
+    k += phase; 		        /* Add phase to new moon time */
+    t = k / 1236.85;		    /* Time in Julian centuries from 1900 January 0.5 */
+    t2 = t * t; 		        /* Square for frequent use */
+    t3 = t2 * t;		        /* Cube for frequent use */
 
-    m = 359.2242                      /* Sun's mean anomaly */
-	+ 29.10535608 * k
-	- 0.0000333 * t2
-	- 0.00000347 * t3;
-    mprime = 306.0253                 /* Moon's mean anomaly */
-	+ 385.81691806 * k
-	+ 0.0107306 * t2
-	+ 0.00001236 * t3;
-    f = 21.2964                       /* Moon's argument of latitude */
-	+ 390.67050646 * k
-	- 0.0016528 * t2
-	- 0.00000239 * t3;
+    /* Mean time of phase */
+    pt = 2415020.75933 + synmonth * k + 0.0001178 * t2 - 0.000000155 * t3 + 0.00033 * dsin(166.56 + 132.87 * t - 0.009173 * t2);
+
+    /* Sun's mean anomaly */
+    m = 359.2242 + 29.10535608 * k - 0.0000333 * t2 - 0.00000347 * t3;
+
+    /* Moon's mean anomaly */
+    mprime = 306.0253 + 385.81691806 * k + 0.0107306 * t2 + 0.00001236 * t3;
+
+    /* Moon's argument of latitude */
+    f = 21.2964	+ 390.67050646 * k - 0.0016528 * t2	- 0.00000239 * t3;
+
     if ((phase < 0.01) || (abs(phase - 0.5) < 0.01)) {
 
        /* Corrections for New and Full Moon */
 
-       pt +=	 (0.1734 - 0.000393 * t) * dsin(m)
+       pt += (0.1734 - 0.000393 * t) * dsin(m)
 		+ 0.0021 * dsin(2 * m)
 		- 0.4068 * dsin(mprime)
 		+ 0.0161 * dsin(2 * mprime)
@@ -190,9 +159,9 @@ double truephase(double k, double phase)
 		- 0.0006 * dsin(2 * f + mprime)
 		+ 0.0010 * dsin(2 * f - mprime)
 		+ 0.0005 * dsin(m + 2 * mprime);
-       apcor = TRUE;
-    } else if ((abs(phase - 0.25) < 0.01 || (abs(phase - 0.75) < 0.01))) {
-       pt +=	 (0.1721 - 0.0004 * t) * dsin(m)
+    }
+    else if ((abs(phase - 0.25) < 0.01 || (abs(phase - 0.75) < 0.01))) {
+       pt += (0.1721 - 0.0004 * t) * dsin(m)
 		+ 0.0021 * dsin(2 * m)
 		- 0.6280 * dsin(mprime)
 		+ 0.0089 * dsin(2 * mprime)
@@ -207,18 +176,13 @@ double truephase(double k, double phase)
 		+ 0.0003 * dsin(m + 2 * mprime)
 		+ 0.0004 * dsin(m - 2 * mprime)
 		- 0.0003 * dsin(2 * m + mprime);
-       if (phase < 0.5)
-	  /* First quarter correction */
-	  pt += 0.0028 - 0.0004 * dcos(m) + 0.0003 * dcos(mprime);
-       else
-	  /* Last quarter correction */
-	  pt += -0.0028 + 0.0004 * dcos(m) - 0.0003 * dcos(mprime);
-       apcor = TRUE;
-    }
-    if (!apcor) {
-	fprintf(stderr,
-            "TRUEPHASE called with invalid phase selector.\n");
-	abort();
+        if (phase < 0.5) {
+	        /* First quarter correction */
+	        pt += 0.0028 - 0.0004 * dcos(m) + 0.0003 * dcos(mprime);
+        }
+        else {
+            pt += -0.0028 + 0.0004 * dcos(m) - 0.0003 * dcos(mprime);
+        }
     }
     return pt;
 }
@@ -434,40 +398,40 @@ double phase_short(double pdate, double *pphase, double *mage)
     MN = fixangle(mlnode - 0.0529539 * Day);
 
     /* Evection */
-    Ev = 1.2739 * sin(torad(2 * (ml - Lambdasun) - MM));
+    Ev = 1.2739 * dsin(2 * (ml - Lambdasun) - MM);
 
     /* Annual equation */
-    Ae = 0.1858 * sin(torad(M));
+    Ae = 0.1858 * dsin(M);
 
     /* Correction term */
-    A3 = 0.37 * sin(torad(M));
+    A3 = 0.37 * dsin(M);
 
     /* Corrected anomaly */
     MmP = MM + Ev - Ae - A3;
 
     /* Correction for the equation of the centre */
-    mEc = 6.2886 * sin(torad(MmP));
+    mEc = 6.2886 * dsin(MmP);
 
     /* Another correction term */
-    A4 = 0.214 * sin(torad(2 * MmP));
+    A4 = 0.214 * dsin(2 * MmP);
 
     /* Corrected longitude */
     lP = ml + Ev + mEc - Ae + A4;
 
     /* Variation */
-    V = 0.6583 * sin(torad(2 * (lP - Lambdasun)));
+    V = 0.6583 * dsin(2 * (lP - Lambdasun));
 
     /* True longitude */
     lPP = lP + V;
 
     /* Corrected longitude of the node */
-    NP = MN - 0.16 * sin(torad(M));
+    NP = MN - 0.16 * dsin(M);
 
     /* Y inclination coordinate */
-    y = sin(torad(lPP - NP)) * cos(torad(minc));
+    y = dsin(lPP - NP) * dcos(minc);
 
     /* X inclination coordinate */
-    x = cos(torad(lPP - NP));
+    x = dcos(lPP - NP);
 
     /* Ecliptic longitude */
     Lambdamoon = todeg(atan2(y, x));

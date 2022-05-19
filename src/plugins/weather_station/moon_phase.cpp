@@ -38,10 +38,10 @@ const __FlashStringHelper *moonPhaseName(uint8_t moonPhase)
 MoonPhasesType calcMoonPhases(time_t unixtime)
 {
     struct tm *cur_gmt_time = gmtime(&unixtime);
-    double cur_julian_time = jtime(cur_gmt_time);
+    double cur_julian_time = julianTime(cur_gmt_time);
 
     double results[5];
-    phasehunt(cur_julian_time, results);
+    phaseHunt(cur_julian_time, results);
 
     MoonPhasesType result;
     for(uint8_t i = 0; i < 5; i++) {
@@ -57,13 +57,12 @@ MoonPhaseType calcMoon(time_t unixtime)
     if (!_moonCache.isValid(unixtime)) {
 
         struct tm *cur_gmt_time = gmtime(&unixtime);
-        double cur_julian_time = jtime(cur_gmt_time);
+        double cur_julian_time = julianTime(cur_gmt_time);
 
-        double tmp;
-        _moonCache.pPhase = phase_short(cur_julian_time, &tmp, &_moonCache.mAge);
+        phaseShort(cur_julian_time, _moonCache);
 
-        _moonCache.uTime = unixtime;
-        _moonCache.jTime = cur_julian_time;
+        _moonCache.unixTime = unixtime;
+        _moonCache.julianTime = cur_julian_time;
 
         // convert to letter for moon_phases font
         // https://www.dafont.com/moon-phases.font

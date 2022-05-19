@@ -6,15 +6,19 @@
 
 #include <time.h>
 
-// JDATE -- Convert internal GMT date and time to Julian day and fraction.
-long jdate(struct tm *t);
+// julianDate -- Convert internal GMT date and time to Julian day and fraction.
+long julianDate(struct tm *t);
 
-// JTIME -- Convert internal GMT date and time to astronomical Julian time
+// julianTime -- Convert internal GMT date and time to astronomical Julian time
 // (i.e. Julian date plus day fraction, expressed as a double).
-double jtime(struct tm *t);
+double julianTime(struct tm *t);
 
-// JYEAR -- Convert Julian date to year, month, day, which are returned via integer pointers to integers.
-void jyear(double td, int *yy, int *mm, int *dd);
+struct julianYearType {
+    uint16_t year;
+    uint8_t month;
 
-// JHMS -- Convert Julian time to hour, minutes, and seconds.
-void jhms(double j, int *h, int *m, int *s);
+    julianYearType(double y, double m) : year(y), month(m) {}
+};
+
+// julianYear -- Convert Julian date to year and month
+julianYearType julianYear(double td);

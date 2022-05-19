@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "moontool.h"
+#include "../moon_phase.h"
 
 #ifndef _MSC_VER
 #pragma GCC push_options
@@ -46,13 +47,15 @@ static constexpr auto kEpoch = 2444237.5;
 #define lunatbase 2423436.0 /* Base date for E. W. Brown's numbered series of lunations (1923 January 16) */
 
 /* Assume not near black hole nor in Tennessee */
+#ifndef PI
 static constexpr auto PI = 3.14159265358979323846;
+#endif
 static constexpr auto kToRad = PI / 180.0;
 static constexpr auto kToDeg = 180.0 / PI;
 
 /*  Handy mathematical functions  */
 
-static double fixangle(double a)
+static double fixAngle(double a)
 {
     return (a - (360.0 * (floor(a / 360.0))));
 }
@@ -89,16 +92,14 @@ static double dcos(double x)
 
            where year is expressed as a year and fractional year.  */
 
-double meanphase(double sdate, double k)
+double meanPhase(double sdate, double k)
 {
-    double t, t2, t3, nt1;
-
     /* Time in Julian centuries from 1900 January 0.5 */
-    t = (sdate - 2415020.0) / 36525;
-    t2 = t * t; /* Square for frequent use */
-    t3 = t2 * t; /* Cube for frequent use */
+    auto t = (sdate - 2415020.0) / 36525;
+    auto t2 = t * t; /* Square for frequent use */
+    auto t3 = t2 * t; /* Cube for frequent use */
 
-    nt1 = 2415020.75933 + synmonth * k
+    auto nt1 = 2415020.75933 + synmonth * k
         + 0.0001178 * t2
         - 0.000000155 * t3
         + 0.00033 * dsin(166.56 + 132.87 * t - 0.009173 * t2);
@@ -110,7 +111,7 @@ double meanphase(double sdate, double k)
            the new moon, and a phase selector (0.0, 0.25, 0.5,
            0.75), obtain the true, corrected phase time.  */
 
-double truephase(double k, double phase)
+double truePhase(double k, double phase)
 {
     k += phase; /* Add phase to new moon time */
     auto t = k / 1236.85; /* Time in Julian centuries from 1900 January 0.5 */
@@ -182,31 +183,30 @@ double truephase(double k, double phase)
             ending with the new moons which bound the  current
             lunation.  */
 
-void phasehunt(double sdate, double phases[5])
+void phaseHunt(double sdate, double phases[5])
 {
     auto adate = sdate - 45.0;
 
-    int yy, mm, dd;
-    jyear(adate, &yy, &mm, &dd);
-    auto k1 = floor((yy + ((mm - 1) * (1.0 / 12.0)) - 1900) * 12.3685);
+    auto ymd = julianYear(adate);
+    auto k1 = floor((ymd.year + ((ymd.month - 1) * (1.0 / 12.0)) - 1900) * 12.3685);
     decltype(k1) k2;
 
-    auto nt1 = adate = meanphase(adate, k1);
+    auto nt1 = adate = meanPhase(adate, k1);
     while (true) {
         adate += synmonth;
         k2 = k1 + 1;
-        auto nt2 = meanphase(adate, k2);
+        auto nt2 = meanPhase(adate, k2);
         if (nt1 <= sdate && nt2 > sdate) {
             break;
         }
         nt1 = nt2;
         k1 = k2;
     }
-    phases[0] = truephase(k1, 0.0);
-    phases[1] = truephase(k1, 0.25);
-    phases[2] = truephase(k1, 0.5);
-    phases[3] = truephase(k1, 0.75);
-    phases[4] = truephase(k2, 0.0);
+    phases[0] = truePhase(k1, 0.0);
+    phases[1] = truePhase(k1, 0.25);
+    phases[2] = truePhase(k1, 0.5);
+    phases[3] = truePhase(k1, 0.75);
+    phases[4] = truePhase(k2, 0.0);
 }
 
 /*  KEPLER  --	 Solve the equation of Kepler.	*/
@@ -224,6 +224,8 @@ double kepler(double m, double ecc)
     while (std::abs(delta) > kEpsilon);
     return e;
 }
+
+#if 0
 
 /*  PHASE  --  Calculate phase of moon as a fraction:
 
@@ -252,10 +254,10 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
     auto Day = pdate - kEpoch;
 
     /* Mean anomaly of the Sun */
-    auto N = fixangle((360 / 365.2422) * Day);
+    auto N = fixAngle((360 / 365.2422) * Day);
 
     /* Convert from perigee co-ordinates to epoch 1980.0 */
-    auto M = fixangle(N + elonge - elongp);
+    auto M = fixAngle(N + elonge - elongp);
 
     /* Solve equation of Kepler */
     auto Ec = kepler(M, eccent);
@@ -265,7 +267,7 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
     Ec = 2 * toDeg(atan(Ec));
 
     /* Sun's geocentric ecliptic longitude */
-    auto Lambdasun = fixangle(Ec + elongp);
+    auto LambdaSun = fixAngle(Ec + elongp);
 
     /* Orbital distance factor */
     auto F = ((1 + eccent * dcos(Ec)) / (1 - eccent * eccent));
@@ -279,16 +281,16 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
     /* Calculation of the Moon's position */
 
     /* Moon's mean longitude */
-    auto ml = fixangle(13.1763966 * Day + mmlong);
+    auto ml = fixAngle(13.1763966 * Day + mmlong);
 
     /* Moon's mean anomaly */
-    auto MM = fixangle(ml - 0.1114041 * Day - mmlongp);
+    auto MM = fixAngle(ml - 0.1114041 * Day - mmlongp);
 
     /* Moon's ascending node mean longitude */
-    auto MN = fixangle(mlnode - 0.0529539 * Day);
+    auto MN = fixAngle(mlnode - 0.0529539 * Day);
 
     /* Evection */
-    auto Ev = 1.2739 * dsin(2 * (ml - Lambdasun) - MM);
+    auto Ev = 1.2739 * dsin(2 * (ml - LambdaSun) - MM);
 
     /* Annual equation */
     auto Ae = 0.1858 * dsin(M);
@@ -309,7 +311,7 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
     auto lP = ml + Ev + mEc - Ae + A4;
 
     /* Variation */
-    auto V = 0.6583 * dsin((2 * (lP - Lambdasun)));
+    auto V = 0.6583 * dsin((2 * (lP - LambdaSun)));
 
     /* True longitude */
     auto lPP = lP + V;
@@ -330,7 +332,7 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
     /* Calculation of the phase of the Moon */
 
     /* Age of the Moon in degrees */
-    auto MoonAge = lPP - Lambdasun;
+    auto MoonAge = lPP - LambdaSun;
 
     /* Phase of the Moon */
     auto MoonPhase = (1 - dcos(MoonAge)) / 2;
@@ -345,26 +347,29 @@ double phase(double pdate, double *pphase, double *mage, double *dist, double *a
     auto MoonAng = mangsiz / MoonDFrac;
 
     *pphase = MoonPhase;
-    *mage = synmonth * (fixangle(MoonAge) / 360.0);
+    *mage = synmonth * (fixAngle(MoonAge) / 360.0);
     *dist = MoonDist;
     *angdia = MoonAng;
     *sudist = SunDist;
     *suangdia = SunAng;
-    return fixangle(MoonAge) / 360.0;
+    return fixAngle(MoonAge) / 360.0;
 }
 
-double phase_short(double pdate, double *pphase, double *mage)
+#endif
+
+
+void phaseShort(double pDate, MoonPhaseType &moon)
 {
     /* Calculation of the Sun's position */
 
     /* Date within epoch */
-    auto Day = pdate - kEpoch;
+    auto Day = pDate - kEpoch;
 
     /* Mean anomaly of the Sun */
-    auto N = fixangle((360 / 365.2422) * Day);
+    auto N = fixAngle((360 / 365.2422) * Day);
 
     /* Convert from perigee co-ordinates to epoch 1980.0 */
-    auto M = fixangle(N + elonge - elongp);
+    auto M = fixAngle(N + elonge - elongp);
 
     /* Solve equation of Kepler */
     auto Ec = kepler(M, eccent);
@@ -374,21 +379,21 @@ double phase_short(double pdate, double *pphase, double *mage)
     Ec = 2 * toDeg(atan(Ec));
 
     /* Sun's geocentric ecliptic longitude */
-    auto Lambdasun = fixangle(Ec + elongp);
+    auto lambdaSun = fixAngle(Ec + elongp);
 
     /* Calculation of the Moon's position */
 
     /* Moon's mean longitude */
-    auto ml = fixangle(13.1763966 * Day + mmlong);
+    auto ml = fixAngle(13.1763966 * Day + mmlong);
 
     /* Moon's mean anomaly */
-    auto MM = fixangle(ml - 0.1114041 * Day - mmlongp);
+    auto MM = fixAngle(ml - 0.1114041 * Day - mmlongp);
 
     /* Moon's ascending node mean longitude */
-    auto MN = fixangle(mlnode - 0.0529539 * Day);
+    auto MN = fixAngle(mlnode - 0.0529539 * Day);
 
     /* Evection */
-    auto Ev = 1.2739 * dsin(2 * (ml - Lambdasun) - MM);
+    auto Ev = 1.2739 * dsin(2 * (ml - lambdaSun) - MM);
 
     /* Annual equation */
     auto Ae = 0.1858 * dsin(M);
@@ -409,7 +414,7 @@ double phase_short(double pdate, double *pphase, double *mage)
     auto lP = ml + Ev + mEc - Ae + A4;
 
     /* Variation */
-    auto V = 0.6583 * dsin(2 * (lP - Lambdasun));
+    auto V = 0.6583 * dsin(2 * (lP - lambdaSun));
 
     /* True longitude */
     auto lPP = lP + V;
@@ -424,19 +429,20 @@ double phase_short(double pdate, double *pphase, double *mage)
     auto x = dcos(lPP - NP);
 
     /* Ecliptic longitude */
-    auto Lambdamoon = toDeg(atan2(y, x));
-    Lambdamoon += NP;
+    auto lambdaMoon = toDeg(atan2(y, x));
+    lambdaMoon += NP;
 
     /* Calculation of the phase of the Moon */
 
     /* Age of the Moon in degrees */
-    auto MoonAge = lPP - Lambdasun;
+    auto MoonAge = lPP - lambdaSun;
 
     /* Phase of the Moon */
-    *pphase = (1 - dcos(MoonAge)) / 2;
+    // moon.pPhase = (1 - dcos(MoonAge)) / 2;
 
-    *mage = synmonth * (fixangle(MoonAge) / 360.0);
-    return fixangle(MoonAge) / 360.0;
+    moon.pPhase = fixAngle(MoonAge) / 360.0;
+
+    moon.mAge = synmonth * (fixAngle(MoonAge) / 360.0);
 }
 
 #ifndef _MSC_VER

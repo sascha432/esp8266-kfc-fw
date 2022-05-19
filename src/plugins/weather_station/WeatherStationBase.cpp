@@ -43,7 +43,7 @@ void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpR
 {
     __LDBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
     if (code != 200) {
-        PrintString message(F("OpenWeatherAPI http status=%d error=%s url=%s"), code, request.getMessage().c_str(), request.getUrl());
+        PrintString message(F("OpenWeatherAPI http status=%d error=%s wifi=%u url=%s"), code, request.getMessage().c_str(), WiFi.isConnected(), request.getUrl());
         Logger_error(message);
         _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
         _pollDataUpdateLastTime(false);
@@ -57,6 +57,7 @@ void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpR
     else {
         _pollDataUpdateLastTime(true);
     }
+    redraw();
 }
 
 void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *payload)

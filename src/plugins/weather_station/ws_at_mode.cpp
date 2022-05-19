@@ -5,25 +5,16 @@
 #if AT_MODE_SUPPORTED
 
 #include "weather_station.h"
-#include  "moon_phase.h"
+#include "moon_phase.h"
+#include "format_time.h"
 #include "at_mode.h"
 #include "moon/moontool.h"
+
 
 #if DEBUG_IOT_WEATHER_STATION
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
-#endif
-
-#if DEBUG_MOON_PHASE
-
-static String get_date_str(time_t unixtime)
-{
-    PrintString str;
-    str.strftime(F("%F %X %Z"), unixtime);
-    return str;
-}
-
 #endif
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSSET, "WSSET", "<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>", "Enable/disable function");
@@ -192,7 +183,6 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             uint32_t days = args.toInt(1, 1);
             uint32_t incr = args.toInt(2, 86400);
             if (args.startsWithIgnoreCase(0, F("list"))) {
-                static constexpr double moondays = 29.53058868;
                 auto &stream = args.getStream();
                 unixtime = time(nullptr);
 
@@ -200,7 +190,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 stream.println(F("date,unixtime,phase"));
 
                 time_t lastPhase = 0;
-                for(float i = 0; i < days; i += moondays) {
+                for(float i = 0; i < days; i += MoonPhaseType::kMoonDay) {
                     auto phases = calcMoonPhases(unixtime + (i * incr));
                     for(auto phase: phases._timestamps) {
                         if (phase <= lastPhase) {
@@ -221,7 +211,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 unixtime = -1;
                 auto results = calcMoonPhases(time(nullptr));
                 for(uint8_t i = 0; i < 5; i++) {
-                    args.print(F("%u %s %s"), (uint32_t)results._timestamps[i], get_date_str(results._timestamps[i]).c_str(), moonPhaseName(static_cast<uint8_t>((i * 2) % 8)));
+                    args.print(F("%u %s %s"), (uint32_t)results._timestamps[i], FormatTime::getDateTimeStr(true, results._timestamps[i]).c_str(), moonPhaseName(static_cast<uint8_t>((i * 2) % 8)));
                 }
             }
             else if (args.startsWithIgnoreCase(0, F("now"))) {
@@ -247,13 +237,15 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             else if (unixtime) {
                 while(days--) {
                     auto moon = calcMoon(unixtime);
-                    args.print(F("%s mAge=%f pPhase=%f(%s) moonFont=%c unixtime=%u"),
-                        get_date_str(moon.uTime).c_str(),
+                    args.print(F("%s mAge=%f pPhase=%f(%s) age=%.3f(%.2f) moonFont=%c unixtime=%u"),
+                        FormatTime::getDateTimeStr(true, moon.unixTime).c_str(),
                         moon.mAge,
                         moon.pPhase,
                         moonPhaseName(moon.pPhase),
+                        moon.moonPhaseAge(),
+                        50.0 / moon.moonPhaseAge(),
                         moon.moonPhaseFont,
-                        (uint32_t)moon.uTime
+                        (uint32_t)moon.unixTime
                     );
                     unixtime += incr;
                 }

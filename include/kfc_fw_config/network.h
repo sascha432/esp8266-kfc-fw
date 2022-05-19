@@ -303,7 +303,12 @@ namespace KFCConfigurationClasses {
                 auto count = static_cast<uint8_t>(num);
                 for(const auto &station: list) {
                     if (count-- == 0) {
-                        return Network::Settings::getConfig().stations[static_cast<uint8_t>(station._id)];
+                        #if DEBUG
+                        if (static_cast<uint8_t>(station._id) != (static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations)) {
+                            __DBG_printf("invalid station id=%u ssid=%s", station._id, __S(station._SSID));
+                        }
+                        #endif
+                        return Network::Settings::getConfig().stations[static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations];
                     }
                 }
                 __DBG_printf("network out of range=%u", num);

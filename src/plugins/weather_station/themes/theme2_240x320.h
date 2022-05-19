@@ -116,5 +116,5 @@
 #define X_POSITION_WEATHER_INDOOR_HUMIDITY              (TFT_WIDTH / 2 - 5)
 #define X_POSITION_WEATHER_INDOOR_PRESSURE              (128 - 2 + _offsetX)
 #define Y_POSITION_WEATHER_INDOOR_TEMP                  (60 + _offsetY)
-#define Y_POSITION_WEATHER_INDDOR_HUMIDITY              (60 + _offsetY)
-#define Y_POSITION_WEATHER_INDDOR_PRESSURE              (60 + _offsetY)
+#define Y_POSITION_WEATHER_INDOOR_HUMIDITY              (60 + _offsetY)
+#define Y_POSITION_WEATHER_INDOOR_PRESSURE              (60 + _offsetY)

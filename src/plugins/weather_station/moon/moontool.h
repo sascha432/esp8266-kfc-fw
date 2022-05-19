@@ -10,7 +10,7 @@
 		    current date.  Five phases are found, starting and
 		    ending with the new moons which bound the  current
 		    lunation.  */
-void phasehunt(double sdate, double phases[5]);
+void phaseHunt(double sdate, double phases[5]);
 
 /*  PHASE  --  Calculate phase of moon as a fraction:
 
@@ -32,8 +32,18 @@ void phasehunt(double sdate, double phases[5]);
 //  double  *sudist;		      /* Distance to Sun */
 //  double  *suangdia;                  /* Sun's angular diameter */
 
+#if 0
 double phase(double pdate, double *pphase, double *mage, double *dist, double *angdia, double *sudist, double *suangdia);
+#endif
 
 // reduced information
-double phase_short(double pdate, double *pphase, double *mage);
+
+struct shortPhaseType {
+    double phase;
+    double mAge;
+};
+
+struct MoonPhaseType;
+
+void phaseShort(double pDate, MoonPhaseType &moon);
 

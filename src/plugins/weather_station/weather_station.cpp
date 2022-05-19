@@ -332,6 +332,7 @@ void WeatherStationPlugin::shutdown()
     delete _canvas;
     _canvas = nullptr;
     LoopFunctions::remove(loop);
+    unlock();
 
     _setBacklightLevel(PWMRANGE);
     drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);

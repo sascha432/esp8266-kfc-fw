@@ -2,6 +2,7 @@
 
 ## Version 0.0.6
 
+ - Added the previous and next 3 moon phases to station plugin
  - Fixed issues with websocket-clients and the OTA tool
  - Username is pre-filled at the WebUI login
  - World Clock screen for weather station

@@ -5,9 +5,11 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include <PrintString.h>
+
 
 #ifndef DEBUG_MOON_PHASE
-#   define DEBUG_MOON_PHASE 0
+#   define DEBUG_MOON_PHASE 1
 #endif
 
 const __FlashStringHelper *moonPhaseName(uint8_t moonPhase);
@@ -21,19 +23,18 @@ struct MoonPhaseType
 {
     static constexpr auto kMoonDay = 29.53058868;
     static constexpr auto kQuarterMoonDay = 29.53058868 / 4.0;
-    static constexpr auto kMoonDayToPct = 29.53058868 / 2.0;
 
     double pPhase;
     double mAge;
     char moonPhaseFont;
-    time_t uTime; // unixtime
-    double jTime;
+    time_t unixTime;
+    double julianTime;
 
     MoonPhaseType() : mAge(NAN) {
     }
 
     bool isValid(time_t curTime) const {
-        return !isnan(mAge) && abs(curTime - uTime) <= 60;
+        return !isnan(mAge) && abs(curTime - unixTime) <= 60;
     }
 
     void invalidate() {
@@ -56,24 +57,42 @@ struct MoonPhaseType
         return ::moonPhaseName(kMoonDay / mAge);
     }
 
-    double moonAgePct() const {
+    double moonPhaseAgePct() const {
         auto age = mAge;
-        while(age > kQuarterMoonDay) {
+        while(age >= kQuarterMoonDay) {
             age -= kQuarterMoonDay;
         }
-        return 100 - (kMoonDayToPct / age);
+        return age == 0 ? 100 : (kQuarterMoonDay * 100.0 / age);
+    }
+
+    double moonPhaseAge() const {
+        auto phaseAge = pPhase;
+        while (phaseAge >= 0.5) {
+            phaseAge -= 0.5;
+        }
+        return phaseAge;
     }
 };
 
 struct MoonPhasesType
 {
     // 0 new moon
+    // 1 first quarter
     // 2 full moon
-    // ...
+    // 3 third quarter
+    // 4 next new moon
     time_t _timestamps[5]; // unixtime
 
     MoonPhasesType() : _timestamps{}
     {}
+
+    time_t *begin() {
+        return &_timestamps[0];
+    }
+
+    time_t *end() {
+        return &_timestamps[5];
+    }
 };
 
 MoonPhasesType calcMoonPhases(time_t unixtime);

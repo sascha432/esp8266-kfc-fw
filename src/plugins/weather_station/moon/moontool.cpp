@@ -437,9 +437,10 @@ void phaseShort(double pDate, MoonPhaseType &moon)
     /* Age of the Moon in degrees */
     auto MoonAge = lPP - lambdaSun;
 
-    /* Phase of the Moon */
-    // moon.pPhase = (1 - dcos(MoonAge)) / 2;
+    /* Illumination of the Moon */
+    moon.iPhase = (1 - dcos(MoonAge)) / 2.0;
 
+    /* Phase of the Moon */
     moon.pPhase = fixAngle(MoonAge) / 360.0;
 
     moon.mAge = synmonth * (fixAngle(MoonAge) / 360.0);

@@ -10,4 +10,4 @@ Moontool was originally written for the Sun Workstation under the SunView graphi
 
 # Changes
 
-Optimized for size
+Optimized for size, added illumination in %

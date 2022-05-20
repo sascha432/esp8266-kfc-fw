@@ -5,11 +5,6 @@
 #include "moon_phase.h"
 #include "moon/moontool.h"
 
-inline static time_t jToUnixtime(double jTime)
-{
-    return (jTime - 2440587.5) * 86400;
-}
-
 static MoonPhaseType _moonCache;
 
 const __FlashStringHelper *moonPhaseName(uint8_t moonPhase)

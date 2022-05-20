@@ -6,6 +6,9 @@
 
 #include <time.h>
 
+// julian time to unix time
+time_t jToUnixtime(double jTime);
+
 // julianDate -- Convert internal GMT date and time to Julian day and fraction.
 long julianDate(struct tm *t);
 

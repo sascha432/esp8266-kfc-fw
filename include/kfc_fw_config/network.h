@@ -304,9 +304,13 @@ namespace KFCConfigurationClasses {
                 for(const auto &station: list) {
                     if (count-- == 0) {
                         #if DEBUG
-                        if (static_cast<uint8_t>(station._id) != (static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations)) {
-                            __DBG_printf("invalid station id=%u ssid=%s", station._id, __S(station._SSID));
-                        }
+                            if (static_cast<uint8_t>(station._id) != (static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations)) {
+                                __DBG_printf("invalid station num=%u id=%u ssid=%s new_id=%u", static_cast<uint8_t>(num), station._id, __S(station._SSID), static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations);
+                                for(uint8_t i = 0; i < Network::Settings::StationsConfig::kNumStations; i++) {
+                                    const auto &station = Network::Settings::getConfig().stations[i];
+                                    __DBG_printf("n=%u ip=%s", i, IPAddress(station.local_ip).toString().c_str());
+                                }
+                            }
                         #endif
                         return Network::Settings::getConfig().stations[static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations];
                     }

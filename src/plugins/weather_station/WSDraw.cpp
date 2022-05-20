@@ -136,8 +136,8 @@ namespace WSDraw {
         _canvas->setTextColor(COLORS_SUN_AND_MOON);
         _canvas->drawTextAligned(X_POSITION_SUN_TITLE, Y_POSITION_SUN_TITLE, F("Sun"), H_POSITION_SUN_TITLE);
         _canvas->drawTextAligned(X_POSITION_MOON_PHASE_NAME, Y_POSITION_MOON_PHASE_NAME, moon.moonPhaseName(), H_POSITION_MOON_PHASE_NAME);
-        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_DAYS, PrintString(F("%dd"), moon.moonDay()), H_POSITION_MOON_PHASE_NAME);
-        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_PCT, PrintString(F("%.1f%%"), moon.moonPhaseAgePct()), H_POSITION_MOON_PHASE_NAME);
+        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_DAYS, PrintString(F("%.1fd"), moon.moonDayDouble()), H_POSITION_MOON_PHASE_NAME);
+        _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_PCT, PrintString(F("%.1f%%"), moon.moonPhaseIlluminationPct()), H_POSITION_MOON_PHASE_NAME);
 
 
         auto &info = _weatherApi.getWeatherInfo();
@@ -383,7 +383,7 @@ namespace WSDraw {
             y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.localIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
             y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("GW ")) + WiFi.gatewayIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
             y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("DNS ")) + WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + kIncr;
-            _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.dnsIP(1).toString(), AdafruitGFXExtension::CENTER);
         }
         else {
             _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Not connected"), AdafruitGFXExtension::CENTER);
@@ -514,7 +514,7 @@ namespace WSDraw {
             _offsetY += 2;
 
             // _canvas->setFont(&DejaVuSans_5pt8b);
-            _canvas->setTextColor(COLORS_MOON_PHASE_TIME);
+            _canvas->setTextColor(COLORS_MOON_PHASE_DATETIME);
             _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, FormatTime::getDateTimeStr(_config.time_format_24h, phase), AdafruitGFXExtension::CENTER);
             _offsetY += 4;
         }
@@ -522,7 +522,7 @@ namespace WSDraw {
         // moon phase name and %
         _canvas->setFont(&Dialog_6pt8b);
         _canvas->setTextColor(COLORS_MOON_PHASE_TOP);
-        _canvas->drawTextAligned(x, phaseY + 2, PrintString(F("%.1f%% %u %s"), moon.moonPhaseAgePct(), moon.moonDay(), moon.moonDayDescr()), AdafruitGFXExtension::LEFT);
+        _canvas->drawTextAligned(x, phaseY + 2, PrintString(F("%.1f%% %.1f %s"), moon.moonPhaseIlluminationPct(), moon.moonDayDouble(), moon.moonDayDescr()), AdafruitGFXExtension::LEFT);
 
     }
 

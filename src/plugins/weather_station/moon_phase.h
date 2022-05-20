@@ -22,8 +22,8 @@ inline const __FlashStringHelper *moonPhaseName(double moonPhase)
 struct MoonPhaseType
 {
     static constexpr auto kMoonDay = 29.53058868;
-    static constexpr auto kQuarterMoonDay = 29.53058868 / 4.0;
 
+    double iPhase;
     double pPhase;
     double mAge;
     char moonPhaseFont;
@@ -50,27 +50,19 @@ struct MoonPhaseType
     }
 
     const __FlashStringHelper *moonDayDescr() const {
-        return moonDay() == 1 ? F("day") : F("days");
+        return moonDayDouble() == 1.0 ? F("day") : F("days");
     }
 
     const __FlashStringHelper *moonPhaseName() const {
         return ::moonPhaseName(kMoonDay / mAge);
     }
 
-    double moonPhaseAgePct() const {
-        auto age = mAge;
-        while(age >= kQuarterMoonDay) {
-            age -= kQuarterMoonDay;
-        }
-        return age == 0 ? 100 : (kQuarterMoonDay * 100.0 / age);
+    double moonPhaseIlluminationPct() const {
+        return moonPhaseIllumination() * 100.0;
     }
 
-    double moonPhaseAge() const {
-        auto phaseAge = pPhase;
-        while (phaseAge >= 0.5) {
-            phaseAge -= 0.5;
-        }
-        return phaseAge;
+    double moonPhaseIllumination() const {
+        return iPhase;
     }
 };
 

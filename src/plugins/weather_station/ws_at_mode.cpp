@@ -235,17 +235,24 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 // dont show
             }
             else if (unixtime) {
+                unixtime -= (incr / 2) * days;
+                auto tm = localtime(&unixtime);
+                tm->tm_hour = 0;
+                tm->tm_min = 0;
+                tm->tm_sec = 0;
+                unixtime = mktime(tm);
+
                 while(days--) {
                     auto moon = calcMoon(unixtime);
-                    args.print(F("%s mAge=%f pPhase=%f(%s) age=%.3f(%.2f) moonFont=%c unixtime=%u"),
+
+                    args.print(F("%s mAge=%f pPhase=%f(%s) il=%.3f(%.2f%%) mFont=%c"),
                         FormatTime::getDateTimeStr(true, moon.unixTime).c_str(),
                         moon.mAge,
                         moon.pPhase,
                         moonPhaseName(moon.pPhase),
-                        moon.moonPhaseAge(),
-                        50.0 / moon.moonPhaseAge(),
-                        moon.moonPhaseFont,
-                        (uint32_t)moon.unixTime
+                        moon.moonPhaseIllumination(),
+                        moon.moonPhaseIlluminationPct(),
+                        moon.moonPhaseFont
                     );
                     unixtime += incr;
                 }
@@ -260,14 +267,3 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
 }
 
 #endif
-
-// wsm 2022-03-09 14
-// wsm 2022-03-28 60
-// wsm 2022-03-30 22
-// wsm 2022-03-31
-// wsm 2022-04-01
-// wsm 2022-04-08
-// wsm 2022-04-16
-// wsm 2022-02-01 365
-// wsm 2022-04-23
-// wsm ph

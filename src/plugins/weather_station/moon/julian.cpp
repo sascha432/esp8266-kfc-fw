@@ -10,6 +10,11 @@
 #pragma GCC optimize ("Os")
 #endif
 
+time_t jToUnixtime(double jTime)
+{
+    return (jTime - 2440587.5) * 86400;
+}
+
 // JDATE -- Convert internal GMT date and time to Julian day and fraction.
 
 long julianDate(struct tm *t)

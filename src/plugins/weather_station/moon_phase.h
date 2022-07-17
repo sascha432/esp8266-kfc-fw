@@ -54,7 +54,7 @@ struct MoonPhaseType
     }
 
     const __FlashStringHelper *moonPhaseName() const {
-        return ::moonPhaseName(kMoonDay / mAge);
+        return ::moonPhaseName(pPhase);
     }
 
     double moonPhaseIlluminationPct() const {
@@ -88,5 +88,6 @@ struct MoonPhasesType
 };
 
 MoonPhasesType calcMoonPhases(time_t unixtime);
-
+time_t getUnixtimeForCalcMoon();
+time_t getUnixtimeForCalcMoon(time_t unixtime);
 MoonPhaseType calcMoon(time_t time);

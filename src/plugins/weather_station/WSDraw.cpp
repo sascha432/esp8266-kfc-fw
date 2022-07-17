@@ -130,7 +130,8 @@ namespace WSDraw {
     {
         constexpr int16_t _offsetY = Y_START_POSITION_SUN_MOON;
 
-        auto moon = calcMoon(time(nullptr));
+
+        auto moon = calcMoon(getUnixtimeForCalcMoon());
 
         _canvas->setFont(FONTS_SUN_AND_MOON);
         _canvas->setTextColor(COLORS_SUN_AND_MOON);
@@ -185,6 +186,8 @@ namespace WSDraw {
         _canvas->drawTextAligned(TFT_WIDTH - 2, _offsetY, PrintString(F("%.1fhPa"), data.getPressure()), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
     }
 
+    static const uint16_t palette[] PROGMEM = { COLORS_LOCATION };
+
     void Base::_drawLocalWeather()
     {
         constexpr int16_t _offsetY = Y_START_POSITION_WEATHER;
@@ -192,7 +195,6 @@ namespace WSDraw {
         if (info.hasData()) {
 
             // --- location
-            static const uint16_t palette[] PROGMEM = { COLORS_LOCATION };
             _canvas->drawBitmap(X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniIconFromProgmem(info.weather[0].icon), palette);
 
             // create kind of shadow effect in case the text is drawn over the icon
@@ -238,13 +240,13 @@ namespace WSDraw {
             if (error.length()) {
                 _canvas->setFont(FONTS_DEFAULT_SMALL);
                 _canvas->setTextColor(COLORS_RED);
-                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("LOADING WEATHER FAILED"), AdafruitGFXExtension::CENTER);
+                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Loading Weather Failed"), AdafruitGFXExtension::CENTER);
                 _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 30, error, AdafruitGFXExtension::CENTER);
             }
             else {
                 _canvas->setFont(FONTS_DEFAULT_MEDIUM);
                 _canvas->setTextColor(COLORS_ORANGE);
-                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("WEATHER\nLOADING..."), AdafruitGFXExtension::CENTER);
+                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Weather\nLoading..."), AdafruitGFXExtension::CENTER);
             }
         }
     }
@@ -464,8 +466,8 @@ namespace WSDraw {
     {
         int16_t _offsetY = Y_START_POSITION_MOON_PHASE;
 
-        auto time = ::time(nullptr);
-        auto moon = calcMoon(time);
+        auto moon = calcMoon(getUnixtimeForCalcMoon());
+        time_t time = ::time(nullptr);
 
         // moon image
         _canvas->setFont(FONTS_MOON_PHASE);
@@ -510,7 +512,7 @@ namespace WSDraw {
                 _canvas->setTextColor(COLORS_MOON_PHASE_ACTIVE);
             }
 
-            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moonPhaseName(moon.pPhase), AdafruitGFXExtension::CENTER);
+            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moon.moonPhaseName(), AdafruitGFXExtension::CENTER);
             _offsetY += 2;
 
             // _canvas->setFont(&DejaVuSans_5pt8b);
@@ -551,7 +553,6 @@ namespace WSDraw {
             _canvas->setCursor(0, 0);
             printDebugInfo(*_canvas);
 
-            static const uint16_t palette[] PROGMEM = { COLORS_LOCATION };
             switch(_mode) {
                 case DebugMode::ICON:
                     _icon = getIconFromProgmem(rand() % 9);

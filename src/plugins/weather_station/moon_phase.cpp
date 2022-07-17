@@ -46,12 +46,27 @@ MoonPhasesType calcMoonPhases(time_t unixtime)
     return result;
 }
 
+time_t getUnixtimeForCalcMoon()
+{
+    time_t unixtime;
+    return getUnixtimeForCalcMoon(time(&unixtime));
+}
+
+time_t getUnixtimeForCalcMoon(time_t unixtime)
+{
+    auto tm = localtime(&unixtime);
+    tm->tm_hour = 0;
+    tm->tm_min = 0;
+    tm->tm_sec = 0;
+    return mktime(tm);
+}
+
 MoonPhaseType calcMoon(time_t unixtime)
 {
     // check if we have valid data
     if (!_moonCache.isValid(unixtime)) {
 
-        struct tm *cur_gmt_time = gmtime(&unixtime);
+        struct tm *cur_gmt_time = localtime(&unixtime);
         double cur_julian_time = julianTime(cur_gmt_time);
 
         phaseShort(cur_julian_time, _moonCache);

@@ -205,7 +205,6 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 }
                 stream.println();
                 return true;
-
             }
             else if (args.startsWithIgnoreCase(0, F("ph"))) {
                 unixtime = -1;
@@ -235,12 +234,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 // dont show
             }
             else if (unixtime) {
-                unixtime -= (incr / 2) * days;
-                auto tm = localtime(&unixtime);
-                tm->tm_hour = 0;
-                tm->tm_min = 0;
-                tm->tm_sec = 0;
-                unixtime = mktime(tm);
+                unixtime = getUnixtimeForCalcMoon(unixtime);
 
                 while(days--) {
                     auto moon = calcMoon(unixtime);

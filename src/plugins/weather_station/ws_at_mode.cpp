@@ -214,7 +214,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 }
             }
             else if (args.startsWithIgnoreCase(0, F("now"))) {
-                unixtime = time(nullptr);
+                unixtime = getUnixtimeForCalcMoon();
             }
             else {
                 StringVector items;
@@ -234,8 +234,6 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 // dont show
             }
             else if (unixtime) {
-                unixtime = getUnixtimeForCalcMoon(unixtime);
-
                 while(days--) {
                     auto moon = calcMoon(unixtime);
 
@@ -243,7 +241,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                         FormatTime::getDateTimeStr(true, moon.unixTime).c_str(),
                         moon.mAge,
                         moon.pPhase,
-                        moonPhaseName(moon.pPhase),
+                        moon.moonPhaseName(),
                         moon.moonPhaseIllumination(),
                         moon.moonPhaseIlluminationPct(),
                         moon.moonPhaseFont

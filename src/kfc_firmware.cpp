@@ -116,7 +116,7 @@ void delayedSetup(bool delayed)
     });
     DEBUG_BOOT_PRINT_POS();
 
-    #if KFC_DISABLE_CRASHCOUNTER == 0
+    #if KFC_DISABLE_CRASH_COUNTER == 0
         // reset crash counter
         DEBUG_BOOT_PRINT_POS();
         SaveCrash::installRemoveCrashCounter(KFC_CRASH_RECOVERY_TIME);
@@ -239,7 +239,7 @@ void setup()
     #endif
 
     bool safe_mode = false;
-    #if KFC_DISABLE_CRASHCOUNTER == 0
+    #if KFC_DISABLE_CRASH_COUNTER == 0
         bool increaseCrashCounter = false;
     #endif
     #if !ENABLE_DEEP_SLEEP
@@ -448,7 +448,7 @@ void setup()
                             case 'c':
                                 DEBUG_BOOT_PRINT_POS();
                                 RTCMemoryManager::clear();
-                                #if KFC_DISABLE_CRASHCOUNTER == 0
+                                #if KFC_DISABLE_CRASH_COUNTER == 0
                                     DEBUG_BOOT_PRINT_POS();
                                     SaveCrash::removeCrashCounter();
                                 #endif
@@ -472,7 +472,7 @@ void setup()
                                 KFC_SAFE_MODE_SERIAL_PORT.println(F("Factory settings restored"));
                                 // fallthrough
                             case 'r':
-                                #if KFC_DISABLE_CRASHCOUNTER == 0
+                                #if KFC_DISABLE_CRASH_COUNTER == 0
                                     DEBUG_BOOT_PRINT_POS();
                                     SaveCrash::removeCrashCounter();
                                 #endif
@@ -490,7 +490,7 @@ void setup()
                 if (endTimeout) {
                     // timeout occurred, count as crash
                     // safe_mode should be false
-                    #if KFC_DISABLE_CRASHCOUNTER == 0
+                    #if KFC_DISABLE_CRASH_COUNTER == 0
                         increaseCrashCounter = true;
                     #endif
                 }
@@ -526,7 +526,7 @@ void setup()
         }
         #endif
 
-        #if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASHCOUNTER == 0
+        #if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASH_COUNTER == 0
             DEBUG_BOOT_PRINT_POS();
             if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
                 DEBUG_BOOT_PRINT_POS();

@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if WEBSERVER_SUPPORT
-
 #include <Arduino_compat.h>
 #include <ArduinoOTA.h>
 #include <PrintString.h>
@@ -202,6 +200,36 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.addNoCache(true);
         headers.setResponseHeaders(response);
     }
+    #if ENABLE_ARDUINO_OTA
+     else if (url.endsWith(F("-arduino-ota"))) {
+        #if 0
+            // require authentication to enable arduinoOTA
+            if (!plugin.isAuthenticated(request)) {
+                auto response = request->beginResponse(403);
+                _logRequest(request, response);
+                request->send(response);
+                return;
+            }
+        #endif
+        for(;;) {
+            auto statusStr = F("Enabled");
+            if (url.startsWith(F("/start-"))) {
+                plugin.ArduinoOTAbegin();
+            }
+            else if (url.startsWith(F("/stop-"))) {
+                statusStr = F("Diabled");
+                plugin.ArduinoOTAend();
+            }
+            else {
+                break;
+            }
+            response = request->beginResponse(200, FSPGM(mime_text_plain), statusStr);
+            headers.addNoCache(true);
+            headers.setResponseHeaders(response);
+            break;
+        }
+    }
+    #endif
     // --------------------------------------------------------------------
     else if (url == F("/webui-handler")) {
         plugin._handlerWebUI(request, headers);
@@ -589,8 +617,6 @@ void Plugin::_handlerAlerts(AsyncWebServerRequest *request, HttpHeaders &headers
     request->send(response);
 }
 
-#endif
-
 void Plugin::_addRestHandler(RestHandler &&handler)
 {
     if (_server) {
@@ -613,12 +639,12 @@ void Plugin::_addRestHandler(RestHandler &&handler)
 
 void Plugin::_handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHeaders &headers)
 {
-#if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
-    if (!isAuthenticated(request)) {
-        send(403, request);
-        return;
-    }
-#endif
+    #if !defined(SPEED_TEST_NO_AUTH) || SPEED_TEST_NO_AUTH == 0
+        if (!isAuthenticated(request)) {
+            send(403, request);
+            return;
+        }
+    #endif
     headers.clear(2); // remove default headers and reserve 3 headers
     headers.addNoCache(); // adds 2 headers
 
@@ -723,7 +749,9 @@ void Plugin::end()
     #endif
     __LDBG_printf("server=%p", _server.get());
     _server.reset();
-    _loginFailures.reset();
+    #if SECURITY_LOGIN_ATTEMPTS
+        _loginFailures.reset();
+    #endif
 }
 
 #if ENABLE_ARDUINO_OTA
@@ -757,6 +785,7 @@ void Plugin::ArduinoOTAbegin()
     }
     ArduinoOTA.setHostname(System::Device::getName());
     ArduinoOTA.setPassword(System::Device::getPassword());
+    // ArduinoOTA.setPort(8266); // default
     ArduinoOTA.onStart([this]() {
         Logger_notice(F("Firmware upload started"));
         BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
@@ -778,9 +807,10 @@ void Plugin::ArduinoOTAbegin()
         }
     });
     ArduinoOTA.onProgress([this](int progress, int size) {
-        __DBG_printf("ArduinoOTA progres %d / %d", progress, size);
+        __DBG_printf("ArduinoOTA progress %d / %d", progress, size);
         if (_AOTAInfo) {
             _AOTAInfo.update(progress, size);
+            _updateFirmwareCallback(progress, size);
         }
     });
     ArduinoOTA.onError([this](ota_error_t err) {
@@ -814,11 +844,11 @@ void Plugin::ArduinoOTAend()
 
 void Plugin::ArduinoOTADumpInfo(Print &output)
 {
-    output.printf_P(PSTR("running=%u in_progress=%u reboot_pending=%u progress=%u/%u error=%d (%s) state=%d\n"),
+    output.printf_P(PSTR("running=%u in_progress=%u reboot_pending=%u progress=%u/%u error=%d (%s)\n"),
         _AOTAInfo._runnning, _AOTAInfo._inProgress, _AOTAInfo._rebootPending,
         _AOTAInfo._progress, _AOTAInfo._size,
-        _AOTAInfo._error, ArduinoOTAErrorStr(_AOTAInfo._error),
-        ArduinoOTA._state
+        _AOTAInfo._error, ArduinoOTAErrorStr(_AOTAInfo._error)
+        // ArduinoOTA._state
     );
 }
 
@@ -836,6 +866,10 @@ void Plugin::_addMDNS()
         service += 's';
     }
     MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.getPort());
+    #if ENABLE_ARDUINO_OTA
+        MDNSService::enableArduino();
+    #endif
+
     MDNSService::announce();
 }
 
@@ -867,18 +901,20 @@ void Plugin::begin(bool restart)
         _addMDNS();
     #endif
 
-    if (System::Flags::getConfig().is_log_login_failures_enabled) {
-        _loginFailures.reset(new FailureCounterContainer());
-        if (!_loginFailures) {
-            __DBG_printf_E("memory allocation failed");
+    #if SECURITY_LOGIN_ATTEMPTS
+        if (System::Flags::getConfig().is_log_login_failures_enabled) {
+            _loginFailures.reset(new FailureCounterContainer());
+            if (!_loginFailures) {
+                __DBG_printf_E("memory allocation failed");
+            }
+            if (_loginFailures) {
+                _loginFailures->readFromFS();
+            }
         }
-        if (_loginFailures) {
-            _loginFailures->readFromFS();
+        else {
+            _loginFailures.reset();
         }
-    }
-    else {
-        _loginFailures.reset();
-    }
+    #endif
 
     // setup webui socket
     if (System::Flags::getConfig().is_webui_enabled) {
@@ -888,9 +924,11 @@ void Plugin::begin(bool restart)
         }
     }
 
-    if (!restart) {
-        addHandler(new AsyncUpdateWebHandler(), AsyncUpdateWebHandler::getURI());
-    }
+    #if WEBSERVER_KFC_OTA
+        if (!restart) {
+            addHandler(new AsyncUpdateWebHandler(), AsyncUpdateWebHandler::getURI());
+        }
+    #endif
 
     _server->onNotFound(handlerNotFound);
 
@@ -974,7 +1012,7 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
 void Plugin::setUpdateFirmwareCallback(UpdateFirmwareCallback callback)
 {
 #if 0
-    if (_updateFirmwareCallback) { // create a list of callbacks that frees itself upon leaving the lamba
+    if (_updateFirmwareCallback) { // create a list of callbacks that frees itself upon leaving the lambda
         auto prev_callback = std::move(_updateFirmwareCallback);
         _updateFirmwareCallback = [prev_callback, callback](size_t pos, size_t size) {
             prev_callback(pos, size);
@@ -1049,15 +1087,25 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
             auto username = System::Device::getUsername();
             auto password = System::Device::getPassword();
 
-            __SID(debug_printf_P(PSTR("blocked=%u username=%s match:user=%u pass=%u\n"),
-                _loginFailures && _loginFailures->isAddressBlocked(remote_addr),
-                pUsername->c_str(), (*pUsername == username), (*pPassword == password))
-            );
+            #if SECURITY_LOGIN_ATTEMPTS
 
-            if (
-                ((!_loginFailures) || (_loginFailures && _loginFailures->isAddressBlocked(remote_addr) == false)) &&
-                (*pUsername == username && *pPassword == password)
-            ) {
+                __SID(debug_printf_P(PSTR("blocked=%u username=%s match:user=%u pass=%u\n"),
+                    _loginFailures && _loginFailures->isAddressBlocked(remote_addr),
+                    pUsername->c_str(), (*pUsername == username), (*pPassword == password))
+                );
+
+                if (
+                    ((!_loginFailures) || (_loginFailures && _loginFailures->isAddressBlocked(remote_addr) == false)) &&
+                    (*pUsername == username && *pPassword == password)
+                ) {
+
+            #else
+
+                if (
+                    (*pUsername == username && *pPassword == password)
+                ) {
+
+            #endif
 
                 auto &cookie = headers.add<HttpCookieHeader>(FSPGM(SID), generate_session_id(username, password, nullptr), String('/'));
                 authType = AuthType::PASSWORD;
@@ -1077,11 +1125,14 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
             }
             else {
                 loginError = FSPGM(Invalid_username_or_password, "Invalid username or password");
-                if (_loginFailures) {
-                    const FailureCounter &failure = _loginFailures->addFailure(remote_addr);
-                    Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
-                }
-                else {
+                #if SECURITY_LOGIN_ATTEMPTS
+                    if (_loginFailures) {
+                        const FailureCounter &failure = _loginFailures->addFailure(remote_addr);
+                        Logger_security(F("Login from %s failed %d times since %s (%s)"), remote_addr.toString().c_str(), failure.getCounter(), failure.getFirstFailure().c_str(), getAuthTypeStr(authType));
+                    }
+                    else
+                #endif
+                {
                     Logger_security(F("Login from %s failed (%s)"), remote_addr.toString().c_str(), getAuthTypeStr(authType));
                 }
                 return _sendFile(FSPGM(_login_html, "/login.html"), String(), headers, client_accepts_gzip, isAuthenticated, request, new LoginTemplate(loginError));
@@ -1235,11 +1286,18 @@ Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))
 
 void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-#if ENABLE_ARDUINO_OTA_AUTOSTART
-    if (mode == SetupModeType::DEFAULT || mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
-        ArduinoOTAbegin();
-    }
-#endif
+    #if ENABLE_ARDUINO_OTA
+        // start ArduinoOTA in safe mode
+        if (mode == SetupModeType::SAFE_MODE) {
+            ArduinoOTAbegin();
+        }
+        else
+    #endif
+    #if ENABLE_ARDUINO_OTA_AUTOSTART
+        if (mode == SetupModeType::DEFAULT || mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
+            ArduinoOTAbegin();
+        }
+    #endif
     if (mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
         invokeReconfigureNow(getName());
     }
@@ -1324,6 +1382,22 @@ void Plugin::getStatus(Print &output)
         if (count) {
             output.printf_P(PSTR(HTML_S(br) "%d Rest API endpoints"), count);
         }
+        #if WEBSERVER_KFC_OTA
+            auto kfcOta = PSTR("Enabled");
+        #else
+            auto kfcOta = PSTR("Disabled");
+        #endif
+        #if ENABLE_ARDUINO_OTA
+            auto ArduinoOta = PSTR("Enabled");
+        #else
+            auto ArduinoOta = PSTR("Disabled");
+        #endif
+        #if ENABLE_ARDUINO_OTA_AUTOSTART
+            auto autoStart = PSTR(" (Auto)");
+        #else
+            auto autoStart = PSTR(" (Manual)");
+        #endif
+        output.printf_P(PSTR(HTML_S(br) "KFC OTA: %s, ArduinoOTA: %s%s"), kfcOta, ArduinoOta, autoStart);
     }
     else {
         output.print(FSPGM(disabled));
@@ -1459,7 +1533,7 @@ namespace SaveCrash {
                 jsonStr.print(F("\"}"));
             }
             else {
-                __LDBG_printf("crashlog index");
+                __LDBG_printf("crash log index");
                 NamedArray items(F("items"));
                 String timeStr;
                 bool outOfMemory = false;

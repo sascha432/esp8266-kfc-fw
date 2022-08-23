@@ -5,7 +5,7 @@
 
 #pragma once
 
-#if WEBSERVER_SUPPORT
+#include <global.h>
 
 #ifndef DEBUG_WEB_SERVER
 #    define DEBUG_WEB_SERVER (0 || defined(DEBUG_ALL))
@@ -14,6 +14,10 @@
 // enable logging HTTP requests to Serial
 #ifndef WEBSERVER_LOG_SERIAL
 #    define WEBSERVER_LOG_SERIAL 1
+#endif
+
+#if !ENABLE_ARDUINO_OTA && !WEBSERVER_KFC_OTA
+#    error OTA not enabled
 #endif
 
 #include <Arduino_compat.h>
@@ -28,7 +32,9 @@
 #endif
 
 class FileMapping;
-class FailureCounterContainer;
+#if SECURITY_LOGIN_ATTEMPTS
+    class FailureCounterContainer;
+#endif
 
 // #if IOT_WEATHER_STATION
 // extern void __weatherStationDetachCanvas(bool release);
@@ -64,7 +70,9 @@ namespace WebServer {
     };
 
     using UpdateFirmwareCallback = std::function<void(size_t position, size_t size)>;
-    using FailureCounterContainerPtr = std::unique_ptr<FailureCounterContainer>;
+    #if SECURITY_LOGIN_ATTEMPTS
+        using FailureCounterContainerPtr = std::unique_ptr<FailureCounterContainer>;
+    #endif
     using RestHandlerVector = std::vector<RestHandler>;
     using RestHandlerCallback = std::function<AsyncWebServerResponse *(AsyncWebServerRequest *request, RestRequest &rest)>;
     using AsyncWebServerExPtr = std::unique_ptr<AsyncWebServerEx>;
@@ -162,24 +170,28 @@ namespace WebServer {
         }
     };
 
-    class AsyncUpdateWebHandler : public AsyncWebHandler {
-    public:
-        using AsyncWebHandler::AsyncWebHandler;
+    #if WEBSERVER_KFC_OTA
 
-        inline static const __FlashStringHelper *getURI() {
-            return F("/update");
-        }
+        class AsyncUpdateWebHandler : public AsyncWebHandler {
+        public:
+            using AsyncWebHandler::AsyncWebHandler;
 
-        virtual bool canHandle(AsyncWebServerRequest *request) override;
-        virtual void handleRequest(AsyncWebServerRequest *request) override;
-        virtual void handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) override;
-        virtual bool isRequestHandlerTrivial() override {
-            return false;
-        }
+            inline static const __FlashStringHelper *getURI() {
+                return F("/update");
+            }
 
-    private:
-        UploadStatus *_validateSession(AsyncWebServerRequest *request, int index);
-    };
+            virtual bool canHandle(AsyncWebServerRequest *request) override;
+            virtual void handleRequest(AsyncWebServerRequest *request) override;
+            virtual void handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) override;
+            virtual bool isRequestHandlerTrivial() override {
+                return false;
+            }
+
+        private:
+            UploadStatus *_validateSession(AsyncWebServerRequest *request, int index);
+        };
+
+    #endif
 
     enum class WebSocketAction {
         NONE = 0,
@@ -258,7 +270,9 @@ namespace WebServer {
         void setUpdateFirmwareCallback(UpdateFirmwareCallback callback);
 
     public:
-        static FailureCounterContainer *getLoginFailureContainer();
+        #if SECURITY_LOGIN_ATTEMPTS
+            static FailureCounterContainer *getLoginFailureContainer();
+        #endif
 
         static void executeDelayed(AsyncWebServerRequest *request, std::function<void()> callback);
 
@@ -284,9 +298,13 @@ namespace WebServer {
 
     private:
         friend AsyncRestWebHandler;
-        friend AsyncUpdateWebHandler;
+        #if WEBSERVER_KFC_OTA
+            friend AsyncUpdateWebHandler;
+        #endif
 
-        FailureCounterContainerPtr _loginFailures;
+        #if SECURITY_LOGIN_ATTEMPTS
+            FailureCounterContainerPtr _loginFailures;
+        #endif
         UpdateFirmwareCallback _updateFirmwareCallback;
         AsyncWebServerExPtr _server;
 
@@ -370,10 +388,12 @@ namespace WebServer {
 
     };
 
-    inline FailureCounterContainer *Plugin::getLoginFailureContainer()
-    {
-        return getInstance()._loginFailures.get();
-    }
+    #if SECURITY_LOGIN_ATTEMPTS
+        inline FailureCounterContainer *Plugin::getLoginFailureContainer()
+        {
+            return getInstance()._loginFailures.get();
+        }
+    #endif
 
     inline void Plugin::addRestHandler(RestHandler &&handler)
     {
@@ -458,5 +478,3 @@ namespace WebServer {
 inline bool operator ==(const WebServer::AuthType &auth, bool value) {
     return (static_cast<int>(auth) >= static_cast<int>(WebServer::AuthType::ANY)) == value;
 }
-
-#endif

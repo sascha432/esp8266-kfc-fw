@@ -19,6 +19,8 @@
 #include <debug_helper_disable.h>
 #endif
 
+#if WEBSERVER_KFC_OTA
+
 #define U_ATMEGA 254
 
 using KFCConfigurationClasses::System;
@@ -379,7 +381,8 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
             if (final) {
                 if (Update.end(true)) {
                     __LDBG_printf("update success: %uB", index + len);
-                } else {
+                }
+                else {
                     status->error = true;
                 }
             }
@@ -393,3 +396,4 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
     }
 }
 
+#endif

@@ -1438,6 +1438,14 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
                 else {
                     Logger_notice(F("AP Mode successfully initialized"));
                     ap_mode_success = true;
+
+                    #if ENABLE_ARDUINO_OTA && !ENABLE_ARDUINO_OTA_AUTOSTART
+                        if (flags.is_softap_standby_mode_enabled) {
+                            auto &plugin = WebServer::Plugin::getInstance();
+                            plugin.ArduinoOTAbegin();
+                        }
+                    #endif
+
                 }
             }
         }

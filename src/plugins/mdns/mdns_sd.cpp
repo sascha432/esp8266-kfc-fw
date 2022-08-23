@@ -78,6 +78,18 @@ bool MDNSService::removeServiceTxt(const String &service, const String &proto, c
     #endif
 }
 
+    #if ENABLE_ARDUINO_OTA
+
+        void MDNSService::enableArduino()
+        {
+            __LDBG_printf("service=ArduinoOTA running=%u", MDNSPlugin::getInstance()._isRunning());
+            if (!MDNSPlugin::getInstance()._isRunning()) {
+                return;
+            }
+            MDNS.enableArduino(8266, true);
+        }
+
+    #endif
 
 #else
 
@@ -100,6 +112,14 @@ bool MDNSService::removeServiceTxt(const String &service, const String &proto, c
 {
     return false;
 }
+
+    #if ENABLE_ARDUINO_OTA
+
+        void MDNSService::enableArduino()
+        {
+        }
+s
+    #endif
 
 void MDNSService::announce()
 {

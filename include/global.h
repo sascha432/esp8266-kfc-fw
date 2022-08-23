@@ -121,12 +121,6 @@
 #    define IOT_SSDP_SUPPORT 1
 #endif
 
-#if HTTP2SERIAL_SUPPORT && !WEBSERVER_SUPPORT
-#    pragma message("HTTP2SERIAL_SUPPORT requires WEBSERVER_SUPPORT. Automatically disabled!")
-#    undef HTTP2SERIAL_SUPPORT
-#    define HTTP2SERIAL_SUPPORT 0
-#endif
-
 // check http2serial.h for a description
 #ifndef HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY
 #    define HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY 75
@@ -165,17 +159,13 @@
 #    define MQTT_AUTO_DISCOVERY 1
 #endif
 
-#ifndef WEBSERVER_SUPPORT
-// enable embded web server
-#    define WEBSERVER_SUPPORT 1
-#endif
-
+// record login failures and block IP if there are too many failed attempts
 #ifndef SECURITY_LOGIN_ATTEMPTS
 #    define SECURITY_LOGIN_ATTEMPTS 1
 #endif
 
 // time in seconds before the system is in a stable state
-// if it keeps crashing within this timeframe, safe mode is activated
+// if it keeps crashing within this time frame, safe mode is activated
 #ifndef KFC_CRASH_RECOVERY_TIME
 #    define KFC_CRASH_RECOVERY_TIME 300
 #endif
@@ -195,7 +185,7 @@
 // for a longer period of time, the counter is set to 0. the counter starts with 1 after
 // the first reset
 
-// resetting the device 4 times in a row restores factory setttings
+// resetting the device 4 times in a row restores factory settings
 // this is indicated by flashing the LED for RESET_DETECTOR_TIMEOUT
 // 0 = disable
 #ifndef KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT
@@ -222,7 +212,7 @@
 #endif
 
 // TLS support for the web server
-#if WEBSERVER_SUPPORT && !defined(WEBSERVER_TLS_SUPPORT)
+#if !defined(WEBSERVER_TLS_SUPPORT)
 #    if defined(ESP32)
 #        define WEBSERVER_TLS_SUPPORT 0
 #    elif defined(ESP8266)
@@ -233,9 +223,6 @@
 // Simple web file manager for FS
 #ifndef FILE_MANAGER
 #    define FILE_MANAGER 1
-#endif
-#if FILE_MANAGER && !WEBSERVER_SUPPORT
-#    error WEBSERVER_SUPPORT=1 required
 #endif
 
 #if defined(ESP32)
@@ -370,11 +357,15 @@
 #endif
 
 #ifndef ENABLE_ARDUINO_OTA
-#    define ENABLE_ARDUINO_OTA 0
+#    define ENABLE_ARDUINO_OTA 1
 #endif
 
 #ifndef ENABLE_ARDUINO_OTA_AUTOSTART
-#    define ENABLE_ARDUINO_OTA_AUTOSTART 0
+#    define ENABLE_ARDUINO_OTA_AUTOSTART 1
+#endif
+
+#ifndef WEBSERVER_KFC_OTA
+#    define WEBSERVER_KFC_OTA 1
 #endif
 
 #ifndef HAVE_I2CSCANNER
@@ -382,8 +373,8 @@
 #endif
 
 // disable crash counter on FS
-#ifndef KFC_DISABLE_CRASHCOUNTER
-#    define KFC_DISABLE_CRASHCOUNTER 0
+#ifndef KFC_DISABLE_CRASH_COUNTER
+#    define KFC_DISABLE_CRASH_COUNTER 0
 #endif
 
 // delay after writing "Starting in safemode..."

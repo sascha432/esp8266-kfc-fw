@@ -228,7 +228,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         analogWriteRange(PWMRANGE);
         analogWriteFreq(10000);
     #else
-    not supported
+        not supported
     #endif
 
     _fadeBacklight(0, _backlightLevel);
@@ -436,6 +436,11 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
     _setBacklightLevel(fromLevel);
     int8_t direction = fromLevel > toLevel ? -step : step;
 
+    // when turned off, the screen is not updated
+    if (fromLevel == 0 && toLevel) {
+        redraw();
+    }
+
     //TODO sometimes fading does not work...
     //probably when called multiple times before its done
 
@@ -482,6 +487,10 @@ void WeatherStationPlugin::_fadeStatusLED()
             else if (color <= 0) {
                 color = 0;
                 timer->disarm();
+                #if HAVE_FASTLED
+                    FastLED.clear(true);
+                    return;
+                #endif
             }
             #if HAVE_FASTLED
                 fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));

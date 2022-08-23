@@ -69,8 +69,7 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
         redraw();
     }
     else if (event == WiFiCallbacks::EventType::CONNECTED) {
-        FastLED.setDither(1);
-        auto next = 10000;
+        auto next = 5000;
         __LDBG_printf("poll weather next=%u", next);
         _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
         #if IOT_WEATHER_STATION_WS2812_NUM
@@ -136,13 +135,17 @@ void WeatherStationBase::_draw()
 
 void WeatherStationBase::_loop()
 {
-    #if HAVE_FASTLED
+    #if HAVE_FASTLED && HAVE_FASTLED_DITHER
         // update as often as possible with dithering enabled
         FastLED.show();
     #endif
 
+    if (_backlightLevel == 0) {
+        return;
+    }
+
     static unsigned long lastUpdate = 0;
-    if (millis() - lastUpdate < 40) {
+    if (millis() - lastUpdate < 50) {
         return;
     }
     // __DBG_printf("time=%d locked=%u canvas=%p screen=%d", (int32)(millis() - lastUpdate), isLocked(), _canvas, _currentScreen);
@@ -150,8 +153,6 @@ void WeatherStationBase::_loop()
         return;
     }
     lastUpdate = millis();
-
-
 
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         if (_touchpadDebug) {

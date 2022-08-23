@@ -192,11 +192,15 @@ extern BlinkLEDTimer *ledTimer;
         // add leds
         #if HAVE_FASTLED
             __LDBG_printf("init FastLED");
-            FastLED.addLeds<NEOPIXEL, __LED_BUILTIN_WS2812_PIN>(_pixels, __LED_BUILTIN_WS2812_NUM_LEDS);
+             FastLED.addLeds<NEOPIXEL, __LED_BUILTIN_WS2812_PIN>(_pixels, __LED_BUILTIN_WS2812_NUM_LEDS);
+             #if HAVE_FASTLED_DITHER
+                FastLED.setDither(BINARY_DITHER);
+             #else
+                FastLED.setDither(DISABLE_DITHER);
+             #endif
         #else
             __LDBG_printf("init NeoPixelEx");
-            digitalWrite(__LED_BUILTIN_WS2812_PIN, LOW);
-            pinMode(__LED_BUILTIN_WS2812_PIN, OUTPUT);
+            _pixels.begin();
         #endif
         #if !BLINK_LED_WS212_UPDATE_IN_TIMER
             __LDBG_print("adding led loop");
@@ -211,7 +215,6 @@ extern BlinkLEDTimer *ledTimer;
 
     inline void WS2812LEDTimer::loop()
     {
-        InterruptLock lock;
         forceShow();
     }
 
@@ -237,14 +240,22 @@ extern BlinkLEDTimer *ledTimer;
             delete ledTimer;
             ledTimer = nullptr;
         }
-        WS2812LEDTimer led;
-        led.off();
-        led.forceShow();
+        #if HAVE_FASTLED
+            FastLED.clear(true);
+        #else
+            WS2812LEDTimer led;
+            led.off();
+            led.forceShow();
+        #endif
     }
 
     inline void WS2812LEDTimer::off()
     {
-        solid(0);
+        #if HAVE_FASTLED
+            FastLED.clear(true);
+        #else
+            solid(0);
+        #endif
     }
 
     inline void WS2812LEDTimer::solid(uint32_t color)

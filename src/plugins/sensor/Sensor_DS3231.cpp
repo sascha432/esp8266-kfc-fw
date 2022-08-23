@@ -5,7 +5,6 @@
 #if IOT_SENSOR_HAVE_DS3231
 
 #include "Sensor_DS3231.h"
-#include "PrintHtmlEntitiesString.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -120,7 +119,7 @@ bool Sensor_DS3231::getSensorData(String &name, StringVector &values)
     strftime_P(buf, sizeof(buf), PSTR("RTC %Y-%m-%d %H:%M:%S"), tm);
     name = F("DS3231");
     values.emplace_back(buf);
-    values.emplace_back(PrintString(F("%.2f &deg;C"), data.temp));
+    values.emplace_back(PrintString(F("%.2f %s"), data.temp, SPGM(UTF8_degreeC)));
     values.emplace_back(PrintString(F("Lost Power: %s"), data.lostPower ? SPGM(Yes) : SPGM(No)));
     return true;
 }

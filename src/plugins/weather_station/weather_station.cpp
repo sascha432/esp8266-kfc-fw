@@ -233,10 +233,6 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
     _fadeBacklight(0, _backlightLevel);
 
-    _currentScreen = ScreenType::TEXT_CLEAR;
-    _toggleScreenTimer = millis();
-    _toggleScreenTimeout = 0;
-
     // show progress bar during firmware updates
     int progressValue = -1;
     WebServer::Plugin::getInstance().setUpdateFirmwareCallback([this, progressValue](size_t position, size_t size) mutable {
@@ -244,7 +240,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         if (progressValue != progress) {
             if (progressValue == -1) {
                 _setBacklightLevel(PWMRANGE);
-                _currentScreen = ScreenType::TEXT_UPDATE;
+                _currentScreen = ScreenType::TEXT_CLEAR;
             }
             setText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM);
             redraw();
@@ -487,7 +483,6 @@ void WeatherStationPlugin::_fadeStatusLED()
                 color = 0;
                 timer->disarm();
             }
-            lock();
             #if HAVE_FASTLED
                 fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
                 FastLED.show();
@@ -495,7 +490,6 @@ void WeatherStationPlugin::_fadeStatusLED()
                 _pixels.fill(color);
                 _pixels.show();
             #endif
-            unlock();
 
         }, ::Event::PriorityType::TIMER);
 

@@ -7,6 +7,7 @@
 #include "WeatherStationBase.h"
 #include "Logger.h"
 #include "WSDraw.h"
+#include "blink_led_timer.h"
 
 #if DEBUG_IOT_WEATHER_STATION
 #    include <debug_helper_enable.h>
@@ -68,6 +69,7 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
         redraw();
     }
     else if (event == WiFiCallbacks::EventType::CONNECTED) {
+        FastLED.setDither(1);
         auto next = 10000;
         __LDBG_printf("poll weather next=%u", next);
         _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
@@ -134,9 +136,22 @@ void WeatherStationBase::_draw()
 
 void WeatherStationBase::_loop()
 {
+    #if HAVE_FASTLED
+        // update as often as possible with dithering enabled
+        FastLED.show();
+    #endif
+
+    static unsigned long lastUpdate = 0;
+    if (millis() - lastUpdate < 40) {
+        return;
+    }
+    // __DBG_printf("time=%d locked=%u canvas=%p screen=%d", (int32)(millis() - lastUpdate), isLocked(), _canvas, _currentScreen);
     if (isLocked()) {
         return;
     }
+    lastUpdate = millis();
+
+
 
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         if (_touchpadDebug) {

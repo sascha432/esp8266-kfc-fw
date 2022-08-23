@@ -10,6 +10,7 @@
 #include "RestAPI.h"
 #include "WSDraw.h"
 
+
 #ifndef DEBUG_IOT_WEATHER_STATION
 #    define DEBUG_IOT_WEATHER_STATION 0
 #endif
@@ -145,6 +146,7 @@ inline void WeatherStationBase::disableDisplay()
             base.lock();
             delete base._canvas; //TODO has a memory leak
             base._canvas = nullptr;
+            // WSDraw::ScrollCanvas::destroy(&base);
         }
     #elif ESP32
         base.lock();

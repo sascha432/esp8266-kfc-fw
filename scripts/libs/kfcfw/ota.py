@@ -3,6 +3,7 @@
 #
 
 import re
+from tkinter import E
 import requests
 import json
 import websocket
@@ -21,18 +22,17 @@ class OTASerialConsole(object):
             self.ws.run_forever()
         thread.start_new_thread(run, ())
 
-    def on_binary(self, data):
+    def on_binary(self, socket, data):
         pass
 
-    def on_message(self, msg):
+    def on_message(self, socket, msg):
         if msg.startswith('+ATMODE_CMDS_HTTP2SERIAL='):
             return
-        print('>%s' % msg, end='')
+        # print('>%s' % msg, end='')
         if isinstance(msg, str):
             pass
 
-    def before_auth(self, msg, error = None):
-        # print('*>%s' % msg)
+    def before_auth(self, socket, msg, error = None):
         if isinstance(msg, str):
             if not self.is_authenticated:
                 if msg == '+AUTH_OK':
@@ -44,12 +44,12 @@ class OTASerialConsole(object):
                 elif msg == '+REQ_AUTH':
                     self.ws.send('+SID %s' % self.sid)
 
-    def on_error(self, error):
+    def on_error(self, socket, error):
         self.disconnect(error)
         print('Disconnected %s...' % error)
         self.is_closed = True
 
-    def on_close(self, error):
+    def on_close(self, socket error, x):
         self.is_closed = True
 
     def on_open(self, error):
@@ -109,14 +109,21 @@ class OTAHelpers(object):
         self.verbose("Checking if device is alive "  + target)
         resp = requests.get(url + "is-alive", timeout=30)
         if resp.status_code!=200:
-            self.error("Device did not respond", 2)
+            self.error("Device did not respond: HTTP Code: %u" % resp.status_code, 2)
+            return
         elif resp.content.decode()!='0':
             self.error("Invalid response", 2)
+            return
         self.verbose("Device responded")
 
     def get_status(self, url, target, sid):
         self.verbose("Querying status "  + target)
-        resp = requests.get(url + "status.html", data={"SID": sid}, timeout=30)
+        try:
+            resp = requests.get(url + "status.html", data={"SID": sid}, timeout=30)
+        except Exception as e:
+            self.error('Cannot connect to status page: %s' % e)
+            return
+
         if resp.status_code==200:
             content = resp.content.decode()
             login_error = self.get_login_error(content)

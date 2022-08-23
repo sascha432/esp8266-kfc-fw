@@ -57,6 +57,7 @@ def new_build(source, target, env):
 
 
 def modify_upload_command(source, target, env, fs=False):
+
     if fs == False:
         new_build(source, target, env)
 
@@ -88,8 +89,7 @@ def modify_upload_command(source, target, env, fs=False):
     args.append('--ini')
     args.append(env.subst("$PROJECT_DIR"))
 
-    env.Replace(UPLOAD_FLAGS=' '.join(args), UPLOAD_COMMAND=upload_command)
-
+    env.Replace(UPLOAD_FLAGS=' '.join(args), UPLOAD_COMMAND=upload_command, UPLOADCMD=upload_command)
 
 def modify_upload_command_fs(source, target, env):
     modify_upload_command(source, target, env, True)
@@ -179,14 +179,14 @@ def firmware_config(source, target, env, action):
             env.GetProjectOption('upload_port')))
         device = m.groupdict()
         if not device['username'].startswith("KFC"):
-            raise RuntimeError("invalid usename: %s" % device['username'])
+            raise RuntimeError("invalid username: %s" % device['username'])
         if device['hash'] == None and len(device['password']) < 6:
             raise RuntimeError("invalid password: ...")
         address = socket.gethostbyname(device['hostname'])
         device['address'] = address
     except Exception as e:
         click.echo('%s' % e)
-        click.secho('requires "upload_port = <username>:<password/hash>@<hostame>" at the environment', fg='yellow')
+        click.secho('requires "upload_port = <username>:<password/hash>@<hostname>" at the environment', fg='yellow')
         env.Exit(1)
 
     if device['hash'] != None:

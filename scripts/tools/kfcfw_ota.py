@@ -5,6 +5,10 @@
 # requires:
 # pip3 install requests-toolbelt progressbar2 websocket-client
 
+import sys
+from os import path
+sys.path.insert(0, path.realpath('c:/users/sascha/.platformio/penv/lib/site-packages'))
+
 import os
 import time
 import argparse
@@ -14,8 +18,6 @@ import requests
 import hashlib
 import shutil
 import subprocess
-from os import path
-import sys
 
 libs_dir = path.realpath(path.join(path.dirname(__file__), '../libs'))
 sys.path.insert(0, libs_dir)
@@ -241,7 +243,7 @@ class OTA(kfcfw.OTAHelpers):
 # main
 
 parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_class=argparse.RawDescriptionHelpFormatter, epilog="exit codes:\n  0 - success\n  1 - general error\n  2 - device did not respond\n  3 - update failed\n  4 - device did not respond after update\n  5 - copying ELF firmware failed")
-parser.add_argument("action", help="action to execute", choices=["flash", "upload", "littlefs", "uploadfs", "atmega", "status", "alive", "export", "import", "factoryreset", "safemode", "console"])
+parser.add_argument("action", help="action to execute", choices=["flash", "upload", "littlefs", "uploadfs", "atmega", "status", "alive", "export", "import", "factoryreset", "safemode", "reset", "console", "startaota"])
 parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="username", required=True)
 parser.add_argument("-p", "--pw", "--pass", help="password", required=True)
@@ -274,52 +276,42 @@ else:
 sid = session.generate(args.user, args.pw)
 target = args.user + ":***@" + args.hostname
 
+def run_commands(commands, timeout=args.timeout):
+    timeout = time.monotonic() + timeout
+    socket = kfcfw.OTASerialConsole(args.hostname, sid)
+    n = 0
+    while time.monotonic()<timeout and not socket.is_closed:
+        if socket.is_authenticated:
+            for cmd in commands:
+                socket.ws.send(cmd + '\r\n')
+            print('\b' * n, end='', flush=True)
+            print('Command executed')
+            return
+        time.sleep(1)
+        print('.', end='', flush=True)
+        n += 1
+        print('\b' * n, end='', flush=True)
+    ota.error('Failed to run command')
+
 if args.action in("flash", "upload", "littlefs", "uploadfs", "atmega"):
     if not args.skip_safemode:
         print("Restarting device in safe mode...")
-        payload_sent = False
-        timeout = time.monotonic() + 10
-        socket = kfcfw.OTASerialConsole(args.hostname, sid)
-        while time.monotonic()<timeout and not socket.is_closed:
-            if socket.is_authenticated and payload_sent==False:
-                socket.ws.send('+rst s\r\n')
-                payload_sent = True
-            time.sleep(1)
+        run_commands(['+rst s'], 10)
     else:
         print("Skipped restarting device in safemode...")
 
     print("Starting update....")
     ota.flash(url, args.action, target, sid)
 elif args.action=="factoryreset":
-    payload_sent = False
-    timeout = time.monotonic() + args.timeout
-    socket = kfcfw.OTASerialConsole(args.hostname, sid)
-    while time.monotonic()<timeout and not socket.is_closed:
-        if socket.is_authenticated and payload_sent==False:
-            socket.ws.send('+factory\r\n')
-            socket.ws.send('+store\r\n')
-            socket.ws.send('+rst\r\n')
-            payload_sent = True
-        time.sleep(1)
+    run_commands(['+factory', '+store', '+rst'])
 elif args.action=="safemode":
-    payload_sent = False
-    timeout = time.monotonic() + args.timeout
-    socket = kfcfw.OTASerialConsole(args.hostname, sid)
-    while time.monotonic()<timeout and not socket.is_closed:
-        if socket.is_authenticated and payload_sent==False:
-            socket.ws.send('+rst s\r\n')
-            socket.ws.send('+rst s\r\n')
-            payload_sent = True
-        time.sleep(1)
+    run_commands(['+rst s', '+rst s'])
+elif args.action=="reset":
+    run_commands(['+rst'])
+elif args.action=="startaota":
+    run_commands(['+aota start'])
 elif args.action=="console":
-    payload_sent = False
-    timeout = time.monotonic() + args.timeout
-    socket = kfcfw.OTASerialConsole(args.hostname, sid)
-    while time.monotonic()<timeout and not socket.is_closed:
-        if socket.is_authenticated and payload_sent==False:
-            socket.ws.send('at\r\n')
-            payload_sent = True
-        time.sleep(1)
+    run_commands(['at'])
 elif args.action=="status":
     ota.get_status(url, target, sid)
 elif args.action=="alive":

@@ -25,7 +25,6 @@ FailureCounter::FailureCounter(FailureCounterContainer &container) :
 {
 }
 
-
 FailureCounter::FailureCounter(FailureCounterContainer &container, const FailureCounterFileRecord_t &record) :
     _addr(record.addr),
     _counter(record.counter),
@@ -213,6 +212,5 @@ void FailureCounterContainer::_removeOldRecords()
         return failure.getTimeframe() > _storageTimeframe;
     }), _failures.end());
 }
-
 
 #endif

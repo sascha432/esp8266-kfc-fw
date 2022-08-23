@@ -53,7 +53,7 @@ namespace SaveCrash {
 
     uint8_t getCrashCounter()
     {
-        #if KFC_DISABLE_CRASHCOUNTER
+        #if KFC_DISABLE_CRASH_COUNTER
             return 0;
         #else
             uint8_t counter = 0;
@@ -70,14 +70,14 @@ namespace SaveCrash {
     void removeCrashCounterAndSafeMode()
     {
         resetDetector.clearCounter();
-        #if KFC_DISABLE_CRASHCOUNTER == 0
+        #if KFC_DISABLE_CRASH_COUNTER == 0
             removeCrashCounter();
         #endif
     }
 
     void removeCrashCounter()
     {
-        #if KFC_DISABLE_CRASHCOUNTER == 0
+        #if KFC_DISABLE_CRASH_COUNTER == 0
             KFCFS_begin();
             auto filename = String(FSPGM(crash_counter_file, "/.pvt/crash_counter"));
             if (KFCFS.exists(filename)) {
@@ -89,7 +89,7 @@ namespace SaveCrash {
     void installRemoveCrashCounter(uint32_t delay_seconds)
     {
         _Scheduler.add(Event::seconds(delay_seconds), false, [](Event::CallbackTimerPtr timer) {
-            #if KFC_DISABLE_CRASHCOUNTER == 0
+            #if KFC_DISABLE_CRASH_COUNTER == 0
                 removeCrashCounter();
             #endif
             resetDetector.clearCounter();

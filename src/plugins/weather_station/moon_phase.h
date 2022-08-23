@@ -9,7 +9,7 @@
 
 
 #ifndef DEBUG_MOON_PHASE
-#   define DEBUG_MOON_PHASE 1
+#   define DEBUG_MOON_PHASE 0
 #endif
 
 const __FlashStringHelper *moonPhaseName(uint8_t moonPhase);

@@ -388,7 +388,9 @@ namespace WSDraw {
             _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.dnsIP(1).toString(), AdafruitGFXExtension::CENTER);
         }
         else {
-            _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Not connected"), AdafruitGFXExtension::CENTER);
+            _canvas->setFont(FONTS_DEFAULT_SMALL);
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Trying to connect to"), AdafruitGFXExtension::CENTER);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.SSID(), AdafruitGFXExtension::CENTER);
         }
     }
 

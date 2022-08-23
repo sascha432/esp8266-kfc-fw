@@ -121,6 +121,10 @@
 #    define IOT_SSDP_SUPPORT 1
 #endif
 
+#ifndef WEBSERVER_SPEED_TEST
+#    define WEBSERVER_SPEED_TEST 1
+#endif
+
 // check http2serial.h for a description
 #ifndef HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY
 #    define HTTP2SERIAL_SERIAL_BUFFER_FLUSH_DELAY 75

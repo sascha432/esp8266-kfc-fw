@@ -141,10 +141,17 @@ void RegisterEx::_createMenu()
     _bootstrapMenu.addMenuItem(FSPGM(Reboot_Device), FSPGM(reboot_html), _navMenu.admin);
     _bootstrapMenu.addMenuItem(F("Restore Factory Defaults"), FSPGM(factory_html), _navMenu.admin);
     _bootstrapMenu.addMenuItem(F("Export Settings"), F("export-settings"), _navMenu.admin);
-    _bootstrapMenu.addMenuItem(F("Update Firmware"), FSPGM(update_fw_html), _navMenu.admin);
+    #if WEBSERVER_KFC_OTA
+        _bootstrapMenu.addMenuItem(F("Update Firmware"), FSPGM(update_fw_html), _navMenu.admin);
+    #endif
+    #if ENABLE_ARDUINO_OTA && !ENABLE_ARDUINO_OTA_AUTOSTART
+        _bootstrapMenu.addMenuItem(F("Enable ArduinoOTA"), F("/start-arduino-ota"), _navMenu.admin);
+    #endif
 
     _navMenu.util = _bootstrapMenu.addMenu(F("Utilities"));
-    _bootstrapMenu.addMenuItem(F("Speed Test"), F("speed-test.html"), _navMenu.util);
+    #if WEBSERVER_SPEED_TEST
+        _bootstrapMenu.addMenuItem(F("Speed Test"), F("speed-test.html"), _navMenu.util);
+    #endif
 }
 
 void Register::sort()

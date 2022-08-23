@@ -379,7 +379,9 @@ namespace WebServer {
         bool _sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
         AsyncWebServerResponse *_beginFileResponse(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
 
-        void _handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHeaders &headers);
+        #if WEBSERVER_SPEED_TEST
+            void _handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHeaders &headers);
+        #endif
         void _handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
         void _handlerImportSettings(AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
         void _handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders &httpHeaders);

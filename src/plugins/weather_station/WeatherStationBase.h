@@ -109,6 +109,9 @@ public:
 
     virtual void _fadeStatusLED() = 0;
 
+    static void disableDisplay();
+    static void enableDisplay();
+
 protected:
     // timeout in seconds, -1 default, 0 no timeout
     void _setScreen(ScreenType screen, int16_t timeout = -1);
@@ -133,6 +136,35 @@ protected:
         bool _touchpadDebug{false};
     #endif
 };
+
+inline void WeatherStationBase::disableDisplay()
+{
+    auto &base = WeatherStationBase::_getInstance();
+    #if ESP8266
+        if (base._canvas) {
+            base.lock();
+            delete base._canvas; //TODO has a memory leak
+            base._canvas = nullptr;
+        }
+    #elif ESP32
+        base.lock();
+    #endif
+}
+
+inline void WeatherStationBase::enableDisplay()
+{
+    auto &base = WeatherStationBase::_getInstance();
+    #if ESP8266
+        if (!base._canvas) {
+            base._canvas = new WSDraw::CanvasType(base._tft.width(), base._tft.height());
+            base.unlock();
+            base.redraw();
+        }
+    #elif ESP32
+        base.unlock();
+        base.redraw();
+    #endif
+}
 
 inline void WeatherStationBase::loop()
 {

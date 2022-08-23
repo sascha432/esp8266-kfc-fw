@@ -16,8 +16,8 @@
 #    define DEBUG_SAVE_CRASH (0 || defined(DEBUG_ALL))
 #endif
 
-#ifndef KFC_DISABLE_CRASHCOUNTER
-#    define KFC_DISABLE_CRASHCOUNTER 0
+#ifndef KFC_DISABLE_CRASH_COUNTER
+#    define KFC_DISABLE_CRASH_COUNTER 0
 #endif
 
 #if DEBUG_SAVE_CRASH

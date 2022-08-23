@@ -2,6 +2,8 @@
 
 ## Version 0.0.6
 
+ - Fixes of the KFC OTA tool
+ - Option to enable KFC OTA and/or ArduinoOTA
  - Added the previous and next 3 moon phases to station plugin
  - Fixed issues with websocket-clients and the OTA tool
  - Username is pre-filled at the WebUI login

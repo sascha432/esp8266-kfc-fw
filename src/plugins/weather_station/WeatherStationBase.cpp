@@ -65,6 +65,7 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
     if (event == WiFiCallbacks::EventType::DISCONNECTED) {
         __LDBG_printf("poll weather stopped");
         _Timer(_pollDataTimer).remove();
+        redraw();
     }
     else if (event == WiFiCallbacks::EventType::CONNECTED) {
         auto next = 10000;
@@ -73,6 +74,7 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
         #if IOT_WEATHER_STATION_WS2812_NUM
             _fadeStatusLED();
         #endif
+        redraw();
     }
 }
 

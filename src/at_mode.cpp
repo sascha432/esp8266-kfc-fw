@@ -2075,17 +2075,18 @@ void at_mode_serial_handle_event(String &commandString)
             auto &plugin = WebServer::Plugin::getInstance();
             if (args.equalsIgnoreCase(0, F("start"))) {
                 args.print(F("starting ArduinoOTA..."));
-                args.print(F("WARNING! running this service consumes about 1KB of RAM. To get all the memory back, the device needs to be restarted."));
                 plugin.ArduinoOTAbegin();
             }
-            else if (args.equalsIgnoreCase(0, F("stop"))) {
-                args.print(F("stopping ArduinoOTA..."));
-                plugin.ArduinoOTAend();
-            }
-            else {
-                args.print(F("ArduinoOTA status:"));
-                plugin.ArduinoOTADumpInfo(args.getStream());
-            }
+            #if 1
+                else if (args.equalsIgnoreCase(0, F("stop"))) {
+                    args.print(F("stopping ArduinoOTA..."));
+                    plugin.ArduinoOTAend();
+                }
+                else {
+                    args.print(F("ArduinoOTA status:"));
+                    plugin.ArduinoOTADumpInfo(args.getStream());
+                }
+            #endif
         }
     #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {

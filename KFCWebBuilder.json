@@ -113,6 +113,12 @@
                 "./Resources/html/hass-edit.html",
                 "./Resources/html/hass-actions.html"
             ],
+            "#if !WEBSERVER_SPEED_TEST": [
+                "./Resources/html/speed-test.html"
+            ],
+            "#if !WEBSERVER_KFC_OTA": [
+                "./Resources/html/update-fw.html"
+            ],
             "#if !SERIAL2TCP_SUPPORT": [
                 "./Resources/html/serial2tcp.html",
                 "./Resources/js/forms/serial2tcp.js"

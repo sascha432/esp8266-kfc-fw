@@ -154,6 +154,10 @@ namespace WSDraw {
         DisplayType &getDisplay();
         CanvasType *getCanvas();
 
+        Base &getBase() {
+            return *this;
+        }
+
     public:
         void setText(const String &text, const GFXfont *textFont);
 

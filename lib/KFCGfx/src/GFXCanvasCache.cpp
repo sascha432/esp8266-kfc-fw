@@ -72,7 +72,7 @@ Cache &Cache::operator=(Cache &&cache) noexcept
 void Cache::allocate()
 {
     if (!_buffer) {
-        _buffer = new ColorType[_width];
+        _buffer = new ColorType[_width]();
         __DBG_ASTATS(stats.malloc++);
     }
     _y = kYInvalid;
@@ -82,7 +82,7 @@ void Cache::allocate()
 void Cache::release()
 {
     if (_buffer) {
-        delete[]  _buffer;
+        delete[] _buffer;
         _buffer = nullptr;
         __DBG_ASTATS(stats.free++);
     }

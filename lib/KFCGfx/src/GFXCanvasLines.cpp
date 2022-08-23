@@ -43,7 +43,7 @@ Lines::~Lines()
         __DBG_ASTATS(
             stats.free++;
         );
-        delete[]  _lines;
+        delete[] _lines;
     }
 }
 

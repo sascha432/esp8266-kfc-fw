@@ -1953,7 +1953,7 @@ void at_mode_serial_handle_event(String &commandString)
                     }
                 }
                 else {
-                    // +LED=slow,200000,1000,16
+                    // +LED=slow,200000,1000,10
                     // +LED=slow,000000,1000,16
                     // pwm 16 output 0
                     // pwm 15 output 0

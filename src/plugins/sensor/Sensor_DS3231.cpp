@@ -5,6 +5,7 @@
 #if IOT_SENSOR_HAVE_DS3231
 
 #include "Sensor_DS3231.h"
+#include "PrintHtmlEntitiesString.h"
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -67,28 +68,39 @@ uint8_t Sensor_DS3231::getAutoDiscoveryCount() const
 
 void Sensor_DS3231::getValues(WebUINS::Events &array, bool timer)
 {
-    auto temp = _readSensorTemp();
-    String timeStr = _getTimeStr();
+    auto data = _readSensor();
+    PrintString timeStr;
+    if (!std::isnormal(data.temp)) {
+        timeStr = '-';
+    }
+    else {
+        WebUINS::UnnamedTrimmedFormattedFloat(data.temp, F("%.2f")).printTo(timeStr);
+    }
+    timeStr += F("<span class=\"unit\">");
+    timeStr += FSPGM(UTF8_degreeC);
+    timeStr += F("</span><br>");
+    auto tmp = _getTimeStr(data);
+    timeStr += tmp;
+
     array.append(
-        WebUINS::Values(FSPGM(ds3231_id_temp), WebUINS::TrimmedFloat(temp, 2), isnan(temp)),
-        WebUINS::Values(FSPGM(ds3231_id_time), timeStr, timeStr.indexOf('\n') != -1)
+        WebUINS::Values(FSPGM(ds3231_id_time), timeStr, tmp.indexOf('\n') != -1)
     );
 }
 
 void Sensor_DS3231::createWebUI(WebUINS::Root &webUI)
 {
     webUI.appendToLastRow(WebUINS::Row(
-        WebUINS::Sensor(FSPGM(ds3231_id_time), _name, F("")).setConfig(_renderConfig),
-        WebUINS::Sensor(FSPGM(ds3231_id_temp), F("RTC Clock"), FSPGM(UTF8_degreeC)).setConfig(_renderConfig)
+        WebUINS::Sensor(FSPGM(ds3231_id_time), _name, F("")).setConfig(_renderConfig)
     ));
 }
 
 void Sensor_DS3231::publishState()
 {
     if (isConnected()) {
-        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_temp)), true, String(_readSensorTemp(), 2));
-        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)_readSensorTime()));
-        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_lost_power)), true, String(_readSensorLostPower()));
+        auto data = _readSensor();
+        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_temp)), true, String(data.temp, 2));
+        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_time)), true, String((uint32_t)data.time));
+        publish(MQTT::Client::formatTopic(FSPGM(ds3231_id_lost_power)), true, String(data.lostPower));
     }
 }
 
@@ -99,54 +111,65 @@ void Sensor_DS3231::getStatus(Print &output)
 
 bool Sensor_DS3231::getSensorData(String &name, StringVector &values)
 {
-    auto now = _readSensorTime();
-    if (!now) {
+    auto data = _readSensor();
+    if (!data.time) {
         return false;
     }
-    auto tm = gmtime(&now);
+    auto tm = gmtime(&data.time);
     char buf[32];
     strftime_P(buf, sizeof(buf), PSTR("RTC %Y-%m-%d %H:%M:%S"), tm);
     name = F("DS3231");
     values.emplace_back(buf);
-    values.emplace_back(PrintString(F("%.2f &deg;C"), _readSensorTemp()));
-    values.emplace_back(PrintString(F("Lost Power: %s"), _readSensorLostPower() ? SPGM(Yes) : SPGM(No)));
+    values.emplace_back(PrintString(F("%.2f &deg;C"), data.temp));
+    values.emplace_back(PrintString(F("Lost Power: %s"), data.lostPower ? SPGM(Yes) : SPGM(No)));
     return true;
 }
 
-float Sensor_DS3231::_readSensorTemp()
+Sensor_DS3231::SensorData Sensor_DS3231::_readSensor()
 {
-    _debug_println();
     if (!rtc.begin()) {
-        return NAN;
+        delay(5);
+        if (!rtc.begin()) {
+            return SensorData({NAN, 0, -1});
+        }
     }
-    return rtc.getTemperature();
+    return SensorData({rtc.getTemperature(), rtc.now().unixtime(), rtc.lostPower()});
 }
 
-time_t Sensor_DS3231::_readSensorTime()
-{
-    _debug_println();
-    if (!rtc.begin()) {
-        return 0;
-    }
-    return rtc.now().unixtime();
-}
 
-int8_t Sensor_DS3231::_readSensorLostPower()
-{
-    // return 0;
-    _debug_println();
-    if (!rtc.begin()) {
-        return -1;
-    }
-    return rtc.lostPower();
-}
+// float Sensor_DS3231::_readSensorTemp()
+// {
+//     _debug_println();
+//     if (!rtc.begin()) {
+//         return NAN;
+//     }
+//     return rtc.getTemperature();
+// }
 
-String Sensor_DS3231::_getTimeStr()
+// time_t Sensor_DS3231::_readSensorTime()
+// {
+//     _debug_println();
+//     if (!rtc.begin()) {
+//         return 0;
+//     }
+//     return rtc.now().unixtime();
+// }
+
+// int8_t Sensor_DS3231::_readSensorLostPower()
+// {
+//     // return 0;
+//     _debug_println();
+//     if (!rtc.begin()) {
+//         return -1;
+//     }
+//     return rtc.lostPower();
+// }
+
+String Sensor_DS3231::_getTimeStr(SensorData &data)
 {
     String str;
-    auto now = _readSensorTime();
-    if (now) {
-        auto tm = gmtime(&now);
+    if (data.time) {
+        auto tm = gmtime(&data.time);
         char buf[16];
         strftime_P(buf, sizeof(buf), PSTR("%Y-%m-%d"), tm);
         str = buf;
@@ -154,7 +177,7 @@ String Sensor_DS3231::_getTimeStr()
         strftime_P(buf, sizeof(buf), PSTR("%H:%M:%S"), tm);
         str += buf;
         str += F("</span><br>\nLost Power: ");
-        str += _readSensorLostPower() ? FSPGM(Yes) : FSPGM(No);
+        str += data.lostPower ? FSPGM(Yes) : FSPGM(No);
     }
     else {
         str = F("N/A");

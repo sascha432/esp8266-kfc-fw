@@ -39,10 +39,18 @@ public:
     virtual bool getSensorData(String &name, StringVector &values) override;
 
 private:
-    float _readSensorTemp();
-    time_t _readSensorTime();
-    int8_t _readSensorLostPower();
-    String _getTimeStr();
+    struct SensorData {
+        float temp;
+        time_t time;
+        int8_t lostPower;
+    };
+
+    SensorData _readSensor();
+
+    // float _readSensorTemp();
+    // time_t _readSensorTime();
+    // int8_t _readSensorLostPower();
+    String _getTimeStr(SensorData &data);
 
     String _name;
     TwoWire *_wire;

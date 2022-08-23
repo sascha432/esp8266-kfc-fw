@@ -90,7 +90,7 @@
 #endif
 
 #ifndef IOT_SENSOR_NAMES_DS3231
-#    define IOT_SENSOR_NAMES_DS3231 "DS3231 Temperature"
+#    define IOT_SENSOR_NAMES_DS3231 "DS3231 RTC Clock"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_INA219

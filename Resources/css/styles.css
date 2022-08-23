@@ -161,6 +161,10 @@
     font-size: 1rem;
 }
 
+#ds3231_time {
+    font-size: 1.75rem;
+}
+
 .input-group-append .btn-default {
     border-color: #ced4da;
     background-color: #e9ecef;

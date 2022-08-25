@@ -289,9 +289,7 @@ namespace WSDraw {
         bool _isScreenValid(ScreenType screen, bool allowZeroTimeout = false) const;
         bool _isScreenValid(uint8_t screen, bool allowZeroTimeout = false) const;
 
-        void resetPictureGalleryTimer() {
-            _pictureUpdateTimer = millis() >> 16;
-        }
+        void _resetPictureGalleryTimer();
 
         static const __FlashStringHelper *getScreenName(ScreenType screen);
         static const __FlashStringHelper *getScreenName(uint8_t screen);
@@ -482,6 +480,11 @@ namespace WSDraw {
     inline bool Base::_isScreenValid(ScreenType screen, bool allowZeroTimeout) const
     {
         return _isScreenValid(static_cast<uint8_t>(screen), allowZeroTimeout);
+    }
+
+    inline void Base::_resetPictureGalleryTimer()
+    {
+        _pictureUpdateTimer = 0;
     }
 
     inline bool Base::_isScreenValid(uint8_t screen, bool allowZeroTimeout) const

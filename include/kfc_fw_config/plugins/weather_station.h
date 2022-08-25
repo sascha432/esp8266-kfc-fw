@@ -67,7 +67,7 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(time_format_24h, 1, false, true, true);
                     CREATE_UINT32_BITFIELD_MIN_MAX(show_webui, 1, false, true, false);
                     CREATE_UINT32_BITFIELD_MIN_MAX(show_regular_clock_on_world_clocks, 1, false, true, true);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(gallery_update_rate, 16, 5, (3600 * 12), 120); // seconds
+                    CREATE_UINT32_BITFIELD_MIN_MAX(gallery_update_rate, 16, 5, 43200, 120, 30); // seconds
                     uint8_t screenTimer[kNumScreens]; // seconds
                     WorldClockType additionalClocks[kNumClocks];
 

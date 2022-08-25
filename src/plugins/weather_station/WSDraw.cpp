@@ -88,16 +88,6 @@ const unsigned char icon_house[] PROGMEM = {
 
 namespace WSDraw {
 
-
-    // static File currentPicture;
-
-    // unsigned char pjpeg_callback(unsigned char* pBuf, unsigned char buf_size, unsigned char *pBytes_actually_read, void *pCallback_data)
-    // {
-    //     auto left = std::min<uint32_t>(currentPicture.available(), buf_size);
-    //     *pBytes_actually_read = currentPicture.read(pBuf, left);
-    //     return 0;
-    // }
-
     Base::Base() :
         _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
         _canvas(new CanvasType(_tft.width(), _tft.height())),
@@ -106,7 +96,7 @@ namespace WSDraw {
         _scrollCanvas(nullptr),
         _textFont(nullptr),
         _lastTime(0),
-        _pictureUpdateTimer(~1U >> 16),
+        _pictureUpdateTimer(0),
         _scrollPosition(0),
         _currentScreen(ScreenType::MAIN),
         _redrawFlag(false),
@@ -561,7 +551,7 @@ namespace WSDraw {
 
     void Base::_drawScreenPictures()
     {
-        if (millis() - _pictureUpdateTimer > WeatherStation::getConfig().gallery_update_rate * 1000UL) {
+        if (!_pictureUpdateTimer || millis() - _pictureUpdateTimer > WeatherStation::getConfig().gallery_update_rate * 1000UL) {
             _pictureUpdateTimer = millis();
 
             File currentPicture;
@@ -616,7 +606,7 @@ namespace WSDraw {
         }
         else if (!_galleryImages.empty()) {
 
-            _drawJpegPicture(LittleFS.open(_galleryImages.back(), fs::FileOpenMode::read), 30);
+            _drawJpegPicture(LittleFS.open(_galleryImages.back(), fs::FileOpenMode::read), 35);
         }
 
     }
@@ -972,7 +962,8 @@ namespace WSDraw {
                 dst += (nw + 7) / 8;
                 src += (kWidth + 7) / 8;
             }
-            tmp.drawBitmap(3, 2, tmp2.getBuffer(), nw, nh, COLORS_BLACK);
+            tmp.drawBitmap(2, 2, tmp2.getBuffer(), nw, nh, COLORS_BLACK);
+            tmp.drawBitmap(1, 1, tmp2.getBuffer(), nw, nh, COLORS_BLACK);
             tmp.drawBitmap(0, 0, tmp2.getBuffer(), nw, nh, COLORS_WHITE);
         }
 

@@ -273,6 +273,8 @@ void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
     _toggleScreenTimer = millis();
     _toggleScreenTimeout = 0;
 
+    _resetPictureGalleryTimer();
+
     if (_currentScreen < ScreenType::NUM_SCREENS) {
         if (timeout == -1) {
             // default timeout

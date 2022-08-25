@@ -81,7 +81,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));
         cfg.addRangeValidatorFor_api_timeout(form);
 
-        form.addObjectGetterSetter(F("ato"), FormGetterSetter(cfg, gallery_update_rate));
+        form.addObjectGetterSetter(F("gur"), FormGetterSetter(cfg, gallery_update_rate));
         form.addFormUI(F("Gallery Update Rate"), FormUI::Suffix(FSPGM(seconds)));
         cfg.addRangeValidatorFor_gallery_update_rate(form);
 

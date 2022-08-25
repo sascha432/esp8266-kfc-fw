@@ -287,7 +287,8 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
             __LDBG_printf("event %u", event.getType());
             #if IOT_WEATHER_STATION
                 if (_getCurrentScreen() == static_cast<uint8_t>(ScreenType::PICTURES) && event.isSwipeRight()) {
-                    WeatherStationBase::_getInstance().resetPictureGalleryTimer();
+                    WeatherStationBase::_getInstance()._resetPictureGalleryTimer();
+                    redraw();
                     return true;
                 }
             #endif

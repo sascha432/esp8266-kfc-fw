@@ -13,6 +13,10 @@ struct FormatTime {
         return PrintString(format24h ? F("%H:%M:%S") : F("%I:%M:%S%p"), tm);
     }
 
+    static String getShortTimeStr(bool format24h, struct tm *tm) {
+        return PrintString(format24h ? F("%H:%M") : F("%I:%M%p"), tm);
+    }
+
     static String getTimeStr(bool format24h, time_t time) {
         return getTimeStr(format24h, localtime(&time));
     }

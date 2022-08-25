@@ -254,7 +254,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         WebTemplate::printSystemTime(time(nullptr), str);
         response = new AsyncBasicResponse(200, FSPGM(mime_text_html), std::move(str));
         if (!response) {
-            __DBG_printf_E("memory allocation failed");
+            __LDBG_printf_E("memory allocation failed");
         }
         headers.setResponseHeaders(response);
     }
@@ -279,7 +279,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.addNoCache();
         response = new AsyncNetworkScanResponse(request->arg(FSPGM(hidden, "hidden")).toInt());
         if (!response) {
-            __DBG_printf_E("memory allocation failed");
+            __LDBG_printf_E("memory allocation failed");
         }
         headers.setResponseHeaders(response);
     }
@@ -352,7 +352,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.addNoCache(true);
         response = new AsyncResolveZeroconfResponse(request->arg(FSPGM(value)));
         if (!response) {
-            __DBG_printf_E("memory allocation failed");
+            __LDBG_printf_E("memory allocation failed");
         }
         headers.setResponseHeaders(response);
     }
@@ -471,17 +471,17 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
         if (!webTemplate) {
             webTemplate = new WebTemplate(isAuthenticated(request) ? WebTemplate::AuthType::AUTH : WebTemplate::AuthType::NO_AUTH);
             if (!webTemplate) {
-                __DBG_printf_E("memory allocation failed");
+                __LDBG_printf_E("memory allocation failed");
             }
         }
         if (!webTemplate->isAuthenticationSet()) {
-            __DBG_printf("not authenticated %s", path.c_str());
+            __LDBG_printf("not authenticated %s", path.c_str());
         }
         auto response = new AsyncTemplateResponse(FSPGM(mime_text_html), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         if (!response) {
-            __DBG_printf_E("memory allocation failed");
+            __LDBG_printf("memory allocation failed");
         }
         if (code) {
             response->setCode(code);
@@ -501,7 +501,7 @@ void Plugin::message(AsyncWebServerRequest *request, MessageType type, const Str
 {
     auto webTemplate = new MessageTemplate(message, title, isAuthenticated(request));
     if (!webTemplate) {
-        __DBG_printf_E("memory allocation failed");
+        __LDBG_printf("memory allocation failed");
     }
     switch(type) {
         case MessageType::DANGER:
@@ -544,7 +544,7 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
             webTemplate = new NotFoundTemplate(httpCode, message);
         }
         if (!webTemplate) {
-            __DBG_printf_E("memory allocation failed");
+            __LDBG_printf("memory allocation failed");
         }
         webTemplate->setAuthenticated(isAuthenticated(request));
         if (sendFileResponse(httpCode, F("/.message.html"), request, headers, webTemplate)) {
@@ -601,10 +601,10 @@ void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
     }
     auto json = WebUISocket::createWebUIJSON();
     String &jsonStr = json.toString();
-    // __DBG_printf("_handlerWebUI %u", jsonStr.length());
+    // __LDBG_printf("_handlerWebUI %u", jsonStr.length());
     auto response = new AsyncBasicResponse(200, FSPGM(mime_application_json), std::move(jsonStr)); //TODO use stream or fillbuffer
     if (!response) {
-        __DBG_printf_E("memory allocation failed");
+        __LDBG_printf("memory allocation failed");
     }
     headers.addNoCache();
     headers.setResponseHeaders(response);
@@ -630,7 +630,7 @@ void Plugin::_addRestHandler(RestHandler &&handler)
             // the object gets destroyed with the web server and requires to keep the list off callbacks separated
             auto restHandler = new AsyncRestWebHandler();
             if (!restHandler) {
-                __DBG_printf_E("memory allocation failed");
+                __LDBG_printf("memory allocation failed");
             }
             __LDBG_printf("handler=%p", restHandler);
             _server->addHandler(restHandler);
@@ -658,13 +658,13 @@ void Plugin::_addRestHandler(RestHandler &&handler)
         if (zip) {
             response = new AsyncSpeedTestResponse(FSPGM(mime_application_zip), size);
             if (!response) {
-                __DBG_printf_E("memory allocation failed");
+                __LDBG_printf("memory allocation failed");
             }
             headers.add<HttpDispositionHeader>(F("speedtest.zip"));
         } else {
             response = new AsyncSpeedTestResponse(FSPGM(mime_image_bmp), size);
             if (!response) {
-                __DBG_printf_E("memory allocation failed");
+                __LDBG_printf("memory allocation failed");
             }
         }
         _logRequest(request, response);
@@ -796,11 +796,11 @@ void Plugin::ArduinoOTAbegin()
     ArduinoOTA.onStart([this]() {
         Logger_notice(F("Firmware upload started"));
         BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-        __DBG_printf("ArduinoOTA start");
+        __LDBG_printf("ArduinoOTA start");
         _AOTAInfo.start();
     });
     ArduinoOTA.onEnd([this]() {
-        __DBG_printf("ArduinoOTA end");
+        __LDBG_printf("ArduinoOTA end");
         if (_AOTAInfo) {
             _AOTAInfo.stop();
             Logger_security(F("Firmware upgrade successful, rebooting device"));
@@ -814,10 +814,12 @@ void Plugin::ArduinoOTAbegin()
         }
     });
     ArduinoOTA.onProgress([this](int progress, int size) {
-        __DBG_printf("ArduinoOTA progress %d / %d", progress, size);
+        __LDBG_printf("ArduinoOTA progress %d / %d", progress, size);
         if (_AOTAInfo) {
             _AOTAInfo.update(progress, size);
-            _updateFirmwareCallback(progress, size);
+            if (_updateFirmwareCallback) {
+                _updateFirmwareCallback(progress, size);
+            }
         }
     });
     ArduinoOTA.onError([this](ota_error_t err) {
@@ -900,11 +902,11 @@ void Plugin::begin(bool restart)
     auto cfg = System::WebServer::getConfig();
     _server.reset(new AsyncWebServerEx(cfg.getPort()));
     if (!_server) { // out of memory?
-        __DBG_printf_E("memory allocation failed");
+        __LDBG_printf("memory allocation failed");
         return;
     }
 
-    #if MDNS_PLUGIN
+    #if MDNS_PLUGIN2
         _addMDNS();
     #endif
 
@@ -912,7 +914,7 @@ void Plugin::begin(bool restart)
         if (System::Flags::getConfig().is_log_login_failures_enabled) {
             _loginFailures.reset(new FailureCounterContainer());
             if (!_loginFailures) {
-                __DBG_printf_E("memory allocation failed");
+                __LDBG_printf("memory allocation failed");
             }
             if (_loginFailures) {
                 _loginFailures->readFromFS();
@@ -976,7 +978,7 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);
             }
-            // __DBG_printf("form=%s plugin=%08x webTemplate=%08x", formName.c_str(), (uint32_t)plugin, (uint32_t)webTemplate);
+            // __LDBG_printf("form=%s plugin=%08x webTemplate=%08x", formName.c_str(), (uint32_t)plugin, (uint32_t)webTemplate);
         }
     }
     if ((isHtml || path.endsWith(FSPGM(_xml))) && webTemplate == nullptr) {
@@ -1081,7 +1083,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
 
         auto &sid = request->arg(FSPGM(SID));
         if (sid.length()) { // just report failures if the cookie is invalid
-            __SID(__DBG_printf("invalid SID=%s", sid.c_str()));
+            __SID(__LDBG_printf("invalid SID=%s", sid.c_str()));
             Logger_security(F("Authentication failed for %s"), IPAddress(request->client()->getRemoteAddress()).toString().c_str());
         }
 
@@ -1217,7 +1219,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                                     static_cast<BlindsControl::StateType>(request->arg(F("blindsctrl_channel0")).toInt()),
                                     static_cast<BlindsControl::StateType>(request->arg(F("blindsctrl_channel1")).toInt())
                                 };
-                                __DBG_printf("blinds factory channel states: 0=%s 1=%s", BlindsControl::ChannelState::__getFPStr(states[0]), BlindsControl::ChannelState::__getFPStr(states[1]));
+                                __LDBG_printf("blinds factory channel states: 0=%s 1=%s", BlindsControl::ChannelState::__getFPStr(states[0]), BlindsControl::ChannelState::__getFPStr(states[1]));
                                 BlindsControlPlugin::_saveState(states, 2);
                             #endif
                             RTCMemoryManager::clear();
@@ -1449,7 +1451,7 @@ AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerF
     }
     auto handler = new AsyncCallbackWebHandler();
     if (!handler) {
-        __DBG_printf_E("memory allocation failed");
+        __LDBG_printf("memory allocation failed");
     }
     __LDBG_printf("handler=%p uri=%s", handler, uri.c_str());
     handler->setUri(uri);
@@ -1555,7 +1557,7 @@ namespace SaveCrash {
                     __LDBG_printf("id=0x%08x reason=%s", item.getId(), item._header.getReason());
                     if (ESP.getFreeHeap() < 4096) {
                         outOfMemory = true;
-                        __DBG_printf("crashlog index: out of heap");
+                        __LDBG_printf("crashlog index: out of heap");
                         return false;
                     }
                     auto stack = item._header.getStack();

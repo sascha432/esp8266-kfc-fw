@@ -21,6 +21,7 @@
 #include <stl_ext/fixed_circular_buffer.h>
 #include "fonts/fonts.h"
 #include "moon_phase.h"
+#include <queue>
 
 #ifndef _MSC_VER
 #include <kfc_fw_config.h>
@@ -148,8 +149,10 @@ namespace WSDraw {
         //}
 
     public:
-        // called for partial or full updates of the screen
-        virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
+        #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
+            // called for partial or full updates of the screen
+            virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
+        #endif
 
         DisplayType &getDisplay();
         CanvasType *getCanvas();
@@ -159,6 +162,8 @@ namespace WSDraw {
         }
 
     public:
+        static bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap);
+
         void setText(const String &text, const GFXfont *textFont);
 
         bool lock();
@@ -178,6 +183,11 @@ namespace WSDraw {
         // displayTimezone = false draws it in the same line
         void _drawTime(bool displayTimezone = true);
 
+        // drawing jpeg pictures with an overlay
+        void _drawJpegPicture(File filename, uint16_t height);
+
+        bool _tftOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap);
+
         // display local weather info
         void _drawLocalWeather();
 
@@ -193,7 +203,7 @@ namespace WSDraw {
         // draws sun and moon info
         void _drawSunAndMoon();
 
-        // draw weather forcast
+        // draw weather forecast
         void _drawForecast();
 
         // draw multiply timezones
@@ -224,6 +234,9 @@ namespace WSDraw {
 
         void _drawMoonPhase();
         void _updateMoonPhase();
+
+        void _drawScreenPictures();
+        void _updateScreenPictures();
 
         #if DEBUG_IOT_WEATHER_STATION
             void _drawDebugInfo();
@@ -275,6 +288,10 @@ namespace WSDraw {
         uint8_t _getCurrentScreen() const;
         bool _isScreenValid(ScreenType screen, bool allowZeroTimeout = false) const;
         bool _isScreenValid(uint8_t screen, bool allowZeroTimeout = false) const;
+
+        void resetPictureGalleryTimer() {
+            _pictureUpdateTimer = millis() >> 16;
+        }
 
         static const __FlashStringHelper *getScreenName(ScreenType screen);
         static const __FlashStringHelper *getScreenName(uint8_t screen);
@@ -336,6 +353,9 @@ namespace WSDraw {
             float _debugDrawTime{0.0f};
         #endif
 
+        uint16_t _tftOutputMaxHeight;
+        GFXcanvas1 *_tftOverlayCanvas;
+        std::vector<String> _galleryImages;
         ScrollCanvas *_scrollCanvas;
         OpenWeatherMapAPI _weatherApi;
         ConfigType _config;
@@ -344,6 +364,7 @@ namespace WSDraw {
         const GFXfont *_textFont;
         SemaphoreMutex _lock;
         time_t _lastTime;
+        uint32_t _pictureUpdateTimer;
         uint8_t _scrollPosition;
         ScreenType _currentScreen;
         volatile bool _redrawFlag;

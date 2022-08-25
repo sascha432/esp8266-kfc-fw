@@ -58,7 +58,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     PluginComponent::PriorityType::WEATHER_STATION,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
-    false,              // allow_safe_mode
+    true,              // allow_safe_mode
     false,              // setup_after_deep_sleep
     true,               // has_get_status
     true,               // has_config_forms
@@ -78,6 +78,8 @@ WeatherStationPlugin::WeatherStationPlugin() :
 {
     REGISTER_PLUGIN(this, "WeatherStationPlugin");
 }
+
+#if WEATHER_STATION_HAVE_BMP_SCREENSHOT
 
 void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 {
@@ -112,10 +114,17 @@ void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
     }
 }
 
+#endif
+
 void WeatherStationPlugin::_installWebhooks()
 {
     __LDBG_printf("server=%p", WebServer::Plugin::getWebServerObject());
-    WebServer::Plugin::addHandler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
+
+    #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+
+        WebServer::Plugin::addHandler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
+
+    #endif
 
     #if 0
     WebServer::Plugin::addRestHandler(std::move(WebServer::Plugin::RestHandler(F("/api/ws"), [this](AsyncWebServerRequest *request, WebServerPlugin::RestRequest &rest) -> AsyncWebServerResponse * {
@@ -213,6 +222,13 @@ void WeatherStationPlugin::_readConfig()
 
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
+
+    if (mode == SetupModeType::SAFE_MODE) {
+        _setBacklightLevel(PWMRANGE);
+        drawText(F("SAFE MODE"), FONTS_DEFAULT_BIG, COLORS_RED, true);
+        return;
+    }
+
     __LDBG_printf("setup");
     _readConfig();
 
@@ -223,10 +239,10 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     _init();
 
     #if ESP32
-        analogWriteFreq(10000);
+        analogWriteFreq(1000);
     #elif ESP8266
         analogWriteRange(PWMRANGE);
-        analogWriteFreq(10000);
+        analogWriteFreq(1000);
     #else
         not supported
     #endif
@@ -240,10 +256,9 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         if (progressValue != progress) {
             if (progressValue == -1) {
                 _setBacklightLevel(PWMRANGE);
-                _currentScreen = ScreenType::TEXT_CLEAR;
+                _currentScreen = ScreenType::TEXT_UPDATE;
             }
-            setText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM);
-            redraw();
+            drawText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM, COLORS_DEFAULT_TEXT, true);
             progressValue = progress;
         }
     });
@@ -270,6 +285,12 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 2, [this](const Mpr121Touchpad::Event &event) {
             __LDBG_printf("event %u", event.getType());
+            #if IOT_WEATHER_STATION
+                if (_getCurrentScreen() == static_cast<uint8_t>(ScreenType::PICTURES) && event.isSwipeRight()) {
+                    WeatherStationBase::_getInstance().resetPictureGalleryTimer();
+                    return true;
+                }
+            #endif
             // if (event.isSwipeLeft() || event.isDoublePress()) {
             //     _debug_println(F("left"));
             //     _setScreen((_currentScreen + NUM_SCREENS - 1) % NUM_SCREENS);
@@ -317,6 +338,10 @@ void WeatherStationPlugin::reconfigure(const String &source)
 void WeatherStationPlugin::shutdown()
 {
     __LDBG_printf("shutdown");
+    _setBacklightLevel(PWMRANGE);
+    drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
+    lock();
+
     #if IOT_ALARM_PLUGIN_ENABLED
         _resetAlarm();
         AlarmPlugin::setCallback(nullptr);
@@ -329,14 +354,12 @@ void WeatherStationPlugin::shutdown()
     #endif
     _Timer(_fadeTimer).remove();
     _Timer(_pollDataTimer).remove();
-    lock();
-    delete _canvas;
-    _canvas = nullptr;
-    LoopFunctions::remove(loop);
-    unlock();
 
-    _setBacklightLevel(PWMRANGE);
-    drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
+    if (_canvas) {
+        delete _canvas;
+        _canvas = nullptr;
+    }
+    LoopFunctions::remove(loop);
 }
 
 void WeatherStationPlugin::getStatus(Print &output)
@@ -384,17 +407,18 @@ void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 
 void WeatherStationPlugin::getValues(WebUINS::Events &array)
 {
-    __DBG_printf("show tft=%u", _config.show_webui);
-
     array.append(WebUINS::Values(F("bl_br"), _backlightLevel, true));
 
-    if (_config.show_webui) {
-        __DBG_printf("adding callOnce this=%p", this);
-        // broadcast entire screen for each new client that connects
-        LoopFunctions::callOnce([this]() {
-            canvasUpdatedEvent(0, 0, TFT_WIDTH, TFT_HEIGHT);
-        });
-    }
+    #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
+        __LDBG_printf("show tft=%u", _config.show_webui);
+        if (_config.show_webui) {
+            __DBG_printf("adding callOnce this=%p", this);
+            // broadcast entire screen for each new client that connects
+            LoopFunctions::callOnce([this]() {
+                canvasUpdatedEvent(0, 0, TFT_WIDTH, TFT_HEIGHT);
+            });
+        }
+    #endif
 }
 
 void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -435,11 +459,6 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
 {
     _setBacklightLevel(fromLevel);
     int8_t direction = fromLevel > toLevel ? -step : step;
-
-    // when turned off, the screen is not updated
-    if (fromLevel == 0 && toLevel) {
-        redraw();
-    }
 
     //TODO sometimes fading does not work...
     //probably when called multiple times before its done
@@ -505,89 +524,93 @@ void WeatherStationPlugin::_fadeStatusLED()
     #endif
 }
 
-void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h)
-{
-    if (!_config.show_webui) {
-        return;
-    }
-    if (_lockCanvasUpdateEvents && millis() < _lockCanvasUpdateEvents) {
-        return;
-    }
-    __LDBG_S_IF(
-        // debug
-        if (_lockCanvasUpdateEvents) {
-            __DBG_printf("queue lock removed");
-            _lockCanvasUpdateEvents = 0;
-        },
-        // no debug
-        _lockCanvasUpdateEvents = 0;
-    )
+#if WEATHER_STATION_HAVE_WEBUI_PREVIEW
 
-    auto webSocketUI = WebUISocket::getServerSocket();
-    // __DBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
-    if (webSocketUI && !isLocked() && !webSocketUI->getClients().isEmpty()) {
-        Buffer buffer;
-
-        WsClient::BinaryPacketType packetIdentifier = WsClient::BinaryPacketType::RGB565_RLE_COMPRESSED_BITMAP;
-        buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
-
-        size_t len = strlen_P(SPGM(weather_station_webui_id));
-        buffer.write(len);
-        buffer.write_P(SPGM(weather_station_webui_id), len);
-        if (buffer.length() & 0x01) { // the next part needs to be word aligned
-            buffer.write(0);
-        }
-
-        // takes 42ms for 128x160 using GFXCanvasCompressedPalette
-        // auto start = micros();
-
-        if (lock()) {
-            GFXCanvasRLEStream stream(*getCanvas(), x, y, w, h);
-            char buf[128];
-            size_t read;
-            while((read = stream.readBytes(buf, sizeof(buf))) != 0) {
-                buffer.write(buf, read);
-            }
-            unlock();
-        }
-        else {
-            __DBG_printf("could not lock canvas");
+    void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h)
+    {
+        if (!_config.show_webui) {
             return;
         }
+        if (_lockCanvasUpdateEvents && millis() < _lockCanvasUpdateEvents) {
+            return;
+        }
+        __LDBG_S_IF(
+            // debug
+            if (_lockCanvasUpdateEvents) {
+                __DBG_printf("queue lock removed");
+                _lockCanvasUpdateEvents = 0;
+            },
+            // no debug
+            _lockCanvasUpdateEvents = 0;
+        )
 
-        // auto dur = micros() - start;
-        // __DBG_printf("dur %u us", dur);
-        // if (!canvas) {
-        //     __DBG_printf("canvas was removed during update");
-        //     return;
-        // }
+        auto webSocketUI = WebUISocket::getServerSocket();
+        // __DBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
+        if (webSocketUI && !isLocked() && !webSocketUI->getClients().isEmpty()) {
+            Buffer buffer;
 
-        uint8_t *ptr;
-        buffer.write(0); // terminate with NUL byte
-        len = buffer.length() - 1;
-        buffer.move(&ptr);
+            WsClient::BinaryPacketType packetIdentifier = WsClient::BinaryPacketType::RGB565_RLE_COMPRESSED_BITMAP;
+            buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
 
-        auto wsBuffer = webSocketUI->makeBuffer(ptr, len, false);
-        // __LDBG_printf("buf=%p len=%u", wsBuffer, buffer.length());
-        if (wsBuffer) {
-
-            wsBuffer->lock();
-            for(auto socket: webSocketUI->getClients()) {
-                if (!socket->canSend()) { // queue full
-                    _lockCanvasUpdateEvents = millis() + 5000;
-                    __LDBG_printf("queue lock added");
-                    break;
-                }
-                if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-                    socket->client()->setRxTimeout(10); // lower timeout
-                    socket->binary(wsBuffer);
-                }
+            size_t len = strlen_P(SPGM(weather_station_webui_id));
+            buffer.write(len);
+            buffer.write_P(SPGM(weather_station_webui_id), len);
+            if (buffer.length() & 0x01) { // the next part needs to be word aligned
+                buffer.write(0);
             }
-            wsBuffer->unlock();
-            webSocketUI->_cleanBuffers();
+
+            // takes 42ms for 128x160 using GFXCanvasCompressedPalette
+            // auto start = micros();
+
+            if (lock()) {
+                GFXCanvasRLEStream stream(*getCanvas(), x, y, w, h);
+                char buf[128];
+                size_t read;
+                while((read = stream.readBytes(buf, sizeof(buf))) != 0) {
+                    buffer.write(buf, read);
+                }
+                unlock();
+            }
+            else {
+                __DBG_printf("could not lock canvas");
+                return;
+            }
+
+            // auto dur = micros() - start;
+            // __DBG_printf("dur %u us", dur);
+            // if (!canvas) {
+            //     __DBG_printf("canvas was removed during update");
+            //     return;
+            // }
+
+            uint8_t *ptr;
+            buffer.write(0); // terminate with NUL byte
+            len = buffer.length() - 1;
+            buffer.move(&ptr);
+
+            auto wsBuffer = webSocketUI->makeBuffer(ptr, len, false);
+            // __LDBG_printf("buf=%p len=%u", wsBuffer, buffer.length());
+            if (wsBuffer) {
+
+                wsBuffer->lock();
+                for(auto socket: webSocketUI->getClients()) {
+                    if (!socket->canSend()) { // queue full
+                        _lockCanvasUpdateEvents = millis() + 5000;
+                        __LDBG_printf("queue lock added");
+                        break;
+                    }
+                    if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
+                        socket->client()->setRxTimeout(10); // lower timeout
+                        socket->binary(wsBuffer);
+                    }
+                }
+                wsBuffer->unlock();
+                webSocketUI->_cleanBuffers();
+            }
         }
     }
-}
+
+#endif
 
 #if IOT_ALARM_PLUGIN_ENABLED
 

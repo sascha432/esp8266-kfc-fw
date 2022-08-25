@@ -2,6 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#include <Arduino_compat.h>
 #include <LoopFunctions.h>
 #include <GFXCanvasConfig.h>
 #include <locale.h>
@@ -11,6 +12,9 @@
 #include "WSDraw.h"
 #include "moon_phase.h"
 #include "format_time.h"
+
+#include <TJpg_Decoder.h>
+#include <../src/plugins/weather_station/WeatherStationBase.h>
 
 #if DEBUG_IOT_WEATHER_STATION
 #include <debug_helper_enable.h>
@@ -84,12 +88,25 @@ const unsigned char icon_house[] PROGMEM = {
 
 namespace WSDraw {
 
+
+    // static File currentPicture;
+
+    // unsigned char pjpeg_callback(unsigned char* pBuf, unsigned char buf_size, unsigned char *pBytes_actually_read, void *pCallback_data)
+    // {
+    //     auto left = std::min<uint32_t>(currentPicture.available(), buf_size);
+    //     *pBytes_actually_read = currentPicture.read(pBuf, left);
+    //     return 0;
+    // }
+
     Base::Base() :
         _tft(TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST),
         _canvas(new CanvasType(_tft.width(), _tft.height())),
+        _tftOutputMaxHeight(_tft.height()),
+        _tftOverlayCanvas(nullptr),
         _scrollCanvas(nullptr),
         _textFont(nullptr),
         _lastTime(0),
+        _pictureUpdateTimer(~1U >> 16),
         _scrollPosition(0),
         _currentScreen(ScreenType::MAIN),
         _redrawFlag(false),
@@ -102,9 +119,15 @@ namespace WSDraw {
         // _screenTimer.remove();
         // delete _screen;
         // _displayMessageTimer.remove();
+        lock();
         ScrollCanvas::destroy(this);
         if (_canvas) {
             delete _canvas;
+            _canvas = nullptr;
+        }
+        if (_tftOverlayCanvas) {
+            delete _tftOverlayCanvas;
+            _tftOverlayCanvas = nullptr;
         }
     }
 
@@ -129,7 +152,6 @@ namespace WSDraw {
     void Base::_drawSunAndMoon()
     {
         constexpr int16_t _offsetY = Y_START_POSITION_SUN_MOON;
-
 
         auto moon = calcMoon(getUnixtimeForCalcMoon());
 
@@ -537,6 +559,73 @@ namespace WSDraw {
         }
     }
 
+    void Base::_drawScreenPictures()
+    {
+        if (millis() - _pictureUpdateTimer > WeatherStation::getConfig().gallery_update_rate * 1000UL) {
+            _pictureUpdateTimer = millis();
+
+            File currentPicture;
+            {
+                uint32_t count = 0;
+                auto dir = KFCFS_openDir(String(F("/WsGallery")).c_str());
+                while(dir.next()) {
+                    if (dir.isFile() && dir.fileName().endsWithIgnoreCase(F(".jpg"))) {
+                        count++;
+                    }
+                }
+
+                String fullName;
+                uint32_t attempts = 5; // try 5 times to avoid getting the same 5 images in a row...
+                while(attempts--) {
+
+                    srand(micros() + _pictureUpdateTimer);
+                    auto num = rand() % count;
+
+                    dir.rewind();
+                    while(dir.next()) {
+                        if (dir.isFile() && dir.fileName().endsWithIgnoreCase(F(".jpg"))) {
+                            if (num-- == 0) {
+                                currentPicture = dir.openFile(fs::FileOpenMode::read);
+                                fullName = currentPicture.fullName();
+                                break;
+                            }
+                        }
+                    }
+
+                    if (std::find(_galleryImages.begin(), _galleryImages.end(), fullName) == _galleryImages.end()) {
+                        break;
+                    }
+
+                    optimistic_yield(10000);
+                }
+
+                _galleryImages.emplace_back(fullName);
+                if (_galleryImages.size() > 5) {
+                    _galleryImages.erase(_galleryImages.begin());
+                }
+
+            }
+
+            if (!currentPicture) {
+                drawText(F("No Jpeg files available in directory /WsGallery"), FONTS_DEFAULT_SMALL, COLORS_DEFAULT_TEXT, true);
+                return;
+            }
+
+            _drawJpegPicture(currentPicture, _tft.height());
+
+        }
+        else if (!_galleryImages.empty()) {
+
+            _drawJpegPicture(LittleFS.open(_galleryImages.back(), fs::FileOpenMode::read), 30);
+        }
+
+    }
+
+    void Base::_updateScreenPictures()
+    {
+        _drawScreenPictures();
+    }
+
 
     #if DEBUG_IOT_WEATHER_STATION
 
@@ -695,50 +784,58 @@ namespace WSDraw {
             uint32_t start = micros();
         #endif
 
-        _canvas->fillScreen(COLORS_BACKGROUND);
-
-        switch(_currentScreen) {
-            case ScreenType::MAIN:
-                _drawScreenMain();
-                break;
-            case ScreenType::INDOOR:
-                _drawScreenIndoorClimate();
-                break;
-            case ScreenType::FORECAST:
-                _drawScreenForecast();
-                break;
-            case ScreenType::INFO:
-                _drawScreenInfo();
-                break;
-            case ScreenType::WORLD_CLOCK:
-                _drawWorldClock();
-                break;
-            case ScreenType::MOON_PHASE:
-                _drawMoonPhase();
-                break;
-            #if DEBUG_IOT_WEATHER_STATION
-                case ScreenType::DEBUG_INFO:
-                    _drawScreenDebug();
-                    break;
-            #endif
-            case ScreenType::TEXT:
-            case ScreenType::TEXT_CLEAR:
-            case ScreenType::TEXT_UPDATE:
-                _drawText(_text, _textFont, COLORS_DEFAULT_TEXT, true);
-                // _Scheduler.add(100, true, [this](Event::CallbackTimerPtr timer) {
-                //     if (_currentScreen != ScreenType::TEXT) {
-                //         timer->disarm();
-                //     }
-                //     else {
-                //         _drawText(_text, _textFont, COLORS_DEFAULT_TEXT);
-                //     }
-                // });
-                _currentScreen = ScreenType::TEXT;
-                break;
-            default:
-                break;
+        if (_currentScreen == ScreenType::PICTURES) {
+            _drawScreenPictures();
         }
-       _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+        else {
+
+            _canvas->fillScreen(COLORS_BACKGROUND);
+
+            switch(_currentScreen) {
+                case ScreenType::MAIN:
+                    _drawScreenMain();
+                    break;
+                case ScreenType::INDOOR:
+                    _drawScreenIndoorClimate();
+                    break;
+                case ScreenType::FORECAST:
+                    _drawScreenForecast();
+                    break;
+                case ScreenType::INFO:
+                    _drawScreenInfo();
+                    break;
+                case ScreenType::WORLD_CLOCK:
+                    _drawWorldClock();
+                    break;
+                case ScreenType::MOON_PHASE:
+                    _drawMoonPhase();
+                    break;
+                #if DEBUG_IOT_WEATHER_STATION
+                    case ScreenType::DEBUG_INFO:
+                        _drawScreenDebug();
+                        break;
+                #endif
+                case ScreenType::TEXT_CLEAR:
+                case ScreenType::TEXT_UPDATE:
+                    _drawText(_text, _textFont, COLORS_DEFAULT_TEXT, true);
+                    // _Scheduler.add(100, true, [this](Event::CallbackTimerPtr timer) {
+                    //     if (_currentScreen != ScreenType::TEXT) {
+                    //         timer->disarm();
+                    //     }
+                    //     else {
+                    //         _drawText(_text, _textFont, COLORS_DEFAULT_TEXT);
+                    //     }
+                    // });
+                    _currentScreen = ScreenType::TEXT;
+                    break;
+                case ScreenType::TEXT:
+                    break;
+                default:
+                    break;
+            }
+
+            _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+        }
 
         #if DEBUG_GFXCANVAS_STATS
             uint32_t dur = micros() - start;
@@ -781,8 +878,10 @@ namespace WSDraw {
             _debugLastUpdate = micros();
         #endif
 
-        // promote full or partial update
-        canvasUpdatedEvent(x, y, w, h);
+        #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
+            // promote full or partial update
+            canvasUpdatedEvent(x, y, w, h);
+        #endif
     }
 
     String Base::_getTemperature(float value, bool kelvin)
@@ -826,6 +925,81 @@ namespace WSDraw {
         }
     }
 
+    bool Base::tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
+    {
+        return WeatherStationBase::_getInstance()._tftOutput(x, y, w, h, bitmap);
+    }
+
+    bool Base::_tftOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
+    {
+        if (y >= _tftOutputMaxHeight) {
+            return false;
+        }
+        auto tmp = GFXcanvas16(w, h);
+        memcpy(tmp.getBuffer(), bitmap, w * h * 2);
+
+        constexpr int16_t kWidth = 120;
+        constexpr int16_t kHeight = 35;
+        constexpr int16_t kTop = 5;
+        constexpr int16_t kLeft = 2;
+
+        if (!_tftOverlayCanvas) {
+            _lastTime = time(nullptr);
+            auto tm = localtime(&_lastTime);
+            PrintString timeStr;
+            timeStr.strftime(F("%a, %b %d"), tm);
+
+            _tftOverlayCanvas = new GFXcanvas1(kWidth, kHeight);
+            _tftOverlayCanvas->setFont(FONTS_DATE);
+            _tftOverlayCanvas->setCursor(kLeft + 3, kTop * 2);
+            _tftOverlayCanvas->print(timeStr);
+            _tftOverlayCanvas->setFont(FONTS_DEFAULT_MEDIUM);
+            _tftOverlayCanvas->setCursor(kLeft + 70, kTop + 25);
+            _tftOverlayCanvas->print(_getTemperature(_getIndoorValues().getTemperature()));
+            _tftOverlayCanvas->setFont(FONTS_TIME);
+            _tftOverlayCanvas->setCursor(kLeft, kTop + 26);
+            _tftOverlayCanvas->print(FormatTime::getShortTimeStr(_config.time_format_24h, tm));
+        }
+
+        if (x < kWidth && y < kHeight) {
+            auto nw = std::min<uint16_t>(kWidth - x, w);
+            auto nh = std::min<uint16_t>(kHeight - y, h);
+            auto tmp2 = GFXcanvas1(nw, nh);
+            auto dst = tmp2.getBuffer();
+            auto src = &_tftOverlayCanvas->getBuffer()[(x / 8) + (y * ((kWidth + 7) / 8))];
+            for(int16_t i = 0; i < nh; i++) {
+                memcpy(dst, src, (nw + 7) / 8);
+                dst += (nw + 7) / 8;
+                src += (kWidth + 7) / 8;
+            }
+            tmp.drawBitmap(3, 2, tmp2.getBuffer(), nw, nh, COLORS_BLACK);
+            tmp.drawBitmap(0, 0, tmp2.getBuffer(), nw, nh, COLORS_WHITE);
+        }
+
+        _tft.drawRGBBitmap(x, y, tmp.getBuffer(), w, h);
+        return true;
+    }
+
+    void Base::_drawJpegPicture(File filename, uint16_t height)
+    {
+        _tftOutputMaxHeight = height;
+        auto TJpgDecPtr = new TJpg_Decoder(tft_output);
+        if (TJpgDecPtr) {
+            if (_tftOutputMaxHeight == _tft.height()) {
+                _tft.fillScreen(COLORS_BACKGROUND);
+            }
+            TJpgDecPtr->drawFsJpg(0, 0, filename);
+            delete TJpgDecPtr;
+            if (_tftOverlayCanvas) {
+                delete _tftOverlayCanvas;
+                _tftOverlayCanvas = nullptr;
+            }
+        }
+        else {
+            __DBG_printf("out of memory");
+        }
+    }
+
     void Base::_updateScreenTime()
     {
         CLEAR_AND_DISPLAY(Y_START_POSITION_TIME, Y_END_POSITION_TIME) {
@@ -848,6 +1022,8 @@ namespace WSDraw {
                 return F("Moon Phase");
             case ScreenType::INFO:
                 return F("System Info");
+            case ScreenType::PICTURES:
+                return F("Gallery");
             #if DEBUG_IOT_WEATHER_STATION
                 case ScreenType::DEBUG_INFO:
                     return F("Debug Info");

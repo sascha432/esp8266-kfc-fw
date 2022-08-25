@@ -432,6 +432,16 @@
 #    define WEATHER_STATION_MAX_CLOCKS 4
 #endif
 
+// option to display the TFT in realtime in the WebUI
+#ifndef WEATHER_STATION_HAVE_WEBUI_PREVIEW
+#    define WEATHER_STATION_HAVE_WEBUI_PREVIEW 0
+#endif
+
+// option to create BMP screenshot of the TFT display
+#ifndef WEATHER_STATION_HAVE_BMP_SCREENSHOT
+#    define WEATHER_STATION_HAVE_BMP_SCREENSHOT 0
+#endif
+
 class Stream;
 class HardwareSerial;
 

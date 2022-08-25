@@ -21,6 +21,7 @@ namespace KFCConfigurationClasses {
                 WORLD_CLOCK,
                 MOON_PHASE,
                 INFO,
+                PICTURES,
                 #if DEBUG_IOT_WEATHER_STATION
                     DEBUG_INFO,
                 #endif
@@ -66,6 +67,7 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(time_format_24h, 1, false, true, true);
                     CREATE_UINT32_BITFIELD_MIN_MAX(show_webui, 1, false, true, false);
                     CREATE_UINT32_BITFIELD_MIN_MAX(show_regular_clock_on_world_clocks, 1, false, true, true);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(gallery_update_rate, 16, 5, (3600 * 12), 120); // seconds
                     uint8_t screenTimer[kNumScreens]; // seconds
                     WorldClockType additionalClocks[kNumClocks];
 
@@ -83,18 +85,21 @@ namespace KFCConfigurationClasses {
                         time_format_24h(kDefaultValueFor_time_format_24h),
                         show_webui(kDefaultValueFor_show_webui),
                         show_regular_clock_on_world_clocks(kDefaultValueFor_show_regular_clock_on_world_clocks),
+                        gallery_update_rate(kDefaultValueFor_gallery_update_rate),
                         screenTimer{
                             10 /*ScreenType::MAIN*/,
                             10 /*INDOOR*/,
                             kSkipScreen /*FORECAST*/,
                             10 /*WORLD_CLOCK*/,
                             10 /*MOON_PHASE*/,
-                            kManualScreen /*INFO*/
+                            kManualScreen, /*INFO*/
+                            kManualScreen /*PICTURES*/
                             #if DEBUG_IOT_WEATHER_STATION
                                 , kManualScreen /*DEBUG_INFO*/
                             #endif
                         },
                         additionalClocks{}
+
                     {
                     }
                 };
@@ -123,61 +128,88 @@ namespace KFCConfigurationClasses {
                 enum class TZPartType {
                     NAME,
                     TZ,
+                    TZ_NAME,
                 };
 
                 #if WEATHER_STATION_MAX_CLOCKS
-                    template<TZPartType Part>
-                    static String _split(const char *str) {
-                        auto sep = strchr(str, 0xff);
-                        if (!sep) {
-                            return String();
-                        }
-                        if __CONSTEXPR17 (Part == TZPartType::NAME) {
-                            String res;
-                            res.concat(str, (sep - str));
-                            return res;
-                        }
-                        else {
-                            return String(sep + 1);
-                        }
+                    template<TZPartType _Part>
+                    static String _explode(const char *strList) {
+                        StringVector list;
+                        explode(strList, '\xff', list, 3);
+                        list.resize(3);
+                        return list.at(static_cast<uint8_t>(_Part));
                     }
 
-                    template<TZPartType Part>
-                    static String _set(const char *str) {
-                        if __CONSTEXPR17 (Part == TZPartType::NAME) {
-                            auto name = _split<TZPartType::TZ>(str);
-                            return PrintString(F("%s\xff%s"), name.c_str(), str);
-                        }
-                        else {
-                            auto tz = _split<TZPartType::TZ>(str);
-                            return PrintString(F("%s\xff%s"), str, tz.c_str());
-                        }
+                    template<TZPartType _Part>
+                    static String _implode(const char *strList, const char *str) {
+                        StringVector list;
+                        explode(strList, '\xff', list, 3);
+                        list.resize(3);
+                        list.at(static_cast<uint8_t>(_Part)) = str;
+                        return implode('\xff', list, 3);
                     }
 
-                    template<TZPartType Part>
+                    template<TZPartType _Part>
                     static String _getTZ(uint8_t num) {
                         switch(num) {
                             case 0:
-                                return _split<Part>(getTZ0());
+                                return _explode<_Part>(WeatherStation::getTZ0());
                             case 1:
-                                return _split<Part>(getTZ1());
+                                return _explode<_Part>(WeatherStation::getTZ1());
                             case 2:
-                                return _split<Part>(getTZ2());
+                                return _explode<_Part>(WeatherStation::getTZ2());
                             case 3:
-                                return _split<Part>(getTZ3());
+                                return _explode<_Part>(WeatherStation::getTZ3());
                             default:
                                 break;
                         }
-                        __DBG_printf("invalid num=%u", num);
+                        __LDBG_printf("invalid num=%u", num);
                         return String();
+                    }
+
+                    template<TZPartType _Part>
+                    static void _setTZ(uint8_t num, const char *str) {
+                        switch(num) {
+                            case 0:
+                                WeatherStation::setTZ0(_implode<_Part>(WeatherStation::getTZ0(), str));
+                                break;
+                            case 1:
+                                WeatherStation::setTZ1(_implode<_Part>(WeatherStation::getTZ1(), str));
+                                break;
+                            case 2:
+                                WeatherStation::setTZ2(_implode<_Part>(WeatherStation::getTZ2(), str));
+                                break;
+                            case 3:
+                                WeatherStation::setTZ3(_implode<_Part>(WeatherStation::getTZ3(), str));
+                                break;
+                            default:
+                                break;
+                        }
+                        __LDBG_printf("invalid num=%u", num);
+                    }
+
+                    static String getName(uint8_t num) {
+                        return _getTZ<TZPartType::NAME>(num);
+                    }
+
+                    static void setName(uint8_t num, const char *str) {
+                        _setTZ<TZPartType::NAME>(num, str);
                     }
 
                     static String getTZ(uint8_t num) {
                         return _getTZ<TZPartType::TZ>(num);
                     }
 
-                    static String getName(uint8_t num) {
-                        return _getTZ<TZPartType::NAME>(num);
+                    static void setTZ(uint8_t num, const char *str) {
+                        _setTZ<TZPartType::TZ>(num, str);
+                    }
+
+                    static String getTZName(uint8_t num) {
+                        return _getTZ<TZPartType::TZ_NAME>(num);
+                    }
+
+                    static void setTZName(uint8_t num, const char *str) {
+                        _setTZ<TZPartType::TZ_NAME>(num, str);
                     }
 
                 #endif

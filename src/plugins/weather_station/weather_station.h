@@ -53,7 +53,9 @@ public:
 private:
     void _readConfig();
     void _init();
-    static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);
+    #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+        static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);
+    #endif
     void _installWebhooks();
 
 private:
@@ -68,9 +70,11 @@ private:
     // sets the backlight level by slowly/decreasing increased it
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step = 8);
 
-    // sends updates areas to the webui
-    // 16bit colors, RLE compression
-    virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h);
+    #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
+        // sends updates areas to the webui
+        // 16bit colors, RLE compression
+        virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h);
+    #endif
 
 private:
     asyncHTTPrequest *_httpClient;

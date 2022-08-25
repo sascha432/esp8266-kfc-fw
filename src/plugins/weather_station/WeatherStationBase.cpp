@@ -127,9 +127,7 @@ void WeatherStationBase::_draw()
     Base::_draw();
     _updateCounter = 0;
     MUTEX_LOCK_BLOCK(_lock) {
-        if (_redrawFlag) {
-            _redrawFlag = false;
-        }
+        _redrawFlag = false;
     }
 }
 
@@ -140,7 +138,8 @@ void WeatherStationBase::_loop()
         FastLED.show();
     #endif
 
-    if (_backlightLevel == 0) {
+    if (_currentScreen == ScreenType::TEXT) {
+        // display is updated outside the loop
         return;
     }
 
@@ -229,6 +228,10 @@ void WeatherStationBase::_loop()
                 else if (_currentScreen == ScreenType::WORLD_CLOCK) {
                     // update clock screen every second
                     _updateScreenWorldClock();
+                    return;
+                }
+                else if (_currentScreen == ScreenType::PICTURES) {
+                    _updateScreenPictures();
                     return;
                 }
                 else if (_currentScreen == ScreenType::INDOOR) {

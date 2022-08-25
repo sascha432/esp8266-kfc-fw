@@ -24,16 +24,16 @@
         </div>
     </nav>
     <!--NAV%%-->
-    <div class="container">
+    <div class="container" id="world_clock">
         <script>
             (function() {
                 var timezone_list =
                 /*--%%TIMEZONE_LIST_JS--*/{};
                 /*--TIMEZONE_LIST_JS%%--*/
-                var s = '';
+                var s = '<option value=""></option>';
                 for (let key in timezone_list) {
                     var val = timezone_list[key];
-                    s += '<option value="' + val + '"' + ('%TZ_NAME%' == key ? ' selected' : '') + '>' + key + '</option>';
+                    s += '<option value="' + val + '">' + key + '</option>';
                 }
                 window.posix_timezone_list_options = s;
             })();
@@ -41,9 +41,6 @@
         <form method="POST" action="%SELF_URI%">
             %FORM_HTML%
         </form>
-        <script>
-            document.getElementById('posix_tz').innerHTML = window.posix_timezone_list_options;
-        </script>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>

@@ -33,27 +33,29 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
         mainGroup = &form.addCardGroup(F("w_clock"));
 
-        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WEATHER_STATION_MAX_CLOCKS, nm, tf);
+        PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WEATHER_STATION_MAX_CLOCKS, nm, tf, tz, tn);
 
         for(uint8_t i = 0; i < WEATHER_STATION_MAX_CLOCKS; i++) {
 
-            form.addCallbackSetter(F_VAR(nm, i), WeatherStation::getTZ(i), [&cfg, i](const String &value, FormUI::Field::BaseField &field) {
-                // cfg.setTZ(value.c_str(), i);
+            form.addCallbackSetter(F_VAR(nm, i), WeatherStation::getName(i), [&cfg, i](const String &value, FormUI::Field::BaseField &field) {
+                cfg.additionalClocks[i]._set__enabled(value.length() ? 1 : 0);
+                WeatherStation::setName(i, value.c_str());
             });
-            form.addFormUI(F("Display Name"));
+            form.addFormUI(F("Display Name"), FormUI::PlaceHolder(F("Disabled")));
+            form.addValidator(FormUI::Validator::Length(4, 16, true));
+
+            form.addCallbackSetter(F_VAR(tz, i), WeatherStation::getTZ(i), [i](const String &value, FormUI::Field::BaseField &field) {
+                WeatherStation::setTZ(i, value.c_str());
+            }).setOptional(true);
+            form.addFormUI(FormUI::Type::SELECT, F("Time Zone"));
+
+            form.addCallbackSetter(F_VAR(tn, i), WeatherStation::getTZName(i), [i](const String &value, FormUI::Field::BaseField &field) {
+                WeatherStation::setTZName(i, value.c_str());
+            });
+            form.addFormUI(FormUI::Type::HIDDEN);
 
             form.addObjectGetterSetter(F_VAR(tf, i), FormGetterSetter(cfg.additionalClocks[i], _time_format_24h));
             form.addFormUI(F("Time Format"), FormUI::BoolItems(F("24h"), F("12h")));
-
-            // form.addCallbackSetter(F_VAR(nm, i), String(cfg.additionalClocks[i].getTZ()), [&cfg, i](const String &value, FormUI::Field::BaseField &field) {
-            //     cfg.additionalClocks[i].setTZ(value.c_str());
-            // });
-            // form.addFormUI(F("Timezone"));
-
-            // form.addStringGetterSetter(F_VAR(tz, i), Plugins::NTPClient::getPosixTimezone, Plugins::NTPClient::setPosixTimezone);
-            // form.addFormUI(FormUI::Type::SELECT, FSPGM(Timezone, "Timezone"));
-            // form.addStringGetterSetter(F("tz_name"), Plugins::NTPClient::getTimezoneName, Plugins::NTPClient::setTimezoneName);
-            // form.addFormUI(FormUI::Type::HIDDEN);
 
         }
 
@@ -79,6 +81,10 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));
         cfg.addRangeValidatorFor_api_timeout(form);
 
+        form.addObjectGetterSetter(F("ato"), FormGetterSetter(cfg, gallery_update_rate));
+        form.addFormUI(F("Gallery Update Rate"), FormUI::Suffix(FSPGM(seconds)));
+        cfg.addRangeValidatorFor_gallery_update_rate(form);
+
         form.addObjectGetterSetter(F("bll"), FormGetterSetter(cfg, backlight_level));
         form.addFormUI(F("Backlight Level"), FormUI::Suffix(F("%")));
         cfg.addRangeValidatorFor_backlight_level(form);
@@ -92,9 +98,9 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         cfg.addRangeValidatorFor_released_threshold(form);
 
         #if DEBUG_IOT_WEATHER_STATION
-        #define NUM_SCREENS 7
+        #define NUM_SCREENS 8
         #else
-        #define NUM_SCREENS 6
+        #define NUM_SCREENS 7
         #endif
         static_assert(NUM_SCREENS == WSDraw::kNumScreens, "number does not match");
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, NUM_SCREENS, st/*, ds*/);
@@ -171,8 +177,12 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
             form.addValidator(FormUI::Validator::Range(0, 255));
         }
 
-        form.addObjectGetterSetter(F("stft"), FormGetterSetter(cfg, show_webui));
-        form.addFormUI(F("Show TFT Contents In WebUI"), FormUI::BoolItems(FSPGM(Yes), FSPGM(No)));
+        #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
+
+            form.addObjectGetterSetter(F("stft"), FormGetterSetter(cfg, show_webui));
+            form.addFormUI(F("Show TFT Contents In WebUI"), FormUI::BoolItems(FSPGM(Yes), FSPGM(No)));
+
+        #endif
 
     }
 

@@ -569,13 +569,13 @@ namespace WSDraw {
         while(dir.next()) {
             if (dir.isFile() && dir.fileName().endsWithIgnoreCase(F(".jpg"))) {
                 if (_scanCallback && _scanCallback(count, dir)) {
-                    __DBG_printf("#%u _scanCallback=true file=%s", count, dir.fileName());
+                    __LDBG_printf("#%u _scanCallback=true file=%s", count, dir.fileName());
                     break;
                 }
                 count++;
             }
         }
-        __DBG_printf("files=%u callback=%p", count, _scanCallback);
+        __LDBG_printf("files=%u callback=%p", count, _scanCallback);
         return count;
     }
 
@@ -586,7 +586,7 @@ namespace WSDraw {
         if (count) { // any files found?
 
             auto minCount = std::min<uint32_t>(count - 1, 5);
-            __DBG_printf("minCount=%u _galleryImages=%u/%s", minCount, _galleryImages.size(), implode(',', _galleryImages).c_str());
+            __LDBG_printf("minCount=%u _galleryImages=%u/%s", minCount, _galleryImages.size(), implode(',', _galleryImages).c_str());
             if (minCount == 0) {
                 _galleryImages.clear();
             }
@@ -596,34 +596,34 @@ namespace WSDraw {
                 }
                 // _galleryImages.erase(_galleryImages.begin(), _galleryImages.end() - minCount);
             }
-            __DBG_printf("_galleryImages.size=%u/%s", _galleryImages.size(), implode(',', _galleryImages).c_str());
+            __LDBG_printf("_galleryImages.size=%u/%s", _galleryImages.size(), implode(',', _galleryImages).c_str());
 
             uint32_t num = ESP.random() % count;
-            __DBG_printf("random=%u count=%u", num, count);
-            fs::Dir candidate;
+            __LDBG_printf("random=%u count=%u", num, count);
+            String candidate;
 
             _scanGalleryDirectory([num, &candidate, this](uint32_t count, fs::Dir &dir) {
                 bool notFound = std::find(_galleryImages.begin(), _galleryImages.end(), dir.fileName()) == _galleryImages.end();
-                __DBG_printf("file=%s notfound=%u num=%u count=%u", dir.fileName().c_str(), notFound, num, count);
-                if (notFound) {
-                    candidate = dir;
+                __LDBG_printf("file=%s notfound=%u num=%u count=%u", dir.fileName().c_str(), notFound, num, count);
+                if (notFound && dir.isFile()) {
+                    candidate = dir.fileName();
                     if (num >= count) {
-                        candidate = dir;
-                        __DBG_printf("scab found=%s", candidate.fileName().c_str());
+                        candidate = dir.fileName();
+                        __LDBG_printf("scan found=%s", candidate.c_str());
                         return true;
                     }
                 }
                 return false;
             });
 
-            if (candidate.isFile()) {
-                _galleryFile = candidate.openFile(fs::FileOpenMode::read);
-                if (_galleryFile.size()) {
+            if (candidate.length()) {
+                _galleryFile = LittleFS.open(PrintString(F("/WsGallery/%s"), candidate.c_str()), fs::FileOpenMode::read);
+                if (_galleryFile) {
                     _galleryImages.emplace_back(_galleryFile.name());
-                    __DBG_printf("added to _galleryImages=%s/%u/%s", _galleryFile.name(), _galleryImages.size(), implode(',', _galleryImages).c_str());
                     found = true;
                 }
             }
+            __LDBG_printf("name=%s/%s found=%u size=%u", candidate.c_str(), _galleryFile.fullName(), found, _galleryFile.size());
 
         }
         if (!found) {

@@ -895,12 +895,9 @@ namespace WSDraw {
 
     void Base::_drawJpegPicture(File filename, uint16_t height)
     {
-        _tftOutputMaxHeight = height;
+        _tftOutputMaxHeight = height ? height : _tft.height();
         auto TJpgDecPtr = new TJpg_Decoder(tft_output);
         if (TJpgDecPtr) {
-            if (_tftOutputMaxHeight == _tft.height()) {
-                _tft.fillScreen(COLORS_BACKGROUND);
-            }
             TJpgDecPtr->drawFsJpg(0, 0, filename);
             delete TJpgDecPtr;
             stdex::reset(_tftOverlayCanvas);

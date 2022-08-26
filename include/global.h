@@ -113,6 +113,10 @@
 #    define AT_MODE_SUPPORTED 1 // AT commands over serial
 #endif
 
+#ifndef AT_MODE_HELP_SUPPORTED
+#    define AT_MODE_HELP_SUPPORTED 0
+#endif
+
 #ifndef HTTP2SERIAL_SUPPORT
 #    define HTTP2SERIAL_SUPPORT 1 // HTTP2Serial bridge (requires ATMODE support)
 #endif

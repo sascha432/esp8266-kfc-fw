@@ -19,6 +19,9 @@
 #if ESP32
 #include <sdkconfig.h>
 #endif
+#if IOT_WEATHER_STATION
+#include <../src/plugins/weather_station/weather_station.h>
+#endif
 
 #if DEBUG_TEMPLATES
 #include <debug_helper_enable.h>
@@ -372,12 +375,25 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(hidden));
         }
     }
+    else if (key == F("GALLERY_IMAGES_COUNT")) {
+        #if IOT_WEATHER_STATION
+            output.print(WeatherStationPlugin::_getInstance()._scanGalleryDirectory(nullptr));
+        #endif
+    }
+    else if (key == F("GALLERY_IMAGES_IMAGES")) {
+        #if IOT_WEATHER_STATION
+            WeatherStationPlugin::_getInstance()._scanGalleryDirectory([&output](uint32_t count, fs::Dir &dir) {
+                output.printf_P(PSTR(HTML_SA(div, HTML_A("class", "col")) HTML_SA(img, HTML_A("src", "/WsGallery/%s") HTML_A("width", "%u") HTML_A("height", "%u") HTML_A("file", "%s")) HTML_E(div)), dir.fileName().c_str(), TFT_WIDTH, TFT_HEIGHT, dir.fileName().c_str());
+                return false;
+            });
+        #endif
+    }
     else if (key == F("PIN_MONITOR_STATUS")) {
-    #if PIN_MONITOR
-            PinMonitor::pinMonitor.printStatus(output);
-    #else
-            output.print(F("Pin monitor disabled"));
-    #endif
+        #if PIN_MONITOR
+                PinMonitor::pinMonitor.printStatus(output);
+        #else
+                output.print(F("Pin monitor disabled"));
+        #endif
     }
     #if IOT_ALARM_PLUGIN_ENABLED
         else if (key.startsWith(F("ALARM_TIMESTAMP_"))) {

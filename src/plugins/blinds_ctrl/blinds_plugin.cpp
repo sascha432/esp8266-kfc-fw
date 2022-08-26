@@ -155,6 +155,8 @@ BlindsControlPlugin &BlindsControlPlugin::getInstance()
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCME, "BCME", "<open|close|stop|tone|imperial|init>[,<channel>][,<tone_frequency>,<tone_pwm_value>]", "Open, close a channel, stop motor or run tone test, play imperial march, init. state");
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr BlindsControlPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -163,6 +165,8 @@ ATModeCommandHelpArrayPtr BlindsControlPlugin::atModeCommandHelp(size_t &size) c
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool BlindsControlPlugin::atModeHandler(AtModeArgs &args)
 {

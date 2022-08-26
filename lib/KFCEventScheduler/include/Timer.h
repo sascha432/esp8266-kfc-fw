@@ -22,7 +22,7 @@
 namespace Event {
 
     class Scheduler;
-    class ManangedCallbackTimer;
+    class ManagedCallbackTimer;
     class CallbackTimer;
 
     class Timer {
@@ -54,12 +54,12 @@ namespace Event {
 
     private:
         friend CallbackTimer;
-        friend ManangedCallbackTimer;
+        friend ManagedCallbackTimer;
         friend Scheduler;
 
         bool _isActive() const;
 
-        ManangedCallbackTimer _managedTimer;
+        ManagedCallbackTimer _managedTimer;
     };
 
     inline Timer::Timer() : _managedTimer()
@@ -82,7 +82,7 @@ namespace Event {
 
     inline Timer &Timer::operator=(CallbackTimerPtr callbackTimer)
     {
-        _managedTimer = ManangedCallbackTimer(callbackTimer, this);
+        _managedTimer = ManagedCallbackTimer(callbackTimer, this);
         return *this;
     }
 

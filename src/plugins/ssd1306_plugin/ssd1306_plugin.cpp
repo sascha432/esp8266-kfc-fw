@@ -278,7 +278,9 @@ public:
     virtual bool hasAtMode() const override {
         return true;
     }
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+    #if AT_MODE_HELP_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+    #endif
     virtual bool atModeHandler(AtModeArgs &args) override;
 
 };
@@ -304,9 +306,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDW, "SSDW", "<line1[,line2,...]>", "Disp
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDRF, "SSDRF", "<filename>", "Read font from FS");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SSDDF, "SSDDF", "<url>", "Download font");
 
-void SSD1306Plugin::atModeHelpGenerator()
-{
-    auto name = getName_P();
+#if AT_MODE_HELP_SUPPORTED
 
 ATModeCommandHelpArrayPtr SSD1306Plugin::atModeCommandHelp(size_t &size) const
 {
@@ -320,6 +320,8 @@ ATModeCommandHelpArrayPtr SSD1306Plugin::atModeCommandHelp(size_t &size) const
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool SSD1306Plugin::atModeHandler(AtModeArgs &args)
 {

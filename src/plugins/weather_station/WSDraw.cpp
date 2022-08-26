@@ -4,6 +4,7 @@
 
 #include <Arduino_compat.h>
 #include <LoopFunctions.h>
+#include <stl_ext/memory.h>
 #include <GFXCanvasConfig.h>
 #include <locale.h>
 #if DEBUG_GFXCANVAS_STATS
@@ -96,7 +97,6 @@ namespace WSDraw {
         _scrollCanvas(nullptr),
         _textFont(nullptr),
         _lastTime(0),
-        _pictureUpdateTimer(0),
         _scrollPosition(0),
         _currentScreen(ScreenType::MAIN),
         _redrawFlag(false),
@@ -111,32 +111,8 @@ namespace WSDraw {
         // _displayMessageTimer.remove();
         lock();
         ScrollCanvas::destroy(this);
-        if (_canvas) {
-            delete _canvas;
-            _canvas = nullptr;
-        }
-        if (_tftOverlayCanvas) {
-            delete _tftOverlayCanvas;
-            _tftOverlayCanvas = nullptr;
-        }
-    }
-
-    void Base::drawText(const String &text, const GFXfont *font, uint16_t color, bool clear)
-    {
-        if (!isLocked()) {
-            _drawText(text, font, color, clear);
-        }
-        else {
-            ScrollCanvas::destroy(this);
-
-            _tft.setTextColor(color);
-            _tft.setFont(font);
-            if (clear) {
-                _tft.fillScreen(COLORS_BACKGROUND);
-            }
-            // DisplayType::Position_t pos;
-            _tft.drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, DisplayType::CENTER, DisplayType::MIDDLE); //, &pos);
-        }
+        stdex::reset(_canvas);
+        stdex::reset(_tftOverlayCanvas);
     }
 
     void Base::_drawSunAndMoon()
@@ -551,69 +527,18 @@ namespace WSDraw {
 
     void Base::_drawScreenPictures()
     {
-        if (!_pictureUpdateTimer || millis() - _pictureUpdateTimer > WeatherStation::getConfig().gallery_update_rate * 1000UL) {
-            _pictureUpdateTimer = millis();
-
-            File currentPicture;
-            {
-                uint32_t count = 0;
-                auto dir = KFCFS_openDir(String(F("/WsGallery")).c_str());
-                while(dir.next()) {
-                    if (dir.isFile() && dir.fileName().endsWithIgnoreCase(F(".jpg"))) {
-                        count++;
-                    }
-                }
-
-                String fullName;
-                uint32_t attempts = 5; // try 5 times to avoid getting the same 5 images in a row...
-                while(attempts--) {
-
-                    srand(micros() + _pictureUpdateTimer);
-                    auto num = rand() % count;
-
-                    dir.rewind();
-                    while(dir.next()) {
-                        if (dir.isFile() && dir.fileName().endsWithIgnoreCase(F(".jpg"))) {
-                            if (num-- == 0) {
-                                currentPicture = dir.openFile(fs::FileOpenMode::read);
-                                fullName = currentPicture.fullName();
-                                break;
-                            }
-                        }
-                    }
-
-                    if (std::find(_galleryImages.begin(), _galleryImages.end(), fullName) == _galleryImages.end()) {
-                        break;
-                    }
-
-                    optimistic_yield(10000);
-                }
-
-                _galleryImages.emplace_back(fullName);
-                if (_galleryImages.size() > 5) {
-                    _galleryImages.erase(_galleryImages.begin());
-                }
-
-            }
-
-            if (!currentPicture) {
-                drawText(F("No Jpeg files available in directory /WsGallery"), FONTS_DEFAULT_SMALL, COLORS_DEFAULT_TEXT, true);
-                return;
-            }
-
-            _drawJpegPicture(currentPicture, _tft.height());
-
+        if (_galleryFile) {
+            _galleryFile.seek(0);
+            _drawJpegPicture(_galleryFile, _tft.height());
         }
-        else if (!_galleryImages.empty()) {
-
-            _drawJpegPicture(LittleFS.open(_galleryImages.back(), fs::FileOpenMode::read), 35);
-        }
-
     }
 
     void Base::_updateScreenPictures()
     {
-        _drawScreenPictures();
+        if (_galleryFile) {
+            _galleryFile.seek(0);
+            _drawJpegPicture(_galleryFile, 35);
+        }
     }
 
 
@@ -744,16 +669,21 @@ namespace WSDraw {
     void Base::_drawText(const String &text, const GFXfont *font, uint16_t color, bool clear)
     {
         ScrollCanvas::destroy(this);
-        _canvas->fillScreen(COLORS_BACKGROUND);
+        if (clear) {
+            _canvas->fillScreen(COLORS_BACKGROUND);
+        }
         _canvas->setTextColor(color);
         _canvas->setFont(font);
         GFXCanvasCompressed::Position_t pos;
         if (clear) {
-            _canvas->drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, GFXCanvasCompressed::CENTER, GFXCanvasCompressed::MIDDLE, &pos);
-            _displayScreen(0, 0, TFT_WIDTH, TFT_HEIGHT);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, GFXCanvasCompressed::CENTER, GFXCanvasCompressed::MIDDLE);
+            pos.y = 0;
+            pos.h = TFT_HEIGHT;
         }
         else {
             _canvas->drawTextAligned(TFT_WIDTH / 2, TFT_HEIGHT / 2, text, GFXCanvasCompressed::CENTER, GFXCanvasCompressed::MIDDLE, &pos);
+        }
+        if (!isLocked()) {
             _displayScreen(0, pos.y, TFT_WIDTH, pos.h);
         }
     }
@@ -808,14 +738,6 @@ namespace WSDraw {
                 case ScreenType::TEXT_CLEAR:
                 case ScreenType::TEXT_UPDATE:
                     _drawText(_text, _textFont, COLORS_DEFAULT_TEXT, true);
-                    // _Scheduler.add(100, true, [this](Event::CallbackTimerPtr timer) {
-                    //     if (_currentScreen != ScreenType::TEXT) {
-                    //         timer->disarm();
-                    //     }
-                    //     else {
-                    //         _drawText(_text, _textFont, COLORS_DEFAULT_TEXT);
-                    //     }
-                    // });
                     _currentScreen = ScreenType::TEXT;
                     break;
                 case ScreenType::TEXT:
@@ -920,7 +842,7 @@ namespace WSDraw {
         return WeatherStationBase::_getInstance()._tftOutput(x, y, w, h, bitmap);
     }
 
-    bool Base::_tftOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
+    bool Base::_tftOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap)
     {
         if (y >= _tftOutputMaxHeight) {
             return false;
@@ -981,10 +903,7 @@ namespace WSDraw {
             }
             TJpgDecPtr->drawFsJpg(0, 0, filename);
             delete TJpgDecPtr;
-            if (_tftOverlayCanvas) {
-                delete _tftOverlayCanvas;
-                _tftOverlayCanvas = nullptr;
-            }
+            stdex::reset(_tftOverlayCanvas);
         }
         else {
             __DBG_printf("out of memory");

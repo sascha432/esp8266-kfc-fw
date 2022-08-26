@@ -227,3 +227,8 @@
 .xs-font {
     font-size: 0.65rem;
 }
+
+
+.container.picture-gallery .col {
+    padding: 1rem;
+}

@@ -280,6 +280,8 @@ void SensorPlugin::getStatus(Print &output)
 
 #include "at_mode.h"
 
+#if AT_MODE_HELP_SUPPORTED
+
 void SensorPlugin::atModeHelpGenerator()
 {
     if (isEnabled() && !_sensors.empty()) {
@@ -294,6 +296,8 @@ void SensorPlugin::atModeHelpGenerator()
         }
     }
 }
+
+#endif
 
 bool SensorPlugin::atModeHandler(AtModeArgs &args)
 {

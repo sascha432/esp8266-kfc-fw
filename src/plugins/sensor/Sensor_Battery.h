@@ -269,7 +269,9 @@ public:
     static float calcLipoCapacity(float voltage, uint8_t cells = 1, bool charging = false, float precision = 1.0);
 
     #if AT_MODE_SUPPORTED && (IOT_SENSOR_BATTERY_DISPLAY_LEVEL || IOT_SENSOR_HAVE_BATTERY_RECORDER)
-        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+        #if AT_MODE_HELP_SUPPORTED
+            virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+        #endif
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif
 

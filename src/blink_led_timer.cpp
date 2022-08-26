@@ -4,6 +4,7 @@
 
 #include "blink_led_timer.h"
 #include "kfc_fw_config.h"
+#include <stl_ext/memory.h>
 
 #if DEBUG_BLINK_LED_TIMER
 #    include "debug_helper_enable.h"
@@ -46,9 +47,7 @@ void BlinkLEDTimer::setPattern(uint8_t pin, uint16_t delay, Bitset &&pattern)
         __LDBG_printf("pin=%u valid=%u led_global_off=%u", pin, isPinValid(pin), System::Device::getConfig().getStatusLedMode() == System::Device::StatusLEDModeType::OFF);
         return;
     }
-    if (!ledTimer) {
-        ledTimer = new BlinkLEDTimer();
-    }
+    stdex::reset(ledTimer, new BlinkLEDTimer());
     ledTimer->set(delay, pin, std::move(pattern));
 }
 
@@ -93,9 +92,7 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
     if (ledTimer) {
         __LDBG_printf("removing timer pin=%u", ledTimer->_pin);
         _oldPin = ledTimer->_pin;
-        __ASSERT_PTR(ledTimer);
-        delete ledTimer;
-        ledTimer = nullptr;
+        stdex::reset(ledTimer);
     }
 
     #if BUILTIN_LED_NEOPIXEL
@@ -107,6 +104,12 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
             }
             else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOLID) {
                 timer->solid(color == -1 ? 0x001500 : color);  // green
+            }
+            else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::FLICKER) {
+                timer->solid(color == -1 ? 0x050500 : color);  // yellow
+            }
+            else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SLOW) {
+                timer->solid(color == -1 ? 0x500000 : color);  // red
             }
             else {
                 Bitset pattern;
@@ -122,7 +125,7 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
                 }
                 timer->set(delay, pin, pattern);
             }
-            ledTimer = timer;
+            stdex::reset(ledTimer, timer);
             __LDBG_printf("pin=%u NeoPixel active color=%06x", pin, timer->getColor());
             return;
         }

@@ -41,6 +41,8 @@ struct ATModeCommandHelp_t {
     PGM_P commandPrefix;
 };
 
+#if AT_MODE_HELP_SUPPORTED
+
 class ATModeCommandHelpData {
 public:
     ATModeCommandHelpData(PGM_P command, PGM_P arguments, PGM_P help) : _data({command, arguments, help, nullptr, nullptr})  {}
@@ -74,7 +76,11 @@ private:
     PGM_P _name;
 };
 
-#    define PROGMEM_AT_MODE_HELP_COMMAND(name) &_at_mode_progmem_command_help_t_##name
+void at_mode_add_help(const ATModeCommandHelp *help);
+void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName);
+void at_mode_print_command_string(Stream &output, char separator);
+
+#    define PROGMEM_AT_MODE_HELP_COMMAND(name) &_at_mode_progmem_command_help_command_##name
 #    define PROGMEM_AT_MODE_HELP_ARGS(name)    _at_mode_progmem_command_help_arguments_##name##[1]
 
 #    undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
@@ -142,16 +148,30 @@ private:
             _at_mode_progmem_command_help_help_##name,                                                                     \
             _at_mode_progmem_command_help_help_query_mode_##name,                                                          \
             (_at_mode_progmem_command_help_prefix_##name)                                                                  \
-        };
+        }
+#else
+
+#    define PROGMEM_AT_MODE_HELP_COMMAND(name) FPSTR(_at_mode_progmem_command_help_command_##name)
+#    define PROGMEM_AT_MODE_HELP_ARGS(name)    _at_mode_progmem_command_help_command_##name
+
+#    undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
+#    define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX ""
+
+
+#    define PROGMEM_AT_MODE_HELP_COMMAND_DEF(name, command, arguments, help, qhelp)                                         \
+        static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command };
+#    define PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(name, help, qhelp)
+#    define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(name, command, arguments, help)                                           \
+        static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command };
+#    define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(name, command, help)                                                      \
+        static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command };
+#    define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(name, command, help, qhelp)                                               \
+        static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command };
+
+#endif
 
 bool at_mode_enabled();
 void at_mode_setup();
-void at_mode_add_help(const ATModeCommandHelp *help);
-void at_mode_add_help(const ATModeCommandHelp_t *help, PGM_P pluginName);
-void serial_handle_event(String command);
-void at_mode_print_command_string(Stream &output, char separator);
-void at_mode_serial_input_handler(Stream &client);
-void at_mode_print_invalid_arguments(Stream &output, uint16_t num = 0, uint16_t min = ~0, uint16_t max = ~0);
 void at_mode_print_prefix(Stream &output, const __FlashStringHelper *command);
 void at_mode_print_prefix(Stream &output, const char *command);
 inline void at_mode_print_prefix(Stream &output, const String &command) {
@@ -159,6 +179,9 @@ inline void at_mode_print_prefix(Stream &output, const String &command) {
 }
 void enable_at_mode(Stream *output);
 void disable_at_mode(Stream *output);
+void serial_handle_event(String command);
+void at_mode_serial_input_handler(Stream &client);
+void at_mode_print_invalid_arguments(Stream &output, uint16_t num = 0, uint16_t min = ~0, uint16_t max = ~0);
 
 using AtModeResolveACallback = std::function<void(const String &name)>;
 
@@ -359,7 +382,9 @@ public:
     void setCommand(const char *command);
     String &getCommand();
     const String &getCommand() const;
-    bool isCommand(const ATModeCommandHelp_t *help) const;
+    #if AT_MODE_HELP_SUPPORTED
+        bool isCommand(const ATModeCommandHelp_t *help) const;
+    #endif
     bool isCommand(const __FlashStringHelper *command) const;
 
     // deprecated

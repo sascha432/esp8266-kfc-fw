@@ -20,6 +20,8 @@ using KFCConfigurationClasses::System;
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NOW, "NOW", "<update>", "Display current time or update NTP");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(TZ, "TZ", "<timezone>", "Set timezone", "Show timezone information");
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr NTPPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -29,6 +31,8 @@ ATModeCommandHelpArrayPtr NTPPlugin::atModeCommandHelp(size_t &size) const
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool NTPPlugin::atModeHandler(AtModeArgs &args)
 {

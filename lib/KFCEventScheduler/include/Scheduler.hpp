@@ -51,7 +51,7 @@ namespace Event {
         }
         else {
             auto callbackTimer = __Scheduler._add(name, intervalMillis, repeat, callback, priority);
-            _managedTimer = ManangedCallbackTimer(callbackTimer, this);
+            _managedTimer = ManagedCallbackTimer(callbackTimer, this);
         }
     }
 
@@ -133,7 +133,7 @@ namespace Event {
 
 namespace Event {
 
-    inline void ManangedCallbackTimer::clear()
+    inline void ManagedCallbackTimer::clear()
     {
         __LDBG_printf("_callbackTimer=%p _timer=%p _managedTimer=%p this=%p _managedTimer._callbackTimer=%p",
             _callbackTimer,
@@ -151,7 +151,7 @@ namespace Event {
         }
     }
 
-    inline bool ManangedCallbackTimer::remove()
+    inline bool ManagedCallbackTimer::remove()
     {
         __LDBG_printf("_callbackTimer=%p _timer=%p _managedTimer=%d _managedTimer._callbackTimer=%p",
             _callbackTimer,

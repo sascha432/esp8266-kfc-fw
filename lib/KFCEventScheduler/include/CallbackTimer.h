@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <Arduino_compat.h>
 #include "Event.h"
 #include "OSTimer.h"
+#include <Arduino_compat.h>
 
 #if DEBUG_EVENT_SCHEDULER
 #    include <debug_helper_enable.h>
@@ -23,17 +23,16 @@ namespace Event {
 
     class Scheduler;
     class Timer;
-    class ManangedCallbackTimer;
+    class ManagedCallbackTimer;
 
     class CallbackTimer {
     public:
-
         CallbackTimer(const char *name, Callback callback, int64_t delay, RepeatType repeat, PriorityType priority);
+
     private:
         ~CallbackTimer();
 
     public:
-
         bool isArmed() const;
         int64_t getInterval() const;
 
@@ -61,7 +60,7 @@ namespace Event {
 
     private:
         friend Timer;
-        friend ManangedCallbackTimer;
+        friend ManagedCallbackTimer;
         friend Scheduler;
 
         void _rearm();
@@ -80,24 +79,27 @@ namespace Event {
         Callback _callback;
         Timer *_timer;
         int64_t _delay;
-        #if SCHEDULER_HAVE_REMAINING_DELAY
-            uint32_t _remainingDelay;
-        #endif
+#if SCHEDULER_HAVE_REMAINING_DELAY
+        uint32_t _remainingDelay;
+#endif
         RepeatType _repeat;
         PriorityType _priority;
-        #if SCHEDULER_HAVE_REMAINING_DELAY
-            bool _maxDelayExceeded;
-        #endif
+#if SCHEDULER_HAVE_REMAINING_DELAY
+        bool _maxDelayExceeded;
+#endif
         bool _callbackScheduled;
         bool _insideCallback;
 
-        #if DEBUG_EVENT_SCHEDULER
-            uint32_t _line;
-            const char *_file;
-            String __getFilePos();
-        #else
-            String __getFilePos() { return emptyString; }
-        #endif
+#if DEBUG_EVENT_SCHEDULER
+        uint32_t _line;
+        const char *_file;
+        String __getFilePos();
+#else
+        String __getFilePos()
+        {
+            return emptyString;
+        }
+#endif
     };
 
     static constexpr auto CallbackTimerSize = sizeof(CallbackTimer);
@@ -134,11 +136,11 @@ namespace Event {
 
     inline int64_t CallbackTimer::__getRemainingDelayMillis() const
     {
-        #if SCHEDULER_HAVE_REMAINING_DELAY
-            return (_remainingDelay == 0) ? 0 : ((_remainingDelay == 1) ? (_delay % kMaxDelay) : ((_remainingDelay - 1) * static_cast<int64_t>(kMaxDelay)));
-        #else
-            return _delay;
-        #endif
+#if SCHEDULER_HAVE_REMAINING_DELAY
+        return (_remainingDelay == 0) ? 0 : ((_remainingDelay == 1) ? (_delay % kMaxDelay) : ((_remainingDelay - 1) * static_cast<int64_t>(kMaxDelay)));
+#else
+        return _delay;
+#endif
     }
 
     inline void CallbackTimer::rearm(int64_t delay, RepeatType repeat, Callback callback)
@@ -179,17 +181,17 @@ namespace Event {
         if (isArmed()) {
             _etsTimer.disarm();
         }
-        #if SCHEDULER_HAVE_REMAINING_DELAY
-            _remainingDelay = 0;
-            _maxDelayExceeded = false;
-        #endif
+#if SCHEDULER_HAVE_REMAINING_DELAY
+        _remainingDelay = 0;
+        _maxDelayExceeded = false;
+#endif
         _callbackScheduled = false;
     }
 
 }
 
 #if DEBUG_EVENT_SCHEDULER
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #ifndef _MSC_VER

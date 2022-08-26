@@ -64,6 +64,22 @@ namespace STL_STD_EXT_NAMESPACE_EX {
     // auto iterator = std::find_if(_timers.begin(), _timers.end(), stdex::compare_unique_ptr(timer));
 
     template <typename _Ta>
+    void reset(_Ta &object) {
+        if (object) {
+            delete object;
+            object = nullptr;
+        }
+    }
+
+    template <typename _Ta, typename _Tb>
+    void reset(_Ta &object, const _Tb &new_object) {
+        if (object) {
+            delete object;
+        }
+        object = new_object;
+    }
+
+    template <typename _Ta>
     class compare_unique_ptr_function : public non_std::unary_function<_Ta, bool>
     {
     protected:

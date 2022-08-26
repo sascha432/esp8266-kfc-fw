@@ -89,7 +89,7 @@ bool PluginComponents::Dependencies::dependsOn(NameType name, DependencyCallback
             Dependency(name, callback, source).invoke(plugin);
         }
         else {
-            // create delayed dendency
+            // create delayed dependency
             __LDBG_printf("dependency callback type=delayed name=%s source=%s", (PGM_P)name, source->getName_P());
             _dependencies.emplace_back(name, callback, source);
         }

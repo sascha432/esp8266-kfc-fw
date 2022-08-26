@@ -26,7 +26,9 @@ public:
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+    #if AT_MODE_HELP_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+    #endif
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 

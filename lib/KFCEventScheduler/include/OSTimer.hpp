@@ -31,6 +31,7 @@ inline __attribute__((__always_inline__)) OSTimer::
 
 inline OSTimer::~OSTimer()
 {
+    detach();
     MUTEX_LOCK_BLOCK(_lock) {
         _etsTimer.done();
     }

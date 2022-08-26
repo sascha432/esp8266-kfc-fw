@@ -21,7 +21,9 @@ void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len)
     #if AT_MODE_SUPPORTED
         StreamString commands;
         commands.print(F("+ATMODE_CMDS_HTTP2SERIAL="));
-        at_mode_print_command_string(commands, '\t');
+        #if AT_MODE_HELP_SUPPORTED
+            at_mode_print_command_string(commands, '\t');
+        #endif
         getClient()->text(commands);
     #endif
     if (resetDetector.hasCrashDetected()) {

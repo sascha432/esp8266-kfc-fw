@@ -137,7 +137,7 @@ bool PluginComponent::getValue(const String &id, String &value, bool &state)
     return false;
 }
 
-#if AT_MODE_SUPPORTED
+#if AT_MODE_HELP_SUPPORTED
 
 ATModeCommandHelpArrayPtr PluginComponent::atModeCommandHelp(size_t &size) const
 {
@@ -158,13 +158,13 @@ void PluginComponent::atModeHelpGenerator()
     }
 }
 
+#endif
+
 bool PluginComponent::atModeHandler(AtModeArgs &args)
 {
     __DBG_panic_pure_virtual();
     return false;
 }
-
-#endif
 
 PluginComponent *PluginComponent::getForm(const String &name)
 {

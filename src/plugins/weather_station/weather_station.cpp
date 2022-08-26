@@ -58,7 +58,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     PluginComponent::PriorityType::WEATHER_STATION,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
-    true,              // allow_safe_mode
+    false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
     true,               // has_get_status
     true,               // has_config_forms
@@ -77,6 +77,11 @@ WeatherStationPlugin::WeatherStationPlugin() :
     #endif
 {
     REGISTER_PLUGIN(this, "WeatherStationPlugin");
+    #if defined(E8266) && __LED_BUILTIN_WS2812_PIN != 16
+        // the WS2812 were connected to port 16, but since framework 3.0.0 GPIO16 cannot be used anymore
+        digitalWrite(16, LOW);
+        pinMode(16, INPUT);
+    #endif
 }
 
 #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
@@ -222,13 +227,6 @@ void WeatherStationPlugin::_readConfig()
 
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-
-    if (mode == SetupModeType::SAFE_MODE) {
-        _setBacklightLevel(PWMRANGE);
-        drawText(F("SAFE MODE"), FONTS_DEFAULT_BIG, COLORS_RED, true);
-        return;
-    }
-
     __LDBG_printf("setup");
     _readConfig();
 
@@ -256,9 +254,9 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         if (progressValue != progress) {
             if (progressValue == -1) {
                 _setBacklightLevel(PWMRANGE);
-                _currentScreen = ScreenType::TEXT_UPDATE;
+                _setScreen(ScreenType::TEXT);
             }
-            drawText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM, COLORS_DEFAULT_TEXT, true);
+            _drawText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM, COLORS_DEFAULT_TEXT, true);
             progressValue = progress;
         }
     });
@@ -292,17 +290,6 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                     return true;
                 }
             #endif
-            // if (event.isSwipeLeft() || event.isDoublePress()) {
-            //     _debug_println(F("left"));
-            //     _setScreen((_currentScreen + NUM_SCREENS - 1) % NUM_SCREENS);
-            // }
-            // else if (event.isSwipeRight() || event.isPress()) {
-            //     _debug_println(F("right"));
-            //     _setScreen((_currentScreen + 1) % NUM_SCREENS);
-            // }
-            // else {
-            //     return false;
-            // }
             this->_setScreen(_getNextScreen(_getCurrentScreen(), true));
             return true;
         });
@@ -338,28 +325,37 @@ void WeatherStationPlugin::reconfigure(const String &source)
 
 void WeatherStationPlugin::shutdown()
 {
-    __LDBG_printf("shutdown");
+    _setScreen(ScreenType::TEXT);
+
+    __DBG_printf("shutdown");
     _setBacklightLevel(PWMRANGE);
-    drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
+    __DBG_printf("shutdown 2");
+    _drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
+    __DBG_printf("shutdown 3");
     lock();
+    __DBG_printf("shutdown 4");
 
     #if IOT_ALARM_PLUGIN_ENABLED
         _resetAlarm();
+        __DBG_printf("shutdown 5");
         AlarmPlugin::setCallback(nullptr);
     #endif
     #if IOT_WEATHER_STATION_WS2812_NUM
+    __DBG_printf("shutdown 6");
         _Timer(_pixelTimer).remove();
     #endif
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
+        __DBG_printf("shutdown 7");
         _touchpad.end();
     #endif
+    __DBG_printf("shutdown 8");
     _Timer(_fadeTimer).remove();
+    __DBG_printf("shutdown 9");
     _Timer(_pollDataTimer).remove();
 
-    if (_canvas) {
-        delete _canvas;
-        _canvas = nullptr;
-    }
+    __DBG_printf("shutdown 10");
+    stdex::reset(_canvas);
+    __DBG_printf("shutdown 11");
     LoopFunctions::remove(loop);
 }
 
@@ -376,9 +372,7 @@ void WeatherStationPlugin::getStatus(Print &output)
 
 void WeatherStationPlugin::_init()
 {
-    _setBacklightLevel(0);
-
-    // __LDBG_printf("spi0 clk %u, spi1 clk %u", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
+    __DBG_printf("spi0 clk %u, spi1 clk %u", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
 
     #if ILI9341_DRIVER
         __LDBG_printf("cs=%d dc=%d rst=%d spi=%u", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY);
@@ -394,16 +388,17 @@ void WeatherStationPlugin::_init()
     #endif
     _tft.fillScreen(0);
     _tft.setRotation(0);
-    redraw();
 }
 
 void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F("Weather Station"), false));
     webUI.addRow(WebUINS::Slider(F("bl_br"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), 1023)));
-    if (_config.show_webui) {
-        webUI.addRow(WebUINS::Screen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas->width(), _canvas->height()));
-    }
+    #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
+        if (_config.show_webui) {
+            webUI.addRow(WebUINS::Screen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas->width(), _canvas->height()));
+        }
+    #endif
 }
 
 void WeatherStationPlugin::getValues(WebUINS::Events &array)

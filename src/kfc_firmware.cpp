@@ -174,6 +174,9 @@ void setup()
         Serial1.begin(KFC_DEBUG_USE_SERIAL1);
         static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
     #endif
+    #if BUILTIN_LED_NEOPIXEL
+        WS2812LEDTimer::init();
+    #endif
 
     #if ENABLE_DEEP_SLEEP
         DEBUG_BOOT_PRINT_POS();
@@ -228,10 +231,6 @@ void setup()
         Serial2Udp::initWiFi(F(CUSTOM_WIFI_SSID), F(CUSTOM_WIFI_PASSWORD), IPAddress(192, 168, 0, 3), 6577);
     #endif
 
-    #if BUILTIN_LED_NEOPIXEL
-        WS2812LEDTimer::init();
-    #endif
-
     #if HAVE_IOEXPANDER
         __LDBG_printf("IOExpander::config.begin() size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
         DEBUG_BOOT_PRINT_POS();
@@ -257,18 +256,8 @@ void setup()
             DEBUG_BOOT_PRINT_POS();
             resetDetector.disarmTimer();
             // delay boot if too many resets are detected
-            uint32_t start = millis();
-            delayTime *= 1000;
-            while(start - millis() < delayTime) {
-                for(auto i = 0; i < 3; i++) {
-                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
-                    delay(100);
-                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-                    delay(100);
-                }
-                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-                delay(400);
-            }
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
+            delay(delayTime * 1000U);
             DEBUG_BOOT_PRINT_POS();
             resetDetector.armTimer();
         }
@@ -355,18 +344,10 @@ void setup()
         if (resetDetector.hasResetDetected()) {
             DEBUG_BOOT_PRINT_POS();
             if (resetDetector.getResetCounter() >= KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT) {
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
                 KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
                 DEBUG_BOOT_PRINT_POS();
-                #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-                    for(uint8_t i = 0; i < (RESET_DETECTOR_TIMEOUT + 500) / (100 + 250); i++) {
-                        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOLID);
-                        delay(100);
-                        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-                        delay(250);
-                    }
-                #else
-                    delay(5000);
-                #endif
+                delay(5000);
                 DEBUG_BOOT_PRINT_POS();
                 config.restoreFactorySettings();
                 DEBUG_BOOT_PRINT_POS();

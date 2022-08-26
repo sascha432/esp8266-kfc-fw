@@ -476,6 +476,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCTAB, "BCTAB", "<from>,<to-voltage>[,<tru
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BREC, "BREC", "[<host=192.168.0.3>,<port=19523>,<type>]", "Enable sensor data recording");
 #endif
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr Sensor_Battery::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -490,6 +492,8 @@ ATModeCommandHelpArrayPtr Sensor_Battery::atModeCommandHelp(size_t &size) const
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool Sensor_Battery::atModeHandler(AtModeArgs &args)
 {

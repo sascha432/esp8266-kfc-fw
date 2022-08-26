@@ -7,9 +7,10 @@
 #include <Arduino_compat.h>
 #include <OSTimer.h>
 #include <dyn_bitset.h>
+#include <stl_ext/memory.h>
 
 #ifndef DEBUG_BLINK_LED_TIMER
-#    define DEBUG_BLINK_LED_TIMER 1
+#    define DEBUG_BLINK_LED_TIMER 0
 #endif
 
 #if DEBUG_BLINK_LED_TIMER
@@ -26,12 +27,6 @@
 #    define BUILTIN_LED_NEOPIXEL 1
 #else
 #    define BUILTIN_LED_NEOPIXEL 0
-#endif
-
-// if set to 1, any color operation tries to run show()
-// otherwise this done in the main loop
-#ifndef BLINK_LED_WS212_UPDATE_IN_TIMER
-#    define BLINK_LED_WS212_UPDATE_IN_TIMER 0
 #endif
 
 #if INVERT_BUILTIN_LED
@@ -162,18 +157,22 @@ extern BlinkLEDTimer *ledTimer;
     public:
         WS2812LEDTimer();
 
+        // turn off or set a solid color
         void off();
         void solid(uint32_t color);
+
+        //
         void set(uint32_t delay, uint8_t pin, Bitset &pattern);
+
+        // color for blinking mode
         void setColor(uint32_t color);
         uint32_t getColor() const;
+        void show();
 
         virtual void run() override;
         virtual void detach() override;
 
         static void init();
-        static void loop();
-        static void forceShow();
         static void terminate();
 
     private:
@@ -198,24 +197,12 @@ extern BlinkLEDTimer *ledTimer;
              #else
                 FastLED.setDither(DISABLE_DITHER);
              #endif
+            FastLED.clear(true);
         #else
             __LDBG_printf("init NeoPixelEx");
             _pixels.begin();
+            _pixels.off();
         #endif
-        #if !BLINK_LED_WS212_UPDATE_IN_TIMER
-            __LDBG_print("adding led loop");
-            LoopFunctions::add(loop);
-        #endif
-
-        __LDBG_print("initialzing LEDs and turning them off");
-        WS2812LEDTimer led;
-        led.off();
-        led.forceShow();
-    }
-
-    inline void WS2812LEDTimer::loop()
-    {
-        forceShow();
     }
 
     inline WS2812LEDTimer::WS2812LEDTimer() :
@@ -224,29 +211,10 @@ extern BlinkLEDTimer *ledTimer;
     {
     }
 
-    inline void WS2812LEDTimer::forceShow()
-    {
-        __LDBG_print("forceShow()");
-        #if HAVE_FASTLED
-            FastLED.show(255);
-        #else
-            _pixels.show();
-        #endif
-    }
-
     inline void WS2812LEDTimer::terminate()
     {
-        if (ledTimer) {
-            delete ledTimer;
-            ledTimer = nullptr;
-        }
-        #if HAVE_FASTLED
-            FastLED.clear(true);
-        #else
-            WS2812LEDTimer led;
-            led.off();
-            led.forceShow();
-        #endif
+        stdex::reset(ledTimer);
+        _pixels.off();
     }
 
     inline void WS2812LEDTimer::off()
@@ -254,7 +222,7 @@ extern BlinkLEDTimer *ledTimer;
         #if HAVE_FASTLED
             FastLED.clear(true);
         #else
-            solid(0);
+            _pixels.off();
         #endif
     }
 
@@ -265,6 +233,7 @@ extern BlinkLEDTimer *ledTimer;
         #else
             _pixels.fill(color);
         #endif
+        show();
     }
 
     inline void WS2812LEDTimer::set(uint32_t delay, uint8_t pin, Bitset &pattern)
@@ -272,6 +241,15 @@ extern BlinkLEDTimer *ledTimer;
         off();
         _pattern = pattern;
         startTimer(delay, true);
+    }
+
+    inline void WS2812LEDTimer::show()
+    {
+        #if HAVE_FASTLED
+            FastLED.show();
+        #else
+            _pixels.show();
+        #endif
     }
 
     inline void WS2812LEDTimer::setColor(uint32_t color)
@@ -292,12 +270,12 @@ extern BlinkLEDTimer *ledTimer;
         else {
             solid(_color);
         }
+        show();
     }
 
     inline void WS2812LEDTimer::detach()
     {
         off();
-        forceShow();
         OSTimer::detach();
     }
 

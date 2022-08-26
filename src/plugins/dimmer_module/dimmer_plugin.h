@@ -31,7 +31,9 @@ namespace Dimmer {
         ChannelsArray &getChannels();
 
         #if AT_MODE_SUPPORTED
-            virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+            #if AT_MODE_HELP_SUPPORTED
+                virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+            #endif
             virtual bool atModeHandler(AtModeArgs &args) override;
         #endif
     };
@@ -63,7 +65,8 @@ namespace Dimmer {
         Module::setup();
     }
 
-    #if AT_MODE_SUPPORTED
+    #if AT_MODE_HELP_SUPPORTED
+
         inline ATModeCommandHelpArrayPtr Plugin::atModeCommandHelp(size_t &size) const
         {
             return Base::atModeCommandHelp(size);
@@ -73,6 +76,7 @@ namespace Dimmer {
         {
             return Base::atModeHandler(args, *this, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
         }
+
     #endif
 
     extern Plugin dimmer_plugin;

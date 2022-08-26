@@ -34,6 +34,7 @@
 #include <NeoPixelEx.h>
 #include <IOExpander.h>
 #include "../src/plugins/plugins.h"
+#include <stl_ext/memory.h>
 
 #if ESP8266
 #    include <umm_malloc/umm_malloc.h>
@@ -140,6 +141,7 @@ void scanPorts(Print &output, uint8_t startAddress, uint8_t endAddress)
 
 #endif
 
+#if AT_MODE_HELP_SUPPORTED
 
 typedef std::vector<ATModeCommandHelp> ATModeHelpVector;
 
@@ -318,6 +320,8 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
     }
 }
 
+#endif
+
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HELP, "HELP", "[single][,word][,or entire phrase]", "Search help");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]", "Enter deep sleep");
@@ -429,6 +433,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CRQ, "I2CRQ", "<address>,<length>", "Req
 #if ENABLE_ARDUINO_OTA
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(AOTA, "AOTA", "<start|stop>", "Start/stop Arduino OTA");
 #endif
+
+#if AT_MODE_HELP_SUPPORTED
 
 void at_mode_help_commands()
 {
@@ -574,6 +580,7 @@ void at_mode_print_command_string(Stream &output, char separator)
     atModeCommandHelp = nullptr;
 }
 
+#endif
 
 class DisplayTimer;
 
@@ -593,10 +600,7 @@ public:
         _type(DisplayType::HEAP)
     {
         __DBG_assert_printf(displayTimer == nullptr, "displayTimer not null");
-        if (displayTimer) {
-            delete displayTimer;
-        }
-        displayTimer = this;
+        stdex::reset(displayTimer, this);
     }
     ~DisplayTimer() {
         if (this == displayTimer) {
@@ -653,7 +657,7 @@ public:
         Serial.printf_P(PSTR("+GPIO: "));
         #if defined(ESP8266)
             for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
-                if (i != 1 && !isFlashInterfacePin(i)) { // do not display TX and flash SPI
+                if (i == 10 || (i != 1 && !isFlashInterfacePin(i))) { // do not display TX and flash SPI
                     // pinMode(i, INPUT);
                     Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
                 }
@@ -842,7 +846,11 @@ void at_mode_dump_fs_info(Stream &output)
 
 void at_mode_print_help(Stream &output)
 {
-    output.println(F("AT? or AT+HELP=<command|text to find> for help"));
+    #if AT_MODE_HELP_SUPPORTED
+        output.println(F("AT? or AT+HELP=<command|text to find> for help"));
+    #else
+        output.println(F("try https://github.com/sascha432/esp8266-kfc-fw/blob/master/docs/AtModeHelp.md\n"));
+    #endif
     if (config.isSafeMode()) {
         output.println(F("SAFE MODE ENABLED"));
     }
@@ -1123,10 +1131,7 @@ AtModeADC *atModeADC;
 
 static void at_mode_adc_delete_object()
 {
-    if (atModeADC) {
-        delete atModeADC;
-        atModeADC = nullptr;
-    }
+    stdex::reset(atModeADC);
 }
 
 static void at_mode_adc_loop()
@@ -1373,11 +1378,15 @@ void at_mode_serial_handle_event(String &commandString)
         return;
     }
 
+    #if AT_MODE_HELP_SUPPORTED
+
     // check if help is requested
     if (commandString == '?' || commandString == 'h' || commandString == F("/?") || commandString == F("/help")) {
         at_mode_generate_help(output);
         return;
     }
+
+    #endif
 
     auto command = commandString.begin();
     // remove leading '+'
@@ -1459,15 +1468,19 @@ void at_mode_serial_handle_event(String &commandString)
     }
     else
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HELP))) {
-        String plugin;
-        StringVector findItems;
-        for(auto strPtr: args.getArgs()) {
-            String str = strPtr;
-            str.trim();
-            str.toLowerCase();
-            findItems.push_back(str);
-        }
-        at_mode_generate_help(output, &findItems);
+        #if AT_MODE_HELP_SUPPORTED
+            String plugin;
+            StringVector findItems;
+            for(auto strPtr: args.getArgs()) {
+                String str = strPtr;
+                str.trim();
+                str.toLowerCase();
+                findItems.push_back(str);
+            }
+            at_mode_generate_help(output, &findItems);
+        #else
+            at_mode_print_help(output);
+        #endif
     }
     #if ESP8266
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO))) {
@@ -1826,7 +1839,9 @@ void at_mode_serial_handle_event(String &commandString)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
         output.print(F("+CMDS="));
-        at_mode_print_command_string(output, ',');
+        #if AT_MODE_HELP_SUPPORTED
+            at_mode_print_command_string(output, ',');
+        #endif
         output.println();
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOAD))) {

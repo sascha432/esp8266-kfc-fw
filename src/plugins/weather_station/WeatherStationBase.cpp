@@ -263,6 +263,15 @@ void WeatherStationBase::_loop()
 
 void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
 {
+    switch(_currentScreen) {
+        case ScreenType::PICTURES:
+            _Timer(_galleryTimer).remove();
+            _galleryFile.close();
+            break;
+        default:
+            break;
+    }
+
     // verify if screen is valid
     _currentScreen = _getScreen(screen, true);
     auto n = static_cast<uint8_t>(_currentScreen);
@@ -273,7 +282,18 @@ void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
     _toggleScreenTimer = millis();
     _toggleScreenTimeout = 0;
 
-    _resetPictureGalleryTimer();
+    switch(_currentScreen) {
+        case ScreenType::PICTURES:
+            _resetPictureGalleryTimer();
+            if (_pickGalleryPicture()) {
+                redraw();
+            } else {
+                _setScreen(ScreenType::TEXT);
+            }
+            break;
+        default:
+            break;
+    }
 
     if (_currentScreen < ScreenType::NUM_SCREENS) {
         if (timeout == -1) {

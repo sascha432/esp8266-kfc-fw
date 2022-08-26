@@ -34,6 +34,7 @@ public:
         auto subMenu = configMenu.addSubMenu(getFriendlyName());
         subMenu.addMenuItem(getFriendlyName(), F("weather.html"));
         subMenu.addMenuItem(F("World Clock"), F("world-clock.html"));
+        subMenu.addMenuItem(F("Gallery Pictures"), F("gallery-pictures.html"));
     }
 
 // WebUI
@@ -44,7 +45,9 @@ public:
 
 public:
     #if AT_MODE_SUPPORTED
-        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        #if AT_MODE_HELP_SUPPORTED
+            virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        #endif
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif
 

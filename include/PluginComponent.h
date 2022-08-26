@@ -225,7 +225,9 @@ namespace PluginComponents {
 
 class PluginComponentAtModeHelpInterface {
 public:
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const = 0;
+    #if AT_MODE_HELP_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const = 0;
+    #endif
 };
 
 class PluginComponent : public PluginComponents::Component, public PluginComponentAtModeHelpInterface {
@@ -444,11 +446,12 @@ public:
     virtual bool getValue(const String &id, String &value, bool &state);
 
 #if AT_MODE_SUPPORTED
-    // returns array ATModeCommandHelp_t[size] or nullptr for no help
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+    #if AT_MODE_HELP_SUPPORTED
+        // returns array ATModeCommandHelp_t[size] or nullptr for no help
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+        virtual void atModeHelpGenerator();
+    #endif
     virtual bool atModeHandler(AtModeArgs &args);
-
-    virtual void atModeHelpGenerator();
 #endif
 
 public:

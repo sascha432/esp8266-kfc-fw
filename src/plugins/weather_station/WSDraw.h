@@ -19,12 +19,19 @@
 #include <OpenWeatherMapAPI.h>
 #include <EventScheduler.h>
 #include <stl_ext/fixed_circular_buffer.h>
+#include <stl_ext/memory.h>
 #include "fonts/fonts.h"
 #include "moon_phase.h"
-#include <queue>
+#include <vector>
 
 #ifndef _MSC_VER
 #include <kfc_fw_config.h>
+#endif
+
+#if DEBUG_IOT_WEATHER_STATION
+#include <debug_helper_enable.h>
+#else
+#include <debug_helper_disable.h>
 #endif
 
 #if _MSC_VER
@@ -132,10 +139,6 @@ namespace WSDraw {
     public:
         // safely redraw in next main loop
         void redraw();
-
-        //// can be called while the canvas is detached
-        //// without a canvas, it is using the TFT directly and clear is forced true
-        void drawText(const String &text, const GFXfont *font, uint16_t color, bool clear = false);
 
         //void displayMessage(const String &title, const String &message, uint16_t titleColor, uint16_t messageColor, uint32_t timeout) {
         //    if (isCanvasAttached()) {
@@ -278,6 +281,15 @@ namespace WSDraw {
         // clear/fill partial screen
         bool _clearPartially(int16_t y, int16_t endY, ColorType color = COLORS_BACKGROUND);
 
+        // find all images and pick a random one that wasn't with the last 5 files
+        bool _pickGalleryPicture();
+
+        using GalleryScannerCallback = std::function<bool (uint32_t count, fs::Dir &dir)>;
+
+        // scan directory and count all .jpg files
+        // if _scanCallback is set, it will be executed for each file
+        uint32_t _scanGalleryDirectory(GalleryScannerCallback _scanCallback);
+
     public:
         ScreenType _getScreen(ScreenType screen, bool allowZeroTimeout = false) const;
         ScreenType _getScreen(uint32_t screen, bool allowZeroTimeout = false) const;
@@ -353,7 +365,9 @@ namespace WSDraw {
 
         uint16_t _tftOutputMaxHeight;
         GFXcanvas1 *_tftOverlayCanvas;
+        Event::Timer _galleryTimer;
         std::vector<String> _galleryImages;
+        fs::File _galleryFile;
         ScrollCanvas *_scrollCanvas;
         OpenWeatherMapAPI _weatherApi;
         ConfigType _config;
@@ -362,7 +376,6 @@ namespace WSDraw {
         const GFXfont *_textFont;
         SemaphoreMutex _lock;
         time_t _lastTime;
-        uint32_t _pictureUpdateTimer;
         uint8_t _scrollPosition;
         ScreenType _currentScreen;
         volatile bool _redrawFlag;
@@ -395,10 +408,7 @@ namespace WSDraw {
         }
 
         static void destroy(Base *draw) {
-            if (draw->_scrollCanvas) {
-                delete draw->_scrollCanvas;
-                draw->_scrollCanvas = nullptr;
-            }
+            stdex::reset(draw->_scrollCanvas);
         }
 
     private:
@@ -484,7 +494,14 @@ namespace WSDraw {
 
     inline void Base::_resetPictureGalleryTimer()
     {
-        _pictureUpdateTimer = 0;
+        __DBG_printf("reset timer=%u", !!_galleryTimer);
+        using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
+
+        _Timer(_galleryTimer).add(Event::seconds(WeatherStation::getConfig().gallery_update_rate), true, [this](Event::CallbackTimerPtr timer) {
+            if (_pickGalleryPicture()) {
+                redraw();
+            }
+        });
     }
 
     inline bool Base::_isScreenValid(uint8_t screen, bool allowZeroTimeout) const
@@ -543,6 +560,76 @@ namespace WSDraw {
             }
         }
         return screen;
+    }
+
+    inline uint32_t Base::_scanGalleryDirectory(GalleryScannerCallback _scanCallback)
+    {
+        uint32_t count = 0;
+        auto dir = KFCFS_openDir(String(F("/WsGallery")).c_str());
+        while(dir.next()) {
+            if (dir.isFile() && dir.fileName().endsWithIgnoreCase(F(".jpg"))) {
+                if (_scanCallback && _scanCallback(count, dir)) {
+                    __DBG_printf("#%u _scanCallback=true file=%s", count, dir.fileName());
+                    break;
+                }
+                count++;
+            }
+        }
+        __DBG_printf("files=%u callback=%p", count, _scanCallback);
+        return count;
+    }
+
+    inline bool Base::_pickGalleryPicture()
+    {
+        bool found = false;
+        auto count = _scanGalleryDirectory(nullptr);
+        if (count) { // any files found?
+
+            auto minCount = std::min<uint32_t>(count - 1, 5);
+            __DBG_printf("minCount=%u _galleryImages=%u/%s", minCount, _galleryImages.size(), implode(',', _galleryImages).c_str());
+            if (minCount == 0) {
+                _galleryImages.clear();
+            }
+            else {
+                while(_galleryImages.size() > minCount) {
+                    _galleryImages.erase(_galleryImages.begin());
+                }
+                // _galleryImages.erase(_galleryImages.begin(), _galleryImages.end() - minCount);
+            }
+            __DBG_printf("_galleryImages.size=%u/%s", _galleryImages.size(), implode(',', _galleryImages).c_str());
+
+            uint32_t num = ESP.random() % count;
+            __DBG_printf("random=%u count=%u", num, count);
+            fs::Dir candidate;
+
+            _scanGalleryDirectory([num, &candidate, this](uint32_t count, fs::Dir &dir) {
+                bool notFound = std::find(_galleryImages.begin(), _galleryImages.end(), dir.fileName()) == _galleryImages.end();
+                __DBG_printf("file=%s notfound=%u num=%u count=%u", dir.fileName().c_str(), notFound, num, count);
+                if (notFound) {
+                    candidate = dir;
+                    if (num >= count) {
+                        candidate = dir;
+                        __DBG_printf("scab found=%s", candidate.fileName().c_str());
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+            if (candidate.isFile()) {
+                _galleryFile = candidate.openFile(fs::FileOpenMode::read);
+                if (_galleryFile.size()) {
+                    _galleryImages.emplace_back(_galleryFile.name());
+                    __DBG_printf("added to _galleryImages=%s/%u/%s", _galleryFile.name(), _galleryImages.size(), implode(',', _galleryImages).c_str());
+                    found = true;
+                }
+            }
+
+        }
+        if (!found) {
+            _drawText(F("No Jpeg files available in directory /WsGallery"), FONTS_DEFAULT_SMALL, COLORS_DEFAULT_TEXT, true);
+        }
+        return found;
     }
 
 }

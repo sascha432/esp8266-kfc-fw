@@ -390,6 +390,8 @@ void RemoteControlPlugin::createMenu()
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCDSLP, "RCDSLP", "[<time in seconds>]", "Set or disable auto sleep");
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr RemoteControlPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -398,6 +400,8 @@ ATModeCommandHelpArrayPtr RemoteControlPlugin::atModeCommandHelp(size_t &size) c
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 {

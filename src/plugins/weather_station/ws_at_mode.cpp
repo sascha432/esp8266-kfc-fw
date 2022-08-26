@@ -24,6 +24,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSU, "WSU", "<i|f>", "Update weather info/
     PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WSM, "WSM", "<date YYYY-MM-DD>[,<days>]", "Show Moon Phase for given Date");
 #endif
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr WeatherStationPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray PROGMEM tmp = {
@@ -37,6 +39,8 @@ ATModeCommandHelpArrayPtr WeatherStationPlugin::atModeCommandHelp(size_t &size) 
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
 {

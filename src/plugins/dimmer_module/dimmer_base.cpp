@@ -644,6 +644,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "G", "Get level(s)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "S", "<channel>,<level>[,<time>]", "Set level");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMCF, "CF", "<" DIMMER_COMMANDS ">", "Configure dimmer firmware");
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr Base::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -654,6 +656,8 @@ ATModeCommandHelpArrayPtr Base::atModeCommandHelp(size_t &size) const
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
 {

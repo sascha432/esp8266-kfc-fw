@@ -167,7 +167,9 @@ public:
     AddCustomSensorCallback &getAddCustomSensorsCallback();
 
     #if AT_MODE_SUPPORTED
-        virtual void atModeHelpGenerator() override;
+        #if AT_MODE_HELP_SUPPORTED
+            virtual void atModeHelpGenerator() override;
+        #endif
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif
 

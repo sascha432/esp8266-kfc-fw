@@ -61,6 +61,8 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Se
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/0x1e1234/...>", "Set signature (/stk500v1/atmega.csv)", "Display signature");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STK500V1L, "STK500V1L", "Dump debug log file (/stk500v1/debug.log)");
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr STK500v1Plugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -71,6 +73,8 @@ ATModeCommandHelpArrayPtr STK500v1Plugin::atModeCommandHelp(size_t &size) const
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
 

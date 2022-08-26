@@ -290,6 +290,8 @@ void Sensor_INA219::reconfigure(PGM_P source)
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SENSORINA219, "SENSORINA219", "<interval in ms>", "Print INA219 sensor data");
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr Sensor_INA219::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -298,6 +300,8 @@ ATModeCommandHelpArrayPtr Sensor_INA219::atModeCommandHelp(size_t &size) const
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool Sensor_INA219::atModeHandler(AtModeArgs &args)
 {

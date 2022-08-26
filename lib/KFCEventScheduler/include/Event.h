@@ -86,7 +86,7 @@
 // ! the object must not be deleted
 // ! disarm() must be called inside the timer callback
 //
-// Event::ManangedCallbackTimer links to Event::CallbackTimer and is used internally by Event::Timer
+// Event::ManagedCallbackTimer links to Event::CallbackTimer and is used internally by Event::Timer
 // to keep the Scheduler in-sync
 //
 // Event::Scheduler is a singleton that manages Event::*Timer objects. It can be used to add()
@@ -98,7 +98,7 @@ namespace Event {
     class Timer;
     class CallbackTimer;
     class Scheduler;
-    class ManangedCallbackTimer;
+    class ManagedCallbackTimer;
 
     #if ESP32
         using OSTimerDelayType = int64_t;

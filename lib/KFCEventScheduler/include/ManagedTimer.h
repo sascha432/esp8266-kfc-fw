@@ -22,21 +22,21 @@ namespace Event {
 
     class Timer;
 
-    class ManangedCallbackTimer {
+    class ManagedCallbackTimer {
     public:
         using TimerPtr = Timer *;
 
-        ManangedCallbackTimer(const ManangedCallbackTimer &) = delete;
-        ManangedCallbackTimer &operator=(const ManangedCallbackTimer &) = delete;
+        ManagedCallbackTimer(const ManagedCallbackTimer &) = delete;
+        ManagedCallbackTimer &operator=(const ManagedCallbackTimer &) = delete;
 
-        ManangedCallbackTimer();
-        ManangedCallbackTimer(CallbackTimerPtr callbackTimer, TimerPtr timer);
+        ManagedCallbackTimer();
+        ManagedCallbackTimer(CallbackTimerPtr callbackTimer, TimerPtr timer);
 
-        ManangedCallbackTimer &operator=(ManangedCallbackTimer &&move) noexcept;
+        ManagedCallbackTimer &operator=(ManagedCallbackTimer &&move) noexcept;
 
-        ManangedCallbackTimer(CallbackTimerPtr callbackTimer);
+        ManagedCallbackTimer(CallbackTimerPtr callbackTimer);
 
-        ~ManangedCallbackTimer();
+        ~ManagedCallbackTimer();
 
         operator bool() const;
 
@@ -50,15 +50,15 @@ namespace Event {
         CallbackTimerPtr _callbackTimer;
     };
 
-    inline ManangedCallbackTimer::ManangedCallbackTimer() : _callbackTimer(nullptr)
+    inline ManagedCallbackTimer::ManagedCallbackTimer() : _callbackTimer(nullptr)
     {
     }
 
-    inline ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer) : _callbackTimer(callbackTimer)
+    inline ManagedCallbackTimer::ManagedCallbackTimer(CallbackTimerPtr callbackTimer) : _callbackTimer(callbackTimer)
     {
     }
 
-    inline ManangedCallbackTimer::ManangedCallbackTimer(CallbackTimerPtr callbackTimer, TimerPtr timer) : _callbackTimer(callbackTimer)
+    inline ManagedCallbackTimer::ManagedCallbackTimer(CallbackTimerPtr callbackTimer, TimerPtr timer) : _callbackTimer(callbackTimer)
     {
         EVENT_SCHEDULER_ASSERT(callbackTimer != nullptr);
         __LDBG_printf("callback_timer=%p timer=%p _timer=%p", callbackTimer, timer, callbackTimer->_timer);
@@ -68,7 +68,7 @@ namespace Event {
         }
     }
 
-    inline ManangedCallbackTimer &ManangedCallbackTimer::operator=(ManangedCallbackTimer &&move) noexcept
+    inline ManagedCallbackTimer &ManagedCallbackTimer::operator=(ManagedCallbackTimer &&move) noexcept
     {
         EVENT_SCHEDULER_ASSERT(move._callbackTimer != nullptr);
         if (_callbackTimer) {
@@ -79,23 +79,23 @@ namespace Event {
         return *this;
     }
 
-    inline ManangedCallbackTimer::~ManangedCallbackTimer()
+    inline ManagedCallbackTimer::~ManagedCallbackTimer()
     {
         __LDBG_printf("this=%p callback_timer=%p timer=%p", this, _callbackTimer, _callbackTimer ? _callbackTimer->_timer : nullptr);
         remove();
     }
 
-    inline ManangedCallbackTimer::operator bool() const
+    inline ManagedCallbackTimer::operator bool() const
     {
         return _callbackTimer != nullptr;
     }
 
-    inline CallbackTimerPtr ManangedCallbackTimer::operator->() const noexcept
+    inline CallbackTimerPtr ManagedCallbackTimer::operator->() const noexcept
     {
         return _callbackTimer;
     }
 
-    inline CallbackTimerPtr ManangedCallbackTimer::get() const noexcept
+    inline CallbackTimerPtr ManagedCallbackTimer::get() const noexcept
     {
         return _callbackTimer;
     }

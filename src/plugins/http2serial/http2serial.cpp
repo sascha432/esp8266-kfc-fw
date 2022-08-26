@@ -141,7 +141,9 @@ public:
     }
 
     #if AT_MODE_SUPPORTED
-        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        #if AT_MODE_HELP_SUPPORTED
+            virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+        #endif
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif
 };
@@ -191,6 +193,8 @@ void Http2SerialPlugin::setup(SetupModeType mode, const PluginComponents::Depend
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port rate");
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr Http2SerialPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -199,6 +203,8 @@ ATModeCommandHelpArrayPtr Http2SerialPlugin::atModeCommandHelp(size_t &size) con
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
 {

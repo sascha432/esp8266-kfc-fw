@@ -57,7 +57,7 @@ namespace Event {
 #endif
         friend CallbackTimer;
         friend Timer;
-        friend ManangedCallbackTimer;
+        friend ManagedCallbackTimer;
 
         CallbackTimer *_add(const char *name, int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
         void _invokeCallback(CallbackTimerPtr timer, uint32_t runtimeLimit);

@@ -87,7 +87,9 @@ public:
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
 #if AT_MODE_SUPPORTED
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+    #if AT_MODE_HELP_SUPPORTED
+        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
+    #endif
     virtual bool atModeHandler(AtModeArgs &args) override;
 
 private:
@@ -314,6 +316,8 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PING, "PING", "<target[,count=4[,timeout=5000]]>", "Ping host or IP address");
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr PingMonitorPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -322,6 +326,8 @@ ATModeCommandHelpArrayPtr PingMonitorPlugin::atModeCommandHelp(size_t &size) con
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool PingMonitorPlugin::atModeHandler(AtModeArgs &args)
 {

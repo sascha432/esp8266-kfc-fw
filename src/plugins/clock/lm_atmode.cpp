@@ -41,6 +41,8 @@ void ClockPlugin::_removeDisplayLedTimer()
 
 #endif
 
+#if AT_MODE_HELP_SUPPORTED
+
 ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
@@ -55,6 +57,8 @@ ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
 }
+
+#endif
 
 bool ClockPlugin::atModeHandler(AtModeArgs &args)
 {

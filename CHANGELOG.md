@@ -2,6 +2,7 @@
 
 ## Version 0.0.6
 
+ - Fixed dependencies and removed ``lib-extra/``
  - Gallery picture display (jpeg) with overlay for the weather station
  - Fixes of the KFC OTA tool
  - Option to enable KFC OTA and/or ArduinoOTA

@@ -191,7 +191,7 @@ public:
         void setBubble(bool bubble);
         void addMovement();
 
-        void broadcastData(const Movement &movement);
+        // void broadcastData(const Movement &movement);
 
     private:
         friend WeatherStationPlugin;

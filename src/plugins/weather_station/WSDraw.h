@@ -494,7 +494,7 @@ namespace WSDraw {
 
     inline void Base::_resetPictureGalleryTimer()
     {
-        __DBG_printf("reset timer=%u", !!_galleryTimer);
+        __LDBG_printf("reset timer=%u", !!_galleryTimer);
         using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
 
         _Timer(_galleryTimer).add(Event::seconds(WeatherStation::getConfig().gallery_update_rate), true, [this](Event::CallbackTimerPtr timer) {

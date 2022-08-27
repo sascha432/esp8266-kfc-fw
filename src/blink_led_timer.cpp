@@ -111,6 +111,9 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
             else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SLOW) {
                 timer->solid(color == -1 ? 0x500000 : color);  // red
             }
+            else if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::MEDIUM) {
+                timer->solid(color == -1 ? 0x000050 : color);  // blue
+            }
             else {
                 Bitset pattern;
                 if (static_cast<BlinkLEDTimer::BlinkType>(delay) == BlinkLEDTimer::BlinkType::SOS) {

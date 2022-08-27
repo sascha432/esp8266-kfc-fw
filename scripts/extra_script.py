@@ -69,9 +69,13 @@ def modify_upload_command(source, target, env, fs=False):
         click.echo('protocol is not espota')
         return
 
-    m = re.match(r'(?P<username>[^:]+):(?P<password>[^@]+)@(?P<hostname>.+)', env.subst(env.GetProjectOption('upload_port')))
+    upload_port = env.subst(env.GetProjectOption('upload_port'))
+    m = re.match(r'(?P<username>[^:]+):(?P<password>[^@]+)@(?P<hostname>.+)', upload_port)
     if not m:
         click.echo('upload_port must be <username>:<password>@<hostname>')
+        aota = 'http://%s/start-arduino-ota' % upload_port
+        click.echo('running "curl -s %s"' % aota)
+        return_code = subprocess.run(['curl', '-s', aota], shell=True).returncode
         return
     device = m.groupdict()
 

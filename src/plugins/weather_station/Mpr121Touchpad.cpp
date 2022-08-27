@@ -207,41 +207,41 @@ void Mpr121Touchpad::Event::addMovement()
     if (_movements.size() < 100) {
         if (_type != EventType::NONE) {
             _movements.emplace_back(0, _position, static_cast<uint32_t>(_curEvent.time), _type);
-            broadcastData(_movements.back());
+            // broadcastData(_movements.back());
         }
     }
 }
 
-void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
-{
-    // auto wsSerialConsole = Http2Serial::getServerSocket();
-    if (Http2Serial::hasAuthenticatedClients) {
-        typedef struct {
-            WsClient::BinaryPacketType packetId;
-            int16_t x;
-            int16_t y;
-            int16_t px;
-            int16_t py;
-            uint32_t time;
-            EventType type;
-        } Packet_t;
-        Packet_t data = { WsClient::BinaryPacketType::TOUCHPAD_DATA, movement.getX(), movement.getY(), _predict.x, _predict.y, movement.getTime(), movement.getType() };
+// void Mpr121Touchpad::Event::broadcastData(const Movement &movement)
+// {
+//     // auto wsSerialConsole = Http2Serial::getServerSocket();
+//     if (Http2Serial::hasAuthenticatedClients) {
+//         typedef struct {
+//             WsClient::BinaryPacketType packetId;
+//             int16_t x;
+//             int16_t y;
+//             int16_t px;
+//             int16_t py;
+//             uint32_t time;
+//             EventType type;
+//         } Packet_t;
+//         Packet_t data = { WsClient::BinaryPacketType::TOUCHPAD_DATA, movement.getX(), movement.getY(), _predict.x, _predict.y, movement.getTime(), movement.getType() };
 
-        WsClient::foreach(Http2Serial::getServerSocket(), nullptr, [&data](AsyncWebSocketClient *client) {
-            if (client->canSend()) {
-                client->binary(reinterpret_cast<uint8_t *>(&data), sizeof(data));
-            }
-        });
+//         WsClient::foreach(Http2Serial::getServerSocket(), nullptr, [&data](AsyncWebSocketClient *client) {
+//             if (client->canSend()) {
+//                 client->binary(reinterpret_cast<uint8_t *>(&data), sizeof(data));
+//             }
+//         });
 
-        // for(auto client: wsSerialConsole->getClients()) {
-        //     if (client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                // if (client->canSend()) {
-                //     client->binary(reinterpret_cast<uint8_t *>(&data), sizeof(data));
-                // }
-        //     }
-        // }
-    }
-}
+//         // for(auto client: wsSerialConsole->getClients()) {
+//         //     if (client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
+//                 // if (client->canSend()) {
+//                 //     client->binary(reinterpret_cast<uint8_t *>(&data), sizeof(data));
+//                 // }
+//         //     }
+//         // }
+//     }
+// }
 
 void Mpr121Touchpad::Event::touched()
 {
@@ -280,7 +280,6 @@ void Mpr121Touchpad::Event::touched()
 
 void Mpr121Touchpad::Event::released()
 {
-    _debug_println();
     _type = EventType::RELEASED;
     _releasedTime = _curEvent.time;
     gestures();
@@ -315,7 +314,8 @@ void Mpr121Touchpad::Event::gestures()
                 }
                 _lastTap = _curEvent.time;
                 _lastPress = 0;
-            } else {
+            }
+            else {
                 type |= EventType::PRESS;
                 if (_lastPress) {
                     _counter++;
@@ -573,9 +573,9 @@ bool Mpr121Touchpad::begin(uint8_t address, uint8_t irqPin, TwoWire *wire)
     pinMode(_irqPin, INPUT);
     attachInterrupt(digitalPinToInterrupt(_irqPin), mpr121_irq_callback, FALLING);
 
-    _mpr121.setThresholds(4, 4);
-    // _mpr121.writeRegister(MPR121_DEBOUNCE, 0x22);
-    // _mpr121.writeRegister(MPR121_CONFIG2, 0b00101100); // 0.5uS encoding, 6 samples 16ms period
+    _mpr121.setThresholds(10, 8);
+    // _mpr121.writeRegister(0x5C, 0x10); // AFES=6 samples, same as AFES in 0x7B, Global CDC=16uA
+    // _mpr121.writeRegister(0x5D, 0x24); // CT=0.5us, TDS=4samples, TDI=16ms
 
     _timer.startTimer(5, true);
 

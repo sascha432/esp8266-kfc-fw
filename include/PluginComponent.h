@@ -445,14 +445,14 @@ public:
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
     virtual bool getValue(const String &id, String &value, bool &state);
 
-#if AT_MODE_SUPPORTED
-    #if AT_MODE_HELP_SUPPORTED
-        // returns array ATModeCommandHelp_t[size] or nullptr for no help
-        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
-        virtual void atModeHelpGenerator();
+    #if AT_MODE_SUPPORTED
+        #if AT_MODE_HELP_SUPPORTED
+            // returns array ATModeCommandHelp_t[size] or nullptr for no help
+            virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+            virtual void atModeHelpGenerator();
+        #endif
+        virtual bool atModeHandler(AtModeArgs &args);
     #endif
-    virtual bool atModeHandler(AtModeArgs &args);
-#endif
 
 public:
     uint32_t getSetupTime() const;

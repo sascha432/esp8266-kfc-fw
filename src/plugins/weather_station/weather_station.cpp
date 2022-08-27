@@ -235,9 +235,8 @@ void WeatherStationPlugin::_readConfig()
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     __LDBG_printf("setup");
-    _readConfig();
-
     _initTFT();
+    _readConfig();
 
     #if ESP32
         analogWriteFreq(1000);
@@ -258,6 +257,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
             if (progressValue == -1) {
                 _setBacklightLevel(PWMRANGE);
                 _setScreen(ScreenType::TEXT);
+                LoopFunctions::remove(loop);
             }
             _drawText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM, COLORS_DEFAULT_TEXT, true);
             progressValue = progress;
@@ -275,12 +275,6 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
     #if IOT_ALARM_PLUGIN_ENABLED
         AlarmPlugin::setCallback(alarmCallback);
-        // #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-        //     // needs to be first callback to stop the event to be passed to other callbacks if the alarm is active
-        //     _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 1, [this](const Mpr121Touchpad::Event &) {
-        //         return _resetAlarm();
-        //     });
-        // #endif
     #endif
 
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
@@ -292,8 +286,6 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                 }
             #endif
             if (_currentScreen == ScreenType::PICTURES && (event.isSwipeRight() || event.isSwipeLeft())) {
-                // WeatherStationBase::_getInstance()._resetPictureGalleryTimer();
-                // redraw();
                 if (_pickGalleryPicture()) {
                     redraw();
                 }
@@ -341,38 +333,25 @@ void WeatherStationPlugin::reconfigure(const String &source)
 
 void WeatherStationPlugin::shutdown()
 {
-    _setScreen(ScreenType::TEXT);
-
-    __DBG_printf("shutdown");
     _setBacklightLevel(PWMRANGE);
-    __DBG_printf("shutdown 2");
+    _setScreen(ScreenType::TEXT);
+    LoopFunctions::remove(loop);
     _drawText(F("Rebooting\nDevice"), FONTS_DEFAULT_BIG, COLORS_DEFAULT_TEXT, true);
-    __DBG_printf("shutdown 3");
-    lock();
-    __DBG_printf("shutdown 4");
 
     #if IOT_ALARM_PLUGIN_ENABLED
         _resetAlarm();
-        __DBG_printf("shutdown 5");
         AlarmPlugin::setCallback(nullptr);
     #endif
     #if IOT_WEATHER_STATION_WS2812_NUM
-    __DBG_printf("shutdown 6");
         _Timer(_pixelTimer).remove();
     #endif
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-        __DBG_printf("shutdown 7");
         _touchpad.end();
     #endif
-    __DBG_printf("shutdown 8");
     _Timer(_fadeTimer).remove();
-    __DBG_printf("shutdown 9");
     _Timer(_pollDataTimer).remove();
 
-    __DBG_printf("shutdown 10");
     stdex::reset(_canvas);
-    __DBG_printf("shutdown 11");
-    LoopFunctions::remove(loop);
 }
 
 void WeatherStationPlugin::getStatus(Print &output)

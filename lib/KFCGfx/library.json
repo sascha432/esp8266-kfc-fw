@@ -9,11 +9,5 @@
   "platforms": [
     "espressif8266",
     "espressif32"
-  ],
-  "dependencies": [
-    {
-      "name": "Adafruit GFX Library",
-      "version": "https://github.com/sascha432/Adafruit-GFX-Library.git"
-    }
   ]
 }

@@ -65,12 +65,15 @@ namespace Dimmer {
         Module::setup();
     }
 
-    #if AT_MODE_HELP_SUPPORTED
+    #if AT_MODE_SUPPORTED
+        #if AT_MODE_HELP_SUPPORTED
 
-        inline ATModeCommandHelpArrayPtr Plugin::atModeCommandHelp(size_t &size) const
-        {
-            return Base::atModeCommandHelp(size);
-        }
+            inline ATModeCommandHelpArrayPtr Plugin::atModeCommandHelp(size_t &size) const
+            {
+                return Base::atModeCommandHelp(size);
+            }
+
+        #endif
 
         inline bool Plugin::atModeHandler(AtModeArgs &args)
         {

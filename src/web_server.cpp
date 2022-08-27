@@ -798,13 +798,15 @@ void Plugin::ArduinoOTAbegin()
         BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
         __LDBG_printf("ArduinoOTA start");
         _AOTAInfo.start();
+        #if IOT_WEATHER_STATION
+        #endif
     });
     ArduinoOTA.onEnd([this]() {
         __LDBG_printf("ArduinoOTA end");
         if (_AOTAInfo) {
             _AOTAInfo.stop();
             Logger_security(F("Firmware upgrade successful, rebooting device"));
-            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
             _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {
                 config.restartDevice();
             });

@@ -62,7 +62,7 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(api_timeout, 9, 10, 300, 30); // seconds
                     CREATE_UINT32_BITFIELD_MIN_MAX(backlight_level, 7, 0, 100, 100); // level in %
                     CREATE_UINT32_BITFIELD_MIN_MAX(touch_threshold, 6, 0, 63, 5);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(released_threshold, 6, 0, 63, 8);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(released_threshold, 6, 0, 63, 15);
                     CREATE_UINT32_BITFIELD_MIN_MAX(is_metric, 1, false, true, true);
                     CREATE_UINT32_BITFIELD_MIN_MAX(time_format_24h, 1, false, true, true);
                     CREATE_UINT32_BITFIELD_MIN_MAX(show_webui, 1, false, true, false);

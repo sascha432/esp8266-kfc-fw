@@ -49,7 +49,7 @@ class OTASerialConsole(object):
         print('Disconnected %s...' % error)
         self.is_closed = True
 
-    def on_close(self, socket error, x):
+    def on_close(self, socket, error, x):
         self.is_closed = True
 
     def on_open(self, error):

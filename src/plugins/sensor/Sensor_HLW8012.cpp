@@ -363,6 +363,17 @@ void Sensor_HLW8012::getStatus(Print &output)
     #endif
 }
 
+String Sensor_HLW8012::_getId(const __FlashStringHelper *type)
+{
+    PrintString id(F("hlw8012_0x%02x"), _pinCF);
+    if (type) {
+        id.write('_');
+        id.print(FPSTR(type));
+    }
+    return id;
+}
+
+
 void Sensor_HLW8012::_setOutputMode(OutputTypeEnum_t outputMode, int delay)
 {
     __LDBG_printf("mode=%u", outputMode);

@@ -60,6 +60,10 @@ public:
         OFF = 0,
         SOLID = 1,
         SOS = 2,
+        NEOPIXEL_GREEN = SOLID,
+        NEOPIXEL_YELLOW = FLICKER,
+        NEOPIXEL_RED = SLOW,
+        NEOPIXEL_BLUE = MEDIUM,
         INVALID = 0xffff
     };
 

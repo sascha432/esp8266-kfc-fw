@@ -1302,13 +1302,6 @@ Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))
 
 void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    #if ENABLE_ARDUINO_OTA
-        // start ArduinoOTA in safe mode
-        if (mode == SetupModeType::SAFE_MODE) {
-            ArduinoOTAbegin();
-        }
-        else
-    #endif
     #if ENABLE_ARDUINO_OTA_AUTOSTART
         if (mode == SetupModeType::DEFAULT || mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
             ArduinoOTAbegin();

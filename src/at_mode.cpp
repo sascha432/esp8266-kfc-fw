@@ -32,7 +32,9 @@
 #include "plugins.h"
 #include "PinMonitor.h"
 #include <NeoPixelEx.h>
+#if HAVE_IOEXPANDER
 #include <IOExpander.h>
+#endif
 #include "../src/plugins/plugins.h"
 #include <stl_ext/memory.h>
 
@@ -677,7 +679,7 @@ public:
             // Serial.println();
 
         #endif
-        #if HAVE_IOEXPANDER
+        #if defined(HAVE_IOEXPANDER)
             IOExpander::config.dumpPins(Serial);
         #endif
     }

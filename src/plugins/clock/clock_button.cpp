@@ -5,7 +5,9 @@
 #include <Arduino_compat.h>
 #include "clock_button.h"
 #include "clock.h"
+#if HAVE_IOEXPANDER
 #include <IOExpander.h>
+#endif
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>

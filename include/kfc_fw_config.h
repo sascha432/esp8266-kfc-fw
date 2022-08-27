@@ -15,7 +15,9 @@
 #include <bitset>
 #include <chrono>
 #include <Configuration.hpp>
+#if HAVE_IOEXPANDER
 #include <IOExpander.h>
+#endif
 #if SYSLOG_SUPPORT
 #include <Syslog.h>
 #endif
@@ -37,7 +39,6 @@
 #define HASH_SIZE 64
 
 #include "kfc_fw_config_types.h"
-#include <IOExpander.h>
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB

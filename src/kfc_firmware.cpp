@@ -11,7 +11,9 @@
 #include <PrintString.h>
 #include <ListDir.h>
 #include <NeoPixelEx.h>
+#if HAVE_IOEXPANDER
 #include <IOExpander.h>
+#endif
 #include "kfc_fw_config.h"
 #include "blink_led_timer.h"
 #include "deep_sleep.h"
@@ -21,6 +23,7 @@
 #include "reset_detector.h"
 #include "save_crash.h"
 #include "plugins_menu.h"
+#include "web_server.h"
 #if PRINTF_WRAPPER_ENABLED
 #include <printf_wrapper.h>
 #endif
@@ -231,7 +234,7 @@ void setup()
         Serial2Udp::initWiFi(F(CUSTOM_WIFI_SSID), F(CUSTOM_WIFI_PASSWORD), IPAddress(192, 168, 0, 3), 6577);
     #endif
 
-    #if HAVE_IOEXPANDER
+    #if defined(HAVE_IOEXPANDER)
         __LDBG_printf("IOExpander::config.begin() size=%u count=%u", sizeof(IOExpander::config), IOExpander::config.size());
         DEBUG_BOOT_PRINT_POS();
         IOExpander::config.begin(KFCFWConfiguration::initTwoWire());
@@ -584,6 +587,11 @@ void setup()
                 }
             });
         }
+
+        #if ENABLE_ARDUINO_OTA
+            // start ArduinoOTA in safe mode
+            WebServer::Plugin::getInstance().ArduinoOTAbegin();
+        #endif
 
     }
     else {

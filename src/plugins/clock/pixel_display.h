@@ -805,11 +805,11 @@ namespace Clock {
                     FastLED.show(brightness);
                     break;
                 case Clock::ShowMethodType::NEOPIXEL:
-                    NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), size(), brightness, NeoPixelEx::Context::validate(nullptr));
+                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size(), brightness, NeoPixelEx::Context::validate(nullptr));
                     break;
                 case Clock::ShowMethodType::NEOPIXEL_REPEAT:
                     for(uint8_t i = 0; i  < 5; i++) {
-                        if (NeoPixelEx::StaticStrip::externalShow<NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(IOT_LED_MATRIX_OUTPUT_PIN, reinterpret_cast<uint8_t *>(_pixels), size(), brightness, NeoPixelEx::Context::validate(nullptr))) {
+                        if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size(), brightness, NeoPixelEx::Context::validate(nullptr))) {
                             break;
                         }
                         ::delay(1);

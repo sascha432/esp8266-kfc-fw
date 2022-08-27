@@ -422,7 +422,7 @@
 #    define HAVE_GDBSTUB 0
 #endif
 
-#if HAVE_IOEXPANDER
+#if defined(HAVE_IOEXPANDER)
 #    if !defined(IOEXPANDER_DEVICE_CONFIG)
 #        error HAVE_IOEXPANDER=1 but IOEXPANDER_DEVICE_CONFIG not defined
 #    endif

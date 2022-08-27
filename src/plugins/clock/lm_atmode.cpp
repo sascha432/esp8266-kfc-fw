@@ -436,10 +436,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 _display.clear();
                 if (num > IOT_CLOCK_NUM_PIXELS) {
                     args.print(F("clearing %u pixels"), num);
-                    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, num);
+                    NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(num);
                 }
                 else {
-                    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, IOT_CLOCK_NUM_PIXELS);
+                    NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(IOT_CLOCK_NUM_PIXELS);
                 }
             }
             else {

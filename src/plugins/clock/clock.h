@@ -1050,7 +1050,7 @@ inline void ClockPlugin::_reset()
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true));
     #endif
-    NeoPixelEx::forceClear(IOT_LED_MATRIX_OUTPUT_PIN, IOT_CLOCK_NUM_PIXELS);
+    NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(IOT_CLOCK_NUM_PIXELS);
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
     #endif

@@ -328,7 +328,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             }
         }
     #endif
-    #if HAVE_IOEXPANDER
+    #if defined(HAVE_IOEXPANDER)
         else if (key == F("IOEXPANDER_STATUS")) {
             IOExpander::config.printStatus<true>(output);
         }

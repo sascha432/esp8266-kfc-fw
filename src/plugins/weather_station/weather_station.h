@@ -55,7 +55,7 @@ public:
 
 private:
     void _readConfig();
-    void _init();
+    void _initTFT();
     #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
         static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);
     #endif

@@ -287,7 +287,8 @@ void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
             _resetPictureGalleryTimer();
             if (_pickGalleryPicture()) {
                 redraw();
-            } else {
+            }
+            else {
                 _setScreen(ScreenType::TEXT);
             }
             break;

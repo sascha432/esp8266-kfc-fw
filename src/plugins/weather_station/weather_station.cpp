@@ -222,7 +222,14 @@ void WeatherStationPlugin::_installWebhooks()
 void WeatherStationPlugin::_readConfig()
 {
     _config = Plugins::WeatherStation::getConfig();
+
     _backlightLevel = std::min(PWMRANGE * _config.backlight_level / 100, PWMRANGE);
+
+    _weatherApi.setAPIKey(WSDraw::WSConfigType::getApiKey());
+    _weatherApi.setQuery(WSDraw::WSConfigType::getApiQuery());
+    _weatherApi.clear();
+
+    _setScreen(_getScreen(ScreenType::MAIN));
 }
 
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
@@ -230,11 +237,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     __LDBG_printf("setup");
     _readConfig();
 
-    _weatherApi.setAPIKey(WSDraw::WSConfigType::getApiKey());
-    _weatherApi.setQuery(WSDraw::WSConfigType::getApiQuery());
-
-    _setScreen(_getScreen(ScreenType::MAIN));
-    _init();
+    _initTFT();
 
     #if ESP32
         analogWriteFreq(1000);
@@ -272,25 +275,38 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
     #if IOT_ALARM_PLUGIN_ENABLED
         AlarmPlugin::setCallback(alarmCallback);
-        #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-            // needs to be first callback to stop the event to be passed to other callbacks if the alarm is active
-            _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 1, [this](const Mpr121Touchpad::Event &) {
-                return _resetAlarm();
-            });
-        #endif
+        // #if IOT_WEATHER_STATION_HAS_TOUCHPAD
+        //     // needs to be first callback to stop the event to be passed to other callbacks if the alarm is active
+        //     _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 1, [this](const Mpr121Touchpad::Event &) {
+        //         return _resetAlarm();
+        //     });
+        // #endif
     #endif
 
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 2, [this](const Mpr121Touchpad::Event &event) {
-            __LDBG_printf("event %u", event.getType());
-            #if IOT_WEATHER_STATION
-                if (_getCurrentScreen() == static_cast<uint8_t>(ScreenType::PICTURES) && event.isSwipeRight()) {
-                    WeatherStationBase::_getInstance()._resetPictureGalleryTimer();
-                    redraw();
-                    return true;
+            __LDBG_printf("event=%u types=%s", event.getType(), event.getGesturesString());
+            #if IOT_ALARM_PLUGIN_ENABLED
+                if (_resetAlarm()) {
+                    return false;
                 }
             #endif
-            this->_setScreen(_getNextScreen(_getCurrentScreen(), true));
+            if (_currentScreen == ScreenType::PICTURES && (event.isSwipeRight() || event.isSwipeLeft())) {
+                // WeatherStationBase::_getInstance()._resetPictureGalleryTimer();
+                // redraw();
+                if (_pickGalleryPicture()) {
+                    redraw();
+                }
+                return false;
+            }
+            if (event.isSwipeRight() || event.isTap()) {
+                this->_setScreen(_getNextScreen(_getCurrentScreen(), true));
+                return false;
+            }
+            if (event.isSwipeLeft()) {
+                this->_setScreen(_getPrevScreen(_getCurrentScreen(), true));
+                return false;
+            }
             return true;
         });
     #endif
@@ -370,9 +386,9 @@ void WeatherStationPlugin::getStatus(Print &output)
     #endif
 }
 
-void WeatherStationPlugin::_init()
+void WeatherStationPlugin::_initTFT()
 {
-    __DBG_printf("spi0 clk %u, spi1 clk %u", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
+    __LDBG_printf("spi0 clk %u, spi1 clk %u", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
 
     #if ILI9341_DRIVER
         __LDBG_printf("cs=%d dc=%d rst=%d spi=%u", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY);

@@ -184,6 +184,7 @@ public:
         bool isDoublePress() const;
         uint8_t getTapCount() const;
         GesturesType getGestures() const;
+        String getGesturesString() const;
         Coordinates getStart() const;
         Coordinates getEnd() const;
         Coordinates getSwipeDistance() const;

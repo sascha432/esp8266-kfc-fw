@@ -17,8 +17,8 @@
 #include <debug_helper_disable.h>
 #endif
 
-volatile bool mpr121_irq_callback_flag;
-Mpr121Touchpad *touchpad = nullptr;
+static volatile bool mpr121_irq_callback_flag;
+static Mpr121Touchpad *touchpad = nullptr;
 
 static Mpr121Touchpad::ReadBuffer buffer;
 
@@ -29,10 +29,14 @@ extern "C" void IRAM_ATTR mpr121_irq_callback()
 
 void Mpr121Timer::run()
 {
+    ets_intr_lock();
     if (mpr121_irq_callback_flag) {
         mpr121_irq_callback_flag = false;
+        ets_intr_unlock();
         buffer.emplace_back(touchpad->_mpr121.touched(), millis());
+        return;
     }
+    ets_intr_unlock();
 }
 
 Mpr121Touchpad::Event::Event(Mpr121Touchpad &pad) : _pad(pad), _curEvent()
@@ -76,7 +80,7 @@ bool Mpr121Touchpad::Event::isSwipeLeft() const
 
 bool Mpr121Touchpad::Event::isSwipeRight() const
 {
-    return _swipe.y > 0;
+    return _swipe.x > 0;
 }
 
 Mpr121Touchpad::GesturesType Mpr121Touchpad::Event::getGestures() const
@@ -110,10 +114,47 @@ Mpr121Touchpad::GesturesType Mpr121Touchpad::Event::getGestures() const
         }
         if (_swipe.x > 0) {
             value |= static_cast<GesturesBaseType>(GesturesType::RIGHT);
-
         }
     }
     return static_cast<GesturesType>(value);
+}
+
+String Mpr121Touchpad::Event::getGesturesString() const
+{
+    StringVector items;
+    if (_swipe == false) {
+        if (isTap()) {
+            items.emplace_back(F("TAP"));
+        }
+        if (isPress()) {
+            items.emplace_back(F("PRESS"));
+        }
+        if (items.size()) {
+            if (_counter == 2) {
+                items.emplace_back(F("DOUBLE"));
+            }
+            else if (_counter > 2) {
+                items.emplace_back(F("MULTI"));
+            }
+        }
+    }
+    else {
+        if (_swipe.y > 0) {
+            items.emplace_back(F("UP"));
+        }
+        if (_swipe.y < 0) {
+            items.emplace_back(F("DOWN"));
+        }
+        if (_swipe.x < 0) {
+            items.emplace_back(F("LEFT"));
+        }
+        if (_swipe.x > 0) {
+            items.emplace_back(F("RIGHT"));
+
+        }
+    }
+    return implode(',', items);
+
 }
 
 Mpr121Touchpad::Coordinates Mpr121Touchpad::Event::getStart() const
@@ -259,6 +300,8 @@ void Mpr121Touchpad::Event::gestures()
     Position moveX = _sumP.x + _sumN.x;
     Position moveY = _sumP.y + _sumN.y;
     auto &type = *reinterpret_cast<EventBaseType *>(&_type);
+
+    // __DBG_printf("sumP=%d/%d sumN=%d/%d moveXY=%d/%d", _sumP.x, _sumP.y, _sumN.x, _sumN.y, moveX, moveY);
     if (
         _sumP.x <= 5 && _sumN.x >= -5 && moveX <= 2 &&
         _sumP.y <= 5 && _sumN.y >= -5 && moveY <= 2
@@ -528,9 +571,12 @@ bool Mpr121Touchpad::begin(uint8_t address, uint8_t irqPin, TwoWire *wire)
     mpr121_irq_callback_flag = false;
     _event._type = EventType::NONE;
     pinMode(_irqPin, INPUT);
-    attachInterrupt(digitalPinToInterrupt(_irqPin), mpr121_irq_callback, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(_irqPin), mpr121_irq_callback, FALLING);
 
     _mpr121.setThresholds(4, 4);
+    // _mpr121.writeRegister(MPR121_DEBOUNCE, 0x22);
+    // _mpr121.writeRegister(MPR121_CONFIG2, 0b00101100); // 0.5uS encoding, 6 samples 16ms period
+
     _timer.startTimer(5, true);
 
     LoopFunctions::add([this]() {
@@ -589,11 +635,13 @@ void Mpr121Touchpad::processEvents()
 {
     ReadBuffer::iterator iterator = buffer.begin();
     int n = 0;
+    ets_intr_lock();
     if (iterator != buffer.end()) {
         // auto start = millis();
         // static int event_counter=0;
         // uint32_t lagg  = 0;
         do {
+            ets_intr_unlock();
             auto previous = _event._position;
             // lagg = std::max(lagg, (uint32_t)millis() - (*iterator).time);
 
@@ -608,15 +656,15 @@ void Mpr121Touchpad::processEvents()
                 _event.move(previous);
             }
             n++;
+            ets_intr_lock();
         } while(++iterator != buffer.end());
 
         // event_counter += n;
         // __LDBG_printf("read %u (%u) events, dur %d, size %u, max. lag %d", n, event_counter, (int)(millis() - start), buffer.size(), lagg);
 
-        noInterrupts();
         buffer.shrink(iterator, buffer.end()); // <1µs
-        interrupts();
     }
+    ets_intr_unlock();
 }
 
 void Mpr121Touchpad::_loop()

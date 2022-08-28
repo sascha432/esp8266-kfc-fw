@@ -109,6 +109,7 @@ public:
     void _openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request);
 
     virtual void _fadeStatusLED() = 0;
+    virtual void _rainbowStatusLED(bool stop = false) = 0;
 
     static void disableDisplay();
     static void enableDisplay();

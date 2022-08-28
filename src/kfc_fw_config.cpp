@@ -30,6 +30,9 @@
 #if IOT_SWITCH
 #include "../src/plugins/switch/switch.h"
 #endif
+#if IOT_WEATHER_STATION
+#include "../src/plugins/weather_station/weather_station.h"
+#endif
 
 #if defined(ESP8266)
 #include <sntp.h>
@@ -247,7 +250,9 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
 {
     __LDBG_printf("reason=%d error=%s wifi_connected=%u wifi_up=%u is_connected=%u ip=%s", event.reason, WiFi_disconnect_reason(event.reason), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
     if (_wifiConnected) {
-        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+        #if !IOT_WEATHER_STATION_WS2812_NUM
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+        #endif
 
         Logger_notice(F("WiFi disconnected, SSID %s, reason %s, had %sIP address"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason), _wifiUp ? emptyString.c_str() : PSTR("no "));
         _wifiConnected = 0;
@@ -329,7 +334,9 @@ void KFCFWConfiguration::setWiFiConnectLedMode()
             auto mode = System::Device::getConfig().getStatusLedMode();
             if (mode != System::Device::StatusLEDModeType::OFF) {
                 if (WiFi.isConnected()) {
-                    BUILTIN_LED_SET(mode == System::Device::StatusLEDModeType::OFF_WHEN_CONNECTED ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
+                    #if !IOT_WEATHER_STATION_WS2812_NUM
+                        BUILTIN_LED_SET(mode == System::Device::StatusLEDModeType::OFF_WHEN_CONNECTED ? BlinkLEDTimer::BlinkType::OFF : BlinkLEDTimer::BlinkType::SOLID);
+                    #endif
                 }
                 else {
                     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
@@ -799,7 +806,11 @@ void KFCFWConfiguration::setup()
     #endif
     {
         Logger_notice(F("Starting KFCFW %s"), version.c_str());
-        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        #if IOT_WEATHER_STATION_WS2812_NUM
+            WeatherStationPlugin::_getInstance()._rainbowStatusLED();
+        #else
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+        #endif
     }
 
     LoopFunctions::add(KFCFWConfiguration::loop);
@@ -1468,7 +1479,9 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
 
     #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID || ENABLE_BOOT_LOG
         if (!station_mode_success || !ap_mode_success) {
-            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+            #if !IOT_WEATHER_STATION_WS2812_NUM
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
+            #endif
         }
     #endif
 
@@ -1776,7 +1789,9 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
 
     if (WiFi.isConnected() && !resetDetector.hasWakeUpDetected()) {
         __DBG_assert_printf(false, "WiFi up, skipping init.");
-        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+        #if !IOT_WEATHER_STATION_WS2812_NUM
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+        #endif
         return;
     }
 

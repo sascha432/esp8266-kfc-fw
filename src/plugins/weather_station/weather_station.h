@@ -61,12 +61,17 @@ private:
     #endif
     void _installWebhooks();
 
+public:
+    // pulses the status LEDs
+    void _setRGBLeds(uint32_t color);
+    void _fadeStatusLED();
+    void _rainbowStatusLED(bool stop = false);
+
+    int16_t _rainbowBrightness;
+
 private:
     void _drawEnvironmentalSensor(GFXCanvasCompressed& canvas, int16_t top);
     virtual IndoorValues _getIndoorValues();
-
-    // pulses the status LEDs
-    void _fadeStatusLED();
 
     // set backlight level
     void _setBacklightLevel(uint16_t level);

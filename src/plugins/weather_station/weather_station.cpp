@@ -21,6 +21,11 @@
 #include "./plugins/sensor/sensor.h"
 #include "./plugins/sensor/Sensor_BME280.h"
 
+#if IOT_WEATHER_STATION_WS2812_NUM
+#define FASTLED_INTERNAL
+#include <FastLED.h>
+#endif
+
 using Plugins = KFCConfigurationClasses::PluginsType;
 
 // web access for screen capture
@@ -235,6 +240,9 @@ void WeatherStationPlugin::_readConfig()
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     __LDBG_printf("setup");
+    #if IOT_WEATHER_STATION_WS2812_NUM
+        _rainbowStatusLED();
+    #endif
     _initTFT();
     _readConfig();
 
@@ -258,7 +266,15 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                 _setBacklightLevel(PWMRANGE);
                 _setScreen(ScreenType::TEXT);
                 LoopFunctions::remove(loop);
+                #if IOT_WEATHER_STATION_WS2812_NUM
+                    _Timer(_pixelTimer).remove();
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                #endif
             }
+            #if IOT_WEATHER_STATION_WS2812_NUM
+                // _setRGBLeds(((((100 - progress) * 0x50) / 100) << 16) | ((((progress) * 0x50) / 100) << 8)); // brightness 80
+                _setRGBLeds(((100 - progress) << 16) | (progress << 8)); // brightness 100
+            #endif
             _drawText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM, COLORS_DEFAULT_TEXT, true);
             progressValue = progress;
         }
@@ -468,6 +484,19 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
     }, Event::PriorityType::TIMER);
 }
 
+void WeatherStationPlugin::_setRGBLeds(uint32_t color)
+{
+    #if IOT_WEATHER_STATION_WS2812_NUM
+        #if HAVE_FASTLED
+            fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
+            FastLED.show();
+        #else
+            _pixels.fill(color);
+            _pixels.show();
+        #endif
+    #endif
+}
+
 void WeatherStationPlugin::_fadeStatusLED()
 {
     #if IOT_WEATHER_STATION_WS2812_NUM
@@ -480,13 +509,8 @@ void WeatherStationPlugin::_fadeStatusLED()
         int32_t color = 0x001500;
         int16_t dir = 0x000100;
 
-        #if HAVE_FASTLED
-            fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
-            FastLED.show();
-        #else
-            _pixels.fill(color);
-            _pixels.show();
-        #endif
+        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+        _setRGBLeds(color);
 
         _Timer(_pixelTimer).add(Event::milliseconds(50), true, [this, color, dir](::Event::CallbackTimerPtr timer) mutable {
             color += dir;
@@ -497,23 +521,51 @@ void WeatherStationPlugin::_fadeStatusLED()
             else if (color <= 0) {
                 color = 0;
                 timer->disarm();
-                #if HAVE_FASTLED
-                    FastLED.clear(true);
-                    return;
-                #endif
             }
-            #if HAVE_FASTLED
-                fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
-                FastLED.show();
-            #else
-                _pixels.fill(color);
-                _pixels.show();
-            #endif
+            _setRGBLeds(color);
 
         }, ::Event::PriorityType::TIMER);
 
     #endif
 }
+
+void WeatherStationPlugin::_rainbowStatusLED(bool stop)
+{
+    #if IOT_WEATHER_STATION_WS2812_NUM
+        if (stop) {
+            _rainbowBrightness--;
+        }
+        else {
+            if (_pixelTimer) {
+                return;
+            }
+
+            _rainbowBrightness = 0x100;
+
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+            _Timer(_pixelTimer).add(Event::milliseconds(50), true, [this](::Event::CallbackTimerPtr timer) {
+
+                if (_rainbowBrightness < 0x100) {
+                    _rainbowBrightness--;
+                    if (_rainbowBrightness <= 0) {
+                        timer->disarm();
+                        _setRGBLeds(0);
+                        return;
+                    }
+                }
+
+                fill_rainbow(reinterpret_cast<CRGB *>(_pixels.ptr()), _pixels.getNumPixels(), beat8(10, 255), 30);
+                #if HAVE_FASTLED
+                    FastLED.show(_rainbowBrightness / 2);
+                #else
+                    _pixels.show(_rainbowBrightness / 2);
+                #endif
+
+            });
+        }
+    #endif
+}
+
 
 #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
 

@@ -59,6 +59,9 @@ void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpR
         _pollDataUpdateLastTime(true);
     }
     redraw();
+    #if IOT_WEATHER_STATION_WS2812_NUM
+        _rainbowStatusLED(true);
+    #endif
 }
 
 void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *payload)
@@ -67,14 +70,20 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
         __LDBG_printf("poll weather stopped");
         _Timer(_pollDataTimer).remove();
         redraw();
+        #if IOT_WEATHER_STATION_WS2812_NUM
+            _rainbowStatusLED();
+        #endif
     }
     else if (event == WiFiCallbacks::EventType::CONNECTED) {
+        #if IOT_WEATHER_STATION_WS2812_NUM
+            _rainbowStatusLED();
+        #endif
         auto next = 5000;
         __LDBG_printf("poll weather next=%u", next);
         _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
-        #if IOT_WEATHER_STATION_WS2812_NUM
-            _fadeStatusLED();
-        #endif
+        // #if IOT_WEATHER_STATION_WS2812_NUM
+        //     _fadeStatusLED();
+        // #endif
         redraw();
     }
 }

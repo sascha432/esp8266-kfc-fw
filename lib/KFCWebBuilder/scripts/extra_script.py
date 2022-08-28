@@ -10,6 +10,25 @@ import os.path
 import os
 import subprocess
 import click
+import re
+from datetime import datetime
+
+def extract_re(regex, filename):
+    with open(filename, 'rt') as file:
+        contents = file.read()
+        contents = contents.replace('\n', ' ').replace('\r', ' ')
+        res = {}
+        for regex in regex:
+            m = re.search(regex, contents)
+            if m:
+                res.update(m.groupdict())
+            else:
+                click.secho('Cannot extract %s from %s' % (regex, filename), fg='red')
+                exit(1)
+        return res
+
+def env_abspath(env, str):
+    return os.path.abspath(env.subst(str))
 
 def build_webui(source, target, env, force = False):
 
@@ -22,8 +41,15 @@ def build_webui(source, target, env, force = False):
         else:
             php_bin = os.path.sep == '\\' and 'php.exe' or 'php'
 
-    php_file = os.path.abspath(env.subst('$PROJECT_DIR/lib/KFCWebBuilder/bin/include/cli_tool.php'));
-    json_file = os.path.abspath(env.subst('$PROJECT_DIR/KFCWebBuilder.json'));
+    php_file = env_abspath(env, '$PROJECT_DIR/lib/KFCWebBuilder/bin/include/cli_tool.php')
+    json_file = env_abspath(env, '$PROJECT_DIR/KFCWebBuilder.json')
+
+    build = extract_re([r'#define\s+__BUILD_NUMBER\s+"(?P<build>[0-9]+)"'], env_abspath(env, '$PROJECT_DIR/include/build.h'))
+    version = extract_re([r'#define\s+FIRMWARE_VERSION_MAJOR\s+(?P<major>[0-9]+) ', r'#define\s+FIRMWARE_VERSION_MINOR\s+(?P<minor>[0-9]+) ', r'#define\s+FIRMWARE_VERSION_REVISION\s+(?P<rev>[0-9]+) '], env_abspath(env, '$PROJECT_DIR/include/global.h'))
+    version = '%s.%s.%s Build %s (%s)' % (version['major'], version['minor'], version['rev'], build['build'], datetime.now().strftime('%b %d %Y %H:%M:%S'))
+
+    with open(env_abspath(env, '$PROJECT_DIR/data/.pvt/build'), 'w') as file:
+        file.write(version)
 
     defines = env.get('CPPDEFINES');
     definesFile = env.subst('$BUILD_DIR/cppdefines.txt');
@@ -47,6 +73,10 @@ def build_webui(source, target, env, force = False):
         env.Exit(1)
 
     args = [ php_bin, php_file, json_file, '--branch', 'spiffs', '--env', 'env:%s' % env.subst('$PIOENV'), '--clean-exit-code', '0', '--dirty-exit-code', '0', '--defines-from', definesFile ]
+
+    if env.get('INCLUDE_DATA_DIR_WSGALLERY'):
+        os.symlink(env_abspath(env, '$PROJECT_DIR/src/plugins/weather_station/WsGallery'), env_abspath(env, '${PROJECTDATA_DIR}/WsGallery'))
+
     if force:
         args.append('--force')
 
@@ -56,6 +86,10 @@ def build_webui(source, target, env, force = False):
         click.echo(cli_cmd)
 
     return_code = subprocess.run(args, shell=True).returncode
+
+    if env.get('INCLUDE_DATA_DIR_WSGALLERY'):
+        os.remove(env_abspath(env, '${PROJECTDATA_DIR}/WsGallery'))
+
     if return_code!=0:
         click.secho('failed to run: %s' % cli_cmd)
         print()

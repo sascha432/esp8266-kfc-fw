@@ -155,6 +155,12 @@ void WebTemplate::printFileSystemInfo(Print &output)
     #if USE_LITTLEFS
         FSInfo info;
         KFCFS.info(info);
+
+        auto file = LittleFS.open(String(F("/.pvt/build")), FileOpenMode::read);
+        if (file) {
+            output.printf_P(PSTR("Version %s" HTML_S(br)), file.readString().c_str());
+        }
+
         output.printf_P(PSTR("Block size %d" HTML_S(br)
                 "Max. open files %d" HTML_S(br)
                 "Max. path length %d" HTML_S(br)

@@ -33,6 +33,7 @@ enum class AutoDiscoverySwitchEnum {
 MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(static_cast<AutoDiscoverySwitchEnum>(num)) {
         case AutoDiscoverySwitchEnum::BRIGHTNESS: {
             if (!discovery->create(this, MQTT_NAME, format)) {
@@ -48,15 +49,16 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addEffectStateTopic(MQTT::Client::formatTopic(FSPGM(_effect_state)));
             discovery->addEffectCommandTopic(MQTT::Client::formatTopic(FSPGM(_effect_set)));
             discovery->addEffectList(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNamesJsonArray());
-            #if MQTT_AUTO_DISCOVERY_USE_NAME
-                #if IOT_LED_MATRIX
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("LED Matrix")));
-                #else
-                    discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Clock")));
-                #endif
-            #endif
             #if IOT_LED_MATRIX_HEXAGON_PANEL
+                discovery->addName(F("Hexagon Panel"));
+                discovery->addObjectId(baseTopic + F("Hexagon Panel"));
                 discovery->addIcon(F("mdi:hexagon-multiple-outline"));
+            #elif IOT_LED_MATRIX
+                discovery->addName(F("LED Matrix"));
+                discovery->addObjectId(baseTopic + F("LED Matrix"));
+            #else
+                discovery->addName(F("Clock"));
+                discovery->addObjectId(baseTopic + F("Clock"));
             #endif
         }
         break;
@@ -68,9 +70,8 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addStateTopic(MQTT::Client::formatTopic(F("power")));
             discovery->addUnitOfMeasurement(String('W'));
             discovery->addDeviceClass(F("power"));
-            #if MQTT_AUTO_DISCOVERY_USE_NAME
-                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Estimated Power")));
-            #endif
+            discovery->addName(F("Estimated Power"));
+            discovery->addObjectId(baseTopic + F("Estimated Power"));
         }
         break;
 #endif
@@ -85,9 +86,8 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addPercentageCommandTopic(MQTT::Client::formatTopic(F("/fan/speed/set")));
             discovery->addSpeedRangeMin(_config.min_fan_speed);
             discovery->addSpeedRangeMax(_config.max_fan_speed);
-            #if MQTT_AUTO_DISCOVERY_USE_NAME
-                discovery->addName(MQTT::Client::getAutoDiscoveryName(F("Fan")));
-            #endif
+            discovery->addName(F("Fan"));
+            discovery->addObjectId(baseTopic + F("Fan"));
         }
         break;
 #endif

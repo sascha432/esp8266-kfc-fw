@@ -95,7 +95,7 @@ void safeSetTZ(const __FlashStringHelper *timezone)
 
 void safeSetTZ(const __FlashStringHelper *timezone)
 {
-    setenv(CStrP(F("TV")), CStrP(timezone), 1);
+    setenv(CStrP(F("TZ")), CStrP(timezone), 1);
     tzset();
 }
 

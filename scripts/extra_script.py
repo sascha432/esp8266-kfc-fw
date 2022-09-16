@@ -76,6 +76,7 @@ def modify_upload_command(source, target, env, fs=False):
         aota = 'http://%s/start-arduino-ota' % upload_port
         click.echo('running "curl -s %s"' % aota)
         return_code = subprocess.run(['curl', '-s', aota], shell=True).returncode
+        print();
         return
     device = m.groupdict()
 

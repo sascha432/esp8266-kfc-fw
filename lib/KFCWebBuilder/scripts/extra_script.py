@@ -13,6 +13,8 @@ import click
 import re
 from datetime import datetime
 
+symlinks = []
+
 def extract_re(regex, filename):
     with open(filename, 'rt') as file:
         contents = file.read()
@@ -31,6 +33,7 @@ def env_abspath(env, str):
     return os.path.abspath(env.subst(str))
 
 def build_webui(source, target, env, force = False):
+    global symlinks
 
     verbose = int(ARGUMENTS.get("PIOVERBOSE", 0))
 
@@ -74,8 +77,30 @@ def build_webui(source, target, env, force = False):
 
     args = [ php_bin, php_file, json_file, '--branch', 'spiffs', '--env', 'env:%s' % env.subst('$PIOENV'), '--clean-exit-code', '0', '--dirty-exit-code', '0', '--defines-from', definesFile ]
 
-    if env.get('INCLUDE_DATA_DIR_WSGALLERY'):
-        os.symlink(env_abspath(env, '$PROJECT_DIR/src/plugins/weather_station/WsGallery'), env_abspath(env, '${PROJECTDATA_DIR}/WsGallery'))
+
+    dirs = []
+    for item in defines:
+        try:
+            if item[0]=='INCLUDE_DATA_DIRS':
+                dirs = env.subst(item[1])
+                dirs = dirs.split(',')
+                break
+        except:
+            pass
+
+    if len(dirs):
+        for src in dirs:
+            src = env_abspath(env, src)
+            dst = env_abspath(env, '${PROJECTDATA_DIR}/%s' % os.path.basename(src))
+            if not os.path.exists(dst):
+                if verbose:
+                    click.secho('Creating symlink %s -> %s' % (src, dst), fg='yellow')
+                a = [ 'mklink', '/J', dst, src ]
+                return_code = subprocess.run(a, shell=True).returncode
+                if return_code:
+                    click.secho('Failed to create symlink: [%u] %s -> %s' % (return_code, src, dst), fg='red')
+                    env.Exit(1)
+        symlinks.append(dst)
 
     if force:
         args.append('--force')
@@ -86,9 +111,6 @@ def build_webui(source, target, env, force = False):
         click.echo(cli_cmd)
 
     return_code = subprocess.run(args, shell=True).returncode
-
-    if env.get('INCLUDE_DATA_DIR_WSGALLERY'):
-        os.remove(env_abspath(env, '${PROJECTDATA_DIR}/WsGallery'))
 
     if return_code!=0:
         click.secho('failed to run: %s' % cli_cmd)
@@ -101,9 +123,19 @@ def rebuild_webui(source, target, env):
 def before_clean(source, target, env):
     env.Execute("del ${PROJECTDATA_DIR}/webui/ -Recurse")
 
+def build_webui_cleanup(source, target, env):
+    global symlinks
+    verbose = int(ARGUMENTS.get("PIOVERBOSE", 0))
+    if symlinks:
+        for lnk in symlinks:
+            if verbose:
+                click.secho('Removing symlink %s' % lnk, fg='yellow')
+            os.remove(lnk)
 
 # env.AddPreAction("$BUILD_DIR/spiffs.bin", build_webui)
 env.AddPreAction("$BUILD_DIR/littlefs.bin", build_webui)
+env.AddPostAction("$BUILD_DIR/littlefs.bin", build_webui_cleanup)
 #env.AddPreAction("buildfs", build_webui)
 env.AlwaysBuild(env.Alias("rebuildfs", None, rebuild_webui))
 env.AlwaysBuild(env.Alias("buildfs", None, build_webui))
+

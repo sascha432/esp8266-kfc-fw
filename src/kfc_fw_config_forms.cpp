@@ -356,12 +356,12 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             webUIGroup.end();
 
-            auto &schedulerGroup = form.addCardGroup(F("scheduler"), F("Task Scheduler"), true);
+            // auto &schedulerGroup = form.addCardGroup(F("scheduler"), F("Task Scheduler"), true);
 
             // form.add(F("schet"), scheduledTasks.toString(), FormUI::InputFieldType::TEXTAREA);
             // form.addFormUI(F("Scheduler"), FormUI::Type::TEXTAREA, FormUI::IntAttribute(F("rows"), 8));
 
-            schedulerGroup.end();
+            // schedulerGroup.end();
 
         }
         else if (formName.equals(FSPGM(password))) {

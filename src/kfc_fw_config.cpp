@@ -1583,10 +1583,13 @@ bool KFCFWConfiguration::setRTC(uint32_t unixtime)
     __LDBG_printf("time=%u", unixtime);
     #if RTC_SUPPORT
         initTwoWire();
-        if (rtc.begin()) {
-            rtc.adjust(DateTime(unixtime));
-            return true;
+        if (!rtc.begin()) {
+            if (!rtc.begin()) {
+                return false;
+            }
         }
+        rtc.adjust(DateTime(unixtime));
+        return true;
     #endif
     return false;
 }
@@ -1648,15 +1651,18 @@ uint32_t KFCFWConfiguration::getRTC()
 {
     #if RTC_SUPPORT
         initTwoWire();
-        if (rtc.begin()) {
-            uint32_t unixtime = rtc.now().unixtime();
-            __LDBG_printf("time=%u", unixtime);
-            if (rtc.lostPower()) {
-                __LDBG_printf("time=0, lostPower=true");
+        if (!rtc.begin()) {
+            if (!rtc.begin()) {
                 return 0;
             }
-            return unixtime;
         }
+        uint32_t unixtime = rtc.now().unixtime();
+        __LDBG_printf("time=%u", unixtime);
+        if (rtc.lostPower()) {
+            __LDBG_printf("time=0, lostPower=true");
+            return 0;
+        }
+        return unixtime;
     #endif
     __LDBG_printf("time=error");
     return 0;
@@ -1666,9 +1672,12 @@ float KFCFWConfiguration::getRTCTemperature()
 {
     #if RTC_SUPPORT
         initTwoWire();
-        if (rtc.begin()) {
-            return rtc.getTemperature();
+        if (!rtc.begin()) {
+            if (!rtc.begin()) {
+                return NAN;
+            }
         }
+        return rtc.getTemperature();
     #endif
     return NAN;
 }

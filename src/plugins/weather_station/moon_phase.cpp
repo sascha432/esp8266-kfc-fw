@@ -9,7 +9,7 @@ static MoonPhaseType _moonCache;
 
 const __FlashStringHelper *moonPhaseName(uint8_t moonPhase)
 {
-    switch(moonPhase % 8) {
+    switch((moonPhase + 1) % 8) {
         case 0:
             return F("New Moon");
         case 1:

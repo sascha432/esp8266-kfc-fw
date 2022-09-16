@@ -273,7 +273,8 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
             }
             #if IOT_WEATHER_STATION_WS2812_NUM
                 // _setRGBLeds(((((100 - progress) * 0x50) / 100) << 16) | ((((progress) * 0x50) / 100) << 8)); // brightness 80
-                _setRGBLeds(((100 - progress) << 16) | (progress << 8)); // brightness 100
+                uint8_t color2 = (progress * progress * progress * progress) / 1000000;
+                _setRGBLeds(((100 - progress) << 16) | (color2 << 8)); // brightness 100
             #endif
             _drawText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM, COLORS_DEFAULT_TEXT, true);
             progressValue = progress;
@@ -501,6 +502,9 @@ void WeatherStationPlugin::_fadeStatusLED()
 {
     #if IOT_WEATHER_STATION_WS2812_NUM
         __LDBG_printf("pin=%u px_timer=%u", IOT_WEATHER_STATION_WS2812_PIN, (bool)_pixelTimer);
+        if (config.isSafeMode()) {
+            return;
+        }
 
         if (_pixelTimer) {
             return;
@@ -532,6 +536,10 @@ void WeatherStationPlugin::_fadeStatusLED()
 void WeatherStationPlugin::_rainbowStatusLED(bool stop)
 {
     #if IOT_WEATHER_STATION_WS2812_NUM
+        if (config.isSafeMode()) {
+            return;
+        }
+
         if (stop) {
             _rainbowBrightness--;
         }
@@ -543,7 +551,7 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
             _rainbowBrightness = 0x100;
 
             BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-            _Timer(_pixelTimer).add(Event::milliseconds(50), true, [this](::Event::CallbackTimerPtr timer) {
+            _Timer(_pixelTimer).add(Event::milliseconds(20), true, [this](::Event::CallbackTimerPtr timer) {
 
                 if (_rainbowBrightness < 0x100) {
                     _rainbowBrightness--;
@@ -565,7 +573,6 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
         }
     #endif
 }
-
 
 #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
 

@@ -55,7 +55,7 @@ struct MoonPhaseType
 
     const __FlashStringHelper *moonPhaseName() const {
         // correct pPhase using iPhase
-        return ::moonPhaseName(pPhase - ((iPhase > 0.5) ? (0.5 / 8.0) : 0));
+        return ::moonPhaseName(((iPhase > 0.5) ? (pPhase - (0.25 / 8.0)) : pPhase));
     }
 
     const __FlashStringHelper *moon_pPhaseName() const {

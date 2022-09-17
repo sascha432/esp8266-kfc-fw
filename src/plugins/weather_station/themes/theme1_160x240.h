@@ -143,6 +143,10 @@
 #define Y_START_POSITION_MOON_PHASE     (2)
 #define Y_END_POSITION_MOON_PHASE       (TFT_HEIGHT - 1)
 
+// analog clock
+#define Y_START_POSITION_ANALOG_CLOCK   (2)
+#define Y_END_POSITION_ANALOG_CLOCK     (TFT_HEIGHT - 1)
+
 // system info
 #define Y_START_POSITION_INFO           (Y_END_POSITION_TIME + 2)
 #define Y_END_POSITION_INFO             (TFT_HEIGHT - 1)

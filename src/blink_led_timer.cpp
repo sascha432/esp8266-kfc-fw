@@ -20,6 +20,8 @@
 #   endif
 #endif
 
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
+
 using KFCConfigurationClasses::System;
 using Device = KFCConfigurationClasses::System::Device;
 
@@ -179,3 +181,5 @@ bool BlinkLEDTimer::isBlink(uint8_t pin, BlinkType delay)
     }
     return ledTimer->_delay == delay;
 }
+
+#endif

@@ -28,7 +28,7 @@ void Animation::_setColor(Color color)
 
 #if 0
 
-// varias effect from atmega328p
+// several effect from atmega328p
 
 #define NUM_LEDS Clock::DisplayType::kNumPixels
 

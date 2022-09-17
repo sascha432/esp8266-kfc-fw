@@ -952,7 +952,7 @@ namespace Clock {
     };
 
     // ------------------------------------------------------------------------
-    // RainbowAnimationFastLED
+    // GradientAnimation
 
     class GradientAnimation : public Animation {
     public:
@@ -1057,12 +1057,12 @@ namespace Clock {
         uint16_t _speed;
     };
 
+#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+
     // ------------------------------------------------------------------------
     // VisualizerAnimation
     //
     // virtual LEDs for led_matrix_visualizer
-
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
 
     class VisualizerAnimation : public Animation {
     public:

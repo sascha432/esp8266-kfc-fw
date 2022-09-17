@@ -373,7 +373,7 @@
 #endif
 
 #ifndef WEBSERVER_KFC_OTA
-#    define WEBSERVER_KFC_OTA 1
+#    error WEBSERVER_KFC_OTA is not defined
 #endif
 
 #ifndef HAVE_I2CSCANNER

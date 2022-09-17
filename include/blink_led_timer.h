@@ -47,6 +47,8 @@
 #    define BUILTIN_LED_GET(mode) true
 #endif
 
+#if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
+
 class BlinkLEDTimer : public OSTimer {
 protected:
     using OSTimer::startTimer;
@@ -144,6 +146,8 @@ inline void BlinkLEDTimer::detach()
 }
 
 extern BlinkLEDTimer *ledTimer;
+
+#endif
 
 #if BUILTIN_LED_NEOPIXEL
 

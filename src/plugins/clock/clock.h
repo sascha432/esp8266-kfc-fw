@@ -238,7 +238,7 @@ public:
     static constexpr uint16_t kMinFlashingSpeed   = 50;
     static constexpr uint16_t kMinRainbowSpeed    = 1;
 
-    static constexpr uint8_t kUpdateAutobrightnessInterval = 2;  // seconds
+    static constexpr uint8_t kUpdateAutoBrightnessInterval = 2;  // seconds
     static constexpr uint8_t kCheckTemperatureInterval     = 5;  // seconds
     static constexpr uint8_t kMinimumTemperatureThreshold  = 30;  // °C
     static constexpr uint8_t kUpdateMQTTInterval           = 30;  // seconds
@@ -247,7 +247,7 @@ public:
 
     static constexpr int16_t kAutoBrightnessOff = -1;
 
-    constexpr static uint8_t enablePinState(bool active) {
+    constexpr static uint8_t kEnablePinState(bool active) {
         return IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(active ? LOW : HIGH, active ? HIGH : LOW);
     }
 
@@ -710,7 +710,7 @@ inline void ClockPlugin::standbyLoop()
 inline void ClockPlugin::enableLoop(bool enable)
 {
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-        setAutobrightness(enable ? (Plugins::Sensor::getConfig().ambient.auto_brightness != -1) : false);
+        setAutoBrightness(enable ? (Plugins::Sensor::getConfig().ambient.auto_brightness != -1) : false);
     #endif
     _display.clear();
     _display.show();
@@ -894,7 +894,7 @@ inline void ClockPlugin::toggleShowMethod()
 
 inline uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
 {
-    return isAutobrightnessEnabled() ?
+    return isAutoBrightnessEnabled() ?
         (_getFadingBrightness() * (getAutoBrightness()) * (temperatureProtection ? getTempProtectionFactor() : 1.0f)) :
         (temperatureProtection ?
             (_getFadingBrightness() * getTempProtectionFactor()) :
@@ -1048,11 +1048,11 @@ inline void ClockPlugin::_updateBrightnessSettings()
 inline void ClockPlugin::_reset()
 {
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true));
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(true));
     #endif
     NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(IOT_CLOCK_NUM_PIXELS);
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(false));
     #endif
     pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
 }

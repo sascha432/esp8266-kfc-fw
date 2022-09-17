@@ -504,7 +504,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     break;
             }
             #if IOT_LED_MATRIX_ENABLE_PIN != -1
-                auto state = digitalRead(IOT_LED_MATRIX_ENABLE_PIN) == enablePinState(true);
+                auto state = digitalRead(IOT_LED_MATRIX_ENABLE_PIN) == kEnablePinState(true);
                 args.print(F("enable pin=%u initial state=%s"), state, initialState);
             #else
                 args.print(F("initial state=%s"), initialState);

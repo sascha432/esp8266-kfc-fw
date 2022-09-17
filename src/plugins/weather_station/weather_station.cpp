@@ -299,6 +299,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
             __LDBG_printf("event=%u types=%s", event.getType(), event.getGesturesString());
             #if IOT_ALARM_PLUGIN_ENABLED
                 if (_resetAlarm()) {
+                    delay(150);
                     return false;
                 }
             #endif
@@ -307,15 +308,18 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                     if (_pickGalleryPicture()) {
                         redraw();
                     }
+                    delay(150);
                     return false;
                 }
             #endif
             if (event.isSwipeRight() || event.isTap()) {
                 this->_setScreen(_getNextScreen(_getCurrentScreen(), true));
+                delay(150);
                 return false;
             }
             if (event.isSwipeLeft()) {
                 this->_setScreen(_getPrevScreen(_getCurrentScreen(), true));
+                delay(150);
                 return false;
             }
             return true;

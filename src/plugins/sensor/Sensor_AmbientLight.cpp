@@ -244,7 +244,7 @@ void Sensor_AmbientLight::_timerCallback()
         default:
             break;
     }
-    if (_handler && _handler->isAutobrightnessEnabled()) {
+    if (_handler && _handler->isAutoBrightnessEnabled()) {
         const uint32_t speed = ((_config.adjustment_speed << 4) + 1000);
         if (_config.auto_brightness == -1) {
             _handler->_autoBrightnessValue = 1;
@@ -286,7 +286,7 @@ String Sensor_AmbientLight::_getLightSensorWebUIValue()
     if (_sensor.type == SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
         return PrintString(F("%.1f lux"), _sensor.bh1750FVI.illuminance);
     }
-    if (!_handler || !_handler->isAutobrightnessEnabled()) {
+    if (!_handler || !_handler->isAutoBrightnessEnabled()) {
         return PrintString(F("<strong>OFF</strong><br> <span class=\"light-sensor-value\">Sensor value %d</span>"), getValue());
     }
     #if IOT_SENSOR_CONFIG_CLOCKV2

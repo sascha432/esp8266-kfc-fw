@@ -32,21 +32,21 @@ class AmbientLightSensorHandler {
 public:
 
     AmbientLightSensorHandler() :
-        _autobrightness(true),
+        _autoBrightness(true),
         _autoBrightnessValue(1.0f),
         _ambientLightSensor(nullptr)
     {
     }
 
-    void setAutobrightness(bool autobrightness) {
-        _autobrightness = autobrightness;
-        if (!autobrightness) {
+    void setAutoBrightness(bool autoBrightness) {
+        _autoBrightness = autoBrightness;
+        if (!autoBrightness) {
             _autoBrightnessValue = 1.0;
         }
     }
 
-    bool isAutobrightnessEnabled() const {
-        return _autobrightness;
+    bool isAutoBrightnessEnabled() const {
+        return _autoBrightness;
     }
 
     float getAutoBrightness() const {
@@ -56,7 +56,7 @@ public:
 private:
     friend Sensor_AmbientLight;
 
-    bool _autobrightness;
+    bool _autoBrightness;
     float _autoBrightnessValue;
     Sensor_AmbientLight *_ambientLightSensor;
 };

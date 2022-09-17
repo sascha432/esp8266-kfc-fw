@@ -247,7 +247,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     #endif
 
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(false));
         pinMode(IOT_LED_MATRIX_ENABLE_PIN, OUTPUT);
     #endif
 
@@ -376,6 +376,37 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     _setupTimer();
     _isRunning = true;
+
+    #if IOT_LED_MATRIX_SHOW_UPDATE_PROGRESS
+
+        // show update status during OTA updates
+        int progressValue = -1;
+        WebServer::Plugin::getInstance().setUpdateFirmwareCallback([this, progressValue](size_t position, size_t size) mutable {
+            int progress = position * 100 / size;
+            if (progressValue != progress) {
+                if (progressValue == -1) {
+
+                    // enable LEDs and clear them to show status
+                    #if IOT_LED_MATRIX_ENABLE_PIN != -1
+                        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(true));
+                    #endif
+                    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
+
+                    LoopFunctions::remove(standbyLoop);
+                    LoopFunctions::remove(loop);
+                    _fps = NAN;
+                }
+
+                uint8_t color2 = (progress * progress * progress * progress) / 1000000;
+                _display.fill(((100 - progress) << 16) | (color2 << 8));
+                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() * 3, 255 / 4, NeoPixelEx::Context::validate(nullptr));
+
+                progressValue = progress;
+            }
+        });
+
+    #endif
+
 }
 
 void ClockPlugin::reconfigure(const String &source)
@@ -745,8 +776,8 @@ void ClockPlugin::_enable()
     }
 
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true));
-        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, enablePinState(true), _isEnabled, _config.enabled);
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(true));
+        __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(true), _isEnabled, _config.enabled);
     #endif
 
     pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
@@ -768,7 +799,7 @@ void ClockPlugin::_enable()
 
 void ClockPlugin::_disable()
 {
-    __LDBG_printf("disable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false), _isEnabled, _config.enabled);
+    __LDBG_printf("disable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(false), _isEnabled, _config.enabled);
 
     // turn all leds off and set brightness to 0
     _display.setBrightness(0);
@@ -791,7 +822,7 @@ void ClockPlugin::_disable()
     digitalWrite(IOT_LED_MATRIX_OUTPUT_PIN, LOW);
 
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, enablePinState(false));
+        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(false));
     #endif
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
@@ -839,7 +870,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
             _config.getAnimation(),
             _targetBrightness,
             #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-                isAutobrightnessEnabled()
+                isAutoBrightnessEnabled()
             #else
                 false
             #endif
@@ -848,7 +879,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
         __LDBG_printf("storing parameters brightness=%u auto=%d color=%s animation=%u", saved.targetBrightness, saved.autoBrightness, getColor().toString().c_str(), saved.animation);
         _resetAlarmFunc = [this, saved](Event::CallbackTimerPtr timer) {
             #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-                setAutobrightness(saved.autoBrightness);
+                setAutoBrightness(saved.autoBrightness);
             #endif
             _targetBrightness = saved.targetBrightness;
             setAnimation(saved.animation);
@@ -862,7 +893,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
     if (!_alarmTimer) {
         __LDBG_printf("alarm brightness=%u color=%s", _targetBrightness, getColor().toString().c_str());
         #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
-            setAutobrightness(false);
+            setAutoBrightness(false);
         #endif
         _targetBrightness = kMaxBrightness;
         _setAnimation(new Clock::FlashingAnimation(*this, _config.alarm.color.value, _config.alarm.speed));

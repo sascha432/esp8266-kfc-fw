@@ -162,7 +162,7 @@ namespace WSDraw {
 
         _canvas->setFont(FONTS_TEMPERATURE);
         _canvas->setTextColor(COLORS_WHITE);
-        _canvas->drawTextAligned(TFT_WIDTH - 2, _offsetY, _getTemperature(data.getTemperature()), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
+        _canvas->drawTextAligned(TFT_WIDTH - 4, _offsetY, _getTemperature(data.getTemperature()), AdafruitGFXExtension::RIGHT, AdafruitGFXExtension::TOP);
         _offsetY += _canvas->getFontHeight(FONTS_TEMPERATURE);
 
         _canvas->setTextColor(COLORS_CYAN);

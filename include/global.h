@@ -436,6 +436,18 @@
 #    define WEATHER_STATION_MAX_CLOCKS 4
 #endif
 
+#ifndef HAVE_ANALOG_CLOCK
+#    define HAVE_ANALOG_CLOCK 1
+#endif
+
+#ifndef HAVE_INFO_SCREEN
+#    define HAVE_INFO_SCREEN 1
+#endif
+
+#ifndef HAVE_CURATED_ART
+#    define HAVE_CURATED_ART 1
+#endif
+
 // option to display the TFT in realtime in the WebUI
 #ifndef WEATHER_STATION_HAVE_WEBUI_PREVIEW
 #    define WEATHER_STATION_HAVE_WEBUI_PREVIEW 0

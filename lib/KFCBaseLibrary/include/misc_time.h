@@ -58,7 +58,8 @@ uint32_t getSystemUptime();
 // milliseconds
 uint64_t getSystemUptimeMillis();
 
-// die maximale laenge an daten fuer dike TZ env variable
+// maximum length for the TZ env variable. requires posix environment
+// 0 = use defaults
 #ifndef TZ_ENVIRONMENT_MAX_SIZE
 #   define TZ_ENVIRONMENT_MAX_SIZE 0
 #endif

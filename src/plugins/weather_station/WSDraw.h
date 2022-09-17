@@ -199,11 +199,15 @@ namespace WSDraw {
         // draw temperature, humidity and pressure in one line
         void _drawIndoorClimate();
 
+        void _drawDateBottom(struct tm *tm);
+
         // displays indoor as main screen
         void _drawIndoorClimateBottom();
 
         // calls _drawIndoorClimate() after clearing the part of the screen and then displays it
         void _updateIndoorClimateBottom();
+
+        // void _updateDateBottom(struct tm *tm);
 
         // draws sun and moon info
         void _drawSunAndMoon();

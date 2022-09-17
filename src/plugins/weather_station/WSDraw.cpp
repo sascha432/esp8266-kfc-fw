@@ -262,6 +262,25 @@ namespace WSDraw {
         }
     }
 
+    void Base::_drawDateBottom(struct tm *tm)
+    {
+        int16_t _offsetY = Y_START_POSITION_INDOOR_BOTTOM + 1;
+
+        _canvas->setFont(FONTS_DATE);
+        _canvas->setTextColor(COLORS_DATE);
+        PrintString timeStr;
+        timeStr.strftime(F("%a %b %d %Y "), tm);
+        timeStr += FormatTime::getTimezoneStr(_config.time_format_24h, tm);
+        _canvas->drawTextAligned((TFT_WIDTH / 2), _offsetY, timeStr.c_str(), H_POSITION_DATE);
+    }
+
+    // void Base::_updateDateBottom(struct tm *tm)
+    // {
+    //     CLEAR_AND_DISPLAY(Y_START_POSITION_INDOOR_BOTTOM, Y_END_POSITION_INDOOR_BOTTOM) {
+    //         _drawDateBottom(tm);
+    //     }
+    // }
+
     void Base::_drawForecast()
     {
         _canvas->setFont(FONTS_DEFAULT_BIG);
@@ -387,6 +406,12 @@ namespace WSDraw {
             _lastTime = time(nullptr);
             auto tm = localtime(&_lastTime);
 
+            if ((tm->tm_sec / 5) % 2 == 0) {
+                _drawIndoorClimateBottom();
+            }
+            else {
+                _drawDateBottom(tm);
+            }
             constexpr int16_t kCenterX = offsetX + kOuterCircleRadius;
             constexpr int16_t kCenterY = offsetY + kOuterCircleRadius;
 
@@ -530,14 +555,12 @@ namespace WSDraw {
         void Base::_drawScreenAnalogClock()
         {
             _drawAnalogClock();
-            _drawIndoorClimateBottom();
             _drawSunAndMoon();
         }
 
         void Base::_updateScreenAnalogClock()
         {
-            CLEAR_AND_DISPLAY(Y_START_POSITION_ANALOG_CLOCK, Y_END_POSITION_ANALOG_CLOCK) {
-                _updateIndoorClimateBottom();
+            CLEAR_AND_DISPLAY(Y_START_POSITION_ANALOG_CLOCK, Y_END_POSITION_INDOOR_BOTTOM) {
                 _drawAnalogClock();
             }
         }
@@ -611,7 +634,7 @@ namespace WSDraw {
                 _canvas->setTextColor(COLORS_MOON_PHASE_ACTIVE);
             }
 
-            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moon.moonPhaseNameNoOffset(), AdafruitGFXExtension::CENTER);
+            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moon.moon_pPhaseName(), AdafruitGFXExtension::CENTER);
             _offsetY += 2;
 
             // _canvas->setFont(&DejaVuSans_5pt8b);

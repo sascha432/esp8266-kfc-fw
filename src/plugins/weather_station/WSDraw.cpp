@@ -346,41 +346,99 @@ namespace WSDraw {
         _drawWorldClocks(offsetY);
     }
 
-    void Base::_drawInfo()
-    {
-        int16_t y = Y_START_POSITION_INFO + 5;
-        constexpr uint8_t kIncr = 3;
+    #if HAVE_ANALOG_CLOCK
 
-        _canvas->setTextColor(COLORS_INFO_TITLE);
-        _canvas->setFont(FONTS_DEFAULT_SMALL);
-        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Hostname"), AdafruitGFXExtension::CENTER) + kIncr;
-        _canvas->setTextColor(COLORS_INFO_DETAILS);
-        _canvas->setFont(FONTS_DEFAULT_MEDIUM);
-        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, KFCConfigurationClasses::System::Device::getName(), AdafruitGFXExtension::CENTER) + 2 + kIncr;
-
-        _canvas->setTextColor(COLORS_INFO_TITLE);
-        _canvas->setFont(FONTS_DEFAULT_SMALL);
-        y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("WiFi"), AdafruitGFXExtension::CENTER) + kIncr;
-        _canvas->setTextColor(COLORS_INFO_DETAILS);
-        _canvas->setFont(FONTS_DEFAULT_MEDIUM);
-        if (WiFi.isConnected()) {
-            auto ssid = WiFi.SSID();
-            if (ssid.length() > 12) {
-                _canvas->setFont(FONTS_DEFAULT_SMALL);
+        void Base::_drawAnalogClockLine(int16_t centerX, int16_t centerY, int16_t angle, uint16_t radius, uint16_t length, uint16_t color)
+        {
+            const float rAngle = angle / DEG_TO_RAD;
+            int16_t x1 = centerX + (sin(rAngle) * radius);
+            int16_t y1 = centerY - (cos(rAngle) * radius);
+            int16_t x2, y2;
+            if (length) {
+                x2 = centerX + (sin(rAngle) * (radius - length));
+                y2 = centerY - (cos(rAngle) * (radius - length));
             }
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, ssid, AdafruitGFXExtension::CENTER) + kIncr;
-            _canvas->setFont(FONTS_DEFAULT_MEDIUM);
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.localIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("GW ")) + WiFi.gatewayIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("DNS ")) + WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + kIncr;
-            _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.dnsIP(1).toString(), AdafruitGFXExtension::CENTER);
+            else {
+                x2 = centerX;
+                y2 = centerY;
+            }
+            _canvas->drawLine(x1, y1, x2, y2, color);
         }
-        else {
+
+        void Base::_drawAnalogClock()
+        {
+            constexpr uint8_t kSpacing = 2; // spacing on both sides
+            constexpr int16_t kMaxSize = std::min(TFT_WIDTH, TFT_HEIGHT) - (kSpacing * 2); // max size of the circle
+            constexpr uint8_t kOuterCircleRadius = kMaxSize / 2;
+            constexpr uint8_t kInnerCircleRadius = 2;
+            constexpr int16_t offsetX = (TFT_WIDTH - kMaxSize) / 2; // center of the screen
+            constexpr int16_t offsetY = (TFT_HEIGHT - kMaxSize) / 2;
+
+            _lastTime = time(nullptr);
+            auto tm = localtime(&_lastTime);
+
+            constexpr int16_t kCenterX = offsetX + kOuterCircleRadius;
+            constexpr int16_t kCenterY = offsetY + kOuterCircleRadius;
+
+            _canvas->drawCircle(kCenterX, kCenterY, kOuterCircleRadius, COLORS_WHITE);
+            _canvas->drawCircle(kCenterY, kCenterY, kInnerCircleRadius, COLORS_WHITE);
+
+            constexpr uint8_t kHourMarkerLineLength = 4;
+            for(uint16_t i = 0; i < 360; i += 30) {
+                _drawAnalogClockLine(kCenterX, kCenterY, i, kOuterCircleRadius, kHourMarkerLineLength, COLORS_RED);
+            }
+
+            constexpr int16_t kSecondsLineLength = kOuterCircleRadius - 3;
+            _drawAnalogClockLine(kCenterX, kCenterY, (tm->tm_sec * 6), kSecondsLineLength, 0, COLORS_YELLOW);
+
+            constexpr int16_t kMinuteLineLength = kOuterCircleRadius * 0.75;
+            _drawAnalogClockLine(kCenterX, kCenterY, (tm->tm_min * 6) + (tm->tm_sec / 10), kMinuteLineLength, 0, COLORS_YELLOW);
+
+            constexpr int16_t kHourLineLength = kOuterCircleRadius * 0.5;
+            _drawAnalogClockLine(kCenterX, kCenterY, (tm->tm_hour * 30) + (tm->tm_min / 2), kHourLineLength, 0, COLORS_YELLOW);
+        }
+
+    #endif
+
+    #if HAVE_INFO_SCREEN
+
+        void Base::_drawInfo()
+        {
+            int16_t y = Y_START_POSITION_INFO + 5;
+            constexpr uint8_t kIncr = 3;
+
+            _canvas->setTextColor(COLORS_INFO_TITLE);
             _canvas->setFont(FONTS_DEFAULT_SMALL);
-            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Trying to connect to"), AdafruitGFXExtension::CENTER);
-            _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.SSID(), AdafruitGFXExtension::CENTER);
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Hostname"), AdafruitGFXExtension::CENTER) + kIncr;
+            _canvas->setTextColor(COLORS_INFO_DETAILS);
+            _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, KFCConfigurationClasses::System::Device::getName(), AdafruitGFXExtension::CENTER) + 2 + kIncr;
+
+            _canvas->setTextColor(COLORS_INFO_TITLE);
+            _canvas->setFont(FONTS_DEFAULT_SMALL);
+            y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("WiFi"), AdafruitGFXExtension::CENTER) + kIncr;
+            _canvas->setTextColor(COLORS_INFO_DETAILS);
+            _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+            if (WiFi.isConnected()) {
+                auto ssid = WiFi.SSID();
+                if (ssid.length() > 12) {
+                    _canvas->setFont(FONTS_DEFAULT_SMALL);
+                }
+                y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, ssid, AdafruitGFXExtension::CENTER) + kIncr;
+                _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+                y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.localIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
+                y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("GW ")) + WiFi.gatewayIP().toString(), AdafruitGFXExtension::CENTER) + kIncr;
+                y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, String(F("DNS ")) + WiFi.dnsIP(0).toString(), AdafruitGFXExtension::CENTER) + kIncr;
+                _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.dnsIP(1).toString(), AdafruitGFXExtension::CENTER);
+            }
+            else {
+                _canvas->setFont(FONTS_DEFAULT_SMALL);
+                y += _canvas->drawTextAligned(TFT_WIDTH / 2, y, F("Trying to connect to"), AdafruitGFXExtension::CENTER);
+                _canvas->drawTextAligned(TFT_WIDTH / 2, y, WiFi.SSID(), AdafruitGFXExtension::CENTER);
+            }
         }
-    }
+
+    #endif
 
     // SCREEN METHODS
 
@@ -439,18 +497,38 @@ namespace WSDraw {
         }
     }
 
-    void Base::_drawScreenInfo()
-    {
-        _drawTime();
-        _drawInfo();
-    }
+    #if HAVE_ANALOG_CLOCK
 
-    void Base::_updateScreenInfo()
-    {
-        CLEAR_AND_DISPLAY(Y_START_POSITION_INFO, Y_END_POSITION_INFO) {
+        void Base::_drawScreenAnalogClock()
+        {
+            _drawAnalogClock();
+        }
+
+        void Base::_updateScreenAnalogClock()
+        {
+            CLEAR_AND_DISPLAY(Y_START_POSITION_ANALOG_CLOCK, Y_END_POSITION_ANALOG_CLOCK) {
+                _drawAnalogClock();
+            }
+        }
+
+    #endif
+
+    #if HAVE_INFO_SCREEN
+
+        void Base::_drawScreenInfo()
+        {
+            _drawTime();
             _drawInfo();
         }
-    }
+
+        void Base::_updateScreenInfo()
+        {
+            CLEAR_AND_DISPLAY(Y_START_POSITION_INFO, Y_END_POSITION_INFO) {
+                _drawInfo();
+            }
+        }
+
+    #endif
 
     void Base::_drawMoonPhase()
     {
@@ -502,7 +580,7 @@ namespace WSDraw {
                 _canvas->setTextColor(COLORS_MOON_PHASE_ACTIVE);
             }
 
-            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moon.moonPhaseName(), AdafruitGFXExtension::CENTER);
+            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moon.moonPhaseNameNoOffset(), AdafruitGFXExtension::CENTER);
             _offsetY += 2;
 
             // _canvas->setFont(&DejaVuSans_5pt8b);
@@ -525,21 +603,25 @@ namespace WSDraw {
         }
     }
 
-    void Base::_drawScreenPictures()
-    {
-        if (_galleryFile) {
-            _galleryFile.seek(0);
-            _drawJpegPicture(_galleryFile, _tft.height());
-        }
-    }
+    #if HAVE_CURATED_ART
 
-    void Base::_updateScreenPictures()
-    {
-        if (_galleryFile) {
-            _galleryFile.seek(0);
-            _drawJpegPicture(_galleryFile, 35);
+        void Base::_drawScreenCuratedArt()
+        {
+            if (_galleryFile) {
+                _galleryFile.seek(0);
+                _drawJpegPicture(_galleryFile, _tft.height());
+            }
         }
-    }
+
+        void Base::_updateScreenCuratedArt()
+        {
+            if (_galleryFile) {
+                _galleryFile.seek(0);
+                _drawJpegPicture(_galleryFile, 35);
+            }
+        }
+
+    #endif
 
 
     #if DEBUG_IOT_WEATHER_STATION
@@ -704,10 +786,13 @@ namespace WSDraw {
             uint32_t start = micros();
         #endif
 
-        if (_currentScreen == ScreenType::PICTURES) {
-            _drawScreenPictures();
-        }
-        else {
+        #if HAVE_CURATED_ART
+            if (_currentScreen == ScreenType::CURATED_ART) {
+                _drawScreenCuratedArt();
+            }
+            else
+        #endif
+        {
 
             _canvas->fillScreen(COLORS_BACKGROUND);
 
@@ -721,9 +806,16 @@ namespace WSDraw {
                 case ScreenType::FORECAST:
                     _drawScreenForecast();
                     break;
-                case ScreenType::INFO:
-                    _drawScreenInfo();
-                    break;
+                #if HAVE_ANALOG_CLOCK
+                    case ScreenType::ANALOG_CLOCK:
+                        _drawScreenAnalogClock();
+                        break;
+                #endif
+                #if HAVE_INFO_SCREEN
+                    case ScreenType::INFO:
+                        _drawScreenInfo();
+                        break;
+                #endif
                 case ScreenType::WORLD_CLOCK:
                     _drawWorldClock();
                     break;
@@ -893,19 +985,23 @@ namespace WSDraw {
         return true;
     }
 
-    void Base::_drawJpegPicture(File filename, uint16_t height)
-    {
-        _tftOutputMaxHeight = height ? height : _tft.height();
-        auto TJpgDecPtr = new TJpg_Decoder(tft_output);
-        if (TJpgDecPtr) {
-            TJpgDecPtr->drawFsJpg(0, 0, filename);
-            delete TJpgDecPtr;
-            stdex::reset(_tftOverlayCanvas);
+    #if HAVE_CURATED_ART
+
+        void Base::_drawJpegPicture(File filename, uint16_t height)
+        {
+            _tftOutputMaxHeight = height ? height : _tft.height();
+            auto TJpgDecPtr = new TJpg_Decoder(tft_output);
+            if (TJpgDecPtr) {
+                TJpgDecPtr->drawFsJpg(0, 0, filename);
+                delete TJpgDecPtr;
+                stdex::reset(_tftOverlayCanvas);
+            }
+            else {
+                __DBG_printf("out of memory");
+            }
         }
-        else {
-            __DBG_printf("out of memory");
-        }
-    }
+
+    #endif
 
     void Base::_updateScreenTime()
     {
@@ -927,10 +1023,18 @@ namespace WSDraw {
                 return F("World Clock");
             case ScreenType::MOON_PHASE:
                 return F("Moon Phase");
-            case ScreenType::INFO:
-                return F("System Info");
-            case ScreenType::PICTURES:
-                return F("Gallery");
+            #if HAVE_ANALOG_CLOCK
+                case ScreenType::ANALOG_CLOCK:
+                    return F("Analog Clock");
+            #endif
+            #if HAVE_INFO_SCREEN
+                case ScreenType::INFO:
+                    return F("System Info");
+            #endif
+            #if HAVE_CURATED_ART
+                case ScreenType::CURATED_ART:
+                    return F("Curated Art");
+            #endif
             #if DEBUG_IOT_WEATHER_STATION
                 case ScreenType::DEBUG_INFO:
                     return F("Debug Info");

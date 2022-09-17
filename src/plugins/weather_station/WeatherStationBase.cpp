@@ -239,21 +239,30 @@ void WeatherStationBase::_loop()
                     _updateScreenWorldClock();
                     return;
                 }
-                else if (_currentScreen == ScreenType::PICTURES) {
-                    _updateScreenPictures();
-                    return;
-                }
+                #if HAVE_CURATED_ART
+                    else if (_currentScreen == ScreenType::CURATED_ART) {
+                        _updateScreenCuratedArt();
+                        return;
+                    }
+                #endif
                 else if (_currentScreen == ScreenType::INDOOR) {
                     _updateScreenIndoorClimate();
                 }
+                #if HAVE_ANALOG_CLOCK
+                    else if (_currentScreen == ScreenType::ANALOG_CLOCK) {
+                        _updateScreenIndoorClimate();
+                    }
+                #endif
                 else if (do5secUpdate) {
                     // update forecast section every 5 seconds
                     if (_currentScreen == ScreenType::FORECAST) {
                         _updateScreenForecast();
                     }
-                    else if (_currentScreen == ScreenType::INFO) {
-                        _updateScreenInfo();
-                    }
+                    #if HAVE_INFO_SCREEN
+                        else if (_currentScreen == ScreenType::INFO) {
+                            _updateScreenInfo();
+                        }
+                    #endif
                 }
 
                 // update time every second
@@ -272,14 +281,16 @@ void WeatherStationBase::_loop()
 
 void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
 {
-    switch(_currentScreen) {
-        case ScreenType::PICTURES:
-            _Timer(_galleryTimer).remove();
-            _galleryFile.close();
-            break;
-        default:
-            break;
-    }
+    #if HAVE_CURATED_ART
+        switch(_currentScreen) {
+            case ScreenType::CURATED_ART:
+                _Timer(_galleryTimer).remove();
+                _galleryFile.close();
+                break;
+            default:
+                break;
+        }
+    #endif
 
     // verify if screen is valid
     _currentScreen = _getScreen(screen, true);
@@ -291,19 +302,21 @@ void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
     _toggleScreenTimer = millis();
     _toggleScreenTimeout = 0;
 
-    switch(_currentScreen) {
-        case ScreenType::PICTURES:
-            _resetPictureGalleryTimer();
-            if (_pickGalleryPicture()) {
-                redraw();
-            }
-            else {
-                _setScreen(ScreenType::TEXT);
-            }
-            break;
-        default:
-            break;
-    }
+    #if HAVE_CURATED_ART
+        switch(_currentScreen) {
+            case ScreenType::CURATED_ART:
+                _resetPictureGalleryTimer();
+                if (_pickGalleryPicture()) {
+                    redraw();
+                }
+                else {
+                    _setScreen(ScreenType::TEXT);
+                }
+                break;
+            default:
+                break;
+        }
+    #endif
 
     if (_currentScreen < ScreenType::NUM_SCREENS) {
         if (timeout == -1) {

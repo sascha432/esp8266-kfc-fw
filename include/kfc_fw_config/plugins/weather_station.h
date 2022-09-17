@@ -20,8 +20,15 @@ namespace KFCConfigurationClasses {
                 FORECAST,
                 WORLD_CLOCK,
                 MOON_PHASE,
-                INFO,
-                PICTURES,
+                #if HAVE_ANALOG_CLOCK
+                    ANALOG_CLOCK,
+                #endif
+                #if HAVE_INFO_SCREEN
+                    INFO,
+                #endif
+                #if HAVE_CURATED_ART
+                    CURATED_ART,
+                #endif
                 #if DEBUG_IOT_WEATHER_STATION
                     DEBUG_INFO,
                 #endif
@@ -91,9 +98,16 @@ namespace KFCConfigurationClasses {
                             10 /*INDOOR*/,
                             kSkipScreen /*FORECAST*/,
                             10 /*WORLD_CLOCK*/,
-                            10 /*MOON_PHASE*/,
-                            kManualScreen, /*INFO*/
-                            kManualScreen /*PICTURES*/
+                            10 /*MOON_PHASE*/
+                            #if HAVE_ANALOG_CLOCK
+                                , kManualScreen /*ANALOG_CLOCK*/
+                            #endif
+                            #if HAVE_INFO_SCREEN
+                                , kManualScreen /*INFO*/
+                            #endif
+                            #if HAVE_CURATED_ART
+                                , kManualScreen /*CURATED_ART*/
+                            #endif
                             #if DEBUG_IOT_WEATHER_STATION
                                 , kManualScreen /*DEBUG_INFO*/
                             #endif

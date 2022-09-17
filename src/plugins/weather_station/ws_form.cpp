@@ -97,14 +97,11 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         form.addFormUI(F("Release Threshold"));
         cfg.addRangeValidatorFor_released_threshold(form);
 
-        #if DEBUG_IOT_WEATHER_STATION
         #define NUM_SCREENS 8
-        #else
-        #define NUM_SCREENS 7
-        #endif
-        static_assert(NUM_SCREENS == WSDraw::kNumScreens, "number does not match");
+        static_assert(NUM_SCREENS == WSDraw::kNumScreens, "since Boost cannot use constexpr or enum, update macro by hand");
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, NUM_SCREENS, st/*, ds*/);
         #undef NUM_SCREENS
+
         // auto modeList = FormUI::Container::List(
         //     kDefaultScreenTimeInSeconds, F("Change Automatically"),
         //     kSkipScreen, F("Hide Screen"),

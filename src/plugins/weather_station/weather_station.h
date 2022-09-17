@@ -34,7 +34,9 @@ public:
         auto subMenu = configMenu.addSubMenu(getFriendlyName());
         subMenu.addMenuItem(getFriendlyName(), F("weather.html"));
         subMenu.addMenuItem(F("World Clock"), F("world-clock.html"));
-        subMenu.addMenuItem(F("Gallery Pictures"), F("gallery-pictures.html"));
+        #if HAVE_CURATED_ART
+            subMenu.addMenuItem(F("Curated Art"), F("curated-art.html"));
+        #endif
     }
 
 // WebUI

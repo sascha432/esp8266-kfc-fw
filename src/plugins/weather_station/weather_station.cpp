@@ -302,12 +302,14 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                     return false;
                 }
             #endif
-            if (_currentScreen == ScreenType::PICTURES && (event.isSwipeRight() || event.isSwipeLeft())) {
-                if (_pickGalleryPicture()) {
-                    redraw();
+            #if HAVE_CURATED_ART
+                if (_currentScreen == ScreenType::CURATED_ART && (event.isSwipeRight() || event.isSwipeLeft())) {
+                    if (_pickGalleryPicture()) {
+                        redraw();
+                    }
+                    return false;
                 }
-                return false;
-            }
+            #endif
             if (event.isSwipeRight() || event.isTap()) {
                 this->_setScreen(_getNextScreen(_getCurrentScreen(), true));
                 return false;
@@ -541,19 +543,29 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
         }
 
         if (stop) {
-            _rainbowBrightness--;
+            _rainbowBrightness--; // reduce below kMaxBrightness to initial fade out
         }
         else {
             if (_pixelTimer) {
                 return;
             }
 
-            _rainbowBrightness = 0x100;
+            // max brightness and fading speed
+            constexpr int16_t kMaxBrightness = 0x200;
+            constexpr uint8_t kReduceBrightness = 8;
+            constexpr int16_t kMaxBrightnessValue = kMaxBrightness / kReduceBrightness;
+            static_assert(kMaxBrightnessValue <= 255, "brightness is limited to 255");
+
+            // rainbow speed and colors
+            constexpr uint8_t kInitialHue = 30;
+            constexpr accum88 kAnimationSpeed = 7;
+
+            _rainbowBrightness = kMaxBrightness;
 
             BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
             _Timer(_pixelTimer).add(Event::milliseconds(20), true, [this](::Event::CallbackTimerPtr timer) {
 
-                if (_rainbowBrightness < 0x100) {
+                if (_rainbowBrightness < kMaxBrightness) {
                     _rainbowBrightness--;
                     if (_rainbowBrightness <= 0) {
                         timer->disarm();
@@ -562,11 +574,11 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
                     }
                 }
 
-                fill_rainbow(reinterpret_cast<CRGB *>(_pixels.ptr()), _pixels.getNumPixels(), beat8(10, 255), 30);
+                fill_rainbow(reinterpret_cast<CRGB *>(_pixels.ptr()), _pixels.getNumPixels(), beat8(kAnimationSpeed, 255), kInitialHue);
                 #if HAVE_FASTLED
-                    FastLED.show(_rainbowBrightness / 2);
+                    FastLED.show(_rainbowBrightness / kReduceBrightness);
                 #else
-                    _pixels.show(_rainbowBrightness / 2);
+                    _pixels.show(_rainbowBrightness / kReduceBrightness);
                 #endif
 
             });

@@ -12,11 +12,16 @@
 #   define DEBUG_MOON_PHASE 0
 #endif
 
-const __FlashStringHelper *moonPhaseName(uint8_t moonPhase);
+const __FlashStringHelper *moonPhaseName(uint8_t moonPhase, uint8_t ofs);
 
 inline const __FlashStringHelper *moonPhaseName(double moonPhase)
 {
-    return moonPhaseName(static_cast<uint8_t>(moonPhase * 8));
+    return moonPhaseName(static_cast<uint8_t>(moonPhase * 8), 1);
+}
+
+inline const __FlashStringHelper *moonPhaseNameNoOffset(double moonPhase)
+{
+    return moonPhaseName(static_cast<uint8_t>(moonPhase * 8), 0);
 }
 
 struct MoonPhaseType
@@ -55,6 +60,10 @@ struct MoonPhaseType
 
     const __FlashStringHelper *moonPhaseName() const {
         return ::moonPhaseName(pPhase);
+    }
+
+    const __FlashStringHelper *moonPhaseNameNoOffset() const {
+        return ::moonPhaseNameNoOffset(pPhase);
     }
 
     double moonPhaseIlluminationPct() const {

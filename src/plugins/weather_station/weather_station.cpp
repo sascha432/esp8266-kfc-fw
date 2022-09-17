@@ -585,7 +585,7 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
                     _pixels.show(_rainbowBrightness / kReduceBrightness);
                 #endif
 
-            });
+            }, ::Event::PriorityType::TIMER);
         }
     #endif
 }

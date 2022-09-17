@@ -6,12 +6,14 @@
 
 #include "colors.h"
 
+#define COLORS_ANALOG_CLOCK_BACKGROUND  0x52AA
 #define COLORS_BACKGROUND               COLORS_BLACK
 #define COLORS_DEFAULT_TEXT             COLORS_WHITE
 #define COLORS_DATE                     COLORS_WHITE
 #define COLORS_TIME                     COLORS_WHITE
 #define COLORS_TIMEZONE                 COLORS_YELLOW
 #define COLORS_CITY                     COLORS_CYAN
+#define COLORS_INDOOR_ICON              0xD6DA
 #define COLORS_CURRENT_WEATHER          COLORS_YELLOW
 #define COLORS_TEMPERATURE              COLORS_WHITE
 #define COLORS_WEATHER_DESCR            COLORS_YELLOW

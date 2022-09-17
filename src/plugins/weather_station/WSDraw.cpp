@@ -156,7 +156,7 @@ namespace WSDraw {
     {
         int16_t _offsetY = Y_START_POSITION_INDOOR + 5;
 
-        _canvas->drawBitmap(6, _offsetY + 10, icon_house, 36, 37, 0xD6DA, COLORS_BACKGROUND);
+        _canvas->drawBitmap(6, _offsetY + 10, icon_house, 36, 37, COLORS_INDOOR_ICON, COLORS_BACKGROUND);
 
         auto data = _getIndoorValues();
 
@@ -264,7 +264,7 @@ namespace WSDraw {
 
     void Base::_drawDateBottom(struct tm *tm)
     {
-        int16_t _offsetY = Y_START_POSITION_INDOOR_BOTTOM + 1;
+        int16_t _offsetY = Y_START_POSITION_INDOOR_BOTTOM;
 
         _canvas->setFont(FONTS_DATE);
         _canvas->setTextColor(COLORS_DATE);
@@ -396,7 +396,7 @@ namespace WSDraw {
 
         void Base::_drawAnalogClock()
         {
-            constexpr uint8_t kSpacing = 12; // spacing on both sides
+            constexpr uint8_t kSpacing = 13; // spacing on both sides
             constexpr int16_t kMaxSize = std::min(TFT_WIDTH, TFT_HEIGHT) - (kSpacing * 2); // max size of the circle
             constexpr int16_t kOuterCircleRadius = kMaxSize / 2;
             constexpr uint8_t kInnerCircleRadius = 4;
@@ -415,6 +415,13 @@ namespace WSDraw {
             constexpr int16_t kCenterX = offsetX + kOuterCircleRadius;
             constexpr int16_t kCenterY = offsetY + kOuterCircleRadius;
 
+            #define FILL_INNER_CLOCK_CIRCLE 0 // filled circles are really slow
+
+            #if FILL_INNER_CLOCK_CIRCLE
+                _canvas->fillCircle(kCenterX, kCenterY, kOuterCircleRadius, COLORS_WHITE);
+                _canvas->fillCircle(kCenterX, kCenterY, kOuterCircleRadius - 2, COLORS_ANALOG_CLOCK_BACKGROUND);
+            #endif
+
             // hour markers
             for(int16_t i = 0; i < 360; i += (360 / 12)) {
                 #if USE_HOUR_CIRCLE_MARKERS
@@ -429,15 +436,17 @@ namespace WSDraw {
                 #endif
             }
 
-            // minute markers
+            // second markers
             for(int16_t i = 0; i < 360; i += (360 / 60)) {
                 constexpr uint8_t kHourMarkerLineLength = 3;
                 _drawAnalogClockMarkers(kCenterX, kCenterY, i, kOuterCircleRadius - 2, kHourMarkerLineLength, COLORS_RED);
             }
 
             // outer and inner circle
-            _canvas->drawCircle(kCenterX, kCenterY, kOuterCircleRadius, COLORS_WHITE);
-            _canvas->drawCircle(kCenterX, kCenterY, kOuterCircleRadius - 1, COLORS_WHITE);
+            #if !FILL_INNER_CLOCK_CIRCLE
+                _canvas->drawCircle(kCenterX, kCenterY, kOuterCircleRadius, COLORS_WHITE);
+                _canvas->drawCircle(kCenterX, kCenterY, kOuterCircleRadius - 1, COLORS_WHITE);
+            #endif
             _canvas->fillCircle(kCenterX, kCenterY, kInnerCircleRadius, COLORS_WHITE);
 
             // hands

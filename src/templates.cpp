@@ -381,19 +381,25 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(hidden));
         }
     }
-    else if (key == F("GALLERY_IMAGES_COUNT")) {
-        #if IOT_WEATHER_STATION
+    #if defined(TFT_WIDTH) && defined(TFT_HEIGHT)
+        else if (key == F("TFT_WIDTH")) {
+            output.print(TFT_WIDTH);
+        }
+        else if (key == F("TFT_HEIGHT")) {
+            output.print(TFT_HEIGHT);
+        }
+    #endif
+    #if IOT_WEATHER_STATION && HAVE_CURATED_ART
+        else if (key == F("GALLERY_IMAGES_COUNT")) {
             output.print(WeatherStationPlugin::_getInstance()._scanGalleryDirectory(nullptr));
-        #endif
-    }
-    else if (key == F("GALLERY_IMAGES_IMAGES")) {
-        #if IOT_WEATHER_STATION
+        }
+        else if (key == F("GALLERY_IMAGES_IMAGES")) {
             WeatherStationPlugin::_getInstance()._scanGalleryDirectory([&output](uint32_t count, fs::Dir &dir) {
-                output.printf_P(PSTR(HTML_SA(div, HTML_A("class", "col")) HTML_SA(img, HTML_A("src", "/WsGallery/%s") HTML_A("width", "%u") HTML_A("height", "%u") HTML_A("file", "%s")) HTML_E(div)), dir.fileName().c_str(), TFT_WIDTH, TFT_HEIGHT, dir.fileName().c_str());
+                output.printf_P(PSTR(HTML_SA(div, HTML_A("class", "col")) HTML_SA(div, HTML_A("class", "ca-image") HTML_A("src", "/CuratedArt/%s") HTML_A("width", "%u") HTML_A("height", "%u")) HTML_E(div) HTML_E(div)), dir.fileName().c_str(), TFT_WIDTH, TFT_HEIGHT, dir.fileName().c_str());
                 return false;
             });
-        #endif
-    }
+        }
+    #endif
     else if (key == F("PIN_MONITOR_STATUS")) {
         #if PIN_MONITOR
                 PinMonitor::pinMonitor.printStatus(output);

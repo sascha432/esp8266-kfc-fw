@@ -27,10 +27,26 @@
         <div class="accordion pt-3">
             <div class="card">
                 <div class="card-header text-white bg-primary">
-                    <h2 class="mb-0">Gallery Pictures (%GALLERY_IMAGES_COUNT%)</h2>
+                    <h2 class="mb-0">Curated Art (%GALLERY_IMAGES_COUNT%)</h2>
                 </div>
             </div>
             <div class="card">
+                <style>
+                    .ca-image {
+                        width: %TFT_WIDTH%px;
+                        height: %TFT_HEIGHT%px;
+                        padding: 0;
+                        margin: 0;
+                        border: solid 2px #eee;
+                        background-image: url(/images/spinner.gif);
+                        background-size: 32px;
+                        background-position: center;
+                        background-repeat: no-repeat;
+                    }
+                    .container.picture-gallery .col {
+                        padding: 1rem;
+                    }
+                </style>
                 <div class="card-body">
                     <div class="container picture-gallery">
                         <div class="row row-cols-sm-2 row-cols-md-4 row-cols-lg-6">
@@ -55,5 +71,23 @@
 	<script debug_loader="1" type="text/javascript" src="../js/common.js"></script>
 	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
     <!--JAVASCRIPT%%-->
+    <script>
+        $(function() {
+            // load picture one by one with some delay
+            var load_one_picture = null;
+            var load_one_picture_delayed = function() {
+                window.setTimeout(load_one_picture, 500);
+            };
+            load_one_picture = function() {
+                var pic = $('div.ca-image:first');
+                if (pic.length) {
+                    pic.parent().html(pic.parent().html().replaceAll('div', 'img'));
+                    pic.get(0).onload = load_one_picture_delayed();
+                    pic.css('background-image', 'none');
+                }
+            };
+            load_one_picture_delayed();
+        });
+    </script>
 </body>
 </html>

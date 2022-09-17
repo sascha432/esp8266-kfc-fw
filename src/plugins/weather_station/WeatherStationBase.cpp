@@ -223,6 +223,9 @@ void WeatherStationBase::_loop()
                         _updateIndoorClimateBottom();
                     }
                 }
+                else if (_currentScreen == ScreenType::INDOOR) {
+                    _updateScreenIndoorClimate();
+                }
                 else if (_currentScreen == ScreenType::MOON_PHASE) {
                     _updateMoonPhase();
                     return;
@@ -239,18 +242,16 @@ void WeatherStationBase::_loop()
                     _updateScreenWorldClock();
                     return;
                 }
-                #if HAVE_CURATED_ART
+                #if HAVE_WEATHER_STATION_CURATED_ART
                     else if (_currentScreen == ScreenType::CURATED_ART) {
                         _updateScreenCuratedArt();
                         return;
                     }
                 #endif
-                else if (_currentScreen == ScreenType::INDOOR) {
-                    _updateScreenIndoorClimate();
-                }
-                #if HAVE_ANALOG_CLOCK
+                #if HAVE_WEATHER_STATION_ANALOG_CLOCK
                     else if (_currentScreen == ScreenType::ANALOG_CLOCK) {
-                        _updateScreenIndoorClimate();
+                        _updateScreenAnalogClock();
+                        return;
                     }
                 #endif
                 else if (do5secUpdate) {
@@ -258,7 +259,7 @@ void WeatherStationBase::_loop()
                     if (_currentScreen == ScreenType::FORECAST) {
                         _updateScreenForecast();
                     }
-                    #if HAVE_INFO_SCREEN
+                    #if HAVE_WEATHER_STATION_INFO_SCREEN
                         else if (_currentScreen == ScreenType::INFO) {
                             _updateScreenInfo();
                         }
@@ -281,7 +282,7 @@ void WeatherStationBase::_loop()
 
 void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
 {
-    #if HAVE_CURATED_ART
+    #if HAVE_WEATHER_STATION_CURATED_ART
         switch(_currentScreen) {
             case ScreenType::CURATED_ART:
                 _Timer(_galleryTimer).remove();
@@ -302,7 +303,7 @@ void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
     _toggleScreenTimer = millis();
     _toggleScreenTimeout = 0;
 
-    #if HAVE_CURATED_ART
+    #if HAVE_WEATHER_STATION_CURATED_ART
         switch(_currentScreen) {
             case ScreenType::CURATED_ART:
                 _resetPictureGalleryTimer();

@@ -145,7 +145,7 @@
 
 // analog clock
 #define Y_START_POSITION_ANALOG_CLOCK   (2)
-#define Y_END_POSITION_ANALOG_CLOCK     (TFT_HEIGHT - 1)
+#define Y_END_POSITION_ANALOG_CLOCK     (Y_START_POSITION_INDOOR_BOTTOM) // (70 + Y_START_POSITION_ANALOG_CLOCK)
 
 // system info
 #define Y_START_POSITION_INFO           (Y_END_POSITION_TIME + 2)
@@ -155,6 +155,7 @@
 #define Y_START_MOON_PHASE              (Y_END_POSITION_TIME + 2)
 #define Y_END_MOON_PHASE                (TFT_HEIGHT - 1)
 
+// debug screen
 #define Y_START_POSITION_DEBUG          0
 #define Y_END_POSITION_DEBUG            (TFT_HEIGHT - 1)
 

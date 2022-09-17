@@ -186,7 +186,7 @@ namespace WSDraw {
         // displayTimezone = false draws it in the same line
         void _drawTime(bool displayTimezone = true);
 
-        #if HAVE_CURATED_ART
+        #if HAVE_WEATHER_STATION_CURATED_ART
             // drawing jpeg pictures with an overlay
             void _drawJpegPicture(File filename, uint16_t height);
         #endif
@@ -215,13 +215,13 @@ namespace WSDraw {
         void _drawWorldClocks(int16_t offsetY);
         void _drawWorldClock();
 
-        #if HAVE_ANALOG_CLOCK
+        #if HAVE_WEATHER_STATION_ANALOG_CLOCK
             // draw analog clock
-            void _drawAnalogClockLine(int16_t centerX, int16_t centerY, int16_t angle, uint16_t radius, uint16_t length, uint16_t color);
+            void _drawAnalogClockMarkers(int16_t centerX, int16_t centerY, int16_t angle, int16_t radius, int16_t length, uint16_t color);
             void _drawAnalogClock();
         #endif
 
-        #if HAVE_INFO_SCREEN
+        #if HAVE_WEATHER_STATION_INFO_SCREEN
             // draw info
             void _drawInfo();
         #endif
@@ -242,14 +242,14 @@ namespace WSDraw {
         void _drawScreenWorldClock();
         void _updateScreenWorldClock();
 
-        #if HAVE_ANALOG_CLOCK
+        #if HAVE_WEATHER_STATION_ANALOG_CLOCK
 
             void _drawScreenAnalogClock();
             void _updateScreenAnalogClock();
 
         #endif
 
-        #if HAVE_INFO_SCREEN
+        #if HAVE_WEATHER_STATION_INFO_SCREEN
 
             void _drawScreenInfo();
             void _updateScreenInfo();
@@ -259,7 +259,7 @@ namespace WSDraw {
         void _drawMoonPhase();
         void _updateMoonPhase();
 
-        #if HAVE_CURATED_ART
+        #if HAVE_WEATHER_STATION_CURATED_ART
 
             void _drawScreenCuratedArt();
             void _updateScreenCuratedArt();
@@ -306,7 +306,7 @@ namespace WSDraw {
         // clear/fill partial screen
         bool _clearPartially(int16_t y, int16_t endY, ColorType color = COLORS_BACKGROUND);
 
-        #if HAVE_CURATED_ART
+        #if HAVE_WEATHER_STATION_CURATED_ART
 
             // find all images and pick a random one that wasn't with the last 5 files
             bool _pickGalleryPicture();
@@ -330,7 +330,7 @@ namespace WSDraw {
         bool _isScreenValid(ScreenType screen, bool allowZeroTimeout = false) const;
         bool _isScreenValid(uint8_t screen, bool allowZeroTimeout = false) const;
 
-        #if HAVE_CURATED_ART
+        #if HAVE_WEATHER_STATION_CURATED_ART
             void _resetPictureGalleryTimer();
         #endif
 
@@ -396,7 +396,7 @@ namespace WSDraw {
 
         uint16_t _tftOutputMaxHeight;
         GFXcanvas1 *_tftOverlayCanvas;
-        #if HAVE_CURATED_ART
+        #if HAVE_WEATHER_STATION_CURATED_ART
             Event::Timer _galleryTimer;
             std::vector<String> _galleryImages;
             fs::File _galleryFile;
@@ -525,17 +525,21 @@ namespace WSDraw {
         return _isScreenValid(static_cast<uint8_t>(screen), allowZeroTimeout);
     }
 
-    inline void Base::_resetPictureGalleryTimer()
-    {
-        __LDBG_printf("reset timer=%u", !!_galleryTimer);
-        using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
+    #if HAVE_WEATHER_STATION_CURATED_ART
 
-        _Timer(_galleryTimer).add(Event::seconds(WeatherStation::getConfig().gallery_update_rate), true, [this](Event::CallbackTimerPtr timer) {
-            if (_pickGalleryPicture()) {
-                redraw();
-            }
-        });
-    }
+        inline void Base::_resetPictureGalleryTimer()
+        {
+            __LDBG_printf("reset timer=%u", !!_galleryTimer);
+            using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
+
+            _Timer(_galleryTimer).add(Event::seconds(WeatherStation::getConfig().gallery_update_rate), true, [this](Event::CallbackTimerPtr timer) {
+                if (_pickGalleryPicture()) {
+                    redraw();
+                }
+            });
+        }
+
+    #endif
 
     inline bool Base::_isScreenValid(uint8_t screen, bool allowZeroTimeout) const
     {
@@ -595,7 +599,7 @@ namespace WSDraw {
         return screen;
     }
 
-    #if HAVE_CURATED_ART
+    #if HAVE_WEATHER_STATION_CURATED_ART
 
         inline uint32_t Base::_scanGalleryDirectory(GalleryScannerCallback _scanCallback)
         {

@@ -432,28 +432,33 @@
 #    endif
 #endif
 
+// max. number for the word clock screen (1-4)
 #ifndef WEATHER_STATION_MAX_CLOCKS
 #    define WEATHER_STATION_MAX_CLOCKS 4
 #endif
 
-#ifndef HAVE_ANALOG_CLOCK
-#    define HAVE_ANALOG_CLOCK 1
+// enable screen to display an analog clock
+#ifndef HAVE_WEATHER_STATION_ANALOG_CLOCK
+#    define HAVE_WEATHER_STATION_ANALOG_CLOCK 1
 #endif
 
-#ifndef HAVE_INFO_SCREEN
-#    define HAVE_INFO_SCREEN 1
+// enable screen to display system/wifi information
+#ifndef HAVE_WEATHER_STATION_INFO_SCREEN
+#    define HAVE_WEATHER_STATION_INFO_SCREEN 1
 #endif
 
-#ifndef HAVE_CURATED_ART
-#    define HAVE_CURATED_ART 1
+// enable displaying jpeg images from /CuratedArt/*.jpg in a random order
+#ifndef HAVE_WEATHER_STATION_CURATED_ART
+#    define HAVE_WEATHER_STATION_CURATED_ART 1
 #endif
 
 // option to display the TFT in realtime in the WebUI
+// TODO currently not working
 #ifndef WEATHER_STATION_HAVE_WEBUI_PREVIEW
 #    define WEATHER_STATION_HAVE_WEBUI_PREVIEW 0
 #endif
 
-// option to create BMP screenshot of the TFT display
+// option to download BMP screenshots of the TFT display
 #ifndef WEATHER_STATION_HAVE_BMP_SCREENSHOT
 #    define WEATHER_STATION_HAVE_BMP_SCREENSHOT 0
 #endif

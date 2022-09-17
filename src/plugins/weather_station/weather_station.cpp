@@ -302,7 +302,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                     return false;
                 }
             #endif
-            #if HAVE_CURATED_ART
+            #if HAVE_WEATHER_STATION_CURATED_ART
                 if (_currentScreen == ScreenType::CURATED_ART && (event.isSwipeRight() || event.isSwipeLeft())) {
                     if (_pickGalleryPicture()) {
                         redraw();

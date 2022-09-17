@@ -346,14 +346,24 @@ namespace WSDraw {
         _drawWorldClocks(offsetY);
     }
 
-    #if HAVE_ANALOG_CLOCK
+    #if HAVE_WEATHER_STATION_ANALOG_CLOCK
 
-        void Base::_drawAnalogClockLine(int16_t centerX, int16_t centerY, int16_t angle, uint16_t radius, uint16_t length, uint16_t color)
+        #define USE_HOUR_CIRCLE_MARKERS 0
+
+        void Base::_drawAnalogClockMarkers(int16_t centerX, int16_t centerY, int16_t angle, int16_t radius, int16_t length, uint16_t color)
         {
-            const float rAngle = angle / DEG_TO_RAD;
+            // const float rAngle = angle * DEG_TO_RAD;
+            const float rAngle = angle / RAD_TO_DEG;
+
             int16_t x1 = centerX + (sin(rAngle) * radius);
             int16_t y1 = centerY - (cos(rAngle) * radius);
             int16_t x2, y2;
+            #if USE_HOUR_CIRCLE_MARKERS
+                if (length < 0) {
+                    _canvas->fillCircle(x1, y1, -length, color);
+                    return;
+                }
+            #endif
             if (length) {
                 x2 = centerX + (sin(rAngle) * (radius - length));
                 y2 = centerY - (cos(rAngle) * (radius - length));
@@ -367,12 +377,12 @@ namespace WSDraw {
 
         void Base::_drawAnalogClock()
         {
-            constexpr uint8_t kSpacing = 2; // spacing on both sides
+            constexpr uint8_t kSpacing = 12; // spacing on both sides
             constexpr int16_t kMaxSize = std::min(TFT_WIDTH, TFT_HEIGHT) - (kSpacing * 2); // max size of the circle
-            constexpr uint8_t kOuterCircleRadius = kMaxSize / 2;
-            constexpr uint8_t kInnerCircleRadius = 2;
+            constexpr int16_t kOuterCircleRadius = kMaxSize / 2;
+            constexpr uint8_t kInnerCircleRadius = 4;
             constexpr int16_t offsetX = (TFT_WIDTH - kMaxSize) / 2; // center of the screen
-            constexpr int16_t offsetY = (TFT_HEIGHT - kMaxSize) / 2;
+            constexpr int16_t offsetY = 1;
 
             _lastTime = time(nullptr);
             auto tm = localtime(&_lastTime);
@@ -380,27 +390,45 @@ namespace WSDraw {
             constexpr int16_t kCenterX = offsetX + kOuterCircleRadius;
             constexpr int16_t kCenterY = offsetY + kOuterCircleRadius;
 
-            _canvas->drawCircle(kCenterX, kCenterY, kOuterCircleRadius, COLORS_WHITE);
-            _canvas->drawCircle(kCenterY, kCenterY, kInnerCircleRadius, COLORS_WHITE);
-
-            constexpr uint8_t kHourMarkerLineLength = 4;
-            for(uint16_t i = 0; i < 360; i += 30) {
-                _drawAnalogClockLine(kCenterX, kCenterY, i, kOuterCircleRadius, kHourMarkerLineLength, COLORS_RED);
+            // hour markers
+            for(int16_t i = 0; i < 360; i += (360 / 12)) {
+                #if USE_HOUR_CIRCLE_MARKERS
+                    // circles
+                    _drawAnalogClockMarkers(kCenterX, kCenterY, i, kOuterCircleRadius - 3, -3, COLORS_RED);
+                #else
+                    // lines
+                    constexpr uint8_t kHourMarkerLineLength = 8;
+                    _drawAnalogClockMarkers(kCenterX, kCenterY, i, kOuterCircleRadius - 2, kHourMarkerLineLength, COLORS_RED);
+                    _drawAnalogClockMarkers(kCenterX, kCenterY, i + 1, kOuterCircleRadius - 2, kHourMarkerLineLength, COLORS_RED);
+                    _drawAnalogClockMarkers(kCenterX, kCenterY, i - 1, kOuterCircleRadius - 2, kHourMarkerLineLength, COLORS_RED);
+                #endif
             }
 
-            constexpr int16_t kSecondsLineLength = kOuterCircleRadius - 3;
-            _drawAnalogClockLine(kCenterX, kCenterY, (tm->tm_sec * 6), kSecondsLineLength, 0, COLORS_YELLOW);
+            // minute markers
+            for(int16_t i = 0; i < 360; i += (360 / 60)) {
+                constexpr uint8_t kHourMarkerLineLength = 3;
+                _drawAnalogClockMarkers(kCenterX, kCenterY, i, kOuterCircleRadius - 2, kHourMarkerLineLength, COLORS_RED);
+            }
 
-            constexpr int16_t kMinuteLineLength = kOuterCircleRadius * 0.75;
-            _drawAnalogClockLine(kCenterX, kCenterY, (tm->tm_min * 6) + (tm->tm_sec / 10), kMinuteLineLength, 0, COLORS_YELLOW);
+            // outer and inner circle
+            _canvas->drawCircle(kCenterX, kCenterY, kOuterCircleRadius, COLORS_WHITE);
+            _canvas->drawCircle(kCenterX, kCenterY, kOuterCircleRadius - 1, COLORS_WHITE);
+            _canvas->fillCircle(kCenterX, kCenterY, kInnerCircleRadius, COLORS_WHITE);
+
+            // hands
+            constexpr int16_t kSecondsLineLength = kOuterCircleRadius - 5;
+            _drawAnalogClockMarkers(kCenterX, kCenterY, (tm->tm_sec * 6), kSecondsLineLength, 0, COLORS_YELLOW);
+
+            constexpr int16_t kMinuteLineLength = kOuterCircleRadius * 0.65;
+            _drawAnalogClockMarkers(kCenterX, kCenterY, (tm->tm_min * 6) /* + (tm->tm_sec / 10)*/, kMinuteLineLength, 0, COLORS_YELLOW);
 
             constexpr int16_t kHourLineLength = kOuterCircleRadius * 0.5;
-            _drawAnalogClockLine(kCenterX, kCenterY, (tm->tm_hour * 30) + (tm->tm_min / 2), kHourLineLength, 0, COLORS_YELLOW);
+            _drawAnalogClockMarkers(kCenterX, kCenterY, (tm->tm_hour * 30) + (tm->tm_min / 2), kHourLineLength, 0, COLORS_YELLOW);
         }
 
     #endif
 
-    #if HAVE_INFO_SCREEN
+    #if HAVE_WEATHER_STATION_INFO_SCREEN
 
         void Base::_drawInfo()
         {
@@ -497,23 +525,26 @@ namespace WSDraw {
         }
     }
 
-    #if HAVE_ANALOG_CLOCK
+    #if HAVE_WEATHER_STATION_ANALOG_CLOCK
 
         void Base::_drawScreenAnalogClock()
         {
             _drawAnalogClock();
+            _drawIndoorClimateBottom();
+            _drawSunAndMoon();
         }
 
         void Base::_updateScreenAnalogClock()
         {
             CLEAR_AND_DISPLAY(Y_START_POSITION_ANALOG_CLOCK, Y_END_POSITION_ANALOG_CLOCK) {
+                _updateIndoorClimateBottom();
                 _drawAnalogClock();
             }
         }
 
     #endif
 
-    #if HAVE_INFO_SCREEN
+    #if HAVE_WEATHER_STATION_INFO_SCREEN
 
         void Base::_drawScreenInfo()
         {
@@ -603,7 +634,7 @@ namespace WSDraw {
         }
     }
 
-    #if HAVE_CURATED_ART
+    #if HAVE_WEATHER_STATION_CURATED_ART
 
         void Base::_drawScreenCuratedArt()
         {
@@ -786,7 +817,7 @@ namespace WSDraw {
             uint32_t start = micros();
         #endif
 
-        #if HAVE_CURATED_ART
+        #if HAVE_WEATHER_STATION_CURATED_ART
             if (_currentScreen == ScreenType::CURATED_ART) {
                 _drawScreenCuratedArt();
             }
@@ -806,12 +837,12 @@ namespace WSDraw {
                 case ScreenType::FORECAST:
                     _drawScreenForecast();
                     break;
-                #if HAVE_ANALOG_CLOCK
+                #if HAVE_WEATHER_STATION_ANALOG_CLOCK
                     case ScreenType::ANALOG_CLOCK:
                         _drawScreenAnalogClock();
                         break;
                 #endif
-                #if HAVE_INFO_SCREEN
+                #if HAVE_WEATHER_STATION_INFO_SCREEN
                     case ScreenType::INFO:
                         _drawScreenInfo();
                         break;
@@ -985,7 +1016,7 @@ namespace WSDraw {
         return true;
     }
 
-    #if HAVE_CURATED_ART
+    #if HAVE_WEATHER_STATION_CURATED_ART
 
         void Base::_drawJpegPicture(File filename, uint16_t height)
         {
@@ -1023,15 +1054,15 @@ namespace WSDraw {
                 return F("World Clock");
             case ScreenType::MOON_PHASE:
                 return F("Moon Phase");
-            #if HAVE_ANALOG_CLOCK
+            #if HAVE_WEATHER_STATION_ANALOG_CLOCK
                 case ScreenType::ANALOG_CLOCK:
                     return F("Analog Clock");
             #endif
-            #if HAVE_INFO_SCREEN
+            #if HAVE_WEATHER_STATION_INFO_SCREEN
                 case ScreenType::INFO:
                     return F("System Info");
             #endif
-            #if HAVE_CURATED_ART
+            #if HAVE_WEATHER_STATION_CURATED_ART
                 case ScreenType::CURATED_ART:
                     return F("Curated Art");
             #endif

@@ -256,12 +256,12 @@ MQTT::AutoDiscovery::EntityPtr SwitchPlugin::getAutoDiscovery(MQTT::FormatType f
     auto discovery = new MQTT::AutoDiscovery::Entity();
     auto channel = PrintString(FSPGM(channel__u), num);
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
-    if (!discovery->create(this, baseTopic + channel, format)) {
+    if (!discovery->create(this, channel, format)) {
         return discovery;
     }
-    discovery->addName(_names[num].toString(num));
     discovery->addStateTopic(_formatTopic(num, true));
     discovery->addCommandTopic(_formatTopic(num, false));
+    discovery->addName(_names[num].toString(num));
     discovery->addObjectId(baseTopic + channel);
 
     // check if channel has a custom icon

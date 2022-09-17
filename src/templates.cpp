@@ -389,7 +389,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(TFT_HEIGHT);
         }
     #endif
-    #if IOT_WEATHER_STATION && HAVE_CURATED_ART
+    #if IOT_WEATHER_STATION && HAVE_WEATHER_STATION_CURATED_ART
         else if (key == F("GALLERY_IMAGES_COUNT")) {
             output.print(WeatherStationPlugin::_getInstance()._scanGalleryDirectory(nullptr));
         }

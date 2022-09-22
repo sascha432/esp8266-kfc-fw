@@ -8,6 +8,10 @@ copy help
 
 ## Common Commands
 
+### ``+RTC=[set]``
+
+Display RTC status or set RTC time from current time
+
 ### TODO
 
 ## 7 Segment Clock

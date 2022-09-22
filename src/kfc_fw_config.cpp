@@ -1563,13 +1563,19 @@ uint32_t KFCFWConfiguration::getWiFiUp()
     return std::max(1U, get_time_diff(config._wifiUp, millis()));
 }
 
+#if 0
+#    define __DBG_RTC_printf __DBG_printf
+#else
+#    define __DBG_RTC_printf(...) ;
+#endif
+
 TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
 {
     if (output) {
         output->printf_P("I2C: SDA=%u, SCL=%u, clock stretch=%u, clock speed=%u, reset=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
     }
     if (!_initTwoWire || reset) {
-        __LDBG_printf("SDA=%u,SCL=%u,stretch=%u,speed=%u,rst=%u", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
+        __DBG_RTC_printf("SDA=%u,SCL=%u,stretch=%u,speed=%u,rst=%u", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
         _initTwoWire = true;
         Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
         Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRETCH);
@@ -1580,11 +1586,14 @@ TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
 
 bool KFCFWConfiguration::setRTC(uint32_t unixtime)
 {
-    __LDBG_printf("time=%u", unixtime);
+    __DBG_RTC_printf("time=%u", unixtime);
     #if RTC_SUPPORT
         initTwoWire();
         if (!rtc.begin()) {
+            __DBG_RTC_printf("rtc.begin() failed #1");
+            delay(5);
             if (!rtc.begin()) {
+                __DBG_RTC_printf("rtc.begin() failed #2");
                 return false;
             }
         }
@@ -1600,6 +1609,7 @@ void KFCFWConfiguration::setupRTC()
         // support for external RTCs
         initTwoWire();
         auto unixtime = config.getRTC();
+        __DBG_RTC_printf("unixtime=%u", unixtime);
         if (unixtime != 0) {
             struct timeval tv = { static_cast<time_t>(unixtime), 0 };
             settimeofday(&tv, nullptr);
@@ -1620,6 +1630,7 @@ void KFCFWConfiguration::setupRTC()
         // time won't start at 1970 and the timezone is also set...
         RTCMemoryManager::setSyncStatus(false);
         auto rtc = RTCMemoryManager::readTime();
+        __DBG_RTC_printf("unixtime=%u", rtc.time);
         struct timeval tv = { static_cast<time_t>(rtc.time), 0 };
         settimeofday(&tv, nullptr);
         RTCMemoryManager::setupRTC();
@@ -1636,14 +1647,14 @@ bool KFCFWConfiguration::rtcLostPower()
         initTwoWire();
         uint32_t unixtime = 0;
         if (!rtc.begin()) {
+            __DBG_RTC_printf("rtc.begin() failed #1");
             delay(5);
-            if (rtc.begin()) {
-                unixtime = rtc.now().unixtime();
+            if (!rtc.begin()) {
+                __DBG_RTC_printf("rtc.begin() failed #2");
+                return false;
             }
         }
-        else {
-            unixtime = rtc.now().unixtime();
-        }
+        unixtime = rtc.now().unixtime();
         if (unixtime == 0) {
             RTCMemoryManager::setSyncStatus(false);
         }
@@ -1653,20 +1664,48 @@ bool KFCFWConfiguration::rtcLostPower()
     #endif
 }
 
+KFCFWConfiguration::RtcStatus KFCFWConfiguration::getRTCStatus()
+{
+    RtcStatus data;
+    #if RTC_SUPPORT
+        initTwoWire();
+        if (!rtc.begin()) {
+            __DBG_RTC_printf("rtc.begin() failed #1");
+            delay(5);
+            if (!rtc.begin()) {
+                __DBG_RTC_printf("rtc.begin() failed #2");
+                return data;
+            }
+        }
+        data.time = rtc.now().unixtime();
+        if (data.time == 0) {
+            RTCMemoryManager::setSyncStatus(false);
+        }
+        data.temperature = rtc.getTemperature();
+        data.lostPower = rtc.lostPower();
+    #else
+        data.time = time(nullptr);
+        data.lostPower = RTCMemoryManager::getSyncStatus() != RTCMemoryManager::SyncStatus::NO;
+    #endif
+    return data;
+}
+
 uint32_t KFCFWConfiguration::getRTC()
 {
     #if RTC_SUPPORT
         initTwoWire();
         if (!rtc.begin()) {
+            __DBG_RTC_printf("rtc.begin() failed #1");
             delay(5);
             if (!rtc.begin()) {
+                __DBG_RTC_printf("rtc.begin() failed #2");
                 return 0;
             }
         }
         uint32_t unixtime = rtc.now().unixtime();
-        __LDBG_printf("time=%u", unixtime);
+        __DBG_RTC_printf("time=%u", unixtime);
         if (rtc.lostPower()) {
-            __LDBG_printf("time=0, lostPower=true");
+            __DBG_RTC_printf("time=0, lostPower=true");
             return 0;
         }
         return unixtime;
@@ -1680,14 +1719,42 @@ float KFCFWConfiguration::getRTCTemperature()
     #if RTC_SUPPORT
         initTwoWire();
         if (!rtc.begin()) {
+            __DBG_RTC_printf("rtc.begin() failed #1");
             delay(5);
             if (!rtc.begin()) {
+                __DBG_RTC_printf("rtc.begin() failed #2");
                 return NAN;
             }
         }
         return rtc.getTemperature();
     #endif
     return NAN;
+}
+
+void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
+{
+    RtcStatus data;
+    #if RTC_SUPPORT
+        initTwoWire();
+    #endif
+
+    data = getRTCStatus();
+    PrintString nowStr;
+    nowStr.strftime(FSPGM(strftime_date_time_zone), data.time);
+    PGM_P nl = plain ? PSTR("\n") : PSTR(", ");
+    output.print(F("Timestamp: "));
+    output.print(nowStr);
+    __DBG_RTC_printf("temp=%.3f lost_power=%u", data.temperature, data.lostPower);
+    if (!isnan(data.temperature)) {
+        output.printf_P(PSTR("%sTemperature: %.2f%s"), nl, data.temperature, plain ? PSTR("C") : SPGM(UTF8_degreeC));
+    }
+    output.printf_P(PSTR("%sLost Power: %s"), nl, data.lostPower ? SPGM(Yes) : SPGM(No));
+
+    #if RTC_SUPPORT
+        if (data.time == 0) {
+            output.print(F("Failed to initialize RTC"));
+        }
+    #endif
 }
 
 // void KFCFWConfiguration::scanWifiSignalLevel(StationVector &list)
@@ -1729,42 +1796,6 @@ float KFCFWConfiguration::getRTCTemperature()
 // {
 //     return Network::WiFi::getStations(KFCFWConfiguration::scanWifiSignalLevel);
 // }
-
-void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
-{
-    time_t now;
-    #if RTC_SUPPORT
-        initTwoWire();
-        if (!rtc.begin()) {
-            delay(5);
-        }
-        if (rtc.begin()) {
-            auto timeFormat_P = PSTR("DDD, DD MMM YYYY hh:mm:ss");
-            const auto size = strlen_P(timeFormat_P) + 1;
-            char timeFormat[size];
-            memcpy_P(timeFormat, timeFormat_P, size);
-
-            now = rtc.now().unixtime();
-    #else
-            now = time(nullptr);
-    #endif
-        PrintString nowStr;
-        nowStr.strftime(FSPGM(strftime_date_time_zone), now);
-        auto nl = plain ? PSTR("\n") : PSTR(", ");
-        output.print(F("Timestamp: "));
-        output.print(nowStr);
-        auto temp = getRTCTemperature();
-        if (!isnan(temp)) {
-            output.printf_P(PSTR("%sTemperature: %.2f%s"), nl, plain ? PSTR("C") : SPGM(UTF8_degreeC));
-        }
-        output.printf_P(PSTR("%sLost Power: %s"), nl, rtcLostPower() ? SPGM(Yes) : SPGM(No));
-    #if RTC_SUPPORT
-        }
-        else {
-            output.print(F("Failed to initialize RTC"));
-        }
-    #endif
-}
 
 static KFCConfigurationPlugin plugin;
 

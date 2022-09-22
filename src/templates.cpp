@@ -254,11 +254,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         printUniqueId(output, FSPGM(kfcfw), -1);
     }
     else if (key == F("SSDP_UUID")) {
-    #if IOT_SSDP_SUPPORT
-            printSSDPUUID(output);
-    #else
-            output.print(F("<SSDP support disabled>"));
-    #endif
+        #if IOT_SSDP_SUPPORT
+                printSSDPUUID(output);
+        #else
+                output.print(F("<SSDP support disabled>"));
+        #endif
     }
     // ------------------------------------------------------------------------------------
     // requires to be authenticated after the next block

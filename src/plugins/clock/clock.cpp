@@ -387,7 +387,8 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
                 uint8_t color2 = (progress * progress * progress * progress) / 1000000;
                 _display.fill(((100 - progress) << 16) | (color2 << 8));
-                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() * sizeof(GRB), 255 / 4, NeoPixelEx::Context::validate(nullptr));
+                _display.show(255 / 4);
+                // NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() * sizeof(GRB), 255 / 4, NeoPixelEx::Context::validate(nullptr));
 
                 progressValue = progress;
             }

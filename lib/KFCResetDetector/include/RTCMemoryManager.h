@@ -204,7 +204,7 @@ private:
     static void _clearTime();
 
     // TODO remove
-    public:
+public:
     static uint32_t _bufSize;
 
     #if RTC_SUPPORT == 0

@@ -174,11 +174,24 @@ public:
 
     static TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
 
+    struct RtcStatus {
+        time_t time;
+        float temperature;
+        bool lostPower;
+
+        RtcStatus() :
+            time(0),
+            temperature(NAN),
+            lostPower(true)
+        {}
+    };
+
     static void setupRTC();
     static bool setRTC(uint32_t unixtime);
     static uint32_t getRTC();
     float getRTCTemperature();
-    bool rtcLostPower() ;
+    bool rtcLostPower();
+    RtcStatus getRTCStatus();
     void printRTCStatus(Print &output, bool plain = true);
 
     // using StationConfig = KFCConfigurationClasses::Network::WiFi::StationConfig;

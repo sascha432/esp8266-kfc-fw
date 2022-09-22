@@ -19,9 +19,9 @@
 #include "../src/plugins/mqtt/mqtt_json.h"
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #if DEBUG_MEASURE_ANIMATION
@@ -32,14 +32,14 @@ ClockPlugin ClockPlugin_plugin;
 
 #if IOT_LED_MATRIX
 
-#define PLUGIN_OPTIONS_NAME                             "led_matrix"
-#define PLUGIN_OPTIONS_FRIENDLY_NAME                    "LED Matrix"
-#define PLUGIN_OPTIONS_WEB_TEMPLATES                    ""
+#    define PLUGIN_OPTIONS_NAME          "led_matrix"
+#    define PLUGIN_OPTIONS_FRIENDLY_NAME "LED Matrix"
+#    define PLUGIN_OPTIONS_WEB_TEMPLATES ""
 
 #else
 
-#define PLUGIN_OPTIONS_NAME                             "clock"
-#define PLUGIN_OPTIONS_FRIENDLY_NAME                    "Clock"
+#    define PLUGIN_OPTIONS_NAME          "clock"
+#    define PLUGIN_OPTIONS_FRIENDLY_NAME "Clock"
 
 #endif
 
@@ -265,18 +265,6 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     readConfig(true);
     _targetBrightness = 0;
 
-    #if IOT_LED_MATRIX == 0
-        // _setSevenSegmentDisplay();
-        #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-            if (isTimeValid()) {
-                _isSyncing = false;
-            } else {
-                setSyncing(true);
-            }
-            addTimeUpdatedCallback(ntpCallback);
-        #endif
-    #endif
-
     #if IOT_CLOCK_BUTTON_PIN != -1
 
         __LDBG_printf("button at pin %u", IOT_CLOCK_BUTTON_PIN);
@@ -399,7 +387,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
                 uint8_t color2 = (progress * progress * progress * progress) / 1000000;
                 _display.fill(((100 - progress) << 16) | (color2 << 8));
-                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() sizeof(GRB)3, 255 / 4, NeoPixelEx::Context::validate(nullptr));
+                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() * sizeof(GRB), 255 / 4, NeoPixelEx::Context::validate(nullptr));
 
                 progressValue = progress;
             }
@@ -914,72 +902,6 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 #endif
 
-#if IOT_LED_MATRIX == 0
-
-#if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-
-#error NOT UP TO DATE
-
-bool ClockPlugin::_loopSyncingAnimation(LoopOptionsType &options)
-{
-    if (!_isSyncing) {
-        return false;
-    }
-    // __LDBG_printf("isyncing=%u", _isSyncing);
-
-    //     if (_isSyncing) {
-//         if (get_time_diff(_lastUpdateTime, millis()) >= 100) {
-//             _lastUpdateTime = millis();
-
-// #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-//             #error crashing
-
-//             // show syncing animation until the time is valid
-//             if (_pixelOrder) {
-//                 if (++_isSyncing > IOT_CLOCK_PIXEL_ORDER_LEN) {
-//                     _isSyncing = 1;
-//                 }
-//                 for(uint8_t i = 0; i < SevenSegmentDisplay::getNumDigits(); i++) {
-//                     _display.rotate(i, _isSyncing - 1, _color, _pixelOrder.data(), _pixelOrder.size());
-//                 }
-//             }
-//             else {
-//                 if (++_isSyncing > SevenSegmentPixel_DIGITS_NUM_PIXELS) {
-//                     _isSyncing = 1;
-//                 }
-//                 for(uint8_t i = 0; i < _display->numDigits(); i++) {
-//                     _display->rotate(i, _isSyncing - 1, _color, nullptr, 0);
-//
-//             }
-// #endif
-//             _display.show();
-//         }
-//         return;
-//     }
-
-    // show 88:88:88 instead of the syncing animation
-    uint32_t color = _color;
-    _display.setParams(options.getMillis(), _getBrightness());
-    _display.setDigit(0, 8, color);
-    _display.setDigit(1, 8, color);
-    _display.setDigit(2, 8, color);
-    _display.setDigit(3, 8, color);
-#        if IOT_CLOCK_NUM_DIGITS == 6
-    _display.setDigit(4, 8, color);
-    _display.setDigit(5, 8, color);
-#        endif
-    _display.setColon(0, SevenSegmentDisplay::BOTH, color);
-#        if IOT_CLOCK_NUM_COLONS == 2
-    _display.setColon(1, SevenSegmentDisplay::BOTH, color);
-#        endif
-    _display.show();
-    return true;
-}
-
-#endif
-
-#endif
-
 void ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
@@ -1010,12 +932,6 @@ void ClockPlugin::_loop()
         // start update process
         _lastUpdateTime = millis();
 
-        #if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-            if (_loopSyncingAnimation(options)) {
-                // ...
-            }
-            else
-        #endif
         if (options.doRedraw()) {
 
             #if IOT_LED_MATRIX == 0

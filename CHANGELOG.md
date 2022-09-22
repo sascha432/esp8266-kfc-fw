@@ -2,6 +2,7 @@
 
 ## Version 0.0.6
 
+ - Fixed FastLED and NeoPixelEx issue with Framework Arduino ESP8266 3.0.1-dev
  - Added analog clock screen to the weather station
  - Fixed invalid TZ env variable name
  - Fixed dependencies and removed ``lib-extra/``

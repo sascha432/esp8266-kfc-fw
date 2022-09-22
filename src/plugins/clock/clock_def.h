@@ -325,21 +325,6 @@
 #   define IOT_CLOCK_MOTION_SENSOR_PIN_INVERTED 0
 #endif
 
-// show rotating animation while the time is invalid
-#ifndef IOT_CLOCK_PIXEL_SYNC_ANIMATION
-#    define IOT_CLOCK_PIXEL_SYNC_ANIMATION 0
-#endif
-
-#if IOT_LED_MATRIX && IOT_CLOCK_PIXEL_SYNC_ANIMATION
-#    error not supported, set IOT_CLOCK_PIXEL_SYNC_ANIMATION=0
-#endif
-
-#if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-#    define IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(...) __VA_ARGS__
-#else
-#    define IF_IOT_CLOCK_PIXEL_SYNC_ANIMATION(...)
-#endif
-
 #ifndef IOT_CLOCK_TEMPERATURE_PROTECTION
 #   define IOT_CLOCK_TEMPERATURE_PROTECTION 0
 #endif

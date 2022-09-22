@@ -17,7 +17,7 @@
 #include "stored_state.h"
 #include "../src/plugins/plugins.h"
 #if IOT_LED_MATRIX_HAVE_SSD1306
-#include <Adafruit_SSD1306.h>
+#    include <Adafruit_SSD1306.h>
 #endif
 
 namespace WebServer {
@@ -548,18 +548,6 @@ private:
         // std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
         time_t _time{0};
 
-    #    if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-    public:
-        void setSyncing(bool sync);
-        static void ntpCallback(time_t now);
-
-    private:
-        bool _loopSyncingAnimation(LoopOptionsType &options);
-
-    private:
-        bool _isSyncing{false};
-    #    endif
-
     #endif
 
 // ------------------------------------------------------------------------
@@ -819,31 +807,6 @@ inline bool ClockPlugin::eventMotionAutoOff(bool state)
     return false;
 }
 
-#endif
-
-#if IOT_CLOCK_PIXEL_SYNC_ANIMATION
-
-inline void ClockPlugin::ntpCallback(time_t now)
-{
-    getIntance().setSyncing(false);
-}
-
-inline void ClockPlugin::setSyncing(bool sync)
-{
-    __LDBG_printf("sync=%u", sync);
-    if (_tempProtection == ProtectionConfigType::MAX) {
-        __LDBG_printf("temperature protection active");
-        return;
-    }
-    if (sync != _isSyncing) {
-        _isSyncing = sync;
-        _time = 0;
-        _display.clear();
-        _updateRate = 100;
-        __LDBG_printf("update_rate=%u", _updateRate);
-        _forceUpdate = true;
-    }
-}
 #endif
 
 #if IOT_LED_MATRIX_FAN_CONTROL
@@ -1133,5 +1096,5 @@ inline struct Clock::ClockLoopOptions::tm24 &Clock::ClockLoopOptions::getLocalTi
 #endif
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif

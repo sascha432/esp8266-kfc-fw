@@ -190,7 +190,7 @@ extern BlinkLEDTimer *ledTimer;
         #if HAVE_FASTLED
             static CRGB _pixels[__LED_BUILTIN_WS2812_NUM_LEDS];
         #else
-            static NeoPixelEx::Strip<__LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, NeoPixelEx::GRB, NeoPixelEx::TimingsWS2812> _pixels;
+            static NeoPixelEx::Strip<__LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, NeoPixelEx::GRB, NeoPixelEx::DefaultTimings> _pixels;
         #endif
     };
 

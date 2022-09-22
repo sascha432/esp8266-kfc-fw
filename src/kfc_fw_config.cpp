@@ -1635,7 +1635,13 @@ bool KFCFWConfiguration::rtcLostPower()
         }
         initTwoWire();
         uint32_t unixtime = 0;
-        if (rtc.begin()) {
+        if (!rtc.begin()) {
+            delay(5);
+            if (rtc.begin()) {
+                unixtime = rtc.now().unixtime();
+            }
+        }
+        else {
             unixtime = rtc.now().unixtime();
         }
         if (unixtime == 0) {
@@ -1652,6 +1658,7 @@ uint32_t KFCFWConfiguration::getRTC()
     #if RTC_SUPPORT
         initTwoWire();
         if (!rtc.begin()) {
+            delay(5);
             if (!rtc.begin()) {
                 return 0;
             }
@@ -1673,6 +1680,7 @@ float KFCFWConfiguration::getRTCTemperature()
     #if RTC_SUPPORT
         initTwoWire();
         if (!rtc.begin()) {
+            delay(5);
             if (!rtc.begin()) {
                 return NAN;
             }
@@ -1727,6 +1735,9 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
     time_t now;
     #if RTC_SUPPORT
         initTwoWire();
+        if (!rtc.begin()) {
+            delay(5);
+        }
         if (rtc.begin()) {
             auto timeFormat_P = PSTR("DDD, DD MMM YYYY hh:mm:ss");
             const auto size = strlen_P(timeFormat_P) + 1;

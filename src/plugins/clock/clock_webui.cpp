@@ -169,9 +169,15 @@ void ClockPlugin::_updatePowerLevelWebUI()
     }
 }
 
+// inline uint8_t _calculate_max_brightness_for_power_mW(uint8_t target_brightness, uint32_t max_power_mW, uint32_t)
+// {
+//     return calculate_max_brightness_for_power_mW(target_brightness, max_power_mW);
+// }
+
 uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
 {
     uint32_t requestedPower_mW;
+
     uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
     if (targetBrightness && newBrightness == 0) { // brightness must not be 0
         newBrightness = 1;

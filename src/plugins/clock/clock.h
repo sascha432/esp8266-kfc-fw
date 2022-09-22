@@ -227,7 +227,9 @@ public:
     using milliseconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1000>>;
     using NamedArray = PluginComponents::NamedArray;
-    using VisualizerType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerAnimationType::VisualizerType;
+    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        using VisualizerType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerAnimationType::VisualizerType;
+    #endif
     using FireAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::FireAnimationType;
     using RainbowConfigType = KFCConfigurationClasses::Plugins::ClockConfigNS::RainbowAnimationType;
     using RainbowMultiplierType = RainbowConfigType::MultiplierType;
@@ -625,7 +627,9 @@ public:
 private:
     friend Clock::LEDMatrixLoopOptions;
     friend Clock::ClockLoopOptions;
-    friend Clock::VisualizerAnimation;
+    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        friend Clock::VisualizerAnimation;
+    #endif
 
     // SevenSegmentDisplay _display;
     bool _schedulePublishState;

@@ -373,9 +373,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addFormUI(F("Over Temperature Protection"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
             form.addValidator(FormUI::Validator::Range(kMinimumTemperatureThreshold, 105));
 
-            form.addObjectGetterSetter(F("tpv"), FormGetterSetter(cfg.protection, regulator_margin));
-            form.addFormUI(F("Extra Margin For Voltage Regulator"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
-            form.addValidator(FormUI::Validator::Range(-50, 50));
+            #if IOT_LED_MATRIX
+
+                form.addObjectGetterSetter(F("tpv"), FormGetterSetter(cfg.protection, regulator_margin));
+                form.addFormUI(F("Extra Margin For Voltage Regulator"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
+                form.addValidator(FormUI::Validator::Range(-50, 50));
+
+            #endif
 
             protectionGroup.end();
         #endif

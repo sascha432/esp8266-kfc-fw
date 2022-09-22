@@ -15,7 +15,7 @@
 #include "blink_led_timer.h"
 #include <stl_ext/algorithm.h>
 #include "../src/plugins/plugins.h"
-// #include "../src/plugins/sensor/sensor.h"
+#include "../src/plugins/sensor/sensor.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
 
 #if DEBUG_IOT_CLOCK
@@ -95,11 +95,11 @@ uint8_t getNeopixelShowMethodInt()
 
 void ClockPlugin::createMenu()
 {
-#if IOT_LED_MATRIX
-    #define MENU_URI_PREFIX "led-matrix/"
-#else
-    #define MENU_URI_PREFIX "clock/"
-#endif
+    #if IOT_LED_MATRIX
+        #define MENU_URI_PREFIX "led-matrix/"
+    #else
+        #define MENU_URI_PREFIX "clock/"
+    #endif
 
     auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
     auto subMenu = configMenu.addSubMenu(getFriendlyName());
@@ -399,7 +399,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
                 uint8_t color2 = (progress * progress * progress * progress) / 1000000;
                 _display.fill(((100 - progress) << 16) | (color2 << 8));
-                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() * 3, 255 / 4, NeoPixelEx::Context::validate(nullptr));
+                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() sizeof(GRB)3, 255 / 4, NeoPixelEx::Context::validate(nullptr));
 
                 progressValue = progress;
             }
@@ -571,6 +571,11 @@ void ClockPlugin::getStatus(Print &output)
     switch(static_cast<Clock::ShowMethodType>(getNeopixelShowMethodInt())) {
         case Clock::ShowMethodType::FASTLED:
             output.printf_P(PSTR(", FastLED %.1ffps"), _fps);
+            #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
+                extern uint32_t _frame_cnt;
+                extern uint32_t _retry_cnt;
+                output.printf_P(PSTR(", aborted frames %u/%u (%.2f%%)"), _retry_cnt, _frame_cnt, !_frame_cnt ? NAN : (_retry_cnt * 100 / static_cast<float>(_frame_cnt)));
+            #endif
             break;
         case Clock::ShowMethodType::NEOPIXEL:
         case Clock::ShowMethodType::NEOPIXEL_REPEAT: {

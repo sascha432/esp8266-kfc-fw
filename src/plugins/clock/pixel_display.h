@@ -12,9 +12,9 @@
 extern "C" uint8_t getNeopixelShowMethodInt();
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #pragma GCC push_options
@@ -729,11 +729,15 @@ namespace Clock {
 
     // FastLED controller adapter
 
+    #ifndef FASTLED_LED_CONTROLLER
+        #define FASTLED_LED_CONTROLLER NEOPIXEL
+    #endif
+
     template<uint8_t _OutputPin>
     class NeoPixelController {
     public:
         static CLEDController &addLeds(CRGB *data, int sizeOrOffset, int size = 0) {
-            return FastLED.addLeds<NEOPIXEL, _OutputPin>(data, sizeOrOffset, size);
+            return FastLED.addLeds<FASTLED_LED_CONTROLLER, _OutputPin>(data, sizeOrOffset, size);
         }
     };
 
@@ -805,11 +809,11 @@ namespace Clock {
                     FastLED.show(brightness);
                     break;
                 case Clock::ShowMethodType::NEOPIXEL:
-                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size(), brightness, NeoPixelEx::Context::validate(nullptr));
+                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size() * sizeof(GRB), brightness, NeoPixelEx::Context::validate(nullptr));
                     break;
                 case Clock::ShowMethodType::NEOPIXEL_REPEAT:
                     for(uint8_t i = 0; i  < 5; i++) {
-                        if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::TimingsWS2812, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size(), brightness, NeoPixelEx::Context::validate(nullptr))) {
+                        if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size() * sizeof(GRB), brightness, NeoPixelEx::Context::validate(nullptr))) {
                             break;
                         }
                         ::delay(1);
@@ -839,5 +843,5 @@ namespace Clock {
 #pragma GCC pop_options
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif

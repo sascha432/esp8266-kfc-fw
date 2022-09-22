@@ -21,7 +21,7 @@
 #include "at_mode.h"
 
 #if IOT_SENSOR_HAVE_INA219
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMTESTP, "LMTESTP", "<#color>[,<time=500ms>]", "Test peak values. WARNING! This command will bypass all potections and limits");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMTESTP, "LMTESTP", "<#color>[,<time=500ms>]", "Test peak values. WARNING! This command will bypass all protections and limits");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMC, "LMC", "<command|help>[,<options>]", "Run command");
 #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
@@ -239,7 +239,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //         return true;
 //     }
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMC))) {
-        // vis[ulizer],<tzpe>
+        // vis[ualizer],<type>
         if (args.startsWithIgnoreCase(0, F("vis"))) {
             IF_IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER(
                 _config.visualizer.type = args.toIntMinMax(1, 1, 4, 2);
@@ -271,8 +271,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             if (args.startsWithIgnoreCase(1, F("fast"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::FASTLED);
             }
-            else if (args.startsWithIgnoreCase(1, F("neo")) || args.startsWithIgnoreCase(1, F("int"))) {
+            else if (args.startsWithIgnoreCase(1, F("neo"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL);
+            }
+            else if (args.startsWithIgnoreCase(1, F("neo_rep"))) {
+                ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL_REPEAT);
             }
             else if (args.startsWithIgnoreCase(1, F("none"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::NONE);
@@ -377,7 +380,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     break;
             }
         }
-        // di[ther],<on|off>
+        // dit[her],<on|off>
         else if (args.startsWithIgnoreCase(0, F("dit"))) {
             bool state = args.isTrue(1);
             _display.setDither(state);
@@ -525,7 +528,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
 
         }
-        // <temp>,<value>
+        // temp,<value>
         else if (args.startsWithIgnoreCase(0, F("tem"))) {
             _tempOverride = args.toIntMinMax<uint8_t>(0, kMinimumTemperatureThreshold, 255, 0);
             if (_tempOverride) {
@@ -539,7 +542,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         // +lmc=set,0-16,0x23,0,0;+lmc=get
         // +lmc=get
         // +lmc=cl;+lmc=get
-        // <get>,[<any|*>[,<offset>,<length>]
+        // get,[<any|*>[,<offset>,<length>]
         else if (args.equalsIgnoreCase(0, F("get")) || args.equalsIgnoreCase(0, F("set"))) {
             Color color;
             auto &stream = args.getStream();
@@ -601,42 +604,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
         }
         else {
-            StringVector cmds;
-            cmds.emplace_back(F("lo[op],<enable|disable>"));
-            cmds.emplace_back(F("me[thod]<fast[led]|neo[pixel]>"));
-            {
-                auto animations = String(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNames());
-                animations.toLowerCase();
-                animations.replace(',', '|');
-                animations.replace(' ', '-');
-                animations.replace('_', '-');
-                cmds.emplace_back(PrintString(F("ani[mation][,<%s>][,blend_time=4000ms]"), animations.c_str()));
-            }
-            cmds.emplace_back(F("out[put],<on|off>"));
-            cmds.emplace_back(F("di[ther],<on|off>"));
-            cmds.emplace_back(F("co[lor],<#color>"));
-            cmds.emplace_back(F("br[igthness],<level>"));
-            cmds.emplace_back(F("map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>"));
-            cmds.emplace_back(F("cl[ear]"));
-            #if IOT_LED_MATRIX == 0
-                    cmds.emplace_back(F("pr[int],<display=00:00:00>"));
-            #endif
-            cmds.emplace_back(PrintString(F("res[et][,<pixels=%u>]"), _display.size()));
-            cmds.emplace_back(F("test,<1=pixel order|2=clock|3=row/col>[,#color=#330033][,<brightness=128>][,<speed=100ms>]"));
-            cmds.emplace_back(F("get[,<range>]"));
-            cmds.emplace_back(F("set,<range(=0-7)>,[#color]"));
-            cmds.emplace_back(F("tem[perature],<value>"));
-
-            auto last = &cmds.back();
-            auto &stream = args.getStream();
-            stream.print("usage: +LMC=<");
-            for(auto &str: cmds) {
-                stream.print(str);
-                if (&str != last) {
-                    stream.print('|');
-                }
-            }
-            stream.println(">");
+            args.print(F("Invalid command"));
         }
         return true;
     }

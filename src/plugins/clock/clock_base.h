@@ -16,19 +16,10 @@
 #endif
 
 #if IOT_CLOCK_BUTTON_PIN != -1
-#include <PinMonitor.h>
-#include <push_button.h>
-#include <rotary_encoder.h>
+#    include <PinMonitor.h>
+#    include <push_button.h>
+#    include <rotary_encoder.h>
 #endif
-
-// #if defined(ESP8266)
-// #ifndef FASTLED_ALLOW_INTERRUPTS
-// #define FASTLED_ALLOW_INTERRUPTS 0
-// #endif
-// #if !defined(FASTLED_INTERRUPT_RETRY_COUNT) && (FASTLED_ALLOW_INTERRUPTS == 1)
-// #define FASTLED_INTERRUPT_RETRY_COUNT 1
-// #endif
-// #endif
 
 #define FASTLED_INTERNAL
 #include <FastLED.h>
@@ -78,5 +69,5 @@ namespace Clock {
 }
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif

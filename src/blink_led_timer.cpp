@@ -16,7 +16,7 @@
 #   if HAVE_FASTLED
         CRGB WS2812LEDTimer::_pixels[__LED_BUILTIN_WS2812_NUM_LEDS];
 #   else
-        NeoPixelEx::Strip<__LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, NeoPixelEx::GRB, NeoPixelEx::TimingsWS2812> WS2812LEDTimer::_pixels;
+        NeoPixelEx::Strip<__LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, NeoPixelEx::GRB, NeoPixelEx::DefaultTimings> WS2812LEDTimer::_pixels;
 #   endif
 #endif
 

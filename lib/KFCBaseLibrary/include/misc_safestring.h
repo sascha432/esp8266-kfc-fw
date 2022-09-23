@@ -74,13 +74,6 @@ inline bool is_not_PGM_P_or_aligned(const void * ptr)
     return !is_PGM_P(ptr) || is_aligned_PGM_P(ptr);
 }
 
-
-
-#if DEBUG
-#define __ASSERT_PTR(ptr)               (is_HEAP_P(ptr) || is_PGM_P(ptr) ? true : __DBG_printf("INVALID PTR %p", ptr))
-#else
-#define __ASSERT_PTR(ptr)               true
-#endif
 #define __IS_SAFE_STR(str)              (is_HEAP_P(str) || is_PGM_P(str) ? str : __safeCString((const void *)str).c_str())
 
 #else
@@ -111,7 +104,6 @@ inline bool is_not_PGM_P_or_aligned(const void * ptr)
     return is_aligned_PGM_P(ptr);
 }
 
-#define __ASSERT_PTR(str)               ;
 #define __IS_SAFE_STR(str)              str
 
 #endif

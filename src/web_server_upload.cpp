@@ -8,15 +8,15 @@
 #include "templates.h"
 #include "web_server.h"
 #if ESP8266
-#include <Updater.h>
-#include <save_crash.h>
+#    include <Updater.h>
+#    include <save_crash.h>
 #endif
 #include "../src/plugins/plugins.h"
 
 #if DEBUG_WEB_SERVER_ACTION
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #if WEBSERVER_KFC_OTA
@@ -33,8 +33,7 @@ using namespace WebServer;
 
 bool AsyncUpdateWebHandler::canHandle(AsyncWebServerRequest *request)
 {
-    __LDBG_printf("update handler method_post=%u url=%s", (request->method() & WebRequestMethod::HTTP_POST), request->url().c_str());
-    if (request->url() != getURI()) {
+    if (!request->url().equals(getURI())) {
         return false;
     }
     // emulate AsyncWebServerRequest dtor using onDisconnect callback

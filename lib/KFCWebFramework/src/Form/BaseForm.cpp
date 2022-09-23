@@ -216,11 +216,11 @@ bool Form::BaseForm::process(const String &name, Print &output)
     // }
     // Serial.println();
     for (const auto &field : _fields) {
-        __DBG_validatePointer(&field, VP_HPS);
-        __DBG_validatePointer(field->getName(), VP_HPS);
-        __DBG_validatePointer(field->getValue(), VP_HPS);
-        __DBG_validatePointer(&name, VP_HPS);
-        __DBG_validatePointer(name.c_str(), VP_HPS);
+        __DBG_validatePointerCheck(&field, VP_HPS);
+        __DBG_validatePointerCheck(field->getName(), VP_HPS);
+        __DBG_validatePointerCheck(field->getValue(), VP_HPS);
+        __DBG_validatePointerCheck(&name, VP_HPS);
+        __DBG_validatePointerCheck(name.c_str(), VP_HPS);
 
         auto len = strlen_P(reinterpret_cast<PGM_P>(field->getName()));
         if (field->getType() == Field::Type::TEXT && name.equalsIgnoreCase(field->getName())) {

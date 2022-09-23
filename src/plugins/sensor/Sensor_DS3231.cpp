@@ -135,35 +135,6 @@ Sensor_DS3231::SensorData Sensor_DS3231::_readSensor()
     return SensorData({rtc.getTemperature(), rtc.now().unixtime(), rtc.lostPower()});
 }
 
-
-// float Sensor_DS3231::_readSensorTemp()
-// {
-//     _debug_println();
-//     if (!rtc.begin()) {
-//         return NAN;
-//     }
-//     return rtc.getTemperature();
-// }
-
-// time_t Sensor_DS3231::_readSensorTime()
-// {
-//     _debug_println();
-//     if (!rtc.begin()) {
-//         return 0;
-//     }
-//     return rtc.now().unixtime();
-// }
-
-// int8_t Sensor_DS3231::_readSensorLostPower()
-// {
-//     // return 0;
-//     _debug_println();
-//     if (!rtc.begin()) {
-//         return -1;
-//     }
-//     return rtc.lostPower();
-// }
-
 String Sensor_DS3231::_getTimeStr(SensorData &data)
 {
     String str;

@@ -363,7 +363,7 @@ void Driver_4ChDimmer::_setValue(const String &id, const String &value, bool has
 
 void Driver_4ChDimmer::_getValues(JsonArray &array)
 {
-    _debug_println();
+    __LDBG_println();
     Dimmer_Base::_getValues(array);
 
     auto obj = &array.addObject(2);
@@ -382,7 +382,7 @@ void Driver_4ChDimmer::_getValues(JsonArray &array)
 
 void Driver_4ChDimmer::publishState(MQTT::Client *client)
 {
-    _debug_println();
+    __LDBG_println();
 
     if (!client) {
         client = MQTT::Client::getClient();
@@ -633,7 +633,7 @@ void Driver_4ChDimmer::_setChannels(float fadetime)
 // get brightness values from dimmer
 void Driver_4ChDimmer::_getChannels()
 {
-    _debug_println();
+    __DBG_println();
     if (_wire.lock()) {
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);

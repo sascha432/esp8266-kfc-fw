@@ -260,7 +260,7 @@ void Mpr121Touchpad::Event::touched()
     }
     _type = EventType::TOUCH;
     if (get_time_diff(_releasedTime, _curEvent.time) > 500) {
-        _debug_println(F("removing predicted position"));
+        __LDBG_printf("removing predicted position");
         _predict = Coordinates(-1, -1);
     }
 
@@ -561,7 +561,7 @@ bool Mpr121Touchpad::begin(uint8_t address, uint8_t irqPin, TwoWire *wire)
     }
     _address = address;
     if (!_mpr121.begin(address, wire)) {
-        _debug_println(F("begin failed"));
+        __LDBG_printf("begin failed");
         return false;
     }
 

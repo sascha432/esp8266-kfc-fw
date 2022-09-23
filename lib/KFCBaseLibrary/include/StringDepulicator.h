@@ -10,7 +10,7 @@
 #    define DEBUG_STRING_DEDUPLICATOR 0
 #endif
 
-#if !DEBUG_STRING_DEDUPLICATOR
+#if !DEBUG_STRING_DEDUPLICATOR && DEBUG
 #    pragma push_macro("__DBG_validatePointer")
 #    pragma push_macro("__DBG_validatePointerCheck")
 #    include <debug_helper_disable_ptr_validation.h>
@@ -120,7 +120,7 @@ private:
 
 #include "StringDepulicator.hpp"
 
-#if !DEBUG_STRING_DEDUPLICATOR
+#if !DEBUG_STRING_DEDUPLICATOR && DEBUG
 #    pragma pop_macro("__DBG_validatePointer")
 #    pragma pop_macro("__DBG_validatePointerCheck")
 #endif

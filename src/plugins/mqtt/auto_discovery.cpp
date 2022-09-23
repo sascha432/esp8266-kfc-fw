@@ -144,8 +144,8 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
 
 void Entity::__addParameter(NameType name, const char *str, bool quotes)
 {
-    __DBG_validatePointer(name, VP_HPS);
-    __DBG_validatePointer(str, VP_HPS);
+    __DBG_validatePointerCheck(name, VP_HPS);
+    __DBG_validatePointerCheck(str, VP_HPS);
     if (_format == FormatType::TOPIC) {
         return;
     }

@@ -196,10 +196,10 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             const String &_key;
         } onReturn(key);
     #endif
-    __DBG_validatePointer(&key, VP_HPS);
-    __DBG_validatePointer(&output, VP_HPS);
-    __DBG_validatePointer(&_form, VP_HPS);
-    __DBG_validatePointer(_form, VP_NHPS);
+    __DBG_validatePointerCheck(&key, VP_HPS);
+    __DBG_validatePointerCheck(&output, VP_HPS);
+    __DBG_validatePointerCheck(&_form, VP_HPS);
+    __DBG_validatePointerCheck(_form, VP_NHPS);
     __LDBG_printf("key=%s %p form=%p auth=%u", __S(key), std::addressof(key), _form, isAuthenticated());
     // ------------------------------------------------------------------------------------
     // public variables
@@ -601,20 +601,20 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
     else if (key == F("SSL_CERT")) {
-    #if WEBSERVER_TLS_SUPPORT
+        #if WEBSERVER_TLS_SUPPORT
             File file = KFCFS.open(FSPGM(server_crt, "/.pvt/server.crt"), fs::FileOpenMode::read);
             if (file) {
                 output.print(file.readString());
             }
-    #endif
+        #endif
     }
     else if (key == F("SSL_KEY")) {
-    #if WEBSERVER_TLS_SUPPORT
+        #if WEBSERVER_TLS_SUPPORT
             File file = KFCFS.open(FSPGM(server_key, "/.pvt/server.key"), fs::FileOpenMode::read);
             if (file) {
                 output.print(file.readString());
             }
-    #endif
+        #endif
     }
     else {
         WebTemplate::process(key, output);

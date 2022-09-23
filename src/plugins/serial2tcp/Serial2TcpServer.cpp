@@ -179,7 +179,7 @@ void Serial2TcpServer::_removeClient(AsyncClient *client)
 
 void Serial2TcpServer::_onStart()
 {
-    _debug_println();
+    __LDBG_println();
 //     if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) {
 // #if DEBUG
 //         DEBUG_HELPER_SILENT();
@@ -191,7 +191,7 @@ void Serial2TcpServer::_onStart()
 
 void Serial2TcpServer::_onEnd()
 {
-    _debug_println();
+    __LDBG_println();
 //     if (_getSerialPort() == SERIAL2TCP_HARDWARE_SERIAL) {
 //         Serial.begin(KFC_SERIAL_RATE);
 // #if DEBUG

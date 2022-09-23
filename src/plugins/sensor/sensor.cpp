@@ -190,7 +190,7 @@ void SensorPlugin::_timerEvent()
         WebUINS::Events events;
         {
             for(const auto sensor: _sensors) {
-                __ASSERT_PTR(sensor);
+                __DBG_validatePointerCheck(sensor, VP_HS);
                 sensor->timerEvent(&events, mqttIsConnected);
             }
         }
@@ -200,7 +200,7 @@ void SensorPlugin::_timerEvent()
     }
     else if (mqttIsConnected) {
         for(const auto sensor: _sensors) {
-            __ASSERT_PTR(sensor);
+            __DBG_validatePointerCheck(sensor, VP_HS);
             sensor->timerEvent(nullptr, true);
         }
     }

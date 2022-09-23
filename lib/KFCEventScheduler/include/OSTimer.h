@@ -38,6 +38,8 @@ void dumpTimers(Print &output);
 struct ETSTimerEx;
 class OSTimer;
 
+#if DEBUG
+
 extern void ___DBG_printEtsTimer(const ETSTimerEx &timer, const char *msg);
 extern void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const char *msg);
 
@@ -62,6 +64,13 @@ inline void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const String &msg)
         debug_prefix(); \
         ___DBG_printEtsTimer_E(timer, msg); \
     }
+
+#else
+
+#define __DBG_printEtsTimer(...)        ;
+#define __DBG_printEtsTimer_E(...)      ;
+
+#endif
 
 #ifndef _MSC_VER
 #    pragma GCC push_options

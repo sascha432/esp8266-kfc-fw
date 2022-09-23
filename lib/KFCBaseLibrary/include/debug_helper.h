@@ -297,10 +297,15 @@ static inline int DEBUG_OUTPUT_flush() {
 
 #else
 
-// deprecated
+#define __DBG_validatePointer(ptr, ...)                     ptr
+#define __DBG_validatePointerCheck(ptr, ...)                ;
+
+// call in setup, after initializing the output stream
 
 #define DEBUG_HELPER_INIT()                                 ;
 #define DEBUG_HELPER_SILENT()                               ;
+#define DEBUG_HELPER_PUSH_STATE()                           ;
+#define DEBUG_HELPER_POP_STATE()                            ;
 #define debug_print(...)                                    ;
 #define debug_println(...)                                  ;
 #define debug_printf(...)                                   ;
@@ -328,14 +333,15 @@ static inline int DEBUG_OUTPUT_flush() {
 
 // new functions
 
-#define __DBG_validatePointer(ptr, ...)                     ptr
-
 #define isDebugContextActive()                              false
 #define DebugContext_prefix(...)
 
 #define __DBG_print(...)                                    ;
 #define __DBG_printf(...)                                   ;
 #define __DBG_println()                                     ;
+#define __DBG_printf_E(...)                                 ;
+#define __DBG_printf_W(...)                                 ;
+#define __DBG_printf_N(...)                                 ;
 #define __DBG_panic(...)                                    ;
 #define __DBG_assert(...)                                   ;
 #define __DBG_assert_printf(...)                            ;
@@ -350,6 +356,9 @@ static inline int DEBUG_OUTPUT_flush() {
 #define __LDBG_printf(...)                                  ;
 #define __LDBG_print(...)                                   ;
 #define __LDBG_println(...)                                 ;
+#define __LDBG_printf_E(...)                                ;
+#define __LDBG_printf_W(...)                                ;
+#define __LDBG_printf_N(...)                                ;
 #define __LDBG_assert(...)                                  ;
 #define __LDBG_assert_printf(...)                           ;
 #define __LDBG_assert_panic(...)                            ;
@@ -362,6 +371,9 @@ static inline int DEBUG_OUTPUT_flush() {
 #define __LDBG_check_ptr(...)                               ;
 #define __LDBG_check_ptr_no_null(...)                       ;
 #define __LDBG_check_ptr_null(...)                          ;
+
+#define __SLDBG_printf(...)                                 ;
+#define __SLDBG_panic(...)                                  ;
 
 #endif
 

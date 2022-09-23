@@ -136,6 +136,8 @@ void dumpTimers(Print &output)
 
 #endif
 
+#if DEBUG
+
 static void ___DBG_printEtsTimerRaw(const ETSTimerEx &timer, const char *msg)
 {
     #if DEBUG_OSTIMER
@@ -185,3 +187,5 @@ void ___DBG_printEtsTimer_E(const ETSTimerEx &timer, const char *msg)
     DEBUG_OUTPUT.print(F(_VT100(reset) __DBG_newline));
     DEBUG_OUTPUT.flush();
 }
+
+#endif

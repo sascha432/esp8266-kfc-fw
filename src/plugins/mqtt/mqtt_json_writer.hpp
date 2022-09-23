@@ -383,7 +383,7 @@ namespace MQTT {
             inline __attribute__((__always_inline__))
                 void printTo(PrintStringInterface &output) const {
                 if (std::isnormal(_value)) {
-                    __DBG_validatePointer(_format, VP_HP);
+                    __DBG_validatePointerCheck(_format, VP_HP);
                     output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                 }
                 else {

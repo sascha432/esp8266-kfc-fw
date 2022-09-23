@@ -321,7 +321,7 @@ uint16_t FileManager::upload()
         _headers.replace<HttpLocationHeader>(url);
         _headers.replace<HttpConnectionHeader>();
     }
-    _debug_println(message);
+    __LDBG_printf("msg=%s", message.c_str());
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
     return true;
 }

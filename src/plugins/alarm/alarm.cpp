@@ -164,7 +164,7 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
 void AlarmPlugin::_installAlarms(Event::CallbackTimerPtr timer)
 {
-    _debug_println();
+    __LDBG_println();
     TimeType delay = 300;
     TimeType minAlarmTime = std::numeric_limits<TimeType>::max();
     _nextAlarm = 0;
@@ -228,7 +228,7 @@ void AlarmPlugin::_installAlarms(Event::CallbackTimerPtr timer)
 
 void AlarmPlugin::_removeAlarms()
 {
-    _debug_println();
+    __LDBG_println();
     _nextAlarm = 0;
     if (_timer) {
         _timer->disarm();
@@ -248,7 +248,7 @@ void AlarmPlugin::_ntpCallback(time_t now)
 
 void AlarmPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 {
-    _debug_println();
+    __LDBG_println();
     if (!_alarms.empty()) {
         bool store = false;
         bool triggered = false;

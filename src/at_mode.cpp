@@ -408,9 +408,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
-#if DEBUG
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
-#endif
 #if DEBUG_CONFIGURATION_GETHANDLE
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Dump configuration handles");
 #endif
@@ -426,6 +424,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOGDBG, "LOGDBG", "<1|0>", "Enable/disable
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PANIC, "PANIC", "[<address|wdt|hwdt|alloc>]", "Cause an exception by calling panic(), writing zeros to memory <address> or triggering the (hardware)WDT");
 
 #endif
+
 #if HAVE_I2CSCANNER
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]", "Scan I2C bus. If ANY is passed as third argument, all available PINs are probed for I2C devices");
 #endif
@@ -1240,6 +1239,8 @@ static bool tokenizerCmpFuncCmdLineMode(char ch, int type)
     return false;
 }
 
+#if DEBUG
+
 static bool _writeAndVerifyFlash(uint32_t address, uint8_t *data, size_t size, uint8_t *compare, const AtModeArgs &args)
 {
     if (ESP.flashWrite(address, data, size) == false) {
@@ -1299,6 +1300,8 @@ static uintptr_t translateAddress(String str) {
     #endif
     return (uintptr_t)~0;
 }
+
+#endif
 
 void at_mode_print_WiFi_info(AtModeArgs &args, uint8_t num, const Network::WiFi::StationModeSettings &cfg, bool showPassword = false)
 {
@@ -1484,7 +1487,7 @@ void at_mode_serial_handle_event(String &commandString)
             at_mode_print_help(output);
         #endif
     }
-    #if ESP8266
+    #if ESP8266 && DEBUG
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO))) {
 /*
 +dumpio=0x700,0x7ff
@@ -1538,296 +1541,298 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
         }
-#endif
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPF))) {
-        static constexpr size_t kFlashBufferSize = 32;
-        uintptr_t addr = translateAddress(args.toString(0));
-        if (addr == ~0U) {
-            addr = args.toNumber(0, SECTION_FLASH_START_ADDRESS);
-        }
-        uintptr_t toAddr = args.toNumber(1, 32U);
-        if (!toAddr) {
-            addr -= SECTION_FLASH_START_ADDRESS;
-            toAddr = addr + kFlashBufferSize;
-        }
-        else if (toAddr >= addr) { // length or address?
-            addr -= SECTION_FLASH_START_ADDRESS;
-            toAddr -= SECTION_FLASH_START_ADDRESS;
-            if (addr == toAddr) {
-                toAddr += sizeof(4);
+    #endif
+    #if DEBUG
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPF))) {
+            static constexpr size_t kFlashBufferSize = 32;
+            uintptr_t addr = translateAddress(args.toString(0));
+            if (addr == ~0U) {
+                addr = args.toNumber(0, SECTION_FLASH_START_ADDRESS);
             }
-        }
-        else {
-            addr -= SECTION_FLASH_START_ADDRESS;
-            toAddr += addr;
-        }
-        uint8_t buf[kFlashBufferSize];
-        std::fill_n(buf, sizeof(buf), 0xff);
-
-        auto &stream = args.getStream();
-        uint32_t start = millis();
-        while(addr < toAddr) {
-            if ((millis() - start) > 5000) {
-                stream.println(F("timeout..."));
-                break;
+            uintptr_t toAddr = args.toNumber(1, 32U);
+            if (!toAddr) {
+                addr -= SECTION_FLASH_START_ADDRESS;
+                toAddr = addr + kFlashBufferSize;
             }
-            uint16_t len = toAddr - addr;
-            if (len > sizeof(buf)) {
-                len = sizeof(buf);
-            }
-            auto result = ESP.flashRead(addr, buf, len);
-            if (result) {
-                DumpBinary(stream, DumpBinary::kGroupBytesDefault, sizeof(buf), addr + SECTION_FLASH_START_ADDRESS).dump(buf, len);
+            else if (toAddr >= addr) { // length or address?
+                addr -= SECTION_FLASH_START_ADDRESS;
+                toAddr -= SECTION_FLASH_START_ADDRESS;
+                if (addr == toAddr) {
+                    toAddr += sizeof(4);
+                }
             }
             else {
-                stream.printf_P(PSTR("address=0x%08x offset=%u len=%u read error\n"), addr + SECTION_FLASH_START_ADDRESS, addr, len);
-                break;
+                addr -= SECTION_FLASH_START_ADDRESS;
+                toAddr += addr;
             }
-            addr += len;
-            delay(1);
+            uint8_t buf[kFlashBufferSize];
+            std::fill_n(buf, sizeof(buf), 0xff);
+
+            auto &stream = args.getStream();
+            uint32_t start = millis();
+            while(addr < toAddr) {
+                if ((millis() - start) > 5000) {
+                    stream.println(F("timeout..."));
+                    break;
+                }
+                uint16_t len = toAddr - addr;
+                if (len > sizeof(buf)) {
+                    len = sizeof(buf);
+                }
+                auto result = ESP.flashRead(addr, buf, len);
+                if (result) {
+                    DumpBinary(stream, DumpBinary::kGroupBytesDefault, sizeof(buf), addr + SECTION_FLASH_START_ADDRESS).dump(buf, len);
+                }
+                else {
+                    stream.printf_P(PSTR("address=0x%08x offset=%u len=%u read error\n"), addr + SECTION_FLASH_START_ADDRESS, addr, len);
+                    break;
+                }
+                addr += len;
+                delay(1);
+            }
         }
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FLASH))) {
-        // +flash=<e[rase]>,<address>|<r[ead]>,<address>[,<offset=0>,<length=4096>]|w[rite],<address>,<byte1>[,<byte2>[,...]]]>
-/*
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FLASH))) {
+            // +flash=<e[rase]>,<address>|<r[ead]>,<address>[,<offset=0>,<length=4096>]|w[rite],<address>,<byte1>[,<byte2>[,...]]]>
+    /*
 
-+flash=r,0x405ab000,0,32
-+flash=r,0x405ab000,0,256
-+flash=e,0x405ab000
-+flash=w,0x405ab000,0,1,2,3,4,5,6,7,8
-+flash=r,0x405ab000,0,8
+    +flash=r,0x405ab000,0,32
+    +flash=r,0x405ab000,0,256
+    +flash=e,0x405ab000
+    +flash=w,0x405ab000,0,1,2,3,4,5,6,7,8
+    +flash=r,0x405ab000,0,8
 
 
-// EEPROM
-+flash=r,EEPROM,0,1024
-+flash=r,EEPROM,0,128
+    // EEPROM
+    +flash=r,EEPROM,0,1024
+    +flash=r,EEPROM,0,128
 
-+flash=e,EEPROM
+    +flash=e,EEPROM
 
-*/
-        auto cmdStr = args.get(0);
-        if (cmdStr) {
-            int cmd = stringlist_ifind_P(F("erase,e,read,r,write,w"), cmdStr);
-            uintptr_t addr = translateAddress(args.toString(1));
-            if (addr == ~0U) {
-                addr = static_cast<uint32_t>(args.toNumber(1, SECTION_FLASH_START_ADDRESS));
-            }
-            auto offset = static_cast<uint32_t>(args.toNumber(2, 0));
-            addr += offset;
-            auto length = static_cast<uint32_t>(args.toNumber(3, SPI_FLASH_SEC_SIZE));
-            uint16_t sector = (addr - SECTION_FLASH_START_ADDRESS) / SPI_FLASH_SEC_SIZE;
-            // recalculate address and offset
-            offset = (addr - SECTION_FLASH_START_ADDRESS) - (sector * SPI_FLASH_SEC_SIZE);
-            addr = (sector * SPI_FLASH_SEC_SIZE);
-            bool rc = true;
-            static constexpr size_t kFlashBufferSize = 32;
-            switch(cmd) {
-                case 0: // erase
-                case 1: // e
-                    args.print(F("erasing sector %u [%08X]"), sector, addr + SECTION_FLASH_START_ADDRESS);
-                    if ((rc = ESP.flashEraseSector(sector)) == false) {
-                        args.print(F("erase failed"));
-                    }
-                    break;
-                case 2: // read
-                case 3: // r
-                    {
-                        args.print(F("reading sector %u address 0x%08x offset %u length %u"), sector, addr + SECTION_FLASH_START_ADDRESS, offset, length);
-                        uint32_t start = addr + offset;
-                        uint32_t end = start + length;
-                        uint8_t buf[kFlashBufferSize];
-                        std::fill_n(buf, sizeof(buf), 0xff);
-                        while (start < end) {
-                            uint8_t len = std::min<size_t>(sizeof(buf), end - start);
-                            if ((rc = ESP.flashRead(start, buf, len)) == false) {
-                                args.print(F("read error address=0x%08x length=%u"), start, length);
-                                break;
-                            }
-                            DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, sizeof(buf), start + SECTION_FLASH_START_ADDRESS).dump(buf, len);
-                            start += len;
-                            delay(1);
+    */
+            auto cmdStr = args.get(0);
+            if (cmdStr) {
+                int cmd = stringlist_ifind_P(F("erase,e,read,r,write,w"), cmdStr);
+                uintptr_t addr = translateAddress(args.toString(1));
+                if (addr == ~0U) {
+                    addr = static_cast<uint32_t>(args.toNumber(1, SECTION_FLASH_START_ADDRESS));
+                }
+                auto offset = static_cast<uint32_t>(args.toNumber(2, 0));
+                addr += offset;
+                auto length = static_cast<uint32_t>(args.toNumber(3, SPI_FLASH_SEC_SIZE));
+                uint16_t sector = (addr - SECTION_FLASH_START_ADDRESS) / SPI_FLASH_SEC_SIZE;
+                // recalculate address and offset
+                offset = (addr - SECTION_FLASH_START_ADDRESS) - (sector * SPI_FLASH_SEC_SIZE);
+                addr = (sector * SPI_FLASH_SEC_SIZE);
+                bool rc = true;
+                static constexpr size_t kFlashBufferSize = 32;
+                switch(cmd) {
+                    case 0: // erase
+                    case 1: // e
+                        args.print(F("erasing sector %u [%08X]"), sector, addr + SECTION_FLASH_START_ADDRESS);
+                        if ((rc = ESP.flashEraseSector(sector)) == false) {
+                            args.print(F("erase failed"));
                         }
-                    }
-                    break;
-                case 4: // write
-                case 5: // w
-                    {
-                        if (args.size() <= 3) {
-                            args.print(F("no data to write"));
-                        }
-                        else {
-                            length = args.size() - 3;
-                            args.print(F("writing sector %u (0x%08x) offset %u length %u"), sector, addr + SECTION_FLASH_START_ADDRESS, offset, length);
-                            uint16_t position = 0;
-                            auto &stream = args.getStream();
-                            auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]());
-                            auto compare = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]());
+                        break;
+                    case 2: // read
+                    case 3: // r
+                        {
+                            args.print(F("reading sector %u address 0x%08x offset %u length %u"), sector, addr + SECTION_FLASH_START_ADDRESS, offset, length);
                             uint32_t start = addr + offset;
-                            if (data && compare) {
-                                rc = 0;
-                                auto ptr = data.get();
-                                for(uint16_t i = 3; i < args.size(); i++) {
-                                    if (i == 3) {
-                                        stream.printf_P(PSTR("[%08X] "), start + SECTION_FLASH_START_ADDRESS);
-                                    }
-                                    auto value = static_cast<uint8_t>(args.toNumber(i, 0xff));
-                                    *ptr++ = value;
-                                    stream.printf_P(PSTR("%02x "), value);
-                                    // once the buffer is full, write and verify
-                                    if (++position % kFlashBufferSize == 0) {
-                                        stream.println();
-                                        if (!_writeAndVerifyFlash(start, data.get(), kFlashBufferSize, compare.get(), args)) {
-                                            position = 0;
-                                            break;
-                                        }
-                                        delay(1);
-                                        // reset buffer ptr
-                                        ptr = data.get();
-                                        // move address ahead
-                                        start += 32;
-                                        if (i < args.size() - 1) {
-                                            stream.printf_P(PSTR("[%08X] "), start + SECTION_FLASH_START_ADDRESS);
-                                        }
-                                    }
+                            uint32_t end = start + length;
+                            uint8_t buf[kFlashBufferSize];
+                            std::fill_n(buf, sizeof(buf), 0xff);
+                            while (start < end) {
+                                uint8_t len = std::min<size_t>(sizeof(buf), end - start);
+                                if ((rc = ESP.flashRead(start, buf, len)) == false) {
+                                    args.print(F("read error address=0x%08x length=%u"), start, length);
+                                    break;
                                 }
-
-                                // data left?
-                                auto rest = position % kFlashBufferSize;
-                                if (rest != 0) {
-                                    stream.println();
-                                    _writeAndVerifyFlash(start, data.get(), rest, compare.get(), args);
-                                }
+                                DumpBinary(args.getStream(), DumpBinary::kGroupBytesDefault, sizeof(buf), start + SECTION_FLASH_START_ADDRESS).dump(buf, len);
+                                start += len;
+                                delay(1);
+                            }
+                        }
+                        break;
+                    case 4: // write
+                    case 5: // w
+                        {
+                            if (args.size() <= 3) {
+                                args.print(F("no data to write"));
                             }
                             else {
-                                args.print(F("failed to allocate %u bytes"), length);
+                                length = args.size() - 3;
+                                args.print(F("writing sector %u (0x%08x) offset %u length %u"), sector, addr + SECTION_FLASH_START_ADDRESS, offset, length);
+                                uint16_t position = 0;
+                                auto &stream = args.getStream();
+                                auto data = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]());
+                                auto compare = std::unique_ptr<uint8_t[]>(new uint8_t[kFlashBufferSize]());
+                                uint32_t start = addr + offset;
+                                if (data && compare) {
+                                    rc = 0;
+                                    auto ptr = data.get();
+                                    for(uint16_t i = 3; i < args.size(); i++) {
+                                        if (i == 3) {
+                                            stream.printf_P(PSTR("[%08X] "), start + SECTION_FLASH_START_ADDRESS);
+                                        }
+                                        auto value = static_cast<uint8_t>(args.toNumber(i, 0xff));
+                                        *ptr++ = value;
+                                        stream.printf_P(PSTR("%02x "), value);
+                                        // once the buffer is full, write and verify
+                                        if (++position % kFlashBufferSize == 0) {
+                                            stream.println();
+                                            if (!_writeAndVerifyFlash(start, data.get(), kFlashBufferSize, compare.get(), args)) {
+                                                position = 0;
+                                                break;
+                                            }
+                                            delay(1);
+                                            // reset buffer ptr
+                                            ptr = data.get();
+                                            // move address ahead
+                                            start += 32;
+                                            if (i < args.size() - 1) {
+                                                stream.printf_P(PSTR("[%08X] "), start + SECTION_FLASH_START_ADDRESS);
+                                            }
+                                        }
+                                    }
+
+                                    // data left?
+                                    auto rest = position % kFlashBufferSize;
+                                    if (rest != 0) {
+                                        stream.println();
+                                        _writeAndVerifyFlash(start, data.get(), rest, compare.get(), args);
+                                    }
+                                }
+                                else {
+                                    args.print(F("failed to allocate %u bytes"), length);
+                                }
                             }
                         }
-                    }
-                    break;
-                default:
-                    args.print(F("invalid command: %s"), cmdStr);
-                    break;
+                        break;
+                    default:
+                        args.print(F("invalid command: %s"), cmdStr);
+                        break;
+                }
             }
-        }
-        else {
-            args.print(F("invalid command"));
-        }
+            else {
+                args.print(F("invalid command"));
+            }
 
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
-        #if 1
-            args.print(F("Device name: %s"), System::Device::getName());
-            #if ESP32
-                args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
-                args.print(F("ESP-IDF version %s"), esp_get_idf_version());
-            #else
-                #if ARDUINO_ESP8266_DEV
-                    #ifndef ARDUINO_ESP8266_RELEASE_EX
-                        #define ARDUINO_ESP8266_RELEASE_EX _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " _STRINGIFY(ARDUINO_ESP8266_GIT_VER)
-                    #endif
+        }
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(METRICS))) {
+            #if 1
+                args.print(F("Device name: %s"), System::Device::getName());
+                #if ESP32
+                    args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
+                    args.print(F("ESP-IDF version %s"), esp_get_idf_version());
                 #else
-                    #ifndef ARDUINO_ESP8266_RELEASE_EX
-                        #define ARDUINO_ESP8266_RELEASE_EX ARDUINO_ESP8266_RELEASE
+                    #if ARDUINO_ESP8266_DEV
+                        #ifndef ARDUINO_ESP8266_RELEASE_EX
+                            #define ARDUINO_ESP8266_RELEASE_EX _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " _STRINGIFY(ARDUINO_ESP8266_GIT_VER)
+                        #endif
+                    #else
+                        #ifndef ARDUINO_ESP8266_RELEASE_EX
+                            #define ARDUINO_ESP8266_RELEASE_EX ARDUINO_ESP8266_RELEASE
+                        #endif
+                    #endif
+                    args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
+                #endif
+                #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
+                {
+                    String options;
+                    #if GDBSTUB_USE_OWN_STACK
+                    options += F("USE_OWN_STACK ");
+                    #endif
+                    #if GDBSTUB_BREAK_ON_EXCEPTION
+                    options += F("BREAK_ON_EXCEPTION ");
+                    #endif
+                    #if GDBSTUB_CTRLC_BREAK
+                    options += F("CTRLC_BREAK ");
+                    #endif
+                    #if GDBSTUB_REDIRECT_CONSOLE_OUTPUT
+                    options += F("REDIRECT_CONSOLE_OUTPUT ");
+                    #endif
+                    #if GDBSTUB_BREAK_ON_INIT
+                    options += F("BREAK_ON_INIT ");
+                    #endif
+
+                    args.print(F("GDBStub: %s"), options.trim().c_str());
+                }
+                #endif
+                args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
+                args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
+                #if ARDUINO_ESP8266_MAJOR >= 3
+                    #ifdef UMM_HEAP_IRAM
+                        {
+                            HeapSelectIram ephemeral;
+                            args.print(F("Free IRAM: %u"), ESP.getFreeHeap());
+                        }
+                    #endif
+                    #if (UMM_NUM_HEAPS != 1)
+                        {
+                            HeapSelectDram ephemeral;
+                            args.print(F("Free DRAM: %u"), ESP.getFreeHeap());
+                        }
                     #endif
                 #endif
-                args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
-            #endif
-            #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
-            {
-                String options;
-                #if GDBSTUB_USE_OWN_STACK
-                options += F("USE_OWN_STACK ");
+                PGM_P flashModeStr;
+                switch(ESP.getFlashChipMode()) {
+                    case FM_DIO:
+                        flashModeStr = PSTR("DIO");
+                        break;
+                    case FM_DOUT:
+                        flashModeStr = PSTR("DOUT");
+                        break;
+                    case FM_QIO:
+                        flashModeStr = PSTR("QIO");
+                        break;
+                    case FM_QOUT:
+                        flashModeStr = PSTR("QOUT");
+                        break;
+                    case FM_UNKNOWN:
+                    default:
+                        flashModeStr = PSTR("UNKNOWN");
+                        break;
+                }
+
+                #if ESP8266
+                    args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
                 #endif
-                #if GDBSTUB_BREAK_ON_EXCEPTION
-                options += F("BREAK_ON_EXCEPTION ");
+                args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS + 4096);
+                args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS + 4096);
+                args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS + 4096);
+                #if ESP8266
+                    args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
+                    args.print(F("HEAP: 0x%08x-0x%08x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
+                    args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&flashModeStr, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&flashModeStr);
                 #endif
-                #if GDBSTUB_CTRLC_BREAK
-                options += F("CTRLC_BREAK ");
+                args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
+                #if ESP32
+                    args.print(F("Chip model %s (%s)"), KFCFWConfiguration::getChipModel(), ESP.getChipModel());
+                #elif ESP8266
+                    args.print(F("Chip model %s"), KFCFWConfiguration::getChipModel());
+                    args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
+                    args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
+                    args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
                 #endif
-                #if GDBSTUB_REDIRECT_CONSOLE_OUTPUT
-                options += F("REDIRECT_CONSOLE_OUTPUT ");
-                #endif
-                #if GDBSTUB_BREAK_ON_INIT
-                options += F("BREAK_ON_INIT ");
+                args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
+                args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
+                auto version = System::Device::getConfig().config_version;
+                args.print(F("Config version 0x%08x, %s"), version, SaveCrash::Data::FirmwareVersion(version).toString().c_str());
+                args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
+                args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
+                args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
+
+                #if PIN_MONITOR
+                    PrintString tmp;
+                    PinMonitor::pinMonitor.printStatus(tmp);
+                    tmp.replace(F(HTML_S(br)), "\n");
+                    args.print(tmp);
                 #endif
 
-                args.print(F("GDBStub: %s"), options.trim().c_str());
-            }
+                args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
             #endif
-            args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
-            args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
-            #if ARDUINO_ESP8266_MAJOR >= 3
-                #ifdef UMM_HEAP_IRAM
-                    {
-                        HeapSelectIram ephemeral;
-                        args.print(F("Free IRAM: %u"), ESP.getFreeHeap());
-                    }
-                #endif
-                #if (UMM_NUM_HEAPS != 1)
-                    {
-                        HeapSelectDram ephemeral;
-                        args.print(F("Free DRAM: %u"), ESP.getFreeHeap());
-                    }
-                #endif
-            #endif
-            PGM_P flashModeStr;
-            switch(ESP.getFlashChipMode()) {
-                case FM_DIO:
-                    flashModeStr = PSTR("DIO");
-                    break;
-                case FM_DOUT:
-                    flashModeStr = PSTR("DOUT");
-                    break;
-                case FM_QIO:
-                    flashModeStr = PSTR("QIO");
-                    break;
-                case FM_QOUT:
-                    flashModeStr = PSTR("QOUT");
-                    break;
-                case FM_UNKNOWN:
-                default:
-                    flashModeStr = PSTR("UNKNOWN");
-                    break;
-            }
-
-            #if ESP8266
-                args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
-            #endif
-            args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS + 4096);
-            args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS + 4096);
-            args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS + 4096);
-            #if ESP8266
-                args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
-                args.print(F("HEAP: 0x%08x-0x%08x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
-                args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&flashModeStr, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&flashModeStr);
-            #endif
-            args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
-            #if ESP32
-                args.print(F("Chip model %s (%s)"), KFCFWConfiguration::getChipModel(), ESP.getChipModel());
-            #elif ESP8266
-                args.print(F("Chip model %s"), KFCFWConfiguration::getChipModel());
-                args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
-                args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
-                args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
-            #endif
-            args.print(F("Firmware size: %s"), formatBytes(ESP.getSketchSize()).c_str());
-            args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
-            auto version = System::Device::getConfig().config_version;
-            args.print(F("Config version 0x%08x, %s"), version, SaveCrash::Data::FirmwareVersion(version).toString().c_str());
-            args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
-            args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
-            args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
-
-            #if PIN_MONITOR
-                PrintString tmp;
-                PinMonitor::pinMonitor.printStatus(tmp);
-                tmp.replace(F(HTML_S(br)), "\n");
-                args.print(tmp);
-            #endif
-
-            args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
-        #endif
-    }
+        }
+    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
         bool safeMode = false;
         if (args.equals(0, 's')) {
@@ -1903,17 +1908,19 @@ void at_mode_serial_handle_event(String &commandString)
         args.ok();
         config.restartDevice(false);
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
-        if (args.requireArgs(1, 1)) {
-            if (args.isTrue(0)) {
-                enable_at_mode(&output);
-            }
-            else {
-                disable_at_mode(&output);
+    #if DEBUG
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
+            if (args.requireArgs(1, 1)) {
+                if (args.isTrue(0)) {
+                    enable_at_mode(&output);
+                }
+                else {
+                    disable_at_mode(&output);
+                }
             }
         }
-    }
-    #if __LED_BUILTIN_WS2812_NUM_LEDS
+    #endif
+    #if __LED_BUILTIN_WS2812_NUM_LEDS && DEBUG
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(NEOPX))) {
             // +neopx=16,3,25,0,0
             if (args.requireArgs(3, 5)) {

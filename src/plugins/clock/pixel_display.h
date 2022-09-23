@@ -803,17 +803,14 @@ namespace Clock {
         void show(uint8_t brightness) {
             switch(getNeopixelShowMethodType()) {
                 case Clock::ShowMethodType::FASTLED:
-                    #if NEOPIXEL_DEBUG
-                        NeoPixelEx::Context::validate(nullptr).getDebugContext().togglePin();
-                    #endif
                     FastLED.show(brightness);
                     break;
                 case Clock::ShowMethodType::NEOPIXEL:
-                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), getNumBytes(), brightness, NeoPixelEx::Context::validate(nullptr));
                     break;
                 case Clock::ShowMethodType::NEOPIXEL_REPEAT:
                     for(uint8_t i = 0; i < 5; i++) {
-                        if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr))) {
+                        if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), getNumBytes(), brightness, NeoPixelEx::Context::validate(nullptr))) {
                             break;
                         }
                         ::delay(1);
@@ -832,6 +829,11 @@ namespace Clock {
             else {
                 ::delay(ms);
             }
+        }
+
+        inline __attribute__((__always_inline__))
+        constexpr size_t getNumBytes() const {
+            return size() * 3;
         }
 
     protected:

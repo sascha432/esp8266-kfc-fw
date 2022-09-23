@@ -135,6 +135,7 @@ protected:
 
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         Mpr121Touchpad _touchpad;
+        uint32_t _touchpadTimer{0};
         bool _touchpadDebug{false};
     #endif
 };

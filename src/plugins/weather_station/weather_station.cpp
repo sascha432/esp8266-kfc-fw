@@ -296,10 +296,14 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 2, [this](const Mpr121Touchpad::Event &event) {
-            __LDBG_printf("event=%u types=%s", event.getType(), event.getGesturesString());
+            __LDBG_printf("event=%u types=%s timeout=%d", event.getType(), event.getGesturesString(), millis() - _touchpadTimer);
+            // ignore all events after the last release for 250ms
+            if (millis() - _touchpadTimer < 250) {
+                return false;
+            }
             #if IOT_ALARM_PLUGIN_ENABLED
                 if (_resetAlarm()) {
-                    delay(150);
+                    _touchpadTimer = millis();
                     return false;
                 }
             #endif
@@ -308,18 +312,18 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                     if (_pickGalleryPicture()) {
                         redraw();
                     }
-                    delay(150);
+                    _touchpadTimer = millis();
                     return false;
                 }
             #endif
             if (event.isSwipeRight() || event.isTap()) {
                 this->_setScreen(_getNextScreen(_getCurrentScreen(), true));
-                delay(150);
+                _touchpadTimer = millis();
                 return false;
             }
             if (event.isSwipeLeft()) {
                 this->_setScreen(_getPrevScreen(_getCurrentScreen(), true));
-                delay(150);
+                _touchpadTimer = millis();
                 return false;
             }
             return true;

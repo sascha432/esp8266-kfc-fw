@@ -296,11 +296,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         _touchpad.addCallback(Mpr121Touchpad::EventType::RELEASED, 2, [this](const Mpr121Touchpad::Event &event) {
-            __LDBG_printf("event=%u types=%s timeout=%d", event.getType(), event.getGesturesString(), millis() - _touchpadTimer);
-            // ignore all events after the last release for 250ms
-            if (millis() - _touchpadTimer < 250) {
-                return false;
-            }
+            __LDBG_printf("event=%u types=%s timeout=%d", event.getType(), event.getGesturesString(), (int32_t)(millis() - _touchpadTimer));
             #if IOT_ALARM_PLUGIN_ENABLED
                 if (_resetAlarm()) {
                     _touchpadTimer = millis();
@@ -308,7 +304,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                 }
             #endif
             #if HAVE_WEATHER_STATION_CURATED_ART
-                if (_currentScreen == ScreenType::CURATED_ART && (event.isSwipeRight() || event.isSwipeLeft())) {
+                if (_currentScreen == ScreenType::CURATED_ART && event.isSwipeAny()) {
                     if (_pickGalleryPicture()) {
                         redraw();
                     }
@@ -316,12 +312,16 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                     return false;
                 }
             #endif
-            if (event.isSwipeRight() || event.isTap()) {
+            // ignore all events after the last release for 250ms
+            if (millis() - _touchpadTimer < 250) {
+                return false;
+            }
+            if (event.isSwipeRight() || event.isTap() || event.isSwipeDown()) {
                 this->_setScreen(_getNextScreen(_getCurrentScreen(), true));
                 _touchpadTimer = millis();
                 return false;
             }
-            if (event.isSwipeLeft()) {
+            if (event.isSwipeLeft() || event.isSwipeUp()) {
                 this->_setScreen(_getPrevScreen(_getCurrentScreen(), true));
                 _touchpadTimer = millis();
                 return false;

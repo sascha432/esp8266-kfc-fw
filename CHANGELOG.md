@@ -2,6 +2,7 @@
 
 ## Version 0.0.6
 
+ - Fixed some environments to be compiled as release (DEBUG=0), which reduces the code size by 10-15%
  - Fixed FastLED and NeoPixelEx issue with Framework Arduino ESP8266 3.0.1-dev
  - Added analog clock screen to the weather station
  - Fixed invalid TZ env variable name

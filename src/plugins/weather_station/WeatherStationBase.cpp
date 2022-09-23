@@ -5,7 +5,7 @@
 #include <Arduino_compat.h>
 #include "weather_station.h"
 #include "WeatherStationBase.h"
-#include "Logger.h"
+#include "logger.h"
 #include "WSDraw.h"
 #include "blink_led_timer.h"
 

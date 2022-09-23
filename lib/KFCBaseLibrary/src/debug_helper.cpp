@@ -102,7 +102,7 @@ bool DebugContext::__store_pos(DebugContext &&dctx)
 }
 
 #if LOGGER
-#include "Logger.h"
+#include "logger.h"
 #endif
 
 DebugContext::Guard::Guard(DebugContext &&ctx)

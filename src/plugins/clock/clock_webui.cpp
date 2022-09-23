@@ -279,13 +279,13 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
         #endif
 
         // calculated power and power limit
-        auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ?
-        #if IOT_SENSOR_HAVE_INA219
-            F("Power / Limit") : F("Power"), 'W'
-        #else
-            F("Calculated Power / Limit") : F("Calculated Power"), 'W'
-        #endif
-        );
+        auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W');
+        // #if IOT_SENSOR_HAVE_INA219
+        //     F("Power / Limit") : F("Power"), 'W'
+        // #else
+        //     F("Calculated Power / Limit") : F("Calculated Power"), 'W'
+        // #endif
+        // );
         power.append(
             WebUINS::NamedString(J(height), height),
             WebUINS::NamedUint32(J(columns), colspan));

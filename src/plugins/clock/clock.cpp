@@ -197,7 +197,7 @@ void ClockPlugin::_setupTimer()
                         if (tempSensor > _config.protection.temperature_reduce_range.min) {
                             // reduce brightness to 25-100% or 50% if the range is invalid
                             _tempBrightness = (_config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min > 0) ?
-                                std::clamp<float>(1.0 - ((tempSensor - _config.protection.temperature_reduce_range.min) * 0.75 / (float)(_config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min)), 0.25, 1.0) :
+                                std::clamp<float>(1.0 - ((tempSensor - _config.protection.temperature_reduce_range.min) * 0.75 / static_cast<float>(_config.protection.temperature_reduce_range.max - _config.protection.temperature_reduce_range.min)), 0.25, 1.0) :
                                 0.5;
                         }
                         else {
@@ -387,8 +387,8 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
                 uint8_t color2 = (progress * progress * progress * progress) / 1000000;
                 _display.fill(((100 - progress) << 16) | (color2 << 8));
-                _display.show(255 / 4);
-                // NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() * sizeof(GRB), 255 / 4, NeoPixelEx::Context::validate(nullptr));
+                // _display.show(255 / 4);
+                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() * sizeof(GRB), 255 / 4, NeoPixelEx::Context::validate(nullptr));
 
                 progressValue = progress;
             }

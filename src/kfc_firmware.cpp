@@ -253,7 +253,7 @@ void setup()
 
         DEBUG_BOOT_PRINT_POS();
         if (resetDetector.getResetCounter() >= 10) {
-            uint32_t delayTime = (resetDetector.getResetCounter() > 30) ? 300 : (resetDetector.getResetCounter() > 20) ? 30 : 5;
+            uint32_t delayTime = (resetDetector.getResetCounter() > 30) ? 120 : (resetDetector.getResetCounter() > 20) ? 30 : 5;
             KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("Reboot continues in %u seconds...\n"), delayTime);
             // stop timer to avoid resetting counters
             DEBUG_BOOT_PRINT_POS();

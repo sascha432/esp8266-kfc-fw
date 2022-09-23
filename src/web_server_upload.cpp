@@ -205,6 +205,8 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
     }
 }
 
+#if DEBUG
+
 static PGM_P _updateCommand2Str(int command)
 {
     switch(command) {
@@ -219,6 +221,8 @@ static PGM_P _updateCommand2Str(int command)
     }
     return PSTR("Unknown");
 }
+
+#endif
 
 void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final)
 {
@@ -285,29 +289,41 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
             size_t size;
             uint8_t command;
             uint8_t imageType = 0;
-            PGM_P imageTypeStr = PSTR("U_UNKNOWN");
+            #if DEBUG
+                PGM_P imageTypeStr = PSTR("U_UNKNOWN");
+            #endif
 
             if (imageTypeArg == F("u_flash")) { // firmware selected
                 imageType = 0;
-                imageTypeStr = PSTR("U_FLASH");
+                #if DEBUG
+                    imageTypeStr = PSTR("U_FLASH");
+                #endif
             }
             else if (imageTypeArg == F("u_fs")) { // filesystem selected
                 imageType = 1;
-                imageTypeStr = PSTR("U_FS");
+                #if DEBUG
+                    imageTypeStr = PSTR("U_FS");
+                #endif
             }
             #if STK500V1
                 else if (imageTypeArg == F("u_atmega")) { // atmega selected
                     imageType = 3;
-                    imageTypeStr = PSTR("U_ATMEGA");
+                    #if DEBUG
+                        imageTypeStr = PSTR("U_ATMEGA");
+                    #endif
                 }
                 else if (filename.indexOf(F(".hex")) != -1) { // auto select
                     imageType = 3;
-                    imageTypeStr = PSTR("U_ATMEGA(auto)");
+                    #if DEBUG
+                        imageTypeStr = PSTR("U_ATMEGA(auto)");
+                    #endif
                 }
             #endif
             else if (filename.indexOf(F("spiffs")) != -1 || filename.indexOf(F("littlefs")) != -1) { // auto select
                 imageType = 1;
-                imageTypeStr = PSTR("U_FS(auto)");
+                #if DEBUG
+                    imageTypeStr = PSTR("U_FS(auto)");
+                #endif
             }
 
             #if STK500V1
@@ -385,12 +401,12 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                     status->error = true;
                 }
             }
-            if (status->error) {
-                #if DEBUG
+            #if DEBUG
+                if (status->error) {
                     // print error to debug output
                     Update.printError(DEBUG_OUTPUT);
-                #endif
-            }
+                }
+            #endif
         }
     }
 }

@@ -82,12 +82,8 @@ void Sensor_AmbientLight::getValues(WebUINS::Events &array, bool timer)
 void Sensor_AmbientLight::createWebUI(WebUINS::Root &webUI)
 {
     webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(), _name,
-        #if IOT_SENSOR_CONFIG_CLOCKV2
-            F("<img src=\"/images/light.svg\" width=\"60\" height=\"60\" style=\"margin-top:-20px;margin-bottom:0.5rem\">")
-        #else
-            F("<img src=\"/images/light.svg\" width=\"80\" height=\"80\" style=\"margin-top:-20px;margin-bottom:1rem\">")
-        #endif
-    ).setConfig(_renderConfig)));
+        F("<img src=\"/images/light.svg\" width=\"70\" height=\"70\" style=\"margin-top:-0.3rem;margin-bottom:-0.6rem\">")).setConfig(_renderConfig))
+    );
 }
 
 void Sensor_AmbientLight::publishState()
@@ -284,23 +280,19 @@ String Sensor_AmbientLight::_getTopic()
 String Sensor_AmbientLight::_getLightSensorWebUIValue()
 {
     if (_sensor.type == SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) {
-        return PrintString(F("%.1f lux"), _sensor.bh1750FVI.illuminance);
+        return PrintString(F("%.1f <span class=\"unit\">lux</span>"), _sensor.bh1750FVI.illuminance);
     }
     if (!_handler || !_handler->isAutoBrightnessEnabled()) {
         return PrintString(F("<strong>OFF</strong><br> <span class=\"light-sensor-value\">Sensor value %d</span>"), getValue());
     }
-    #if IOT_SENSOR_CONFIG_CLOCKV2
-        return PrintString(F("<span style=\"font-size: 1.75rem; padding-bottom: 0.75rem;\">%.0f &#37;</span>"), getAutoBrightness());
-    #else
-        return PrintString(F("%.0f &#37;"), getAutoBrightness());
-    #endif
+    return PrintString(F("%.0f<span class=\"unit\">%%</span>"), getAutoBrightness());
 }
 
 void Sensor_AmbientLight::_updateLightSensorWebUI()
 {
     if (WebUISocket::hasAuthenticatedClients()) {
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
-            WebUINS::Events(WebUINS::Values(_getId(), _getLightSensorWebUIValue()))
+            WebUINS::Events(WebUINS::Values(_getId(), _getLightSensorWebUIValue(), (_handler && _handler->isAutoBrightnessEnabled())))
         ));
     }
 }

@@ -14,6 +14,7 @@ import subprocess
 from SCons.Script import ARGUMENTS
 from pprint import pprint
 import datetime
+import platform
 Import("env", "projenv")
 try:
     import configparser
@@ -126,7 +127,7 @@ def which(name, env, flags=os.F_OK):
 
 def mem_analyzer(source, target, env):
 
-    if esp32==False:
+    if esp32==False and platform.system() == 'Windows':
         # https://github.com/Sermus/ESP8266_memory_analyzer
         args = [
             path.realpath(path.join(env.subst("$PROJECT_DIR"), "./scripts/tools/MemAnalyzer.exe")),

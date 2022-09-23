@@ -809,11 +809,11 @@ namespace Clock {
                     FastLED.show(brightness);
                     break;
                 case Clock::ShowMethodType::NEOPIXEL:
-                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size() * sizeof(GRB), brightness, NeoPixelEx::Context::validate(nullptr));
+                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
                     break;
                 case Clock::ShowMethodType::NEOPIXEL_REPEAT:
-                    for(uint8_t i = 0; i  < 5; i++) {
-                        if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size() * sizeof(GRB), brightness, NeoPixelEx::Context::validate(nullptr))) {
+                    for(uint8_t i = 0; i < 5; i++) {
+                        if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr))) {
                             break;
                         }
                         ::delay(1);

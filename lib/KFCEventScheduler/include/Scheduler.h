@@ -135,7 +135,7 @@ namespace Event {
 }
 
 #if !DISABLE_GLOBAL_EVENT_SCHEDULER
-extern Event::Scheduler __Scheduler;
+    extern Event::Scheduler __Scheduler;
 #endif
 
 #include "Scheduler.hpp"

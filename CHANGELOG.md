@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.0.7-dev
+
+ - New version after a lot of issues have been fixed after upgrading to Framework Arduino ESP8266 3.0.1
+
 ## Version 0.0.6
 
  - Fixed some environments to be compiled as release (DEBUG=0), which reduces the code size by 10-15%

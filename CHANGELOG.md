@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.0.7-dev
+## Version 0.0.7 (master)
 
  - AT mode help has been moved to ``docs\AtModeHelp.md`` to save flash memory
  - Most parts can be compiled under linux now (invalid case-sensitive filenames mostly fixed, some python scripts might still contain Windows specific code)

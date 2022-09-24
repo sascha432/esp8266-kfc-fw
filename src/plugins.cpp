@@ -255,7 +255,11 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             __LDBG_printf("adding webui");
             auto webUi = FSPGM(WebUI);
             _bootstrapMenu.addMenuItem(webUi, url, _navMenu.device, _navMenu.device/*insert at the top*/);
-            _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
+
+            auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
+            #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+                _bootstrapMenu.addMenuItem(F("Display Screenshot"), F("images/screen_capture.bmp"), _navMenu.home, home);
+            #endif
         }
     }
 

@@ -37,6 +37,9 @@ public:
         #if HAVE_WEATHER_STATION_CURATED_ART
             subMenu.addMenuItem(F("Curated Art"), F("curated-art.html"));
         #endif
+        #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+            subMenu.addMenuItem(F("Display Screenshot"), F("images/screen_capture.bmp"));
+        #endif
     }
 
 // WebUI

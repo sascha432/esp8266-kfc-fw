@@ -460,7 +460,7 @@
 
 // option to download BMP screenshots of the TFT display
 #ifndef WEATHER_STATION_HAVE_BMP_SCREENSHOT
-#    define WEATHER_STATION_HAVE_BMP_SCREENSHOT 0
+#    define WEATHER_STATION_HAVE_BMP_SCREENSHOT 1
 #endif
 
 class Stream;

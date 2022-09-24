@@ -1474,21 +1474,21 @@ void at_mode_serial_handle_event(String &commandString)
         #endif
     }
     else
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HELP))) {
-        #if AT_MODE_HELP_SUPPORTED
-            String plugin;
-            StringVector findItems;
-            for(auto strPtr: args.getArgs()) {
-                String str = strPtr;
-                str.trim();
-                str.toLowerCase();
-                findItems.push_back(str);
-            }
-            at_mode_generate_help(output, &findItems);
-        #else
-            at_mode_print_help(output);
-        #endif
-    }
+    // if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HELP))) {
+    //     #if AT_MODE_HELP_SUPPORTED
+    //         String plugin;
+    //         StringVector findItems;
+    //         for(auto strPtr: args.getArgs()) {
+    //             String str = strPtr;
+    //             str.trim();
+    //             str.toLowerCase();
+    //             findItems.push_back(str);
+    //         }
+    //         at_mode_generate_help(output, &findItems);
+    //     #else
+    //         at_mode_print_help(output);
+    //     #endif
+    // }
     #if ESP8266 && DEBUG
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO))) {
 /*
@@ -1835,7 +1835,7 @@ void at_mode_serial_handle_event(String &commandString)
             #endif
         }
     #endif
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
+    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
         bool safeMode = false;
         if (args.equals(0, 's')) {
             safeMode = true;
@@ -1846,13 +1846,13 @@ void at_mode_serial_handle_event(String &commandString)
         }
         config.restartDevice(safeMode);
     }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
-        output.print(F("+CMDS="));
-        #if AT_MODE_HELP_SUPPORTED
-            at_mode_print_command_string(output, ',');
-        #endif
-        output.println();
-    }
+    // else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
+    //     output.print(F("+CMDS="));
+    //     #if AT_MODE_HELP_SUPPORTED
+    //         at_mode_print_command_string(output, ',');
+    //     #endif
+    //     output.println();
+    // }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOAD))) {
         config.read();
         args.ok();

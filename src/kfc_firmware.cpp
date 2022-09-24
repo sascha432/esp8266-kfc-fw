@@ -3,35 +3,38 @@
  */
 
 #include <Arduino_compat.h>
-#include <algorithm>
-#include <vector>
-#include <functional>
 #include <Event.h>
-#include <StreamWrapper.h>
-#include <PrintString.h>
 #include <ListDir.h>
-#include <NeoPixelEx.h>
-#if HAVE_IOEXPANDER
-#include <IOExpander.h>
-#endif
-#include "kfc_fw_config.h"
+#include <PrintString.h>
+#include <StreamWrapper.h>
+#include <algorithm>
+#include <functional>
+#include <vector>
+#include "at_mode.h"
 #include "blink_led_timer.h"
 #include "deep_sleep.h"
-#include "at_mode.h"
-#include "serial_handler.h"
-#include "serial2udp.h"
+#include "kfc_fw_config.h"
+#include "plugins_menu.h"
 #include "reset_detector.h"
 #include "save_crash.h"
-#include "plugins_menu.h"
+#include "serial2udp.h"
+#include "serial_handler.h"
 #include "web_server.h"
-#if PRINTF_WRAPPER_ENABLED
-#include <printf_wrapper.h>
-#endif
 #include "../src/plugins/plugins.h"
+#if __LED_BUILTIN_WS2812_NUM_LEDS
+#    include <NeoPixelEx.h>
+#endif
+#if HAVE_IOEXPANDER
+#    include <IOExpander.h>
+#endif
+#if PRINTF_WRAPPER_ENABLED
+#    include <printf_wrapper.h>
+#endif
+
 #if DEBUG_ALL
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 // connect to wifi and serial2tcp before booting to see all debug output
@@ -40,10 +43,10 @@
 #endif
 
 #if DEBUG_PRE_INIT_SERIAL2TCP
-#include "../src/plugins/serial2tcp/serial2tcp.h"
-#include "../src/plugins/serial2tcp/Serial2TcpBase.h"
-#include "../src/plugins/serial2tcp/Serial2TcpClient.h"
-#include "PluginComponent.h"
+#    include "../src/plugins/serial2tcp/Serial2TcpBase.h"
+#    include "../src/plugins/serial2tcp/Serial2TcpClient.h"
+#    include "../src/plugins/serial2tcp/serial2tcp.h"
+#    include "PluginComponent.h"
 #endif
 
 // set to 1 to enable debugging the boot sequence

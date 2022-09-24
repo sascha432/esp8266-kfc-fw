@@ -31,9 +31,11 @@
 #include "blink_led_timer.h"
 #include "plugins.h"
 #include "PinMonitor.h"
-#include <NeoPixelEx.h>
+#if __LED_BUILTIN_WS2812_NUM_LEDS
+#    include <NeoPixelEx.h>
+#endif
 #if HAVE_IOEXPANDER
-#include <IOExpander.h>
+#    include <IOExpander.h>
 #endif
 #include "../src/plugins/plugins.h"
 #include <stl_ext/memory.h>
@@ -361,12 +363,15 @@ enum class WiFiCommandsType : uint8_t {
     #endif
 };
 
-#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next" \
 #if HAVE_PING_GATEWAY
-    "|stop_ping"
+#    define WIFI_COMMANDS_STOP_PING         "|stop_ping"
+#    define WIFI_COMMANDS_STOP_PING_HELP    "    stop_ping                                   Stop pinging the gateway\n"
 #else
-    ""
+#    define WIFI_COMMANDS_STOP_PING         ""
+#    define WIFI_COMMANDS_STOP_PING_HELP    ""
 #endif
+
+#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next" WIFI_COMMANDS_STOP_PING
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Manage WiFi\n"
     "    reset                                       Reset WiFi connection\n"
@@ -380,6 +385,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Mana
     "    diag                                        Print diagnostic information\n"
     "    stl                                         List available WiFi stations\n"
     "    next                                        Switch to next WiFi station\n"
+    WIFI_COMMANDS_STOP_PING_HELP
 );
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");

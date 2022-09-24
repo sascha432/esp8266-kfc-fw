@@ -23,7 +23,9 @@
 #include "save_crash.h"
 #include <JsonBaseReader.h>
 #include <Form/Types.h>
-#include <NeoPixelEx.h>
+#if __LED_BUILTIN_WS2812_NUM_LEDS
+#    include <NeoPixelEx.h>
+#endif
 #include "deep_sleep.h"
 #include "PinMonitor.h"
 #include "../src/plugins/plugins.h"
@@ -48,7 +50,7 @@
 #if RTC_SUPPORT
 #    include <RTClib.h>
 #    if RTC_DEVICE_DS3231
-RTC_DS3231 rtc;
+        RTC_DS3231 rtc;
 #    else
 #        error RTC device not set
 #    endif

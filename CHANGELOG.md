@@ -2,6 +2,8 @@
 
 ## Version 0.0.7-dev
 
+ - AT mode help has been moved to ``docs\AtModeHelp.md`` to save flash memory
+ - Most parts can be compiled under linux now (invalid case-sensitive filenames mostly fixed, some python scripts might still contain Windows specific code)
  - New version after a lot of issues have been fixed after upgrading to Framework Arduino ESP8266 3.0.1
 
 ## Version 0.0.6

@@ -110,7 +110,7 @@ enum class Command {
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<" COMMANDS ">", "Manage MQTT\n"
     "    con[nect]                                   Connect to server\n"
-    "    dis[connect][,<true|false>]                 Disconnect from server and enalbe/disable auto reconnect\n"
+    "    dis[connect][,<true|false>]                 Disconnect from server and enable/disable auto reconnect\n"
     "    set,<enable,disable>                        Enable or disable MQTT\n"
     "    top[ics]                                    List subscribed topics\n"
     "    auto[discovery][,restart][,force]           Publish auto discovery\n"

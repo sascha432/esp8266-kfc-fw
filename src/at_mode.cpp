@@ -327,7 +327,7 @@ void at_mode_display_help(Stream &output, StringVector *findText = nullptr)
 #endif
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HELP, "HELP", "[single][,word][,or entire phrase]", "Search help");
+// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HELP, "HELP", "[single][,word][,or entire phrase]", "Search help");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]", "Enter deep sleep");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RST, "RST", "[<s>]", "Soft reset. 's' enables safe mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CMDS, "CMDS", "Send a list of available AT commands");
@@ -443,7 +443,7 @@ void at_mode_help_commands()
 {
     auto name = PSTR("at_mode");
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(AT), name);
-    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HELP), name);
+    // at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(HELP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DSLP), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RST), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CMDS), name);

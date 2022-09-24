@@ -1,12 +1,76 @@
 # AT Mode Commands
 
-After the command help takes a lot of FLASH memory, it has been moved to this document here
-
-## TODO
-
- - Add all at commands
+After the command help takes a lot of FLASH memory, it has been moved to this document here. Most commands without DEBUG MODE are listed.
 
 ## Common Commands
+
+### ``AT``
+
+Print ``OK``
+
+### ``REM=...``
+
+Ignore comment
+
+### ``DSLP=[<milliseconds>[,<mode>]]``
+
+Enter deep sleep
+
+### ``RST=[<s>]``
+
+Reset device. If ``s`` is provided, it will reboot in SAFE MODE.
+
+### ``LOAD``
+
+Discard changes and load settings from EEPROM
+
+### ``STORE``
+
+Store current settings in EEPROM
+
+### ``FACTORY``
+
+Restore factory settings (but do not store in EEPROM)
+
+### ``FSR``
+
+Restore factory settings, store in EEPROM and reboot device
+
+### ``ATMODE=<1|0>``
+
+Enable/disable AT Mode if compiled in
+
+### ``DLY=<milliseconds>``
+
+Call delay(milliseconds)
+
+### ``CAT=<filename>``
+
+Display file contents
+
+### ``RM=<filename>``
+
+Remove file from FS
+
+### ``RN=<filename>,<new filename>``
+
+Rename file or directory
+
+### ``LS=[<directory>[,<hidden=true|false>,<subdirs=true|false>]]``
+
+List files and directories
+
+### ``LSR=[<directory>]``
+
+List files and directories using FS.openDir(). This will not display read only virtual files.
+
+### ``AOTA=<start|stop>``
+
+Start/stop Arduino OTA (required about 1K RAM to run)
+
+### ``PLG=<list|start|stop|add-blacklist|add|remove>[,<name>]``
+
+Plugin management. If a plugin malfunctions, it can be blacklisted in SAFE MODE.
 
 ### ``+RTC=[set]``
 
@@ -29,15 +93,37 @@ Run WiFi command
  - next                                        Switch to next WiFi station
  - stop_ping                                   Stop pinging the gateway (Only if compiled in)
 
+### ``LED=<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]``
+
+Set internal LED mode or an LED on a certain PIN.
+
+### ``NEOPX=<pin>,<num>,<r>,<g>,<b>``
+
+Set NeoPixel colors for a given PIN if available
+
 ### ``+METRICS``
 
 Displays versions of the SDK, framework, libraries, memory addresses and a lot more. Available in DEBUG mode only
 
 ### ``PING=<target[,count=4[,timeout=5000]]>``
 
-Ping host or IP address
+Ping host or IP address if compiled in
 
-### TODO
+### ``I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]``
+
+Configure I2C Bus
+
+### ``I2CTM=<address>,<data,...>``
+
+Transmsit data to slave
+
+### ``I2CRQ=<address>,<length>``
+
+Request data from slave
+
+### ``I2CSCAN=[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]``
+
+Scan I2C Bus. If ANY is passed as third argument, all available PINs are probed for I2C devices. Available only if compiled in
 
 ## 7 Segment Clock
 
@@ -70,3 +156,48 @@ Run command
 ``LMVIEW=<interval in ms|0=disable>,<client_id>``
 
 Display LEDs over http2serial
+
+## Weather Station
+
+### ``WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
+
+Enable/disable function
+
+### ``WSBL=<level=0-1023>``
+
+Set backlight level
+
+### ``WSU=<i|f>``
+
+Update weather info/forecast
+
+### ``WSM=<date YYYY-MM-DD>[,<days>]``
+
+Show Moon Phase for given date. Only available in DEBUG MODE
+
+### ``MDNSR`=<service>,<proto>,[<wait=3000ms>]``
+
+Query MDNS
+
+### ``MDNSR=<stop|start|enable|disable|zeroconf>``
+
+Configure MDNS
+
+## Blinds Controller
+
+### ``BCME=<open|close|stop|tone|imperial|init>[,<channel>][,<tone_frequency>,<tone_pwm_value>]``
+
+Open, close a channel, stop motor or run tone test, play imperial march, initial state
+
+## MQTT
+
+### ``MQTT=con|dis|set|top|auto|list``
+
+Manage MQTT
+
+  con[nect]                                   Connect to server
+  dis[connect][,<true|false>]                 Disconnect from server and enable/disable auto reconnect
+  set,<enable,disable>                        Enable or disable MQTT
+  top[ics]                                    List subscribed topics
+  auto[discovery][,restart][,force]           Publish auto discovery
+  list[,<full|crc>]                           List auto discovery

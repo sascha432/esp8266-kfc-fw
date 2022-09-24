@@ -358,20 +358,9 @@ enum class WiFiCommandsType : uint8_t {
     DIAG,
     AVAIL_ST_LIST,
     NEXT,
-    #if HAVE_PING_GATEWAY
-        STOP_PING
-    #endif
 };
 
-#if HAVE_PING_GATEWAY
-#    define WIFI_COMMANDS_STOP_PING         "|stop_ping"
-#    define WIFI_COMMANDS_STOP_PING_HELP    "    stop_ping                                   Stop pinging the gateway\n"
-#else
-#    define WIFI_COMMANDS_STOP_PING         ""
-#    define WIFI_COMMANDS_STOP_PING_HELP    ""
-#endif
-
-#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next" WIFI_COMMANDS_STOP_PING
+#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Manage WiFi\n"
     "    reset                                       Reset WiFi connection\n"
@@ -385,7 +374,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Mana
     "    diag                                        Print diagnostic information\n"
     "    stl                                         List available WiFi stations\n"
     "    next                                        Switch to next WiFi station\n"
-    WIFI_COMMANDS_STOP_PING_HELP
 );
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
@@ -2229,13 +2217,6 @@ void at_mode_serial_handle_event(String &commandString)
                     args.print(F("switching WiFi network"));
                     config.reconfigureWiFi(nullptr);
                     break;
-                #if HAVE_PING_GATEWAY
-                    case WiFiCommandsType::STOP_PING:
-                        extern void stop_ping_gateway();
-                        args.print(F("stopping gateway ping"));
-                        stop_ping_gateway();
-                        break;
-                #endif
             }
         }
 

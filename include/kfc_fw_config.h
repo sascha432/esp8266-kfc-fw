@@ -38,13 +38,6 @@
 
 #define HASH_SIZE 64
 
-// just a test of the framework ping methods [lwip] (+3256 byte code size incl. debug oupout)
-// a better solution is https://github.com/sascha432/AsyncPing.git
-#ifndef HAVE_PING_GATEWAY
-// #    define HAVE_PING_GATEWAY 1
-#    define HAVE_PING_GATEWAY 0
-#endif
-
 #include "kfc_fw_config_types.h"
 
 // NOTE using the new handlers (USE_WIFI_SET_EVENT_HANDLER_CB=0) costs 896 byte RAM with 5 handlers

@@ -1490,7 +1490,7 @@ void at_mode_serial_handle_event(String &commandString)
     //     #endif
     // }
     #if ESP8266 && DEBUG
-        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO))) {
+        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPIO))) {
 /*
 +dumpio=0x700,0x7ff
 +dumpio=0x1200,0x1300
@@ -1543,9 +1543,10 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
         }
+        else
     #endif
     #if DEBUG
-        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPF))) {
+        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMPF))) {
             static constexpr size_t kFlashBufferSize = 32;
             uintptr_t addr = translateAddress(args.toString(0));
             if (addr == ~0U) {

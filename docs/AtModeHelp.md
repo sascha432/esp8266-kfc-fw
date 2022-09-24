@@ -157,7 +157,7 @@ Run command
 
 Display LEDs over http2serial
 
-## Weather Station
+## Weather Station / Clock / LED Matrix
 
 ### ``WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
 
@@ -201,3 +201,30 @@ Manage MQTT
   top[ics]                                    List subscribed topics
   auto[discovery][,restart][,force]           Publish auto discovery
   list[,<full|crc>]                           List auto discovery
+
+## STK500v1 Programmer
+
+### ``STK500V1F=<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]``
+
+### ``STK500V1S=<atmega328p/0x1e1234/...>``
+
+Set signature (/stk500v1/atmega.csv)
+
+### ``STK500V1L``
+
+Dump debug log file (/stk500v1/debug.log)
+
+## Dimmer
+
+### ``DIMG``
+
+Get level(s)
+
+### ``DIMS=<channel>,<level>[,<time>]``
+
+Set level
+
+### ``DIMCF=<reset|weeprom|info|print|write|factory>``
+
+Configure dimmer firmware
+

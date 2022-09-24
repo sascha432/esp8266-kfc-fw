@@ -356,9 +356,17 @@ enum class WiFiCommandsType : uint8_t {
     DIAG,
     AVAIL_ST_LIST,
     NEXT,
+    #if HAVE_PING_GATEWAY
+        STOP_PING
+    #endif
 };
 
-#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next"
+#define WIFI_COMMANDS "reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next" \
+#if HAVE_PING_GATEWAY
+    "|stop_ping"
+#else
+    ""
+#endif
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(WIFI, "WIFI", "<" WIFI_COMMANDS ">", "Manage WiFi\n"
     "    reset                                       Reset WiFi connection\n"
@@ -2215,6 +2223,13 @@ void at_mode_serial_handle_event(String &commandString)
                     args.print(F("switching WiFi network"));
                     config.reconfigureWiFi(nullptr);
                     break;
+                #if HAVE_PING_GATEWAY
+                    case WiFiCommandsType::STOP_PING:
+                        extern void stop_ping_gateway();
+                        args.print(F("stopping gateway ping"));
+                        stop_ping_gateway();
+                        break;
+                #endif
             }
         }
 

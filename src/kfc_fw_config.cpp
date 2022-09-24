@@ -28,33 +28,83 @@
 #include "PinMonitor.h"
 #include "../src/plugins/plugins.h"
 #if IOT_SWITCH
-#include "../src/plugins/switch/switch.h"
+#    include "../src/plugins/switch/switch.h"
 #endif
 #if IOT_WEATHER_STATION
-#include "../src/plugins/weather_station/weather_station.h"
+#    include "../src/plugins/weather_station/weather_station.h"
+#endif
+#if HAVE_PING_GATEWAY
+#    include <ping.h>
 #endif
 
 #if defined(ESP8266)
-#include <sntp.h>
-// #include <sntp-lwip2.h>
+#    include <sntp.h>
+// #    include <sntp-lwip2.h>
 #elif defined(ESP32)
-#include <lwip/apps/sntp.h>
-#include <nvs.h>
+#    include <lwip/apps/sntp.h>
+#    include <nvs.h>
 #endif
 
 #if RTC_SUPPORT
-#include <RTClib.h>
-#if RTC_DEVICE_DS3231
+#    include <RTClib.h>
+#    if RTC_DEVICE_DS3231
 RTC_DS3231 rtc;
-#else
-#error RTC device not set
-#endif
+#    else
+#        error RTC device not set
+#    endif
 #endif
 
 #if DEBUG_KFC_CONFIG
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
+#endif
+
+#if HAVE_PING_GATEWAY
+    static struct ping_option pingOptions;
+
+    static void start_ping_gateway();
+
+    static void ping_recv(void *opts, void *resp)
+    {
+        auto &response = *static_cast<struct ping_resp *>(resp);
+        auto &options = *static_cast<struct ping_option *>(opts);
+        __DBG_printf("options=%p/%p time=%u seq=%u bytes=%u err=%d", opts, &pingOptions, response.resp_time, response.seqno, response.bytes, response.ping_err);
+    }
+
+    static void ping_done(void *opts, void *resp)
+    {
+        auto &response = *static_cast<struct ping_resp *>(resp);
+        auto &options = *static_cast<struct ping_option *>(opts);
+        __DBG_printf("options=%p/%p time=%u", opts, &pingOptions);
+        __DBG_printf("totals count=%u timeouts=%u bytes=%u time=%u", response.total_count, response.timeout_count, response.total_bytes, response.total_time);
+
+        _Scheduler.add(Event::seconds(30), false, [](Event::CallbackTimerPtr) {
+            if (pingOptions.count && pingOptions.ip) {
+                start_ping_gateway();
+            }
+        });
+    }
+
+    static void start_ping_gateway()
+    {
+        pingOptions = { 4, WiFi.gatewayIP(), 1, ping_recv, ping_done, nullptr };
+        ping_start(&pingOptions);
+        __DBG_printf("start ping %ux%s", pingOptions.count, WiFi.gatewayIP().toString().c_str());
+    }
+
+    void stop_ping_gateway()
+    {
+        __DBG_printf("stop ping %ux%s", pingOptions.count, WiFi.gatewayIP().toString().c_str());
+        // there is no way to stop a ping command until the total count has been reached
+        // ping_stop() is missing and the structures/functions are static
+        // unregister the functions and make sure to use a new pointer for ping_start(), since it identifies the ping running
+        InterruptLock lock;
+        ping_regist_recv(&pingOptions, nullptr);
+        ping_regist_sent(&pingOptions, nullptr);
+    }
+
+
 #endif
 
 bool KFCFWConfiguration::_initTwoWire = false;
@@ -249,6 +299,13 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
 void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnected &event)
 {
     __LDBG_printf("reason=%d error=%s wifi_connected=%u wifi_up=%u is_connected=%u ip=%s", event.reason, WiFi_disconnect_reason(event.reason), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
+
+    #if HAVE_PING_GATEWAY
+        // disable ping
+        pingOptions.count = 0;
+        pingOptions.ip = 0;
+    #endif
+
     if (_wifiConnected) {
         #if !IOT_WEATHER_STATION_WS2812_NUM
             BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
@@ -322,6 +379,11 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     LoopFunctions::callOnce([event]() {
         WiFiCallbacks::callEvent(WiFiCallbacks::EventType::CONNECTED, (void *)&event);
     });
+
+    #if HAVE_PING_GATEWAY
+        // start to ping the gateway
+        start_ping_gateway();
+    #endif
 }
 
 void KFCFWConfiguration::setWiFiConnectLedMode()

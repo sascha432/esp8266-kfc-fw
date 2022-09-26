@@ -123,8 +123,8 @@ namespace KFCConfigurationClasses {
                     }
                 } color;
                 CREATE_UINT32_BITFIELD_MIN_MAX(speed, 14, 0, 16383, 60, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(bpm, 8, 0, 255, 10, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(hue, 8, 0, 255, 10, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(bpm, 8, 0, 255, 12, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(hue, 8, 0, 255, 14, 1);
                 RainbowAnimationType() :
                     speed(kDefaultValueFor_speed),
                     bpm(kDefaultValueFor_bpm),

@@ -24,6 +24,8 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 **SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
 
+If it is not being installed automatically, run ``pio pkg install -t platformio/tool-mklittlefs``
+
 Starting with version 0.0.5, a modified Arduino framework is being used.
 https://github.com/sascha432/Arduino/tree/master
 
@@ -91,6 +93,18 @@ Send messages to a syslog server via UDP, TCP and TLS
 ### KFCWebBuilder
 
 Framework to build WebUIs with bootstrap and store them mostly compressed in a virtual file system. Combined with server side includes, complex dynamic web pages/forms with a low memory footprint can be created
+
+#### Building the VFS
+
+Following software is required to build the virtual file system.
+
+ - Java JRE 8
+ - NodeJS v16
+ - PHP 7.4.x (8.x is not working)
+
+ Executables must the in PATH
+
+ Compatible versions might work as well, but those have been tested...
 
 ### KFCVirtualFileSystem
 

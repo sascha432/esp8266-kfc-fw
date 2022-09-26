@@ -50,12 +50,12 @@
             "#elif ESP32": "@~/.platformio/packages/tool-mkspiffs/mkspiffs/mkspiffs_espressif32_arduino"
         },
         "nodejs": {
-            "#if OS_WIN": "${env.ProgramFiles}/nodejs/node.exe",
+            "#if OS_WIN": "node.exe",
             "#elif OS_OSX": "/usr/local/opt/nodejs",
             "#else": "/usr/bin/nodejs"
         },
         "php": {
-            "#if OS_WIN": "php.exe",
+            "#if OS_WIN": "@php.exe",
             "#elif OS_OSX": "/usr/bin/php",
             "#else": "/usr/bin/php"
         },

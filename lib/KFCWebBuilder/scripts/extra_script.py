@@ -12,6 +12,7 @@ import subprocess
 import click
 import re
 from datetime import datetime
+import platform
 
 symlinks = []
 
@@ -95,7 +96,10 @@ def build_webui(source, target, env, force = False):
             if not os.path.exists(dst):
                 if verbose:
                     click.secho('Creating symlink %s -> %s' % (src, dst), fg='yellow')
-                a = [ 'mklink', '/J', dst, src ]
+                if platform.system() == 'Windows':
+                    a = [ 'mklink', '/J', dst, src ]
+                else:
+                    a = [ 'ln', '-s', dst, src ]
                 return_code = subprocess.run(a, shell=True).returncode
                 if return_code:
                     click.secho('Failed to create symlink: [%u] %s -> %s' % (return_code, src, dst), fg='red')
@@ -121,7 +125,10 @@ def rebuild_webui(source, target, env):
     build_webui(source, target, env, True)
 
 def before_clean(source, target, env):
-    env.Execute("del ${PROJECTDATA_DIR}/webui/ -Recurse")
+    if platform.system() == 'Windows':
+        env.Execute("del \"${PROJECTDATA_DIR}/webui/\" -Recurse")
+    else:
+        env.Execute("rm -fR \"${PROJECTDATA_DIR}/webui/\"")
 
 def build_webui_cleanup(source, target, env):
     global symlinks

@@ -24,8 +24,6 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 **SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
 
-If it is not being installed automatically, run ``pio pkg install -t platformio/tool-mklittlefs``
-
 Starting with version 0.0.5, a modified Arduino framework is being used.
 https://github.com/sascha432/Arduino/tree/master
 
@@ -96,16 +94,17 @@ Framework to build WebUIs with bootstrap and store them mostly compressed in a v
 
 #### Building the VFS
 
-Following software is required to build the virtual file system.
+Following software is required to build the virtual file system. Compatible versions might work as well, the listed ones have been tested...
 
- - Java JRE 8
- - NodeJS v16
- - Install uglify-js using ``npm install uglify-js`` inside the project directory
- - PHP 7.4.x (8.x is not working)
+ - Java JRE 8 / openjdk-18-jre-headless
+ - NodeJS v12 or v16
+ - Install uglify-js (3.15.3) using ``npm install uglify-js`` inside the project directory. For linux create a symlink ``sudo ln -s $(pwd)/node_modules/uglify-js/bin/uglifyjs /usr/bin/uglifyjs``
+ - PHP 7.4.x (8.x is not supported yet)
+ - mklittlefs - If it is not being installed automatically, run ``pio pkg install -t platformio/tool-mklittlefs``
 
-Executables must be in PATH
+Executables must be in ``PATH``. If you have PHP 8.x, install PHP 7.x from source and ``export PHPEXE=/home/sascha/Desktop/php-7.4.30/sapi/cli/php``. For Windows, create an environment variable ``PHPEXE`` pointing to php.exe
 
-Compatible versions might work as well, but those have been tested...
+More details about binaries can be found/changed in ``lib/KFCWebBuilder/KFCWebBuilder.json``
 
 ### KFCVirtualFileSystem
 

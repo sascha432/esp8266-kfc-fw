@@ -96,6 +96,7 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &name, Form
     #endif
 
     form.addStringGetterSetter(F("btok"), System::Device::getToken, System::Device::setToken);
+    form.addFormUI(F("Remote Authentication Token"));
     form.addValidator(FormUI::Validator::Length(System::Device::kTokenMinSize, System::Device::kTokenMaxSize));
 
     webserverGroup.end();

@@ -98,9 +98,13 @@ def build_webui(source, target, env, force = False):
                     click.secho('Creating symlink %s -> %s' % (src, dst), fg='yellow')
                 if platform.system() == 'Windows':
                     a = [ 'mklink', '/J', dst, src ]
+                    return_code = subprocess.run(a, shell=True).returncode
                 else:
-                    a = [ 'ln', '-s', dst, src ]
-                return_code = subprocess.run(a, shell=True).returncode
+                    try:
+                        os.symlink(src, dst, False)
+                        return_code = 0
+                    except:
+                        return_code = 1
                 if return_code:
                     click.secho('Failed to create symlink: [%u] %s -> %s' % (return_code, src, dst), fg='red')
                     env.Exit(1)

@@ -100,11 +100,12 @@ Following software is required to build the virtual file system.
 
  - Java JRE 8
  - NodeJS v16
+ - Install uglify-js using ``npm install uglify-js`` inside the project directory
  - PHP 7.4.x (8.x is not working)
 
- Executables must the in PATH
+Executables must be in PATH
 
- Compatible versions might work as well, but those have been tested...
+Compatible versions might work as well, but those have been tested...
 
 ### KFCVirtualFileSystem
 

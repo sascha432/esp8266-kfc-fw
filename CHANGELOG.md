@@ -2,6 +2,7 @@
 
 ## Version 0.0.7 (master)
 
+ - Added boost boost 1.80.0 preprocessor
  - AT mode help has been moved to ``docs\AtModeHelp.md`` to save flash memory
  - Most parts can be compiled under linux now and probably OSX as as well (invalid case-sensitive filenames mostly fixed, some python scripts might still contain Windows specific code)
  - New version after a lot of issues have been fixed after upgrading to Framework Arduino ESP8266 3.0.1

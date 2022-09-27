@@ -43,7 +43,8 @@ def build_webui(source, target, env, force = False):
         if 'PHPEXE' in os.environ:
             php_bin = os.environ['PHPEXE']
         else:
-            php_bin = os.path.sep == '\\' and 'php.exe' or 'php'
+            #php_bin = platform.system() == 'Windows' and 'php.exe' or 'php'
+            php_bin = 'php'
 
     php_file = env_abspath(env, '$PROJECT_DIR/lib/KFCWebBuilder/bin/include/cli_tool.php')
     json_file = env_abspath(env, '$PROJECT_DIR/KFCWebBuilder.json')
@@ -78,7 +79,6 @@ def build_webui(source, target, env, force = False):
 
     args = [ php_bin, php_file, json_file, '--branch', 'spiffs', '--env', 'env:%s' % env.subst('$PIOENV'), '--clean-exit-code', '0', '--dirty-exit-code', '0', '--defines-from', definesFile ]
 
-
     dirs = []
     for item in defines:
         try:
@@ -108,17 +108,20 @@ def build_webui(source, target, env, force = False):
                 if return_code:
                     click.secho('Failed to create symlink: [%u] %s -> %s' % (return_code, src, dst), fg='red')
                     env.Exit(1)
-        symlinks.append(dst)
+            symlinks.append(dst)
 
     if force:
         args.append('--force')
+
+    if verbose:
+        args.append('--verbose');
 
     # cli_cmd = subprocess.check_output(args, shell=True);
     cli_cmd = ' '.join(args);
     if verbose:
         click.echo(cli_cmd)
 
-    return_code = subprocess.run(args, shell=True).returncode
+    return_code = subprocess.run(args, shell=(platform.system() == 'Windows')).returncode
 
     if return_code!=0:
         click.secho('failed to run: %s' % cli_cmd)

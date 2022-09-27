@@ -8,6 +8,10 @@
  - freetype2-devel, libfreetype6-dev (those have been tested)
  - cygwin or WSL2 to create them with Windows
 
+ OR
+
+ extract ``fonts_headers.tgz``, if you do not want to add your own fonts
+
 ## Compiling fontconvert
 
 Goto directory and run make ``src/plugins/weather_station/fonts/fontconvert``. Further information about the software can be found at [https://github.com/sascha432/Adafruit-GFX-Library](https://github.com/sascha432/Adafruit-GFX-Library)

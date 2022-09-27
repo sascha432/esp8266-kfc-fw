@@ -41,17 +41,16 @@ https://github.com/sascha432/Arduino/tree/master
 
 ## Stable versions
 
-I started to create branches of stable versions for my different devices.
-
-[7 Channel Relay Board - Version 0.0.4.7598](https://github.com/sascha432/esp8266-kfc-fw/tree/relay_board_0.0.4.7598)
-
-[BME280 Sensor - Version 0.0.4.7617](https://github.com/sascha432/esp8266-kfc-fw/tree/bme280_0.0.4.7617)
-
-[Blinds Control - Version 0.0.4.7591](https://github.com/sascha432/esp8266-kfc-fw/tree/blinds_control_0.0.4.7591)
+Currently the master branch is stable, but one project is not up-to-date
 
 [Remote Control - Version 0.0.4.7545](https://github.com/sascha432/esp8266-kfc-fw/tree/remote_control_0.0.4.7545)
 
 ## Requirements
+
+ - Visual Studio Code for Windows or Linux
+ - PlatformIO 6.1.4 (Linux compiles way faster)
+ - WSL2 Virtual Linux and WSL remote extension. Speeds up compiling with many cores by 10-30%
+ - See ``Building the VFS`` for more requirements
 
 ### ESP8266
 

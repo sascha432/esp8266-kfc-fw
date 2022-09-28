@@ -11,7 +11,11 @@
 - ``pio run`` to get dependencies etc...
 - ``pio run -t clean ; pio run`` a couple times
 
-## Linux (ext4)
+## Results
+
+Both Windows and Linux are a 1-2 day old clean install, nothing running in the background.
+
+### Linux (ext4)
 
 ```
 Environment    Status    Duration
@@ -24,8 +28,9 @@ rlybrd_85      SUCCESS   00:00:33.927
 clockv2_100    SUCCESS   00:00:40.905
 ```
 
+### Windows 11 (NTFS)
+
 ```
-## Windows 11 (NTFS)
 
 Environment    Status    Duration
 -------------  --------  ------------

@@ -176,13 +176,6 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
             form.addValidator(FormUI::Validator::Range(0, 255));
         }
 
-        #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
-
-            form.addObjectGetterSetter(F("stft"), FormGetterSetter(cfg, show_webui));
-            form.addFormUI(F("Show TFT Contents In WebUI"), FormUI::BoolItems(FSPGM(Yes), FSPGM(No)));
-
-        #endif
-
     }
 
     mainGroup->end();

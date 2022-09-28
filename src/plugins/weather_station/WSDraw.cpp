@@ -944,11 +944,6 @@ namespace WSDraw {
             _debugDrawTime = (_debugDrawTime + dur) / 2.0;
             _debugLastUpdate = micros();
         #endif
-
-        #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
-            // promote full or partial update
-            canvasUpdatedEvent(x, y, w, h);
-        #endif
     }
 
     String Base::_getTemperature(float value, bool kelvin)

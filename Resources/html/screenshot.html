@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <div align="center" class="p-5"><img src="/images/screen_capture.bmp" id="screenshot" width="%TFT_WIDTH%" height="%TFT_HEIGHT%" dimw="%TFT_WIDTH%" dimh="%TFT_HEIGHT%" style="border: 5px solid #007bff"></div>
+        <div align="center" class="p-0">Zoom</div>
+        <div align="center" class="p-0"><a href="#" class="zoom" level="1">1x</a> | <a href="#" class="zoom" level="2">2x</a> | <a href="#" class="zoom" level="3">3x</a> | <a href="#" class="zoom" level="4">4x</a></div>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    <script>
+        $(function() {
+            var reload_image = null;
+            var src = $('#screenshot').attr('src');
+            reload_image = function() {
+                var new_src = src + '?' + Math.random();
+                $('#screenshot').attr('src', new_src);
+                window.setTimeout(reload_image, 1000);
+            };
+            window.setTimeout(reload_image, 1000);
+            $('.zoom').on('click', function() {
+                var level = parseInt($(this).attr('level'));
+                var w = parseInt($('#screenshot').attr('dimw'));
+                var h = parseInt($('#screenshot').attr('dimh'));
+                $('#screenshot').width(w * level);
+                $('#screenshot').height(h * level);
+            });
+        });
+    </script>
+
+</body>
+</html>

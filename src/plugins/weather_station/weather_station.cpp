@@ -416,27 +416,11 @@ void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F("Weather Station"), false));
     webUI.addRow(WebUINS::Slider(F("bl_br"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), 1023)));
-    #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
-        if (_config.show_webui) {
-            webUI.addRow(WebUINS::Screen(FSPGM(weather_station_webui_id, "ws_tft"), _canvas->width(), _canvas->height()));
-        }
-    #endif
 }
 
 void WeatherStationPlugin::getValues(WebUINS::Events &array)
 {
     array.append(WebUINS::Values(F("bl_br"), _backlightLevel, true));
-
-    #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
-        __LDBG_printf("show tft=%u", _config.show_webui);
-        if (_config.show_webui) {
-            __DBG_printf("adding callOnce this=%p", this);
-            // broadcast entire screen for each new client that connects
-            LoopFunctions::callOnce([this]() {
-                canvasUpdatedEvent(0, 0, TFT_WIDTH, TFT_HEIGHT);
-            });
-        }
-    #endif
 }
 
 void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -593,94 +577,6 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
         }
     #endif
 }
-
-#if WEATHER_STATION_HAVE_WEBUI_PREVIEW
-
-    void WeatherStationPlugin::canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h)
-    {
-        if (!_config.show_webui) {
-            return;
-        }
-        if (_lockCanvasUpdateEvents && millis() < _lockCanvasUpdateEvents) {
-            return;
-        }
-        __LDBG_S_IF(
-            // debug
-            if (_lockCanvasUpdateEvents) {
-                __DBG_printf("queue lock removed");
-                _lockCanvasUpdateEvents = 0;
-            },
-            // no debug
-            _lockCanvasUpdateEvents = 0;
-        )
-
-        auto webSocketUI = WebUISocket::getServerSocket();
-        // __DBG_printf("x=%d y=%d w=%d h=%d ws=%p empty=%u", x, y, w, h, webSocketUI, webSocketUI->getClients().isEmpty());
-        if (webSocketUI && !isLocked() && !webSocketUI->getClients().isEmpty()) {
-            Buffer buffer;
-
-            WsClient::BinaryPacketType packetIdentifier = WsClient::BinaryPacketType::RGB565_RLE_COMPRESSED_BITMAP;
-            buffer.write(reinterpret_cast<uint8_t *>(&packetIdentifier), sizeof(packetIdentifier));
-
-            size_t len = strlen_P(SPGM(weather_station_webui_id));
-            buffer.write(len);
-            buffer.write_P(SPGM(weather_station_webui_id), len);
-            if (buffer.length() & 0x01) { // the next part needs to be word aligned
-                buffer.write(0);
-            }
-
-            // takes 42ms for 128x160 using GFXCanvasCompressedPalette
-            // auto start = micros();
-
-            if (lock()) {
-                GFXCanvasRLEStream stream(*getCanvas(), x, y, w, h);
-                char buf[128];
-                size_t read;
-                while((read = stream.readBytes(buf, sizeof(buf))) != 0) {
-                    buffer.write(buf, read);
-                }
-                unlock();
-            }
-            else {
-                __DBG_printf("could not lock canvas");
-                return;
-            }
-
-            // auto dur = micros() - start;
-            // __DBG_printf("dur %u us", dur);
-            // if (!canvas) {
-            //     __DBG_printf("canvas was removed during update");
-            //     return;
-            // }
-
-            uint8_t *ptr;
-            buffer.write(0); // terminate with NUL byte
-            len = buffer.length() - 1;
-            buffer.move(&ptr);
-
-            auto wsBuffer = webSocketUI->makeBuffer(ptr, len, false);
-            // __LDBG_printf("buf=%p len=%u", wsBuffer, buffer.length());
-            if (wsBuffer) {
-
-                wsBuffer->lock();
-                for(auto socket: webSocketUI->getClients()) {
-                    if (!socket->canSend()) { // queue full
-                        _lockCanvasUpdateEvents = millis() + 5000;
-                        __LDBG_printf("queue lock added");
-                        break;
-                    }
-                    if (socket->status() == WS_CONNECTED && socket->_tempObject && reinterpret_cast<WsClient *>(socket->_tempObject)->isAuthenticated()) {
-                        socket->client()->setRxTimeout(10); // lower timeout
-                        socket->binary(wsBuffer);
-                    }
-                }
-                wsBuffer->unlock();
-                webSocketUI->_cleanBuffers();
-            }
-        }
-    }
-
-#endif
 
 #if IOT_ALARM_PLUGIN_ENABLED
 

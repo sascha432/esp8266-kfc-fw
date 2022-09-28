@@ -58,7 +58,6 @@ namespace KFCConfigurationClasses {
                         released_threshold(8),
                         is_metric(true),
                         time_format_24h(true),
-                        show_webui(false),
                         screenTimer{ 10, 10 }
                     {
                     }
@@ -152,11 +151,6 @@ namespace WSDraw {
         //}
 
     public:
-        #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
-            // called for partial or full updates of the screen
-            virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
-        #endif
-
         DisplayType &getDisplay();
         CanvasType *getCanvas();
 

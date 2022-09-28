@@ -72,7 +72,6 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(released_threshold, 6, 0, 63, 8);
                     CREATE_UINT32_BITFIELD_MIN_MAX(is_metric, 1, false, true, true);
                     CREATE_UINT32_BITFIELD_MIN_MAX(time_format_24h, 1, false, true, true);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(show_webui, 1, false, true, false);
                     CREATE_UINT32_BITFIELD_MIN_MAX(show_regular_clock_on_world_clocks, 1, false, true, true);
                     CREATE_UINT32_BITFIELD_MIN_MAX(gallery_update_rate, 16, 5, 43200, 120, 30); // seconds
                     uint8_t screenTimer[kNumScreens]; // seconds
@@ -90,7 +89,6 @@ namespace KFCConfigurationClasses {
                         released_threshold(kDefaultValueFor_released_threshold),
                         is_metric(kDefaultValueFor_is_metric),
                         time_format_24h(kDefaultValueFor_time_format_24h),
-                        show_webui(kDefaultValueFor_show_webui),
                         show_regular_clock_on_world_clocks(kDefaultValueFor_show_regular_clock_on_world_clocks),
                         gallery_update_rate(kDefaultValueFor_gallery_update_rate),
                         screenTimer{

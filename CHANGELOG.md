@@ -2,6 +2,7 @@
 
 ## Version 0.0.7 (master)
 
+ - Weather station live display of the TFT
  - Removed HTTP authentication token
  - More details about the software to build the VFS (Windows and Linux), can be found in ``README.md`` / ``Building the VFS``
  - Added boost boost 1.80.0 preprocessor

@@ -38,7 +38,7 @@ public:
             subMenu.addMenuItem(F("Curated Art"), F("curated-art.html"));
         #endif
         #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
-            subMenu.addMenuItem(F("Display Screenshot"), F("images/screen_capture.bmp"));
+            subMenu.addMenuItem(F("Show TFT"), F("screenshot.html"));
         #endif
     }
 
@@ -82,12 +82,6 @@ private:
     void _setBacklightLevel(uint16_t level);
     // sets the backlight level by slowly/decreasing increased it
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step = 8);
-
-    #if WEATHER_STATION_HAVE_WEBUI_PREVIEW
-        // sends updates areas to the webui
-        // 16bit colors, RLE compression
-        virtual void canvasUpdatedEvent(int16_t x, int16_t y, int16_t w, int16_t h);
-    #endif
 
 private:
     asyncHTTPrequest *_httpClient;

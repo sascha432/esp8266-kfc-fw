@@ -452,12 +452,6 @@
 #    define HAVE_WEATHER_STATION_CURATED_ART 1
 #endif
 
-// option to display the TFT in realtime in the WebUI
-// TODO currently not working
-#ifndef WEATHER_STATION_HAVE_WEBUI_PREVIEW
-#    define WEATHER_STATION_HAVE_WEBUI_PREVIEW 0
-#endif
-
 // option to download BMP screenshots of the TFT display
 #ifndef WEATHER_STATION_HAVE_BMP_SCREENSHOT
 #    define WEATHER_STATION_HAVE_BMP_SCREENSHOT 1

@@ -1039,100 +1039,6 @@ $.webUIComponent = {
         });
     },
     //
-    // decompress and display bitmaps
-    //
-    handleRLECompressedBitmap: function(data, pos) {
-        var x, y, width, height, ctx, image, palette = [], paletteCount, writePos = 0, maxWritePos;
-        try {
-            var len = new Uint8Array(data, pos++, 1)[0];
-            var canvasId = new Uint8Array(data, pos, len);
-            pos += canvasId.byteLength;
-            var canvasIdStr = new TextDecoder("utf-8").decode(canvasId);
-            var canvas = $('#' + canvasIdStr);
-            if (canvas.length == 0) {
-                this.console.error('cannot find canvas for', canvasIdStr);
-                return;
-            }
-            ctx = canvas[0].getContext('2d');
-            if (!ctx) {
-                this.console.error('cannot get 2d context for', canvas);
-                return;
-            }
-            if (pos % 2) { // word alignment
-                pos++;
-            }
-            var tmp = new Uint16Array(data, pos, 5);
-            pos += tmp.byteLength;
-            x = tmp[0];
-            y = tmp[1];
-            width = tmp[2];
-            height = tmp[3];
-            paletteCount = tmp[4];
-            if (paletteCount) {
-                var palettergb565 = new Uint16Array(data, pos, paletteCount);
-                pos += palettergb565.byteLength;
-                for (var i = 0; i < palettergb565.length; i++) {
-                    palette.push($._____rgb565_to_888(palettergb565[i]));
-                }
-            }
-            image = ctx.createImageData(width, height);
-            maxWritePos = width * height * 4;
-
-        } catch(e) {
-            this.console.error('failed to decode header', e);
-            return;
-        }
-
-        try {
-            function copy_rle_color(color) {
-                do {
-                    image.data[writePos++] = color[0];
-                    image.data[writePos++] = color[1];
-                    image.data[writePos++] = color[2];
-                    image.data[writePos++] = 0xff;
-                    if (writePos > maxWritePos) {
-                        throw 'image size exceeded';
-                    }
-                } while(rle--);
-            }
-
-            if (paletteCount) {
-                while(pos < data.byteLength) {
-                    var tmp = new Uint8Array(data, pos++, 1)[0];
-                    var index = (tmp >> 4); // palette index
-                    tmp &= 0xf;
-                    if (tmp == 0xe) { // 8 bit data marker
-                        rle = new Uint8Array(data, pos++, 1)[0] + 0xe;
-                    } else if (tmp == 0xf) { // 15 bit data marker, low-hi-byte
-                        var tmp = new Uint8Array(data, pos, 2);
-                        pos += tmp.byteLength;
-                        rle = tmp[0] | (tmp[1] << 8);
-                    }
-                    else { // 4 bit data
-                        rle = tmp;
-                    }
-                    copy_rle_color(palette[index]);
-                }
-            }
-            else {
-                while(pos < data.byteLength) {
-                    var rle = new Uint8Array(data, pos++, 1)[0];
-                    if (rle & 0x80) { // marker for 15bit, hi-low-byte
-                        rle = ((rle & 0x7f) << 8) | (new Uint8Array(data, pos++, 1)[0]);
-                    }
-                    var tmp = new Uint8Array(data, pos, 2); // 16bit color rgb565
-                    pos += tmp.byteLength;
-                    copy_rle_color($._____rgb565_to_888((tmp[1] << 8) | tmp[0]));
-                }
-            }
-
-        } catch(e) {
-            this.console.error('failed to decode image data', e);
-        }
-
-        ctx.putImageData(image, x, y);
-    },
-    //
     // web socket handler
     //
     socket_handler: function(event) {
@@ -1142,15 +1048,6 @@ $.webUIComponent = {
         else if (event.type == 'auth') {
             //event.socket.send('+GET_VALUES');
             this.request_ui();
-        }
-        else if (event.data instanceof ArrayBuffer) {
-            var packetId = new Uint16Array(event.data, 0, 1);
-            if (packetId == 0x0001) {// RGB565_RLE_COMPRESSED_BITMAP
-                this.handleRLECompressedBitmap(event.data, packetId.byteLength);
-            }
-            else {
-                this.console.log('unknown packet id: ' + packetId)
-            }
         }
         else if (event.type == 'data') {
             try {

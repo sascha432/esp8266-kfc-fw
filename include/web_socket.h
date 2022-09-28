@@ -46,7 +46,6 @@ public:
     };
 
     enum class BinaryPacketType : uint16_t {
-        RGB565_RLE_COMPRESSED_BITMAP,
         HLW8012_PLOT_DATA,
         TOUCHPAD_DATA,
         ADC_READINGS,

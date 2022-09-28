@@ -13,7 +13,7 @@ The ESP Web Framework consists of C++ classes to improve building web sites with
   - uglify-js 3.15.3
   - gzip 1.11
 
-Other version might work as well, but have not been tested
+Another version might work as well, but have not been tested
 
 ## Classes
 

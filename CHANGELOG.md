@@ -5,7 +5,7 @@
  - More details about the software to build the VFS (Windows and Linux), can be found in ``README.md`` / ``Building the VFS``
  - Added boost boost 1.80.0 preprocessor
  - AT mode help has been moved to ``docs\AtModeHelp.md`` to save flash memory
- - Most parts can be compiled under linux now and probably OSX as as well (invalid case-sensitive filenames mostly fixed, some python scripts might still contain Windows specific code)
+ - Most parts can be compiled under Linux now and probably OSX as well (invalid case-sensitive filenames mostly fixed, some python scripts might still contain Windows specific code)
  - New version after a lot of issues have been fixed after upgrading to Framework Arduino ESP8266 3.0.1
 
 ## Version 0.0.6
@@ -61,12 +61,12 @@
 - Inline forms for WebUI
 - Sort order for sensors
 - Support for BH1750FVI Ambient Light Sensor
-- Removed persistant WiFi settings and improved stability
+- Removed persistent WiFi settings and improved stability
 - WebServer logging to Serial
 - Removed WebAlerts
 - Support for GDBStub
-- framework-arduinoespressif8266 3.1.0  / Arduino Core 3.0.1-dev
-- Cleanup of the Visual Studio mock libary for 3.0.0
+- framework-arduinoespressif8266 3.1.0 / Arduino Core 3.0.1-dev
+- Cleanup of the Visual Studio mock library for 3.0.0
 - arduinoespressif8266 patch files have been removed and moved to [https://github.com/sascha432/Arduino/tree/master](https://github.com/sascha432/Arduino/tree/master)
 - Removed internal memory debugger
 - New version for framework-arduinoespressif8266 3.30000.210519 (3.0.0) and GCC 10.2 changes
@@ -74,7 +74,7 @@
 ## Version 0.0.4
 
 - Improved NTP plugin
-- Support for interal or external RTC
+- Support for internal or external RTC
 - Changes for GCC 10.2
 - Added framework-arduinoespressif8266 3.30000.210519 (3.0.0)
 - Fixed play tone for blinds plugin
@@ -107,19 +107,19 @@
 - JSON schema support for MQTT light
 - Upgrade to arduinoespressif8266 3.20704.0 including patch files for the platform
 - Fully asynchronous MQTT auto discovery with incremental or full updates
-- MQTT callbacks for QoS
+- MQTT callback's for QoS
 - Battery level indicator in % with charging detection
 - MQTT device triggers for remote control
 - Support for rotary encoders with pushbutton and capacitive touch sensor
 - Limit maximum power of the LEDs
 - Option to save and restore brightness/other settings after reboot (Clock/LED Matrix plugin)
 - Fixed crash during login with login security disabled
-- Configureable login security
+- Configurable login security
 - Added fire animation
 - Reduce brightness depending on the temperature
 - Cycling color and animation for rainbow mode (Clock/LED matrix)
 - LED Matrix plugin
-- Rewrite of the remote control plugin for faster response times and longer battery life
+- Rewrite of the remote-control plugin for faster response times and longer battery life
   - Removed support for home assistant Restful API
   - Option to send UDP packets to minimize latency
   - Deep sleep up to 30 days
@@ -127,7 +127,7 @@
   - 300ms for MQTT over TCP
 - utf-8 support for web sockets
 - Fixed some environments and adapted changes of the Espressif 8266 2.3.1 framework (Arduino Core 2.7.4)
-- Support for loading javascript and CSS from remote server(s) during development
+- Support for loading JavaScript and CSS from remote server(s) during development
 - Major improvements for forms, they are using ~10x less memory and are ~20x faster. Most need less than 1KB and load within 10ms
 - Read ADC over web sockets with kfcfw_tool and graphical analysis
 - Removed filters from syslog, reduced memory usage and improved performance
@@ -141,11 +141,11 @@
 - Removed test mode from the blinds plugin and implemented it into kfwfc_tool
 - Disable AP mode after 15min. if default password is used (does not apply to AP mode in standby)
 - Enable recovery mode after version change (AP mode enabled, default SSID, broadcast SSID, enable web server, reset passwords IF empty)
-- Javascript updates and fixes
+- JavaScript updates and fixes
 - Zeroconf resolve button for forms
 - MQTT auto discovery rebroadcast interval
 - Open/close automation for the Blinds Plugin, audible warning while running or shortly before
-- Added missing html enitities encoding to forms
+- Added missing html entities encoding to forms
 - Improved HTML form generator
 - Added SSDP plugin
 - Templates for configuration getters/setters
@@ -164,12 +164,12 @@
 
 ## Version 0.0.3
 
-- Replaced remote timezone with native POSIX timezone support
+- Replaced remote time zone with native POSIX time zone support
 - MQTT auto discovery aggregates all entities as single device
 - MQTT auto discovery abbreviations
 - Send calibration/config. to MQTT for recovery after firmware updates
 - MQTT auto discovery queue to reduce memory usage and network load
-- NTP startup delay reduced to 1 second (from up to 5 minutes)
+- NTP start-up delay reduced to 1 second (from up to 5 minutes)
 - Arduino ESP8266 2.7.1 release changes/fixes
 - Option to enable/disable mDNS
 - Advanced firmware configuration for dimmer plugin
@@ -187,7 +187,7 @@
 - Option to disable the "WebUI" page
 - Reboot after certain time if running in Safe Mode
 - Restart WiFi subsystem once a minute if the connection failed
-- Persistant message popups for the WebUI (WebAlerts)
+- Persistent message popups for the WebUI (WebAlerts)
 - Multiple instances of Home Assistant supported
 - Set mireds for Hass plugin
 - Support for DHT11/22 sensor

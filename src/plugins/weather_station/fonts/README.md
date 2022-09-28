@@ -14,7 +14,7 @@
 
 ## Compiling fontconvert
 
-Goto directory and run make ``src/plugins/weather_station/fonts/fontconvert``. Further information about the software can be found at [https://github.com/sascha432/Adafruit-GFX-Library](https://github.com/sascha432/Adafruit-GFX-Library)
+Change directory to ``src/plugins/weather_station/fonts/fontconvert`` and run ``make``. Further information about the software can be found at [https://github.com/sascha432/Adafruit-GFX-Library](https://github.com/sascha432/Adafruit-GFX-Library)
 
 ``` bash
 sascha:~/Documents/PlatformIO/Projects/esp8266-kfc-fw/src/plugins/weather_station/fonts/fontconvert$ make
@@ -33,7 +33,7 @@ sascha:~/Documents/PlatformIO/Projects/esp8266-kfc-fw/src/plugins/weather_statio
 Change directory to ``src/plugins/weather_station/fonts`` and run ``bash ./makefonts``. This will create a directory ``output`` with a variety of fonts and different sizes
 
 ``` bash
-sascha:~/Documents/PlatformIO/Projects/esp8266-kfc-fw/src/plugins/weather_station/fonts$ bash ./makefonts 
+sascha:~/Documents/PlatformIO/Projects/esp8266-kfc-fw/src/plugins/weather_station/fonts$ bash ./makefonts
 Creating fonts in "/home/sascha/Documents/PlatformIO/Projects/esp8266-kfc-fw/src/plugins/weather_station/fonts/output"
 Using "/home/sascha/Documents/PlatformIO/Projects/esp8266-kfc-fw/src/plugins/weather_station/fonts/fontconvert/fontconvert"
 DejaVuSans_Bold 2 OK

@@ -157,8 +157,7 @@ namespace KFCConfigurationClasses {
             }
 
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Password, 6, 64);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Token, SESSION_DEVICE_TOKEN_MIN_LENGTH, 255);
-
+            
         };
 
         // --------------------------------------------------------------------

@@ -6,14 +6,6 @@
 
 #include <Arduino_compat.h>
 
-#ifndef HAVE_SESSION_DEVICE_TOKEN
-#define HAVE_SESSION_DEVICE_TOKEN               1
-#endif
-
-#ifndef SESSION_DEVICE_TOKEN_MIN_LENGTH
-#define SESSION_DEVICE_TOKEN_MIN_LENGTH         16
-#endif
-
 #if defined(ESP8266) && ARDUINO_ESP8266_MAJOR >= 3
 
 #include <bearssl/bearssl.h>

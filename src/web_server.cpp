@@ -1458,44 +1458,25 @@ AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerF
 AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request)
 {
     const String *pSID;
-    // __DBG_printf("args.%su header.%s=%u", FSPGM(SID), request->hasArg(FSPGM(SID)), FSPGM(Authorization), request->hasHeader(FSPGM(Authorization)));
-
-    auto auth = request->getHeader(FSPGM(Authorization));
-    if (auth) {
-        auto &value = auth->value();
-        __SID(__DBG_printf("auth SID=%s remote=%s", value.c_str(), request->client()->remoteIP().toString().c_str()));
-        if (value.startsWith(FSPGM(Bearer_))) {
-            auto token = value.c_str() + 7;
-            const auto len = value.length() - 7;
-            __SID(__DBG_printf("token=%s device_token=%s len=%u", token, System::Device::getToken(), len));
-            if (len >= System::Device::kTokenMinSize && !strcmp(token, System::Device::getToken())) {
-                __SID(__DBG_print("valid BEARER token"));
-                return AuthType::BEARER;
-            }
+    String cSID;
+    if (((pSID = &request->arg(FSPGM(SID)))->length() != 0) || HttpCookieHeader::parseCookie(request, FSPGM(SID), cSID)) {
+        bool isCookie = (cSID.length() != 0);
+        if (pSID->length() != 0) { // parameter overrides cookie
+            cSID = *pSID;
+            isCookie = false;
         }
-        __SID(__DBG_print("Authorization header failed"));
+        __SID(__DBG_printf("SID=%s remote=%s type=%s", cSID.c_str(), request->client()->remoteIP().toString().c_str(), request->methodToString()));
+        if (cSID.length() == 0) {
+            return AuthType::NONE;
+        }
+        if (verify_session_id(cSID.c_str(), System::Device::getUsername(), System::Device::getPassword())) {
+            __SID(__DBG_printf("valid SID=%s type=%s", cSID.c_str(), isCookie ? FSPGM(cookie, "cookie") : request->methodToString()));
+            return isCookie ? AuthType::SID_COOKIE : AuthType::SID;
+        }
+        __SID(__DBG_printf("invalid SID=%s", cSID.c_str()));
     }
     else {
-        String cSID;
-        if (((pSID = &request->arg(FSPGM(SID)))->length() != 0) || HttpCookieHeader::parseCookie(request, FSPGM(SID), cSID)) {
-            bool isCookie = (cSID.length() != 0);
-            if (pSID->length() != 0) { // parameter overrides cookie
-                cSID = *pSID;
-                isCookie = false;
-            }
-            __SID(__DBG_printf("SID=%s remote=%s type=%s", cSID.c_str(), request->client()->remoteIP().toString().c_str(), request->methodToString()));
-            if (cSID.length() == 0) {
-                return AuthType::NONE;
-            }
-            if (verify_session_id(cSID.c_str(), System::Device::getUsername(), System::Device::getPassword())) {
-                __SID(__DBG_printf("valid SID=%s type=%s", cSID.c_str(), isCookie ? FSPGM(cookie, "cookie") : request->methodToString()));
-                return isCookie ? AuthType::SID_COOKIE : AuthType::SID;
-            }
-            __SID(__DBG_printf("invalid SID=%s", cSID.c_str()));
-        }
-        else {
-            __SID(__DBG_print("no SID"));
-        }
+        __SID(__DBG_print("no SID"));
     }
     return AuthType::NONE;
 }

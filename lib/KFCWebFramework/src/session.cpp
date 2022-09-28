@@ -45,20 +45,8 @@ String generate_session_id(const char *username, const char *password, const uin
     return sid;
 }
 
-extern const char *session_get_token();
-extern size_t session_get_token_min_size();
-
 bool verify_session_id(const char *sessionId, const char *username, const char *password)
 {
-#if HAVE_SESSION_DEVICE_TOKEN
-
-    auto token = session_get_token();
-    if (token && strlen(token) >= session_get_token_min_size() && !strcmp(sessionId, token)) {
-        return true;
-    }
-
-#endif
-
     if (strlen(sessionId) != SessionHash::kSessionIdSize) {
         return false;
     }

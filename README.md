@@ -48,7 +48,7 @@ Currently the master branch is stable, but one project is not up-to-date
 ## Requirements
 
  - Visual Studio Code for Windows or Linux
- - PlatformIO 6.1.4 (Linux compiles way faster)
+ - PlatformIO 6.1.4 (Linux compiles way faster, see [compile_time.md](compile_time.md))
  - WSL2 Virtual Linux and WSL remote extension. Speeds up compiling with many cores by 10-30%
  - See ``Building the VFS`` for more requirements
 
@@ -56,6 +56,8 @@ Currently the master branch is stable, but one project is not up-to-date
 
 - GCC 10.x
 - Arduino Core 3.x with modified WString class
+
+Since this device has not enough memory and CPU power, a SSL webserver is not possible for most environments. To secure a connection, use haproxy with a certificate from https://letsencrypt.org/. Something like *.mydomain.com and redirect all traffic to the devices. Like https://bathroom.mydomain.com to 192.168.0.88, Like https://kitchen.mydomain.com to 192.168.0.77, etc...
 
 The modified version of the core is available on github and used by default
 
@@ -103,7 +105,7 @@ Following software is required to build the virtual file system. Compatible vers
 
 Executables must be in ``PATH``. If you have PHP 8.x, install PHP 7.x from source and ``export PHPEXE=/home/sascha/Desktop/php-7.4.30/sapi/cli/php``. For Windows, create an environment variable ``PHPEXE`` pointing to php.exe
 
-More details about binaries can be found/changed in ``lib/KFCWebBuilder/KFCWebBuilder.json``
+More details about binaries can be found/changed in [lib/KFCWebBuilder/KFCWebBuilder.json](lib/KFCWebBuilder/KFCWebBuilder.json)
 
 ### KFCVirtualFileSystem
 

@@ -1876,15 +1876,3 @@ WebTemplate *KFCConfigurationPlugin::getWebTemplate(const String &name)
     return new StatusTemplate();
 }
 
-extern const char *session_get_token();
-extern size_t session_get_token_min_size();
-
-const char *session_get_token()
-{
-    return System::Device::getToken();
-}
-
-size_t session_get_token_min_size()
-{
-    return System::Device::kTokenMinSize;
-}

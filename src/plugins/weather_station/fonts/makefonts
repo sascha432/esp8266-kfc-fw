@@ -19,7 +19,7 @@ fi
 
 FONT_SIZES="2 3 4 5 6 7 8 9 10 11 12 13 14 15"
 FONT_CHARS="32 254"
-OUTDIR="$(pwd)/output"
+OUTDIR="./output"
 HEADER="fonts.h"
 INCLUDES="fonts_includes.h"
 FONTS=*.ttf

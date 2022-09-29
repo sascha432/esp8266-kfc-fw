@@ -256,10 +256,10 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             auto webUi = FSPGM(WebUI);
             _bootstrapMenu.addMenuItem(webUi, url, _navMenu.device, _navMenu.device/*insert at the top*/);
 
-            //auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
-            // #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
-            //     _bootstrapMenu.addMenuItem(F("Show TFT"), F("screenshot.html"), _navMenu.home, home);
-            // #endif
+            auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
+            #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+                _bootstrapMenu.addMenuItem(F("Show TFT"), F("screenshot.html"), _navMenu.home, home);
+            #endif
         }
     }
 

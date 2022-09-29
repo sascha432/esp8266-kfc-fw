@@ -81,12 +81,6 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));
         cfg.addRangeValidatorFor_api_timeout(form);
 
-        #if HAVE_WEATHER_STATION_CURATED_ART
-            form.addObjectGetterSetter(F("gur"), FormGetterSetter(cfg, gallery_update_rate));
-            form.addFormUI(F("Curated Art Update Rate"), FormUI::Suffix(FSPGM(seconds)));
-            cfg.addRangeValidatorFor_gallery_update_rate(form);
-        #endif
-
         form.addObjectGetterSetter(F("bll"), FormGetterSetter(cfg, backlight_level));
         form.addFormUI(F("Backlight Level"), FormUI::Suffix(F("%")));
         cfg.addRangeValidatorFor_backlight_level(form);
@@ -174,6 +168,15 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
             // , FormUI::CheckboxButtonSuffix(toggleModeHidden, FSPGM(HIDDEN, "HIDDEN")));
             // FormUI::CheckboxButtonSuffix(checkbox, F("Skip Screen")));
             form.addValidator(FormUI::Validator::Range(0, 255));
+
+            #if HAVE_WEATHER_STATION_CURATED_ART
+                if (static_cast<ScreenType>(i) == ScreenType::CURATED_ART) {
+                    form.addObjectGetterSetter(F("gur"), FormGetterSetter(cfg, gallery_update_rate));
+                    form.addFormUI(F("Curated Art Update Rate"), FormUI::Suffix(FSPGM(seconds)));
+                    cfg.addRangeValidatorFor_gallery_update_rate(form);
+                }
+            #endif
+
         }
 
     }

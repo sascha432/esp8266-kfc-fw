@@ -13,24 +13,16 @@ class GFXCanvasCompressed;
 
 class GFXCanvasBitmapStream : public Stream {
 public:
-    GFXCanvasBitmapStream(GFXCanvasCompressed& canvas, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-    GFXCanvasBitmapStream(GFXCanvasCompressed& canvas);
+    GFXCanvasBitmapStream(GFXCanvasCompressed &canvas, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    GFXCanvasBitmapStream(GFXCanvasCompressed &canvas);
 
     virtual int available();
     virtual int read();
-    virtual void flush() {}
+    virtual void flush();
 
-    operator bool() const {
-        return _available != 0;
-    }
-
-    virtual int peek() {
-        return -1;
-    }
-
-    virtual size_t write(uint8_t) {
-        return 0;
-    }
+    operator bool() const;
+    virtual int peek();
+    virtual size_t write(uint8_t);
 
     size_t size() const;
 
@@ -48,3 +40,33 @@ private:
     uint16_t _width;
     uint16_t _height;
 };
+
+inline GFXCanvasBitmapStream::operator bool() const 
+{
+    return _available != 0;
+}
+
+inline void GFXCanvasBitmapStream::flush() 
+{
+}
+
+inline int GFXCanvasBitmapStream::peek() 
+{
+    return -1;
+}
+
+inline size_t GFXCanvasBitmapStream::write(uint8_t) 
+{
+    return 0;
+}
+
+inline int GFXCanvasBitmapStream::available()
+{
+    return _available;
+}
+
+inline size_t GFXCanvasBitmapStream::size() const
+{
+    return _header.h.bfh.bfSize;
+}
+

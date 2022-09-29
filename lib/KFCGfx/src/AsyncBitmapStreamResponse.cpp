@@ -6,26 +6,7 @@
 #include "GFXCanvasConfig.h"
 #include <debug_helper_disable.h>
 
-extern "C" void WeatherStationPlugin_unlock();
-
-AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas) :
-    AsyncAbstractResponse(nullptr),
-    _stream(canvas)
-{
-	_code = 200;
-	_contentLength = _stream.size();
-	_contentType = F("image/bmp");
-}
-
-AsyncBitmapStreamResponse::~AsyncBitmapStreamResponse()
-{
-    WeatherStationPlugin_unlock();
-}
-
-bool AsyncBitmapStreamResponse::_sourceValid() const
-{
-	return !!_stream;
-}
+const char content_type_image_bmp[] PROGMEM = { "image/bmp" };
 
 size_t AsyncBitmapStreamResponse::_fillBuffer(uint8_t* buf, size_t maxLen)
 {
@@ -39,13 +20,4 @@ size_t AsyncBitmapStreamResponse::_fillBuffer(uint8_t* buf, size_t maxLen)
         *buf++ = _stream.read();
     }
     return maxLen;
-}
-
-AsyncClonedBitmapStreamResponse::AsyncClonedBitmapStreamResponse(GFXCanvasCompressed *canvas) : AsyncBitmapStreamResponse(*canvas), _canvasPtr(canvas)
-{
-}
-
-AsyncClonedBitmapStreamResponse::~AsyncClonedBitmapStreamResponse()
-{
-    delete _canvasPtr;
 }

@@ -30,12 +30,8 @@ GFXCanvasBitmapStream::GFXCanvasBitmapStream(GFXCanvasCompressed& canvas, uint16
     _width = w;
     _height = h;
     _position = 0;
+    __LDBG_printf("init x,y,w,h=%d,%d,%d,%d", _x, _y, _width, _height);
     _createHeader();
-}
-
-int GFXCanvasBitmapStream::available()
-{
-    return _available;
 }
 
 int GFXCanvasBitmapStream::read()
@@ -72,11 +68,6 @@ int GFXCanvasBitmapStream::read()
         }
     }
     return -1;
-}
-
-size_t GFXCanvasBitmapStream::size() const
-{
-    return _header.h.bfh.bfSize;
 }
 
 void GFXCanvasBitmapStream::_createHeader()

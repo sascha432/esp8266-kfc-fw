@@ -85,7 +85,7 @@ $.formValidator = {
 // to labels that did not exist at the time of loading the script
 //
 // <div class="form-help-block">
-// <div data-target="#target,#target2">The ADC of the ESP8266 has some limitations. If it is read too...</div>
+// <div data-target="#target,#target2,[id^=starting_with_]">The ADC of the ESP8266 has some limitations. If it is read too...</div>
 // </div>
 // ---------------------------------------------------------------------------------
 $.addFormHelp = function(force) {

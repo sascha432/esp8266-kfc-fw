@@ -2,8 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_WEATHER_STATION
-
 #include "weather_station.h"
 #include <PrintHtmlEntitiesString.h>
 #include <EventScheduler.h>
@@ -91,36 +89,124 @@ WeatherStationPlugin::WeatherStationPlugin() :
 
 #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
 
+void WeatherStationPlugin::_recvTFTCtrl(AsyncWebServerRequest *request)
+{
+    if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
+        WeatherStationPlugin::_getInstance().__recvTFTCtrl(request);
+        return;
+    }
+    request->send(403);
+}
+
 void WeatherStationPlugin::_sendScreenCaptureBMP(AsyncWebServerRequest *request)
 {
-    // __LDBG_printf("WeatherStationPlugin::_sendScreenCapture(): is_authenticated=%u", WebServerPlugin::getInstance().isAuthenticated(request) == true);
-
     if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
-        if (WeatherStationPlugin::_getInstance().lock()) {
-            #if 1
-                auto response = new AsyncBitmapStreamResponse(*WeatherStationPlugin::_getInstance().getCanvas());
-            #else
-                __LDBG_IF(
-                    auto mem = ESP.getFreeHeap()
-                    );
-                auto response = new AsyncClonedBitmapStreamResponse(lock.getCanvas().clone());
-                __LDBG_IF(
-                    auto usage = mem - ESP.getFreeHeap();
-                    __DBG_printf("AsyncClonedBitmapStreamResponse memory usage %u", usage);
-                );
-                plugin.releaseCanvasLock();
-            #endif
-            HttpHeaders httpHeaders;
-            httpHeaders.addNoCache();
-            httpHeaders.setResponseHeaders(response);
-            request->send(response);
+        WeatherStationPlugin::_getInstance().__sendScreenCaptureBMP(request);
+        return;
+    }
+    request->send(403);
+}
+
+void WeatherStationPlugin::__recvTFTCtrl(AsyncWebServerRequest *request)
+{
+    if (_updateProgress >= 0) {
+        request->send(503);
+        return;
+    }
+    int code = 200;
+    auto type = request->arg(F("type"));
+    if (type == F("click")) {
+        _setScreen(_getNextScreen(_getCurrentScreen(), true));
+    }
+    else if (type == F("tap")) {
+        if (_currentScreen == ScreenType::CURATED_ART) {
+            _setScreen(ScreenType::CURATED_ART);
+            if (_currentScreen == ScreenType::TEXT) {
+                code = 204;
+                type = F("Cannot load curated art");
+            }
         }
         else {
-            request->send(503);
+            _setScreen(_getNextScreen(_getCurrentScreen(), true));
         }
     }
+    else if (type == F("dbltap")) {
+        if (_currentScreen == ScreenType::CURATED_ART) {
+            _setScreen(_getNextScreen(_getCurrentScreen(), true));
+        }
+        else {
+            _setScreen(_getPrevScreen(_getCurrentScreen(), true));
+        }
+    }
+    auto response = new AsyncBasicResponse(code, FSPGM(mime_text_plain), type);
+    HttpHeaders httpHeaders;
+    httpHeaders.addNoCache();
+    httpHeaders.setResponseHeaders(response);
+    request->send(response);
+}
+
+// helper class displaying images
+
+class WS_AsyncJpegResponse : public AsyncFileResponse {
+public:
+    WS_AsyncJpegResponse(fs::File &file) : AsyncFileResponse(file, file.name(), FSPGM(mime_image_jpeg)), _file(file)/*m _fullName(file.fullName())*/ {
+        _file.seek(0);
+    }
+    virtual ~WS_AsyncJpegResponse() {
+        _file = LittleFS.open(_file.fullName(), fs::FileOpenMode::read);
+        __DBG_printf("jpeg unlock file=%s", __S(_file.fullName()));
+        WeatherStationPlugin::_getInstance().unlock();
+    }
+private:
+    fs::File &_file;
+//    String _fullName;
+};
+
+class WS_AsyncBitmapResponse : public AsyncBitmapStreamResponse {
+public:
+    WS_AsyncBitmapResponse(GFXCanvasCompressed &canvas) : AsyncBitmapStreamResponse(canvas) {
+    }
+    virtual ~WS_AsyncBitmapResponse() {
+        WeatherStationPlugin::_getInstance().unlock();
+    }
+};
+
+void WeatherStationPlugin::__sendScreenCaptureBMP(AsyncWebServerRequest *request)
+{
+    if (_updateProgress >= 0) {
+        auto response = new AsyncWebServerResponse(503);
+        response->addHeader(F("X-Screen-Name"), PrintString(F("Update in progress %d%%..."), _updateProgress));
+        response->addHeader(F("X-Progress"), String(_updateProgress));
+        request->send(response);
+        return;
+    }
+    else if (lock()) {
+        AsyncWebServerResponse *response;
+        String name;
+        if (_getCurrentScreen() == static_cast<uint8_t>(ScreenType::CURATED_ART)) {
+            if (!_galleryFile) {
+                unlock();
+                request->send(204); // invalid image
+                return;
+            }
+            name = PrintString(F("%s<br><div class=\"h6\">%s</div>"), getScreenName(_currentScreen), _galleryFile.fullName());
+            // just send the jpeg image
+            response = new WS_AsyncJpegResponse(_galleryFile);
+        }
+        else {
+            name = getScreenName(_currentScreen);
+            // create bitmap of the current screen
+            response = new WS_AsyncBitmapResponse(*WeatherStationPlugin::_getInstance().getCanvas());
+        }
+        HttpHeaders httpHeaders;
+        httpHeaders.addNoCache();
+        httpHeaders.setResponseHeaders(response);
+        response->addHeader(F("X-Screen-Name"), name); // pass name of the screen in the header
+        request->send(response);
+    }
     else {
-        request->send(403);
+        // too many requests, screen still locked
+        request->send(425);
     }
 }
 
@@ -133,6 +219,7 @@ void WeatherStationPlugin::_installWebhooks()
     #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
 
         WebServer::Plugin::addHandler(F("/images/screen_capture.bmp"), _sendScreenCaptureBMP);
+        WebServer::Plugin::addHandler(F("/tft-touch"), _recvTFTCtrl);
 
     #endif
 
@@ -240,6 +327,7 @@ void WeatherStationPlugin::_readConfig()
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     __LDBG_printf("setup");
+    
     #if IOT_WEATHER_STATION_WS2812_NUM
         _rainbowStatusLED();
     #endif
@@ -257,12 +345,16 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 
     _fadeBacklight(0, _backlightLevel);
 
-    // show progress bar during firmware updates
-    int progressValue = -1;
+    int32_t progressValue = -1;
     WebServer::Plugin::getInstance().setUpdateFirmwareCallback([this, progressValue](size_t position, size_t size) mutable {
-        int progress = position * 100 / size;
-        if (progressValue != progress) {
+        #if !WEATHER_STATION_HAVE_BMP_SCREENSHOT
+            // without the progress bar, it is a local variable
+            int32_t 
+        #endif
+        _updateProgress = position * 100 / size;
+        if (progressValue != _updateProgress) {
             if (progressValue == -1) {
+                // turn display to max. brightness, disable redraws, turn the LEDs off
                 _setBacklightLevel(PWMRANGE);
                 _setScreen(ScreenType::TEXT);
                 LoopFunctions::remove(loop);
@@ -272,12 +364,13 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
                 #endif
             }
             #if IOT_WEATHER_STATION_WS2812_NUM
-                // _setRGBLeds(((((100 - progress) * 0x50) / 100) << 16) | ((((progress) * 0x50) / 100) << 8)); // brightness 80
-                uint8_t color2 = (progress * progress * progress * progress) / 1000000;
-                _setRGBLeds(((100 - progress) << 16) | (color2 << 8)); // brightness 100
+                // display update status from red to green... max. brightness is 100 out of 255
+                constexpr uint8_t kBrightnessDivider = 1;
+                uint8_t color2 = (_updateProgress * _updateProgress * _updateProgress * _updateProgress) / 1000000;
+                _setRGBLeds((((100 - _updateProgress) / kBrightnessDivider) << 16) | ((color2 / kBrightnessDivider) << 8));
             #endif
-            _drawText(PrintString(F("Updating\n%d%%"), progress), FONTS_DEFAULT_MEDIUM, COLORS_DEFAULT_TEXT, true);
-            progressValue = progress;
+            _drawText(PrintString(F("Updating\n%d%%"), _updateProgress), FONTS_DEFAULT_MEDIUM, COLORS_DEFAULT_TEXT, true);
+            progressValue = _updateProgress;
         }
     });
 
@@ -415,7 +508,7 @@ void WeatherStationPlugin::_initTFT()
 void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F("Weather Station"), false));
-    webUI.addRow(WebUINS::Slider(F("bl_br"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), 1023)));
+    webUI.addRow(WebUINS::Slider(F("bl_br"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), PWMRANGE)));
 }
 
 void WeatherStationPlugin::getValues(WebUINS::Events &array)
@@ -483,7 +576,7 @@ void WeatherStationPlugin::_setRGBLeds(uint32_t color)
 {
     #if IOT_WEATHER_STATION_WS2812_NUM
         #if HAVE_FASTLED
-            fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
+            fill_solid(WS2812LEDTimer::_pixels, WS2812LEDTimer::kNumPixels, CRGB(color));
             FastLED.show();
         #else
             _pixels.fill(color);
@@ -499,7 +592,6 @@ void WeatherStationPlugin::_fadeStatusLED()
         if (config.isSafeMode()) {
             return;
         }
-
         if (_pixelTimer) {
             return;
         }
@@ -546,7 +638,8 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
             constexpr int16_t kMaxBrightness = 0x200;
             constexpr uint8_t kReduceBrightness = 8;
             constexpr int16_t kMaxBrightnessValue = kMaxBrightness / kReduceBrightness;
-            static_assert(kMaxBrightnessValue <= 255, "brightness is limited to 255");
+            constexpr float kMaxBrightnessInPercent = kMaxBrightnessValue * 100 / 255.0;
+            static_assert(kMaxBrightnessValue <= 255 && kMaxBrightnessInPercent <= 100.0, "brightness is limited to 255/100%");
 
             // rainbow speed and colors
             constexpr uint8_t kInitialHue = 30;
@@ -596,7 +689,7 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
                 #if IOT_WEATHER_STATION_WS2812_NUM
                     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                 #endif
-                _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler
+                _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler since it is called with a nullptr
                 _resetAlarmFunc = nullptr;
             };
         }
@@ -604,6 +697,7 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
         // check if an alarm is already active
         if (!_alarmTimer) {
             #if IOT_WEATHER_STATION_WS2812_NUM
+                _Timer(_pixelTimer).remove();
                 BlinkLEDTimer::setBlink(__LED_BUILTIN, BlinkLEDTimer::BlinkType::FAST, 0xff0000);
             #endif
         }
@@ -626,14 +720,5 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
         }
         return false;
     }
-
-#endif
-
-extern "C" void WeatherStationPlugin_unlock();
-
-void WeatherStationPlugin_unlock()
-{
-    WeatherStationPlugin::_getInstance().unlock();
-}
 
 #endif

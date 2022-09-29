@@ -163,6 +163,10 @@ extern BlinkLEDTimer *ledTimer;
 
     class WS2812LEDTimer : public BlinkLEDTimer {
     public:
+        static constexpr uint8_t kNumPixels =__LED_BUILTIN_WS2812_NUM_LEDS;
+        static constexpr uint8_t kNumBytes = kNumPixels * sizeof(NeoPixelEx::GRB);
+
+    public:
         WS2812LEDTimer();
 
         // turn off or set a solid color
@@ -188,9 +192,9 @@ extern BlinkLEDTimer *ledTimer;
 
     public:
         #if HAVE_FASTLED
-            static CRGB _pixels[__LED_BUILTIN_WS2812_NUM_LEDS];
+            static CRGB _pixels[WS2812LEDTimer::kNumPixels];
         #else
-            static NeoPixelEx::Strip<__LED_BUILTIN_WS2812_PIN, __LED_BUILTIN_WS2812_NUM_LEDS, NeoPixelEx::GRB, NeoPixelEx::DefaultTimings> _pixels;
+            static NeoPixelEx::Strip<__LED_BUILTIN_WS2812_PIN, WS2812LEDTimer::kNumPixels, NeoPixelEx::GRB, NeoPixelEx::DefaultTimings> _pixels;
         #endif
     };
 
@@ -237,7 +241,7 @@ extern BlinkLEDTimer *ledTimer;
     inline void WS2812LEDTimer::solid(uint32_t color)
     {
         #if HAVE_FASTLED
-            fill_solid(_pixels, __LED_BUILTIN_WS2812_NUM_LEDS, CRGB(color));
+            fill_solid(_pixels, kNumPixels, CRGB(color));
         #else
             _pixels.fill(color);
         #endif

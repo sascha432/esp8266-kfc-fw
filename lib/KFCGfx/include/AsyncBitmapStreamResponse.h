@@ -9,13 +9,12 @@
 #include "GFXCanvasConfig.h"
 #include "GFXCanvasCompressed.h"
 
+
+extern const char content_type_image_bmp[] PROGMEM;
+
 class AsyncBitmapStreamResponse : public AsyncAbstractResponse {
 public:
-    using Callback = std::function<void()>;
-
-public:
-    // callback is invoked in the destructor
-    AsyncBitmapStreamResponse(GFXCanvasCompressed& canvas);
+    AsyncBitmapStreamResponse(GFXCanvasCompressed &canvas, const __FlashStringHelper *contentType = FPSTR(content_type_image_bmp));
     virtual ~AsyncBitmapStreamResponse();
     bool _sourceValid() const;
     virtual size_t _fillBuffer(uint8_t* buf, size_t maxLen) override;
@@ -24,12 +23,21 @@ private:
     GFXCanvasBitmapStream _stream;
 };
 
-// use GFXCanvasCompressed::clone() to create the object
-class AsyncClonedBitmapStreamResponse : public AsyncBitmapStreamResponse {
-public:
-    AsyncClonedBitmapStreamResponse(GFXCanvasCompressed *canvas);
-    virtual ~AsyncClonedBitmapStreamResponse();
+inline AsyncBitmapStreamResponse::AsyncBitmapStreamResponse(GFXCanvasCompressed &canvas, const __FlashStringHelper *contentType) :
+    AsyncAbstractResponse(nullptr),
+    _stream(canvas)
+{
+	_code = 200;
+	_contentLength = _stream.available();
+	_contentType = contentType;
+}
 
-private:
-    GFXCanvasCompressed *_canvasPtr;
-};
+inline AsyncBitmapStreamResponse::~AsyncBitmapStreamResponse()
+{
+}
+
+inline bool AsyncBitmapStreamResponse::_sourceValid() const
+{
+	return !!_stream;
+}
+

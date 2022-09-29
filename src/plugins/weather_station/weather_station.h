@@ -62,6 +62,9 @@ private:
     void _readConfig();
     void _initTFT();
     #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+        void __recvTFTCtrl(AsyncWebServerRequest *request);
+        static void _recvTFTCtrl(AsyncWebServerRequest *request);
+        void __sendScreenCaptureBMP(AsyncWebServerRequest *request);
         static void _sendScreenCaptureBMP(AsyncWebServerRequest *request);
     #endif
     void _installWebhooks();
@@ -73,6 +76,9 @@ public:
     void _rainbowStatusLED(bool stop = false);
 
     int16_t _rainbowBrightness;
+    #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+        int32_t _updateProgress{-2};
+    #endif
 
 private:
     void _drawEnvironmentalSensor(GFXCanvasCompressed& canvas, int16_t top);

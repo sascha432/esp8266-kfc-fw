@@ -25,9 +25,38 @@
     </nav>
     <!--NAV%%-->
     <div class="container">
-        <div align="center" class="p-5"><img src="/images/screen_capture.bmp" id="screenshot" width="%TFT_WIDTH%" height="%TFT_HEIGHT%" dimw="%TFT_WIDTH%" dimh="%TFT_HEIGHT%" style="border: 5px solid #007bff"></div>
+        <style>
+            #tft-name {
+                font-size: 2rem;
+                font-weight: bold;
+            }
+            .tft-border {
+                border: 5px solid #007bff;
+                display: inline-block;
+            }
+            #dbltap, #tap {
+                position: relative; top: 2px;
+            }
+        </style>
+        <div align="center" class="p-2 pt-5 display-4" id="tft-name"></div>
+        <div align="center" class="p-5"><span class="tft-border"><img src="/images/screen_capture.bmp" id="tft" width="%TFT_WIDTH%" height="%TFT_HEIGHT%"></span></div>
         <div align="center" class="p-0">Zoom</div>
-        <div align="center" class="p-0"><a href="#" class="zoom" level="1">1x</a> | <a href="#" class="zoom" level="2">2x</a> | <a href="#" class="zoom" level="3">3x</a> | <a href="#" class="zoom" level="4">4x</a></div>
+        <div align="center" class="p-0">
+            <a href="#" class="oi oi-arrow-circle-left" id="dbltap"></a> | 
+            <a href="#" class="zoom" level="1">1x</a> | 
+            <a href="#" class="zoom" level="2">2x</a> | 
+            <a href="#" class="zoom" level="3">3x</a> | 
+            <a href="#" class="zoom" level="4">4x</a> |
+            <a href="#" class="oi oi-arrow-circle-right" id="tap"></a> 
+        </div>
+        <div align="center" class="p-0">Refesh Rate</div>
+        <div align="center" class="p-0">
+            <a href="#" class="update-rate" ms="1000">1s</a> | 
+            <a href="#" class="update-rate" ms="2000">2s</a> | 
+            <a href="#" class="update-rate" ms="5000">5s</a> | 
+            <a href="#" class="update-rate" ms="10000">10s</a> |
+            <a href="#" class="update-rate" ms="30000">30s</a>
+        </div>
         <!--%%FOOT-->
         <div class="row">
             <div class="col footer">&nbsp;</div>
@@ -45,21 +74,126 @@
 
     <script>
         $(function() {
-            var reload_image = null;
-            var src = $('#screenshot').attr('src');
-            reload_image = function() {
-                var new_src = src + '?' + Math.random();
-                $('#screenshot').attr('src', new_src);
-                window.setTimeout(reload_image, 1000);
-            };
-            window.setTimeout(reload_image, 1000);
-            $('.zoom').on('click', function() {
-                var level = parseInt($(this).attr('level'));
-                var w = parseInt($('#screenshot').attr('dimw'));
-                var h = parseInt($('#screenshot').attr('dimh'));
-                $('#screenshot').width(w * level);
-                $('#screenshot').height(h * level);
+            var tft = $('#tft');
+            var tft_container = $('.tft-border');
+            var src = tft.attr('src');
+            var screen_name = $('#tft-name');
+            var loading = '<img src="images/spinner.gif" width="32" height="32">';
+            var w = tft.width();
+            var h = tft.height();
+            var locked = false;
+            var reload_image_func = null;
+            var reload_timer = null;
+            var default_zoom = 2;
+            var update_rate = 1000;
+
+            screen_name.html(loading);
+            // display an error nad hide broken image
+            function set_error(msg, time_multiplier) {
+                tft.hide();
+                locked = false;
+                screen_name.html(msg);
+                if (time_multiplier !== undefined) {
+                    window.clearTimeout(reload_timer);
+                    reload_timer = window.setTimeout(reload_image_func, update_rate * time_multiplier);
+                }
+            }
+            // change zoom level
+            function zoom(level) {
+                tft.width(w * level).height(h * level);
+                tft_container.width(w * level).height(h * level);    
+            }
+            // start with default zoom
+            zoom(default_zoom); 
+            // add onclick functions to all zoom links
+            $('.zoom').on('click', function(e) {
+                e.preventDefault();
+                zoom(parseInt($(this).attr('level')));
             });
+            // add onclick functions to all refresh rate links
+            $('.update-rate').on('click', function(e) {
+                e.preventDefault();
+                update_rate = parseInt($(this).attr('ms'));
+                console.log('ur', update_rate);
+                window.clearTimeout(reload_timer);
+                reload_timer = window.setTimeout(reload_image_func, 1000);
+
+            });
+            // tft action on click/dblclick or the left/right arrows
+            var tft_action = function(e, a) {
+                e.preventDefault();
+                $.get('/tft-touch?type=' + a, function(data, msg, xhr) {
+                    screen_name.html(loading);
+                    if (xhr.status == 204) {
+                        tft.hide();
+                        screen_name.html(data);
+                    }
+                    else {
+                        window.clearTimeout(reload_timer);
+                        reload_timer = window.setTimeout(reload_image_func, 100);
+                    }
+                }, 'text');
+            };
+            $('#tap').on('click', function(e) { tft_action(e, 'click'); });
+            $('#dbltap').on('click', function(e) { tft_action(e, 'dbltap'); });
+            tft.on('click', function(e) { tft_action(e, 'tap'); });
+            tft.on('dblclick', function(e) { tft_action(e, 'dbltap'); });
+
+            // load image with $.ajax and URL.createObjectURL()
+            reload_image_func = function() {
+                if (locked) {
+                    set_error('Too many requests', 2.5);
+                    return;
+                }
+                locked = true;
+                $.ajax({ 
+                    url: src, 
+                    type: 'GET',
+                    cache: false,
+                    processData: false,
+                    timeout: update_rate - 100,
+                    xhrFields: {
+                        responseType: 'blob'
+                    }
+                    }).always(function(data, content, xhr) {
+                    var screen_name_text = xhr.getResponseHeader('X-Screen-Name');
+                    if (xhr.status == 245) {
+                        set_error('Too many requests', 2.5);
+                        return;
+                    }
+                    else if (xhr.status == 503) {
+                        var progress = xhr.getResponseHeader('X-Progress');
+                        if (progress !== null) {
+                            set_error(screen_name_text, 0.25);
+                            return;
+                        }
+                        set_error('HTTP Error ' + xhr.status, 1);
+                        return;
+                    } 
+                    else if (xhr.status != 200) {
+                        set_error('HTTP Error ' + xhr.status, 1);
+                        return;
+                    }
+                    screen_name.html(screen_name_text);
+                    
+                    // create URL in RAM from the data blob
+                    var image_url_blob = URL.createObjectURL(data);
+
+                    // remove the blob after is has been loaded and unlock the function
+                    tft.show().on('load', function() {
+                        URL.revokeObjectURL(image_url_blob);
+                        locked = false;
+                        tft.off('load');
+                    }).on('error', function() {
+                        URL.revokeObjectURL(image_url_blob);
+                        locked = false;
+                        tft.off('error');
+                        set_error('Failed to load image');
+                    }).attr('src', image_url_blob);
+                });
+                reload_timer = window.setTimeout(reload_image_func, update_rate);
+            };
+            reload_timer = window.setTimeout(reload_image_func, update_rate);
         });
     </script>
 

@@ -201,7 +201,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.setResponseHeaders(response);
     }
     #if ENABLE_ARDUINO_OTA
-     else if (url.endsWith(F("-arduino-ota"))) {
+    else if (url.endsWith(F("-arduino-ota"))) {
         #if 0
             // require authentication to enable ArduinoOTA
             // ArduinoOTA has authentication enabled

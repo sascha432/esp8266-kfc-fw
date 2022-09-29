@@ -202,6 +202,18 @@ Manage MQTT
   auto[discovery][,restart][,force]           Publish auto discovery
   list[,<full|crc>]                           List auto discovery
 
+## Weather Station
+
+### ``WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
+
+### ``WSBL=<level=0-1023>``
+
+Set backlight level
+
+### ``WSU=<i|f>``
+
+Update weather info/forecast
+
 ## STK500v1 Programmer
 
 ### ``STK500V1F=<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]``

@@ -919,10 +919,7 @@ namespace WSDraw {
     void Base::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
     {
         #if DEBUG_IOT_WEATHER_STATION
-            if (_debugLastUpdate) {
-                auto diff = micros() - _debugLastUpdate;
-                float multiplier = diff > 0 ? ((1000U * 1000U) / diff) : 0;
-                // _debugFPS = time in microseconds per frame
+            if (_debugLastUpdate) {120
                 _debugFPS = (_debugFPS * multiplier) + diff;
                 _debugPPS = (_debugPPS * multiplier) + ((w - x) * (h - y));
                 multiplier++;

@@ -166,6 +166,24 @@ namespace KFCConfigurationClasses {
                 };
             #endif
 
+            #if IOT_SENSOR_HAVE_BME680
+                struct __attribute__packed__ BME680SensorType {
+                    using Type = BME680SensorType;
+
+                    CREATE_FLOAT_FIELD(temp_offset, -100, 100, 0);
+                    CREATE_FLOAT_FIELD(humidity_offset, -100, 100, 0);
+                    CREATE_FLOAT_FIELD(pressure_offset, -100, 100, 0);
+
+                    BME680SensorType() :
+                        temp_offset(kDefaultValueFor_temp_offset),
+                        humidity_offset(kDefaultValueFor_humidity_offset),
+                        pressure_offset(kDefaultValueFor_pressure_offset)
+                    {
+                    }
+
+                };
+            #endif
+
             struct __attribute__packed__ SensorConfigType {
                 #if IOT_SENSOR_HAVE_BATTERY
                     BatteryConfigType battery;
@@ -184,6 +202,9 @@ namespace KFCConfigurationClasses {
                 #endif
                 #if IOT_SENSOR_HAVE_BME280
                     BME280SensorType bme280;
+                #endif
+                #if IOT_SENSOR_HAVE_BME680
+                    BME680SensorType bme680;
                 #endif
             };
 

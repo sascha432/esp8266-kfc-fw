@@ -53,6 +53,7 @@ public:
 
     virtual bool hasForm() const;
     virtual void createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form) override;
+    virtual void setup() override;
     virtual void reconfigure(PGM_P source) override;
 
     virtual void publishState() override;
@@ -63,10 +64,13 @@ public:
 
     SensorDataType readSensor();
 
-#if IOT_SENSOR_BME280_HAVE_COMPENSATION_CALLBACK
-    // temperature or offset to compensate temperature and humidity readings
-    void setCompensationCallback(CompensationCallback callback);
-#endif
+    #if IOT_SENSOR_BME280_HAVE_COMPENSATION_CALLBACK
+        // temperature or offset to compensate temperature and humidity readings
+        void setCompensationCallback(CompensationCallback callback);
+
+    private:
+        CompensationCallback _callback;
+    #endif
 
 private:
     friend Sensor_CCS811;
@@ -78,7 +82,7 @@ private:
     String _name;
     uint8_t _address;
     Adafruit_BME280 _bme280;
-    CompensationCallback _callback;
+    TwoWire &_wire;
     SensorConfigType _cfg;
 };
 
@@ -104,6 +108,12 @@ inline void Sensor_BME280::setCompensationCallback(CompensationCallback callback
 inline bool Sensor_BME280::hasForm() const
 {
     return true;
+}
+
+inline void Sensor_BME280::setup()
+{
+    _readConfig();
+    _bme280.begin(_address, &_wire);
 }
 
 inline void Sensor_BME280::reconfigure(PGM_P source)

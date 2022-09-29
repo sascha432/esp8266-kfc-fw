@@ -12,7 +12,11 @@
 #include <debug_helper_disable.h>
 #endif
 
-Sensor_BME680::Sensor_BME680(const String &name, uint8_t address) : MQTT::Sensor(MQTT::SensorType::BME680), _name(name), _address(address)
+Sensor_BME680::Sensor_BME680(const String &name, uint8_t address, TwoWire &wire) :
+    MQTT::Sensor(MQTT::SensorType::BME680),
+    _name(name),
+    _address(address),
+    _bme680(&wire)
 {
     REGISTER_SENSOR_CLIENT(this);
 }
@@ -30,7 +34,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     case 0:
         if (discovery->create(this, _getId(FSPGM(temperature)), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-            // discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
             discovery->addValueTemplate(FSPGM(temperature));
             discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
             discovery->addName(F("Temperature"));
@@ -40,7 +43,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     case 1:
         if (discovery->create(this, _getId(FSPGM(humidity)), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-            // discovery->addUnitOfMeasurement('%');
             discovery->addValueTemplate(FSPGM(humidity));
             discovery->addDeviceClass(F("humidity"), '%');
             discovery->addName(F("Humidity"));
@@ -50,7 +52,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     case 2:
         if (discovery->create(this, _getId(FSPGM(pressure)), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-            // discovery->addUnitOfMeasurement(FSPGM(hPa));
             discovery->addValueTemplate(FSPGM(pressure));
             discovery->addDeviceClass(F("pressure"), FSPGM(hPa));
             discovery->addName(F("Pressure"));
@@ -60,7 +61,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     case 3:
         if (discovery->create(this, _getId(F("gas")), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-            // discovery->addUnitOfMeasurement(F("ppm"));
             discovery->addValueTemplate(F("gas"));
             discovery->addDeviceClass(F("volatile_organic_compounds"), F("ppm"));
             discovery->addName(F("VOC Gas"));
@@ -71,90 +71,100 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
     return discovery;
 }
 
-uint8_t Sensor_BME680::getAutoDiscoveryCount() const
+void Sensor_BME680::getValues(WebUINS::Events &array, bool timer)
 {
-    return 4;
-}
-
-void Sensor_BME680::getValues(JsonArray &array, bool timer)
-{
-    __LDBG_printf("Sensor_BME680::getValues()");
+    using namespace MQTT::Json;
 
     auto sensor = _readSensor();
-
-    auto obj = &array.addObject(4);
-    obj->add(JJ(id), _getId(FSPGM(temperature)));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(sensor.temperature, 2));
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(FSPGM(humidity)));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(sensor.humidity, 2));
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(FSPGM(pressure)));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(sensor.pressure, 2));
-    obj = &array.addObject(3);
-    obj->add(JJ(id), _getId(F("gas")));
-    obj->add(JJ(state), true);
-    obj->add(JJ(value), JsonNumber(sensor.gas, 2));
+    array.append(
+        WebUINS::Values(_getId(FSPGM(temperature)), WebUINS::TrimmedFloat(sensor.temperature, 2), true),
+        WebUINS::Values(_getId(FSPGM(humidity)), WebUINS::TrimmedFloat(sensor.humidity, 2), true),
+        WebUINS::Values(_getId(FSPGM(pressure)), WebUINS::TrimmedFloat(sensor.pressure, 2), true),
+        NamedUint32(_getId(F("gas")), sensor.pressure)
+    );
 }
 
 void Sensor_BME680::createWebUI(WebUINS::Root &webUI)
 {
-    __LDBG_printf("Sensor_BME680::createWebUI()");
-
-    *row = &webUI.addRow();
-    (*row)->addSensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC));
-    (*row)->addSensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%');
-    (*row)->addSensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa));
-    (*row)->addSensor(_getId(F("gas")), _name + F(" VOC Gas"), emptyString);
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(FSPGM(temperature)), _name + F(" Temperature"), FSPGM(UTF8_degreeC)).setConfig(_renderConfig)));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(FSPGM(humidity)), _name + F(" Humidity"), '%').setConfig(_renderConfig)));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(FSPGM(pressure)), _name + F(" Pressure"), FSPGM(hPa)).setConfig(_renderConfig)));
+    webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(_getId(F("gas")), _name + F(" VOC Gas"), F("ppm")).setConfig(_renderConfig)));
 }
 
 void Sensor_BME680::getStatus(Print &output)
 {
     output.printf_P(PSTR("BME680 @ I2C address 0x%02x" HTML_S(br)), _address);
-}
-
-void Sensor_BME680::publishState(MQTT::Client *client)
-{
-    if (client && client->isConnected()) {
-        auto sensor = _readSensor();
-        PrintString str;
-        JsonUnnamedObject json;
-        json.add(FSPGM(temperature), JsonNumber(sensor.temperature, 2));
-        json.add(FSPGM(humidity), JsonNumber(sensor.humidity, 2));
-        json.add(FSPGM(pressure), JsonNumber(sensor.pressure, 2));
-        json.add(F("gas"), JsonNumber(sensor.gas, 2));
-        json.printTo(str);
-
-        client->publish(MQTT::Client::formatTopic(_getId()), _qos, true, str);
+    if (_cfg.temp_offset) {
+        output.printf_P(PSTR("Temperature offset %.*f%s "), countDecimalPlaces(_cfg.temp_offset), _cfg.temp_offset, SPGM(UTF8_degreeC));
+    }
+    if (_cfg.humidity_offset) {
+        output.printf_P(PSTR("Humidity offset %.*f%% "), countDecimalPlaces(_cfg.humidity_offset), _cfg.humidity_offset);
+    }
+    if (_cfg.pressure_offset) {
+        output.printf_P(PSTR("Pressure offset %.*f%s"), countDecimalPlaces(_cfg.pressure_offset), _cfg.pressure_offset, FSPGM(hPa));
+    }
+    if (_cfg.temp_offset || _cfg.humidity_offset || _cfg.pressure_offset) {
+        output.print(F(HTML_S(br)));
     }
 }
 
-Sensor_BME680::SensorData_t Sensor_BME680::_readSensor()
+bool Sensor_BME680::getSensorData(String &name, StringVector &values)
 {
-    SensorData_t sensor;
-    _bme680.begin(address);
+    name = F("BME680");
+    auto sensor = _readSensor();
+    values.emplace_back(PrintString(F("%.2f %s"), sensor.temperature, SPGM(UTF8_degreeC)));
+    values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
+    values.emplace_back(PrintString(F("%.2f hPa"), sensor.pressure));
+    values.emplace_back(PrintString(F("%u ppm"), sensor.gas));
+    return true;
+}
 
-    sensor.temperature = _bme680.readTemperature();
-    sensor.humidity = _bme680.readHumidity();
-    sensor.pressure = _bme680.readPressure() / 100.0;
-    sensor.gas = _bme680.readGas();
+void Sensor_BME680::createConfigureForm(AsyncWebServerRequest *request, FormUI::Form::BaseForm &form)
+{
+    auto &cfg = Plugins::Sensor::getWriteableConfig();
 
-    __LDBG_printf("Sensor_BME680::_readSensor(): address 0x%02x: %.2f °C, %.2f%%, %.2f hPa, gas %u", _address, sensor.temperature, sensor.humidity, sensor.pressure, sensor.gas);
+    auto &group = form.addCardGroup(F("bme680"), F("BME680 Temperature, Humidity and Pressure Sensor"), true);
+
+    form.addObjectGetterSetter(F("bme680_t"), FormGetterSetter(cfg.bme680, temp_offset));
+    form.addFormUI(F("Temperature Offset"), FormUI::Suffix(FSPGM(UTF8_degreeC)));
+
+    form.addObjectGetterSetter(F("bme680_h"), FormGetterSetter(cfg.bme680, humidity_offset));
+    form.addFormUI(F("Humidity Offset"), FormUI::Suffix(F("%")));
+
+    form.addObjectGetterSetter(F("bme680_p"), FormGetterSetter(cfg.bme680, pressure_offset));
+    form.addFormUI(F("Pressure Offset"), FormUI::Suffix(FSPGM(hPa)));
+
+    group.end();
+}
+
+void Sensor_BME680::publishState()
+{
+    if (isConnected()) {
+        auto sensor = _readSensor();
+        using namespace MQTT::Json;
+
+        publish(MQTT::Client::formatTopic(_getId()), true, UnnamedObject(
+            NamedFormattedDouble(FSPGM(temperature), sensor.temperature, F("%.2f")),
+            NamedFormattedDouble(FSPGM(humidity), sensor.humidity, F("%.2f")),
+            NamedFormattedDouble(FSPGM(pressure), sensor.pressure, F("%.2f")),
+            NamedUint32(F("gas"), sensor.gas)
+        ).toString());
+    }
+}
+
+Sensor_BME680::SensorDataType Sensor_BME680::_readSensor()
+{
+    auto sensor = SensorDataType(
+        _bme680.readTemperature() + _cfg.temp_offset,
+        _bme680.readHumidity() + _cfg.humidity_offset,
+        (_bme680.readPressure() / 100.0) + _cfg.pressure_offset,
+        _bme680.readGas()
+    );
+
+    __LDBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa %u ppm", _address, sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity, sensor.pressure, sensor.gas);
 
     return sensor;
-}
-
-String Sensor_BME680::_getId(const __FlashStringHelper *type)
-{
-    PrintString id(F("bme680_0x%02x"), _address);
-    if (type) {
-        id.write('_');
-        id.print(type);
-    }
-    return id;
 }
 
 #endif

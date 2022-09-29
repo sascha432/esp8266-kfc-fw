@@ -20,11 +20,9 @@ Sensor_BME280::Sensor_BME280(const String &name, uint8_t address, TwoWire &wire)
     MQTT::Sensor(MQTT::SensorType::BME280),
     _name(name),
     _address(address),
-    _callback(nullptr)
+    _wire(wire)
 {
     REGISTER_SENSOR_CLIENT(this);
-    _readConfig();
-    _bme280.begin(_address, &wire);
 }
 
 Sensor_BME280::~Sensor_BME280()
@@ -40,7 +38,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
         case 0:
             if (discovery->create(this, _getId(FSPGM(temperature, "temperature")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-                // discovery->addUnitOfMeasurement(FSPGM(UTF8_degreeC));
                 discovery->addValueTemplate(FSPGM(temperature));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
                 discovery->addName(F("Temperature"));
@@ -50,7 +47,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
         case 1:
             if (discovery->create(this, _getId(FSPGM(humidity, "humidity")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-                // discovery->addUnitOfMeasurement('%');
                 discovery->addValueTemplate(FSPGM(humidity));
                 discovery->addDeviceClass(F("humidity"), '%');
                 discovery->addName(F("Humidity"));
@@ -60,7 +56,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
         case 2:
             if (discovery->create(this, _getId(FSPGM(pressure, "pressure")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
-                // discovery->addUnitOfMeasurement(FSPGM(hPa, "hPa"));
                 discovery->addValueTemplate(FSPGM(pressure));
                 discovery->addDeviceClass(F("pressure"), FSPGM(hPa, "hPa"));
                 discovery->addName(F("Pressure"));
@@ -157,12 +152,12 @@ Sensor_BME280::SensorDataType Sensor_BME280::_readSensor()
 
     __LDBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa", _address, sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity, sensor.pressure);
 
-#if IOT_SENSOR_BME280_HAVE_COMPENSATION_CALLBACK
-    if (_callback) {
-        _callback(sensor);
-        __LDBG_printf("compensated %.2f %s, %.2f%%", sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity);
-    }
-#endif
+    #if IOT_SENSOR_BME280_HAVE_COMPENSATION_CALLBACK
+        if (_callback) {
+            _callback(sensor);
+            __LDBG_printf("compensated %.2f %s, %.2f%%", sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity);
+        }
+    #endif
     return sensor;
 }
 

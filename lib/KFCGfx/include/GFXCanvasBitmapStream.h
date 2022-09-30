@@ -8,10 +8,21 @@
 #include <bitmap_header.h>
 #include "GFXCanvasConfig.h"
 #include "GFXCanvasCache.h"
+#include "GFXCanvas.h"
+#include <memory.h>
+
+#if DEBUG_GFXCANVAS
+#    include "debug_helper_enable.h"
+#else
+#    include "debug_helper_disable.h"
+#endif
 
 class GFXCanvasCompressed;
 
 class GFXCanvasBitmapStream : public Stream {
+public:
+    // Convert RGB565 to 24bit RGB, 32bit zero padded
+
 public:
     GFXCanvasBitmapStream(GFXCanvasCompressed &canvas, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
     GFXCanvasBitmapStream(GFXCanvasCompressed &canvas);
@@ -32,7 +43,7 @@ private:
 private:
     GFXCanvasCompressed &_canvas;
     GFXCanvas::Cache _cache;
-    BitmapFileHeader_t _header;
+    GFXCanvas::BitmapHeaderType _header;
     uint32_t _position;
     uint32_t _available;
     uint16_t _x;
@@ -41,21 +52,21 @@ private:
     uint16_t _height;
 };
 
-inline GFXCanvasBitmapStream::operator bool() const 
+inline GFXCanvasBitmapStream::operator bool() const
 {
     return _available != 0;
 }
 
-inline void GFXCanvasBitmapStream::flush() 
+inline void GFXCanvasBitmapStream::flush()
 {
 }
 
-inline int GFXCanvasBitmapStream::peek() 
+inline int GFXCanvasBitmapStream::peek()
 {
     return -1;
 }
 
-inline size_t GFXCanvasBitmapStream::write(uint8_t) 
+inline size_t GFXCanvasBitmapStream::write(uint8_t)
 {
     return 0;
 }
@@ -67,6 +78,9 @@ inline int GFXCanvasBitmapStream::available()
 
 inline size_t GFXCanvasBitmapStream::size() const
 {
-    return _header.h.bfh.bfSize;
+    return _header.getBfSize() + _available - _position;
 }
 
+#if DEBUG_GFXCANVAS
+#    include "debug_helper_disable.h"
+#endif

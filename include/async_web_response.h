@@ -10,7 +10,7 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
-// #include <KFCJson.h>
+#include <GFXCanvas.h>
 #include <vector>
 #include <map>
 #include <functional>
@@ -123,7 +123,7 @@ public:
 
 private:
     int32_t _size;
-    BitmapFileHeader_t _header;
+    GFXCanvas::BitmapFileHeaderType _header;
 };
 
 // class AsyncBufferResponse : public AsyncBaseResponse {

@@ -9,20 +9,22 @@
 
 #pragma GCC push_options
 #if DEBUG_GFXCANVAS
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
-#pragma GCC optimize ("O3")
+#    include <debug_helper_disable.h>
+#    pragma GCC optimize("O3")
 #endif
 
 using namespace GFXCanvas;
 
 GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(uWidthType width, uHeightType height) : GFXCanvasCompressed(width, height)
 {
+    __LDBG_printf("w=%d h=%d", width, height);
 }
 
 GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(const GFXCanvasCompressedPalette &canvas) : GFXCanvasCompressed(canvas.width(), canvas._lines), _palette(canvas._palette)
 {
+    __LDBG_printf("canvas=%p", &canvas);
 }
 
 GFXCanvasCompressed* GFXCanvasCompressedPalette::clone()
@@ -110,16 +112,6 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, Buffer &buffer)
     __DBG_BOUNDS_assert(count == _width);
 }
 
-
-ColorType GFXCanvasCompressedPalette::getPaletteColor(ColorType color) const
-{
-    return _palette.getColorIndex(color);
-}
-
-const ColorPalette *GFXCanvasCompressedPalette::getPalette() const
-{
-    return &_palette;
-}
 
 void GFXCanvasCompressedPalette::getDetails(Print &output, bool displayPalette) const
 {

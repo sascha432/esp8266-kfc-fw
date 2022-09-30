@@ -9,7 +9,7 @@
 #include <Buffer.h>
 
 #ifndef DEBUG_GFXCANVAS
-#    define DEBUG_GFXCANVAS 0
+#    define DEBUG_GFXCANVAS 1
 #endif
 
 #ifndef DEBUG_GFXCANVAS_BOUNDS
@@ -33,6 +33,10 @@
 // max. number of cached lines
 #ifndef GFXCANVAS_MAX_CACHED_LINES
 #    define GFXCANVAS_MAX_CACHED_LINES 1
+#endif
+// enable 4bit / 16 color .bmp files
+#ifndef GFXCANVAS_SUPPORT_4BIT_BMP
+#    define GFXCANVAS_SUPPORT_4BIT_BMP 0 //TODO do not turn on, it has buts
 #endif
 
 // enable for debugging only
@@ -69,14 +73,6 @@ namespace GFXCanvas {
     struct uDimensionType {
         uWidthType w;
         uHeightType h;
-    };
-
-    struct __attribute__packed__ GFXCanvasRLEStreamHeader_t {
-        uint16_t x;
-        uint16_t y;
-        uint16_t width;
-        uint16_t height;
-        uint16_t paletteCount;
     };
 
 }

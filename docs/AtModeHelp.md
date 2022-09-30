@@ -125,6 +125,11 @@ Request data from slave
 
 Scan I2C Bus. If ANY is passed as third argument, all available PINs are probed for I2C devices. Available only if compiled in
 
+### ``PWM=<pin>,<input|input_pullup|waveform|level=0-1024>[,<frequency=100-40000Hz>[,<duration/ms>]]
+
+PWM output on PIN, min./max. level set it to LOW/HIGH" using digitalWrite
+
+
 ## 7 Segment Clock
 
 ### ``+LMTESTP=<#color>[,<time=500ms>]``

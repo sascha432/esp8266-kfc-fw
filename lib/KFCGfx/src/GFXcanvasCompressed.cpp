@@ -18,10 +18,10 @@ extern "C" {
 
 #pragma GCC push_options
 #if DEBUG_GFXCANVAS
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
-#pragma GCC optimize ("O3")
+#    include <debug_helper_disable.h>
+#    pragma GCC optimize("O3")
 #endif
 
 using namespace GFXCanvas;
@@ -342,22 +342,14 @@ void GFXCanvasCompressed::getDetails(Print &output, bool displayPalette) const
 
 GFXCanvasBitmapStream GFXCanvasCompressed::getBitmap()
 {
+    __LDBG_printf("GFXCanvasBitmapStream(*this)");
     return GFXCanvasBitmapStream(*this);
 }
 
 GFXCanvasBitmapStream GFXCanvasCompressed::getBitmap(uXType x, uYType y, uWidthType width, uHeightType height)
 {
+    __LDBG_printf("GFXCanvasBitmapStream(*this, %d, %d, %d, %d)", x, y, width, height);
     return GFXCanvasBitmapStream(*this, x, y, width, height);
-}
-
-GFXCanvasRLEStream GFXCanvasCompressed::getRLEStream()
-{
-    return GFXCanvasRLEStream(*this);
-}
-
-GFXCanvasRLEStream GFXCanvasCompressed::getRLEStream(uXType x, uYType y, uWidthType width, uHeightType height)
-{
-    return GFXCanvasRLEStream(*this, x, y, width, height);
 }
 
 Cache &GFXCanvasCompressed::getLine(sYType y)

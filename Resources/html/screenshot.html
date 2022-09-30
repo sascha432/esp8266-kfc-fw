@@ -42,18 +42,18 @@
         <div align="center" class="p-5"><span class="tft-border"><img src="/images/screen_capture.bmp" id="tft" width="%TFT_WIDTH%" height="%TFT_HEIGHT%"></span></div>
         <div align="center" class="p-0">Zoom</div>
         <div align="center" class="p-0">
-            <a href="#" class="oi oi-arrow-circle-left" id="dbltap"></a> | 
-            <a href="#" class="zoom" level="1">1x</a> | 
-            <a href="#" class="zoom" level="2">2x</a> | 
-            <a href="#" class="zoom" level="3">3x</a> | 
+            <a href="#" class="oi oi-arrow-circle-left" id="dbltap"></a> |
+            <a href="#" class="zoom" level="1">1x</a> |
+            <a href="#" class="zoom" level="2">2x</a> |
+            <a href="#" class="zoom" level="3">3x</a> |
             <a href="#" class="zoom" level="4">4x</a> |
-            <a href="#" class="oi oi-arrow-circle-right" id="tap"></a> 
+            <a href="#" class="oi oi-arrow-circle-right" id="tap"></a>
         </div>
         <div align="center" class="p-0">Refesh Rate</div>
         <div align="center" class="p-0">
-            <a href="#" class="update-rate" ms="1000">1s</a> | 
-            <a href="#" class="update-rate" ms="2000">2s</a> | 
-            <a href="#" class="update-rate" ms="5000">5s</a> | 
+            <a href="#" class="update-rate" ms="1000">1s</a> |
+            <a href="#" class="update-rate" ms="2000">2s</a> |
+            <a href="#" class="update-rate" ms="5000">5s</a> |
             <a href="#" class="update-rate" ms="10000">10s</a> |
             <a href="#" class="update-rate" ms="30000">30s</a>
         </div>
@@ -101,10 +101,10 @@
             // change zoom level
             function zoom(level) {
                 tft.width(w * level).height(h * level);
-                tft_container.width(w * level).height(h * level);    
+                tft_container.width(w * level).height(h * level);
             }
             // start with default zoom
-            zoom(default_zoom); 
+            zoom(default_zoom);
             // add onclick functions to all zoom links
             $('.zoom').on('click', function(e) {
                 e.preventDefault();
@@ -146,8 +146,8 @@
                     return;
                 }
                 locked = true;
-                $.ajax({ 
-                    url: src, 
+                $.ajax({
+                    url: src,
                     type: 'GET',
                     cache: false,
                     processData: false,
@@ -169,15 +169,18 @@
                         }
                         set_error('HTTP Error ' + xhr.status, 1);
                         return;
-                    } 
+                    }
                     else if (xhr.status != 200) {
                         set_error('HTTP Error ' + xhr.status, 1);
                         return;
                     }
                     screen_name.html(screen_name_text);
-                    
+
                     // create URL in RAM from the data blob
                     var image_url_blob = URL.createObjectURL(data);
+
+
+console.log('bmp size', data.length);
 
                     // remove the blob after is has been loaded and unlock the function
                     tft.show().on('load', function() {

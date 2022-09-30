@@ -34,12 +34,4 @@ typedef struct __attribute__packed__ {
 
 #endif
 
-typedef union {
-    struct _bitmapHeader {
-        BITMAPFILEHEADER bfh;
-        BITMAPINFOHEADER bih;
-    } h;
-    uint8_t b[sizeof(struct _bitmapHeader)];
-} BitmapFileHeader_t;
-
 #include "pop_pack.h"

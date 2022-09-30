@@ -9,6 +9,12 @@
 #include "GFXCanvasCompressed.h"
 #include "GFXCanvasByteBuffer.h"
 
+#if DEBUG_GFXCANVAS
+#    include "debug_helper_enable.h"
+#else
+#    include "debug_helper_disable.h"
+#endif
+
 using namespace GFXCanvas;
 
 class GFXCanvasCompressedPalette : public GFXCanvasCompressed {
@@ -28,5 +34,21 @@ public:
     virtual void getDetails(Print &output, bool displayPalette = false) const;
 
 private:
-    ColorPalette _palette;
+    ColorPalette16 _palette;
 };
+
+
+inline ColorType GFXCanvasCompressedPalette::getPaletteColor(ColorType color) const
+{
+    return _palette.getColorIndex(color);
+}
+
+inline const ColorPalette *GFXCanvasCompressedPalette::getPalette() const
+{
+    __LDBG_printf("return %p", &_palette);
+    return &_palette;
+}
+
+#if DEBUG_GFXCANVAS
+#    include "debug_helper_disable.h"
+#endif

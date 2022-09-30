@@ -127,6 +127,8 @@ def which(name, env, flags=os.F_OK):
 
 def mem_analyzer(source, target, env):
 
+    return;
+
     if esp32==False and platform.system() == 'Windows':
         # https://github.com/Sermus/ESP8266_memory_analyzer
         args = [

@@ -390,8 +390,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLG, "PLG", "<list|start|stop|add-blacklist|add|remove>[,<name>]", "Plugin management");
 
-#if DEBUG
-
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DSH, "DSH", "Display serial handler");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSM, "FSM", "Display FS mapping");
 #if PIN_MONITOR
@@ -406,6 +404,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<p
 #if defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
+
+
+#if DEBUG
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
@@ -471,7 +472,6 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(RTC), name);
 #endif
 
-#if DEBUG
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DSH), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(FSM), name);
 #if PIN_MONITOR
@@ -486,6 +486,7 @@ void at_mode_help_commands()
 #if defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CPU), name);
 #endif
+#if DEBUG
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PSTORE), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(METRICS), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(DUMP), name);
@@ -589,7 +590,7 @@ class DisplayTimer;
 
 extern DisplayTimer *displayTimer;
 
-#if DEBUG
+#if 1
 
 class DisplayTimer {
 public:
@@ -2403,7 +2404,6 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     }
-#if DEBUG
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FSM))) {
         auto &streams = *serialHandler.getStreams();
         auto &clients = serialHandler.getClients();
@@ -2650,6 +2650,7 @@ void at_mode_serial_handle_event(String &commandString)
             args.print(F("%d MHz"), ESP.getCpuFreqMHz());
         }
     #endif
+#if DEBUG
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DUMP))) {
 
         auto version = System::Device::getConfig().config_version;

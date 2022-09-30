@@ -19,15 +19,20 @@ RLE compressed 16bit canvas
 #include "GFXCanvasStats.h"
 #include "GFXCanvasLines.h"
 #include "GFXCanvasBitmapStream.h"
-#include "GFXCanvasRLEStream.h"
+
+#if DEBUG_GFXCANVAS
+#    include "debug_helper_enable.h"
+#else
+#    include "debug_helper_disable.h"
+#endif
 
 using namespace GFXCanvas;
 
 namespace GFXCanvas {
     class ColorPalette;
+    class ColorPalette16;
 }
 
-class GFXCanvasRLEStream;
 class GFXCanvasBitmapStream;
 
 class GFXCanvasCompressed : public AdafruitGFXExtension {
@@ -114,14 +119,11 @@ public:
 
     GFXCanvasBitmapStream getBitmap();
     GFXCanvasBitmapStream getBitmap(uXType x, uYType y, uWidthType width, uHeightType height);
-    GFXCanvasRLEStream getRLEStream();
-    GFXCanvasRLEStream getRLEStream(uXType x, uYType y, uWidthType width, uHeightType height);
 
     Cache &getLine(sYType y);
 
 private:
     friend GFXCanvasBitmapStream;
-    friend GFXCanvasRLEStream;
     friend GFXCanvas::SingleLineCache;
 
     // Cache &_getCache(sYType y);
@@ -133,6 +135,7 @@ protected:
     virtual void _RLEdecode(ByteBuffer &buffer, ColorType *output);
     virtual void _RLEencode(ColorType *data, Buffer &buffer);
 
+public:
     // colors are translated only inside the decode/encode methods
     virtual ColorType getPaletteColor(ColorType color) const;
     virtual const ColorPalette *getPalette() const;
@@ -191,5 +194,10 @@ inline ColorType GFXCanvasCompressed::getPaletteColor(ColorType color) const
 
 inline const ColorPalette *GFXCanvasCompressed::getPalette() const
 {
+    __LDBG_printf("return nullptr");
     return nullptr;
 }
+
+#if DEBUG_GFXCANVAS
+#    include "debug_helper_disable.h"
+#endif

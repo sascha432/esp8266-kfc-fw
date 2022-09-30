@@ -8,7 +8,6 @@
 #include "GFXCanvasConfig.h"
 
 class GFXCanvasCompressed;
-class GFXCanvasRLEStream;
 
 namespace GFXCanvas {
 
@@ -88,6 +87,14 @@ namespace GFXCanvas {
             _read = value;
         }
 
+        inline ColorType at(uint16_t pos) const
+        {
+            if (pos >= _width) {
+                return 0;
+            }
+            return _buffer[pos];
+        }
+
         inline ColorType *getBuffer() const
         {
             __LDBG_check_alloc_no_null(_buffer);
@@ -111,8 +118,6 @@ namespace GFXCanvas {
         }
 
     protected:
-        friend GFXCanvasRLEStream;
-
         ColorType *_buffer;
         sYType _y;
         uWidthType _width;

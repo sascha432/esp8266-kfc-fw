@@ -162,11 +162,11 @@
 }
 
 #ds3231_time {
-    font-size: 1.65rem;
+    font-size: 1.60rem;
 }
 
 #ds3231_time > .unit {
-    font-size: 1.65rem;
+    font-size: 1.5rem;
 }
 
 .input-group-append .btn-default {

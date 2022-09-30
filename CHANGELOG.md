@@ -2,6 +2,9 @@
 
 ## Version 0.0.7 (master)
 
+ - Added support for 4bit bitmap images (IN PROGRESS)
+ - Added an external I2C bus to the Weather Station, that can be used for other sensors like BME680 (VOC gas), BH1750FVI (Lux), INA219 (Voltage, Current, Power) with live data on the TFT and the WebUI
+ - Support for BME680 updated
  - Live display of the TFT in the WebUI of the Weather Station and links to control it
  - Removed HTTP authentication token
  - More details about the software to build the VFS (Windows and Linux), can be found in ``README.md`` / ``Building the VFS``

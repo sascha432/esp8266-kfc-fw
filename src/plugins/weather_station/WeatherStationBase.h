@@ -15,6 +15,7 @@
 #    define DEBUG_IOT_WEATHER_STATION 0
 #endif
 
+// Add MPR121 based touchpad
 #ifndef IOT_WEATHER_STATION_HAS_TOUCHPAD
 #    define IOT_WEATHER_STATION_HAS_TOUCHPAD 1
 #endif
@@ -40,6 +41,11 @@
 #    else
 #        define IOT_WEATHER_STATION_WS2812_PIN __LED_BUILTIN_WS2812_PIN
 #    endif
+#endif
+
+// if the BME680 is available, use it to display indoor temperature, humidity and pressure
+#if !defined(IOT_SENSOR_USE_BME680_AS_INDOOR_SENSOR) || !IOT_SENSOR_HAVE_BME680
+#    define IOT_SENSOR_USE_BME680_AS_INDOOR_SENSOR 0
 #endif
 
 // set to 1 to enable ILI9341 driver default is ST7735

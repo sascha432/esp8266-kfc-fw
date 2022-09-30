@@ -10,18 +10,22 @@
 #include <serial_handler.h>
 #include <WebUISocket.h>
 #include <AsyncBitmapStreamResponse.h>
-#include <GFXCanvasRLEStream.h>
 #include <kfc_fw_config.h>
 #include "RestAPI.h"
 #include "web_server.h"
 #include "async_web_response.h"
 #include "blink_led_timer.h"
 #include "./plugins/sensor/sensor.h"
-#include "./plugins/sensor/Sensor_BME280.h"
+#if IOT_SENSOR_HAVE_BME280
+#    include "./plugins/sensor/Sensor_BME280.h"
+#endif
+#if IOT_SENSOR_HAVE_BME680
+#    include "./plugins/sensor/Sensor_BME680.h"
+#endif
 
 #if IOT_WEATHER_STATION_WS2812_NUM
-#define FASTLED_INTERNAL
-#include <FastLED.h>
+#    define FASTLED_INTERNAL
+#    include <FastLED.h>
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
@@ -35,13 +39,13 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 //
 
 #if DEBUG_IOT_WEATHER_STATION
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #if IOT_WEATHER_STATION_WS2812_NUM && __LED_BUILTIN == -1
-#error invalid built-in LED
+#    error invalid built-in LED
 #endif
 
 WeatherStationPlugin ws_plugin;
@@ -119,22 +123,28 @@ void WeatherStationPlugin::__recvTFTCtrl(AsyncWebServerRequest *request)
         _setScreen(_getNextScreen(_getCurrentScreen(), true));
     }
     else if (type == F("tap")) {
-        if (_currentScreen == ScreenType::CURATED_ART) {
-            _setScreen(ScreenType::CURATED_ART);
-            if (_currentScreen == ScreenType::TEXT) {
-                code = 204;
-                type = F("Cannot load curated art");
+        #if HAVE_WEATHER_STATION_CURATED_ART
+            if (_currentScreen == ScreenType::CURATED_ART) {
+                _setScreen(ScreenType::CURATED_ART);
+                if (_currentScreen == ScreenType::TEXT) {
+                    code = 204;
+                    type = F("Cannot load curated art");
+                }
             }
-        }
-        else {
+            else
+        #endif
+        {
             _setScreen(_getNextScreen(_getCurrentScreen(), true));
         }
     }
     else if (type == F("dbltap")) {
-        if (_currentScreen == ScreenType::CURATED_ART) {
-            _setScreen(_getNextScreen(_getCurrentScreen(), true));
-        }
-        else {
+        #if HAVE_WEATHER_STATION_CURATED_ART
+            if (_currentScreen == ScreenType::CURATED_ART) {
+                _setScreen(_getNextScreen(_getCurrentScreen(), true));
+            }
+            else
+        #endif
+        {
             _setScreen(_getPrevScreen(_getCurrentScreen(), true));
         }
     }
@@ -183,17 +193,20 @@ void WeatherStationPlugin::__sendScreenCaptureBMP(AsyncWebServerRequest *request
     else if (lock()) {
         AsyncWebServerResponse *response;
         String name;
-        if (_getCurrentScreen() == static_cast<uint8_t>(ScreenType::CURATED_ART)) {
-            if (!_galleryFile) {
-                unlock();
-                request->send(204); // invalid image
-                return;
+        #if HAVE_WEATHER_STATION_CURATED_ART
+            if (_getCurrentScreen() == static_cast<uint8_t>(ScreenType::CURATED_ART)) {
+                if (!_galleryFile) {
+                    unlock();
+                    request->send(204); // invalid image
+                    return;
+                }
+                name = PrintString(F("%s<br><div class=\"h6\">%s</div>"), getScreenName(_currentScreen), _galleryFile.fullName());
+                // just send the jpeg image
+                response = new WS_AsyncJpegResponse(_galleryFile);
             }
-            name = PrintString(F("%s<br><div class=\"h6\">%s</div>"), getScreenName(_currentScreen), _galleryFile.fullName());
-            // just send the jpeg image
-            response = new WS_AsyncJpegResponse(_galleryFile);
-        }
-        else {
+            else
+        #endif
+        {
             name = getScreenName(_currentScreen);
             // create bitmap of the current screen
             response = new WS_AsyncBitmapResponse(*WeatherStationPlugin::_getInstance().getCanvas());
@@ -327,7 +340,7 @@ void WeatherStationPlugin::_readConfig()
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     __LDBG_printf("setup");
-    
+
     #if IOT_WEATHER_STATION_WS2812_NUM
         _rainbowStatusLED();
     #endif
@@ -349,7 +362,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     WebServer::Plugin::getInstance().setUpdateFirmwareCallback([this, progressValue](size_t position, size_t size) mutable {
         #if !WEATHER_STATION_HAVE_BMP_SCREENSHOT
             // without the progress bar, it is a local variable
-            int32_t 
+            int32_t
         #endif
         _updateProgress = position * 100 / size;
         if (progressValue != _updateProgress) {
@@ -483,6 +496,9 @@ void WeatherStationPlugin::getStatus(Print &output)
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
         output.printf_P(PSTR(HTML_S(br) "MPR121 Touch Pad"));
     #endif
+    #if IOT_SENSOR_USE_BME680_AS_INDOOR_SENSOR
+        output.printf_P(PSTR(HTML_S(br) "BME680 as primary sensor"));
+    #endif
 }
 
 void WeatherStationPlugin::_initTFT()
@@ -528,26 +544,32 @@ void WeatherStationPlugin::setValue(const String &id, const String &value, bool 
 
 void WeatherStationPlugin::_drawEnvironmentalSensor(GFXCanvasCompressed& canvas, int16_t _offsetY)
 {
-    auto sensor = SensorPlugin::getSensor<Sensor_BME280>(MQTT::SensorType::BME280);
-    if (!sensor) {
-        return;
-    }
-    auto values = sensor->readSensor();
-
     canvas.setFont(FONTS_WEATHER_DESCR);
     canvas.setTextColor(COLORS_WEATHER_DESCR);
-    PrintString str(F("\n\nTemperature %.2f°C\nHumidity %.2f%%\nPressure %.2fhPa"), values.temperature, values.humidity, values.pressure);
+    auto values = getIndoorValues();
+    PrintString str(F("\n\nTemperature %.2f°C\nHumidity %.2f%%\nPressure %.2fhPa"), values.getTemperature(), values.getHumidity(), values.getPressure());
+    #if IOT_SENSOR_USE_BME680_AS_INDOOR_SENSOR
+        str.printf_P(PSTR("\nVOC Gas %uppm"), values.getGas());
+    #endif
     canvas.drawTextAligned(0, _offsetY, str, AdafruitGFXExtension::LEFT);
 }
 
 WeatherStationPlugin::IndoorValues WeatherStationPlugin::_getIndoorValues()
 {
-    auto sensor = SensorPlugin::getSensor<Sensor_BME280>(MQTT::SensorType::BME280);
+    #if IOT_SENSOR_USE_BME680_AS_INDOOR_SENSOR
+        auto sensor = SensorPlugin::getSensor<Sensor_BME680>(MQTT::SensorType::BME680);
+    #else
+        auto sensor = SensorPlugin::getSensor<Sensor_BME280>(MQTT::SensorType::BME280);
+    #endif
     if (!sensor) {
-        return IndoorValues(0, 0, 0);
+        return IndoorValues();
     }
     auto values = sensor->readSensor();
-    return IndoorValues(values.temperature, values.humidity, values.pressure);
+    return IndoorValues(values.temperature, values.humidity, values.pressure
+        #if IOT_SENSOR_USE_BME680_AS_INDOOR_SENSOR
+            , values.gas
+        #endif
+    );
 }
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step)

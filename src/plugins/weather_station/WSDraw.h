@@ -342,10 +342,19 @@ namespace WSDraw {
 
             static constexpr float kFactor = 100; // fixed point factor for temperature and humidity
 
-            IndoorValues(float temperature, float humidity, float pressure) :
+            IndoorValues() :
+                _temperature(0),
+                _humidity(0),
+                _pressure(NAN),
+                _gas(0)
+            {
+            }
+
+            IndoorValues(float temperature, float humidity, float pressure, uint32_t gas = 0) :
                 _temperature(temperature * kFactor),
                 _humidity(humidity * kFactor),
-                _pressure(pressure)
+                _pressure(pressure),
+                _gas(gas)
             {
             }
 
@@ -357,6 +366,9 @@ namespace WSDraw {
             }
             void setPressure(float pressure) {
                 _pressure = pressure;
+            }
+            void setGas(uint32_t gas) {
+                _gas = gas;
             }
 
             // °C
@@ -371,11 +383,16 @@ namespace WSDraw {
             float getPressure() const {
                 return _pressure;
             }
+            // ppm
+            uint32_t getGas() const {
+                return _gas;
+            }
 
         private:
             int16_t _temperature;
             uint16_t _humidity;
             float _pressure;
+            uint32_t _gas;
         };
 
         // get temperature as string (°C or °F), depending on the user setting
@@ -424,7 +441,7 @@ namespace WSDraw {
             }
             _draw._scrollCanvas = this;
         }
-        
+
         ~ScrollCanvas() {
             _timer.remove();
             _draw._scrollCanvas = nullptr;

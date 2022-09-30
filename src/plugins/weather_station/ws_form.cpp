@@ -93,7 +93,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         form.addFormUI(F("Release Threshold"));
         cfg.addRangeValidatorFor_released_threshold(form);
 
-        #define NUM_SCREENS 8
+        #define NUM_SCREENS 5//8
         static_assert(NUM_SCREENS == WSDraw::kNumScreens, "since Boost cannot use constexpr or enum, update macro by hand");
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, NUM_SCREENS, st/*, ds*/);
         #undef NUM_SCREENS
@@ -106,54 +106,6 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
 
         for(uint8_t i = 0; i < WSDraw::kNumScreens; i++) {
 
-            // auto &toggleModeHidden = form.addCallbackGetterSetter<uint8_t>(F_VAR(ds, i), [&cfg, i](uint8_t &value, Field::BaseField &field, bool store) {
-            //     if (store) {
-            //         if (value == kDefaultScreenTimeInSeconds) {
-            //             // store default time only if the mode was manual or skip before
-            //             switch(cfg.screenTimer[i]) {
-            //                 case kManualScreen:
-            //                 case kSkipScreen:
-            //                     cfg.screenTimer[i] = value;
-            //                     break;
-            //             }
-            //         }
-            //     }
-            //     else {
-            //         switch(cfg.screenTimer[i]) {
-            //             case kDefaultScreenTimeInSeconds:
-            //             case kSkipScreen:
-            //             case kManualScreen:
-            //                 value = cfg.screenTimer[i];
-            //                 break;
-            //             default:
-            //                 value = kDefaultScreenTimeInSeconds;
-            //                 break;
-            //         }
-            //     }
-            //     __LDBG_printf("i=%u checked=%u store=%u", i, value, store);
-            //     return true;
-            // });
-            // form.addFormUI(FormUI::Type::HIDDEN, modeList);
-
-            // auto &checkbox = form.addCallbackGetterSetter<bool>(F_VAR(ds, i),
-            //     if (store) {
-            //         if (value) {
-            //             cfg.screenTimer[i] = kSkipScreen;
-            //         }
-            //         else if (cfg.screenTimer[i] == kSkipScreen) {
-            //             cfg.screenTimer[i] = kManualScreen;
-            //         }
-            //     }
-            //     else {
-            //         value = (cfg.screenTimer[i] == kSkipScreen);
-            //     }
-            //     __LDBG_printf("i=%u checked=%u store=%u", i, value, store);
-            //     return true;
-            // });
-            // form.addFormUI(FormUI::Type::HIDDEN);
-            // bool isSkipChecked = checkbox.getValue().toInt();
-            // __LDBG_printf("i=%u checkedbox_value=%s", i, checkbox.getValue().c_str());
-
             form.addCallbackGetterSetter<uint8_t>(F_VAR(st, i), [&cfg, i](uint8_t &value, Field::BaseField &field, bool store) {
                 if (store) {
                     cfg.screenTimer[i] = value;
@@ -165,8 +117,6 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
                 return true;
             });
             form.addFormUI(FormUI::Label(WSDraw::Base::getScreenName(i)), FormUI::Suffix(FSPGM(seconds)));
-            // , FormUI::CheckboxButtonSuffix(toggleModeHidden, FSPGM(HIDDEN, "HIDDEN")));
-            // FormUI::CheckboxButtonSuffix(checkbox, F("Skip Screen")));
             form.addValidator(FormUI::Validator::Range(0, 255));
 
             #if HAVE_WEATHER_STATION_CURATED_ART

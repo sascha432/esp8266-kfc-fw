@@ -80,6 +80,10 @@ public:
         int32_t _updateProgress{-2};
     #endif
 
+    static IndoorValues getIndoorValues() {
+        return _getInstance()._getIndoorValues();
+    }
+
 private:
     void _drawEnvironmentalSensor(GFXCanvasCompressed& canvas, int16_t top);
     virtual IndoorValues _getIndoorValues();

@@ -6,17 +6,20 @@
 
 #include "Sensor_BME680.h"
 
-#if DEBUG_IOT_SENSOR
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
+#    if DEBUG_IOT_SENSOR
+#        include <debug_helper_enable.h>
+#    else
+#        include <debug_helper_disable.h>
+#    endif
 
 Sensor_BME680::Sensor_BME680(const String &name, uint8_t address, TwoWire &wire) :
     MQTT::Sensor(MQTT::SensorType::BME680),
     _name(name),
-    _address(address),
+    _address(address)
+#if HAVE_ADAFRUIT_BME680_LIB
+    ,
     _bme680(&wire)
+    #endif
 {
     REGISTER_SENSOR_CLIENT(this);
 }
@@ -94,7 +97,13 @@ void Sensor_BME680::createWebUI(WebUINS::Root &webUI)
 
 void Sensor_BME680::getStatus(Print &output)
 {
-    output.printf_P(PSTR("BME680 @ I2C address 0x%02x" HTML_S(br)), _address);
+    #if HAVE_ADAFRUIT_BME680_LIB
+        output.printf_P(PSTR("BME680 @ I2C address 0x%02x" HTML_S(br)), _address);
+    #endif
+    #if HAVE_BOSCHSENSORTEC_LIB
+        output.printf_P(PSTR("BME680 @ I2C address 0x%02x, BSec " HTML_S(br)), _address);
+        output.printf_P(PSTR("BSEC library version %u.%u.%u.%u" HTML_S(br)), iaqSensor.version.major, iaqSensor.version.minor, iaqSensor.version.major_bugfix, iaqSensor.version.minor_bugfix);
+    #endif
     if (_cfg.temp_offset) {
         output.printf_P(PSTR("Temperature offset %.*f%s "), countDecimalPlaces(_cfg.temp_offset), _cfg.temp_offset, SPGM(UTF8_degreeC));
     }
@@ -116,7 +125,7 @@ bool Sensor_BME680::getSensorData(String &name, StringVector &values)
     values.emplace_back(PrintString(F("%.2f %s"), sensor.temperature, SPGM(UTF8_degreeC)));
     values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
     values.emplace_back(PrintString(F("%.2f hPa"), sensor.pressure));
-    values.emplace_back(PrintString(F("%u ppm"), sensor.gas));
+    values.emplace_back(PrintString(F("%.6f kOhm"), sensor.gas));
     return true;
 }
 
@@ -148,23 +157,84 @@ void Sensor_BME680::publishState()
             NamedFormattedDouble(FSPGM(temperature), sensor.temperature, F("%.2f")),
             NamedFormattedDouble(FSPGM(humidity), sensor.humidity, F("%.2f")),
             NamedFormattedDouble(FSPGM(pressure), sensor.pressure, F("%.2f")),
-            NamedUint32(F("gas"), sensor.gas)
+            NamedFormattedDouble(F("gas"), sensor.gas, F("%.2f"))
         ).toString());
     }
 }
 
-Sensor_BME680::SensorDataType Sensor_BME680::_readSensor()
-{
-    auto sensor = SensorDataType(
-        _bme680.readTemperature() + _cfg.temp_offset,
-        _bme680.readHumidity() + _cfg.humidity_offset,
-        (_bme680.readPressure() / 100.0) + _cfg.pressure_offset,
-        _bme680.readGas()
-    );
+#if HAVE_ADAFRUIT_BME680_LIB
 
-    __LDBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa %u ppm", _address, sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity, sensor.pressure, sensor.gas);
 
-    return sensor;
-}
+    Sensor_BME680::SensorDataType &Sensor_BME680::_readSensor()
+    {
+        auto endTime = _bme680.beginReading();
+        if (!endTime) {
+            return _sensor;
+        }
+        if (!_bme680.endReading()) {
+            return _sensor;
+        }
+
+        auto lastSuccesfulAccess = _sensor.getTimeSinceLastSuccess();
+
+        _sensor = SensorDataType(
+            _bme680.temperature + _cfg.temp_offset,
+            _bme680.humidity + _cfg.humidity_offset,
+            (_bme680.pressure / 100.0) + _cfg.pressure_offset,
+            _bme680.gas_resistance / 1000.0
+        );
+        _sensor.setLastSuccess();
+
+        __DBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa %.6f kOhm  delay=%u", _address, _sensor.temperature, SPGM(UTF8_degreeC), _sensor.humidity, _sensor.pressure, _sensor.gas, lastSuccesfulAccess);
+
+        return _sensor;
+    }
+
+#endif
+
+#if HAVE_BOSCHSENSORTEC_LIB
+
+    Sensor_BME680::SensorDataType &Sensor_BME680::_readSensor()
+    {
+        String output;
+        if (iaqSensor.run()) { // If new data is available
+            output += ", " + String(iaqSensor.rawTemperature);
+            output += ", " + String(iaqSensor.pressure);
+            output += ", " + String(iaqSensor.rawHumidity);
+            output += ", " + String(iaqSensor.gasResistance);
+            output += ", " + String(iaqSensor.iaq);
+            output += ", " + String(iaqSensor.iaqAccuracy);
+            output += ", " + String(iaqSensor.temperature);
+            output += ", " + String(iaqSensor.humidity);
+            output += ", " + String(iaqSensor.staticIaq);
+            output += ", " + String(iaqSensor.co2Equivalent);
+            output += ", " + String(iaqSensor.breathVocEquivalent);
+            Serial.println(output);
+        } else {
+            if (iaqSensor.status != BSEC_OK) {
+                if (iaqSensor.status < BSEC_OK) {
+                    output = "BSEC error code : " + String(iaqSensor.status);
+                    Serial.println(output);
+                } else {
+                    output = "BSEC warning code : " + String(iaqSensor.status);
+                    Serial.println(output);
+                }
+            }
+
+            if (iaqSensor.bme680Status != BME680_OK) {
+                if (iaqSensor.bme680Status < BME680_OK) {
+                    output = "BME680 error code : " + String(iaqSensor.bme680Status);
+                    Serial.println(output);
+                } else {
+                    output = "BME680 warning code : " + String(iaqSensor.bme680Status);
+                    Serial.println(output);
+                }
+            }
+        }
+        return _sensor;
+    }
+
+#endif
+
 
 #endif

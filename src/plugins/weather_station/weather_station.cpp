@@ -337,6 +337,7 @@ void WeatherStationPlugin::_readConfig()
     _setScreen(_getScreen(ScreenType::MAIN));
 }
 
+
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     __LDBG_printf("setup");

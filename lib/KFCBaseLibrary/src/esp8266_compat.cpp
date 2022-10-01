@@ -18,13 +18,21 @@
 
     #include <LwipDhcpServer.h>
 
-    bool wifi_softap_get_dhcps_lease(struct dhcps_lease *please) {
-        return dhcpSoftAP.get_dhcps_lease(please);
-    }
+    #if ARDUINO_ESP8266_MINOR >= 1
 
-    bool wifi_softap_set_dhcps_lease(struct dhcps_lease *please) {
-        return dhcpSoftAP.set_dhcps_lease(please);
-    }
+        // the thwo functions are back in this release
+
+    #else
+
+        bool wifi_softap_get_dhcps_lease(struct dhcps_lease *please) {
+            return dhcpSoftAP.get_dhcps_lease(please);
+        }
+
+        bool wifi_softap_set_dhcps_lease(struct dhcps_lease *please) {
+            return dhcpSoftAP.set_dhcps_lease(please);
+        }
+
+    #endif
 
 #endif
 

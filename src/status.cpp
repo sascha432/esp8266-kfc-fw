@@ -166,7 +166,7 @@ void WiFi_get_status(Print &out)
                 IPAddress(if_cfg.gw.addr).toString().c_str()
             );
         }
-#if 0
+#if 1
         if (wifi_softap_dhcps_status() == DHCP_STOPPED) {
 #else
         if (!dhcpSoftAP.isRunning()) {

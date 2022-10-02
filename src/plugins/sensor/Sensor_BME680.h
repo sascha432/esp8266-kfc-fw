@@ -154,10 +154,10 @@ inline void Sensor_BME680::setup()
     iaqSensor.updateSubscription(sensorList, 10, BSEC_SAMPLE_RATE_LP);
 
     _readSensor();
+}
 
 
 #endif
-}
 
 inline void Sensor_BME680::reconfigure(PGM_P source)
 {

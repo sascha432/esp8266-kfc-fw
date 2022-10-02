@@ -185,7 +185,7 @@ void Sensor_BME680::publishState()
         );
         _sensor.setLastSuccess();
 
-        __DBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa %.6f kOhm  delay=%u", _address, _sensor.temperature, SPGM(UTF8_degreeC), _sensor.humidity, _sensor.pressure, _sensor.gas, lastSuccesfulAccess);
+        // __DBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa %.6f kOhm  delay=%u", _address, _sensor.temperature, SPGM(UTF8_degreeC), _sensor.humidity, _sensor.pressure, _sensor.gas, lastSuccesfulAccess);
 
         return _sensor;
     }

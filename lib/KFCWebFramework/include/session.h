@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include "core_version.h"
 
 #if defined(ESP8266) && ARDUINO_ESP8266_MAJOR >= 3
 

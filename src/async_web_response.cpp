@@ -11,11 +11,11 @@
 #include "../src/plugins/plugins.h"
 
 #if DEBUG_ASYNC_WEB_RESPONSE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 // enable partial debugging here
-#define DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE       0
+#    define DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE 0
 #endif
 
 AsyncBaseResponse::AsyncBaseResponse(bool chunked)
@@ -656,7 +656,6 @@ size_t AsyncFillBufferCallbackResponse::_fillBuffer(uint8_t *data, size_t len)
     }
 }
 
-
 AsyncResolveZeroconfResponse::AsyncResolveZeroconfResponse(const String &value) : AsyncFillBufferCallbackResponse([value](bool *async, bool fillBuffer, AsyncFillBufferCallbackResponse *response) {
         if (*async) { // indicator that "response" still exists
             if (!fillBuffer) { // we don't do refills
@@ -671,9 +670,9 @@ void AsyncResolveZeroconfResponse::_doStuff(bool *async, const String &value)
 {
     uint32_t start = millis();
     if (!config.resolveZeroConf(String(), value, 0, [this, async, value, start](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-        if (*async) {
-            PrintHtmlEntitiesString str;
-            switch(type) {
+            if (*async) {
+                PrintHtmlEntitiesString str;
+                switch (type) {
                 case MDNSResolver::ResponseType::RESOLVED:
                     str.print(F("Result for "));
                     break;
@@ -681,28 +680,28 @@ void AsyncResolveZeroconfResponse::_doStuff(bool *async, const String &value)
                 case MDNSResolver::ResponseType::TIMEOUT:
                     str.print(F("Timeout resolving "));
                     break;
-            }
-            str.print(value);
-            String result;
-            PGM_P resultType;
-            if (IPAddress_isValid(address)) {
-                result = address.toString();
-                resultType = SPGM(Address);
+                }
+                str.print(value);
+                String result;
+                PGM_P resultType;
+                if (IPAddress_isValid(address)) {
+                    result = address.toString();
+                    resultType = SPGM(Address);
 
-            } else {
-                result = hostname;
-                resultType = SPGM(Hostname);
-            }
-            str.printf_P(PSTR(HTML_S(br) HTML_S(br) "%s: %s" HTML_S(br) "Port: %u"), resultType, result.c_str(), port);
-            if (result != resolved) {
-                str.printf_P(PSTR(HTML_S(br) "Resolved: %s"), resolved.c_str());
-            }
-            str.printf_P(PSTR(HTML_S(br) "Timeout: %u / %ums"), get_time_diff(start, millis()), KFCConfigurationClasses::System::Device::getConfig().zeroconf_timeout);
+                } else {
+                    result = hostname;
+                    resultType = SPGM(Hostname);
+                }
+                str.printf_P(PSTR(HTML_S(br) HTML_S(br) "%s: %s" HTML_S(br) "Port: %u"), resultType, result.c_str(), port);
+                if (result != resolved) {
+                    str.printf_P(PSTR(HTML_S(br) "Resolved: %s"), resolved.c_str());
+                }
+                str.printf_P(PSTR(HTML_S(br) "Timeout: %u / %ums"), get_time_diff(start, millis()), KFCConfigurationClasses::System::Device::getConfig().zeroconf_timeout);
 
-            _buffer = std::move(str);
-        }
-        finished(async, this);
-    })) {
+                _buffer = std::move(str);
+            }
+            finished(async, this);
+        })) {
         if (*async) {
             PrintHtmlEntitiesString str;
             str.printf_P(PSTR("Required Format:" HTML_S(br) "%s<service>.<proto>:<address|value[:port value]>|<fallback[:port]>}"), SPGM(_var_zeroconf));

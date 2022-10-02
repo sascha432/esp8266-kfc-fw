@@ -45,23 +45,6 @@ protected:
     String _head;
 };
 
-// class AsyncJsonResponse : public AsyncBaseResponse {
-// public:
-//     AsyncJsonResponse();
-
-//     virtual bool _sourceValid() const override;
-//     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
-
-//     JsonUnnamedObject &getJsonObject();
-
-// protected:
-//     virtual void __assembleHead(uint8_t version) override;
-
-// private:
-//     JsonUnnamedObject _json;
-//     JsonBuffer _jsonBuffer;
-// };
-
 #if MDNS_PLUGIN
 
 class AsyncMDNSResponse : public AsyncBaseResponse {
@@ -226,3 +209,4 @@ public:
 private:
     void _doStuff(bool *async, const String &value);
 };
+

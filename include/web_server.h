@@ -8,7 +8,7 @@
 #include <global.h>
 
 #ifndef DEBUG_WEB_SERVER
-#    define DEBUG_WEB_SERVER (0 || defined(DEBUG_ALL))
+#    define DEBUG_WEB_SERVER (1 || defined(DEBUG_ALL))
 #endif
 
 // enable logging HTTP requests to Serial
@@ -28,7 +28,7 @@
 #include "plugins.h"
 #include "web_socket.h"
 #ifdef ENABLE_ARDUINO_OTA
-#include <ArduinoOTA.h>
+#    include <ArduinoOTA.h>
 #endif
 
 class FileMapping;

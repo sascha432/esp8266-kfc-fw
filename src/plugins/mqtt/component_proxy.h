@@ -61,12 +61,17 @@ namespace MQTT {
         void init();
         void unsubscribe();
 
-        virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) {
-            return nullptr;
-        }
-        virtual uint8_t getAutoDiscoveryCount() const {
-            return 0;
-        }
+        #if MQTT_AUTO_DISCOVERY
+
+            virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) {
+                return nullptr;
+            }
+
+            virtual uint8_t getAutoDiscoveryCount() const {
+                return 0;
+            }
+            
+        #endif
 
         virtual void onDisconnect(AsyncMqttClientDisconnectReason reason);
 

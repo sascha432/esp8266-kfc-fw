@@ -829,13 +829,17 @@ public:
         return _mqttClient;
     }
 
-    inline bool Client::safeIsAutoDiscoveryRunning()
-    {
-        if (_mqttClient) {
-            return _mqttClient->isAutoDiscoveryRunning();
+    #if MQTT_AUTO_DISCOVERY
+
+        inline bool Client::safeIsAutoDiscoveryRunning()
+        {
+            if (_mqttClient) {
+                return _mqttClient->isAutoDiscoveryRunning();
+            }
+            return false;
         }
-        return false;
-    }
+
+    #endif
 
     inline bool Client::safeIsConnected()
     {
@@ -888,11 +892,15 @@ public:
 
     #endif
 
-    inline __attribute__((__always_inline__))
-    AutoDiscovery::QueuePtr &Client::getAutoDiscoveryQueue()
-    {
-        return _autoDiscoveryQueue;
-    }
+    #if MQTT_AUTO_DISCOVERY
+
+        inline __attribute__((__always_inline__))
+        AutoDiscovery::QueuePtr &Client::getAutoDiscoveryQueue()
+        {
+            return _autoDiscoveryQueue;
+        }
+
+    #endif
 
     inline __attribute__((__always_inline__))
     const __FlashStringHelper *Client::toBoolTrueFalse(bool value)

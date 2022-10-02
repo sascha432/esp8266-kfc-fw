@@ -4,7 +4,7 @@
 
 #pragma once
 
-#if IOT_SSDP_SUPPORT
+ #if IOT_SSDP_SUPPORT
 
 #ifndef DEBUG_SSDP
 #    define DEBUG_SSDP 0
@@ -12,12 +12,18 @@
 
 #include <Arduino_compat.h>
 #if ESP8266
-#include <ESP8266SSDP.h>
+#    include <ESP8266SSDP.h>
 #elif ESP32
-#include <ESP32SSDP.h>
+#    include <ESP32SSDP.h>
 #endif
-#include <kfc_fw_config.h>
 #include "plugins.h"
+#include <kfc_fw_config.h>
+
+#if DEBUG_SSDP
+#    include <debug_helper_enable.h>
+#else
+#    include <debug_helper_disable.h>
+#endif
 
 class SSDPPlugin : public PluginComponent {
 public:
@@ -43,4 +49,9 @@ public:
     }
 };
 
+#if DEBUG_SSDP
+#    include <debug_helper_disable.h>
 #endif
+
+
+ #endif

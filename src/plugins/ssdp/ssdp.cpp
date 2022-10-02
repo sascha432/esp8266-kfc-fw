@@ -9,9 +9,9 @@
 #include "WiFiCallbacks.h"
 
 #if DEBUG_SSDP
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using KFCConfigurationClasses::System;
@@ -56,6 +56,7 @@ static void wifiCallback(WiFiCallbacks::EventType event, void *payload)
 
 void SSDPPlugin::_begin()
 {
+    __LDBG_printf("running=%u", _running);
     PrintString tmp;
     SSDP.setSchemaURL(FSPGM(description_xml));
     SSDP.setHTTPPort(System::WebServer::getConfig().getPort());
@@ -75,12 +76,14 @@ void SSDPPlugin::_begin()
     SSDP.setManufacturer(FSPGM(KFCLabs, "KFCLabs"));
     SSDP.setManufacturerURL(F("https://github.com/sascha432"));
     SSDP.setURL(String('/'));
+    __LDBG_printf("SSDP.begin()");
     _running = SSDP.begin();
     __LDBG_printf("SSDP=%u", _running);
 }
 
 void SSDPPlugin::_end()
 {
+    __LDBG_printf("running=%u", _running);
     SSDP.end();
     _running = false;
 }
@@ -107,8 +110,10 @@ void SSDPPlugin::shutdown()
     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
 }
 
+
 void SSDPPlugin::getStatus(Print &output)
 {
+    __LDBG_printf("enabled=%u running=%", System::Flags::getConfig().is_ssdp_enabled, _running);
     if (System::Flags::getConfig().is_ssdp_enabled && _running) {
         WebTemplate::printWebInterfaceUrl(output);
         output.print(FSPGM(description_xml, "description.xml"));

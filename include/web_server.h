@@ -8,7 +8,7 @@
 #include <global.h>
 
 #ifndef DEBUG_WEB_SERVER
-#    define DEBUG_WEB_SERVER (1 || defined(DEBUG_ALL))
+#    define DEBUG_WEB_SERVER (0 || defined(DEBUG_ALL))
 #endif
 
 // enable logging HTTP requests to Serial

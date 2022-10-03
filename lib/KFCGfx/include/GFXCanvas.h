@@ -266,10 +266,12 @@ namespace GFXCanvas {
         }
         ~BitmapHeaderType();
 
-        void update(BitmapHeaderType &header, int32_t width, int32_t height, uint8_t bits, uint16_t numPaletteColors)
+
+        BitmapHeaderType &operator=(BitmapHeaderType &&src)
         {
-            header.~BitmapHeaderType();
-            new(static_cast<void *>(&header)) BitmapHeaderType(width, height, bits,numPaletteColors);
+            new(static_cast<void *>(this)) BitmapHeaderType(src._header.bih.biWidth, src._header.bih.biHeight, src._header.bih.biBitCount, src._header.bih.biClrUsed);
+            std::swap(_palette, src._palette);
+            return *this;
         }
 
         // get single byte from header or palette
@@ -297,6 +299,7 @@ namespace GFXCanvas {
     {
         if (_palette) {
             delete[] _palette;
+            _palette = nullptr;
         }
     }
 
@@ -329,162 +332,6 @@ namespace GFXCanvas {
     inline BitmapFileHeaderType &BitmapHeaderType::getBitmapFileHeader()
     {
         return _fileHeader;
-    }
-
-
-    // --------------------------------------------------------------------
-    // ColorPalette for canvas objects with out a palette
-    // --------------------------------------------------------------------
-
-    class ColorPalette {
-    public:
-        static constexpr size_t kColorsMax = 65536;
-
-    public:
-        ColorPalette() : _palette(nullptr), _numColors(0) {}
-        virtual ~ColorPalette() {}
-
-        virtual size_t length() const;
-        virtual size_t size() const;
-
-        virtual void fillPaletteColors(BitmapHeaderType &_fileHeader) {}
-
-    protected:
-        BitmapPaletteColorType *_palette;
-        uint16_t _numColors;
-    };
-
-    inline size_t ColorPalette::size() const
-    {
-        return kColorsMax;
-    }
-
-    inline size_t ColorPalette::length() const
-    {
-        return 0;
-    }
-
-    // --------------------------------------------------------------------
-    // ColorPalette for canvas objects with 16 colors
-    // --------------------------------------------------------------------
-
-    class ColorPalette16 : public ColorPalette
-    {
-    public:
-        static constexpr size_t kColorsMax = 16;
-        static constexpr ColorType kInvalid = ~0;
-        static constexpr int kInvalidIndexResult = -1;
-
-    public:
-        ColorPalette16();
-
-        ColorType &at(int index);
-        ColorType at(ColorType index) const;
-        ColorType &operator[](int index);
-        ColorType operator[](ColorType index) const;
-
-        virtual size_t length() const override;
-        virtual size_t size() const override;
-
-        void clear();
-        ColorType *begin();
-        ColorType *end();
-        const ColorType *begin() const;
-        const ColorType *end() const;
-
-        // returns index or -1
-        int getColorIndex(ColorType color) const;
-        // add color if it does not exist and return index
-        // returns index of existing color
-        // returns -1 if there is no space to add more
-        int addColor(ColorType color);
-
-        virtual void fillPaletteColors(BitmapHeaderType &_fileHeader) override;
-
-    private:
-        ColorType _palette[kColorsMax];
-        size_t _count;
-    };
-
-    inline ColorPalette16::ColorPalette16() :
-        _palette{},
-        _count(0)
-    {
-        __LDBG_printf("new");
-    }
-
-    inline ColorType &ColorPalette16::at(int index)
-    {
-        __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assertp((unsigned)index < (unsigned)_count, "index=%d count=%d", index, _count), return _palette[0]);
-        index = (unsigned)index % _count;
-        __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
-        return _palette[index];
-    }
-
-    inline ColorType ColorPalette16::at(ColorType index) const
-    {
-        __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assertp((unsigned)index < (unsigned)_count, "index=%d count=%d", index, _count), return _palette[0]);
-        if (_count == 0) {
-            return 0;
-        }
-        index = (unsigned)index % _count;
-        __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert((unsigned)index < (unsigned)_count), return _palette[0]);
-        return _palette[index];
-    }
-
-    inline ColorType &ColorPalette16::operator[](int index)
-    {
-        return at(index);
-    }
-
-    inline ColorType ColorPalette16::operator[](ColorType index) const
-    {
-        return at(index);
-    }
-
-    inline void ColorPalette16::clear()
-    {
-        // set _count to 0 as well
-        _count = 0;
-        std::fill_n(begin(), size(), 0);
-    }
-
-    inline ColorType *ColorPalette16::begin()
-    {
-        return &_palette[0];
-    }
-
-    inline ColorType *ColorPalette16::end()
-    {
-        return &_palette[_count];
-    }
-
-    inline const ColorType *ColorPalette16::begin() const
-    {
-        return &_palette[0];
-    }
-
-    inline const ColorType *ColorPalette16::end() const
-    {
-        return &_palette[_count];
-    }
-
-    inline size_t ColorPalette16::length() const
-    {
-        return _count;
-    }
-
-    inline size_t ColorPalette16::size() const
-    {
-        return kColorsMax;
-    }
-
-    inline void ColorPalette16::fillPaletteColors(BitmapHeaderType &_fileHeader)
-    {
-        auto dst = _fileHeader.getPalleteColorDataPtr();
-        for(const auto color: *this) {
-            *dst++ = BitmapPaletteColorType(color);
-        }
     }
 
 }

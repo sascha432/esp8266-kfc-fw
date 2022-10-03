@@ -49,6 +49,7 @@
 namespace GFXCanvas {
 
     using ColorType = uint16_t;
+    using ColorIndexType = int8_t;
     using ColorPaletteType = ColorType;
     using RGBColorType = uint32_t;
     using ByteBufferSizeType = int16_t;

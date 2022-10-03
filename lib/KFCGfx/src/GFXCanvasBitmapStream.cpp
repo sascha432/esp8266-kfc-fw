@@ -109,35 +109,10 @@ int GFXCanvasBitmapStream::read()
 
 void GFXCanvasBitmapStream::_createHeader()
 {
-    uint8_t bits = 16; // RGB555
-    uint16_t numPaletteColors = 0;
+    _header = BitmapHeaderType(_width, _height, _canvas._palette->bits(), _canvas._palette->size());
+    _available = _header.getBfSize();
 
-    #if GFXCANVAS_SUPPORT_4BIT_BMP
-        const auto *palette = _canvas.getPalette();
-        __LDBG_printf("palette=%p size=%d", palette, palette ? palette->length() : -1);
-        if (palette) {
-            if (palette->size() == ColorPalette16::kColorsMax) {
-                bits = 4;
-                numPaletteColors = palette->length();
-                _windowsPalette = GFXCanvas::WindowsColorPalette(*palette);
-            }
-            else {
-                __DBG_panic("only 4bit palettes are supported");
-            }
-        }
-    #endif
-
-    _header.update(_header, _width, _height, bits, numPaletteColors);
-
-    // _available = (((_width * _header.h.bih.biBitCount) + 31) / 32) * sizeof(uint32_t); // align to 32bit
-    // _available *= _height; // multiply with height
-    // _available += sizeof(_header.h); // add header size
-    // _available += bitmapColorPaletteSizeInBytes();
-
-    // __LDBG_printf("bits=%p available=%u p_size=%u", _header.h.bih.biBitCount, _available, bitmapColorPaletteSizeInBytes());
-
-    // _header.bfh.bfSize = _available;
-
+    __LDBG_printf("bits=%p available=%u size=%u", _header.getBitmapFileHeader().h.bih.biBitCount, _available, _header.getBfSize());
 }
 
 #pragma GCC pop_options

@@ -19,6 +19,7 @@ RLE compressed 16bit canvas
 #include "GFXCanvasStats.h"
 #include "GFXCanvasLines.h"
 #include "GFXCanvasBitmapStream.h"
+#include "GFXPalette.h"
 
 #if DEBUG_GFXCANVAS
 #    include "debug_helper_enable.h"
@@ -28,11 +29,6 @@ RLE compressed 16bit canvas
 
 using namespace GFXCanvas;
 
-namespace GFXCanvas {
-    class ColorPalette;
-    class ColorPalette16;
-}
-
 class GFXCanvasBitmapStream;
 
 class GFXCanvasCompressed : public AdafruitGFXExtension {
@@ -41,8 +37,8 @@ public:
 
     static constexpr size_t kCachedLinesMax = GFXCANVAS_MAX_CACHED_LINES;
 
-    GFXCanvasCompressed(uWidthType width, uHeightType height);
-    GFXCanvasCompressed(uWidthType width, const Lines &lines);
+    GFXCanvasCompressed(uWidthType width, uHeightType height, ColorPalette *palete = nullptr);
+    GFXCanvasCompressed(uWidthType width, const Lines &lines, ColorPalette *palete = nullptr);
     virtual ~GFXCanvasCompressed();
 
     virtual GFXCanvasCompressed *clone();
@@ -135,12 +131,8 @@ protected:
     virtual void _RLEdecode(ByteBuffer &buffer, ColorType *output);
     virtual void _RLEencode(ColorType *data, Buffer &buffer);
 
-public:
-    // colors are translated only inside the decode/encode methods
-    virtual ColorType getPaletteColor(ColorType color) const;
-    virtual const ColorPalette *getPalette() const;
-
 protected:
+    ColorPalette *_palette;
     Lines _lines;
 
 private:
@@ -185,17 +177,6 @@ inline void GFXCanvasCompressed::clipY(sXType &startY, sXType &endY)
 inline void GFXCanvasCompressed::drawInto(DrawLineCallback_t callback)
 {
     drawInto(0, 0, _width, _height, callback);
-}
-
-inline ColorType GFXCanvasCompressed::getPaletteColor(ColorType color) const
-{
-    return color;
-}
-
-inline const ColorPalette *GFXCanvasCompressed::getPalette() const
-{
-    __LDBG_printf("return nullptr");
-    return nullptr;
 }
 
 #if DEBUG_GFXCANVAS

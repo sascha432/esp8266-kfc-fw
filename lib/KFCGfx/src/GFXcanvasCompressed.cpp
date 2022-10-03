@@ -26,19 +26,28 @@ extern "C" {
 
 using namespace GFXCanvas;
 
-GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height) :
+GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height, ColorPalette *palette) :
     AdafruitGFXExtension(width, height),
+    _palette(palette ? palette : new ColorPalette16()),
     _lines(height),
     _cache(width, height, kCachedLinesMax)
 {
 }
 
-GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, const Lines &lines) : AdafruitGFXExtension(width, lines.height()), _lines(lines), _cache(width, _lines.height(), 0)
+GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, const Lines &lines, ColorPalette *palette) :
+    AdafruitGFXExtension(width, lines.height()),
+    _palette(palette ? palette : new ColorPalette16()),
+    _lines(lines),
+    _cache(width,
+    _lines.height(), 0)
 {
 }
 
 GFXCanvasCompressed::~GFXCanvasCompressed()
 {
+    if (_palette) {
+        delete _palette;
+    }
 }
 
 GFXCanvasCompressed *GFXCanvasCompressed::clone()

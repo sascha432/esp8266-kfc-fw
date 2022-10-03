@@ -77,14 +77,17 @@ void AlarmPlugin::onMessage(const char *topic, const char *payload, size_t len)
 
         __DBG_printf("alarm color %s", payload);
 
-    } else {
+    }
+    else {
 
         if (_callback) {
             _alarmState = MQTT::Client::toBool(payload);
             if (_alarmState) {
+                setBuzzer(true);
                 _callback(ModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
             }
             else {
+                setBuzzer(false);
                 _callback(ModeType::BOTH, Alarm::STOP_ALARM);
             }
             _publishState();
@@ -103,6 +106,9 @@ void AlarmPlugin::getStatus(Print &output)
     if (_alarmState) {
         output.print(F(HTML_S(br) "Alarm active"));
     }
+    #if IOT_ALARM_PLUGIN_HAS_BUZZER
+        output.printf_P(PSTR(HTML_S(br) "Buzzer on PIN %u"), IOT_ALARM_BUZZER_PIN);
+    #endif
 }
 
 
@@ -135,7 +141,7 @@ void AlarmPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addObjectGetterSetter(F_VAR(ah, i), alarm.time, alarm.time.get_bits_hour, alarm.time.set_bits_hour);
             form.addObjectGetterSetter(F_VAR(am, i), alarm.time, alarm.time.get_bits_minute, alarm.time.set_bits_minute);
             #if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT
-                form.addObjectGetterSetter(F_VAR(mt, i), alarm.mode, alarm.get_int_mode, alarm.set_int_mode);
+                form.addObjectGetterSetter(F_VAR(mt, i), FormGetterSetter(alarm, mode)); //alarm.mode, alarm.get_int_mode, alarm.set_int_mode);
             #else
                 alarm.mode = SingleAlarmType::cast_int_mode(ModeType::BOTH);
             #endif
@@ -229,6 +235,7 @@ void AlarmPlugin::_installAlarms(Event::CallbackTimerPtr timer)
 void AlarmPlugin::_removeAlarms()
 {
     __LDBG_println();
+    setBuzzer(false);
     _nextAlarm = 0;
     if (_timer) {
         _timer->disarm();
@@ -255,6 +262,7 @@ void AlarmPlugin::_timerCallback(Event::CallbackTimerPtr timer)
         auto now = time(nullptr) + 30;
         for(auto &alarm: _alarms) {
             if (alarm._time && static_cast<TimeType>(now) >= alarm._time) {
+
                 auto ts = alarm._alarm.time.timestamp;
                 PrintString message = F("Alarm triggered");
                 if (ts) {
@@ -269,6 +277,9 @@ void AlarmPlugin::_timerCallback(Event::CallbackTimerPtr timer)
                 Logger_notice(message);
                 if (_callback) {
                     triggered = true;
+                    if (alarm._alarm.isBuzzerEnabled()) {
+                        setBuzzer(true);
+                    }
                     _callback(SingleAlarmType::cast_enum_mode(alarm._alarm.mode), alarm._alarm.max_duration);
                 }
 
@@ -311,3 +322,59 @@ AlarmPlugin &AlarmPlugin::getInstance()
  {
      return plugin;
  }
+
+#if IOT_ALARM_PLUGIN_HAS_BUZZER
+
+
+void AlarmPlugin::setBuzzer(bool enabled)
+{
+    if (enabled) {
+        if(_buzzerTimer) { // already running
+            return;
+        }
+
+        #define TIMER_INTERVAL 250
+        #define FROM_SECONDS(s) static_cast<uint32_t>(s * (1000 / TIMER_INTERVAL))
+
+        uint32_t counter = 0;
+        _Timer(_buzzerTimer).add(Event::milliseconds(TIMER_INTERVAL), true, [this, counter](Event::CallbackTimerPtr) mutable {
+            auto cycle = counter % FROM_SECONDS(5);
+            switch(cycle) {
+                case FROM_SECONDS(0):
+                case FROM_SECONDS(1.0):
+                case FROM_SECONDS(2.0):
+                    turnBuzzerOn();
+                    break;
+                case FROM_SECONDS(0.5):
+                case FROM_SECONDS(1.5):
+                case FROM_SECONDS(2.5):
+                    turnBuzzerOff();
+                    break;
+                default:
+                    if (cycle >= FROM_SECONDS(5)) {
+                        counter = 0;
+                        return;
+                    }
+                    break;
+            }
+            counter++;
+        });
+    }
+    else {
+        _Timer(_buzzerTimer).remove();
+        turnBuzzerOff();
+    }
+}
+
+void AlarmPlugin::turnBuzzerOn()
+{
+    digitalWrite(IOT_ALARM_BUZZER_PIN, HIGH);
+}
+
+void AlarmPlugin::turnBuzzerOff()
+{
+    digitalWrite(IOT_ALARM_BUZZER_PIN, LOW);
+}
+
+#endif
+

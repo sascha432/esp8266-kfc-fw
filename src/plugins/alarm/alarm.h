@@ -34,6 +34,10 @@
 #   define IOT_ALARM_PLUGIN_HAS_BUZZER 0
 #endif
 
+#ifndef IOT_ALARM_BUZZER_PIN
+#    define IOT_ALARM_BUZZER_PIN -1
+#endif
+
 #ifndef IOT_ALARM_PLUGIN_HAS_SILENT
 #   define IOT_ALARM_PLUGIN_HAS_SILENT 0
 #endif
@@ -76,14 +80,26 @@ public:
         BOTH,
     };
 
+    #if IOT_ALARM_PLUGIN_HAS_BUZZER
+        void setBuzzer(bool enabled);
+        void turnBuzzerOn();
+        void turnBuzzerOff();
+
+        Event::Timer _buzzerTimer;
+    #else
+        void setBuzzer(bool enabled) {}
+        void turnBuzzerOn() {}
+        void turnBuzzerOff() {}
+    #endif
+
+    static AlarmPlugin &getInstance();
+
 private:
     void _installAlarms(Event::CallbackTimerPtr timer);
     void _removeAlarms();
     void _ntpCallback(time_t now);
     void _timerCallback(Event::CallbackTimerPtr timer);
     void _publishState();
-
-    static AlarmPlugin &getInstance();
 
     inline static String _formatTopic(const __FlashStringHelper *topic) {
         return MQTT::Client::formatTopic(String(FSPGM(alarm)), topic);
@@ -115,6 +131,10 @@ inline void AlarmPlugin::setup(SetupModeType mode, const PluginComponents::Depen
         addTimeUpdatedCallback(ntpCallback);
     #endif
     MQTT::Client::registerComponent(this);
+    #if IOT_ALARM_PLUGIN_HAS_BUZZER
+        digitalWrite(IOT_ALARM_BUZZER_PIN, LOW);
+        pinMode(IOT_ALARM_BUZZER_PIN, OUTPUT);
+    #endif
 }
 
 inline void AlarmPlugin::onConnect()

@@ -635,74 +635,73 @@ String KFCFWConfiguration::defaultDeviceName()
 
 void KFCFWConfiguration::restoreFactorySettings()
 {
-    __LDBG_println();
     PrintString str;
 
-    erase();
-    clear();
-    SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
+    __DBG_CALL(erase());
+    __DBG_CALL(clear());
+    __DBG_CALL((SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC));
 
-    auto deviceName = defaultDeviceName();
-    System::Flags::defaults();
-    System::Firmware::defaults();
-    System::Device::defaults(true);
-    System::Device::setName(deviceName);
-    // System::Device::setTitle(FSPGM(KFC_Firmware, "KFC Firmware"));
-    System::Device::setPassword(FSPGM(defaultPassword, "12345678"));
-    System::WebServer::defaults();
-    Network::WiFi::setSSID0(deviceName);
-    Network::WiFi::setPassword0(FSPGM(defaultPassword));
-    Network::WiFi::setSoftApSSID(deviceName);
-    Network::WiFi::setSoftApPassword(FSPGM(defaultPassword));
-    Network::Settings::defaults();
-    Network::SoftAP::defaults();
+    __DBG_CALL(auto deviceName = defaultDeviceName()));
+    __DBG_CALL(System::Flags::defaults());
+    __DBG_CALL(System::Firmware::defaults());
+    __DBG_CALL(System::Device::defaults(true));
+    __DBG_CALL(System::Device::setName(deviceName));
+    // __DBG_CALL(System::Device::setTitle(FSPGM(KFC_Firmware, "KFC Firmware")));
+    __DBG_CALL(System::Device::setPassword(FSPGM(defaultPassword, "12345678")));
+    __DBG_CALL(System::WebServer::defaults());
+    __DBG_CALL(Network::WiFi::setSSID0(deviceName));
+    __DBG_CALL(Network::WiFi::setPassword0(FSPGM(defaultPassword)));
+    __DBG_CALL(Network::WiFi::setSoftApSSID(deviceName));
+    __DBG_CALL(Network::WiFi::setSoftApPassword(FSPGM(defaultPassword)));
+    __DBG_CALL(Network::Settings::defaults());
+    __DBG_CALL(Network::SoftAP::defaults());
 
     using Plugins = KFCConfigurationClasses::PluginsType;
 
     #if MQTT_SUPPORT
-        Plugins::MqttClient::defaults();
+        __DBG_CALL(Plugins::MqttClient::defaults());
     #endif
     #if IOT_REMOTE_CONTROL
-        Plugins::RemoteControl::defaults();
+        __DBG_CALL(Plugins::RemoteControl::defaults());
     #endif
     #if SERIAL2TCP_SUPPORT
-        Plugins::Serial2TCP::defaults();
+        __DBG_CALL(Plugins::Serial2TCP::defaults());
     #endif
     #if SYSLOG_SUPPORT
-        Plugins::SyslogClient::defaults();
+        __DBG_CALL(Plugins::SyslogClient::defaults());
     #endif
     #if NTP_CLIENT
-        Plugins::NTPClient::defaults();
+        __DBG_CALL(Plugins::NTPClient::defaults());
     #endif
     #if IOT_ALARM_PLUGIN_ENABLED
-        Plugins::Alarm::defaults();
+        __DBG_CALL(Plugins::Alarm::defaults());
     #endif
     #if IOT_WEATHER_STATION
-        Plugins::WeatherStation::defaults();
+        __DBG_CALL(Plugins::WeatherStation::defaults());
     #endif
     #if IOT_SENSOR
-        Plugins::Sensor::defaults();
+        __DBG_CALL(Plugins::Sensor::defaults());
     #endif
     #if IOT_BLINDS_CTRL
-        Plugins::Blinds::defaults();
+        __DBG_CALL(Plugins::Blinds::defaults());
     #endif
     #if PING_MONITOR_SUPPORT
-        Plugins::Ping::defaults();
+        __DBG_CALL(Plugins::Ping::defaults());
     #endif
     #if IOT_DIMMER_MODULE || IOT_ATOMIC_SUN_V2
-        Plugins::Dimmer::defaults();
+        __DBG_CALL(Plugins::Dimmer::defaults());
     #endif
     #if IOT_CLOCK
-        Plugins::Clock::defaults();
+        __DBG_CALL(Plugins::Clock::defaults());
     #endif
 
     #if CUSTOM_CONFIG_PRESET
-        customSettings();
+        __DBG_CALL(customSettings());
     #endif
     Logger_warning(F("Factory settings restored"));
 
     #if SECURITY_LOGIN_ATTEMPTS
-        KFCFS.remove(FSPGM(login_failure_file));
+        __DBG_CALL(KFCFS.remove(FSPGM(login_failure_file)));
     #endif
 }
 

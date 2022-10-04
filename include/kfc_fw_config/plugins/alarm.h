@@ -79,6 +79,17 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT16_BITFIELD(max_duration, 16); // limit in seconds, 0 = unlimited
                 CREATE_ENUM_BITFIELD(mode, ModeType);
                 CREATE_UINT8_BITFIELD(is_enabled, 1);
+
+                bool isBuzzerEnabled() const {
+                    switch(get_enum_mode(*this)) {
+                        case ModeType::BOTH:
+                        case ModeType::BUZZER:
+                            return true;
+                        default:
+                            break;
+                    }
+                    return true;
+                }
             };
 
             struct __attribute__packed__ AlarmConfigType

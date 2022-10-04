@@ -637,6 +637,10 @@ void KFCFWConfiguration::restoreFactorySettings()
 {
     PrintString str;
 
+    #undef __DBG_CALL
+    #define __DBG_CALL(...) \
+        __VA_ARGS__;
+
     __DBG_CALL(erase());
     __DBG_CALL(clear());
     __DBG_CALL((SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC));

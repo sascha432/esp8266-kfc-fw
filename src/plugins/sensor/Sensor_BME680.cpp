@@ -169,13 +169,14 @@ void Sensor_BME680::publishState()
     {
         auto endTime = _bme680.beginReading();
         if (!endTime) {
+            __DBG_printf("begin reading failed");
             return _sensor;
+
         }
         if (!_bme680.endReading()) {
+            __DBG_printf("end reading failed");
             return _sensor;
         }
-
-        auto lastSuccesfulAccess = _sensor.getTimeSinceLastSuccess();
 
         _sensor = SensorDataType(
             _bme680.temperature + _cfg.temp_offset,
@@ -183,9 +184,7 @@ void Sensor_BME680::publishState()
             (_bme680.pressure / 100.0) + _cfg.pressure_offset,
             _bme680.gas_resistance / 1000.0
         );
-        _sensor.setLastSuccess();
 
-        // __DBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa %.6f kOhm  delay=%u", _address, _sensor.temperature, SPGM(UTF8_degreeC), _sensor.humidity, _sensor.pressure, _sensor.gas, lastSuccesfulAccess);
 
         return _sensor;
     }

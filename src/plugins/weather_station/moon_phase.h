@@ -57,10 +57,10 @@ struct MoonPhaseType
         // correct pPhase using iPhase
         auto cpPh = pPhase;
         if (iPhase > 0.75) {
-            // cpPh += (0.25 / 8.0); //TODO check what to do here
-        }
-        else if (iPhase > 0.5) {
             cpPh -= (0.25 / 8.0);
+        }
+        else if (iPhase >= 0.5) {
+            cpPh -= (0.5 / 8.0);
         }
         else if (iPhase < 0.125) {
             cpPh += (0.5 / 8.0);

@@ -15,29 +15,29 @@
 #include "../src/plugins/sensor/sensor.h"
 
 #ifndef STK500V1_RESET_PIN
-#error STK500V1_RESET_PIN not defined
+#    error STK500V1_RESET_PIN not defined
 #endif
 
 #if IOT_SENSOR && (IOT_SENSOR_HAVE_HLW8012 || IOT_SENSOR_HAVE_HLW8032)
-#include "../src/plugins/sensor/sensor.h"
-#include "../src/plugins/sensor/Sensor_HLW80xx.h"
+#    include "../src/plugins/sensor/Sensor_HLW80xx.h"
+#    include "../src/plugins/sensor/sensor.h"
 #endif
 
 #if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2
-#error requires IOT_ALARM_PLUGIN_ENABLED=1 or IOT_ATOMIC_SUN_V2=1
+#    error requires IOT_ALARM_PLUGIN_ENABLED=1 or IOT_ATOMIC_SUN_V2=1
 #endif
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
-#if !PIN_MONITOR
-#error PIN_MONITOR=1 required
-#endif
-#include <PinMonitor.h>
+#    if !PIN_MONITOR
+#        error PIN_MONITOR=1 required
+#    endif
+#    include <PinMonitor.h>
 #endif
 
 #if DEBUG_IOT_DIMMER_MODULE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;

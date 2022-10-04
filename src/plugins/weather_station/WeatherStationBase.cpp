@@ -75,6 +75,7 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
         #endif
     }
     else if (event == WiFiCallbacks::EventType::CONNECTED) {
+        publishNow();
         #if IOT_WEATHER_STATION_WS2812_NUM
             _rainbowStatusLED();
         #endif

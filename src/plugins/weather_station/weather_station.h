@@ -10,12 +10,16 @@
 #include <StreamString.h>
 #include "WebUIComponent.h"
 #include "WeatherStationBase.h"
-#include "plugins.h"
+#include "../src/plugins/plugins.h"
+#include "../src/plugins/mqtt/mqtt_client.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
+#include <../src/plugins/mqtt/mqtt_client.h>
+#include "../src/plugins/ntp/ntp_plugin.h"
 #if IOT_ALARM_PLUGIN_ENABLED
-#include "../src/plugins/alarm/alarm.h"
+#    include "../src/plugins/alarm/alarm.h"
 #endif
 
-class WeatherStationPlugin : public PluginComponent, public WeatherStationBase {
+class WeatherStationPlugin : public PluginComponent, public WeatherStationBase, public MQTTComponent {
 // PluginComponent
 public:
     WeatherStationPlugin();
@@ -42,12 +46,40 @@ public:
         #endif
     }
 
+// WebUI and MQTTComponent helpers
+public:
+    void publishDelayed();
+    virtual void publishNow();
+
+private:
+    Event::Timer _publishTimer;
+    uint32_t _publishLastTime{9};
+
 // WebUI
 public:
     virtual void createWebUI(WebUINS::Root &webUI) override;
     virtual void getValues(WebUINS::Events &array) override;
     virtual void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState) override;
+    void _publishWebUI();
 
+// MQTTComponent
+public:
+    enum class TopicType : uint8_t {
+        COMMAND_SET,
+        COMMAND_STATE,
+    };
+
+    virtual MQTT::AutoDiscovery::EntityPtr getAutoDiscovery(MQTT::FormatType format, uint8_t num);
+    inline uint8_t getAutoDiscoveryCount() const;
+    virtual void onConnect() override;
+    virtual void onMessage(const char *topic, const char *payload, size_t len);
+
+private:
+    String _createTopics(TopicType type, bool full = true) const;
+    void onJsonMessage(const MQTT::Json::Reader &json);
+    void _publishMQTT();
+
+// AT commands
 public:
     #if AT_MODE_SUPPORTED
         #if AT_MODE_HELP_SUPPORTED
@@ -92,6 +124,7 @@ private:
     void _setBacklightLevel(uint16_t level);
     // sets the backlight level by slowly/decreasing increased it
     void _fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step = 8);
+    void _updateBacklight(uint16_t toLevel, uint8_t step = 8);
 
 private:
     asyncHTTPrequest *_httpClient;
@@ -126,9 +159,15 @@ inline WeatherStationPlugin &WeatherStationPlugin::_getInstance()
 
 inline void WeatherStationPlugin::_setBacklightLevel(uint16_t level)
 {
+    __DBG_printf("bl=%u", level);
     #if ESP32
         analogWrite(TFT_PIN_LED, level, PWMRANGE);
     #else
         analogWrite(TFT_PIN_LED, level);
     #endif
+}
+
+inline uint8_t WeatherStationPlugin::getAutoDiscoveryCount() const
+{
+    return 1;
 }

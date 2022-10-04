@@ -20,6 +20,10 @@
 #    define IOT_WEATHER_STATION_HAS_TOUCHPAD 1
 #endif
 
+#ifndef IOT_WEATHER_STATION_TOUCHPAD_DEBUG
+#    define IOT_WEATHER_STATION_TOUCHPAD_DEBUG 1
+#endif
+
 // IRQ pin
 #ifndef IOT_WEATHER_STATION_MPR121_PIN
 #    define IOT_WEATHER_STATION_MPR121_PIN 12
@@ -99,6 +103,7 @@ public:
 
     static void loop();
     static void wifiCallback(WiFiCallbacks::EventType event, void *payload);
+    virtual void publishNow() = 0;
     // static void pollDataTimer(Event::CallbackTimerPtr timer);
 
     static WeatherStationBase &_getInstance();

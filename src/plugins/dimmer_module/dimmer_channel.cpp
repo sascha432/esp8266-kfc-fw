@@ -51,7 +51,7 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
                 }
                 else {
                     #if IOT_DIMMER_MODULE_CHANNELS > 1
-                        fullname = PrintString(F("Dimmer Channel %u"), _channel + 1);
+                        fullname = PrintString(F("Dimmer Channel %u"), _channel + 1);f_cre
                     #else
                         fullname = F("Dimmer");
                     #endif

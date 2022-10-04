@@ -77,11 +77,14 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             }
             else
             #endif
-            if (args.equalsIgnoreCase(0, F("touchpad"))) {
-                _touchpadDebug = state;
-                args.printf_P(PSTR("touchpad debug=%u"), state);
-            }
-            else if (args.equalsIgnoreCase(0, F("timeformat24h"))) {
+            #if IOT_WEATHER_STATION_TOUCHPAD_DEBUG
+                if (args.equalsIgnoreCase(0, F("touchpad"))) {
+                    _touchpadDebug = state;
+                    args.printf_P(PSTR("touchpad debug=%u"), state);
+                }
+                else
+            #endif
+            if (args.equalsIgnoreCase(0, F("timeformat24h"))) {
                 _config.time_format_24h = state;
                 redraw();
                 args.printf_P(PSTR("time format 24h=%u"), state);

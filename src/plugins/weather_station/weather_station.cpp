@@ -15,12 +15,12 @@
 #include "web_server.h"
 #include "async_web_response.h"
 #include "blink_led_timer.h"
-#include "./plugins/sensor/sensor.h"
+#include "../src/plugins/sensor/sensor.h"
 #if IOT_SENSOR_HAVE_BME280
-#    include "./plugins/sensor/Sensor_BME280.h"
+#    include "../src/plugins/sensor/Sensor_BME280.h"
 #endif
 #if IOT_SENSOR_HAVE_BME680
-#    include "./plugins/sensor/Sensor_BME680.h"
+#    include "../src/plugins/sensor/Sensor_BME680.h"
 #endif
 
 #if IOT_WEATHER_STATION_WS2812_NUM
@@ -77,6 +77,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 WeatherStationPlugin::WeatherStationPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WeatherStationPlugin)),
+    MQTTComponent(ComponentType::LIGHT),
     // _pollTimer(0),
     _httpClient(nullptr)
     #if IOT_WEATHER_STATION_WS2812_NUM
@@ -446,6 +447,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     }
 
     _installWebhooks();
+    MQTT::Client::registerComponent(this);
 }
 
 void WeatherStationPlugin::reconfigure(const String &source)
@@ -455,6 +457,7 @@ void WeatherStationPlugin::reconfigure(const String &source)
         _installWebhooks();
     }
     else {
+        MQTT::Client::unregisterComponent(this);
         auto oldLevel = _backlightLevel;
         _readConfig();
         #if IOT_WEATHER_STATION_HAS_TOUCHPAD
@@ -462,11 +465,14 @@ void WeatherStationPlugin::reconfigure(const String &source)
         #endif
         _fadeBacklight(oldLevel, _backlightLevel);
         _setScreen(_getScreen(_currentScreen));
+        MQTT::Client::registerComponent(this);
     }
 }
 
 void WeatherStationPlugin::shutdown()
 {
+    MQTT::Client::unregisterComponent(this);
+
     _setBacklightLevel(PWMRANGE);
     _setScreen(ScreenType::TEXT);
     LoopFunctions::remove(loop);
@@ -522,6 +528,25 @@ void WeatherStationPlugin::_initTFT()
     _tft.setRotation(0);
 }
 
+String WeatherStationPlugin::_createTopics(TopicType type, bool full) const
+{
+    switch(type) {
+        case TopicType::COMMAND_SET:
+            if (!full) {
+                return FSPGM(_set);
+            }
+            return MQTT::Client::formatTopic(FSPGM(_set));
+        case TopicType::COMMAND_STATE:
+            if (!full) {
+                return FSPGM(_state);
+            }
+            return MQTT::Client::formatTopic(FSPGM(_state));
+        default:
+            break;
+    }
+    return String();
+}
+
 void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F("Weather Station"), false));
@@ -537,9 +562,104 @@ void WeatherStationPlugin::setValue(const String &id, const String &value, bool 
 {
     __LDBG_printf("id=%s value=%s has=%u", __S(id), __S(value), hasValue);
     if (hasValue && id.equals(F("bl_br"))) {
-        int level =  value.toInt();
-        _fadeBacklight(_backlightLevel, level);
-        _backlightLevel = level;
+        _updateBacklight(value.toInt());
+        publishDelayed();
+    }
+}
+
+void WeatherStationPlugin::_publishWebUI()
+{
+    if (WebUISocket::hasAuthenticatedClients()) {
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
+            WebUINS::Values(F("bl_br"), _backlightLevel, true)
+        )));
+    }
+}
+
+MQTT::AutoDiscovery::EntityPtr WeatherStationPlugin::getAutoDiscovery(FormatType format, uint8_t num)
+{
+    auto discovery = new AutoDiscovery::Entity();
+    auto baseTopic = MQTT::Client::getBaseTopicPrefix();
+    switch(num) {
+        case 0:
+            if (discovery->createJsonSchema(this, F("background_level"), format)) {
+                discovery->addStateTopic(_createTopics(TopicType::COMMAND_STATE));
+                discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
+                discovery->addBrightnessScale(PWMRANGE);
+                discovery->addParameter(F("brightness"), true);
+                discovery->addName(F("Background Level"));
+                discovery->addObjectId(baseTopic + F("background_level"));
+            }
+            break;
+    }
+    return discovery;
+}
+
+void WeatherStationPlugin::onConnect()
+{
+    subscribe(_createTopics(TopicType::COMMAND_SET));
+    publishNow();
+}
+
+void WeatherStationPlugin::onMessage(const char *topic, const char *payload, size_t len)
+{
+    __LDBG_printf("topic=%s payload=%s", topic, payload);
+    auto stream = HeapStream(payload, len);
+    auto reader = MQTT::Json::Reader(&stream);
+    if (reader.parse()) {
+        onJsonMessage(reader);
+    }
+}
+
+void WeatherStationPlugin::onJsonMessage(const MQTT::Json::Reader &json)
+{
+    if (json.state != -1) {
+        if (json.state && !_backlightLevel) {
+            _updateBacklight(_config.backlight_level);
+        }
+        else if (!json.state && _backlightLevel) {
+            _updateBacklight(0);
+        }
+    }
+    if (json.brightness != -1) {
+        if (json.brightness == 0 && _backlightLevel) {
+            _updateBacklight(0);
+        }
+        else if (json.brightness) {
+            _updateBacklight(json.brightness);
+        }
+    }
+}
+
+void WeatherStationPlugin::_publishMQTT()
+{
+    if (isConnected()) {
+        using namespace MQTT::Json;
+        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_backlightLevel != 0), Brightness(_backlightLevel), Transition(5)).toString());
+    }
+}
+
+void WeatherStationPlugin::publishNow()
+{
+    _publishMQTT();
+    _publishWebUI();
+    _publishLastTime = millis();
+}
+
+void WeatherStationPlugin::publishDelayed()
+{
+    if (_publishTimer) {
+        return;
+    }
+    uint32_t diff = millis() - _publishLastTime;
+    if (diff < 250 - 10) {
+        __LDBG_printf("starting timer %u", 250 - diff);
+        _Timer(_publishTimer).add(Event::milliseconds(250 - diff), false, [this](Event::CallbackTimerPtr) {
+            publishNow();
+        });
+    }
+    else {
+        publishNow();
     }
 }
 
@@ -593,6 +713,12 @@ void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, 
         _setBacklightLevel(fromLevel);
 
     }, Event::PriorityType::TIMER);
+}
+
+void WeatherStationPlugin::_updateBacklight(uint16_t toLevel, uint8_t step)
+{
+    _fadeBacklight(_backlightLevel, toLevel, step);
+    _backlightLevel = toLevel;
 }
 
 void WeatherStationPlugin::_setRGBLeds(uint32_t color)
@@ -712,7 +838,7 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
                 #if IOT_WEATHER_STATION_WS2812_NUM
                     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
                 #endif
-                _alarmTimer.remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler since it is called with a nullptr
+                _Timer(_alarmTimer).remove(); // make sure the scheduler is not calling a dangling pointer.. not using the TimerPtr in case it is not called from the scheduler since it is called with a nullptr
                 _resetAlarmFunc = nullptr;
             };
         }
@@ -736,6 +862,8 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
     bool WeatherStationPlugin::_resetAlarm()
     {
         __LDBG_printf("reset=%u state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
+
+        AlarmPlugin::getInstance().setBuzzer(false);
         if (_resetAlarmFunc) {
             _resetAlarmFunc(*_alarmTimer);
             AlarmPlugin::resetAlarm();

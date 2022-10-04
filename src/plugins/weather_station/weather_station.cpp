@@ -528,18 +528,12 @@ void WeatherStationPlugin::_initTFT()
     _tft.setRotation(0);
 }
 
-String WeatherStationPlugin::_createTopics(TopicType type, bool full) const
+String WeatherStationPlugin::_createTopics(TopicType type) const
 {
     switch(type) {
         case TopicType::COMMAND_SET:
-            if (!full) {
-                return FSPGM(_set);
-            }
             return MQTT::Client::formatTopic(FSPGM(_set));
         case TopicType::COMMAND_STATE:
-            if (!full) {
-                return FSPGM(_state);
-            }
             return MQTT::Client::formatTopic(FSPGM(_state));
         default:
             break;
@@ -593,57 +587,6 @@ MQTT::AutoDiscovery::EntityPtr WeatherStationPlugin::getAutoDiscovery(FormatType
             break;
     }
     return discovery;
-}
-
-void WeatherStationPlugin::onConnect()
-{
-    subscribe(_createTopics(TopicType::COMMAND_SET));
-    publishNow();
-}
-
-void WeatherStationPlugin::onMessage(const char *topic, const char *payload, size_t len)
-{
-    __LDBG_printf("topic=%s payload=%s", topic, payload);
-    auto stream = HeapStream(payload, len);
-    auto reader = MQTT::Json::Reader(&stream);
-    if (reader.parse()) {
-        onJsonMessage(reader);
-    }
-}
-
-void WeatherStationPlugin::onJsonMessage(const MQTT::Json::Reader &json)
-{
-    if (json.state != -1) {
-        if (json.state && !_backlightLevel) {
-            _updateBacklight(_config.backlight_level);
-        }
-        else if (!json.state && _backlightLevel) {
-            _updateBacklight(0);
-        }
-    }
-    if (json.brightness != -1) {
-        if (json.brightness == 0 && _backlightLevel) {
-            _updateBacklight(0);
-        }
-        else if (json.brightness) {
-            _updateBacklight(json.brightness);
-        }
-    }
-}
-
-void WeatherStationPlugin::_publishMQTT()
-{
-    if (isConnected()) {
-        using namespace MQTT::Json;
-        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_backlightLevel != 0), Brightness(_backlightLevel), Transition(5)).toString());
-    }
-}
-
-void WeatherStationPlugin::publishNow()
-{
-    _publishMQTT();
-    _publishWebUI();
-    _publishLastTime = millis();
 }
 
 void WeatherStationPlugin::publishDelayed()

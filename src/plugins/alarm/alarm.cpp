@@ -87,8 +87,8 @@ void AlarmPlugin::onMessage(const char *topic, const char *payload, size_t len)
                 _callback(ModeType::BOTH, Alarm::DEFAULT_MAX_DURATION);
             }
             else {
-                setBuzzer(false);
                 _callback(ModeType::BOTH, Alarm::STOP_ALARM);
+                setBuzzer(false);
             }
             _publishState();
         }

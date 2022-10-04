@@ -32,19 +32,7 @@ public:
 
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
-    virtual void createMenu() override
-    {
-        auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
-        auto subMenu = configMenu.addSubMenu(getFriendlyName());
-        subMenu.addMenuItem(getFriendlyName(), F("weather.html"));
-        subMenu.addMenuItem(F("World Clock"), F("world-clock.html"));
-        #if HAVE_WEATHER_STATION_CURATED_ART
-            subMenu.addMenuItem(F("Curated Art"), F("curated-art.html"));
-        #endif
-        #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
-            subMenu.addMenuItem(F("Show TFT"), F("screenshot.html"));
-        #endif
-    }
+    virtual void createMenu() override;
 
 // WebUI and MQTTComponent helpers
 public:
@@ -75,7 +63,7 @@ public:
     virtual void onMessage(const char *topic, const char *payload, size_t len);
 
 private:
-    String _createTopics(TopicType type, bool full = true) const;
+    String _createTopics(TopicType type) const;
     void onJsonMessage(const MQTT::Json::Reader &json);
     void _publishMQTT();
 
@@ -157,6 +145,21 @@ inline WeatherStationPlugin &WeatherStationPlugin::_getInstance()
     return ws_plugin;
 }
 
+inline void WeatherStationPlugin::createMenu()
+{
+    auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
+    auto subMenu = configMenu.addSubMenu(getFriendlyName());
+    subMenu.addMenuItem(getFriendlyName(), F("weather.html"));
+    subMenu.addMenuItem(F("World Clock"), F("world-clock.html"));
+    #if HAVE_WEATHER_STATION_CURATED_ART
+        subMenu.addMenuItem(F("Curated Art"), F("curated-art.html"));
+    #endif
+    #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+        subMenu.addMenuItem(F("Show TFT"), F("screenshot.html"));
+    #endif
+}
+
+
 inline void WeatherStationPlugin::_setBacklightLevel(uint16_t level)
 {
     __DBG_printf("bl=%u", level);
@@ -170,4 +173,55 @@ inline void WeatherStationPlugin::_setBacklightLevel(uint16_t level)
 inline uint8_t WeatherStationPlugin::getAutoDiscoveryCount() const
 {
     return 1;
+}
+
+inline void WeatherStationPlugin::onConnect()
+{
+    subscribe(_createTopics(TopicType::COMMAND_SET));
+    publishNow();
+}
+
+inline void WeatherStationPlugin::onMessage(const char *topic, const char *payload, size_t len)
+{
+    __LDBG_printf("topic=%s payload=%s", topic, payload);
+    auto stream = HeapStream(payload, len);
+    auto reader = MQTT::Json::Reader(&stream);
+    if (reader.parse()) {
+        onJsonMessage(reader);
+    }
+}
+
+inline void WeatherStationPlugin::onJsonMessage(const MQTT::Json::Reader &json)
+{
+    if (json.state != -1) {
+        if (json.state && !_backlightLevel) {
+            _updateBacklight(_config.backlight_level);
+        }
+        else if (!json.state && _backlightLevel) {
+            _updateBacklight(0);
+        }
+    }
+    if (json.brightness != -1) {
+        if (json.brightness == 0 && _backlightLevel) {
+            _updateBacklight(0);
+        }
+        else if (json.brightness) {
+            _updateBacklight(json.brightness);
+        }
+    }
+}
+
+inline void WeatherStationPlugin::_publishMQTT()
+{
+    if (isConnected()) {
+        using namespace MQTT::Json;
+        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_backlightLevel != 0), Brightness(_backlightLevel), Transition(5)).toString());
+    }
+}
+
+inline void WeatherStationPlugin::publishNow()
+{
+    _publishMQTT();
+    _publishWebUI();
+    _publishLastTime = millis();
 }

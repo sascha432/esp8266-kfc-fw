@@ -196,7 +196,7 @@ public:
 
     ~ConfigurationParameter() {
         if (_param.isWriteable()) {
-            delete _param._writeable;
+            free(_param._writeable);
         }
         else if (_param._readable) {
             free(_param._readable);

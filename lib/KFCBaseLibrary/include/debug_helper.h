@@ -146,6 +146,10 @@ inline _Ta *__validatePointer(const _Ta *ptr, ValidatePointerType type, const ch
 #define __DBG_IF(...)                                       __VA_ARGS__
 #define __DBG_N_IF(...)
 #define __DBG_S_IF(a, b)                                    __DBG_IF(a)__DBG_N_IF(b)
+#define __DBG_CALL(...) \
+        __DBG_printf("calling '%s'", PSTR(_STRINGIFY(__VA_ARGS__))); \
+        __VA_ARGS__; \
+        __DBG_printf("returned '%s'", PSTR(_STRINGIFY(__VA_ARGS__)));
 
 // MSVC version
 
@@ -295,6 +299,7 @@ static inline int DEBUG_OUTPUT_flush() {
 #define DEBUG_SOURCE_FORMAT
 #endif
 
+
 #else
 
 #define __DBG_validatePointer(ptr, ...)                     ptr
@@ -374,6 +379,8 @@ static inline int DEBUG_OUTPUT_flush() {
 
 #define __SLDBG_printf(...)                                 ;
 #define __SLDBG_panic(...)                                  ;
+
+#define __DBG_CALL(...)                                      __VA_ARGS__;
 
 #endif
 

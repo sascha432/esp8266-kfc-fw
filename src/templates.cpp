@@ -188,13 +188,15 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
     #if DEBUG_TEMPLATES
         struct OnReturn {
-            OnReturn(const String &key) : _key(key) {
+            OnReturn(const String &key, PrintHtmlEntitiesString &output) : _key(key), _output(output), _length(_output.length()) {
             }
             ~OnReturn() {
-                __DBG_printf("key=%s", __S(_key));
+                __DBG_printf("key=%s length+=%u", __S(_key), _output.length() - _length);
             }
             const String &_key;
-        } onReturn(key);
+            PrintHtmlEntitiesString &_output;
+            size_t _length;
+        } onReturn(key, output);
     #endif
     __DBG_validatePointerCheck(&key, VP_HPS);
     __DBG_validatePointerCheck(&output, VP_HPS);

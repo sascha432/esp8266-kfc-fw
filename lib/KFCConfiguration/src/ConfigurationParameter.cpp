@@ -222,9 +222,9 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
         }
 
         // allocate memory
-        auto tmp = std::unique_ptr<uint8_t[]>(::new uint8_t[requiredSize]);
+        auto tmp = std::unique_ptr<uint8_t[]>(::new uint8_t[requiredSize]());
         if (!tmp) {
-            __LDBG_assert_panic(tmp.get(), "allocate returned nullptr");
+            __DBG_printf_E("0%04x: allocating %u bytes failed", _param.getHandle(), requiredSize);;
             return true;
         }
         return _readDataTo(conf, offset, tmp.get()) && (memcmp(tmp.get(), _param.data(), _param.length()) != 0);

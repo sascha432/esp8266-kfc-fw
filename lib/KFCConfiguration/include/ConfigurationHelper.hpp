@@ -14,18 +14,14 @@ namespace ConfigurationHelper {
         __LDBG_assert_printf(size != 0, "allocating size=%u", size);
         size = std::max(1U, size);
         size = (size + 7) & ~7;
-        auto ptr = reinterpret_cast<uint32_t *>(malloc(size));
-        __LDBG_assert_printf(ptr != nullptr, "malloc=%u returned=%p", size, ptr);
-        if (!ptr) {
-            if (realSize) {
-                *realSize = 0;
-            }
-            return nullptr;
-        }
         if (realSize) {
             *realSize = size;
         }
-        std::fill_n(ptr, size / sizeof(uint32_t), 0);
+        auto ptr = calloc(size, 1);
+        if (!ptr) {
+            __DBG_printf_E("allocate %u(%u) bytes failed", realSize, size);
+            return nullptr;
+        }
         return (uint8_t *)ptr;
     }
 
@@ -42,7 +38,11 @@ namespace ConfigurationHelper {
         #endif
         auto &param = parameter._getParam();
         __LDBG_assert_printf(size >= param.size(), "size=%u too small param.size=%u", size, param.size());
-        param._readable = allocate(size, nullptr);
+        size_t realSize;
+        param._readable = allocate(size, &realSize);
+        if (!param._readable) {
+            __DBG_printf_E("0x%04x: allocate %u(%u) bytes failed", parameter._getParam().getHandle(), realSize, size);
+        }
     }
 
     inline void deallocate(ConfigurationParameter &parameter)
@@ -50,7 +50,7 @@ namespace ConfigurationHelper {
         auto &param = parameter._getParam();
         if (param.isWriteable()) {
             //param._length = param._writeable->length();
-            delete param._writeable;
+            free(param._writeable);
             param._writeable = nullptr;
             param._is_writeable = false;
         }

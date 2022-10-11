@@ -15,19 +15,21 @@
 #    define DEBUG_IOT_WEATHER_STATION 0
 #endif
 
-// Add MPR121 based touchpad
+// Add WW21 based touchpad
 #ifndef IOT_WEATHER_STATION_HAS_TOUCHPAD
 #    define IOT_WEATHER_STATION_HAS_TOUCHPAD 1
 #endif
 
 #ifndef IOT_WEATHER_STATION_TOUCHPAD_DEBUG
 #    define IOT_WEATHER_STATION_TOUCHPAD_DEBUG 1
+#else
+#    undef IOT_WEATHER_STATION_HAS_TOUCHPAD 1
+#    ifndef IOT_WEATHER_STATION_MPR121_PIN
+#        define IOT_WEATHER_STATION_MPR121_PIN 12
+#    endif
 #endif
 
 // IRQ pin
-#ifndef IOT_WEATHER_STATION_MPR121_PIN
-#    define IOT_WEATHER_STATION_MPR121_PIN 12
-#endif
 
 // number of pixels
 #ifndef IOT_WEATHER_STATION_WS2812_NUM

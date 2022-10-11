@@ -162,7 +162,6 @@ inline void WeatherStationPlugin::createMenu()
 
 inline void WeatherStationPlugin::_setBacklightLevel(uint16_t level)
 {
-    __DBG_printf("bl=%u", level);
     #if ESP32
         analogWrite(TFT_PIN_LED, level, PWMRANGE);
     #else

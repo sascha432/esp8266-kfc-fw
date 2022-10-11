@@ -112,8 +112,10 @@ namespace WSDraw {
     using DisplayType = GFXExtension<DISPLAY_PLUGIN_TFT_TYPE>;
     #if ESP32
         using CanvasType = GFXCanvasCompressed;
+        using CanvasPaletteType = ColorPalette16;
     #else
         using CanvasType = GFXCanvasCompressedPalette;
+        using CanvasPaletteType = ColorPalette4;
     #endif
     using ConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t;
     using WSConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;
@@ -164,6 +166,7 @@ namespace WSDraw {
         void setText(const String &text, const GFXfont *textFont);
 
         bool lock();
+        bool lock(uint32_t timeoutMillis);
         void unlock();
         bool isLocked();
 
@@ -482,6 +485,18 @@ namespace WSDraw {
             _locked = true;
         }
         return true;
+    }
+
+    inline bool Base::lock(uint32_t timeoutMillis)
+    {
+        auto start = micros();
+        while((micros() - start) < timeoutMillis) {
+            if (lock()) {
+                return true;
+            }
+            optimistic_yield(50000);
+        }
+        return false;
     }
 
     inline void Base::unlock()

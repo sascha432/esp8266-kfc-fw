@@ -108,7 +108,6 @@ public:
     }
 
     void drawInto(DrawLineCallback_t callback);
-
     void drawInto(sXType x, sYType y, sWidthType width, sHeightType height, DrawLineCallback_t callback);
 
     virtual void getDetails(Print &output, bool displayPalette = false) const;

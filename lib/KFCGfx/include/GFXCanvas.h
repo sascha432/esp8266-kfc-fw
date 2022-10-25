@@ -180,11 +180,13 @@ namespace GFXCanvas {
     static_assert(sizeof(BitmapPaletteColorType) == sizeof(uint32_t), "Invalid size");
 
 
-    inline BitmapPaletteColorType::BitmapPaletteColorType() : rawBGR(0)
+    inline BitmapPaletteColorType::BitmapPaletteColorType() :
+        rawBGR(0)
     {
     }
 
-    inline BitmapPaletteColorType::BitmapPaletteColorType(ColorType rgb565) : BitmapPaletteColorType()
+    inline BitmapPaletteColorType::BitmapPaletteColorType(ColorType rgb565) :
+        BitmapPaletteColorType()
     {
         convertToRGB(rgb565, red, green, blue);
     }
@@ -225,54 +227,12 @@ namespace GFXCanvas {
             return sizeof(BitmapFileHeaderType);
         }
 
-        uint32_t getHeaderAndPaletteSize() const {
-            return _header.bfh.bfSize;
-        }
-
-        uint32_t getBfSize() const {
-            return _header.bfh.bfSize;
-        }
-
     public:
-
-        BitmapHeaderType() :
-            _fileHeader(),
-            _header(_fileHeader.h),
-            _palette(nullptr)
-        {
-        }
-
-        BitmapHeaderType(int32_t width, int32_t height, uint8_t bits, uint16_t numPaletteColors) :
-            _fileHeader(),
-            _header(_fileHeader.h),
-            _palette(nullptr)
-        {
-            _header.bfh.bfType = 'B' | ('M' << 8);
-            _header.bfh.bfReserved2 = sizeof(_header);
-            _header.bih.biSize = sizeof(_header.bih);
-            _header.bih.biPlanes = 1;
-            _header.bih.biWidth = width;
-            _header.bih.biHeight = -height; // negative means top to bottom
-            _header.bih.biBitCount = bits;
-            _header.bih.biClrUsed = numPaletteColors;
-
-            _palette = new BitmapPaletteColorType[_header.bih.biClrUsed]();
-            if (!_palette) {
-                __LDBG_printf("cannot allocate memory for the ");
-                _header.bih.biClrUsed = 0;
-            }
-
-            _header.bfh.bfSize = sizeof(_header) + (_header.bih.biClrUsed * sizeof(BitmapPaletteColorType));
-        }
+        BitmapHeaderType();
+        BitmapHeaderType(int32_t width, int32_t height, uint8_t bits, uint16_t numPaletteColors);
         ~BitmapHeaderType();
 
-
-        BitmapHeaderType &operator=(BitmapHeaderType &&src)
-        {
-            new(static_cast<void *>(this)) BitmapHeaderType(src._header.bih.biWidth, src._header.bih.biHeight, src._header.bih.biBitCount, src._header.bih.biClrUsed);
-            std::swap(_palette, src._palette);
-            return *this;
-        }
+        BitmapHeaderType &operator=(BitmapHeaderType &&src);
 
         // get single byte from header or palette
         uint8_t getHeaderAt(uint16_t index) const;
@@ -289,11 +249,45 @@ namespace GFXCanvas {
         // get the bitmap file header
         BitmapFileHeaderType &getBitmapFileHeader();
 
+        uint32_t getHeaderAndPaletteSize() const;
+        uint32_t getBitCount() const;
+        void setBfSize(uint32_t size);
+
     private:
         BitmapFileHeaderType _fileHeader;
         decltype(_fileHeader.h) &_header;
         BitmapPaletteColorType *_palette;
     };
+
+    inline BitmapHeaderType::BitmapHeaderType() :
+        _fileHeader(),
+        _header(_fileHeader.h),
+        _palette(nullptr)
+    {
+    }
+
+    inline BitmapHeaderType::BitmapHeaderType(int32_t width, int32_t height, uint8_t bits, uint16_t numPaletteColors) :
+        BitmapHeaderType()
+    {
+        _header.bfh.bfType = 'B' | ('M' << 8);
+        _header.bfh.bfReserved2 = sizeof(_header);
+        _header.bih.biSize = sizeof(_header.bih);
+        _header.bih.biPlanes = 1;
+        _header.bih.biWidth = width;
+        _header.bih.biHeight = -height; // negative means top to bottom
+        _header.bih.biBitCount = bits;
+        _header.bih.biClrUsed = numPaletteColors;
+
+        if (_header.bih.biClrUsed) {
+            _palette =  new BitmapPaletteColorType[_header.bih.biClrUsed]();
+            if (!_palette) {
+                __LDBG_printf("cannot allocate palette memory=%u", _header.bih.biClrUsed);
+                _header.bih.biClrUsed = 0;
+            }
+        }
+
+        __DBG_printf("pal_num=%u bits=%u size=%u res2=%u", numPaletteColors, bits, _header.bih.biSize, _header.bfh.bfReserved2);
+    }
 
     inline BitmapHeaderType::~BitmapHeaderType()
     {
@@ -301,6 +295,17 @@ namespace GFXCanvas {
             delete[] _palette;
             _palette = nullptr;
         }
+    }
+
+    inline BitmapHeaderType &BitmapHeaderType::operator=(BitmapHeaderType &&src)
+    {
+        auto width = src._header.bih.biWidth;
+        auto height = -src._header.bih.biHeight;
+        auto bits = src._header.bih.biBitCount;
+        auto count = src._header.bih.biClrUsed;
+        src.~BitmapHeaderType();
+        new(static_cast<void *>(this)) BitmapHeaderType(width, height, bits, count); // place new header
+        return *this;
     }
 
     inline uint16_t BitmapHeaderType::getNumPaletteColors() const
@@ -332,6 +337,21 @@ namespace GFXCanvas {
     inline BitmapFileHeaderType &BitmapHeaderType::getBitmapFileHeader()
     {
         return _fileHeader;
+    }
+
+    inline uint32_t BitmapHeaderType::getHeaderAndPaletteSize() const
+    {
+        return getHeaderSize() + (_header.bih.biClrUsed * sizeof(BitmapPaletteColorType));
+    }
+
+    inline uint32_t BitmapHeaderType::getBitCount() const
+    {
+        return _header.bih.biBitCount;
+    }
+
+    inline void BitmapHeaderType::setBfSize(uint32_t size)
+    {
+        _header.bfh.bfSize = size;
     }
 
 }

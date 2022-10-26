@@ -222,7 +222,6 @@ namespace GFXCanvas {
 
     class BitmapHeaderType {
     public:
-
         static constexpr size_t getHeaderSize() {
             return sizeof(BitmapFileHeaderType);
         }
@@ -285,8 +284,6 @@ namespace GFXCanvas {
                 _header.bih.biClrUsed = 0;
             }
         }
-
-        __DBG_printf("pal_num=%u bits=%u size=%u res2=%u", numPaletteColors, bits, _header.bih.biSize, _header.bfh.bfReserved2);
     }
 
     inline BitmapHeaderType::~BitmapHeaderType()

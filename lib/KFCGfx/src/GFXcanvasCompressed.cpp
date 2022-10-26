@@ -28,7 +28,7 @@ using namespace GFXCanvas;
 
 GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height, ColorPalette *palette) :
     AdafruitGFXExtension(width, height),
-    _palette(palette ? palette : new ColorPalette16()),
+    _palette(palette),
     _lines(height),
     _cache(width, height, kCachedLinesMax)
 {
@@ -36,7 +36,7 @@ GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height, C
 
 GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, const Lines &lines, ColorPalette *palette) :
     AdafruitGFXExtension(width, lines.height()),
-    _palette(palette ? palette : new ColorPalette16()),
+    _palette(palette),
     _lines(lines),
     _cache(width, _lines.height(), 0)
 {

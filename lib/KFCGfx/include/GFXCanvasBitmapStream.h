@@ -44,12 +44,13 @@ private:
     GFXCanvasCompressed &_canvas;
     GFXCanvas::Cache _cache;
     GFXCanvas::BitmapHeaderType _header;
+    uint32_t _position;
+    uint32_t _available;
     uint16_t _x;
     uint16_t _y;
     uint16_t _width;
     uint16_t _height;
-    uint32_t _position;
-    uint32_t _available;
+    uint16_t _perLine;
 };
 
 inline GFXCanvasBitmapStream::operator bool() const

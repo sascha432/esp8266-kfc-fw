@@ -162,50 +162,6 @@ namespace GFXCanvas {
     }
 
     // --------------------------------------------------------------------
-    // ColorPalette16 with 16 bit / 65536 colors, no palette
-    // --------------------------------------------------------------------
-
-    class ColorPalette16 : public ColorPalette
-    {
-    public:
-        static constexpr uint32_t kColorsMax = 16;
-
-    public:
-        virtual size_t capacity() const;
-        virtual size_t size() const;
-        virtual ColorPaletteVector *getColorPalette();
-
-        virtual uint8_t bits() const;
-        virtual uint32_t maxColors() const;
-    };
-
-    inline size_t ColorPalette16::capacity() const
-    {
-        return kColorsMax;
-    }
-
-    inline size_t ColorPalette16::size() const
-    {
-        return 0;
-    }
-
-
-    inline ColorPalette16::ColorPaletteVector *ColorPalette16::getColorPalette()
-    {
-        return nullptr;
-    }
-
-    inline uint8_t ColorPalette16::bits() const
-    {
-        return 16;
-    }
-
-    inline uint32_t ColorPalette16::maxColors() const
-    {
-        return kColorsMax;
-    }
-
-    // --------------------------------------------------------------------
     // ColorPalette with 4 bit / 16 colors
     // --------------------------------------------------------------------
 

@@ -9,7 +9,7 @@
 #include <Buffer.h>
 
 #ifndef DEBUG_GFXCANVAS
-#    define DEBUG_GFXCANVAS 1
+#    define DEBUG_GFXCANVAS 0
 #endif
 
 #ifndef DEBUG_GFXCANVAS_BOUNDS
@@ -27,7 +27,7 @@
 #if _MSC_VER
 #    define DEBUG_GFXCANVAS_BOUNDS_CHECK 1
 #    define GFXCANVAS_MAX_CACHED_LINES 1
-//#define GFXCANVAS_MAX_CACHED_LINES                  16
+// #    define GFXCANVAS_MAX_CACHED_LINES 16
 #endif
 
 // max. number of cached lines
@@ -36,7 +36,7 @@
 #endif
 // enable 4bit / 16 color .bmp files
 #ifndef GFXCANVAS_SUPPORT_4BIT_BMP
-#    define GFXCANVAS_SUPPORT_4BIT_BMP 0 //TODO do not turn on, it has buts
+#    define GFXCANVAS_SUPPORT_4BIT_BMP 0 //TODO this is not working yet
 #endif
 
 // enable for debugging only

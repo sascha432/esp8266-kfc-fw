@@ -37,9 +37,11 @@ public:
 
     static constexpr size_t kCachedLinesMax = GFXCANVAS_MAX_CACHED_LINES;
 
-    GFXCanvasCompressed(uWidthType width, uHeightType height, ColorPalette *palete = nullptr);
-    GFXCanvasCompressed(uWidthType width, const Lines &lines, ColorPalette *palete = nullptr);
+    GFXCanvasCompressed(uWidthType width, uHeightType height, ColorPalette *palette = nullptr);
+    GFXCanvasCompressed(uWidthType width, const Lines &lines, ColorPalette *palette = nullptr);
     virtual ~GFXCanvasCompressed();
+
+    ColorPalette *getColorPalette();
 
     virtual GFXCanvasCompressed *clone();
 
@@ -140,6 +142,11 @@ private:
     void clipX(sXType &startX, sXType &endX);
     void clipY(sXType &startY, sXType &endY);
 };
+
+inline ColorPalette *GFXCanvasCompressed::getColorPalette()
+{
+    return _palette;
+}
 
 inline void GFXCanvasCompressed::clipX(sXType &startX, sXType &endX)
 {

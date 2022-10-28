@@ -17,11 +17,12 @@ extern "C" {
 #endif
 
 #pragma GCC push_options
+#pragma GCC optimize("O3")
+
 #if DEBUG_GFXCANVAS
 #    include <debug_helper_enable.h>
 #else
 #    include <debug_helper_disable.h>
-#    pragma GCC optimize("O3")
 #endif
 
 using namespace GFXCanvas;

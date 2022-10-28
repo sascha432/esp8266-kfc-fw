@@ -8,11 +8,12 @@
 #include "GFXCanvasCompressedPalette.h"
 
 #pragma GCC push_options
+#pragma GCC optimize("O3")
+
 #if DEBUG_GFXCANVAS
 #    include <debug_helper_enable.h>
 #else
 #    include <debug_helper_disable.h>
-#    pragma GCC optimize("O3")
 #endif
 
 using namespace GFXCanvas;
@@ -123,7 +124,7 @@ void GFXCanvasCompressedPalette::getDetails(Print &output, bool displayPalette) 
         output.printf_P(PSTR("palette %u="), _palette->size());
         uint8_t i = 0;
         for(const auto color: *_palette->getColorPalette()) {
-            output.printf("%06x", GFXCanvas::convertToRGB(color));
+            output.printf("%06x", GFXCanvas::convertRGB565ToRGB(color));
             if (++i < _palette->size()) {
                 output.print(',');
             }

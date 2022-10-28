@@ -130,20 +130,30 @@ namespace GFXCanvas {
 
     // --------------------------------------------------------------------
     // Color conversions
+    // RGB565 <-> RGB555
+    // RGB565 <-> RGB24
+    // RGB565 <-> BGR24
     // --------------------------------------------------------------------
 
-    inline void convertToRGB(ColorType color, uint8_t& r, uint8_t& g, uint8_t& b)
+    inline void convertRGB565ToRGB(ColorType color, uint8_t& r, uint8_t& g, uint8_t& b)
     {
         r = ((color >> 11) * 527 + 23) >> 6;
         g = (((color >> 5) & 0x3f) * 259 + 33) >> 6;
         b = ((color & 0x1f) * 527 + 23) >> 6;
     }
 
-    inline RGBColorType convertToRGB(ColorType color)
+    inline RGBColorType convertRGB565ToRGB(ColorType color)
     {
         uint8_t r, g, b;
-        convertToRGB(color, r, g, b);
+        convertRGB565ToRGB(color, r, g, b);
         return (r << 16) | (g << 8) | b;
+    }
+
+    inline RGBColorType convertRGB565ToBGR(ColorType color)
+    {
+        uint8_t r, g, b;
+        convertRGB565ToRGB(color, r, g, b);
+        return (b << 16) | (g << 8) | r;
     }
 
     inline ColorType convertRGBtoRGB565(uint8_t r, uint8_t g, uint8_t b)
@@ -156,12 +166,22 @@ namespace GFXCanvas {
         return convertRGBtoRGB565(rgb, rgb >> 8, rgb >> 16);
     }
 
+    inline uint8_t convertRGB565toRGB555LowByte(ColorType color)
+    {
+        return (color & 0x1f) | ((color & 0xc0) >> 1) | ((color >> 8) << 7);
+    }
+
+    inline uint8_t convertRGB565toRGB555HighByte(ColorType color)
+    {
+        return color >> 9;
+    }
+
     // --------------------------------------------------------------------
     // typedef struct _Win3xPaletteElement
     // --------------------------------------------------------------------
 
     struct BitmapPaletteColorType {
-        union  {
+        union {
             struct {
                 uint8_t blue;
                 uint8_t green;
@@ -177,6 +197,7 @@ namespace GFXCanvas {
         uint32_t getGBRValue() const;
     };
 
+    // check if structures have the correct size
     static_assert(sizeof(BitmapPaletteColorType) == sizeof(uint32_t), "Invalid size");
 
 
@@ -186,9 +207,8 @@ namespace GFXCanvas {
     }
 
     inline BitmapPaletteColorType::BitmapPaletteColorType(ColorType rgb565) :
-        BitmapPaletteColorType()
+        rawBGR(convertRGB565ToBGR(rgb565))
     {
-        convertToRGB(rgb565, red, green, blue);
     }
 
     inline uint32_t BitmapPaletteColorType::getGBRValue() const
@@ -212,13 +232,16 @@ namespace GFXCanvas {
         {}
     };
 
+    // check if structures have the correct size
     static_assert(sizeof(BITMAPFILEHEADER) == 14, "Invalid size");
     static_assert(sizeof(BITMAPINFOHEADER) == 40, "Invalid size");
+    static_assert(sizeof(BitmapFileHeaderType) == 54, "Invalid size");
 
     // --------------------------------------------------------------------
     // BMP Version 3 (Microsoft Windows NT)
-    // Class to access the file header and color palette
+    // Class to access the file header and RGB color palette as byte stream
     // --------------------------------------------------------------------
+
 
     class BitmapHeaderType {
     public:
@@ -231,7 +254,11 @@ namespace GFXCanvas {
         BitmapHeaderType(int32_t width, int32_t height, uint8_t bits, uint16_t numPaletteColors);
         ~BitmapHeaderType();
 
-        BitmapHeaderType &operator=(BitmapHeaderType &&src);
+        // update is faster than using operators
+        void update(int32_t width, int32_t height, uint8_t bits, uint16_t numPaletteColors);
+
+        BitmapHeaderType &operator=(BitmapHeaderType &&hdr) = delete;
+        BitmapHeaderType &operator=(const BitmapHeaderType &hdr) = delete;
 
         // get single byte from header or palette
         uint8_t getHeaderAt(uint16_t index) const;
@@ -239,8 +266,6 @@ namespace GFXCanvas {
 
         // number of colors in the palette
         uint16_t getNumPaletteColors() const;
-        // data pointer to the palette
-        BitmapPaletteColorType *getPalleteColorDataPtr();
 
         // set single palette color
         void setPaletteColor(uint16_t index, ColorType color);
@@ -265,6 +290,12 @@ namespace GFXCanvas {
     {
     }
 
+    inline void BitmapHeaderType::update(int32_t width, int32_t height, uint8_t bits, uint16_t numPaletteColors)
+    {
+        this->~BitmapHeaderType();
+        new(static_cast<void *>(this)) BitmapHeaderType(width, height, bits, numPaletteColors); // place new header
+    }
+
     inline BitmapHeaderType::BitmapHeaderType(int32_t width, int32_t height, uint8_t bits, uint16_t numPaletteColors) :
         BitmapHeaderType()
     {
@@ -277,11 +308,30 @@ namespace GFXCanvas {
         _header.bih.biBitCount = bits;
         _header.bih.biClrUsed = numPaletteColors;
 
+        #if DEBUG_GFXCANVAS || DEBUG_GFXCANVAS_4BIT
+            if (bits == 4) {
+                if (numPaletteColors < 1 || numPaletteColors > 16) {
+                    __DBG_panic("bits=4 palette=%u", numPaletteColors);
+                }
+            }
+            else if (bits == 16) {
+                if (numPaletteColors) {
+                    __DBG_panic("bits=16 palette=%u", numPaletteColors);
+                }
+            }
+            else {
+                __DBG_panic("bits=%u not supported", bits);
+            }
+        #endif
+
         if (_header.bih.biClrUsed) {
-            _palette =  new BitmapPaletteColorType[_header.bih.biClrUsed]();
+            _palette = new BitmapPaletteColorType[_header.bih.biClrUsed]();
             if (!_palette) {
                 __LDBG_printf("cannot allocate palette memory=%u", _header.bih.biClrUsed);
+                // send invalid image if there is not enough memory
                 _header.bih.biClrUsed = 0;
+                _header.bih.biWidth = 0;
+                _header.bih.biHeight = 0;
             }
         }
     }
@@ -294,32 +344,15 @@ namespace GFXCanvas {
         }
     }
 
-    inline BitmapHeaderType &BitmapHeaderType::operator=(BitmapHeaderType &&src)
-    {
-        auto width = src._header.bih.biWidth;
-        auto height = -src._header.bih.biHeight;
-        auto bits = src._header.bih.biBitCount;
-        auto count = src._header.bih.biClrUsed;
-        src.~BitmapHeaderType();
-        new(static_cast<void *>(this)) BitmapHeaderType(width, height, bits, count); // place new header
-        return *this;
-    }
-
     inline uint16_t BitmapHeaderType::getNumPaletteColors() const
     {
         return _header.bih.biClrUsed;
-    }
-
-    inline BitmapPaletteColorType *BitmapHeaderType::getPalleteColorDataPtr()
-    {
-        return _palette;
     }
 
     inline void BitmapHeaderType::setPaletteColor(uint16_t index, ColorType color)
     {
         _palette[index] = BitmapPaletteColorType(color);
     }
-
 
     inline uint8_t BitmapHeaderType::getHeaderAt(uint16_t index) const
     {
@@ -328,7 +361,16 @@ namespace GFXCanvas {
 
     inline uint8_t BitmapHeaderType::getPaletteAt(uint16_t index) const
     {
-        return reinterpret_cast<uint8_t *>(_palette)[index - getHeaderSize()];
+        #if DEBUG_GFXCANVAS_4BIT
+            const uint8_t byteIndex = index % sizeof(BitmapPaletteColorType);
+            const uint16_t paletteIndex = index / sizeof(BitmapPaletteColorType);
+            if (byteIndex == 0) {
+                __DBG_printf("i=%u n=%u(%u) #%02x%02x%02x", index, paletteIndex, byteIndex, _palette[paletteIndex].red, _palette[paletteIndex].green, _palette[paletteIndex].blue);
+            }
+            return reinterpret_cast<uint8_t *>(&_palette[paletteIndex])[byteIndex];
+        #else
+            return reinterpret_cast<uint8_t *>(_palette)[index];
+        #endif
     }
 
     inline BitmapFileHeaderType &BitmapHeaderType::getBitmapFileHeader()

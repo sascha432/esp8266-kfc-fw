@@ -18,15 +18,12 @@ namespace GFXCanvas {
 
 
     // --------------------------------------------------------------------
-    // Base class ColorPalette
-    // Single colors must not be deleted, only new colors can be pushed
-    // at the end
-    // clear() can be used to remove all colors from the palette
+    // ColorPalette, 16 bit RGB, no palette
     // --------------------------------------------------------------------
 
     class ColorPalette {
     public:
-        static constexpr uint32_t kColorsMax = 0;
+        static constexpr uint32_t kColorsMax = 65536;
 
         using ColorPaletteVector = std::vector<ColorType>;
         using ColorPaletteIterator = ColorPaletteVector::iterator;
@@ -50,14 +47,14 @@ namespace GFXCanvas {
 
         virtual uint8_t bits() const;
         virtual uint32_t maxColors() const;
-
-        // virtual void fillPaletteColors(BitmapHeaderType &_fileHeader) {}
     };
 
     inline void ColorPalette::clear()
     {
         auto _palette = getColorPalette();
-        _palette->clear();
+        if (_palette) {
+            _palette->clear();
+        }
     }
 
     inline ColorPalette::ColorPaletteIterator ColorPalette::add(ColorType color)
@@ -88,6 +85,11 @@ namespace GFXCanvas {
     inline ColorPalette::ColorPaletteIterator ColorPalette::find(ColorType color)
     {
         auto _palette = getColorPalette();
+        #if DEBUG_GFXCANVAS_4BIT
+            if (std::find(_palette->begin(), _palette->end(), color) == _palette->end()) {
+                __DBG_panic("color=%u not found");
+            }
+        #endif
         return std::find(_palette->begin(), _palette->end(), color);
     }
 
@@ -131,7 +133,6 @@ namespace GFXCanvas {
         return getColorPalette()->size();
     }
 
-
     inline ColorPalette::~ColorPalette()
     {
     }
@@ -153,16 +154,16 @@ namespace GFXCanvas {
 
     inline uint8_t ColorPalette::bits() const
     {
-        return 0;
+        return 16;
     }
 
     inline uint32_t ColorPalette::maxColors() const
     {
-        return 0;
+        return kColorsMax;
     }
 
     // --------------------------------------------------------------------
-    // ColorPalette with 4 bit / 16 colors
+    // ColorPalette with 4 bit / 16 colors 32bit RGB palette
     // --------------------------------------------------------------------
 
     class ColorPalette4 : public ColorPalette

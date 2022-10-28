@@ -34,9 +34,15 @@
 #ifndef GFXCANVAS_MAX_CACHED_LINES
 #    define GFXCANVAS_MAX_CACHED_LINES 1
 #endif
+
 // enable 4bit / 16 color .bmp files
 #ifndef GFXCANVAS_SUPPORT_4BIT_BMP
 #    define GFXCANVAS_SUPPORT_4BIT_BMP 0 //TODO this is not working yet
+#    ifndef DEBUG_GFXCANVAS_4BIT
+#        define DEBUG_GFXCANVAS_4BIT 1
+#    endif
+#else
+#    define DEBUG_GFXCANVAS_4BIT 0
 #endif
 
 // enable for debugging only

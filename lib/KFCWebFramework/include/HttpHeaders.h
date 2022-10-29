@@ -86,9 +86,7 @@ inline const String HttpHeader::getValue() const
 
 inline void HttpHeader::printTo(Print &output) const
 {
-    output.print(getName());
-    output.print(F(": "));
-    output.println(getValue());
+    output.printf_P(PSTR("%s: %s\r\n"), getName().c_str(), getValue().c_str());
 }
 
 

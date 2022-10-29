@@ -50,9 +50,9 @@ void AsyncBaseResponse::__assembleHead(uint8_t version)
     _headers.free();
 
     if (version) {
-        out += AsyncWebHeader(F("Accept-Ranges"), F("none")).toString();
+        out.printf_P(PSTR("%s: %s\r\n"), PSTR("Accept-Ranges"), PSTR("none"));
         if (_chunked) {
-            out += AsyncWebHeader(F("Transfer-Encoding"), F("chunked")).toString();
+            out.printf_P(PSTR("%s: %s\r\n"), PSTR("Transfer-Encoding"), PSTR("chunked"));
         }
     }
 

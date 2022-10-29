@@ -19,7 +19,6 @@ RLE compressed 16bit canvas
 #include "GFXCanvasStats.h"
 #include "GFXCanvasLines.h"
 #include "GFXCanvasBitmapStream.h"
-#include "GFXPalette.h"
 
 #if DEBUG_GFXCANVAS
 #    include "debug_helper_enable.h"
@@ -37,11 +36,9 @@ public:
 
     static constexpr size_t kCachedLinesMax = GFXCANVAS_MAX_CACHED_LINES;
 
-    GFXCanvasCompressed(uWidthType width, uHeightType height, ColorPalette *palette = nullptr);
-    GFXCanvasCompressed(uWidthType width, const Lines &lines, ColorPalette *palette = nullptr);
+    GFXCanvasCompressed(uWidthType width, uHeightType height);
+    GFXCanvasCompressed(uWidthType width, const Lines &lines);
     virtual ~GFXCanvasCompressed();
-
-    ColorPalette *getColorPalette();
 
     virtual GFXCanvasCompressed *clone();
 
@@ -112,11 +109,10 @@ public:
     void drawInto(DrawLineCallback_t callback);
     void drawInto(sXType x, sYType y, sWidthType width, sHeightType height, DrawLineCallback_t callback);
 
-    virtual void getDetails(Print &output, bool displayPalette = false) const;
-
     GFXCanvasBitmapStream getBitmap();
     GFXCanvasBitmapStream getBitmap(uXType x, uYType y, uWidthType width, uHeightType height);
 
+    void setDecodePalette(bool decode);
     Cache &getLine(sYType y);
 
 private:
@@ -133,8 +129,8 @@ protected:
     virtual void _RLEencode(ColorType *data, Buffer &buffer);
 
 protected:
-    ColorPalette *_palette;
     Lines _lines;
+    bool _decodePalette;
 
 private:
     LinesCache _cache;
@@ -143,9 +139,8 @@ private:
     void clipY(sXType &startY, sXType &endY);
 };
 
-inline ColorPalette *GFXCanvasCompressed::getColorPalette()
+inline GFXCanvasCompressed::~GFXCanvasCompressed()
 {
-    return _palette;
 }
 
 inline void GFXCanvasCompressed::clipX(sXType &startX, sXType &endX)
@@ -183,6 +178,11 @@ inline void GFXCanvasCompressed::clipY(sXType &startY, sXType &endY)
 inline void GFXCanvasCompressed::drawInto(DrawLineCallback_t callback)
 {
     drawInto(0, 0, _width, _height, callback);
+}
+
+inline void GFXCanvasCompressed::setDecodePalette(bool decode)
+{
+    _decodePalette = decode;
 }
 
 #if DEBUG_GFXCANVAS

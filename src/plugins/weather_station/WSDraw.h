@@ -112,10 +112,8 @@ namespace WSDraw {
     using DisplayType = GFXExtension<DISPLAY_PLUGIN_TFT_TYPE>;
     #if ESP32
         using CanvasType = GFXCanvasCompressed;
-        using CanvasPaletteType = ColorPalette16;
     #else
         using CanvasType = GFXCanvasCompressedPalette;
-        using CanvasPaletteType = ColorPalette4;
     #endif
     using ConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStationConfig::Config_t;
     using WSConfigType = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;

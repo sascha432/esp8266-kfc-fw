@@ -27,27 +27,20 @@ extern "C" {
 
 using namespace GFXCanvas;
 
-GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height, ColorPalette *palette) :
+GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, uHeightType height) :
     AdafruitGFXExtension(width, height),
-    _palette(palette),
     _lines(height),
+    _decodePalette(true),
     _cache(width, height, kCachedLinesMax)
 {
 }
 
-GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, const Lines &lines, ColorPalette *palette) :
+GFXCanvasCompressed::GFXCanvasCompressed(uWidthType width, const Lines &lines) :
     AdafruitGFXExtension(width, lines.height()),
-    _palette(palette),
     _lines(lines),
+    _decodePalette(true),
     _cache(width, _lines.height(), 0)
 {
-}
-
-GFXCanvasCompressed::~GFXCanvasCompressed()
-{
-    if (_palette) {
-        delete _palette;
-    }
 }
 
 GFXCanvasCompressed *GFXCanvasCompressed::clone()
@@ -326,26 +319,6 @@ void GFXCanvasCompressed::_encodeLine(Cache &cache)
         stats.heap_low = std::min(stats.heap_low, ESP.getFreeHeap());
         stats.encode_time += timer.getTime() / 1000.0;
         stats.encode_count++;
-    );
-}
-
-void GFXCanvasCompressed::getDetails(Print &output, bool displayPalette) const
-{
-    size_t size = 0;
-    auto count = _height;
-    while(count--) {
-        size += _lines.length(count);
-    }
-    uint32_t rawSize = _width * _height * sizeof(uint16_t);
-    int empty = 0;
-    for (uYType y = 0; y < _height; y++) {
-        if (_lines.length(y) == 0) {
-            empty++;
-        }
-    }
-    output.printf_P(PSTR("%ux%ux16 mem %u/%u (%.2f%%) empty=%d\n"), _width, _height, size, rawSize, 100.0 - (size * 100.0 / (float)rawSize), empty);
-    __DBG_STATS(
-        stats.dump(output);
     );
 }
 

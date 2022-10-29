@@ -308,7 +308,7 @@ namespace GFXCanvas {
         _header.bih.biBitCount = bits;
         _header.bih.biClrUsed = numPaletteColors;
 
-        #if DEBUG_GFXCANVAS || DEBUG_GFXCANVAS_4BIT
+        #if DEBUG_GFXCANVAS
             if (bits == 4) {
                 if (numPaletteColors < 1 || numPaletteColors > 16) {
                     __DBG_panic("bits=4 palette=%u", numPaletteColors);
@@ -361,7 +361,7 @@ namespace GFXCanvas {
 
     inline uint8_t BitmapHeaderType::getPaletteAt(uint16_t index) const
     {
-        #if DEBUG_GFXCANVAS_4BIT
+        #if DEBUG_GFXCANVAS
             const uint8_t byteIndex = index % sizeof(BitmapPaletteColorType);
             const uint16_t paletteIndex = index / sizeof(BitmapPaletteColorType);
             if (byteIndex == 0) {

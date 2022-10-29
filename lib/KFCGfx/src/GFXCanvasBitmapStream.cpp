@@ -10,6 +10,7 @@
 #include "GFXCanvas.h"
 #include "GFXCanvasBitmapStream.h"
 #include "GFXCanvasCompressed.h"
+#include "GFXCanvasCompressedPalette.h"
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -68,22 +69,17 @@ int GFXCanvasBitmapStream::read()
             if (!_cache.isY(y)) {
                 __LDBG_printf("y=%u x=%u avail=%d", y, x, _available);
                 _cache.setY(y);
+                _canvas.setDecodePalette(false); // return palette index instead of RGB565
                 _canvas._decodeLine(_cache);
+                _canvas.setDecodePalette(true);
             }
 
             if (x < _width) {
                 #if GFXCANVAS_SUPPORT_4BIT_BMP
                     // for 4 bit we have to fetch 2 pixels per byte
-                    auto color = _cache.at(x);
-                    auto &bitCanvas = *(_canvas.getColorPalette());
-                    uint8_t byte = *bitCanvas.find(color) << 4;
+                    uint8_t byte = _cache.at(x * 2);
                     if (++x < _width) {
-                        color = _cache.at(x);
-                        byte |= static_cast<uint8_t>(*bitCanvas.find(color));
-                        // return byte | static_cast<uint8_t>(*bitCanvas.find(color));
-                    }
-                    if (y > 5 && y < 10) {
-                        Serial.printf("y=%u x=%u c=%u b=%u\n", y, x, color, byte);
+                        return byte | (_cache.at(x * 2) << 4);
                     }
                     return byte;
                 #else
@@ -115,20 +111,18 @@ void GFXCanvasBitmapStream::_createHeader()
     #if GFXCANVAS_SUPPORT_4BIT_BMP
         #define DEBUG_PERLINE_FACTOR 0.5
         _perLine = (((_width + 3) / sizeof(uint32_t)) * sizeof(uint32_t) / 2);  // 32 bit padding, 4 bit per pixel, padding each line with zeros up to a 32bit boundary will result in up to 28 zeros = 7 'wasted pixels'
-        _header.update(_width, _height, _canvas._palette->bits(), _canvas._palette->size());
-        // convert palette directly from the vector to BGR24
-        auto ptr = _canvas._palette->getColorPalette()->data();
-        for(uint8_t i = 0; i < _canvas._palette->size(); i++) {
-            _header.setPaletteColor(i, *ptr++);
+        auto &canvas = reinterpret_cast<GFXCanvasCompressedPalette &>(_canvas);
+        _header.update(_width, _height, 4, canvas.getPaletteSize());
+        // convert palette directly to BGR24
+        for(uint8_t i = 0; i < canvas.getPaletteSize(); i++) {
+            _header.setPaletteColor(i, canvas.getPaletteAt(i));
         }
         _available = _header.getHeaderAndPaletteSize();
-        // _available += ((_width + 3) * sizeof(uint32_t)) / sizeof(uint32_t) / 2 * _height;
     #else
         #define DEBUG_PERLINE_FACTOR 2
         _perLine = ((_width + 1) / sizeof(uint16_t)) * sizeof(uint16_t) * 2;  // 32 bit padding, 16 bit per pixel, padding each line with zeros up to a 32bit boundary will result in up to 2 zeros = 1 'wasted pixel'
         _header.update(_width, _height, 16, 0);
         _available = _header.getHeaderSize();
-        // _available += (2UL * _width * _height);
     #endif
     _available += _perLine * _height;
     _header.setBfSize(_available);

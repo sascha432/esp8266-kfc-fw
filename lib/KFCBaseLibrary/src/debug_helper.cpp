@@ -45,6 +45,7 @@ __DBG_panic();
     }
     __DBG_printf(_VT100(bold_red) "INVALID POINTER %p(%u) FILE=%s LINE=%u FUNC=%s" _VT100(reset), ptr, type, file, line, func);
     __dump_binary_to(DEBUG_OUTPUT, ptr, 16, 16);
+    // __DBG_panic("trace");
     // check if the pointer is in DRAM (compiled in data in RAM, outside the HEAP)
     if (!___IsValidDRAMPointer(ptr)) {
         #if 1

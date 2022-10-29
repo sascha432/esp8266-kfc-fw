@@ -19,13 +19,15 @@
 using namespace GFXCanvas;
 
 GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(uWidthType width, uHeightType height) :
-    GFXCanvasCompressed(width, height, new ColorPalette4())
+    GFXCanvasCompressed(width, height),
+    _size(0)
 {
     __LDBG_printf("w=%d h=%d", width, height);
 }
 
 GFXCanvasCompressedPalette::GFXCanvasCompressedPalette(const GFXCanvasCompressedPalette &canvas) :
-    GFXCanvasCompressed(canvas.width(), canvas._lines, new ColorPalette4())
+    GFXCanvasCompressed(canvas.width(), canvas._lines),
+    _size(0)
 {
     __LDBG_printf("canvas=%p", &canvas);
 }
@@ -37,7 +39,7 @@ GFXCanvasCompressed* GFXCanvasCompressedPalette::clone()
 
 void GFXCanvasCompressedPalette::fillScreen(uint16_t color)
 {
-    _palette->clear();
+    _clearPalettte();
     GFXCanvasCompressed::fillScreen(color);
 }
 
@@ -59,7 +61,7 @@ void GFXCanvasCompressedPalette::_RLEdecode(ByteBuffer &buffer, ColorType *outpu
         }
         __DBG_BOUNDS(count += rle);
         __DBG_BOUNDS_RETURN(__DBG_BOUNDS_buffer_end(&output[rle - 1], &output[_width]));
-        output = std::fill_n(output, rle, _palette->getColor(_palette->get(index)));
+        output = std::fill_n(output, rle, _decodePalette ? _getColor(index) : index);
     }
     __DBG_BOUNDS_assertp(count == _width, "count=%u width=%u", count, _width);
 }
@@ -69,8 +71,6 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, Buffer &buffer)
     // 4 bit: rle = data [0x0-0xe], 0xf indicates that a byte follows
     // 4 bit: palette index
     // 8 bit: rle = data + 0x0f
-
-    // _debug_printf("_encodeLine(%u): %p %p %u\n", y, ptr, end, _width);
 
     uint16_t rle = 0;
     auto begin = data;
@@ -85,7 +85,7 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, Buffer &buffer)
         }
         else {
             __DBG_BOUNDS(count += rle);
-            auto index = _palette->getIndex(_palette->add(lastColor));
+            auto index = _addColor(lastColor);
             __DBG_BOUNDS_RETURN(__DBG_BOUNDS_assert(index != -1));
             if (rle > 0xf) {
                 //buffer.push_bb(index << 4, rle - 0xf);
@@ -101,7 +101,7 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, Buffer &buffer)
     }
     if (begin == end) {
         __DBG_BOUNDS(count += rle);
-        auto index = _palette->getIndex(_palette->add(lastColor));
+        auto index = _addColor(lastColor);
         __DBG_BOUNDS_RETURN(__DBG_BOUNDS_assert(index != -1));
         if (rle > 0xf) {
             //buffer.push_bb(index << 4, rle - 0xf);
@@ -113,24 +113,6 @@ void GFXCanvasCompressedPalette::_RLEencode(ColorType *data, Buffer &buffer)
         }
     }
     __DBG_BOUNDS_assert(count == _width);
-}
-
-
-void GFXCanvasCompressedPalette::getDetails(Print &output, bool displayPalette) const
-{
-    GFXCanvasCompressed::getDetails(output, displayPalette);
-
-    if (displayPalette && _palette->getColorPalette()) {
-        output.printf_P(PSTR("palette %u="), _palette->size());
-        uint8_t i = 0;
-        for(const auto color: *_palette->getColorPalette()) {
-            output.printf("%06x", GFXCanvas::convertRGB565ToRGB(color));
-            if (++i < _palette->size()) {
-                output.print(',');
-            }
-        }
-        output.print('\n');
-    }
 }
 
 #pragma GCC pop_options

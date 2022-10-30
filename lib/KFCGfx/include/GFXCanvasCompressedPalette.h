@@ -41,12 +41,15 @@ public:
 private:
     void _clearPalettte();
     ColorIndexType _addColor(ColorType color);
-    ColorIndexType _getColor(ColorIndexType index) const;
+    ColorType _getColor(ColorIndexType index) const;
     ColorIndexType _getIndex(ColorType color) const;
 
 private:
-    ColorType _palette[16];
-    uint8_t _size;
+    static constexpr uint8_t kMaxColors = 16;
+
+private:
+    ColorType _palette[kMaxColors];
+    ColorIndexType _size;
 };
 
 inline ColorIndexType GFXCanvasCompressedPalette::getPaletteSize() const
@@ -70,26 +73,24 @@ inline ColorIndexType GFXCanvasCompressedPalette::_addColor(ColorType color)
     if (index != -1) {
         return index;
     }
-    if (_size < 16) {
+    if (_size < kMaxColors) {
         _palette[_size] = color;
         return _size++;
     }
     return 0;
 }
 
-inline ColorIndexType GFXCanvasCompressedPalette::_getColor(ColorIndexType index) const
+inline ColorType GFXCanvasCompressedPalette::_getColor(ColorIndexType index) const
 {
     return _palette[index];
 }
 
 inline ColorIndexType GFXCanvasCompressedPalette::_getIndex(ColorType color) const
 {
-    uint8_t i = 0;
-    while(i < 16) {
+    for(uint8_t i = 0; i < _size; i++) {
         if (_palette[i] == color) {
             return i;
         }
-        i++;
     }
     return -1;
 }

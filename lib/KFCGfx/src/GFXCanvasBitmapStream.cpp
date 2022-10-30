@@ -2,7 +2,6 @@
 * Author: sascha_lammers@gmx.de
 */
 
-
 // http://www.daubnet.com/en/file-format-bmp
 
 #include <Arduino_compat.h>
@@ -34,7 +33,7 @@ GFXCanvasBitmapStream::GFXCanvasBitmapStream(GFXCanvasCompressed &canvas, uint16
 
 {
     _createHeader();
-    #if DEBUG_GFXCANVAS || GFXCANVAS_SUPPORT_4BIT_BMP
+    #if DEBUG_GFXCANVAS
     __DBG_printf("init x,y,w,h,p=%d,%d,%d,%d,%d,b=%u", _x, _y, _width, _height, _perLine, _header.getBitCount());
     #endif
 }
@@ -66,23 +65,27 @@ int GFXCanvasBitmapStream::read()
             __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _canvas.height()), return 0);
             __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sx(x, _canvas.width()), return 0);
 
-            if (!_cache.isY(y)) {
-                __LDBG_printf("y=%u x=%u avail=%d", y, x, _available);
-                _cache.setY(y);
-                _canvas.setDecodePalette(false); // return palette index instead of RGB565
-                _canvas._decodeLine(_cache);
-                _canvas.setDecodePalette(true);
-            }
-
             if (x < _width) {
                 #if GFXCANVAS_SUPPORT_4BIT_BMP
+                    if (!_cache.isY(y)) {
+                        __LDBG_printf("y=%u x=%u a=%d", y, x, _available);
+                        _cache.setY(y);
+                        _canvas.setDecodePalette(false); // return palette index instead of RGB565
+                        _canvas._decodeLine(_cache);
+                        _canvas.setDecodePalette(true);
+                    }
                     // for 4 bit we have to fetch 2 pixels per byte
-                    uint8_t byte = _cache.at(x * 2);
+                    uint8_t byte = _cache.at(x * 4) & 0x0f;
                     if (++x < _width) {
-                        return byte | (_cache.at(x * 2) << 4);
+                        return byte | ((_cache.at(x * 4) << 4) & 0xf0);
                     }
                     return byte;
                 #else
+                    if (!_cache.isY(y)) {
+                        __LDBG_printf("y=%u x=%u a=%d", y, x, _available);
+                        _cache.setY(y);
+                        _canvas._decodeLine(_cache);
+                    }
                     // for 16bit, we have to split each pixel into its low and high byte
                     auto color = _cache.at(x);
                     if (imagePos % 2 == 0) {
@@ -93,7 +96,7 @@ int GFXCanvasBitmapStream::read()
             }
             else {
                 // 32bit padding
-                #if DEBUG_GFXCANVAS || GFXCANVAS_SUPPORT_4BIT_BMP
+                #if DEBUG_GFXCANVAS
                     if (y == 0) { // display padding for first line only
                         __DBG_printf("y=0,x=%u,w=%u,padding=0", x, _width);
                     }
@@ -127,7 +130,7 @@ void GFXCanvasBitmapStream::_createHeader()
     _available += _perLine * _height;
     _header.setBfSize(_available);
 
-    #if DEBUG_GFXCANVAS || GFXCANVAS_SUPPORT_4BIT_BMP
+    #if DEBUG_GFXCANVAS
         __DBG_printf("bits=%u avail=%d hdr=%u pal=%u perln=%u(%u)", _header.getBitCount(), _available, _header.getHeaderSize(), _header.getHeaderAndPaletteSize(), _perLine, static_cast<uint32_t>(_width * DEBUG_PERLINE_FACTOR)/*unpadded size*/);
     #endif
 }

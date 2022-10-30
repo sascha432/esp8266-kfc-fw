@@ -24,7 +24,7 @@ void *__validatePointer(const void *ptr, ValidatePointerType type, const char *f
     }
     if ((static_cast<int>(type) & static_cast<int>(ValidatePointerType::P_ALIGNED)) && (((uint32_t)ptr & 0x03) != 0)) {
         __DBG_printf(_VT100(bold_red) "INVALID POINTER %p(%u) NOT ALIGNED=%u FILE=%s LINE=%u FUNC=%s" _VT100(reset), ptr, type, ((uint32_t)ptr & 0x03), file, line, func);
-__DBG_panic();
+        __DBG_panic();
         return const_cast<void *>(ptr);
     }
     if (static_cast<int>(type) & static_cast<int>(ValidatePointerType::P_STACK)) {

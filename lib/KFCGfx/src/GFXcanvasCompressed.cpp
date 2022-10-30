@@ -233,8 +233,8 @@ void GFXCanvasCompressed::_RLEencode(ColorType *data, Buffer &buffer)
         else {
             __DBG_BOUNDS(count += rle);
             buffer.write(rle);
-            buffer.write((uint8_t)lastColor);
-            buffer.write((uint8_t)(lastColor >> 8));
+            buffer.write(static_cast<uint8_t>(lastColor));
+            buffer.write(static_cast<uint8_t>(lastColor >> 8));
             lastColor = color;
             rle = 1;
         }
@@ -242,8 +242,8 @@ void GFXCanvasCompressed::_RLEencode(ColorType *data, Buffer &buffer)
     if (begin == end) {
         __DBG_BOUNDS(count += rle);
         buffer.write(rle);
-        buffer.write((uint8_t)lastColor);
-        buffer.write((uint8_t)(lastColor >> 8));
+        buffer.write(static_cast<uint8_t>(lastColor));
+        buffer.write(static_cast<uint8_t>(lastColor >> 8));
     }
     else {
         __DBG_printf("begin=%p != end=%p rle=%u ???", begin, end, rle); //TODO remove
@@ -283,12 +283,6 @@ Cache &GFXCanvasCompressed::_decodeLine(sYType y)
         __DBG_ASTATS(stats.cache_miss++);
     }
     __DBG_BOUNDS_ACTION(__DBG_BOUNDS_assert(cache.isDirty() == false), return cache);
-
-    // if (can_yield()) {
-    // if ((y & 0xf) == 0) {
-    //     optimistic_yield(1000);
-    // }
-    // }
 
     _decodeLine(cache);
 

@@ -49,17 +49,17 @@ size_t PrintString::vprintf(const char *format, va_list arg)
     size_t len = vsnprintf(temp, sizeof(temp), format, arg);
     if (len > sizeof(temp) - 1) {
         auto strLen = length();
-#if WSTRING_HAVE_SETLEN
-        if (reserve(strLen + len)) {
-            len = vsnprintf(wbuffer() + strLen, len + 1, format, arg);
-            setLen(strLen + len);
-            return len;
-        }
-#else
-        if (reserve(strLen + len)) {
-            return vsnprintf(begin() + _increaseLength(strLen + len), len + 1, format, arg);
-        }
-#endif
+        #if WSTRING_HAVE_SETLEN
+            if (reserve(strLen + len)) {
+                len = vsnprintf(wbuffer() + strLen, len + 1, format, arg);
+                setLen(strLen + len);
+                return len;
+            }
+        #else
+            if (reserve(strLen + len)) {
+                return vsnprintf(begin() + _increaseLength(strLen + len), len + 1, format, arg);
+            }
+        #endif
         return 0;
     }
     return write(reinterpret_cast<const uint8_t *>(temp), len);
@@ -72,17 +72,17 @@ size_t PrintString::vprintf_P(PGM_P format, va_list arg)
     size_t len = vsnprintf_P(temp, sizeof(temp), format, arg);
     if (len > sizeof(temp) - 1) {
         auto strLen = length();
-#if WSTRING_HAVE_SETLEN
-        if (reserve(strLen + len)) {
-            len = vsnprintf_P(wbuffer() + strLen, len + 1, format, arg);
-            setLen(strLen + len);
-            return len;
-        }
-#else
-        if (reserve(strLen + len)) {
-            return vsnprintf_P(begin() + _increaseLength(strLen + len), len + 1, format, arg);
-        }
-#endif
+        #if WSTRING_HAVE_SETLEN
+            if (reserve(strLen + len)) {
+                len = vsnprintf_P(wbuffer() + strLen, len + 1, format, arg);
+                setLen(strLen + len);
+                return len;
+            }
+        #else
+            if (reserve(strLen + len)) {
+                return vsnprintf_P(begin() + _increaseLength(strLen + len), len + 1, format, arg);
+            }
+        #endif
         return 0;
     }
     return write(reinterpret_cast<const uint8_t *>(temp), len);

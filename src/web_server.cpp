@@ -560,31 +560,31 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
 
 #if WEBSERVER_LOG_SERIAL
 
-void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse *response)
-{
-    PrintString log;
-    IPAddress(request->client()->getRemoteAddress()).printTo(log);
-    log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
-    log.print(request->methodToString());
-    log.print(' ');
-    auto url = PrintString(urlEncode(request->url(), F("\r\n\" ")));
-    if (request->args()) {
-        for(size_t i = 0; i < request->args(); i++) {
-            auto param = request->getParam(i);
-            url.printf_P(PSTR("%c%s=%s"), (i == 0 ? '?' : '&'), param->name().c_str(), urlEncode(param->value(), F("\r\n\" ?=")).c_str());
+    void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse *response)
+    {
+        PrintString log;
+        IPAddress(request->client()->getRemoteAddress()).printTo(log);
+        log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
+        log.print(request->methodToString());
+        log.print(' ');
+        auto url = PrintString(urlEncode(request->url(), F("\r\n\" ")));
+        if (request->args()) {
+            for(size_t i = 0; i < request->args(); i++) {
+                auto param = request->getParam(i);
+                url.printf_P(PSTR("%c%s=%s"), (i == 0 ? '?' : '&'), param->name().c_str(), urlEncode(param->value(), F("\r\n\" ?=")).c_str());
+            }
         }
+        log.print(url);
+        if (response) {
+            auto contentLength = response->getContentLength();
+            auto contentLengthStr = contentLength ? String(contentLength) : String('-');
+            log.printf_P(PSTR(" HTTP/1.%u\" %d %s \"%s\""), request->version(), response->getCode(), contentLengthStr.c_str(), response->getContentType().c_str());
+        }
+        else {
+            log.printf_P(PSTR("\" failed"));
+        }
+        Serial.println(log);
     }
-    log.print(url);
-    if (response) {
-        auto contentLength = response->getContentLength();
-        auto contentLengthStr = contentLength ? String(contentLength) : String('-');
-        log.printf_P(PSTR(" HTTP/1.%u\" %d %s \"%s\""), request->version(), response->getCode(), contentLengthStr.c_str(), response->getContentType().c_str());
-    }
-    else {
-        log.printf_P(PSTR("\" failed"));
-    }
-    Serial.println(log);
-}
 
 #endif
 
@@ -738,10 +738,10 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
 
 #if ENABLE_ARDUINO_OTA
 
-inline static void ArduinoOTALoop()
-{
-    ArduinoOTA.handle();
-}
+    inline static void ArduinoOTALoop()
+    {
+        ArduinoOTA.handle();
+    }
 
 #endif
 
@@ -763,126 +763,126 @@ void Plugin::end()
 
 #if ENABLE_ARDUINO_OTA
 
-const __FlashStringHelper *Plugin::ArduinoOTAErrorStr(ota_error_t err)
-{
-    if (err == static_cast<ota_error_t>(ArduinoOTAInfo::kNoError)) {
-        return F("NONE");
+    const __FlashStringHelper *Plugin::ArduinoOTAErrorStr(ota_error_t err)
+    {
+        if (err == static_cast<ota_error_t>(ArduinoOTAInfo::kNoError)) {
+            return F("NONE");
+        }
+        switch (err) {
+        case OTA_AUTH_ERROR:
+            return F("AUTH ERROR");
+        case OTA_BEGIN_ERROR:
+            return F("BEGIN ERROR");
+        case OTA_CONNECT_ERROR:
+            return F("CONNECT ERROR");
+        case OTA_RECEIVE_ERROR:
+            return F("RECEIVE ERROR");
+        case OTA_END_ERROR:
+            return F("END ERROR");
+        default:
+            break;
+        }
+        return F("UNKNOWN");
     }
-    switch (err) {
-    case OTA_AUTH_ERROR:
-        return F("AUTH ERROR");
-    case OTA_BEGIN_ERROR:
-        return F("BEGIN ERROR");
-    case OTA_CONNECT_ERROR:
-        return F("CONNECT ERROR");
-    case OTA_RECEIVE_ERROR:
-        return F("RECEIVE ERROR");
-    case OTA_END_ERROR:
-        return F("END ERROR");
-    default:
-        break;
-    }
-    return F("UNKNOWN");
-}
 
-void Plugin::ArduinoOTAbegin()
-{
-    if (_AOTAInfo._runnning) {
-        return;
-    }
-    ArduinoOTA.setHostname(System::Device::getName());
-    ArduinoOTA.setPassword(System::Device::getPassword());
-    // ArduinoOTA.setPort(8266); // default
-    ArduinoOTA.onStart([this]() {
-        Logger_notice(F("Firmware upload started"));
-        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-        __LDBG_printf("ArduinoOTA start");
-        _AOTAInfo.start();
-        #if IOT_WEATHER_STATION
-        #endif
-    });
-    ArduinoOTA.onEnd([this]() {
-        __LDBG_printf("ArduinoOTA end");
-        if (_AOTAInfo) {
-            _AOTAInfo.stop();
-            Logger_security(F("Firmware upgrade successful, rebooting device"));
+    void Plugin::ArduinoOTAbegin()
+    {
+        if (_AOTAInfo._runnning) {
+            return;
+        }
+        ArduinoOTA.setHostname(System::Device::getName());
+        ArduinoOTA.setPassword(System::Device::getPassword());
+        // ArduinoOTA.setPort(8266); // default
+        ArduinoOTA.onStart([this]() {
+            Logger_notice(F("Firmware upload started"));
             BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-            _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {
-                config.restartDevice();
-            });
-        }
-        else {
-            Logger_error(F("Firmware upgrade failed: %s"), ArduinoOTAErrorStr(_AOTAInfo._error));
-        }
-    });
-    ArduinoOTA.onProgress([this](int progress, int size) {
-        __LDBG_printf("ArduinoOTA progress %d / %d", progress, size);
-        if (_AOTAInfo) {
-            _AOTAInfo.update(progress, size);
-            if (_updateFirmwareCallback) {
-                _updateFirmwareCallback(progress, size);
+            __LDBG_printf("ArduinoOTA start");
+            _AOTAInfo.start();
+            #if IOT_WEATHER_STATION
+            #endif
+        });
+        ArduinoOTA.onEnd([this]() {
+            __LDBG_printf("ArduinoOTA end");
+            if (_AOTAInfo) {
+                _AOTAInfo.stop();
+                Logger_security(F("Firmware upgrade successful, rebooting device"));
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+                _Scheduler.add(2000, false, [](Event::CallbackTimerPtr timer) {
+                    config.restartDevice();
+                });
             }
-        }
-    });
-    ArduinoOTA.onError([this](ota_error_t err) {
-        if (_AOTAInfo) {
-            _AOTAInfo.stop(err);
-            if (!_AOTAInfo) {
-                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+            else {
                 Logger_error(F("Firmware upgrade failed: %s"), ArduinoOTAErrorStr(_AOTAInfo._error));
             }
-        }
-    });
-    ArduinoOTA.setRebootOnSuccess(false);
-    ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled);
-    LoopFunctions::add(ArduinoOTALoop);
-    _AOTAInfo._runnning = true;
+        });
+        ArduinoOTA.onProgress([this](int progress, int size) {
+            __LDBG_printf("ArduinoOTA progress %d / %d", progress, size);
+            if (_AOTAInfo) {
+                _AOTAInfo.update(progress, size);
+                if (_updateFirmwareCallback) {
+                    _updateFirmwareCallback(progress, size);
+                }
+            }
+        });
+        ArduinoOTA.onError([this](ota_error_t err) {
+            if (_AOTAInfo) {
+                _AOTAInfo.stop(err);
+                if (!_AOTAInfo) {
+                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                    Logger_error(F("Firmware upgrade failed: %s"), ArduinoOTAErrorStr(_AOTAInfo._error));
+                }
+            }
+        });
+        ArduinoOTA.setRebootOnSuccess(false);
+        ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled);
+        LoopFunctions::add(ArduinoOTALoop);
+        _AOTAInfo._runnning = true;
 
-    __LDBG_printf("Arduino OTA running on %s", ArduinoOTA.getHostname().c_str());
-}
-
-void Plugin::ArduinoOTAend()
-{
-    if (!_AOTAInfo._runnning) {
-        return;
+        __LDBG_printf("Arduino OTA running on %s", ArduinoOTA.getHostname().c_str());
     }
-    __LDBG_printf("Arduino OTA stopped");
-    LoopFunctions::remove(ArduinoOTALoop);
-    _AOTAInfo = ArduinoOTAInfo();
-    ArduinoOTA.~ArduinoOTAClass();
-    ArduinoOTA = ArduinoOTAClass();
-}
 
-void Plugin::ArduinoOTADumpInfo(Print &output)
-{
-    output.printf_P(PSTR("running=%u in_progress=%u reboot_pending=%u progress=%u/%u error=%d (%s)\n"),
-        _AOTAInfo._runnning, _AOTAInfo._inProgress, _AOTAInfo._rebootPending,
-        _AOTAInfo._progress, _AOTAInfo._size,
-        _AOTAInfo._error, ArduinoOTAErrorStr(_AOTAInfo._error)
-        // ArduinoOTA._state
-    );
-}
+    void Plugin::ArduinoOTAend()
+    {
+        if (!_AOTAInfo._runnning) {
+            return;
+        }
+        __LDBG_printf("Arduino OTA stopped");
+        LoopFunctions::remove(ArduinoOTALoop);
+        _AOTAInfo = ArduinoOTAInfo();
+        ArduinoOTA.~ArduinoOTAClass();
+        ArduinoOTA = ArduinoOTAClass();
+    }
+
+    void Plugin::ArduinoOTADumpInfo(Print &output)
+    {
+        output.printf_P(PSTR("running=%u in_progress=%u reboot_pending=%u progress=%u/%u error=%d (%s)\n"),
+            _AOTAInfo._runnning, _AOTAInfo._inProgress, _AOTAInfo._rebootPending,
+            _AOTAInfo._progress, _AOTAInfo._size,
+            _AOTAInfo._error, ArduinoOTAErrorStr(_AOTAInfo._error)
+            // ArduinoOTA._state
+        );
+    }
 
 #endif
 
 #if MDNS_PLUGIN
 
-void Plugin::_addMDNS()
-{
-    MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
-    MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
-    auto cfg = System::WebServer::getConfig();
-    String service = FSPGM(http);
-    if (cfg.is_https) {
-        service += 's';
-    }
-    MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.getPort());
-    #if ENABLE_ARDUINO_OTA
-        MDNSService::enableArduino();
-    #endif
+    void Plugin::_addMDNS()
+    {
+        MDNSService::removeService(FSPGM(http, "http"), FSPGM(tcp));
+        MDNSService::removeService(FSPGM(https, "https"), FSPGM(tcp));
+        auto cfg = System::WebServer::getConfig();
+        String service = FSPGM(http);
+        if (cfg.is_https) {
+            service += 's';
+        }
+        MDNSService::addService(service, FSPGM(tcp, "tcp"), cfg.getPort());
+        #if ENABLE_ARDUINO_OTA
+            MDNSService::enableArduino();
+        #endif
 
-    MDNSService::announce();
-}
+        MDNSService::announce();
+    }
 
 #endif
 

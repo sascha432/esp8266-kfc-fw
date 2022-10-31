@@ -2965,7 +2965,7 @@ void at_mode_serial_input_handler(Stream &client)
                     break;
                 case '\r':
                     lastWasCR = true;
-                    serial.print(F("\r\n"));
+                    serial.println();
                     at_mode_serial_handle_event(line);
                     line = String();
                     break;

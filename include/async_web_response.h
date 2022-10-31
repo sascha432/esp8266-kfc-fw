@@ -10,7 +10,6 @@
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>
-#include <GFXCanvas.h>
 #include <vector>
 #include <map>
 #include <functional>
@@ -20,9 +19,9 @@
 #include <TemplateDataProvider.h>
 #include <SSIProxyStream.h>
 #include "web_server.h"
+#include "bitmap_header.h"
 #include "../include/templates.h"
 #include "./plugins/mdns/mdns_plugin.h"
-#include "bitmap_header.h"
 
 class HttpHeaders;
 

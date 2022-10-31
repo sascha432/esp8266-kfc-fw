@@ -34,4 +34,24 @@ typedef struct __attribute__packed__ {
 
 #endif
 
+namespace GFXCanvas {
+
+    union BitmapFileHeaderType {
+        struct _bitmapHeader {
+            BITMAPFILEHEADER bfh;
+            BITMAPINFOHEADER bih;
+        } h;
+        uint8_t b[sizeof(struct _bitmapHeader)];
+
+        BitmapFileHeaderType() : b{}
+        {}
+    };
+
+    // check if structures have the correct size
+    static_assert(sizeof(BITMAPFILEHEADER) == 14, "Invalid size");
+    static_assert(sizeof(BITMAPINFOHEADER) == 40, "Invalid size");
+    static_assert(sizeof(BitmapFileHeaderType) == 54, "Invalid size");
+
+}
+
 #include "pop_pack.h"

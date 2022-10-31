@@ -458,7 +458,8 @@
 
 // option to download BMP screenshots of the TFT display
 #ifndef WEATHER_STATION_HAVE_BMP_SCREENSHOT
-#    define WEATHER_STATION_HAVE_BMP_SCREENSHOT 1
+#    define WEATHER_STATION_HAVE_BMP_SCREENSHOT IOT_WEATHER_STATION
+// #    define WEATHER_STATION_HAVE_BMP_SCREENSHOT 0
 #endif
 
 class Stream;

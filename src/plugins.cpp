@@ -92,11 +92,11 @@ void Register::dumpList(Print &output)
             plugin->getName_P(),
             static_cast<int8_t>(options.priority),
             BOOL_STR(plugin->allowSafeMode()),
-#if ENABLE_DEEP_SLEEP
-            BOOL_STR(plugin->autoSetupAfterDeepSleep()),
-#else
-            PSTR("n/a"),
-#endif
+            #if ENABLE_DEEP_SLEEP
+                BOOL_STR(plugin->autoSetupAfterDeepSleep()),
+            #else
+                PSTR("n/a"),
+            #endif
             options.memory_id,
             BOOL_STR(plugin->hasStatus()),
             BOOL_STR(plugin->hasAtMode()),
@@ -256,28 +256,28 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             auto webUi = FSPGM(WebUI);
             _bootstrapMenu.addMenuItem(webUi, url, _navMenu.device, _navMenu.device/*insert at the top*/);
 
-            auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
             #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
+                auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
                 _bootstrapMenu.addMenuItem(F("Show TFT"), F("screenshot.html"), _navMenu.home, home);
             #endif
         }
     }
 
-#if ENABLE_DEEP_SLEEP
-    if (mode == SetupModeType::AUTO_WAKE_UP) {
-        __LDBG_printf("auto wakeup");
-        if (!dependencies->empty()) {
-            __DBG_printf("unresolved dependencies=%u", dependencies->size());
-            _delayedStartupTime = PLUGIN_DEEP_SLEEP_DELAYED_START_TIME;
-            _Scheduler.add(1000, true, [dependencies, this](Event::CallbackTimerPtr timer) {
-                if (millis() > _delayedStartupTime) {
-                    __LDBG_printf("DELAYED_AUTO_WAKE_UP");
-                    timer->disarm();
-                    setup(SetupModeType::DELAYED_AUTO_WAKE_UP, dependencies);
-                }
-            });
+    #if ENABLE_DEEP_SLEEP
+        if (mode == SetupModeType::AUTO_WAKE_UP) {
+            __LDBG_printf("auto wakeup");
+            if (!dependencies->empty()) {
+                __DBG_printf("unresolved dependencies=%u", dependencies->size());
+                _delayedStartupTime = PLUGIN_DEEP_SLEEP_DELAYED_START_TIME;
+                _Scheduler.add(1000, true, [dependencies, this](Event::CallbackTimerPtr timer) {
+                    if (millis() > _delayedStartupTime) {
+                        __LDBG_printf("DELAYED_AUTO_WAKE_UP");
+                        timer->disarm();
+                        setup(SetupModeType::DELAYED_AUTO_WAKE_UP, dependencies);
+                    }
+                });
+            }
         }
-    }
-#endif
+    #endif
     __LDBG_printf("exiting plugin setup");
 }

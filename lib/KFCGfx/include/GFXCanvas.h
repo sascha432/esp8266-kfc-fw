@@ -18,6 +18,13 @@
 #    include "debug_helper_disable.h"
 #endif
 
+// --------------------------------------------------------------------
+// BMP Version 3 (Microsoft Windows NT)
+// File header union
+// --------------------------------------------------------------------
+
+#include "bitmap_header.h"
+
 namespace GFXCanvas {
 
     // --------------------------------------------------------------------
@@ -218,27 +225,6 @@ namespace GFXCanvas {
 
     // --------------------------------------------------------------------
     // BMP Version 3 (Microsoft Windows NT)
-    // File header union
-    // --------------------------------------------------------------------
-
-    union BitmapFileHeaderType {
-        struct _bitmapHeader {
-            BITMAPFILEHEADER bfh;
-            BITMAPINFOHEADER bih;
-        } h;
-        uint8_t b[sizeof(struct _bitmapHeader)];
-
-        BitmapFileHeaderType() : b{}
-        {}
-    };
-
-    // check if structures have the correct size
-    static_assert(sizeof(BITMAPFILEHEADER) == 14, "Invalid size");
-    static_assert(sizeof(BITMAPINFOHEADER) == 40, "Invalid size");
-    static_assert(sizeof(BitmapFileHeaderType) == 54, "Invalid size");
-
-    // --------------------------------------------------------------------
-    // BMP Version 3 (Microsoft Windows NT)
     // Class to access the file header and RGB color palette as byte stream
     // --------------------------------------------------------------------
 
@@ -398,6 +384,5 @@ namespace GFXCanvas {
 #if DEBUG_GFXCANVAS
 #    include "debug_helper_disable.h"
 #endif
-
 
 #include <pop_pack.h>

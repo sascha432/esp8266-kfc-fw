@@ -138,7 +138,6 @@ namespace GFXCanvas {
     // --------------------------------------------------------------------
     // Color conversions
     // RGB565 <-> RGB555
-    // RGB565 <-> RGB24
     // RGB565 <-> BGR24
     // --------------------------------------------------------------------
 
@@ -149,18 +148,11 @@ namespace GFXCanvas {
         b = ((color & 0x1f) * 527 + 23) >> 6;
     }
 
-    inline RGBColorType convertRGB565ToRGB(ColorType color)
-    {
-        uint8_t r, g, b;
-        convertRGB565ToRGB(color, r, g, b);
-        return (r << 16) | (g << 8) | b;
-    }
-
     inline RGBColorType convertRGB565ToBGR(ColorType color)
     {
         uint8_t r, g, b;
         convertRGB565ToRGB(color, r, g, b);
-        return (b << 16) | (g << 8) | r;
+        return (r << 16) | (g << 8) | b;
     }
 
     inline ColorType convertRGBtoRGB565(uint8_t r, uint8_t g, uint8_t b)
@@ -195,13 +187,13 @@ namespace GFXCanvas {
                 uint8_t red;
                 uint8_t __reserved;
             };
-            uint32_t rawBGR; // dword aligned and zero filled
+            uint32_t bgr; // dword aligned and zero filled
         };
 
         BitmapPaletteColorType();
         BitmapPaletteColorType(ColorType rgb565);
 
-        uint32_t getGBRValue() const;
+        uint32_t getBGRValue() const;
     };
 
     // check if structures have the correct size
@@ -209,25 +201,24 @@ namespace GFXCanvas {
 
 
     inline BitmapPaletteColorType::BitmapPaletteColorType() :
-        rawBGR(0)
+        bgr(0)
     {
     }
 
     inline BitmapPaletteColorType::BitmapPaletteColorType(ColorType rgb565) :
-        rawBGR(convertRGB565ToBGR(rgb565))
+        bgr(convertRGB565ToBGR(rgb565))
     {
     }
 
-    inline uint32_t BitmapPaletteColorType::getGBRValue() const
+    inline uint32_t BitmapPaletteColorType::getBGRValue() const
     {
-        return rawBGR;
+        return bgr;
     }
 
     // --------------------------------------------------------------------
     // BMP Version 3 (Microsoft Windows NT)
     // Class to access the file header and RGB color palette as byte stream
     // --------------------------------------------------------------------
-
 
     class BitmapHeaderType {
     public:

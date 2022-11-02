@@ -37,7 +37,7 @@
 
 // enable 4bit / 16 color .bmp files
 #ifndef GFXCANVAS_SUPPORT_4BIT_BMP
-#    define GFXCANVAS_SUPPORT_4BIT_BMP 0 //TODO this is not working yet
+#    define GFXCANVAS_SUPPORT_4BIT_BMP 1
 #endif
 
 // enable for debugging only

@@ -34,7 +34,7 @@ GFXCanvasBitmapStream::GFXCanvasBitmapStream(GFXCanvasCompressed &canvas, uint16
 {
     _createHeader();
     #if DEBUG_GFXCANVAS
-    __DBG_printf("init x,y,w,h,p=%d,%d,%d,%d,%d,b=%u", _x, _y, _width, _height, _perLine, _header.getBitCount());
+        __DBG_printf("init x,y,w,h,p=%d,%d,%d,%d,%d,b=%u", _x, _y, _width, _height, _perLine, _header.getBitCount());
     #endif
 }
 
@@ -60,7 +60,11 @@ int GFXCanvasBitmapStream::read()
 
             uint16_t imagePos = _position++ - _header.getHeaderAndPaletteSize();
             uint16_t y = (imagePos / _perLine) + _y;
-            uint16_t x = ((imagePos % _perLine) / 2) + _x;
+            #if GFXCANVAS_SUPPORT_4BIT_BMP
+                uint16_t x = (imagePos % _perLine) + _x;
+            #else
+                uint16_t x = ((imagePos % _perLine) / 2) + _x;
+            #endif
 
             __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sy(y, _canvas.height()), return 0);
             __DBG_BOUNDS_ACTION(__DBG_BOUNDS_sx(x, _canvas.width()), return 0);
@@ -74,10 +78,9 @@ int GFXCanvasBitmapStream::read()
                         _canvas._decodeLine(_cache);
                         _canvas.setDecodePalette(true);
                     }
-                    // for 4 bit we have to fetch 2 pixels per byte
-                    uint8_t byte = _cache.at(x * 4) & 0x0f;
-                    if (++x < _width) {
-                        return byte | ((_cache.at(x * 4) << 4) & 0xf0);
+                    uint8_t byte = ((_cache.at(x << 1) << 4) & 0xf0);
+                    if (x + 1 < _width) {
+                        return byte | ((_cache.at((x << 1) + 1)) & 0x0f);
                     }
                     return byte;
                 #else

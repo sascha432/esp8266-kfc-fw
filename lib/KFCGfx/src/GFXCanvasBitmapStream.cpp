@@ -119,7 +119,7 @@ void GFXCanvasBitmapStream::_createHeader()
         _perLine = (((_width + 3) / sizeof(uint32_t)) * sizeof(uint32_t) / 2);  // 32 bit padding, 4 bit per pixel, padding each line with zeros up to a 32bit boundary will result in up to 28 zeros = 7 'wasted pixels'
         auto &canvas = reinterpret_cast<GFXCanvasCompressedPalette &>(_canvas);
         _header.update(_width, _height, 4, canvas.getPaletteSize());
-        // convert palette directly to BGR24
+        // convert palette directly to RGB24
         for(uint8_t i = 0; i < canvas.getPaletteSize(); i++) {
             _header.setPaletteColor(i, canvas.getPaletteAt(i));
         }

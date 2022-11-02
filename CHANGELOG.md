@@ -3,7 +3,7 @@
 ## Version 0.0.7 (master)
 
  - Merged framework-arduinoespressif8266 3.1.0-dev [https://github.com/sascha432/Arduino](https://github.com/sascha432/Arduino)
- - Added support for 4bit bitmap images (***currently broken***)
+ - Added support for 4bit bitmap images
  - Added an external I2C bus to the Weather Station, that can be used for other sensors like BME680 (VOC gas), BH1750FVI (Lux), INA219 (Voltage, Current, Power) with live data on the TFT and the WebUI
  - Support for BME680 updated
  - Live display of the TFT in the WebUI of the Weather Station and links to control it

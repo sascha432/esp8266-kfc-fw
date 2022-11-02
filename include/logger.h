@@ -10,7 +10,7 @@
 #include <PrintString.h>
 #include <EnumHelper.h>
 #if ESP32
-#include <Mutex.h>
+#    include <Mutex.h>
 #endif
 
 #ifndef DEBUG_LOGGER

@@ -56,7 +56,7 @@ bool OpenWeatherMapAPI::parseWeatherData(const String &data)
 {
     StreamString stream;
     stream.print(data);
-    return parseWeatherData(*(Stream *)&stream);
+    return parseWeatherData(reinterpret_cast<Stream &>(stream));
 }
 
 bool OpenWeatherMapAPI::parseWeatherData(Stream &stream)
@@ -68,7 +68,7 @@ bool OpenWeatherMapAPI::parseForecastData(const String &data)
 {
     StreamString stream;
     stream.print(data);
-    return parseForecastData(*(Stream *)&stream);
+    return parseForecastData(reinterpret_cast<Stream &>(stream));
 }
 
 bool OpenWeatherMapAPI::parseForecastData(Stream &stream)

@@ -9,6 +9,16 @@
 #include <StreamString.h>
 #include <map>
 
+#ifndef DEBUG_OPENWEATHERMAPAPI
+#    define DEBUG_OPENWEATHERMAPAPI 1
+#endif
+
+#if DEBUG_OPENWEATHERMAPAPI
+#    include "debug_helper_enable.h"
+#else
+#    include "debug_helper_disable.h"
+#endif
+
 class OpenWeatherMapAPI {
 public:
     class Weather_t {
@@ -167,3 +177,7 @@ private:
     WeatherInfo _info;
     WeatherForecast _forecast;
 };
+
+#if DEBUG_OPENWEATHERMAPAPI
+#    include "debug_helper_disable.h"
+#endif

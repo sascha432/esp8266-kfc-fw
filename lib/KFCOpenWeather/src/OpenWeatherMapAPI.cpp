@@ -7,6 +7,12 @@
 #include "OpenWeatherForecastJsonReader.h"
 #include <misc.h>
 
+#if DEBUG_OPENWEATHERMAPAPI
+#    include "debug_helper_enable.h"
+#else
+#    include "debug_helper_disable.h"
+#endif
+
 // PROGMEM_STRING_DEF(openweathermap_api_url, "http://api.openweathermap.org/data/2.5/{api_type}?q={query}&appid={api_key}");
 
 OpenWeatherMapAPI::OpenWeatherMapAPI()

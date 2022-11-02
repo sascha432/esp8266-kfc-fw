@@ -138,7 +138,7 @@ namespace GFXCanvas {
     // --------------------------------------------------------------------
     // Color conversions
     // RGB565 <-> RGB555
-    // RGB565 <-> BGR24
+    // RGB565 <-> RGB24
     // --------------------------------------------------------------------
 
     inline void convertRGB565ToRGB(ColorType color, uint8_t& r, uint8_t& g, uint8_t& b)
@@ -148,7 +148,7 @@ namespace GFXCanvas {
         b = ((color & 0x1f) * 527 + 23) >> 6;
     }
 
-    inline RGBColorType convertRGB565ToBGR(ColorType color)
+    inline RGBColorType convertRGB565ToRGB(ColorType color)
     {
         uint8_t r, g, b;
         convertRGB565ToRGB(color, r, g, b);
@@ -206,7 +206,7 @@ namespace GFXCanvas {
     }
 
     inline BitmapPaletteColorType::BitmapPaletteColorType(ColorType rgb565) :
-        bgr(convertRGB565ToBGR(rgb565))
+        bgr(convertRGB565ToRGB(rgb565))
     {
     }
 

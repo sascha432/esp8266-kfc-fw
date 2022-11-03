@@ -7,17 +7,9 @@
 #include <Arduino_compat.h>
 #include <PrintString.h>
 
-
 #ifndef DEBUG_MOON_PHASE
 #   define DEBUG_MOON_PHASE 0
 #endif
-
-const __FlashStringHelper *moonPhaseName(uint8_t moonPhase);
-
-inline const __FlashStringHelper *moonPhaseName(double moonPhase)
-{
-    return moonPhaseName(static_cast<uint8_t>(moonPhase * 8));
-}
 
 struct MoonPhaseType
 {
@@ -26,15 +18,16 @@ struct MoonPhaseType
     double iPhase;
     double pPhase;
     double mAge;
-    char moonPhaseFont;
+    const __FlashStringHelper *phaseName;
     time_t unixTime;
     double julianTime;
+    char moonPhaseFont;
 
-    MoonPhaseType() : mAge(NAN) {
+    MoonPhaseType() : mAge(NAN), phaseName(nullptr) {
     }
 
     bool isValid(time_t curTime) const {
-        return !isnan(mAge) && abs(curTime - unixTime) <= 60;
+        return !isnan(mAge) && (abs(curTime - unixTime) <= 60);
     }
 
     void invalidate() {
@@ -54,25 +47,7 @@ struct MoonPhaseType
     }
 
     const __FlashStringHelper *moonPhaseName() const {
-        // correct pPhase using iPhase
-        auto cpPh = pPhase;
-        if (iPhase > 0.75) {
-            cpPh -= (0.25 / 8.0);
-        }
-        else if (iPhase >= 0.5) {
-            cpPh -= (0.5 / 8.0);
-        }
-        else if (iPhase < 0.125) {
-            cpPh += (0.5 / 8.0);
-        }
-        else if (iPhase < 0.25) {
-            cpPh += (0.25 / 8.0);
-        }
-        return ::moonPhaseName(cpPh);
-    }
-
-    const __FlashStringHelper *moon_pPhaseName() const {
-        return ::moonPhaseName(pPhase);
+        return phaseName;
     }
 
     double moonPhaseIlluminationPct() const {
@@ -108,4 +83,4 @@ struct MoonPhasesType
 MoonPhasesType calcMoonPhases(time_t unixtime);
 time_t getUnixtimeForCalcMoon();
 time_t getUnixtimeForCalcMoon(time_t unixtime);
-MoonPhaseType calcMoon(time_t time);
+MoonPhaseType calcMoon(time_t time, bool runPhaseHunt);

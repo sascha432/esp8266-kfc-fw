@@ -204,21 +204,15 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                             continue;
                         }
                         lastPhase = phase;
-                        auto moon = calcMoon(phase);
+                        auto moon = calcMoon(phase, true);
                         PrintString dateStr;
                         dateStr.strftime_P(PSTR("%Y-%m-%d %H:%M"), phase);
-                        stream.printf_P(PSTR("%s," TIME_T_FMT ",%s\n"), dateStr.c_str(), phase, moonPhaseName(moon.pPhase));
+
+                        stream.printf_P(PSTR("%s," TIME_T_FMT ",%s,%.2f%%\n"), dateStr.c_str(), phase, moon.moonPhaseName(), moon.moonPhaseIlluminationPct());
                     }
                 }
                 stream.println();
                 return true;
-            }
-            else if (args.startsWithIgnoreCase(0, F("ph"))) {
-                unixtime = -1;
-                auto results = calcMoonPhases(time(nullptr));
-                for(uint8_t i = 0; i < 5; i++) {
-                    args.print(F("%u %s %s"), (uint32_t)results._timestamps[i], FormatTime::getDateTimeStr(true, results._timestamps[i]).c_str(), moonPhaseName(static_cast<uint8_t>((i * 2) % 8)));
-                }
             }
             else if (args.startsWithIgnoreCase(0, F("now"))) {
                 unixtime = getUnixtimeForCalcMoon();
@@ -242,7 +236,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             }
             else if (unixtime) {
                 while(days--) {
-                    auto moon = calcMoon(unixtime);
+                    auto moon = calcMoon(unixtime, true);
 
                     args.print(F("%s mAge=%f pPhase=%f(%s) il=%.3f(%.2f%%) mFont=%c"),
                         FormatTime::getDateTimeStr(true, moon.unixTime).c_str(),

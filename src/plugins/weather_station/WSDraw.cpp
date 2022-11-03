@@ -119,7 +119,7 @@ namespace WSDraw {
     {
         constexpr int16_t _offsetY = Y_START_POSITION_SUN_MOON;
 
-        auto moon = calcMoon(getUnixtimeForCalcMoon());
+        auto moon = calcMoon(getUnixtimeForCalcMoon(), true);
 
         _canvas->setFont(FONTS_SUN_AND_MOON);
         _canvas->setTextColor(COLORS_SUN_AND_MOON);
@@ -597,7 +597,7 @@ namespace WSDraw {
     {
         int16_t _offsetY = Y_START_POSITION_MOON_PHASE;
 
-        auto moon = calcMoon(getUnixtimeForCalcMoon());
+        auto moon = calcMoon(getUnixtimeForCalcMoon(), false);
         time_t time = ::time(nullptr);
 
         // moon image
@@ -631,7 +631,7 @@ namespace WSDraw {
         auto lastPhase = moon.pPhase - 0.25;
 
         for(auto phase: phases._timestamps) {
-            auto moon = calcMoon(phase);
+            auto moon = calcMoon(phase, false);
 
             // _canvas->setFont(&Dialog_6pt8b);
 
@@ -643,7 +643,7 @@ namespace WSDraw {
                 _canvas->setTextColor(COLORS_MOON_PHASE_ACTIVE);
             }
 
-            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moon.moon_pPhaseName(), AdafruitGFXExtension::CENTER);
+            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moon.moonPhaseName(), AdafruitGFXExtension::CENTER);
             _offsetY += 2;
 
             // _canvas->setFont(&DejaVuSans_5pt8b);

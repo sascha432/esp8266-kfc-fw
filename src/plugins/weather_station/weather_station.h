@@ -155,7 +155,7 @@ inline void WeatherStationPlugin::createMenu()
         subMenu.addMenuItem(F("Curated Art"), F("curated-art.html"));
     #endif
     #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
-        subMenu.addMenuItem(F("Show TFT"), F("screenshot.html"));
+        subMenu.addMenuItem(F("Show Screen"), F("display-screen.html"));
     #endif
 }
 

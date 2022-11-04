@@ -63,9 +63,6 @@ time_t getUnixtimeForCalcMoon(time_t unixtime)
 {
     unixtime -= 86400 + 1;
     auto tm = localtime(&unixtime);
-    // tm->tm_hour = 0;
-    // tm->tm_min = 0;
-    // tm->tm_sec = 0;
     return mktime(tm);
 }
 

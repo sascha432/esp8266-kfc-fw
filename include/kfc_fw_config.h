@@ -9,28 +9,28 @@
 #endif
 
 #include <Arduino_compat.h>
+#include <Configuration.hpp>
 #include <EventScheduler.h>
-#include <vector>
-#include <functional>
 #include <bitset>
 #include <chrono>
-#include <Configuration.hpp>
+#include <functional>
+#include <vector>
 #if HAVE_IOEXPANDER
-#include <IOExpander.h>
+#    include <IOExpander.h>
 #endif
 #if SYSLOG_SUPPORT
-#include <Syslog.h>
+#    include <Syslog.h>
 #endif
 #if MDNS_PLUGIN
-#include "../src/plugins/mdns/mdns_resolver.h"
+#    include "../src/plugins/mdns/mdns_resolver.h"
 #endif
-#include <Wire.h>
-#include <dyn_bitset.h>
-#include "logger.h"
-#include "misc.h"
 #include "at_mode.h"
 #include "blink_led_timer.h"
+#include "logger.h"
+#include "misc.h"
 #include "reset_detector.h"
+#include <Wire.h>
+#include <dyn_bitset.h>
 
 #ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
 #    undef dhcp_start

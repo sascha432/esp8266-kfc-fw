@@ -101,7 +101,7 @@
                 "./Resources/html/weather.html",
                 "./Resources/html/world-clock.html",
                 "./Resources/html/curated-art.html",
-                "./Resources/html/screenshot.html",
+                "./Resources/html/display-screen.html",
                 "./Resources/js/forms/world-clock.js"
             ],
             "#if !IOT_REMOTE_CONTROL": [

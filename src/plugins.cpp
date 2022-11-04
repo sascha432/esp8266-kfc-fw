@@ -258,7 +258,7 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
 
             #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
                 auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
-                _bootstrapMenu.addMenuItem(F("Show TFT"), F("screenshot.html"), _navMenu.home, home);
+                _bootstrapMenu.addMenuItem(F("Show Screen"), F("display-screen.html"), _navMenu.home, home);
             #endif
         }
     }

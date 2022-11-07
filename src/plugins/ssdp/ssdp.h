@@ -4,7 +4,7 @@
 
 #pragma once
 
- #if IOT_SSDP_SUPPORT
+#if IOT_SSDP_SUPPORT
 
 #ifndef DEBUG_SSDP
 #    define DEBUG_SSDP 0
@@ -53,5 +53,4 @@ public:
 #    include <debug_helper_disable.h>
 #endif
 
-
- #endif
+#endif

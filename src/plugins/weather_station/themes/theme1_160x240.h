@@ -4,34 +4,7 @@
 
 #pragma once
 
-#include "colors.h"
-
-#define COLORS_ANALOG_CLOCK_BACKGROUND  0x52AA
-#define COLORS_BACKGROUND               COLORS_BLACK
-#define COLORS_DEFAULT_TEXT             COLORS_WHITE
-#define COLORS_DATE                     COLORS_WHITE
-#define COLORS_TIME                     COLORS_WHITE
-#define COLORS_TIMEZONE                 COLORS_YELLOW
-#define COLORS_CITY                     COLORS_CYAN
-#define COLORS_INDOOR_ICON              0xD6DA
-#define COLORS_CURRENT_WEATHER          COLORS_YELLOW
-#define COLORS_TEMPERATURE              COLORS_WHITE
-#define COLORS_WEATHER_DESCR            COLORS_YELLOW
-#define COLORS_SUN_AND_MOON             COLORS_YELLOW
-#define COLORS_SUN_RISE_SET             COLORS_WHITE
-#define COLORS_MOON_PHASE               COLORS_WHITE
-#define COLORS_WORLD_CLOCK_CITY         COLORS_CYAN
-#define COLORS_WORLD_CLOCK_TIME         COLORS_WHITE
-#define COLORS_WORLD_CLOCK_TIMEZONE     COLORS_YELLOW
-#define COLORS_INFO_TITLE               COLORS_ORANGE
-#define COLORS_INFO_DETAILS             COLORS_WHITE
-#define COLORS_MOON_PHASE_TOP           COLORS_CYAN
-#define COLORS_MOON_PHASE_TIME          COLORS_WHITE
-#define COLORS_MOON_PHASE_TIMEZONE      COLORS_YELLOW
-#define COLORS_MOON_PHASE_NAME          COLORS_WHITE
-#define COLORS_MOON_PHASE_ACTIVE        COLORS_CYAN
-#define COLORS_MOON_PHASE_DATETIME      COLORS_YELLOW
-#define COLORS_LOCATION                 COLORS_BACKGROUND, COLORS_WHITE, COLORS_YELLOW, COLORS_BLUE
+#include "theme1_colors.h"
 
 #define FONTS_DEFAULT_SMALL             &DejaVuSans_5pt8b
 #define FONTS_DEFAULT_MEDIUM            &Dialog_Bold_7pt8b

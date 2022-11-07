@@ -12,8 +12,12 @@ void NTPClient::defaults()
 {
     setConfig(NTPClientConfig());
     setServer1(F("pool.ntp.org"));
-    setServer2(F("time.nist.gov"));
-    setServer3(F("time.windows.com"));
+    #if SNTP_MAX_SERVERS > 1
+        setServer2(F("time.nist.gov"));
+    #endif
+    #if SNTP_MAX_SERVERS > 2
+        setServer3(F("time.windows.com"));
+    #endif
     setTimezoneName(F("Etc/Universal"));
     setPosixTimezone(F("UTC0"));
 }

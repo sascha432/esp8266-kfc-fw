@@ -397,7 +397,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
         else if (key == F("GALLERY_IMAGES_IMAGES")) {
             WeatherStationPlugin::_getInstance()._scanGalleryDirectory([&output](uint32_t count, fs::Dir &dir) {
-                output.printf_P(PSTR(HTML_SA(div, HTML_A("class", "col")) HTML_SA(div, HTML_A("class", "ca-image") HTML_A("src", "/CuratedArt/%s") HTML_A("width", "%u") HTML_A("height", "%u")) HTML_E(div) HTML_E(div)), dir.fileName().c_str(), TFT_WIDTH, TFT_HEIGHT, dir.fileName().c_str());
+                output.printf_P(PSTR(HTML_SA(div, HTML_A("class", "col")) HTML_SA(div, HTML_A("class", "ca-image") HTML_A("src", "/CuratedArt/%s") HTML_A("width", "%u") HTML_A("height", "%u")) HTML_E(div) HTML_E(div)), __S(dir.fileName()), TFT_WIDTH, TFT_HEIGHT, __S(dir.fileName()));
                 return false;
             });
         }

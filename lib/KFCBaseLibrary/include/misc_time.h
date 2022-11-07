@@ -5,6 +5,7 @@
 #pragma once
 
 #include <time.h>
+#include <pgmspace.h>
 
 // use TIME_T_FMT for sprintf and time_t
 #if defined(_MSC_VER)

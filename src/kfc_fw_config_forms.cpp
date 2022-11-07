@@ -183,12 +183,12 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WIFI_STATION_MAX_NUM, stm, en, prio, ssid, pass, dhcp, ip, sn, gw, dns1, dns2);
 
-            auto stationGroup = &globalGroup.end().addCardGroup(F_VAR(stm, 0), F("Station Mode - ") + String(Network::WiFi::getFPStrSSID(0)), true);
+            auto stationGroup = &globalGroup.end().addCardGroup(F_VAR(stm, 0), String(F("Station Mode - ")) + Network::WiFi::getFPStrSSID(0), true);
 
             for(uint8_t i = 0; i < Network::WiFi::kNumStations; i++) {
 
                 if (i > 0) {
-                    stationGroup = &stationGroup->end().addCardGroup(F_VAR(stm, i), F("Station Mode - ") + String(Network::WiFi::getFPStrSSID(i)), network.stations[i].isEnabled(i));
+                    stationGroup = &stationGroup->end().addCardGroup(F_VAR(stm, i), String(F("Station Mode - ")) + Network::WiFi::getFPStrSSID(i), network.stations[i].isEnabled(i));
                 }
 
                 auto &stationEnabled = form.addObjectGetterSetter(F_VAR(en, i), FormGetterSetter(network.stations[i], enabled));

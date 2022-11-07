@@ -586,7 +586,7 @@ namespace WSDraw {
         return true;
     }
 
-    inline ScreenType Base::_getScreen(uint32 screen, bool allowZeroTimeout) const
+    inline ScreenType Base::_getScreen(uint32_t screen, bool allowZeroTimeout) const
     {
         return _getScreen(static_cast<ScreenType>(screen), allowZeroTimeout);
     }
@@ -635,7 +635,7 @@ namespace WSDraw {
             uint32_t count = 0;
             auto dir = KFCFS_openDir(String(F("/CuratedArt")).c_str());
             while(dir.next()) {
-                if (dir.isFile() && dir.fileName().endsWithIgnoreCase(F(".jpg"))) {
+                if (dir.isFile() && String(dir.fileName()).endsWithIgnoreCase(F(".jpg"))) {
                     if (_scanCallback && _scanCallback(count, dir)) {
                         __LDBG_printf("#%u _scanCallback=true file=%s", count, dir.fileName());
                         break;
@@ -672,7 +672,7 @@ namespace WSDraw {
 
                 _scanGalleryDirectory([num, &candidate, this](uint32_t count, fs::Dir &dir) {
                     bool notFound = std::find(_galleryImages.begin(), _galleryImages.end(), dir.fileName()) == _galleryImages.end();
-                    __LDBG_printf("file=%s notfound=%u num=%u count=%u", dir.fileName().c_str(), notFound, num, count);
+                    __LDBG_printf("file=%s notfound=%u num=%u count=%u", __S(dir.fileName()), notFound, num, count);
                     if (notFound && dir.isFile()) {
                         candidate = dir.fileName();
                         if (num >= count) {

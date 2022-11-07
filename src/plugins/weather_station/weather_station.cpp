@@ -350,7 +350,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
     _readConfig();
 
     #if ESP32
-        analogWriteFreq(1000);
+        analogWriteFrequency(TFT_PIN_LED, 1000);
     #elif ESP8266
         analogWriteRange(PWMRANGE);
         analogWriteFreq(1000);
@@ -510,7 +510,9 @@ void WeatherStationPlugin::getStatus(Print &output)
 
 void WeatherStationPlugin::_initTFT()
 {
-    __LDBG_printf("spi0 clk %u, spi1 clk %u", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
+    #if ESP8266
+        __LDBG_printf("spi0 clk %u, spi1 clk %u", static_cast<uint32_t>(SPI0CLK) / 1000000, static_cast<uint32_t>(SPI1CLK) / 1000000);
+    #endif
 
     #if ILI9341_DRIVER
         __LDBG_printf("cs=%d dc=%d rst=%d spi=%u", TFT_PIN_CS, TFT_PIN_DC, TFT_PIN_RST, SPI_FREQUENCY);

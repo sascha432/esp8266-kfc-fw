@@ -834,7 +834,12 @@ void Plugin::end()
             }
         });
         ArduinoOTA.setRebootOnSuccess(false);
-        ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled);
+        #if ESP32
+            ArduinoOTA.begin();
+            ArduinoOTA.setMdnsEnabled(System::Flags::getConfig().is_mdns_enabled);
+        #else
+            ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled);
+        #endif
         LoopFunctions::add(ArduinoOTALoop);
         _AOTAInfo._runnning = true;
 

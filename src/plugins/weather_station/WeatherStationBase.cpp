@@ -198,7 +198,7 @@ void WeatherStationBase::_loop()
         if (_toggleScreenTimeout) {
             uint32_t dur = millis() - _toggleScreenTimer;
             if (dur > _toggleScreenTimeout) {
-                // __LDBG_printf("timeout=%u screen=%u next=%u", _toggleScreenTimeout, _getCurrentScreen(), _getNextScreen(_getCurrentScreen()));
+                __LDBG_printf("timeout=%u screen=%u next=%u", _toggleScreenTimeout, _getCurrentScreen(), _getNextScreen(_getCurrentScreen()));
                 _setScreen(_getNextScreen(_getCurrentScreen()));
                 _draw();
                 return;
@@ -331,7 +331,7 @@ void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
         }
     }
 
-    // __LDBG_printf("screen=%u new_screen=%u timeout=%u", screen, newScreen, _toggleScreenTimeout);
+    __LDBG_printf("screen=%u new_screen=%u timeout=%u", screen, _currentScreen, _toggleScreenTimeout);
     redraw();
 }
 

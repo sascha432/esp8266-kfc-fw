@@ -74,7 +74,7 @@ Plugin management. If a plugin malfunctions, it can be blacklisted in SAFE MODE.
 
 ### ``+RTC=[set]``
 
-Display RTC status or set RTC time from current time
+Display RTC status or set RTC time from current time. Only available with a real time clock (i.e. DS3231)
 
 ### ``+WIFI=<command>,[args]``
 

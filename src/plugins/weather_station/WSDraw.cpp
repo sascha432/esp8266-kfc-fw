@@ -626,7 +626,7 @@ namespace WSDraw {
         _canvas->setTextColor(COLORS_MOON_PHASE_TIMEZONE);
         y += _canvas->drawTextAligned(_canvas->getCursorX(), y, FormatTime::getTimezoneStr(_config.time_format_24h, time), AdafruitGFXExtension::LEFT);
 
-        // the previous, current and next 2 moon phases
+        // the previous, current and next    2 moon phases
         auto phases = calcMoonPhases(time);
         auto lastPhase = moon.pPhase - 0.25;
 

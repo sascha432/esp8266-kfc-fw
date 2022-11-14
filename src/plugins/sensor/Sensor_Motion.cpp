@@ -35,6 +35,7 @@ Sensor_Motion::~Sensor_Motion()
 MQTT::AutoDiscovery::EntityPtr Sensor_Motion::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     switch(num) {
         case 0:
             if (!discovery->create(MQTTComponent::ComponentType::BINARY_SENSOR, _getId(), format)) {

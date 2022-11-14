@@ -16,8 +16,11 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     IOT_DIMMER_PLUGIN_NAME,
     IOT_DIMMER_PLUGIN_FRIENDLY_NAME,
     "",                 // web_templates
-    "general,channels,buttons,advanced", // forms
-    "mqtt",        // reconfigure_dependencies
+    "general," \
+    "channels," \
+    "buttons," \
+    "advanced",         // forms
+    "mqtt",             // reconfigure_dependencies
     PluginComponent::PriorityType::DIMMER_MODULE,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),

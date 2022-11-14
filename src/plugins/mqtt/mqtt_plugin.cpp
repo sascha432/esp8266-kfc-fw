@@ -215,6 +215,24 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                                 stream.printf_P(PSTR("%08x\n"), crc);
                             }
                         }
+                        else if (args.equalsIgnoreCase(1, F("file"))) {
+                            String filename = F("/.logs/mqtt_auto_discovery.json");
+                            stream.printf_P(PSTR("Filename: %s\n"), filename.c_str());
+                            auto list = client.getAutoDiscoveryList(FormatType::JSON);
+                            auto file = KFCFS.open(filename.c_str(), FileOpenMode::write);
+                            if (file) {
+                                int n = list.size();
+                                file.print('[');
+                                for(auto iterator = list.begin(); iterator != list.end(); ++iterator) {
+                                    const auto &entity = *iterator;
+                                    file.print(entity->getPayload());
+                                    if (--n != 0) {
+                                        file.println(',');
+                                    }
+                                }
+                                file.println(']');
+                            }
+                        }
                         else {
                             FormatType format = args.equalsIgnoreCase(1, F("full")) ? FormatType::JSON : FormatType::TOPIC;
                             auto &stream = args.getStream();
@@ -230,19 +248,18 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                                     if (entity) {
                                         if (format == FormatType::TOPIC) {
                                             stream.println(entity->getTopic());
-                                            delay(5);
+                                            delay(2);
                                         }
                                         else {
                                             stream.print(entity->getTopic());
-                                            delay(5);
+                                            delay(2);
                                             stream.print(':');
                                             stream.println(entity->getPayload());
                                             delay(10);
                                         }
                                     }
                                     else {
-                                        stream.println(F("entity=nullptr"));
-                                        // stream.printf_P(PSTR("entity=nullptr component=%p index=%u size=%u\n"), iterator._component, iterator._index, iterator._size);
+                                        __DBG_panic("entity=nullptr");
                                     }
                                 }
                             }

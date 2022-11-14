@@ -205,7 +205,7 @@ Manage MQTT
   set,<enable,disable>                        Enable or disable MQTT
   top[ics]                                    List subscribed topics
   auto[discovery][,restart][,force]           Publish auto discovery
-  list[,<full|crc>]                           List auto discovery
+  list[,<full|crc|file>]                      List auto discovery (file = /.logs/mqtt_auto_discovery.json)
 
 ## Weather Station
 
@@ -223,13 +223,21 @@ Update weather info/forecast
 
 ### ``STK500V1F=<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]``
 
+Flash .HEX file to AVR MCU over serial boot loader
+
+For example: ``+STK500V1F=/stk500v1/atomicsun-firmware-2.2.3-328pb.hex``
+
 ### ``STK500V1S=<atmega328p/0x1e1234/...>``
 
 Set signature (/stk500v1/atmega.csv)
 
-### ``STK500V1L``
+### ``STK500V1S?``
 
-Dump debug log file (/stk500v1/debug.log)
+Display signature
+
+### ``Debug log file``
+
+Debug log file (/stk500v1/debug.log)
 
 ## Dimmer
 
@@ -244,4 +252,3 @@ Set level
 ### ``DIMCF=<reset|weeprom|info|print|write|factory>``
 
 Configure dimmer firmware
-

@@ -29,6 +29,7 @@ Sensor_LM75A::~Sensor_LM75A()
 MQTT::AutoDiscovery::EntityPtr Sensor_LM75A::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     switch(num) {
         case 0:
             if (!discovery->create(this, _getId(), format)) {

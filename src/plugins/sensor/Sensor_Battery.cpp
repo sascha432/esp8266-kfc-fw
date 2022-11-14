@@ -110,6 +110,7 @@ enum class AutoDiscoveryNumHelperType {
 MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(static_cast<AutoDiscoveryNumHelperType>(num)) {
         case AutoDiscoveryNumHelperType::VOLTAGE:

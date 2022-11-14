@@ -52,9 +52,10 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name, MQTT::SensorType type) :
 
 MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
+    auto discovery = new MQTT::AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     String topic = _getTopic();
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
-    auto discovery = new MQTT::AutoDiscovery::Entity();
     switch(num) {
         case 0:
             if (discovery->create(this, FSPGM(power), format)) {

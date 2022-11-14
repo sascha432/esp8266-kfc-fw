@@ -66,7 +66,8 @@ enum class AutoDiscoveryEnum {
 
 MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
 {
-    MQTT::AutoDiscovery::EntityPtr discovery = new MQTT::AutoDiscovery::Entity();
+    auto discovery = new MQTT::AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(static_cast<AutoDiscoveryEnum>(num)) {
         case AutoDiscoveryEnum::UPTIME_SECONDS:

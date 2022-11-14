@@ -120,6 +120,7 @@ inline const String &AtModeArgs::getCommand() const
 
 inline bool AtModeArgs::isCommand(const __FlashStringHelper *command) const
 {
+    __DBG_validatePointerCheck(command, VP_HPS);
     return _command.equalsIgnoreCase(command);
 }
 

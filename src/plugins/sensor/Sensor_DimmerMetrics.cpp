@@ -16,6 +16,7 @@
 MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(num) {
         case 0:

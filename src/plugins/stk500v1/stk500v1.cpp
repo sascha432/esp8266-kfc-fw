@@ -63,7 +63,6 @@ STK500v1Plugin::STK500v1Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ST
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]", "Flash ATmega micro controller");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/0x1e1234/...>", "Set signature (/stk500v1/atmega.csv)", "Display signature");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STK500V1L, "STK500V1L", "Dump debug log file (/stk500v1/debug.log)");
 
 #if AT_MODE_HELP_SUPPORTED
 
@@ -71,8 +70,7 @@ ATModeCommandHelpArrayPtr STK500v1Plugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
         PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F),
-        PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S),
-        PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L),
+        PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S)
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
@@ -87,12 +85,6 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
             args.print(F("Name unknown"));
         }
         args.printf_P(PSTR("Signature set: %02x %02x %02x"), _signature[0], _signature[1], _signature[2]);
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1L))) {
-        args.print(F("+STK500V1L: --- start ---"));
-        STK500v1Programmer::dumpLog(args.getStream());
-        args.print(F("+STK500V1L: --- end ---"));
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F))) {

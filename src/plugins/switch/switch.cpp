@@ -188,7 +188,7 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
         form.addFormUI(F("Default State"), states);
 
         form.addObjectGetterSetter(F_VAR(webui, i), FormGetterSetter(_configs[i]._data, webUI));
-        form.addFormUI(F("WebUI"), webUI);
+        form.addFormUI(FSPGM(WebUI), webUI);
 
         form.addCallbackGetterSetter<String>(F_VAR(ico, i), [i](String &str, Field::BaseField &, bool store) {
             if (store) {

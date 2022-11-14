@@ -33,7 +33,8 @@ Channel::Channel(Module *dimmer, uint8_t channel) :
 
 MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = new AutoDiscovery::Entity();
+    auto discovery = new MQTT::AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(num) {
         case 0:
@@ -51,7 +52,7 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
                 }
                 else {
                     #if IOT_DIMMER_MODULE_CHANNELS > 1
-                        fullname = PrintString(F("Dimmer Channel %u"), _channel + 1);f_cre
+                        fullname = PrintString(F("Dimmer Channel %u"), _channel + 1);
                     #else
                         fullname = F("Dimmer");
                     #endif

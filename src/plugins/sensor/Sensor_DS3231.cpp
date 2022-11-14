@@ -31,7 +31,8 @@ Sensor_DS3231::~Sensor_DS3231()
 
 MQTT::AutoDiscovery::EntityPtr Sensor_DS3231::getAutoDiscovery(FormatType format, uint8_t num)
 {
-    auto discovery = new AutoDiscovery::Entity();
+    auto discovery = new MQTT::AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch (num) {
     case 0:

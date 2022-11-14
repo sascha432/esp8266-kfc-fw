@@ -2,6 +2,8 @@
 
 ## Version 0.0.7 (master)
 
+ - Updates/fixes and new firmware for 4 channel dimmer
+ - Write MQTT auto discovery to file ``/.logs/mqtt_auto_discovery.json`` (command ``+MQTT=list,file``)
  - Merged framework-arduinoespressif8266 3.1.0-dev [https://github.com/sascha432/Arduino](https://github.com/sascha432/Arduino)
  - Added support for 4bit bitmap images
  - Added an external I2C bus to the Weather Station, that can be used for other sensors like BME680 (VOC gas), BH1750FVI (Lux), INA219 (Voltage, Current, Power) with live data on the TFT and the WebUI

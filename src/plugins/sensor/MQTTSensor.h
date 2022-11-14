@@ -17,6 +17,12 @@
 #include "../mqtt/mqtt_json.h"
 #include "EnumBitset.h"
 
+#if 0
+#    define __DBG_discovery_printf __DBG_printf
+#else
+#    define __DBG_discovery_printf(...)
+#endif
+
 #if DEBUG_IOT_SENSOR
 #    define REGISTER_SENSOR_CLIENT(sensor)                                   \
         {                                                                    \

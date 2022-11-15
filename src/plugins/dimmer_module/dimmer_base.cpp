@@ -115,29 +115,29 @@ void Base::_updateConfig(ConfigType &config, const Dimmer::ConfigReaderWriter &r
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
 
-void Base::_onReceive(size_t length)
-{
-    auto type = _wire.read();
-    #ifdef DIMMER_EVENT_RESTART
-        if (type == DIMMER_EVENT_RESTART) {
-            auto reader = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(_wire, DIMMER_I2C_ADDRESS));
-            reader->readConfig(10, 500, [this, reader](ConfigReaderWriter &config, bool status) {
-                _updateConfig(_config, *reader, status);
-            }, 100);
+    void Base::_onReceive(size_t length)
+    {
+        auto type = _wire.read();
+        #ifdef DIMMER_EVENT_RESTART
+            if (type == DIMMER_EVENT_RESTART) {
+                auto reader = std::shared_ptr<ConfigReaderWriter>(new ConfigReaderWriter(_wire, DIMMER_I2C_ADDRESS));
+                reader->readConfig(10, 500, [this, reader](ConfigReaderWriter &config, bool status) {
+                    _updateConfig(_config, *reader, status);
+                }, 100);
+            }
+            else
+        #endif
+        if (type == DIMMER_EVENT_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
+            MetricsType metrics;
+            _wire.read(metrics);
+            _updateMetrics(metrics);
         }
-        else
-    #endif
-    if (type == DIMMER_EVENT_METRICS_REPORT && length >= sizeof(dimmer_metrics_t) + 1) {
-        MetricsType metrics;
-         _wire.read(metrics);
-        _updateMetrics(metrics);
+        else if (type == DIMMER_EVENT_TEMPERATURE_ALERT && length == 3) {
+            dimmer_over_temperature_event_t event;
+            _wire.read(event);
+            Logger_error(PrintString(F("Dimmer temperature alarm triggered: %u%s > %u%s"), event.current_temp, SPGM(UTF8_degreeC), event.max_temp, SPGM(UTF8_degreeC)));
+        }
     }
-    else if (type == DIMMER_EVENT_TEMPERATURE_ALERT && length == 3) {
-        dimmer_over_temperature_event_t event;
-        _wire.read(event);
-        Logger_error(PrintString(F("Dimmer temperature alarm triggered: %u%s > %u%s"), event.current_temp, SPGM(UTF8_degreeC), event.max_temp, SPGM(UTF8_degreeC)));
-    }
-}
 
 #endif
 

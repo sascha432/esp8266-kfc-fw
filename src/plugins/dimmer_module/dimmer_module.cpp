@@ -3,12 +3,12 @@
  */
 
 #include "dimmer_module.h"
-#include "firmware_protocol.h"
+ #include "firmware_protocol.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;

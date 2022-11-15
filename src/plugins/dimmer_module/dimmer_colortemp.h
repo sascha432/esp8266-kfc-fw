@@ -18,6 +18,7 @@ namespace Dimmer {
 
     class ColorTemperature : public MQTTComponent {
     public:
+        // color in Mired * 100
         static constexpr uint16_t kColorMin = 15300;
         static constexpr uint16_t kColorMax = 50000;
         static constexpr uint16_t kColorRange = (kColorMax - kColorMin);
@@ -25,8 +26,10 @@ namespace Dimmer {
         enum class TopicType : uint8_t {
             MAIN_SET,
             MAIN_STATE,
+            COLOR_SET,
+            COLOR_STATE,
             LOCK_SET,
-            LOCK_STATE
+            LOCK_STATE,
         };
 
     public:
@@ -38,6 +41,9 @@ namespace Dimmer {
         virtual uint8_t getAutoDiscoveryCount() const override;
         virtual void onConnect() override;
         virtual void onMessage(const char *topic, const char *payload, size_t len) final;
+
+    protected:
+        void onJsonMessage(const MQTT::Json::Reader &json);
 
     // WebUI
     public:

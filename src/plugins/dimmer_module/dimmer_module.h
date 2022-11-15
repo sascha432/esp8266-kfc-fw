@@ -9,10 +9,10 @@
 // 1 - 8 channels
 // https://github.com/sascha432/trailing_edge_dimmer
 
-#include <Arduino_compat.h>
 #include "dimmer_buttons.h"
+#include <Arduino_compat.h>
 #if IOT_DIMMER_HAS_COLOR_TEMP
-#include "dimmer_colortemp.h"
+#    include "dimmer_colortemp.h"
 #endif
 
 namespace Dimmer {
@@ -77,39 +77,45 @@ namespace Dimmer {
 
     #endif
 
-
     inline uint8_t Module::isAnyOnInt() const
     {
+        __LDBG_printf("anyon=%u", isAnyOn() ? 1 : 0);
         return isAnyOn() ? 1 : 0;
     }
 
     inline bool Module::on(uint8_t channel, float transition)
     {
+        __LDBG_printf("on ch=%u t=%f", channel, transition);
         return _channels[channel].on(transition);
     }
 
     inline bool Module::off(uint8_t channel, float transition)
     {
+        __LDBG_printf("off ch=%u t=%f", channel, transition);
         return _channels[channel].off(&_config, transition);
     }
 
     inline int16_t Module::getChannel(uint8_t channel) const
     {
+        __LDBG_printf("get ch=%u lvl=%u", channel, _channels[channel].getLevel());
         return _channels[channel].getLevel();
     }
 
     inline bool Module::getChannelState(uint8_t channel) const
     {
+        __LDBG_printf("get ch=%u state=%u", channel, _channels[channel].getOnState());
         return _channels[channel].getOnState();
     }
 
     inline void Module::setChannel(uint8_t channel, int16_t level, float transition)
     {
+        __LDBG_printf("set ch=%u lvl=%u t=%f", channel, level, transition);
         _channels[channel].setLevel(level, transition);
     }
 
     inline void Module::stopFading(uint8_t channel)
     {
+        __LDBG_printf("stop ch=%u", channel);
         _channels[channel].stopFading();
     }
 

@@ -34,15 +34,11 @@ namespace Dimmer {
                     discovery->addStateTopic(_createTopics(TopicType::MAIN_STATE));
                     discovery->addCommandTopic(_createTopics(TopicType::MAIN_SET));
                     discovery->addBrightnessScale(_base.getChannelCount() * Channel::getMaxLevel());
+                    discovery->addColorTempStateTopic(_createTopics(TopicType::COLOR_STATE));
+                    discovery->addColorTempCommandTopic(_createTopics(TopicType::COLOR_SET));
                     discovery->addParameter(F("brightness"), true);
                     discovery->addParameter(F("white"), true);
                 }
-                // discovery->addPayloadOnOff();
-                // discovery->addBrightnessStateTopic(_data.brightness.state);
-                // discovery->addBrightnessCommandTopic(_data.brightness.set);
-                // discovery->addBrightnessScale(MAX_LEVEL_ALL_CHANNELS);
-                // discovery->addColorTempStateTopic(_data.color.state);
-                // discovery->addColorTempCommandTopic(_data.color.set);
                 break;
             case 1:
                 if (discovery->create(this, FSPGM(lock_channels, "lock_channels"), format)) {
@@ -69,7 +65,10 @@ namespace Dimmer {
     {
         __DBG_printf("topic=%s payload=%s", topic, payload);
 
-        if (strcmp_end_P(topic, SPGM(_set)) == 0) {
+        if (strcmp_end_P(topic, PSTR("/lock/set")) == 0) {
+            _setLockChannels(atoi(payload));
+        }
+        else if (strcmp_end_P(topic, SPGM(_set)) == 0) {
             __LDBG_printf("set main");
             auto stream = HeapStream(payload, len);
             auto reader = MQTT::Json::Reader(&stream);
@@ -77,12 +76,31 @@ namespace Dimmer {
                 #if DEBUG_IOT_DIMMER_MODULE
                     reader.dump(DEBUG_OUTPUT);
                 #endif
-                // onJsonMessage(client, reader, index);
+                onJsonMessage(reader);
             }
 
         }
-        else if (strcmp_end_P(topic, PSTR("/lock/set")) == 0) {
-            _setLockChannels(atoi(payload));
+    }
+
+    void ColorTemperature::onJsonMessage(const MQTT::Json::Reader &json)
+    {
+        //TODO mqtt
+        __LDBG_printf("json state=%d", json.state);
+        if (json.state != -1) {
+            if (json.state && !_brightness) {
+                // on();
+            }
+            else if (!json.state && _brightness) {
+                // off();
+            }
+        }
+        if (json.brightness != -1) {
+            if (json.brightness == 0 && _brightness) {
+                // off();
+            }
+            else if (json.brightness) {
+                // _set(json.brightness);
+            }
         }
     }
 
@@ -96,7 +114,7 @@ namespace Dimmer {
 
     void ColorTemperature::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
     {
-        __LDBG_printf("id=%s value=%s has_value=%u state=%d has_state=%u", id.c_str(), value.c_str(), hasValue, state, hasState);
+        __LDBG_printf("id=%s val=%s has_val=%u state=%d has_state=%u", __S(id), __S(value), hasValue, state, hasState);
         if (hasValue) {
             if (id == F("d-lck")) {
                 _setLockChannels(value.toInt());
@@ -145,6 +163,7 @@ namespace Dimmer {
     // convert brightness and color to channels
     void ColorTemperature::_brightnessToChannels()
     {
+        __LDBG_printf("_base=%p", std::addressof(_base));
         auto &_channels = reinterpret_cast<Module &>(_base)._channels;
         // calculate single channels from brightness and color
         float color = (_color - kColorMin) / kColorRange;
@@ -171,6 +190,7 @@ namespace Dimmer {
     {
         __LDBG_printf("brightness=%u brightness_pub=%d color=%f color_pub=%f channel_lock=%u ch_lck_pub=%u", _brightness, _brightnessPublished, _color, _colorPublished, _channelLock, _channelLockPublished);
         if (_brightness != _brightnessPublished || _color != _colorPublished || _channelLock != _channelLockPublished) {
+            // publish if any value has been changed
             _publishMQTT();
             _publishWebUI();
             _brightness = _brightnessPublished;
@@ -206,9 +226,10 @@ namespace Dimmer {
 
     void ColorTemperature::_setLockChannels(bool value)
     {
-        __LDBG_printf("state=%u", value);
+        __LDBG_printf("lock=%u", value);
         _channelLock = value;
         if (value) {
+            // if channels are locked, the ratio is 1:1 (4 channels = ratio 2)
             _ratio[0] = 2;
             _ratio[1] = 2;
             _brightnessToChannels();
@@ -218,13 +239,12 @@ namespace Dimmer {
 
     void ColorTemperature::_calcRatios()
     {
+        __LDBG_printf("_base=%p", std::addressof(_base));
         auto &_channels = reinterpret_cast<Module &>(_base)._channels;
         _ratio[0] = _channels[_channel_ww2].getOnState() ?
-            ((_channels[_channel_ww1].getLevel() + _channels[_channel_ww2].getLevel()) / static_cast<float>(_channels[_channel_ww2].getLevel())) : (_channels[_channel_ww1].getOnState() ?
-                INFINITY : 2);
+            ((_channels[_channel_ww1].getLevel() + _channels[_channel_ww2].getLevel()) / static_cast<float>(_channels[_channel_ww2].getLevel())) : (_channels[_channel_ww1].getOnState() ? INFINITY : 2);
         _ratio[1] = _channels[_channel_cw2].getOnState() ?
-            ((_channels[_channel_cw1].getLevel() + _channels[_channel_cw2].getLevel()) / static_cast<float>(_channels[_channel_cw2].getLevel())) : (_channels[_channel_cw1].getOnState() ?
-                INFINITY : 2);
+            ((_channels[_channel_cw1].getLevel() + _channels[_channel_cw2].getLevel()) / static_cast<float>(_channels[_channel_cw2].getLevel())) : (_channels[_channel_cw1].getOnState() ? INFINITY : 2);
         __LDBG_printf("ww=%f cw=%f", _ratio[0], _ratio[1]);
     }
 
@@ -250,6 +270,7 @@ namespace Dimmer {
             case TopicType::LOCK_STATE:
                 return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/lock/state"));
             default:
+                __LDBG_panic("invalid type=%u", type);
                 break;
         }
         return String();

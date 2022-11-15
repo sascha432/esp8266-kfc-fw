@@ -32,7 +32,6 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameWeatherStationConfig_t, "MainConfig()
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameRemoteConfig_t, "MainConfig().plugins.remote.cfg");
 
 
-
 // --------------------------------------------------------------------
 // exported static functions
 
@@ -93,16 +92,16 @@ namespace KFCConfigurationClasses {
     #if ESP8266
         return FormUI::Container::List(
             0, F("GPIO0"),
-            1, F("GPIO1/U0TXD"),
+            1, F("GPIO1/TX"),
             2, F("GPIO2"),
-            3, F("GPIO3/U0RXD"),
+            3, F("GPIO3/RX"),
             4, F("GPIO4"),
             5, F("GPIO5"),
             12, F("GPIO12"),
             13, F("GPIO13"),
             14, F("GPIO14"),
             15, F("GPIO15"),
-            16, F("GPIO16/RTC_GPIO0")
+            16, F("GPIO16/RTC")
         );
         // PROGMEM_DEF_LOCAL_PSTR_ARRAY(pinNames, "GPIO0", "U0TXD", "GPIO2", "U0RXD", "GPIO4", "GPIO5", "", "", "", "", "", "", "GPIO12", "GPIO13", "GPIO14", "GPIO15", "GPIO16/RTC_GPIO0");
     #else

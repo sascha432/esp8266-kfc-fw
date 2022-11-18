@@ -4,15 +4,15 @@
 
 #pragma once
 
+#include "../src/plugins/sensor/sensor.h"
+#include "dimmer_colortemp.h"
+#include "dimmer_def.h"
 #include <Arduino_compat.h>
-#include <kfc_fw_config.h>
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>
-#include <web_server.h>
+#include <kfc_fw_config.h>
 #include <serial_handler.h>
-#include "dimmer_def.h"
-#include "dimmer_colortemp.h"
-#include "../src/plugins/sensor/sensor.h"
+#include <web_server.h>
 
 #ifndef STK500V1_RESET_PIN
 #    error STK500V1_RESET_PIN not defined
@@ -60,11 +60,13 @@ namespace Dimmer {
         {
         }
 
-        operator bool() const {
+        operator bool() const
+        {
             return _version;
         }
 
-        void invalidate() {
+        void invalidate()
+        {
             _version = dimmer_version_t({});
             _info = dimmer_config_info_t({});
             _firmwareConfig = register_mem_cfg_t({});
@@ -87,16 +89,17 @@ namespace Dimmer {
     class Plugin;
     class ColorTemperature;
     class RGBChannels;
+    class ChannelsArray;
 
     extern Plugin dimmer_plugin;
 
-    #if IOT_DIMMER_MODULE_HAS_BUTTONS
-        class ButtonsImpl;
-        using Buttons = ButtonsImpl;
-    #else
-        class NoButtonsImpl;
-        using Buttons = NoButtonsImpl;
-    #endif
+#if IOT_DIMMER_MODULE_HAS_BUTTONS
+    class ButtonsImpl;
+    using Buttons = ButtonsImpl;
+#else
+    class NoButtonsImpl;
+    using Buttons = NoButtonsImpl;
+#endif
 
     // class MinMaxLevel {
     // public:
@@ -142,8 +145,9 @@ namespace Dimmer {
             static void fetchMetrics(Event::CallbackTimerPtr timer);
         #endif
 
-        virtual bool on(uint8_t channel = -1, float transition = NAN) = 0;
-        virtual bool off(uint8_t channel = -1, float transition = NAN) = 0;
+            virtual bool on(uint8_t channel = -1, float transition = NAN) = 0;
+            virtual bool off(uint8_t channel = -1, float transition = NAN) = 0;
+
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
             virtual bool isAnyOn() const = 0;
         #endif
@@ -152,6 +156,7 @@ namespace Dimmer {
         virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
         virtual void stopFading(uint8_t channel) = 0;
         virtual uint8_t getChannelCount() const = 0;
+        virtual ChannelsArray &getChannels();
 
         virtual int16_t getRange(uint8_t channel) const = 0;
         virtual int16_t getOffset(uint8_t channel) const = 0;
@@ -221,34 +226,35 @@ namespace Dimmer {
         void _fetchMetrics();
     #endif
 
-    // WebUI
+        // WebUI
     protected:
         void getValues(WebUINS::Events &array);
         void setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState);
 
-    // ATMode
-    #if AT_MODE_SUPPORTED
+// ATMode
+#if AT_MODE_SUPPORTED
     protected:
-        #if AT_MODE_HELP_SUPPORTED
-            ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
-        #endif
+#    if AT_MODE_HELP_SUPPORTED
+        ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
+#    endif
         bool atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel);
-    #endif
+#endif
 
     public:
         static void setupWebServer();
         static void handleWebServer(AsyncWebServerRequest *request);
         static void resetDimmerMCU();
+
     private:
         static uint8_t _getChannelFrom(AsyncWebServerRequest *request);
 
     protected:
-        #if IOT_DIMMER_HAS_COLOR_TEMP
-            ColorTemperature _color;
-        #endif
-        #if IOT_DIMMER_HAS_RGB
-            RGBChannels _rgb;
-        #endif
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        ColorTemperature _color;
+    #endif
+    #if IOT_DIMMER_HAS_RGB
+        RGBChannels _rgb;
+    #endif
     };
 
     inline Base::~Base()
@@ -306,8 +312,14 @@ namespace Dimmer {
         return SensorPlugin::getSensor<MQTT::SensorType::DIMMER_METRICS>();
     }
 
+    inline ChannelsArray &Base::getChannels()
+    {
+        __DBG_panic("pure virtual");
+        return *(ChannelsArray *)(nullptr);
+    }
+
 }
 
 #if DEBUG_IOT_DIMMER_MODULE
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif

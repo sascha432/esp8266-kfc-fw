@@ -76,6 +76,8 @@ namespace Dimmer {
         uint16_t getStorededBrightness() const;
         void stopFading();
 
+        void setDimmer(Module *dimmer);
+
     protected:
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
             int _offDelayPrecheck(int16_t level, ConfigType *config = nullptr, int16_t storeLevel = -1);
@@ -88,6 +90,7 @@ namespace Dimmer {
     private:
         friend ChannelsArray;
         friend ColorTemperature;
+        friend Module;
 
         void _publish();
         bool _set(int32_t level, float transition = NAN, bool publish = true);
@@ -110,6 +113,11 @@ namespace Dimmer {
     // inline int16_t Channel::getMaxLevel() const {
     //     return _maxLevel;
     // }
+
+    inline void Channel::setDimmer(Module *dimmer)
+    {
+        _dimmer = dimmer;
+    }
 
     inline bool Channel::getOnState() const
     {

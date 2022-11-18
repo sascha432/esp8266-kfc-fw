@@ -65,6 +65,7 @@ namespace Dimmer {
     private:
         void _setLockChannels(bool value);
         void _calcRatios();
+        Base &_getBase();
 
         void begin();
 
@@ -72,7 +73,7 @@ namespace Dimmer {
         friend Base;
         friend Plugin;
 
-        Base &_base;
+        Base *_base;
         float _color;
         float _colorPublished;
         float _ratio[2];
@@ -94,6 +95,11 @@ namespace Dimmer {
             #error not implemented
         #endif
     };
+
+    inline Base &ColorTemperature::_getBase()
+    {
+        return *_base;
+    }
 
 }
 

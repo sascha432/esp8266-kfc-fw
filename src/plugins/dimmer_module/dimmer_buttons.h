@@ -62,46 +62,6 @@ namespace Dimmer {
         }
     };
 
-    // using ChannelPtr = Channel *;
-
-    // class GroupArray : public ChannelsArray
-    // {
-    // public:
-    //     GroupArray(ChannelsArray *channels)
-    //     {
-    //         uint8_t n = 0;
-    //         for(const auto &channel: *channels) {
-    //             std::array<ChannelPtr, _Channels>::at(n++) = &channel;
-    //         }
-    //     }
-
-    //     void setAll(int16_t value) {
-    //         for (auto channel: *this) {
-    //             channel->setLevel(value);
-    //         }
-    //     }
-
-    //     int32_t getSum() const {
-    //         int32_t sum = 0;
-    //         for (const auto channel: *this) {
-    //             sum += channel->getLevel();
-    //         }
-    //         return sum;
-    //     }
-
-    //     int32_t getSum(int16_t minLevel) const {
-    //         int32_t sum = 0;
-    //         for (const auto channel: *this) {
-    //             auto level = channel->getLevel();
-    //             if (level > minLevel) {
-    //                 sum += level;
-    //             }
-    //         }
-    //         return sum;
-    //     }
-    // };
-
-
     // ------------------------------------------------------------------------
     // DimmerNoButtonsImpl
     // ------------------------------------------------------------------------
@@ -109,7 +69,6 @@ namespace Dimmer {
     class NoButtonsImpl : public Base {
     public:
         using Base::Base;
-        // using ChannelsArray = std::array<Channel, IOT_DIMMER_MODULE_CHANNELS>;
 
         void begin();
         void end();
@@ -120,6 +79,12 @@ namespace Dimmer {
 
     inline void NoButtonsImpl::begin()
     {
+        // auto size = _channels.size();
+        // for(uint8_t i = 0; i < size; i++) {
+        //     auto &channel = _channels.at(i);
+        //     channel.setDimmer(reinterpret_cast<Dimmer::Module*>(0xffffffff));
+
+        // }
     }
 
     inline void NoButtonsImpl::end()
@@ -128,28 +93,27 @@ namespace Dimmer {
 
     #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-    // ------------------------------------------------------------------------
-    // DimmerButtonsImpl
-    // ------------------------------------------------------------------------
+        // ------------------------------------------------------------------------
+        // DimmerButtonsImpl
+        // ------------------------------------------------------------------------
 
-    class ButtonsImpl : public Base {
-    public:
-        using Base::Base;
-        // using ChannelsArray = std::array<Channel, IOT_DIMMER_MODULE_CHANNELS>;
+        class ButtonsImpl : public Base {
+        public:
+            using Base::Base;
 
-        void begin();
-        void end();
+            void begin();
+            void end();
 
-    protected:
-        friend Button;
+        protected:
+            friend Button;
 
-        ChannelsArray _channels;
-    };
+            ChannelsArray _channels;
+        };
 
-    inline void Buttons::end()
-    {
-        PinMonitor::pinMonitor.end();
-    }
+        inline void Buttons::end()
+        {
+            PinMonitor::pinMonitor.end();
+        }
 
     #endif
 

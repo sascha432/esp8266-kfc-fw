@@ -18,6 +18,7 @@
 namespace Dimmer {
 
     class ColorTemperature;
+    class ChannelsArray;
 
     class Module: public MQTTComponent, public Buttons {
     protected:
@@ -36,6 +37,7 @@ namespace Dimmer {
         virtual bool off(uint8_t channel = -1, float transition = NAN) override;
 
         virtual uint8_t getChannelCount() const override;
+        virtual ChannelsArray &getChannels() override;
         virtual bool isAnyOn() const;
         uint8_t isAnyOnInt() const;
         virtual bool getChannelState(uint8_t channel) const override;
@@ -122,6 +124,11 @@ namespace Dimmer {
     inline uint8_t Module::getChannelCount() const
     {
         return _channels.size();
+    }
+
+    inline ChannelsArray &Module::getChannels()
+    {
+        return _channels;
     }
 
     inline int16_t Module::getRange(uint8_t channel) const

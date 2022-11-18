@@ -4,15 +4,15 @@
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-#include "../include/templates.h"
-#include <plugins.h>
-#include "dimmer_button.h"
+#    include "../include/templates.h"
+#    include "dimmer_button.h"
+#    include <plugins.h>
 
-#if DEBUG_IOT_DIMMER_MODULE
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
+#    if DEBUG_IOT_DIMMER_MODULE
+#        include <debug_helper_enable.h>
+#    else
+#        include <debug_helper_disable.h>
+#    endif
 
 using namespace Dimmer;
 using namespace PinMonitor;
@@ -31,7 +31,7 @@ void Buttons::begin()
 
     pinMonitor.setDefaultPinMode(IOT_DIMMER_MODULE_PINMODE);
 
-    for(uint8_t i = 0; i < _channels.size() * 2; i++) {
+    for (uint8_t i = 0; i < _channels.size() * 2; i++) {
         auto pinNum = _config._base.pin(i);
         __LDBG_assert_printf(pinNum != 0xff, "pinNum=0x%02x channel=%u", pinNum, i);
         if (pinNum != 0xff) {

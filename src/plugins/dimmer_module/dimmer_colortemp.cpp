@@ -21,19 +21,20 @@ namespace Dimmer {
 
     ColorTemperature::ColorTemperature(Base *base) :
         MQTTComponent(ComponentType::LIGHT),
-        _base(*base)
+        _base(base)
     {
     }
 
     MQTT::AutoDiscovery::EntityPtr ColorTemperature::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
     {
         auto discovery = new MQTT::AutoDiscovery::Entity();
+        __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
         switch(num) {
             case 0:
                 if (discovery->createJsonSchema(this, FSPGM(main), format)) {
                     discovery->addStateTopic(_createTopics(TopicType::MAIN_STATE));
                     discovery->addCommandTopic(_createTopics(TopicType::MAIN_SET));
-                    discovery->addBrightnessScale(_base.getChannelCount() * Channel::getMaxLevel());
+                    discovery->addBrightnessScale(_base->getChannelCount() * Channel::getMaxLevel());
                     discovery->addColorTempStateTopic(_createTopics(TopicType::COLOR_STATE));
                     discovery->addColorTempCommandTopic(_createTopics(TopicType::COLOR_SET));
                     discovery->addParameter(F("brightness"), true);
@@ -59,6 +60,7 @@ namespace Dimmer {
     {
         subscribe(_createTopics(TopicType::MAIN_SET));
         subscribe(_createTopics(TopicType::LOCK_SET));
+        // subscribe(_createTopics(TopicType::COLOR_SET));
     }
 
     void ColorTemperature::onMessage(const char *topic, const char *payload, size_t len)
@@ -136,7 +138,7 @@ namespace Dimmer {
     // convert channels to brightness and color
     void ColorTemperature::_channelsToBrightness()
     {
-        auto &_channels = reinterpret_cast<Module &>(_base)._channels;
+        auto &_channels = _base->getChannels();
         // calculate color and brightness values from single channels
         int32_t sum = _channels.getSum();
         if (sum) {
@@ -163,8 +165,7 @@ namespace Dimmer {
     // convert brightness and color to channels
     void ColorTemperature::_brightnessToChannels()
     {
-        __LDBG_printf("_base=%p", std::addressof(_base));
-        auto &_channels = reinterpret_cast<Module &>(_base)._channels;
+        auto &_channels = _base->getChannels();
         // calculate single channels from brightness and color
         float color = (_color - kColorMin) / kColorRange;
         uint16_t ww = _brightness * color;
@@ -188,7 +189,7 @@ namespace Dimmer {
 
     void ColorTemperature::_publish()
     {
-        __LDBG_printf("brightness=%u brightness_pub=%d color=%f color_pub=%f channel_lock=%u ch_lck_pub=%u", _brightness, _brightnessPublished, _color, _colorPublished, _channelLock, _channelLockPublished);
+        __LDBG_printf("brightness=%d brightness_pub=%d color=%f color_pub=%f channel_lock=%u ch_lck_pub=%u", _brightness, _brightnessPublished, _color, _colorPublished, _channelLock, _channelLockPublished);
         if (_brightness != _brightnessPublished || _color != _colorPublished || _channelLock != _channelLockPublished) {
             // publish if any value has been changed
             _publishMQTT();
@@ -207,7 +208,7 @@ namespace Dimmer {
                 State(_brightness != 0),
                 Brightness(_brightness),
                 MQTT::Json::ColorTemperature(static_cast<uint16_t>(_color)),
-                Transition(_base._getConfig()._base._fadetime())).toString()
+                Transition(_base->_getConfig()._base._fadetime())).toString()
             );
         }
     }
@@ -239,8 +240,8 @@ namespace Dimmer {
 
     void ColorTemperature::_calcRatios()
     {
-        __LDBG_printf("_base=%p", std::addressof(_base));
-        auto &_channels = reinterpret_cast<Module &>(_base)._channels;
+        __LDBG_printf("_base=%p", _base);
+        auto &_channels = _base->getChannels();
         _ratio[0] = _channels[_channel_ww2].getOnState() ?
             ((_channels[_channel_ww1].getLevel() + _channels[_channel_ww2].getLevel()) / static_cast<float>(_channels[_channel_ww2].getLevel())) : (_channels[_channel_ww1].getOnState() ? INFINITY : 2);
         _ratio[1] = _channels[_channel_cw2].getOnState() ?
@@ -269,6 +270,10 @@ namespace Dimmer {
                 return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/lock/set"));
             case TopicType::LOCK_STATE:
                 return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/lock/state"));
+            case TopicType::COLOR_SET:
+                return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/color/set"));
+            case TopicType::COLOR_STATE:
+                return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/color/state"));
             default:
                 __LDBG_panic("invalid type=%u", type);
                 break;

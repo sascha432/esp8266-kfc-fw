@@ -20,7 +20,6 @@ namespace KFCConfigurationClasses {
                             channel_mapping{ 0, 1, 2, 3 },
                         #endif
                     #endif
-                    level{},
                     #if IOT_DIMMER_MODULE_HAS_BUTTONS
                         off_delay(kDefaultValueFor_off_delay),
                         off_delay_signal(kDefaultValueFor_off_delay_signal),
@@ -37,21 +36,24 @@ namespace KFCConfigurationClasses {
                         max_brightness(kDefaultValueFor_max_brightness),
                         shortpress_time(kDefaultValueFor_shortpress_time),
                         lp_fadetime(kDefaultValueFor_lp_fadetime),
+                    #else
+                        min_brightness(kDefaultValueFor_min_brightness),
+                        max_brightness(kDefaultValueFor_max_brightness),
                     #endif
                     on_fadetime(kDefaultValueFor_on_fadetime),
                     off_fadetime(kDefaultValueFor_off_fadetime)
             {
+                #if IOT_DIMMER_MODULE_CHANNELS
+                    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                        level.from[i] = 0;
+                        level.to[i] = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
+                    }
+                #endif
             }
 
             void Dimmer::defaults()
             {
-                DimmerConfig_t cfg = {};
-                // error: cannot bind packed field
-                // std::fill(std::begin(cfg.level.to), std::end(cfg.level.to), IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                    cfg.level.to[i] = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
-                }
-                setConfig(cfg);
+                setConfig(DimmerConfig_t());
             }
 
         }

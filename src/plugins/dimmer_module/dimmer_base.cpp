@@ -624,9 +624,6 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
 
 #include "at_mode.h"
 
-#undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
-#define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "DIM"
-
 #define DIMMER_COMMANDS "reset|weeprom|info|print|write|factory"
 #undef DISPLAY
 
@@ -640,9 +637,9 @@ enum class DimmerCommandType {
     FACTORY
 };
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "G", "Get level(s)");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "S", "<channel>,<level>[,<time>]", "Set level");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMCF, "CF", "<" DIMMER_COMMANDS ">", "Configure dimmer firmware");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DIMG, "DIMG", "Get level(s)");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMS, "DIMS", "<channel>,<level>[,<time>]", "Set level");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DIMCF, "DIMCF", "<" DIMMER_COMMANDS ">", "Configure dimmer firmware");
 
 #if AT_MODE_HELP_SUPPORTED
 

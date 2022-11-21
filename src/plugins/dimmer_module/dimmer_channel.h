@@ -76,8 +76,6 @@ namespace Dimmer {
         uint16_t getStorededBrightness() const;
         void stopFading();
 
-        void setDimmer(Module *dimmer);
-
     protected:
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
             int _offDelayPrecheck(int16_t level, ConfigType *config = nullptr, int16_t storeLevel = -1);
@@ -109,15 +107,6 @@ namespace Dimmer {
         uint8_t _publishFlag;
         uint8_t _mqttCounter;
     };
-
-    // inline int16_t Channel::getMaxLevel() const {
-    //     return _maxLevel;
-    // }
-
-    inline void Channel::setDimmer(Module *dimmer)
-    {
-        _dimmer = dimmer;
-    }
 
     inline bool Channel::getOnState() const
     {

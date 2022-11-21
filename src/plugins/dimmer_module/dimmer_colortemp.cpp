@@ -60,7 +60,7 @@ namespace Dimmer {
     {
         subscribe(_createTopics(TopicType::MAIN_SET));
         subscribe(_createTopics(TopicType::LOCK_SET));
-        // subscribe(_createTopics(TopicType::COLOR_SET));
+        subscribe(_createTopics(TopicType::COLOR_SET));
     }
 
     void ColorTemperature::onMessage(const char *topic, const char *payload, size_t len)

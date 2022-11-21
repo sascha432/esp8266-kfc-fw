@@ -4,71 +4,71 @@ After the command help takes a lot of FLASH memory, it has been moved to this do
 
 ## Common Commands
 
-### ``AT``
+### ``+AT?``
 
 Print ``OK``
 
-### ``REM=...``
+### ``+REM=...``
 
 Ignore comment
 
-### ``DSLP=[<milliseconds>[,<mode>]]``
+### ``+DSLP=[<milliseconds>[,<mode>]]``
 
 Enter deep sleep
 
-### ``RST=[<s>]``
+### ``+RST=[<s>]``
 
 Reset device. If ``s`` is provided, it will reboot in SAFE MODE.
 
-### ``LOAD``
+### ``+LOAD``
 
 Discard changes and load settings from EEPROM
 
-### ``STORE``
+### ``+TORE``
 
 Store current settings in EEPROM
 
-### ``FACTORY``
+### ``+FACTORY``
 
 Restore factory settings (but do not store in EEPROM)
 
-### ``FSR``
+### ``+FSR``
 
 Restore factory settings, store in EEPROM and reboot device
 
-### ``ATMODE=<1|0>``
+### ``+ATMODE=<1|0>``
 
 Enable/disable AT Mode if compiled in
 
-### ``DLY=<milliseconds>``
+### ``+DLY=<milliseconds>``
 
 Call delay(milliseconds)
 
-### ``CAT=<filename>``
+### ``+CAT=<filename>``
 
 Display file contents
 
-### ``RM=<filename>``
+### ``+RM=<filename>``
 
 Remove file from FS
 
-### ``RN=<filename>,<new filename>``
+### ``+RN=<filename>,<new filename>``
 
 Rename file or directory
 
-### ``LS=[<directory>[,<hidden=true|false>,<subdirs=true|false>]]``
+### ``+LS=[<directory>[,<hidden=true|false>,<subdirs=true|false>]]``
 
 List files and directories
 
-### ``LSR=[<directory>]``
+### ``+LSR=[<directory>]``
 
 List files and directories using FS.openDir(). This will not display read only virtual files.
 
-### ``AOTA=<start|stop>``
+### ``+AOTA=<start|stop>``
 
 Start/stop Arduino OTA (required about 1K RAM to run)
 
-### ``PLG=<list|start|stop|add-blacklist|add|remove>[,<name>]``
+### ``+PLG=<list|start|stop|add-blacklist|add|remove>[,<name>]``
 
 Plugin management. If a plugin malfunctions, it can be blacklisted in SAFE MODE.
 
@@ -93,11 +93,11 @@ Run WiFi command
  - next                                        Switch to next WiFi station
  - stop_ping                                   Stop pinging the gateway (Only if compiled in)
 
-### ``LED=<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]``
+### ``+LED=<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]``
 
 Set internal LED mode or an LED on a certain PIN.
 
-### ``NEOPX=<pin>,<num>,<r>,<g>,<b>``
+### ``+NEOPX=<pin>,<num>,<r>,<g>,<b>``
 
 Set NeoPixel colors for a given PIN if available
 
@@ -105,23 +105,23 @@ Set NeoPixel colors for a given PIN if available
 
 Displays versions of the SDK, framework, libraries, memory addresses and a lot more. Available in DEBUG mode only
 
-### ``PING=<target[,count=4[,timeout=5000]]>``
+### ``+PING=<target[,count=4[,timeout=5000]]>``
 
 Ping host or IP address if compiled in
 
-### ``I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]``
+### ``+I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]``
 
 Configure I2C Bus
 
-### ``I2CTM=<address>,<data,...>``
+### ``+I2CTM=<address>,<data,...>``
 
 Transmsit data to slave
 
-### ``I2CRQ=<address>,<length>``
+### ``+I2CRQ=<address>,<length>``
 
 Request data from slave
 
-### ``I2CSCAN=[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]``
+### ``+I2CSCAN=[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]``
 
 Scan I2C Bus. If ANY is passed as third argument, all available PINs are probed for I2C devices. Available only if compiled in
 
@@ -158,45 +158,45 @@ Run command
 - get[,<range>]
 - set,<range(=0-7)>,[#color]
 
-``LMVIEW=<interval in ms|0=disable>,<client_id>``
+``+LMVIEW=<interval in ms|0=disable>,<client_id>``
 
 Display LEDs over http2serial
 
 ## Weather Station / Clock / LED Matrix
 
-### ``WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
+### ``+WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
 
 Enable/disable function
 
-### ``WSBL=<level=0-1023>``
+### ``+WSBL=<level=0-1023>``
 
 Set backlight level
 
-### ``WSU=<i|f>``
+### ``+WSU=<i|f>``
 
 Update weather info/forecast
 
-### ``WSM=<date YYYY-MM-DD>[,<days>]``
+### ``+WSM=<date YYYY-MM-DD>[,<days>]``
 
 Show Moon Phase for given date. Only available in DEBUG MODE
 
-### ``MDNSR`=<service>,<proto>,[<wait=3000ms>]``
+### ``+MDNSR`=<service>,<proto>,[<wait=3000ms>]``
 
 Query MDNS
 
-### ``MDNSR=<stop|start|enable|disable|zeroconf>``
+### ``+MDNSR=<stop|start|enable|disable|zeroconf>``
 
 Configure MDNS
 
 ## Blinds Controller
 
-### ``BCME=<open|close|stop|tone|imperial|init>[,<channel>][,<tone_frequency>,<tone_pwm_value>]``
+### ``+BCME=<open|close|stop|tone|imperial|init>[,<channel>][,<tone_frequency>,<tone_pwm_value>]``
 
 Open, close a channel, stop motor or run tone test, play imperial march, initial state
 
 ## MQTT
 
-### ``MQTT=con|dis|set|top|auto|list``
+### ``+MQTT=con|dis|set|top|auto|list``
 
 Manage MQTT
 
@@ -209,29 +209,29 @@ Manage MQTT
 
 ## Weather Station
 
-### ``WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
+### ``+WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
 
-### ``WSBL=<level=0-1023>``
+### ``+WSBL=<level=0-1023>``
 
 Set backlight level
 
-### ``WSU=<i|f>``
+### ``+WSU=<i|f>``
 
 Update weather info/forecast
 
 ## STK500v1 Programmer
 
-### ``STK500V1F=<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]``
+### ``+STK500V1F=<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]``
 
 Flash .HEX file to AVR MCU over serial boot loader
 
 For example: ``+STK500V1F=/stk500v1/atomicsun-firmware-2.2.3-328pb.hex``
 
-### ``STK500V1S=<atmega328p/0x1e1234/...>``
+### ``+STK500V1S=<atmega328p/0x1e1234/...>``
 
 Set signature (/stk500v1/atmega.csv)
 
-### ``STK500V1S?``
+### ``+STK500V1S?``
 
 Display signature
 
@@ -241,14 +241,19 @@ Debug log file (/stk500v1/debug.log)
 
 ## Dimmer
 
-### ``DIMG``
+### ``+DIMG``
 
 Get level(s)
 
-### ``DIMS=<channel>,<level>[,<time>]``
+### ``+DIMS=<channel>,<level>[,<time>]``
 
 Set level
 
-### ``DIMCF=<reset|weeprom|info|print|write|factory>``
+### ``+DIMCF=<reset|weeprom|info|print|write|factory|zc,value>``
 
 Configure dimmer firmware
+
+#### ``+DIMCF=zc,value``
+
+Set zero crossing offset
+

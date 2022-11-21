@@ -26,7 +26,10 @@ namespace Dimmer {
         using TwoWireEx::TwoWireEx;
 
         struct Lock {
-            Lock(TwoWire &wire) : _wire(wire), _locked(_wire.lock()) {
+            Lock(TwoWire &wire) :
+                _wire(wire),
+                _locked(_wire.lock())
+            {
             }
             ~Lock() {
                 if (_locked) {
@@ -133,6 +136,20 @@ namespace Dimmer {
                 endTransmission();
                 unlock();
             #endif
+        }
+
+        void setZeroCrossing(uint16_t value, uint8_t address = kDefaultSlaveAddress)
+        {
+            if (!lock()) {
+                return;
+            }
+            beginTransmission(address);
+            write(DIMMER_REGISTER_COMMAND);
+            write(DIMMER_COMMAND_SET_ZC_DELAY);
+            write(static_cast<uint8_t>(value));
+            write(static_cast<uint8_t>(value << 8));
+            endTransmission();
+            unlock();
         }
 
         void forceTemperatureCheck(uint8_t address = kDefaultSlaveAddress) {

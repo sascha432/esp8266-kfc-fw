@@ -61,7 +61,7 @@ STK500v1Plugin::STK500v1Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ST
 }
 
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]", "Flash ATmega micro controller");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]", "Flash ATmega micro controller over Serial Port");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/0x1e1234/...>", "Set signature (/stk500v1/atmega.csv)", "Display signature");
 
 #if AT_MODE_HELP_SUPPORTED
@@ -78,6 +78,14 @@ ATModeCommandHelpArrayPtr STK500v1Plugin::atModeCommandHelp(size_t &size) const
 
 #endif
 
+class HardwareSerialHelper : public HardwareSerial {
+public:
+    // returns 0 if not active
+    uint32_t getBaudRate() {
+        return uart_get_baudrate(_uart);
+    }
+};
+
 bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
 
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S))) {
@@ -93,6 +101,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                 args.print(F("In progress"));
             }
             else {
+                uint32_t prevBaudRate = 0;
                 PGM_P portName;
                 Stream *serialPort;
                 String filename = args.get(0);
@@ -106,6 +115,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                             break;
                         #endif
                     case 1:
+                        prevBaudRate = reinterpret_cast<HardwareSerialHelper &>(Serial1).getBaudRate();
                         // Serial1.begin(KFC_SERIAL_RATE);
                         Serial1.setRxBufferSize(512);
                         serialPort = &Serial1;
@@ -113,6 +123,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                         break;
                     case 0:
                     default:
+                        prevBaudRate = reinterpret_cast<HardwareSerialHelper &>(Serial0).getBaudRate();
                         // Serial0.begin(KFC_SERIAL_RATE);
                         Serial0.setRxBufferSize(512);
                         serialPort = &Serial0;
@@ -129,8 +140,8 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                 stk500v1->setLogging(args.toInt(2, STK500v1Programmer::LOG_FILE));
 
                 // run in main loop
-                _Scheduler.add(1000, false, [this, serialPort, serialPortNum](Event::CallbackTimerPtr timer) {
-                    stk500v1->begin([serialPort, serialPortNum]() {
+                _Scheduler.add(1000, false, [this, serialPort, serialPortNum, prevBaudRate](Event::CallbackTimerPtr timer) {
+                    stk500v1->begin([serialPort, serialPortNum, prevBaudRate]() {
                         switch(serialPortNum) {
                             #if STK500_HAVE_SOFTWARE_SERIAL
                                 case 2:
@@ -138,16 +149,19 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                                     break;
                                 #endif
                             case 1:
-                                // Serial1.end();
-                                // TODO reinitialize if in use
-                                // Serial1.begin();
                                 Serial1.setRxBufferSize(256);
+                                if (prevBaudRate) {
+                                    Serial1.end();
+                                    Serial1.begin(prevBaudRate);
+                                }
                                 break;
                             case 0:
                             default:
                                 Serial0.setRxBufferSize(256);
-                                Serial0.end();
-                                Serial0.begin(KFC_SERIAL_RATE);
+                                if (prevBaudRate) {
+                                    Serial0.end();
+                                    Serial0.begin(prevBaudRate);
+                                }
                                 break;
                         }
                         delete stk500v1;

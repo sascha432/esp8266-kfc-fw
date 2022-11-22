@@ -2,16 +2,16 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include <Arduino_compat.h>
-#include <IntelHexFormat.h>
-#include <Buffer.h>
-#include <PrintString.h>
 #include "stk500v1.h"
+#include <Arduino_compat.h>
+#include <Buffer.h>
+#include <IntelHexFormat.h>
+#include <PrintString.h>
 
 #if DEBUG_STK500V1
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 PROGMEM_STRING_DECL(stk500v1_log_file);
@@ -119,7 +119,7 @@ public:
 
 public:
     STK500v1Programmer(Stream &serial);
-    virtual ~STK500v1Programmer();
+    ~STK500v1Programmer();
 
     void setFile(const String &filename);
 
@@ -129,8 +129,6 @@ public:
     static void dumpLog(Stream &output);
     static void loopFunction();
 
-    void setPageSize(uint16_t pageSize);
-
     // set default timeout
     void setTimeout(uint16_t timeout);
 
@@ -138,6 +136,7 @@ public:
 
 public:
     void setSignature(const char *signature);
+    void setSignature(const __FlashStringHelper *signature);
     void setSignature_P(PGM_P signature);
     // void setFuseBytes(uint8_t low, uint8_t high, uint8_t extended);
     static bool getSignature(const char *mcu, char *signature);
@@ -174,7 +173,6 @@ private:
         void _sendCommandReadFuseExt();
         void _sendCommandProgFuseExt(uint8_t fuseLow, uint8_t fuseHigh, uint8_t fuseExt);
     #endif
-    // void _setExpectedResponse_P(PGM_P response, uint8_t length);
     void _setExpectedResponseInSync();
 
     // read response with timeout
@@ -226,8 +224,8 @@ private:
         char _fuseBytes[3];
     #endif
     IntelHexFormat _file;
-    uint16_t _pageSize;
     uint8_t *_pageBuffer;
+    static constexpr uint8_t _pageSize = 128;
     uint16_t _pageAddress;
     uint16_t _pagePosition;
     uint16_t _verified;
@@ -260,6 +258,23 @@ private:
 
 extern STK500v1Programmer *stk500v1;
 
+inline void STK500v1Programmer::setSignature(const char *signature)
+{
+    if (*signature) {
+        memmove_P(_signature, signature, sizeof(_signature));
+    }
+}
+
+inline void STK500v1Programmer::setSignature_P(PGM_P signature)
+{
+    setSignature(signature);
+}
+
+inline void STK500v1Programmer::setSignature(const __FlashStringHelper *signature)
+{
+    setSignature(reinterpret_cast<PGM_P>(signature));
+}
+
 inline STK500v1Programmer::~STK500v1Programmer()
 {
     delete[] _pageBuffer;
@@ -278,13 +293,6 @@ inline void STK500v1Programmer::_skipResponse(Callback_t success, Callback_t fai
 {
     success();
 }
-
-// inline void STK500v1Programmer::_setExpectedResponse_P(PGM_P response, uint8_t length)
-// {
-//     _logPrintf_P(PSTR("Expected response length=%u"), length);
-//     _expectedResponse.clear();
-//     _expectedResponse.write_P(response, length);
-// }
 
 inline void STK500v1Programmer::_delay(uint16_t time, Callback_t callback)
 {
@@ -306,11 +314,6 @@ inline void STK500v1Programmer::loopFunction()
 inline void STK500v1Programmer::setTimeout(uint16_t timeout)
 {
     _defaultTimeout = timeout;
-}
-
-inline void STK500v1Programmer::setPageSize(uint16_t pageSize)
-{
-    _pageSize = pageSize;
 }
 
 inline void STK500v1Programmer::setLogging(int logging)
@@ -354,5 +357,5 @@ void STK500v1Programmer::_log(const __FlashStringHelper *format, _Args ...args)
 }
 
 #if DEBUG_STK500V1
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif

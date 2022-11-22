@@ -41,8 +41,7 @@ STK500v1Programmer::STK500v1Programmer(Stream &serial) :
     #if STK500_HAVE_FUSES
         _fuseBytes{0xff, 0xda, 0xff}, // https://www.engbedded.com/fusecalc/
     #endif
-    _pageSize(128),
-    _pageBuffer(new uint8_t[_pageSize]()),
+    _pageBuffer(new uint8_t[_pageSize]),
     _logging(LoggingEnum::LOG_DISABLED),
     _success(false)
 {
@@ -599,29 +598,17 @@ void STK500v1Programmer::_clearResponse(uint16_t delayTime, Callback_t callback)
 
 void STK500v1Programmer::_clearPageBuffer()
 {
-    memset(_pageBuffer, 0, _pageSize);
-}
-
-void STK500v1Programmer::setSignature(const char *signature)
-{
-    if (*signature) {
-        memmove_P(_signature, signature, sizeof(_signature));
-    }
-}
-
-void STK500v1Programmer::setSignature_P(PGM_P signature)
-{
-    memmove_P(_signature, signature, sizeof(_signature));
+    std::fill_n(reinterpret_cast<uint32_t *>(_pageBuffer), _pageSize / sizeof(uint32_t), 0);
 }
 
 #if STK500_HAVE_FUSES
 
-void STK500v1Programmer::setFuseBytes(uint8_t low, uint8_t high, uint8_t extended)
-{
-    _fuseBytes[FUSE_LOW] = low;
-    _fuseBytes[FUSE_HIGH] = high;
-    _fuseBytes[FUSE_EXT] = extended;
-}
+    void STK500v1Programmer::setFuseBytes(uint8_t low, uint8_t high, uint8_t extended)
+    {
+        _fuseBytes[FUSE_LOW] = low;
+        _fuseBytes[FUSE_HIGH] = high;
+        _fuseBytes[FUSE_EXT] = extended;
+    }
 
 #endif
 

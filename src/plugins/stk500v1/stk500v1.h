@@ -54,6 +54,7 @@
 #    define STK500_HAVE_SOFTWARE_SERIAL_PINS D5, D6
 #endif
 
+// The serial boot loader cannot change fuses
 #ifndef STK500_HAVE_FUSES
 #    define STK500_HAVE_FUSES 0
 #endif

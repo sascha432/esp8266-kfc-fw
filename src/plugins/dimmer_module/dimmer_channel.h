@@ -61,8 +61,8 @@ namespace Dimmer {
         virtual void onConnect() override;
         virtual void onMessage(const char *topic, const char *payload, size_t len) override final;
 
-        bool on(float transition = NAN);
-        bool off(ConfigType *config = nullptr, float transition = NAN, int32_t level = -1);
+        bool on(float transition = NAN, bool publish = true);
+        bool off(ConfigType *config = nullptr, float transition = NAN, int32_t level = -1, bool publish = true);
         void publishState();
 
         static constexpr int16_t getMaxLevel() {

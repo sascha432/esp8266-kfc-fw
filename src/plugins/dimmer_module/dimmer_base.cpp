@@ -47,7 +47,6 @@ void Base::begin()
         _wire.setTimeout(1000);
         _wire.begin(DIMMER_I2C_MASTER_ADDRESS);
         _wire.onReceive(Base::onReceive);
-    #else
     #endif
 
     readConfig(_getConfig());
@@ -274,13 +273,13 @@ void Base::_updateMetrics(const MetricsType &metrics)
 
 #if IOT_SENSOR_HAVE_HLW8012
 
-void Base::_forceMetricsUpdate(uint8_t delay)
-{
-    auto sensor = SensorPlugin::getSensor<Sensor_HLW80xx::kSensorType>();
-    if (sensor) {
-        sensor->setNextMqttUpdate(delay);
+    void Base::_forceMetricsUpdate(uint8_t delay)
+    {
+        auto sensor = SensorPlugin::getSensor<Sensor_HLW80xx::kSensorType>();
+        if (sensor) {
+            sensor->setNextMqttUpdate(delay);
+        }
     }
-}
 
 #endif
 
@@ -341,13 +340,15 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
             auto val = value.toInt() != 0;
             for(uint8_t i = 0; i < getChannelCount(); i++) {
                 if (val) {
-                    on(i);
+                    on(i, NAN, false);
                 }
                 else {
-                    off(i);
+                    off(i, NAN, false);
                 }
-                publishChannel(i);
-                __LDBG_printf("group switch value=%u channel=%u level=%u state=%u", val, i, getChannel(i), getChannelState(i));
+                #if !defined(IOT_DIMMER_HAS_COLOR_TEMP) && !defined(IOT_DIMMER_HAS_RGB)
+                    publishChannel(i);
+                    __LDBG_printf("group switch value=%u channel=%u level=%u state=%u", val, i, getChannel(i), getChannelState(i));
+                #endif
             }
             #if IOT_DIMMER_HAS_COLOR_TEMP
                 _color._publish();
@@ -367,16 +368,21 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
                 hasState = true;
                 state = val != 0;
             }
+            #if defined(IOT_DIMMER_HAS_COLOR_TEMP) || defined(IOT_DIMMER_HAS_RGB)
+                constexpr bool publish = false;
+            #else
+                constexpr bool publish = true;
+            #endif
             if (hasState) {
                 if (state && !getChannelState(channel)) {
-                    on(channel);
+                    on(channel, NAN, publish);
                 }
                 else if (!state && getChannelState(channel)) {
-                    off(channel);
+                    off(channel, NAN, publish);
                 }
             }
             if (hasValue) {
-                setChannel(channel, val);
+                setChannel(channel, val, NAN, publish);
             }
             #if IOT_DIMMER_HAS_COLOR_TEMP
                 _color._publish();

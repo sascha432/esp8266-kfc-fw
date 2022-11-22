@@ -145,15 +145,15 @@ namespace Dimmer {
             static void fetchMetrics(Event::CallbackTimerPtr timer);
         #endif
 
-            virtual bool on(uint8_t channel = -1, float transition = NAN) = 0;
-            virtual bool off(uint8_t channel = -1, float transition = NAN) = 0;
+            virtual bool on(uint8_t channel = -1, float transition = NAN, bool publish = true) = 0;
+            virtual bool off(uint8_t channel = -1, float transition = NAN, bool publish = true) = 0;
 
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
             virtual bool isAnyOn() const = 0;
         #endif
         virtual int16_t getChannel(uint8_t channel) const = 0;
         virtual bool getChannelState(uint8_t channel) const = 0;
-        virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
+        virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN, bool publish = true) = 0;
         virtual void stopFading(uint8_t channel) = 0;
         virtual uint8_t getChannelCount() const = 0;
         virtual ChannelsArray &getChannels();

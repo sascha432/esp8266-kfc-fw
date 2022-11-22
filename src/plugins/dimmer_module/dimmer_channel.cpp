@@ -128,7 +128,7 @@ void Channel::onMessage(const char *topic, const char *payload, size_t len)
 
 void Channel::onJsonMessage(const MQTT::Json::Reader &json)
 {
-    __LDBG_printf("json state=%d", json.state);
+    __LDBG_printf("channel=%u state=%d brightness=%d", _channel, json.state, json.brightness);
     if (json.state != -1) {
         if (json.state && !_brightness) {
             on();
@@ -147,7 +147,7 @@ void Channel::onJsonMessage(const MQTT::Json::Reader &json)
     }
 }
 
-bool Channel::on(float transition)
+bool Channel::on(float transition, bool publish)
 {
 // #if IOT_DIMMER_MODULE_HAS_BUTTONS
 //     // returns -1 for abort with false, 1 for abort with true and 0 for continue
@@ -160,12 +160,12 @@ bool Channel::on(float transition)
         if (!_storedBrightness)  {
             _storedBrightness = kDefaultLevel;
         }
-        return _set(_storedBrightness, transition);
+        return _set(_storedBrightness, transition, publish);
     }
     return false;
 }
 
-bool Channel::off(ConfigType *config, float transition, int32_t level)
+bool Channel::off(ConfigType *config, float transition, int32_t level, bool publish)
 {
 // #if IOT_DIMMER_MODULE_HAS_BUTTONS
 //     // returns -1 for abort with false, 1 for abort with true and 0 for continue
@@ -175,7 +175,7 @@ bool Channel::off(ConfigType *config, float transition, int32_t level)
 //     }
 // #endif
     if (_brightness) {
-        return _set(0, transition);
+        return _set(0, transition, publish);
     }
     return false;
 }

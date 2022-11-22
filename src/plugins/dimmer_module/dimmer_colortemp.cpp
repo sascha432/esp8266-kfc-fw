@@ -70,7 +70,7 @@ namespace Dimmer {
         if (strcmp_end_P(topic, PSTR("/lock/set")) == 0) {
             _setLockChannels(atoi(payload));
         }
-        else if (strcmp_end_P(topic, SPGM(_set)) == 0) {
+        else if (strcmp_end_P(topic, PSTR("/main/set")) == 0) {
             __LDBG_printf("set main");
             auto stream = HeapStream(payload, len);
             auto reader = MQTT::Json::Reader(&stream);
@@ -86,23 +86,35 @@ namespace Dimmer {
 
     void ColorTemperature::onJsonMessage(const MQTT::Json::Reader &json)
     {
-        //TODO mqtt
-        __LDBG_printf("json state=%d", json.state);
+        __LDBG_printf("main state=%d brightness=%d color=%d", json.state, json.brightness, json.color_temp);
+        auto &channels = _base->getChannels();
+        const auto count = _base->getChannelCount();
         if (json.state != -1) {
             if (json.state && !_brightness) {
-                // on();
+                for(uint8_t i = 0; i < count; i++) {
+                    channels[i].on();
+                }
             }
             else if (!json.state && _brightness) {
-                // off();
+                for(uint8_t i = 0; i < count; i++) {
+                    channels[i].off();
+                }
             }
         }
         if (json.brightness != -1) {
             if (json.brightness == 0 && _brightness) {
-                // off();
+                for(uint8_t i = 0; i < count; i++) {
+                    channels[i].off();
+                }
             }
             else if (json.brightness) {
-                // _set(json.brightness);
+                _brightnessToChannels();
+                _publish();
             }
+        }
+        else if (json.color_temp != -1) {
+            _brightnessToChannels();
+            _publish();
         }
     }
 
@@ -207,7 +219,7 @@ namespace Dimmer {
             publish(_createTopics(TopicType::MAIN_STATE), true, UnnamedObject(
                 State(_brightness != 0),
                 Brightness(_brightness),
-                MQTT::Json::ColorTemperature(static_cast<uint16_t>(_color)),
+                MQTT::Json::ColorTemperature(static_cast<uint32_t>(_color)),
                 Transition(_base->_getConfig()._base._fadetime())).toString()
             );
         }
@@ -230,9 +242,9 @@ namespace Dimmer {
         __LDBG_printf("lock=%u", value);
         _channelLock = value;
         if (value) {
-            // if channels are locked, the ratio is 1:1 (4 channels = ratio 2)
-            _ratio[0] = 2;
-            _ratio[1] = 2;
+            // if channels are locked, the ratio is 1:1
+            _ratio[0] = _base->getChannelCount() / 2.0;
+            _ratio[1] = _ratio[0];
             _brightnessToChannels();
             _publish();
         }
@@ -271,9 +283,9 @@ namespace Dimmer {
             case TopicType::LOCK_STATE:
                 return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/lock/state"));
             case TopicType::COLOR_SET:
-                return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/color/set"));
+                return MQTT::Client::formatTopic(String(F("color")), F("/color/set"));
             case TopicType::COLOR_STATE:
-                return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/color/state"));
+                return MQTT::Client::formatTopic(String(F("color")), F("/color/state"));
             default:
                 __LDBG_panic("invalid type=%u", type);
                 break;

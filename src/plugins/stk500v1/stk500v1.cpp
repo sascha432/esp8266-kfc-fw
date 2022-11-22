@@ -115,7 +115,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                         #endif
                     case 1:
                         prevBaudRate = reinterpret_cast<HardwareSerialHelper &>(Serial1).getBaudRate();
-                        // Serial1.begin(KFC_SERIAL_RATE);
+                        Serial1.begin(KFC_SERIAL_RATE);
                         Serial1.setRxBufferSize(512);
                         serialPort = &Serial1;
                         portName = PSTR("Serial1");
@@ -123,7 +123,7 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                     case 0:
                     default:
                         prevBaudRate = reinterpret_cast<HardwareSerialHelper &>(Serial0).getBaudRate();
-                        // Serial0.begin(KFC_SERIAL_RATE);
+                        Serial0.begin(KFC_SERIAL_RATE);
                         Serial0.setRxBufferSize(512);
                         serialPort = &Serial0;
                         portName = PSTR("Serial");
@@ -149,16 +149,16 @@ bool STK500v1Plugin::atModeHandler(AtModeArgs &args) {
                                 #endif
                             case 1:
                                 Serial1.setRxBufferSize(256);
+                                Serial1.end();
                                 if (prevBaudRate) {
-                                    Serial1.end();
                                     Serial1.begin(prevBaudRate);
                                 }
                                 break;
                             case 0:
                             default:
                                 Serial0.setRxBufferSize(256);
+                                Serial0.end();
                                 if (prevBaudRate) {
-                                    Serial0.end();
                                     Serial0.begin(prevBaudRate);
                                 }
                                 break;

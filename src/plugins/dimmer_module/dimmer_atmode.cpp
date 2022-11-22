@@ -18,7 +18,7 @@ using namespace Dimmer;
 
 #include "at_mode.h"
 
-#define DIMMER_COMMANDS "reset|weeprom|info|print|write|factory|halt|zc,<value>"
+#define DIMMER_COMMANDS "reset|weeprom|info|print|write|factory|zc"
 #undef DISPLAY
 
 enum class DimmerCommandType {
@@ -29,7 +29,6 @@ enum class DimmerCommandType {
     PRINT,
     WRITE,
     FACTORY,
-    HALT,
     ZERO_CROSSING
 };
 
@@ -92,7 +91,16 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
                 }
                 break;
             case DimmerCommandType::ZERO_CROSSING: {
-                    _wire.setZeroCrossing(args.toIntMinMax(1, 0, 0xffff));
+                    auto arg = args.get(1);
+                    if (arg && *arg == '+') {
+                        _wire.changeZeroCrossing(std::clamp<int16_t>(atoi(arg + 1), 0, 255));
+                    }
+                    else if (arg && *arg == '-') {
+                        _wire.changeZeroCrossing(std::clamp<int16_t>(atoi(arg), -255, 0));
+                    }
+                    else {
+                        _wire.setZeroCrossing(args.toIntMinMax(1, 0, 0xffff));
+                    }
                     args.ok();
                 }
                 break;
@@ -114,10 +122,6 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
             case DimmerCommandType::WRITE_EEPROM: {
                     _wire.writeEEPROM();
                     args.ok();
-                }
-                break;
-            case DimmerCommandType::HALT: {
-                    _wire.halt();
                 }
                 break;
             case DimmerCommandType::INVALID:

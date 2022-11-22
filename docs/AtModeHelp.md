@@ -249,11 +249,35 @@ Get level(s)
 
 Set level
 
-### ``+DIMCF=reset|weeprom|info|print|write|factory|halt|zc,<value>``
+### ``+DIMCF=reset|weeprom|info|print|write|factory|zc``
 
 Configure dimmer firmware
 
-#### ``+DIMCF=zc,value``
+#### ``+DIMCF=reset``
 
-Set zero crossing offset (16bit) in CPU cycles (16MHz = 62.5ns)
+Hard reset MCU
+
+#### ``+DIMCF=weeprom``
+
+Write EEPROM
+
+#### ``+DIMCF=info``
+
+Display dimmer info and config over serial port
+
+#### ``+DIMCF=write``
+
+Write EEPROM and configuration
+
+#### ``+DIMCF=factory``
+
+Restore factory settings
+
+#### ``+DIMCF=zc,<value>``
+
+Set zero crossing offset (16bit) in CPU cycles (16MHz = 62.5ns). The EEPROM must be written to store the value permanently
+
+#### ``+DIMCF=zc,<+-value>``
+
+Increase or decrease zero crossing offset
 

@@ -152,6 +152,25 @@ namespace Dimmer {
             unlock();
         }
 
+        void changeZeroCrossing(int16_t value, uint8_t address = kDefaultSlaveAddress)
+        {
+            if (!lock()) {
+                return;
+            }
+            beginTransmission(address);
+            write(DIMMER_REGISTER_COMMAND);
+            if (value >= 0) {
+                write(DIMMER_COMMAND_INCR_ZC_DELAY);
+                write(static_cast<uint8_t>(value));
+            }
+            else {
+                write(DIMMER_COMMAND_DECR_ZC_DELAY);
+                write(static_cast<uint8_t>(-value));
+            }
+            endTransmission();
+            unlock();
+        }
+
         void forceTemperatureCheck(uint8_t address = kDefaultSlaveAddress) {
             if (!lock()) {
                 return;
@@ -188,18 +207,6 @@ namespace Dimmer {
             write(DIMMER_COMMAND_WRITE_CUBIC_INT);
             write(ci._channel);
             write(ci._data);
-            bool result = (endTransmission() == 0);
-            unlock();
-            return result;
-        }
-
-        bool halt(uint8_t address = kDefaultSlaveAddress) {
-            if (!lock()) {
-                return false;
-            }
-            beginTransmission(address);
-            write(DIMMER_REGISTER_COMMAND);
-            write(DIMMER_COMMAND_HALT);
             bool result = (endTransmission() == 0);
             unlock();
             return result;

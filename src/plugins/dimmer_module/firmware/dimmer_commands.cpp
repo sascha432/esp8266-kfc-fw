@@ -2,13 +2,13 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include  <Arduino_compat.h>
 #include "../firmware_protocol.h"
+#include <Arduino_compat.h>
 
-#if DEBUG_IOT_DIMMER_MODULE || 1
-#include <debug_helper_enable.h>
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using namespace Dimmer;

@@ -2,18 +2,18 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include <EventScheduler.h>
+#include "STK500v1Programmer.h"
 #include "at_mode.h"
 #include "plugins.h"
-#include "STK500v1Programmer.h"
+#include <EventScheduler.h>
 #if STK500_HAVE_SOFTWARE_SERIAL
-#include <SoftwareSerial.h>
+#    include <SoftwareSerial.h>
 #endif
 
 #if DEBUG_STK500V1
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 // Plugin
@@ -59,7 +59,6 @@ STK500v1Plugin::STK500v1Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ST
 {
     REGISTER_PLUGIN(this, "STK500v1Plugin");
 }
-
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]", "Flash ATmega micro controller over Serial Port");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/0x1e1234/...>", "Set signature (/stk500v1/atmega.csv)", "Display signature");

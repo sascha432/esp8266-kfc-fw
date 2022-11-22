@@ -3,43 +3,44 @@
  */
 
 #include <Arduino_compat.h>
-#include <ArduinoOTA.h>
-#include <PrintString.h>
-#include <PrintHtmlEntitiesString.h>
-#include <EventScheduler.h>
-#include <BufferStream.h>
-#include <JsonConfigReader.h>
-#include <ESPAsyncWebServer.h>
-#include "build.h"
-#include "web_server.h"
-#include "rest_api.h"
-#include "async_web_response.h"
-#include "async_web_handler.h"
-#include "kfc_fw_config.h"
-#include "templates.h"
-#include "blink_led_timer.h"
-#include "fs_mapping.h"
-#include "JsonTools.h"
-#include "session.h"
+#if ENABLE_ARDUINO_OTA
+#    include <ArduinoOTA.h>
+#endif
 #include "../include/templates.h"
-#include "web_socket.h"
-#include "web_server_action.h"
-#include "WebUISocket.h"
-#include "kfc_fw_config.h"
-#include "failure_counter.h"
-#include "save_crash.h"
 #include "../src/plugins/plugins.h"
+#include "JsonTools.h"
+#include "WebUISocket.h"
+#include "async_web_handler.h"
+#include "async_web_response.h"
+#include "blink_led_timer.h"
+#include "build.h"
+#include "failure_counter.h"
+#include "fs_mapping.h"
+#include "kfc_fw_config.h"
+#include "rest_api.h"
+#include "save_crash.h"
+#include "session.h"
+#include "templates.h"
+#include "web_server.h"
+#include "web_server_action.h"
+#include "web_socket.h"
+#include <BufferStream.h>
+#include <ESPAsyncWebServer.h>
+#include <EventScheduler.h>
+#include <JsonConfigReader.h>
+#include <PrintHtmlEntitiesString.h>
+#include <PrintString.h>
 #if IOT_BLINDS_CTRL && IOT_BLINDS_CTRL_SAVE_STATE
-#include "../src/plugins/blinds_ctrl/blinds_plugin.h"
+#    include "../src/plugins/blinds_ctrl/blinds_plugin.h"
 #endif
 #if IOT_WEATHER_STATION
-#include "../src/plugins/weather_station/WeatherStationBase.h"
+#    include "../src/plugins/weather_station/WeatherStationBase.h"
 #endif
-#include  "spgm_auto_def.h"
+#include "spgm_auto_def.h"
 #if DEBUG_WEB_SERVER
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #define DEBUG_WEB_SERVER_SID                DEBUG_WEB_SERVER
@@ -195,42 +196,34 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
 
     auto &url = request->url();
     // --------------------------------------------------------------------
+    #if ENABLE_ARDUINO_OTA
+        if (url.endsWith(F("-arduino-ota"))) {
+            for(;;) {
+                auto statusStr = F("Enabled");
+                if (url.startsWith(F("/start-"))) {
+                    plugin.ArduinoOTAbegin();
+                }
+                else if (url.startsWith(F("/stop-"))) {
+                    statusStr = F("Diabled");
+                    plugin.ArduinoOTAend();
+                }
+                else {
+                    break;
+                }
+                response = request->beginResponse(200, FSPGM(mime_text_plain), statusStr);
+                headers.addNoCache(true);
+                headers.setResponseHeaders(response);
+                break;
+            }
+        }
+        else
+    #endif
+    // --------------------------------------------------------------------
     if (url == F("/is-alive")) {
         response = request->beginResponse(200, FSPGM(mime_text_plain), std::move(String(request->arg(String('p')).toInt())));
         headers.addNoCache(true);
         headers.setResponseHeaders(response);
     }
-    #if ENABLE_ARDUINO_OTA
-    else if (url.endsWith(F("-arduino-ota"))) {
-        #if 0
-            // require authentication to enable ArduinoOTA
-            // ArduinoOTA has authentication enabled
-            if (!plugin.isAuthenticated(request)) {
-                auto response = request->beginResponse(403);
-                _logRequest(request, response);
-                request->send(response);
-                return;
-            }
-        #endif
-        for(;;) {
-            auto statusStr = F("Enabled");
-            if (url.startsWith(F("/start-"))) {
-                plugin.ArduinoOTAbegin();
-            }
-            else if (url.startsWith(F("/stop-"))) {
-                statusStr = F("Diabled");
-                plugin.ArduinoOTAend();
-            }
-            else {
-                break;
-            }
-            response = request->beginResponse(200, FSPGM(mime_text_plain), statusStr);
-            headers.addNoCache(true);
-            headers.setResponseHeaders(response);
-            break;
-        }
-    }
-    #endif
     // --------------------------------------------------------------------
     else if (url == F("/webui-handler")) {
         plugin._handlerWebUI(request, headers);
@@ -854,6 +847,7 @@ void Plugin::end()
         __LDBG_printf("Arduino OTA stopped");
         LoopFunctions::remove(ArduinoOTALoop);
         _AOTAInfo = ArduinoOTAInfo();
+        // release memory
         ArduinoOTA.~ArduinoOTAClass();
         ArduinoOTA = ArduinoOTAClass();
     }

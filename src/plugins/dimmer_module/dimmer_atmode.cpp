@@ -18,7 +18,7 @@ using namespace Dimmer;
 
 #include "at_mode.h"
 
-#define DIMMER_COMMANDS "reset|weeprom|info|print|write|factory|zc,value"
+#define DIMMER_COMMANDS "reset|weeprom|info|print|write|factory|halt|zc,<value>"
 #undef DISPLAY
 
 enum class DimmerCommandType {
@@ -29,6 +29,7 @@ enum class DimmerCommandType {
     PRINT,
     WRITE,
     FACTORY,
+    HALT,
     ZERO_CROSSING
 };
 
@@ -115,8 +116,11 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
                     args.ok();
                 }
                 break;
+            case DimmerCommandType::HALT: {
+                    _wire.halt();
+                }
+                break;
             case DimmerCommandType::INVALID:
-            // default:
                 args.print(F("Invalid command: %s: expected: <%s>"), args.toString(0).c_str(), commands);
                 break;
         }

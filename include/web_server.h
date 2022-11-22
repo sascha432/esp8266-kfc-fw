@@ -328,6 +328,10 @@ namespace WebServer {
         void ArduinoOTADumpInfo(Print &output);
         const __FlashStringHelper *ArduinoOTAErrorStr(ota_error_t err);
 
+        static bool ArduinoOTAEnabled() {
+            return getInstance()._AOTAInfo._runnning;
+        }
+
         struct ArduinoOTAInfo {
 
             static constexpr int kNoError = -1;
@@ -335,9 +339,9 @@ namespace WebServer {
             ota_error_t _error;
             uint32_t _progress;
             uint32_t _size;
-            bool _runnning: 1;
-            bool _inProgress: 1;
-            bool _rebootPending: 1;
+            bool _runnning;
+            bool _inProgress;
+            bool _rebootPending;
 
             ArduinoOTAInfo() : _error(static_cast<ota_error_t>(kNoError)), _progress(0), _size(0), _runnning(false), _inProgress(false), _rebootPending(false) {}
 

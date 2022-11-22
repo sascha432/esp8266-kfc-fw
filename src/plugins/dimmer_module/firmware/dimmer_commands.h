@@ -193,6 +193,18 @@ namespace Dimmer {
             return result;
         }
 
+        bool halt(uint8_t address = kDefaultSlaveAddress) {
+            if (!lock()) {
+                return false;
+            }
+            beginTransmission(address);
+            write(DIMMER_REGISTER_COMMAND);
+            write(DIMMER_COMMAND_HALT);
+            bool result = (endTransmission() == 0);
+            unlock();
+            return result;
+        }
+
         MetricsType getMetrics(uint8_t address = kDefaultSlaveAddress) {
             MetricsType metrics;
             if (lock()) {

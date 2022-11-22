@@ -74,7 +74,7 @@ public:
 
 #elif ESP8266
 
-#include <SHA256.h>
+#include "SHA256.h"
 
 class SessionHash : public SHA256
 {

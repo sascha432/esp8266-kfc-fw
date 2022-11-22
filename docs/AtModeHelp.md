@@ -249,11 +249,11 @@ Get level(s)
 
 Set level
 
-### ``+DIMCF=<reset|weeprom|info|print|write|factory|zc,value>``
+### ``+DIMCF=reset|weeprom|info|print|write|factory|halt|zc,<value>``
 
 Configure dimmer firmware
 
 #### ``+DIMCF=zc,value``
 
-Set zero crossing offset in CPU cycles
+Set zero crossing offset (16bit) in CPU cycles (16MHz = 62.5ns)
 

@@ -2,8 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "kfc_fw_config.h"
 #include "blink_led_timer.h"
+#include "kfc_fw_config.h"
 #include "logger.h"
 #include "templates.h"
 #include "web_server.h"
@@ -21,7 +21,7 @@
 
 #if WEBSERVER_KFC_OTA
 
-#define U_ATMEGA 254
+#    define U_ATMEGA 254
 
 using KFCConfigurationClasses::System;
 
@@ -92,71 +92,11 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
     // auto &plugin = Plugin::getInstance();
     PrintString errorStr;
     // AsyncWebServerResponse *response = nullptr;
-    #if STK500V1
-        if (status->command == U_ATMEGA) {
-            if (!request->_tempFile || !request->_tempFile.fullName()) {
-                errorStr = F("Failed to read temporary file");
-                goto errorResponse;
-            }
-            // get filename and close the file
-            String filename = request->_tempFile.fullName();
-            request->_tempFile.close();
-
-            // check if singleton exists
-            if (stk500v1) {
-                errorStr = F("ATmega firmware upgrade already running");
-                Logger_error(errorStr);
-                goto errorResponse;
-            }
-            else {
-                Logger_security(F("Starting ATmega firmware upgrade..."));
-
-                stk500v1 = new STK500v1Programmer(Serial);
-                stk500v1->setSignature_P(PSTR("\x1e\x95\x0f"));
-                stk500v1->setFile(filename);
-                stk500v1->setLogging(STK500v1Programmer::LOG_FILE);
-
-                // give it 3.5 seconds to upload the file (a few KB max)
-                _Scheduler.add(3500, false, [filename](Event::CallbackTimerPtr timer) {
-                    if (stk500v1) {
-                        // start update
-                        stk500v1->begin([filename]() {
-                            free(stk500v1);
-                            stk500v1 = nullptr;
-                            // remove temporary file
-                            KFCFS.remove(filename);
-                        });
-                    }
-                    else {
-                        // write something to the logfile
-                        Logger_error(F("Cannot start ATmega firmware upgrade"));
-                        // remove temporary file
-                        KFCFS.remove(filename);
-                    }
-                });
-
-                HttpHeaders headers(false);
-                headers.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
-                request->send(HttpLocationHeader::redir(request, String('/') + FSPGM(serial_console_html), headers));
-
-                // auto response = request->beginResponse(302);
-                // HttpHeaders httpHeaders(false);
-                // httpHeaders.add<HttpLocationHeader>(String('/') + FSPGM(serial_console_html));
-                // httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
-                // httpHeaders.setResponseHeaders(response);
-                // request->send(response);
-            }
-        }
-        else
-    #endif
     if (Update.hasError()) {
         // TODO check if we need to restart the file system
         // KFCFS_begin();
 
         Update.printError(errorStr);
-        #if STK500V1
-        errorResponse: ;
-        #endif
         BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         Plugin::message(request, MessageType::DANGER, errorStr, F("Firmware Upgrade Failed"));
 
@@ -305,20 +245,6 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                     imageTypeStr = PSTR("U_FS");
                 #endif
             }
-            #if STK500V1
-                else if (imageTypeArg == F("u_atmega")) { // atmega selected
-                    imageType = 3;
-                    #if DEBUG
-                        imageTypeStr = PSTR("U_ATMEGA");
-                    #endif
-                }
-                else if (filename.indexOf(F(".hex")) != -1) { // auto select
-                    imageType = 3;
-                    #if DEBUG
-                        imageTypeStr = PSTR("U_ATMEGA(auto)");
-                    #endif
-                }
-            #endif
             else if (filename.indexOf(F("spiffs")) != -1 || filename.indexOf(F("littlefs")) != -1) { // auto select
                 imageType = 1;
                 #if DEBUG
@@ -326,62 +252,32 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                 #endif
             }
 
-            #if STK500V1
-                if (imageType == 3) {
-                    status->command = U_ATMEGA;
-                    request->_tempFile = KFCFS.open(FSPGM(stk500v1_tmp_file), fs::FileOpenMode::write);
-                    __LDBG_printf("ATmega fw temp file %u, filename %s", (bool)request->tempFile, String(FSPGM(stk500v1_tmp_file)).c_str());
-                }
-                else
-            #endif
-            {
-                if (imageType) {
-                    #if (ARDUINO_ESP8266_MAJOR == 2 && ARDUINO_ESP8266_MINOR >= 6) || (ARDUINO_ESP8266_MAJOR >= 3)
-                        size = ((size_t) &_FS_end - (size_t) &_FS_start);
-                    #else
-                        size = 1048576;
-                    #endif
-                    command = U_FS;
-                    #ifndef ATOMIC_FS_UPDATE
-                        KFCFS.end();
-                    #endif
-                }
-                else {
-                    size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-                    command = U_FLASH;
-                }
-                status->command = command;
-                __DBG_printf("Update starting: %s, image type %s (%d), size %d, command %s (%d)", filename.c_str(), imageTypeStr, imageType, (int)size, _updateCommand2Str(command), command);
-
-                #if defined(ESP8266)
-                    Update.runAsync(true);
+            if (imageType) {
+                #if (ARDUINO_ESP8266_MAJOR == 2 && ARDUINO_ESP8266_MINOR >= 6) || (ARDUINO_ESP8266_MAJOR >= 3)
+                    size = ((size_t) &_FS_end - (size_t) &_FS_start);
+                #else
+                    size = 1048576;
                 #endif
+                command = U_FS;
+                #ifndef ATOMIC_FS_UPDATE
+                    KFCFS.end();
+                #endif
+            }
+            else {
+                size = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+                command = U_FLASH;
+            }
+            status->command = command;
+            __DBG_printf("Update starting: %s, image type %s (%d), size %d, command %s (%d)", filename.c_str(), imageTypeStr, imageType, (int)size, _updateCommand2Str(command), command);
 
-                if (!Update.begin(size, command)) {
-                    status->error = true;
-                }
+            #if defined(ESP8266)
+                Update.runAsync(true);
+            #endif
+
+            if (!Update.begin(size, command)) {
+                status->error = true;
             }
         }
-        #if STK500V1
-            if (status->command == U_ATMEGA) {
-                if (!request->_tempFile) {
-                    status->error = true;
-                }
-                else if (request->_tempFile.write(data, len) != len) {
-                    status->error = true;
-                }
-                #if DEBUG_WEB_SERVER
-                    if (final) {
-                        if (request->_tempFile) {
-                            __DBG_printf("upload success: %uB", request->_tempFile.size());
-                        else {
-                            __DBG_printf("upload error: tempFile = false");
-                        }
-                    }
-                #endif
-            }
-            else
-        #endif
         {
             if (!status->error && !Update.hasError()) {
                 if (Update.write(data, len) != len) {

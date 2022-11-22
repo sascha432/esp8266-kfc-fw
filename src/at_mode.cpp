@@ -2352,7 +2352,7 @@ void at_mode_serial_handle_event(String &commandString)
             __DBG_printf("cmd=%d arg0=%s cmds=%s", cmd, args.get(0), cmds);
             if (cmd == 0) {
                 PluginComponents::RegisterEx::getInstance().dumpList(output);
-                args.printf_P("Blacklist=%s", PluginComponent::getBlacklist());
+                args.print(F("Blacklist=%s"), PluginComponent::getBlacklist());
             }
             else if (args.requireArgs(2, 2)) {
                 PluginComponent *plugin = nullptr;

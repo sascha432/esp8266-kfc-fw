@@ -225,7 +225,25 @@ Update weather info/forecast
 
 Flash .HEX file to AVR MCU over Serial Port (requires bootloader)
 
+__NOTE__: If the process fails, check if the voltage does not drop too much during the process
+
 For example: ``+STK500V1F=/stk500v1/atomicsun-firmware-2.2.3-328pb.hex``
+
+``` text
++STK500V1F: Flashing /stk500v1/atomicsun-firmware-2.2.3-328pb.hex on Serial
+
+Input file validated. 27750 bytes to write...
+Connected to bootloader...
+Device signature = 0x1e950f
+
+Writing: | ################################################## | Complete
+
+Reading: | ################################################## | Complete
+
+27750 bytes verified
+Programming successful (22 seconds)
+Done
+```
 
 ### ``+STK500V1S=<atmega328p/0x1e1234/...>``
 
@@ -264,6 +282,13 @@ Write EEPROM
 #### ``+DIMCF=info``
 
 Display dimmer info and config over serial port
+
+``` text
++REM=MOSFET Dimmer 2.2.3 Nov 22 2022 17:50:49 Author sascha_lammers@gmx.de
++REM=sig=1e-95-16,fuses=l:ff,h:da,e:f5,MCU=ATmega328PB@8Mhz,gcc=7.3.0
++REM=options=EEPROM=62,NTC=A0,int.temp,VCC,fading_events=1,proto=UART,addr=17,mode=T,timer1=8/1.00,lvls=8192,pins=6,8,9,10,cubic=0,range=0-8192
++REM=values=restore=1,f=60.342Hz,vref11=1.100,NTC=27.20/+0.00,int.temp=36/ofs=88/gain=156,max.temp=75,metrics=5,VCC=3.229,min.on-time=300,min.off=300,ZC=110,sw.on-time=0/0
+```
 
 #### ``+DIMCF=write``
 

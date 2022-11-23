@@ -30,6 +30,9 @@ void Module::setup()
 
 void Module::shutdown()
 {
+    for (uint8_t i = 0; i < _channels.size(); i++) {
+        _channels[i].end();
+    }
     _endMqtt();
     Buttons::end();
     Base::end();
@@ -86,7 +89,7 @@ void Module::getStatus(Print &out)
 
 bool Module::isAnyOn() const
 {
-    for(uint8_t i = 0; i < getChannelCount(); i++) {
+    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
         if (_channels[i].getOnState()) {
             return true;
         }
@@ -122,6 +125,21 @@ void Module::_getChannels()
     }
 }
 
+void Module::publishChannelState(uint8_t channel)
+{
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        // update all values
+        _color._channelsToBrightness();
+        // publish all values
+        _color._publish();
+    #elif IOT_DIMMER_HAS_RGB
+        // N/A
+    #else
+        // publish single channel
+        getChannel(channel).publishState();
+    #endif
+}
+
 void Module::_onReceive(size_t length)
 {
     __LDBG_printf("length=%u type=%02x", length, _wire.peek());
@@ -137,14 +155,10 @@ void Module::_onReceive(size_t length)
                 auto curLevel = _channels[event.channel].getLevel();
                 if (curLevel != level) {  // update level if out of sync
                     __LDBG_printf("resync cur=%u lvl=%u", curLevel, level);
-                    auto publish = (event.level == _calcLevel(curLevel, event.channel)); // check if the error comes from up or downsampling and do not publish in those cases
-                    _channels[event.channel].setLevel(level, NAN, publish);
-                    #if IOT_DIMMER_HAS_COLOR_TEMP
-                        if (publish) { // update color temperature if the brightness has changed
-                            _color._brightnessToChannels();
-                            _color._publish();
-                        }
-                    #endif
+                    auto publish = (event.level == _calcLevel(curLevel, event.channel)); // check if the error comes from up or down sampling and do not publish in those cases
+                    if (publish) {
+                        _channels[event.channel].setLevel(level);
+                    }
                 }
             }
             else {

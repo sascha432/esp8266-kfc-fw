@@ -54,15 +54,15 @@ ATModeCommandHelpArrayPtr Base::atModeCommandHelp(size_t &size) const
 bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMG))) {
-        for(uint8_t i = 0; i < dimmer.getChannelCount(); i++) {
-            args.print(F("%u: %d (%s)"), i, getChannel(i), getChannelState(i) ? PSTR("on") : PSTR("off"), dimmer_plugin.getChannels().at(i).getStorededBrightness());
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            args.print(F("%u: %d (%s)"), i, getChannel(i), getChannelState(i) ? PSTR("on") : PSTR("off"), dimmer_plugin.getChannels().at(i).getStoredBrightness());
         }
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(DIMS))) {
         if (args.requireArgs(2, 3)) {
             uint8_t channel = args.toInt(0);
-            if (channel < dimmer.getChannelCount()) {
+            if (channel < IOT_DIMMER_MODULE_CHANNELS) {
                 int level = args.toIntMinMax(1, 0, maxLevel);
                 float time = args.toFloat(2, -1);
                 args.print(F("Set %u: %d (time %.2f)"), channel, level, time);

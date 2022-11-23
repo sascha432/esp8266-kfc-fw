@@ -145,23 +145,24 @@ namespace Dimmer {
             static void fetchMetrics(Event::CallbackTimerPtr timer);
         #endif
 
-            virtual bool on(uint8_t channel = -1, float transition = NAN, bool publish = true) = 0;
-            virtual bool off(uint8_t channel = -1, float transition = NAN, bool publish = true) = 0;
+            virtual bool on(uint8_t channel = -1, float transition = NAN) = 0;
+            virtual bool off(uint8_t channel = -1, float transition = NAN) = 0;
 
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
             virtual bool isAnyOn() const = 0;
         #endif
         virtual int16_t getChannel(uint8_t channel) const = 0;
         virtual bool getChannelState(uint8_t channel) const = 0;
-        virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN, bool publish = true) = 0;
+        virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
         virtual void stopFading(uint8_t channel) = 0;
-        virtual uint8_t getChannelCount() const = 0;
+        virtual void publishChannelState(uint8_t channel);
         virtual ChannelsArray &getChannels();
 
         virtual int16_t getRange(uint8_t channel) const = 0;
         virtual int16_t getOffset(uint8_t channel) const = 0;
 
         virtual void publishChannel(uint8_t channel) = 0;
+        virtual void publishChannels() = 0;
 
         // read config from dimmer
         bool readConfig(ConfigType &config);
@@ -192,7 +193,7 @@ namespace Dimmer {
         #endif
         Sensor_DimmerMetrics *getMetricsSensor() const;
 
-        // return absoluate fade time for changing to another level
+        // return absolute fade time for changing to another level
         float getTransitionTime(int fromLevel, int toLevel, float transitionTimeOverride);
 
         int16_t _calcLevel(int16_t level, uint8_t channel) const;
@@ -310,6 +311,11 @@ namespace Dimmer {
     inline Sensor_DimmerMetrics *Base::getMetricsSensor() const
     {
         return SensorPlugin::getSensor<MQTT::SensorType::DIMMER_METRICS>();
+    }
+
+    inline void Base::publishChannelState(uint8_t channel)
+    {
+        // do nothing
     }
 
     inline ChannelsArray &Base::getChannels()

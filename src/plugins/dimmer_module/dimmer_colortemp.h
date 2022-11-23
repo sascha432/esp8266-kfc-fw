@@ -22,12 +22,11 @@ namespace Dimmer {
         static constexpr uint16_t kColorMin = 15300;
         static constexpr uint16_t kColorMax = 50000;
         static constexpr uint16_t kColorRange = (kColorMax - kColorMin);
+        static constexpr float kColorRangeFloat = kColorRange;
 
         enum class TopicType : uint8_t {
             MAIN_SET,
             MAIN_STATE,
-            COLOR_SET,
-            COLOR_STATE,
             LOCK_SET,
             LOCK_STATE,
         };
@@ -68,12 +67,15 @@ namespace Dimmer {
         Base &_getBase();
 
         void begin();
+        void end();
 
     private:
         friend Base;
         friend Plugin;
 
         Base *_base;
+        Event::Timer _mqttTimer;
+        Event::Timer _webuiTimer;
         float _color;
         float _colorPublished;
         float _ratio[2];

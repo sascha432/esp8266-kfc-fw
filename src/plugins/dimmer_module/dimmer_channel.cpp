@@ -20,14 +20,14 @@ using namespace Dimmer;
 Channel::Channel(Module *dimmer, uint8_t channel) :
     MQTTComponent(ComponentType::LIGHT),
     _dimmer(dimmer),
-    _publishLastTime(0),
     #if IOT_DIMMER_MODULE_HAS_BUTTONS
         _delayTimer(nullptr),
     #endif
     _storedBrightness(0),
     _brightness(0),
-    _channel(channel),
-    _publishFlag(0)
+    _brightnessMQTT(~0),
+    _brightnessWebUI(~0),
+    _channel(channel)
 {
 }
 
@@ -41,7 +41,7 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
             if (discovery->createJsonSchema(this, PrintString(FSPGM(channel__u), _channel), format)) {
                 discovery->addStateTopic(_createTopics(TopicType::COMMAND_STATE));
                 discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
-                discovery->addBrightnessScale(getMaxLevel());
+                discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
                 discovery->addParameter(F("brightness"), true);
                 String fullname;
                 auto name = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::getChannelName(_channel);
@@ -91,17 +91,15 @@ String Channel::_createTopics(TopicType type, bool full) const
                 return VALUEP FSPGM(_state);
             }
             return MQTT::Client::formatTopic(VALUE FSPGM(_state));
-        default:
-            break;
     }
-    return String();
+    __builtin_unreachable();
 }
 
 void Channel::onConnect()
 {
     subscribe(_createTopics(TopicType::COMMAND_SET));
-    _publishLastTime = 0;
     _publishTimer.remove();
+    _brightnessMQTT = ~0;
     publishState();
 }
 
@@ -147,59 +145,23 @@ void Channel::onJsonMessage(const MQTT::Json::Reader &json)
     }
 }
 
-bool Channel::on(float transition, bool publish)
+bool Channel::on(float transition)
 {
-// #if IOT_DIMMER_MODULE_HAS_BUTTONS
-//     // returns -1 for abort with false, 1 for abort with true and 0 for continue
-//     int result = _offDelayPrecheck(DEFAULT_LEVEL);
-//     if (result != 0) {
-//         return result != -1;
-//     }
-// #endif
     if (!_brightness) {
         if (!_storedBrightness)  {
             _storedBrightness = kDefaultLevel;
         }
-        return _set(_storedBrightness, transition, publish);
+        return _set(_storedBrightness, transition);
     }
     return false;
 }
 
-bool Channel::off(ConfigType *config, float transition, int32_t level, bool publish)
+bool Channel::off(ConfigType *config, float transition, int32_t level)
 {
-// #if IOT_DIMMER_MODULE_HAS_BUTTONS
-//     // returns -1 for abort with false, 1 for abort with true and 0 for continue
-//     int result = _offDelayPrecheck(0, config, level);
-//     if (result != 0) {
-//         return result != -1;
-//     }
-// #endif
-    if (_brightness) {
-        return _set(0, transition, publish);
+   if (_brightness) {
+        return _set(0, transition);
     }
     return false;
-}
-
-void Channel::setLevel(int32_t level, float transition, bool publish)
-{
-    __LDBG_printf("d=%p lvl=%u t=%f pub=%u", _dimmer, level, transition, publish);
-    // #if IOT_DIMMER_MODULE_HAS_BUTTONS
-    //     _offDelayPrecheck(level, nullptr);
-    // #endif
-    // if (level == 0) {
-    //     //setStoredBrightness(_brightness);
-    //     _set(0, transition, publish);
-    // }
-    // else {
-    //     _set(level, transition, publish);
-    // }
-    _set(level, transition, publish);
-    #if IOT_DIMMER_HAS_COLOR_TEMP
-        // adjust other channels to keep color temperature
-        _dimmer->_color._channelsToBrightness();
-    #endif
-    #if IOT_DIMMER_HAS_RGB
-    #endif
 }
 
 void Channel::stopFading()
@@ -207,9 +169,9 @@ void Channel::stopFading()
     _dimmer->_stopFading(_channel);
 }
 
-bool Channel::_set(int32_t level, float transition, bool publish)
+bool Channel::_set(int32_t level, float transition)
 {
-    __LDBG_printf("d=%p lvl=%d trans=%f p=%u ch=%u", _dimmer, level, transition, publish, _channel);
+    __LDBG_printf("lvl=%d trans=%f ch=%u", level, transition, _channel);
     if (level == 0) {
         // if channel is turned off, store previous brightness
         if (_brightness != 0) {
@@ -218,9 +180,7 @@ bool Channel::_set(int32_t level, float transition, bool publish)
             _brightness = 0;
             _dimmer->_fade(_channel, 0, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
             _dimmer->_wire.writeEEPROM();
-            if (publish) {
-                publishState();
-            }
+            _dimmer->publishChannelState(_channel);
             return true;
         }
     }
@@ -228,13 +188,11 @@ bool Channel::_set(int32_t level, float transition, bool publish)
         // brightness has changed, get min/max. levels and change brightness
         auto &cfg = _dimmer->_getConfig()._base;
         auto prevBrightness = _brightness;
-        _brightness = std::clamp<int32_t>(level, cfg.min_brightness * getMaxLevel() / 100, cfg.max_brightness * getMaxLevel() / 100);
-        __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * getMaxLevel() / 100, cfg.max_brightness * getMaxLevel() / 100, _brightness);
+        _brightness = std::clamp<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
+        __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, _brightness);
         _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
         _dimmer->_wire.writeEEPROM();
-        if (publish) {
-            publishState();
-        }
+        _dimmer->publishChannelState(_channel);
         return true;
     }
     return false;
@@ -271,7 +229,7 @@ bool Channel::_set(int32_t level, float transition, bool publish)
 
         if (config.off_delay >= 5 && config.off_delay_signal) {
             auto delay = config.off_delay - 4;
-            int16_t brightness = storeLevel + (storeLevel * 100 / getMaxLevel() > 70 ? getMaxLevel() * -0.3 : getMaxLevel() * 0.3);
+            int16_t brightness = storeLevel + (storeLevel * 100 / IOT_DIMMER_MODULE_MAX_BRIGHTNESS > 70 ? IOT_DIMMER_MODULE_MAX_BRIGHTNESS * -0.3 : IOT_DIMMER_MODULE_MAX_BRIGHTNESS * 0.3);
             // flash once to signal confirmation
             _Timer(_delayTimer)->add(Event::milliseconds(1900), true, [this, delay, brightness, storeLevel](Event::CallbackTimerPtr timer) {
                 if (timer == nullptr) {
@@ -316,84 +274,25 @@ bool Channel::_set(int32_t level, float transition, bool publish)
 
 void Channel::_publishMQTT()
 {
-    if (isConnected()) {
+    if (isConnected() && _brightness != _brightnessMQTT) {
         using namespace MQTT::Json;
-        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(State(_brightness != 0), Brightness(_brightness), Transition(_dimmer->_getConfig()._base._fadetime())).toString());
+        publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(
+            State(_brightness != 0),
+            Brightness(_brightness),
+            Transition(_dimmer->_getConfig()._base._getFadeTime())).toString()
+        );
+        _brightnessMQTT = _brightness;
     }
 }
 
 void Channel::_publishWebUI()
 {
-    if (WebUISocket::hasAuthenticatedClients()) {
+    if (WebUISocket::hasAuthenticatedClients() && _brightness != _brightnessWebUI) {
         __LDBG_printf("channel=%u brightness=%u", _channel, _brightness);
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
-            WebUINS::Values(PrintString(F("d-chan%u"), _channel), _brightness, true),
+            WebUINS::Values(PrintString(F("d-ch%u"), _channel), _brightness, true),
             WebUINS::Values(F("group-switch-0"), _dimmer->isAnyOnInt(), true)
         )));
+        _brightnessWebUI = _brightness;
     }
-}
-
-void Channel::_publish()
-{
-    __LDBG_printf("publish channel=%u", _channel);
-    _publishMQTT();
-    _publishWebUI();
-    _publishLastTime = millis(); // store the time of the last publish event
-}
-
-void Channel::publishState()
-{
-    if (_publishTimer) {
-        // __LDBG_printf("timer running");
-        return;
-    }
-    uint32_t diff = millis() - _publishLastTime;
-    if (diff < 250 - 10) {
-        // limit publish events to ~4 times per second
-        __LDBG_printf("starting timer %u", 250 - diff);
-        _Timer(_publishTimer).add(Event::milliseconds(250 - diff), false, [this](Event::CallbackTimerPtr) {
-            _publish();
-        });
-    }
-    else {
-        _publish();
-    }
-
-    // if (publishFlag == 0) { // no updates
-    //     return;
-    // }
-    // else if (publishFlag == kStartTimerFlag) { // start timer
-
-    //     _publishFlag |= kWebUIUpdateFlag|kMQTTUpdateFlag;
-    //     if (_publishTimer) { // timer already running
-    //         return;
-    //     }
-    //     // start timer to limit update rate
-    //     _mqttCounter = 0;
-    //     _Timer(_publishTimer).add(Event::milliseconds(kWebUIMaxUpdateRate), true, [this](Event::CallbackTimerPtr timer) {
-    //         auto flag = _publishFlag;
-    //         if (flag == 0) { // no updates, end timer
-    //             timer->disarm();
-    //             return;
-    //         }
-    //         if (_mqttCounter < kMQTTUpdateRateMultiplier) {
-    //             // once the counter reached its max. it is reset by the publishState() method
-    //             _mqttCounter++;
-    //             // remove MQTT flag
-    //             flag &= ~kMQTTUpdateFlag;
-    //         }
-    //         publishState(nullptr, flag);
-    //     });
-    //     return;
-    // }
-
-    // if (publishFlag & kMQTTUpdateFlag) {
-    //     publish(_createTopics(TopicType::COMMAND_STATE), true, PrintString(F("{\"state\":\"%s\",\"brightness\":%u}"), MQTT::Client::toBoolOnOff(_brightness), _brightness));
-    //     _publishFlag &= ~kMQTTUpdateFlag;
-    //     _mqttCounter = 0;
-    // }
-
-    // if (publishFlag & kWebUIUpdateFlag) {
-    //     _publishFlag &= ~kWebUIUpdateFlag;
-    // }
 }

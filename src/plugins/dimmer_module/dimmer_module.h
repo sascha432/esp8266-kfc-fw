@@ -33,20 +33,21 @@ namespace Dimmer {
             virtual void onConnect() override;
         #endif
 
-        virtual bool on(uint8_t channel = -1, float transition = NAN, bool publish = true) override;
-        virtual bool off(uint8_t channel = -1, float transition = NAN, bool publish = true) override;
+        virtual bool on(uint8_t channel = -1, float transition = NAN) override;
+        virtual bool off(uint8_t channel = -1, float transition = NAN) override;
 
-        virtual uint8_t getChannelCount() const override;
         virtual ChannelsArray &getChannels() override;
         virtual bool isAnyOn() const;
         uint8_t isAnyOnInt() const;
+        virtual void publishChannelState(uint8_t channel) override;
         virtual bool getChannelState(uint8_t channel) const override;
 
         virtual int16_t getChannel(uint8_t channel) const override;
-        virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN, bool publish = true) override;
+        virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) override;
         virtual void stopFading(uint8_t channel) override;
 
         virtual void publishChannel(uint8_t channel) override;
+        virtual void publishChannels() override;
 
         virtual int16_t getRange(uint8_t channel) const override;
         virtual int16_t getOffset(uint8_t channel) const override;
@@ -85,16 +86,16 @@ namespace Dimmer {
         return isAnyOn() ? 1 : 0;
     }
 
-    inline bool Module::on(uint8_t channel, float transition, bool publish)
+    inline bool Module::on(uint8_t channel, float transition)
     {
-        __LDBG_printf("on ch=%u t=%f p=%u", channel, transition, publish);
-        return _channels[channel].on(transition, publish);
+        __LDBG_printf("on ch=%u t=%f p=%u", channel, transition);
+        return _channels[channel].on(transition);
     }
 
-    inline bool Module::off(uint8_t channel, float transition, bool publish)
+    inline bool Module::off(uint8_t channel, float transition)
     {
-        __LDBG_printf("off ch=%u t=%f p=%u", channel, transition, publish);
-        return _channels[channel].off(&_config, transition, publish);
+        __LDBG_printf("off ch=%u t=%f p=%u", channel, transition);
+        return _channels[channel].off(&_config, transition);
     }
 
     inline int16_t Module::getChannel(uint8_t channel) const
@@ -109,21 +110,16 @@ namespace Dimmer {
         return _channels[channel].getOnState();
     }
 
-    inline void Module::setChannel(uint8_t channel, int16_t level, float transition, bool publish)
+    inline void Module::setChannel(uint8_t channel, int16_t level, float transition)
     {
-        __LDBG_printf("set ch=%u lvl=%u t=%f p=%u", channel, level, transition, publish);
-        _channels[channel].setLevel(level, transition, publish);
+        __LDBG_printf("set ch=%u lvl=%u t=%f p=%u", channel, level, transition);
+        _channels[channel].setLevel(level, transition);
     }
 
     inline void Module::stopFading(uint8_t channel)
     {
         __LDBG_printf("stop ch=%u", channel);
         _channels[channel].stopFading();
-    }
-
-    inline uint8_t Module::getChannelCount() const
-    {
-        return _channels.size();
     }
 
     inline ChannelsArray &Module::getChannels()
@@ -144,6 +140,13 @@ namespace Dimmer {
     inline void Module::publishChannel(uint8_t channel)
     {
         _channels[channel].publishState();
+    }
+
+    inline void Module::publishChannels()
+    {
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            _channels[i].publishState();
+        }
     }
 
 }

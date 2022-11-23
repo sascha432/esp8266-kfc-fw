@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_IOT_DIMMER_MODULE
-#    define DEBUG_IOT_DIMMER_MODULE (1 || defined(DEBUG_ALL))
+#    define DEBUG_IOT_DIMMER_MODULE (0 || defined(DEBUG_ALL))
 #endif
 
 // number of channels

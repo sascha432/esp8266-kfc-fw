@@ -43,26 +43,6 @@ namespace Dimmer {
             TwoWire &_wire;
             bool _locked;
         };
-        // struct Lock {
-        //     Lock(TwoWire &wire, bool noLocking = false) : _wire(wire), _locked(noLocking || _wire.lock()), _noLocking(noLocking) {
-        //     }
-        //     ~Lock() {
-        //         if (_noLocking == false && _locked) {
-        //             _wire.unlock();
-        //             _locked = false;
-        //         }
-        //     }
-        //     operator bool() const {
-        //         return _locked;
-        //     }
-        //     TwoWire &_wire;
-        //     bool _locked;
-        //     bool _noLocking;
-        // };
-
-        static constexpr uint8_t getChannelCount() {
-            return DIMMER_CHANNEL_COUNT;
-        }
 
         void fadeTo(uint8_t channel, int16_t fromLevel, int16_t toLevel, float fadeTime, uint8_t address = kDefaultSlaveAddress) {
             if (!lock()) {

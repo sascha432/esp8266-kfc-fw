@@ -34,9 +34,7 @@ namespace Dimmer {
                 if (discovery->createJsonSchema(this, FSPGM(main), format)) {
                     discovery->addStateTopic(_createTopics(TopicType::MAIN_STATE));
                     discovery->addCommandTopic(_createTopics(TopicType::MAIN_SET));
-                    discovery->addBrightnessScale(_base->getChannelCount() * Channel::getMaxLevel());
-                    discovery->addColorTempStateTopic(_createTopics(TopicType::COLOR_STATE));
-                    discovery->addColorTempCommandTopic(_createTopics(TopicType::COLOR_SET));
+                    discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
                     discovery->addParameter(F("brightness"), true);
                     discovery->addParameter(F("white"), true);
                 }
@@ -60,7 +58,6 @@ namespace Dimmer {
     {
         subscribe(_createTopics(TopicType::MAIN_SET));
         subscribe(_createTopics(TopicType::LOCK_SET));
-        subscribe(_createTopics(TopicType::COLOR_SET));
     }
 
     void ColorTemperature::onMessage(const char *topic, const char *payload, size_t len)
@@ -70,7 +67,7 @@ namespace Dimmer {
         if (strcmp_end_P(topic, PSTR("/lock/set")) == 0) {
             _setLockChannels(atoi(payload));
         }
-        else if (strcmp_end_P(topic, PSTR("/main/set")) == 0) {
+        else if (strcmp_end_P(topic, PSTR("/set")) == 0) {
             __LDBG_printf("set main");
             auto stream = HeapStream(payload, len);
             auto reader = MQTT::Json::Reader(&stream);
@@ -87,32 +84,33 @@ namespace Dimmer {
     void ColorTemperature::onJsonMessage(const MQTT::Json::Reader &json)
     {
         __LDBG_printf("main state=%d brightness=%d color=%d", json.state, json.brightness, json.color_temp);
-        auto &channels = _base->getChannels();
-        const auto count = _base->getChannelCount();
+        auto &channels = _getBase().getChannels();
         if (json.state != -1) {
             if (json.state && !_brightness) {
-                for(uint8_t i = 0; i < count; i++) {
+                for(uint8_t i = 0; i < channels.size(); i++) {
                     channels[i].on();
                 }
             }
             else if (!json.state && _brightness) {
-                for(uint8_t i = 0; i < count; i++) {
+                for(uint8_t i = 0; i < channels.size(); i++) {
                     channels[i].off();
                 }
             }
         }
         if (json.brightness != -1) {
             if (json.brightness == 0 && _brightness) {
-                for(uint8_t i = 0; i < count; i++) {
+                for(uint8_t i = 0; i < channels.size(); i++) {
                     channels[i].off();
                 }
             }
             else if (json.brightness) {
+                _brightness = json.brightness;
                 _brightnessToChannels();
                 _publish();
             }
         }
         else if (json.color_temp != -1) {
+            _color = json.color_temp * 100;
             _brightnessToChannels();
             _publish();
         }
@@ -135,26 +133,69 @@ namespace Dimmer {
                 _publish();
             }
             else if (id == F("d-ct")) {
-                _color = value.toFloat();
+                _color = std::clamp<float>(value.toFloat(), kColorMin, kColorMax);
                 _brightnessToChannels();
                 _publish();
             }
             else if (id == F("d-br")) {
-                _brightness = value.toInt();
+                _brightness = std::clamp<int32_t>(value.toInt(), 0, IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
                 _brightnessToChannels();
                 _publish();
             }
         }
     }
 
+    void ColorTemperature::_publishMQTT()
+    {
+        return;
+        if (isConnected()) {
+            _Timer(_mqttTimer).throttle(333, [this](Event::CallbackTimerPtr) {
+                using namespace MQTT::Json;
+                publish(_createTopics(TopicType::MAIN_STATE), true, UnnamedObject(
+                    State(_brightness != 0),
+                    Brightness(_brightness),
+                    MQTT::Json::ColorTemperature(_color),
+                    Transition(_getBase()._getConfig()._base._getFadeTime())).toString()
+                );
+                auto &_channels = _getBase().getChannels();
+                for(uint8_t i = 0; i < _channels.size(); i++) {
+                    _channels[i]._publishMQTT();
+                }
+            });
+        }
+    }
+
+    void ColorTemperature::_publishWebUI()
+    {
+        if (WebUISocket::hasAuthenticatedClients()) {
+            __LDBG_printf("clients=%u brightness=%d color=%.0f locked=%u", WebUISocket::hasAuthenticatedClients(), _brightness, _color, _channelLock);
+            _Timer(_webuiTimer).throttle(333, [this](Event::CallbackTimerPtr) {
+                auto &_channels = _getBase().getChannels();
+                WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
+                    WebUINS::Values(F("d-br"), _brightness, true),
+                    WebUINS::Values(F("d-ct"), static_cast<uint32_t>(_color), true),
+                    WebUINS::Values(F("d-lck"), _channelLock, true),
+                    WebUINS::Values(PrintString(F("d-ch%u"), 0), _channels[_channel_ww1].getLevel(), true),
+                    WebUINS::Values(PrintString(F("d-ch%u"), 1), _channels[_channel_ww2].getLevel(), true),
+                    WebUINS::Values(PrintString(F("d-ch%u"), 2), _channels[_channel_cw1].getLevel(), true),
+                    WebUINS::Values(PrintString(F("d-ch%u"), 3), _channels[_channel_cw2].getLevel(), true),
+                    WebUINS::Values(F("group-switch-0"), _channels.getSum() ? 1 : 0, true)
+                )));
+                // for(uint8_t i = 0; i < _channels.size(); i++) {
+                //     _channels[i]._publishWebUI();
+                // }
+            });
+        }
+    }
+
     // convert channels to brightness and color
     void ColorTemperature::_channelsToBrightness()
     {
-        auto &_channels = _base->getChannels();
+        auto &_channels = _getBase().getChannels();
         // calculate color and brightness values from single channels
         int32_t sum = _channels.getSum();
         if (sum) {
-            _color = ((_channels[_channel_ww1].getLevel() + _channels[_channel_ww2].getLevel()) * kColorRange) / static_cast<float>(sum) + kColorMin;
+            _color = (((_channels[_channel_ww1].getLevel() + _channels[_channel_ww2].getLevel()) * kColorRange) / static_cast<float>(sum)) + kColorMin;
             _brightness = sum;
         }
         else {
@@ -162,12 +203,13 @@ namespace Dimmer {
             _color = kColorMin + (kColorRange / 2); // set to center
         }
         _calcRatios();
-        __LDBG_printf("ww=%u,%u cw=%u,%u = brightness=%u color=%.0f ratio=%f,%f",
+        __LDBG_printf("ww=%d,%d cw=%d,%d = brightness=%d sum=%d color=%.0f ratio=%f,%f",
             _channels[_channel_ww1].getLevel(),
             _channels[_channel_ww2].getLevel(),
             _channels[_channel_cw1].getLevel(),
             _channels[_channel_cw2].getLevel(),
             _brightness,
+            sum,
             _color,
             _ratio[0],
             _ratio[1]
@@ -177,17 +219,23 @@ namespace Dimmer {
     // convert brightness and color to channels
     void ColorTemperature::_brightnessToChannels()
     {
-        auto &_channels = _base->getChannels();
+        auto &_channels = _getBase().getChannels();
         // calculate single channels from brightness and color
-        float color = (_color - kColorMin) / kColorRange;
+        auto color = (_color - kColorMin) / kColorRangeFloat;
+        #if DEBUG_IOT_DIMMER_MODULE
+            if (color < 0 || color > 1.0f || !isnormal(color)) {
+                __DBG_panic("color=%f _color=%f min=%d range=%f", color, _color, kColorMin, kColorRangeFloat);
+            }
+        #endif
         uint16_t ww = _brightness * color;
         uint16_t cw = _brightness * (1.0f - color);
         _channels[_channel_ww2].setLevel(ww / _ratio[0]);
         _channels[_channel_ww1].setLevel(ww - _channels[_channel_ww2].getLevel());
         _channels[_channel_cw2].setLevel(cw / _ratio[1]);
         _channels[_channel_cw1].setLevel(cw - _channels[_channel_cw2].getLevel());
-        __LDBG_printf("brightness=%u color=%.0f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f",
+        __LDBG_printf("brightness=%d sum=%d color=%.0f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f",
             _brightness,
+            _channels.getSum(),
             _color,
             color,
             _channels[_channel_ww1].getLevel(),
@@ -201,39 +249,14 @@ namespace Dimmer {
 
     void ColorTemperature::_publish()
     {
-        __LDBG_printf("brightness=%d brightness_pub=%d color=%f color_pub=%f channel_lock=%u ch_lck_pub=%u", _brightness, _brightnessPublished, _color, _colorPublished, _channelLock, _channelLockPublished);
+        __LDBG_printf("brightness=%d brightness_pub=%d color=%.0f color_pub=%.0f ch_lock=%u ch_lck_pub=%u", _brightness, _brightnessPublished, _color, _colorPublished, _channelLock, _channelLockPublished);
         if (_brightness != _brightnessPublished || _color != _colorPublished || _channelLock != _channelLockPublished) {
             // publish if any value has been changed
             _publishMQTT();
             _publishWebUI();
-            _brightness = _brightnessPublished;
-            _color = _colorPublished;
-            _channelLock = _channelLockPublished;
-        }
-    }
-
-    void ColorTemperature::_publishMQTT()
-    {
-        if (isConnected()) {
-            using namespace MQTT::Json;
-            publish(_createTopics(TopicType::MAIN_STATE), true, UnnamedObject(
-                State(_brightness != 0),
-                Brightness(_brightness),
-                MQTT::Json::ColorTemperature(static_cast<uint32_t>(_color)),
-                Transition(_base->_getConfig()._base._fadetime())).toString()
-            );
-        }
-    }
-
-    void ColorTemperature::_publishWebUI()
-    {
-        if (WebUISocket::hasAuthenticatedClients()) {
-            __LDBG_printf("brightness=%u color=%.0f locked=%u", _brightness, _color, _channelLock);
-            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
-                WebUINS::Values(F("d-br"), _brightness, true),
-                WebUINS::Values(F("d-ct"), static_cast<uint32_t>(_color), true),
-                WebUINS::Values(F("d-lck"), _channelLock, true)
-            )));
+            _brightnessPublished = _brightness;
+            _colorPublished = _color;
+            _channelLockPublished = _channelLock;
         }
     }
 
@@ -243,22 +266,41 @@ namespace Dimmer {
         _channelLock = value;
         if (value) {
             // if channels are locked, the ratio is 1:1
-            _ratio[0] = _base->getChannelCount() / 2.0;
-            _ratio[1] = _ratio[0];
-            _brightnessToChannels();
+            _ratio[0] = 2;
+            _ratio[1] = 2;
+            auto &_channels = _getBase().getChannels();
+            uint16_t ww = (_channels[_channel_ww1].getLevel() + _channels[_channel_ww2].getLevel()) / 2;
+            uint16_t cw = (_channels[_channel_cw1].getLevel() + _channels[_channel_cw2].getLevel()) / 2;
+            _channels[_channel_ww1].setLevel(ww);
+            _channels[_channel_ww2].setLevel(ww);
+            _channels[_channel_cw1].setLevel(cw);
+            _channels[_channel_cw2].setLevel(cw);
+            _channelsToBrightness();
             _publish();
         }
     }
 
     void ColorTemperature::_calcRatios()
     {
-        __LDBG_printf("_base=%p", _base);
-        auto &_channels = _base->getChannels();
-        _ratio[0] = _channels[_channel_ww2].getOnState() ?
-            ((_channels[_channel_ww1].getLevel() + _channels[_channel_ww2].getLevel()) / static_cast<float>(_channels[_channel_ww2].getLevel())) : (_channels[_channel_ww1].getOnState() ? INFINITY : 2);
-        _ratio[1] = _channels[_channel_cw2].getOnState() ?
-            ((_channels[_channel_cw1].getLevel() + _channels[_channel_cw2].getLevel()) / static_cast<float>(_channels[_channel_cw2].getLevel())) : (_channels[_channel_cw1].getOnState() ? INFINITY : 2);
-        __LDBG_printf("ww=%f cw=%f", _ratio[0], _ratio[1]);
+        if (_channelLock) {
+            _ratio[0] = 2;
+            _ratio[1] = 2;
+            return;
+        }
+        auto &_channels = _getBase().getChannels();
+        auto ww1 = _channels[_channel_ww1].getLevel();
+        auto ww2 = _channels[_channel_ww2].getLevel();
+        auto cw1 = _channels[_channel_cw1].getLevel();
+        auto cw2 = _channels[_channel_cw2].getLevel();
+        _ratio[0] = (ww2 ? ((ww1 + ww2) / static_cast<float>(ww2)) : 2);
+        if (_ratio[0] == 0) {
+            _ratio[0] = 2;
+        }
+        _ratio[1] = (cw2 ? ((cw1 + cw2) / static_cast<float>(cw2)) : 2);
+        if (_ratio[1] == 0) {
+            _ratio[1] = 2;
+        }
+        __LDBG_printf("ratio=%f,%f ww=%d/%d cw=%d/%d", _ratio[0], _ratio[1], ww1, ww2, cw1, cw2);
     }
 
     void ColorTemperature::begin()
@@ -269,6 +311,12 @@ namespace Dimmer {
         _colorPublished = NAN;
         _channelLock = false;
         _channelLockPublished = !_channelLock;
+    }
+
+    void ColorTemperature::end()
+    {
+        _mqttTimer.remove();
+        _webuiTimer.remove();
     }
 
     String ColorTemperature::_createTopics(TopicType type)
@@ -282,15 +330,8 @@ namespace Dimmer {
                 return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/lock/set"));
             case TopicType::LOCK_STATE:
                 return MQTT::Client::formatTopic(String(FSPGM(lock_channels)), F("/lock/state"));
-            case TopicType::COLOR_SET:
-                return MQTT::Client::formatTopic(String(F("color")), F("/color/set"));
-            case TopicType::COLOR_STATE:
-                return MQTT::Client::formatTopic(String(F("color")), F("/color/state"));
-            default:
-                __LDBG_panic("invalid type=%u", type);
-                break;
         }
-        return String();
+        __builtin_unreachable();
     }
 
 }

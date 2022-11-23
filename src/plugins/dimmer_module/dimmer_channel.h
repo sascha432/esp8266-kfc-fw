@@ -45,6 +45,11 @@ namespace Dimmer {
             _topic = _createTopics(TopicType::COMMAND_SET, false);
         }
 
+        void end()
+        {
+            _publishTimer.remove();
+        }
+
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
             Channel(const Channel &) = delete;
             Channel &operator=(const Channel &) = delete;
@@ -61,19 +66,15 @@ namespace Dimmer {
         virtual void onConnect() override;
         virtual void onMessage(const char *topic, const char *payload, size_t len) override final;
 
-        bool on(float transition = NAN, bool publish = true);
-        bool off(ConfigType *config = nullptr, float transition = NAN, int32_t level = -1, bool publish = true);
+        bool on(float transition = NAN);
+        bool off(ConfigType *config = nullptr, float transition = NAN, int32_t level = -1);
         void publishState();
-
-        static constexpr int16_t getMaxLevel() {
-            return kMaxLevel;
-        }
 
         bool getOnState() const;
         int16_t getLevel() const;
-        void setLevel(int32_t level, float transition = NAN, bool publish = true);
+        void setLevel(int32_t level, float transition = NAN);
         void setStoredBrightness(int32_t store);
-        uint16_t getStorededBrightness() const;
+        uint16_t getStoredBrightness() const;
         void stopFading();
 
     protected:
@@ -91,21 +92,20 @@ namespace Dimmer {
         friend Module;
 
         void _publish();
-        bool _set(int32_t level, float transition = NAN, bool publish = true);
+        bool _set(int32_t level, float transition = NAN);
         String _createTopics(TopicType type, bool full = true) const;
 
         Module *_dimmer;
         String _topic;
         Event::Timer _publishTimer;
-        uint32_t _publishLastTime;
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
             Event::Timer *_delayTimer;
         #endif
         uint16_t _storedBrightness;
         uint16_t _brightness;
+        uint16_t _brightnessMQTT;
+        uint16_t _brightnessWebUI;
         uint8_t _channel;
-        uint8_t _publishFlag;
-        uint8_t _mqttCounter;
     };
 
     inline bool Channel::getOnState() const
@@ -118,6 +118,11 @@ namespace Dimmer {
         return _brightness;
     }
 
+    inline void Channel::setLevel(int32_t level, float transition)
+    {
+        _set(level, transition);
+    }
+
     inline void Channel::setStoredBrightness(int32_t store)
     {
         // do not store 0
@@ -126,9 +131,23 @@ namespace Dimmer {
         }
     }
 
-    inline uint16_t Channel::getStorededBrightness() const
+    inline uint16_t Channel::getStoredBrightness() const
     {
         return _storedBrightness;
+    }
+
+    inline void Channel::_publish()
+    {
+        __LDBG_printf("publish channel=%u", _channel);
+        _publishMQTT();
+        _publishWebUI();
+    }
+
+    inline void Channel::publishState()
+    {
+        _Timer(_publishTimer).throttle(333, [this](Event::CallbackTimerPtr) {
+            _publish();
+        });
     }
 
 }

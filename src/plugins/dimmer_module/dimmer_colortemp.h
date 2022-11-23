@@ -18,9 +18,9 @@ namespace Dimmer {
 
     class ColorTemperature : public MQTTComponent {
     public:
-        // color in Mired * 100
-        static constexpr uint16_t kColorMin = 15300;
-        static constexpr uint16_t kColorMax = 50000;
+        static constexpr uint16_t kColorMultiplier = 100;
+        static constexpr uint16_t kColorMin = 153 * kColorMultiplier;
+        static constexpr uint16_t kColorMax = 500 * kColorMultiplier;
         static constexpr uint16_t kColorRange = (kColorMax - kColorMin);
         static constexpr float kColorRangeFloat = kColorRange;
 

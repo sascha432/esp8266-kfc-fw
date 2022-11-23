@@ -138,7 +138,7 @@ namespace MQTT {
 
     static constexpr AutoReconnectType kAutoReconnectDisabled = 0;
 
-    // reduce timeouts if the queue reqiures too much RAM
+    // reduce timeouts if the queue requires too much RAM
 
     // packets in the local queue are discarded after 7.5 seconds
     // the timeout can be changed after sending a packet

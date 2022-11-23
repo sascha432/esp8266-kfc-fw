@@ -67,7 +67,7 @@ void Base::begin()
 void Base::end()
 {
     auto &_channels = getChannels();
-    for(uint8_t i = 0; i < _channels.size(); i++) {
+    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
         _channels[i].end();
     }
 

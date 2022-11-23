@@ -25,8 +25,6 @@ Channel::Channel(Module *dimmer, uint8_t channel) :
     #endif
     _storedBrightness(0),
     _brightness(0),
-    _brightnessMQTT(~0),
-    _brightnessWebUI(~0),
     _channel(channel)
 {
 }
@@ -99,7 +97,6 @@ void Channel::onConnect()
 {
     subscribe(_createTopics(TopicType::COMMAND_SET));
     _publishTimer.remove();
-    _brightnessMQTT = ~0;
     publishState();
 }
 
@@ -112,7 +109,7 @@ void Channel::onMessage(const char *topic, const char *payload, size_t len)
     auto stream = HeapStream(payload, len);
     auto reader = MQTT::Json::Reader(&stream);
     if (reader.parse()) {
-        #if DEBUG_IOT_DIMMER_MODULE || 1
+        #if DEBUG_IOT_DIMMER_MODULE
             PrintString str;
             reader.dump(str);
             __DBG_printf("%s", str.c_str());
@@ -274,25 +271,23 @@ bool Channel::_set(int32_t level, float transition)
 
 void Channel::_publishMQTT()
 {
-    if (isConnected() && _brightness != _brightnessMQTT) {
+    if (isConnected()) {
         using namespace MQTT::Json;
         publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(
             State(_brightness != 0),
             Brightness(_brightness),
             Transition(_dimmer->_getConfig()._base._getFadeTime())).toString()
         );
-        _brightnessMQTT = _brightness;
     }
 }
 
 void Channel::_publishWebUI()
 {
-    if (WebUISocket::hasAuthenticatedClients() && _brightness != _brightnessWebUI) {
+    if (WebUISocket::hasAuthenticatedClients()) {
         __LDBG_printf("channel=%u brightness=%u", _channel, _brightness);
         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
             WebUINS::Values(PrintString(F("d-ch%u"), _channel), _brightness, true),
             WebUINS::Values(F("group-switch-0"), _dimmer->isAnyOnInt(), true)
         )));
-        _brightnessWebUI = _brightness;
     }
 }

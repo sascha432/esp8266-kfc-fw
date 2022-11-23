@@ -34,9 +34,12 @@ namespace Dimmer {
                 if (discovery->createJsonSchema(this, FSPGM(main), format)) {
                     discovery->addStateTopic(_createTopics(TopicType::MAIN_STATE));
                     discovery->addCommandTopic(_createTopics(TopicType::MAIN_SET));
-                    discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+                    discovery->addBrightnessScale(IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
                     discovery->addParameter(F("brightness"), true);
-                    discovery->addParameter(F("white"), true);
+                    discovery->addParameter(F("color_mode"), true);
+                    discovery->addSupportedColorModes(F("[\"color_temp\"]"));
+                    // discovery->addParameter(F("min_mireds"), static_cast<uint16_t>(kColorMin / kColorMultiplier));
+                    // discovery->addParameter(F("max_mireds"), static_cast<uint16_t>(kColorMax / kColorMultiplier));
                 }
                 break;
             case 1:
@@ -65,14 +68,14 @@ namespace Dimmer {
         __DBG_printf("topic=%s payload=%s", topic, payload);
 
         if (strcmp_end_P(topic, PSTR("/lock/set")) == 0) {
-            _setLockChannels(atoi(payload));
+            _setLockChannels(MQTT::Client::toBool(payload));
         }
         else if (strcmp_end_P(topic, PSTR("/set")) == 0) {
             __LDBG_printf("set main");
             auto stream = HeapStream(payload, len);
             auto reader = MQTT::Json::Reader(&stream);
             if (reader.parse()) {
-                #if DEBUG_IOT_DIMMER_MODULE
+                #if DEBUG_IOT_DIMMER_MODULE || 1
                     reader.dump(DEBUG_OUTPUT);
                 #endif
                 onJsonMessage(reader);
@@ -87,19 +90,19 @@ namespace Dimmer {
         auto &channels = _getBase().getChannels();
         if (json.state != -1) {
             if (json.state && !_brightness) {
-                for(uint8_t i = 0; i < channels.size(); i++) {
+                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
                     channels[i].on();
                 }
             }
             else if (!json.state && _brightness) {
-                for(uint8_t i = 0; i < channels.size(); i++) {
+                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
                     channels[i].off();
                 }
             }
         }
         if (json.brightness != -1) {
             if (json.brightness == 0 && _brightness) {
-                for(uint8_t i = 0; i < channels.size(); i++) {
+                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
                     channels[i].off();
                 }
             }
@@ -110,7 +113,7 @@ namespace Dimmer {
             }
         }
         else if (json.color_temp != -1) {
-            _color = json.color_temp * 100;
+            _color = json.color_temp * kColorMultiplier;
             _brightnessToChannels();
             _publish();
         }
@@ -133,12 +136,12 @@ namespace Dimmer {
                 _publish();
             }
             else if (id == F("d-ct")) {
-                _color = std::clamp<float>(value.toFloat(), kColorMin, kColorMax);
+                _color = value.toFloat();
                 _brightnessToChannels();
                 _publish();
             }
             else if (id == F("d-br")) {
-                _brightness = std::clamp<int32_t>(value.toInt(), 0, IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+                _brightness = value.toInt();
                 _brightnessToChannels();
                 _publish();
             }
@@ -147,7 +150,6 @@ namespace Dimmer {
 
     void ColorTemperature::_publishMQTT()
     {
-        return;
         if (isConnected()) {
             _Timer(_mqttTimer).throttle(333, [this](Event::CallbackTimerPtr) {
                 using namespace MQTT::Json;
@@ -157,8 +159,11 @@ namespace Dimmer {
                     MQTT::Json::ColorTemperature(_color),
                     Transition(_getBase()._getConfig()._base._getFadeTime())).toString()
                 );
+
+                publish(_createTopics(TopicType::LOCK_STATE), true, MQTT::Client::toBoolOnOff(_channelLock));
+
                 auto &_channels = _getBase().getChannels();
-                for(uint8_t i = 0; i < _channels.size(); i++) {
+                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
                     _channels[i]._publishMQTT();
                 }
             });
@@ -181,7 +186,7 @@ namespace Dimmer {
                     WebUINS::Values(PrintString(F("d-ch%u"), 3), _channels[_channel_cw2].getLevel(), true),
                     WebUINS::Values(F("group-switch-0"), _channels.getSum() ? 1 : 0, true)
                 )));
-                // for(uint8_t i = 0; i < _channels.size(); i++) {
+                // for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
                 //     _channels[i]._publishWebUI();
                 // }
             });

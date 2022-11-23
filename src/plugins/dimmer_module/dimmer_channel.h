@@ -103,8 +103,6 @@ namespace Dimmer {
         #endif
         uint16_t _storedBrightness;
         uint16_t _brightness;
-        uint16_t _brightnessMQTT;
-        uint16_t _brightnessWebUI;
         uint8_t _channel;
     };
 

@@ -31,7 +31,7 @@ void Buttons::begin()
 
     pinMonitor.setDefaultPinMode(IOT_DIMMER_MODULE_PINMODE);
 
-    for (uint8_t i = 0; i < _channels.size() * 2; i++) {
+    for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS * 2; i++) {
         auto pinNum = _config._base.pin(i);
         __LDBG_assert_printf(pinNum != 0xff, "pinNum=0x%02x channel=%u", pinNum, i);
         if (pinNum != 0xff) {

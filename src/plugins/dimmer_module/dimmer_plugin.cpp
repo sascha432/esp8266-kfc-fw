@@ -116,7 +116,7 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
     }
 
     #if IOT_DIMMER_GROUP_LOCK
-        webUI.appendToLastRow(WebUINS::Switch(F("d-lck"), F("Lock Channels"), false, WebUINS::NamePositionType::TOP, 4));
+        webUI.appendToLastRow(WebUINS::Switch(F("d-lck"), F("Lock Channels"), true, WebUINS::NamePositionType::TOP, 4));
     #endif
 
 
@@ -130,7 +130,7 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
         #if IOT_DIMMER_HAVE_CHANNEL_ORDER
             const auto channelOrder = std::array<int8_t, IOT_DIMMER_MODULE_CHANNELS>({IOT_DIMMER_CHANNEL_ORDER});
         #endif
-        for (uint8_t number = 1; number <= _channels.size(); number++) {
+        for (uint8_t number = 1; number <= IOT_DIMMER_MODULE_CHANNELS; number++) {
             #if IOT_DIMMER_HAVE_CHANNEL_ORDER
                 auto idx = channelOrder[number - 1];
             #else
@@ -174,7 +174,7 @@ void Plugin::createMenu()
 
 void Plugin::getStatus(Print &out)
 {
-    out.printf_P(PSTR("%u Channel MOSFET Dimmer "), _channels.size());
+    out.printf_P(PSTR("%u Channel MOSFET Dimmer "), IOT_DIMMER_MODULE_CHANNELS);
     if (_isEnabled()) {
         out.print(F("enabled on " IOT_DIMMER_INTERFACE));
         Module::getStatus(out);

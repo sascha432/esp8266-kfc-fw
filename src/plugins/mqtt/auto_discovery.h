@@ -202,6 +202,12 @@ namespace MQTT {
                 __addParameter(FSPGM(mqtt_effect_list), json.c_str(), false);
             }
 
+            // JSON array
+            // ["rgbw","color_temp",...]
+            void addSupportedColorModes(String json) {
+                __addParameter(F("supported_color_modes"), json.c_str(), false);
+            }
+
             template<typename _T>
             void addTopic(_T value) {
                 addParameter(FSPGM(mqtt_topic), value);
@@ -213,7 +219,7 @@ namespace MQTT {
             }
 
             template<typename _T>
-            void addubType(_T value) {
+            void addSubType(_T value) {
                 addParameter(FSPGM(mqtt_subtype), value);
             }
 

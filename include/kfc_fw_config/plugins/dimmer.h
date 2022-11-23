@@ -28,8 +28,6 @@ namespace KFCConfigurationClasses {
                         } level;
                     #endif
                     #if IOT_DIMMER_MODULE_HAS_BUTTONS
-                        CREATE_UINT16_BITFIELD_MIN_MAX(off_delay, 9, 0, 480, 0);
-                        CREATE_UINT16_BITFIELD_MIN_MAX(off_delay_signal, 1, 0, 1, false);
                         CREATE_UINT16_BITFIELD_MIN_MAX(pin_ch0_down, 5, 0, 16, 13);
                         CREATE_UINT16_BITFIELD_MIN_MAX(pin_ch0_down_inverted, 1, 0, 1, false);
                         CREATE_UINT16_BITFIELD_MIN_MAX(pin_ch0_up, 5, 0, 16, 4);
@@ -71,17 +69,17 @@ namespace KFCConfigurationClasses {
                     #if IOT_ATOMIC_SUN_V2
                         CREATE_FLOAT_FIELD(on_fadetime, 1.0, 300.0, 12.5);
                         CREATE_FLOAT_FIELD(off_fadetime, 1.0, 300.0, 12.5);
-                        float _fadetime() const {
+                        float _getFadeTime() const {
                             return on_fadetime;
                         }
                     #elif IOT_DIMMER_MODULE
                         CREATE_FLOAT_FIELD(on_fadetime, 1.0, 300.0, 7.5);
                         CREATE_FLOAT_FIELD(off_fadetime, 1.0, 300.0, 7.5);
-                        float _fadetime() const {
+                        float _getFadeTime() const {
                             return lp_fadetime;
                         }
                     #else
-                        float _fadetime() const {
+                        float _getFadeTime() const {
                             return 0;
                         }
                     #endif

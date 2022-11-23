@@ -6,9 +6,9 @@
 #include "Utility/ProgMemHelper.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
@@ -82,21 +82,6 @@ namespace Dimmer {
             form.addObjectGetterSetter(F("offft"), FormGetterSetter(cfg, off_fadetime));
             form.addFormUI(F("Off Fade Time"), FormUI::Suffix(FSPGM(seconds)));
             cfg.addRangeValidatorFor_off_fadetime(form);
-
-            #if IOT_DIMMER_MODULE_HAS_BUTTONS
-                auto &offDelaySignal = form.addObjectGetterSetter(F("offdlys"), FormGetterSetter(cfg, off_delay_signal));
-                form.addFormUI(FormUI::Type::HIDDEN);
-
-                form.addObjectGetterSetter(F("offdly"), FormGetterSetter(cfg, off_delay));
-                form.addFormUI(F("Off Delay"), FormUI::Suffix(FSPGM(seconds)), FormUI::CheckboxButtonSuffix(offDelaySignal, F("Confirm Signal")));
-                cfg.addRangeValidatorFor_off_delay(form);
-
-            #endif
-
-            #if DIMMER_FIRMWARE_VERSION <= 0x020105
-                form.addPointerTriviallyCopyable(F("lcf"), &firmwareConfig.linear_correction_factor);
-                form.addFormUI(F("Linear Correction Factor"), configValidAttr, FormUI::PlaceHolder(1.0, 1));
-            #endif
 
             form.addCallbackSetter(F("restore"), firmwareConfig.bits.restore_level, [&firmwareConfig](const uint8_t value, FormField &) {
                 firmwareConfig.bits.restore_level = value;

@@ -300,7 +300,7 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
     }
 }
 
-uint16_t WsClient::getQeueDelay()
+uint16_t WsClient::getQueueDelay()
 {
     // calculate delay depending on the queue size
     auto qCount = AsyncWebSocket::_getQueuedMessageCount();
@@ -351,7 +351,7 @@ static bool __get_server(AsyncWebSocket *&server, WsClient *sender)
 static bool __get_server(AsyncWebSocket *&server, AsyncWebSocketClient *client)
 {
     if (!client) {
-        __DBG_printf("cleint is nullptr");
+        __DBG_printf("client is nullptr");
         return false;
     }
     if (!server) {
@@ -367,7 +367,7 @@ void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSock
             __DBG_printf_E("esp_task_wdt_add failed");
         }
     #endif
-    auto qDelay = getQeueDelay();
+    auto qDelay = getQueueDelay();
     buffer->lock();
     WsClient::foreach(server, sender, [buffer, qDelay](AsyncWebSocketClient *client) {
         if (client->canSend()) {
@@ -527,7 +527,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
                     esp_task_wdt_reset();
                 #elif ESP8266
                     if (can_yield()) {
-                        delay(WsClient::getQeueDelay());
+                        delay(WsClient::getQueueDelay());
                     }
                 #endif
             }
@@ -558,7 +558,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
                     esp_task_wdt_reset();
                 #elif ESP8266
                     if (can_yield()) {
-                        delay(WsClient::getQeueDelay());
+                        delay(WsClient::getQueueDelay());
                     }
                 #endif
             }
@@ -587,7 +587,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
                 esp_task_wdt_reset();
             #elif ESP8266
                 if (can_yield()) {
-                    delay(WsClient::getQeueDelay());
+                    delay(WsClient::getQueueDelay());
                 }
             #endif
         }

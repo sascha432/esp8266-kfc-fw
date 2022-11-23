@@ -169,9 +169,9 @@ void Sensor_HLW80xx::shutdown()
     _saveEnergyCounter();
 
     // update energy counter in EEPROM
-    auto &cfg = Plugins::Sensor::getWriteableConfig();
-    if (cfg.hlw80xx.energyCounter != _energyCounter[0]) {
-        cfg.hlw80xx.energyCounter = _energyCounter[0];
+    auto &cfg = Plugins::Sensor::getWriteableConfig().hlw80xx;
+    if (cfg.energyCounter != _energyCounter[0]) {
+        cfg.energyCounter = _energyCounter[0];
         config.write();
     }
 }
@@ -201,22 +201,23 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, FormUI:
     form.add(F("hlw80xx_e1"), String(), FormUI::Field::Type::TEXT);
     form.addFormUI(F("Total Energy"), FormUI::Suffix(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergyPrimaryCounter()), 3));
 
-    // form.addValidator(FormUI::Validator::Callback([&cfg, this](String value, FormField &field) {
-    //     if (value.length()) {
-    //         // gets copied to getEnergyPrimaryCounter() in configurationSaved()
-    //         cfg.hlw80xx.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
-    //     }
-    //     return true;
-    // }));
+    form.addValidator(FormUI::Validator::CallbackTemplate<String>([&cfg, this](const String &value, FormField &field) {
+        if (value.length()) {
+            // gets copied to getEnergyPrimaryCounter() in configurationSaved()
+            cfg.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
+        }
+        return true;
+    }));
+
     form.add(F("hlw80xx_2"), String(), FormUI::Field::Type::TEXT);
     form.addFormUI(F("Energy"), FormUI::Suffix(FSPGM(kWh)), FormUI::PlaceHolder(IOT_SENSOR_HLW80xx_PULSE_TO_KWH(getEnergySecondaryCounter()), 3));
 
-    // form.addValidator(FormUI::Validator::Callback([this](String value, FormField &field) {
-    //     if (value.length()) {
-    //         getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
-    //     }
-    //     return true;
-    // }));
+    form.addValidator(FormUI::Validator::CallbackTemplate<String>([this](const String &value, FormField &field) {
+        if (value.length()) {
+            getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
+        }
+        return true;
+    }));
 
     group.end();
 

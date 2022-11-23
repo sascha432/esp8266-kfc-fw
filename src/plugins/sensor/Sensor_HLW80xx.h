@@ -332,13 +332,9 @@ inline WebUINS::TrimmedFloat Sensor_HLW80xx::_currentToNumber(float current) con
 
 inline WebUINS::TrimmedFloat Sensor_HLW80xx::_energyToNumber(float energy) const
 {
-    auto tmp = energy;
-    uint8_t digits = 0;
-    while(tmp >= 1 && digits < 3) {
-        digits++;
-        tmp *= 0.1;
-    }
-    return WebUINS::TrimmedFloat(energy, 3 - digits + _extraDigits);
+    char buf[8];
+    auto digits = energy < 1 ? 4 : std::max(0, 4 - snprintf_P(buf, sizeof(buf), PSTR("%u"), static_cast<uint32_t>(energy)));
+    return WebUINS::TrimmedFloat(energy, digits + _extraDigits);
 }
 
 inline WebUINS::TrimmedFloat Sensor_HLW80xx::_powerToNumber(float power) const

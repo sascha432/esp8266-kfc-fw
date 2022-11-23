@@ -46,6 +46,9 @@ namespace Event {
         void add(const char *name, int64_t intervalMillis, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
         void add(const char *name, milliseconds interval, RepeatType repeat, Callback callback, PriorityType priority = PriorityType::NORMAL);
 
+        // throttle a call, if called a second time before delayMillis have not been passed, it is ignored
+        void throttle(uint32_t delayMillis, Callback callback, PriorityType priority = PriorityType::NORMAL);
+
         bool remove();
 
         operator bool() const;
@@ -68,6 +71,27 @@ namespace Event {
 
     inline Timer::Timer(CallbackTimerPtr callbackTimer) : _managedTimer(callbackTimer, this)
     {
+    }
+
+    inline void Timer::throttle(uint32_t delayMillis, Callback callback, PriorityType priority)
+    {
+        if (_isActive()) {
+            auto &timer = *_managedTimer.get();
+            if (timer._repeat.getRepeatsLeft() >= RepeatType::kNoRepeat) {
+                // further calls are blocked for delayMillis
+                return;
+            }
+            // execute delayed and block all calls for delayMillis
+            add(Event::milliseconds(delayMillis), 2, [callback](CallbackTimerPtr timer) {
+                callback(timer);
+                // disarm, we just want one call
+                timer->disarm();
+            }, priority);
+        }
+        else {
+            // not active, run immediately
+            add(Event::milliseconds(10), RepeatType::kNoRepeat, callback, priority);
+        }
     }
 
     inline bool Timer::remove()

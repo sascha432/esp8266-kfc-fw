@@ -15,13 +15,10 @@
 #include <vector>
 #include <stl_ext/chunked_list.h>
 #include <stl_ext/is_trivially_copyable.h>
-#if HAVE_EMBEDIS
-#include <Embedis.h>
-#endif
 #if ESP8266
 #include <coredecls.h>
 #endif
-#if ESP32
+#if ESP32 || HAVE_NVS_FLASH
 #include <nvs.h>
 #endif
 
@@ -207,7 +204,7 @@ public:
 
     static constexpr uint16_t kHeaderOffset = CONFIGURATION_HEADER_OFFSET;
     static_assert((kHeaderOffset & 3) == 0, "not dword aligned");
-    #if ESP32
+    #if ESP32 || HAVE_NVS_FLASH
         static_assert(kHeaderOffset == 0, "offset not supported");
     #endif
 
@@ -230,7 +227,7 @@ public:
             FLASH_ERASE_ERROR,
             FLASH_WRITE_ERROR,
         #endif
-        #if ESP32
+        #if ESP32 || HAVE_NVS_FLASH
             NVS_COMMIT_ERROR,
             NVS_SET_BLOB_ERROR,
             NVS_ERASE_ALL,
@@ -259,7 +256,7 @@ public:
                 case WriteResultType::FLASH_WRITE_ERROR:
                     return F("FLASH_WRITE_ERROR");
             #endif
-            #if ESP32
+            #if ESP32 || HAVE_NVS_FLASH
                 case WriteResultType::NVS_COMMIT_ERROR:
                     return F("NVS_COMMIT_ERROR");
                 case WriteResultType::NVS_SET_BLOB_ERROR:
@@ -490,7 +487,7 @@ private:
             return ESP.flashEraseSector(sector);
         }
 
-    #elif ESP32
+    #elif ESP32 || HAVE_NVS_FLASH
 
         // NVS implementation
         static uint32_t _nvs_key_handle(ConfigurationParameter::TypeEnum_t type, HandleType handle) {

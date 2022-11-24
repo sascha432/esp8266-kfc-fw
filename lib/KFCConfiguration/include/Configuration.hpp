@@ -10,7 +10,7 @@
 inline Configuration::~Configuration()
 {
     clear();
-    #if ESP32
+    #if ESP32 || HAVE_NVS_FLASH
         nvs_close(_handle);
         _handle = 0;
     #endif

@@ -187,7 +187,7 @@ bool ConfigurationParameter::hasDataChanged(Configuration &conf) const
     }
     __LDBG_assert_panic(static_cast<const void *>(&(*iterator)) == static_cast<const void *>(this), "*iterator=%p this=%p", &(*iterator), this);
 
-    #if ESP32
+    #if ESP32 || HAVE_NVS_FLASH
 
         size_t requiredSize = _param.length();
         auto tmp = std::unique_ptr<uint8_t[]>(::new uint8_t[requiredSize]);
@@ -241,7 +241,7 @@ bool ConfigurationParameter::_readData(Configuration &conf, uint16_t offset)
     ConfigurationHelper::allocate(_param.size(), *this);
     conf.setLastReadAccess();
 
-    #if ESP32
+    #if ESP32 || HAVE_NVS_FLASH
         esp_err_t err;
         size_t size = _param.length();
         if ((err = nvs_get_blob(conf._handle, conf._nvs_key_handle_name(_param.type(), _param.getHandle()), _param._readable, &size)) != ESP_OK) {

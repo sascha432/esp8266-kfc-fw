@@ -9,7 +9,7 @@
 #if ESP8266
 #include <interrupts.h>
 #endif
-#if ESP32
+#if ESP32 || HAVE_NVS_FLASH
 #include <nvs.h>
 #define NVS_PARTITION_NAME "nvs"
 #endif
@@ -34,7 +34,7 @@
 #endif
 
 Configuration::Configuration(uint16_t size) :
-    #if ESP32
+    #if ESP32 || HAVE_NVS_FLASH
         _handle(0),
         _name("kfcfw_config"),
     #endif
@@ -74,7 +74,7 @@ Configuration::WriteResultType Configuration::erase()
             __DBG_printf("failed to erase configuration");
             return WriteResultType::FLASH_ERASE_ERROR;
         }
-    #elif ESP32
+    #elif ESP32 || HAVE_NVS_FLASH
         _nvs_open();
         // clear previous configuration
         esp_err_t err;
@@ -100,7 +100,7 @@ Configuration::WriteResultType Configuration::write()
 {
     __LDBG_printf("params=%u", _params.size());
 
-    #if ESP32
+    #if ESP32 || HAVE_NVS_FLASH
         _nvs_open();
         Header header;
         esp_err_t err;
@@ -359,7 +359,7 @@ void Configuration::dump(Print &output, bool dirty, const String &name)
     Header header;
     auto address = ConfigurationHelper::getFlashAddress(kHeaderOffset);
 
-    #if ESP32
+    #if ESP32 || HAVE_NVS_FLASH
 
         // read header to display details
         size_t size = sizeof(header);
@@ -479,7 +479,7 @@ bool Configuration::_readParams()
 {
     Header header;
 
-    #if ESP32
+    #if ESP32 || HAVE_NVS_FLASH
 
         _nvs_open();
 

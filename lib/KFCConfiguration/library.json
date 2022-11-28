@@ -7,6 +7,10 @@
       "name": "sascha lammers",
       "maintainer": true
     },
+    "build": {
+        "includeDir": "include",
+        "srcDir": "src"
+    },
     "frameworks": "arduino",
     "platforms": ["espressif8266", "espressif32"],
     "dependencies": [

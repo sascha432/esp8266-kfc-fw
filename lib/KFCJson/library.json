@@ -6,6 +6,10 @@
         "maintainer": true
     },
     "frameworks": "arduino",
+    "build": {
+        "includeDir": "include",
+        "srcDir": "src"
+    },
     "platforms": [
         "espressif8266",
         "espressif32"

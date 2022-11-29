@@ -29,11 +29,14 @@ namespace Dimmer {
     {
         auto discovery = new MQTT::AutoDiscovery::Entity();
         __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
+        auto baseTopic = MQTT::Client::getBaseTopicPrefix();
         switch(num) {
             case 0:
                 if (discovery->createJsonSchema(this, FSPGM(main), format)) {
                     discovery->addStateTopic(_createTopics(TopicType::MAIN_STATE));
                     discovery->addCommandTopic(_createTopics(TopicType::MAIN_SET));
+                    discovery->addName(F("Dimmer Main"));
+                    discovery->addObjectId(baseTopic + F("main"));
                     discovery->addBrightnessScale(IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
                     discovery->addParameter(F("brightness"), true);
                     discovery->addParameter(F("color_mode"), true);
@@ -46,6 +49,8 @@ namespace Dimmer {
                 if (discovery->create(this, FSPGM(lock_channels, "lock_channels"), format)) {
                     discovery->addStateTopic(_createTopics(TopicType::LOCK_STATE));
                     discovery->addCommandTopic(_createTopics(TopicType::LOCK_SET));
+                    discovery->addName(F("Lock Channels"));
+                    discovery->addObjectId(baseTopic + F("lock_channels"));
                 }
                 break;
         }
@@ -156,7 +161,8 @@ namespace Dimmer {
                 publish(_createTopics(TopicType::MAIN_STATE), true, UnnamedObject(
                     State(_brightness != 0),
                     Brightness(_brightness),
-                    MQTT::Json::ColorTemperature(_color),
+                    MQTT::Json::NamedString(F("color_mode"), F("color_temp")),
+                    MQTT::Json::ColorTemperature(_color / kColorMultiplier),
                     Transition(_getBase()._getConfig()._base._getFadeTime())).toString()
                 );
 

@@ -279,10 +279,6 @@ namespace Dimmer {
                 form.addValidator(FormUI::Validator::Range(0, 65535));
 
 
-                form.addPointerTriviallyCopyable(F("adjhwc"), &firmwareConfig.halfwave_adjust_cycles);
-                form.addFormUI(F("Adjust Half-wave Length"), configValidAttr, FormUI::Suffix(F("Clock cycles")));
-                form.addValidator(FormUI::Validator::Range(-128, 127));
-
             #endif
 
             form.addPointerTriviallyCopyable(F("min_on"), &firmwareConfig.minimum_on_time_ticks);
@@ -293,63 +289,29 @@ namespace Dimmer {
             form.addFormUI(F("Minimum Off-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
             form.addValidator(FormUI::Validator::Range(1, 65535));
 
-            #if DIMMER_FIRMWARE_VERSION >= 0x020200
+            form.addCallbackSetter<float>(F("vref11"), firmwareConfig.internal_vref11, [&firmwareConfig](float value, FormField &) {
+                firmwareConfig.internal_vref11 = value;
+            });
+            form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix(F("V")));
+            form.addValidator(FormUI::Validator::RangeDouble(internal_vref11_t((int8_t)-128), internal_vref11_t((int8_t)127), 1));
 
-                form.addPointerTriviallyCopyable(F("swon_min_on"), &firmwareConfig.switch_on_minimum_ticks);
-                form.addFormUI(F("Switch-On Minimum On-time"), configValidAttr, FormUI::Suffix(FSPGM(ticks)));
-                form.addValidator(FormUI::Validator::Range(0, 65535));
+            form.add<float>(F("temp_ofs"), firmwareConfig.ntc_temp_cal_offset, [&firmwareConfig](const float value, FormField &, bool) {
+                firmwareConfig.ntc_temp_cal_offset = value;
+                return false;
+            });
+            form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(UTF8_degreeC)));
 
-                form.addPointerTriviallyCopyable(F("swon_count"), &firmwareConfig.switch_on_count);
-                form.addFormUI(F("Switch-On Minimum On-time"), configValidAttr, FormUI::Suffix(F("Half Cycles")));
-                form.addValidator(FormUI::Validator::Range(0, 250));
+            form.addPointerTriviallyCopyable(F("tsofs"), &firmwareConfig.internal_temp_calibration.ts_offset);
+            form.addFormUI(F("TS Offset (ATmega Sensor)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(F("temperature sensor offset correction")));
+            form.addValidator(FormUI::Validator::Range(0, 255));
 
-            #endif
-
-            #if DIMMER_FIRMWARE_VERSION < 0x020200
-
-                form.addPointerTriviallyCopyable(F("vref11"), &firmwareConfig.internal_1_1v_ref);
-                form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix(F("V")));
-                form.addValidator(FormUI::Validator::RangeDouble(1.0, 1.2, 1));
-
-                form.add<float>(F("temp_ofs"), (firmwareConfig.ntc_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&firmwareConfig](const float &value, FormField &, bool) {
-                    firmwareConfig.ntc_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
-                    return false;
-                });
-                form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(UTF8_degreeC)));
-
-                form.add<float>(F("temp2_ofs"), (firmwareConfig.int_temp_offset / DIMMER_TEMP_OFFSET_DIVIDER), [&firmwareConfig](const float &value, FormField &, bool) {
-                    firmwareConfig.int_temp_offset = value * DIMMER_TEMP_OFFSET_DIVIDER;
-                    return false;
-                });
-                form.addFormUI(F("Temperature Offset 2 (ATmega)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(UTF8_degreeC)));
-
-            #else
-
-                form.addCallbackSetter<float>(F("vref11"), firmwareConfig.internal_vref11, [&firmwareConfig](float value, FormField &) {
-                    firmwareConfig.internal_vref11 = value;
-                });
-                form.addFormUI(F("ATmega 1.1V Reference Calibration"), configValidAttr, FormUI::PlaceHolder(1.1, 1), FormUI::Suffix(F("V")));
-                form.addValidator(FormUI::Validator::RangeDouble(internal_vref11_t((int8_t)-128), internal_vref11_t((int8_t)127), 1));
-
-                form.add<float>(F("temp_ofs"), firmwareConfig.ntc_temp_cal_offset, [&firmwareConfig](const float value, FormField &, bool) {
-                    firmwareConfig.ntc_temp_cal_offset = value;
-                    return false;
-                });
-                form.addFormUI(F("Temperature Offset (NTC)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(FSPGM(UTF8_degreeC)));
-
-                form.addPointerTriviallyCopyable(F("tsofs"), &firmwareConfig.internal_temp_calibration.ts_offset);
-                form.addFormUI(F("TS Offset (ATmega Sensor)"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(F("temperature sensor offset correction")));
-                form.addValidator(FormUI::Validator::Range(0, 255));
-
-                form.addPointerTriviallyCopyable(F("tsgain"), &firmwareConfig.internal_temp_calibration.ts_gain);
-                form.addFormUI(F("TS Gain"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(F("8-bit unsigned fixed point 1/128th units")));
-                form.addValidator(FormUI::Validator::Range(0, 255));
-                // , [&firmwareConfig](const uint8_t value, FormField &) {
-                //     firmwareConfig.int_temp_offset = value;
-                //     return false;
-                // });
-
-            #endif
+            form.addPointerTriviallyCopyable(F("tsgain"), &firmwareConfig.internal_temp_calibration.ts_gain);
+            form.addFormUI(F("TS Gain"), configValidAttr, FormUI::PlaceHolder(0), FormUI::Suffix(F("8-bit unsigned fixed point 1/128th units")));
+            form.addValidator(FormUI::Validator::Range(0, 255));
+            // , [&firmwareConfig](const uint8_t value, FormField &) {
+            //     firmwareConfig.int_temp_offset = value;
+            //     return false;
+            // });
 
             fwGroup.end();
 

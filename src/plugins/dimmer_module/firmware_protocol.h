@@ -26,6 +26,6 @@
 #define DIMMER_FIRMWARE_VERSION_MAJOR 2
 #define DIMMER_FIRMWARE_VERSION_MINOR 2
 
-#include "../src/dimmer_protocol.h"
-#include "../src/dimmer_reg_mem.h"
+#include "dimmer_protocol.h"
+#include "dimmer_reg_mem.h"
 #include "firmware/dimmer_commands.h"

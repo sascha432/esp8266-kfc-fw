@@ -20,10 +20,11 @@ void Module::setup()
     Base::begin();
     Buttons::begin();
     _beginMqtt();
-    _Scheduler.add(Event::milliseconds(900), false, [this](Event::CallbackTimerPtr) {
+    _Scheduler.add(Event::milliseconds(1500), false, [this](Event::CallbackTimerPtr) {
         _getChannels();
         #if IOT_DIMMER_HAS_COLOR_TEMP
             _color._channelsToBrightness();
+            _color._publish();
         #endif
     });
 }

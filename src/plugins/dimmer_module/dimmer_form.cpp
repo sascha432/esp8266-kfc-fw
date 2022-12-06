@@ -141,26 +141,34 @@ namespace Dimmer {
 
             PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_DIMMER_MODULE_CHANNELS, cn, cr, co);
 
-
             for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                form.addCallbackGetterSetter<String>(F_VAR(cn, i), [cfg, i](String &name, FormField &, bool store) {
-                    if (store) {
-                        KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::setChannelName(i, name);
-                    }
-                    else {
-                        name = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::getChannelName(i);
-                    }
-                    return true;
-                });
-                form.addFormUI(FormUI::Label(PrintString(F("Channel %u Name"), i + 1)));
-                KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::addChannel1NameLengthValidator(form, true);
+
+                #if IOT_ATOMIC_SUN_V2
+                    String nameStr = getChannelName(i);
+                    nameStr += F(" - ");
+                    auto name = nameStr.c_str();
+                #else
+                    form.addCallbackGetterSetter<String>(F_VAR(cn, i), [cfg, i](String &name, FormField &, bool store) {
+                        if (store) {
+                            KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::setChannelName(i, name);
+                        }
+                        else {
+                            name = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::getChannelName(i);
+                        }
+                        return true;
+                    });
+                    form.addFormUI(FormUI::Label(PrintString(F("Channel %u Name"), i + 1)));
+                    KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::addChannel1NameLengthValidator(form, true);
+
+                    auto name = PSTR("Channel");
+                #endif
 
                 form.addPointerTriviallyCopyable(F_VAR(cr, i), &cfg.level.from[i]);
-                form.addFormUI(FormUI::Label(PrintString(F("Channel %u Minimum Level Limit"), i + 1)));
+                form.addFormUI(FormUI::Label(PrintString(F("%s %u Minimum Level Limit"), name, i + 1)));
                 form.addValidator(FormUI::Validator::Range(0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS - ((IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100 + 3))));
 
                 form.addPointerTriviallyCopyable(F_VAR(co, i), &cfg.level.to[i]);
-                form.addFormUI(FormUI::Label(PrintString(F("Channel %u Maximum Level Limit"), i + 1)));
+                form.addFormUI(FormUI::Label(PrintString(F("%s %u Maximum Level Limit"), name, i + 1)));
                 form.addValidator(FormUI::Validator::Range((IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100 + 3), IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
 
                 // form.addValidator(FormUI::Validator::Callback([i, &vars](const String &to, FormUI::Field::BaseField &field) -> bool {

@@ -12,9 +12,9 @@
 #include <WebUISocket.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 namespace Dimmer {
@@ -24,6 +24,28 @@ namespace Dimmer {
         _base(base)
     {
     }
+
+    #if IOT_ATOMIC_SUN_V2
+
+        void ColorTemperature::setChannel(uint8_t channel, int16_t level, float transition)
+        {
+            auto &_channels = _getBase().getChannels();
+            if (_channelLock) {
+                if (channel == _channel_ww1 || channel == _channel_ww2) {
+                    _channels[_channel_ww1].setLevel(level, transition);
+                    _channels[_channel_ww2].setLevel(level, transition);
+                }
+                else if (channel == _channel_cw1 || channel == _channel_cw2) {
+                    _channels[_channel_cw1].setLevel(level, transition);
+                    _channels[_channel_cw2].setLevel(level, transition);
+                }
+            }
+            else {
+                _channels[channel].setLevel(level, transition);
+            }
+        }
+
+    #endif
 
     MQTT::AutoDiscovery::EntityPtr ColorTemperature::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
     {

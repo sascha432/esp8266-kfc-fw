@@ -34,6 +34,10 @@ namespace Dimmer {
     public:
         ColorTemperature(Base *base);
 
+        #if IOT_ATOMIC_SUN_V2
+            void setChannel(uint8_t channel, int16_t level, float transition = NAN);
+        #endif
+
     // MQTT
     public:
         virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
@@ -81,9 +85,9 @@ namespace Dimmer {
         float _ratio[2];
         int32_t _brightness;
         int32_t _brightnessPublished;
-        bool _channelLock;
-        bool _channelLockPublished;
         #if IOT_ATOMIC_SUN_V2
+            bool _channelLock;
+            bool _channelLockPublished;
             // warm white
             int8_t _channel_ww1;
             int8_t _channel_ww2;

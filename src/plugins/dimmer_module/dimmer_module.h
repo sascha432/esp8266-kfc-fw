@@ -113,7 +113,11 @@ namespace Dimmer {
     inline void Module::setChannel(uint8_t channel, int16_t level, float transition)
     {
         __LDBG_printf("set ch=%u lvl=%u t=%f p=%u", channel, level, transition);
-        _channels[channel].setLevel(level, transition);
+        #if IOT_ATOMIC_SUN_V2
+            _color.setChannel(channel, level, transition);
+        #else
+            _channels[channel].setLevel(level, transition);
+        #endif
     }
 
     inline void Module::stopFading(uint8_t channel)

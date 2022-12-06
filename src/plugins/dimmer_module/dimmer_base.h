@@ -171,6 +171,10 @@ namespace Dimmer {
 
         void createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request);
 
+        #if IOT_ATOMIC_SUN_V2
+            const __FlashStringHelper *getChannelName(uint8_t channel);
+        #endif
+
     protected:
         friend Channel;
         friend ColorTemperature;
@@ -250,17 +254,38 @@ namespace Dimmer {
         static uint8_t _getChannelFrom(AsyncWebServerRequest *request);
 
     protected:
-    #if IOT_DIMMER_HAS_COLOR_TEMP
-        ColorTemperature _color;
-    #endif
-    #if IOT_DIMMER_HAS_RGB
-        RGBChannels _rgb;
-    #endif
+        #if IOT_DIMMER_HAS_COLOR_TEMP
+            ColorTemperature _color;
+        #endif
+        #if IOT_DIMMER_HAS_RGB
+            RGBChannels _rgb;
+        #endif
     };
 
     inline Base::~Base()
     {
     }
+
+    #if IOT_ATOMIC_SUN_V2
+
+        inline const __FlashStringHelper *Base::getChannelName(uint8_t channel)
+        {
+            if (channel == _color._channel_ww1) {
+                return F("Warm White #1");
+            }
+            else if (channel == _color._channel_ww2) {
+                return F("Warm White #2");
+            }
+            else if (channel == _color._channel_cw1) {
+                return F("Cold White #1");
+            }
+            else if (channel == _color._channel_cw2) {
+                return F("Cold White #2");
+            }
+            __builtin_unreachable();
+        }
+
+    #endif
 
     inline int16_t Base::_calcLevel(int16_t level, uint8_t channel) const
     {

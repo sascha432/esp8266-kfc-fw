@@ -79,7 +79,7 @@ namespace Dimmer {
 
     protected:
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
-            int _offDelayPrecheck(int16_t level, ConfigType *config = nullptr, int16_t storeLevel = -1);
+            int _offDelayPreCheck(int16_t level, ConfigType *config = nullptr, int16_t storeLevel = -1);
         #endif
 
         void onJsonMessage(const MQTT::Json::Reader &json);

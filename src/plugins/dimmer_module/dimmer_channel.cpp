@@ -41,22 +41,26 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
                 discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
                 discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
                 discovery->addParameter(F("brightness"), true);
-                String fullname;
-                auto name = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::getChannelName(_channel);
-                if (*name) {
-                    fullname = KFCConfigurationClasses::System::Device::getName();
-                    fullname += ' ';
-                    fullname += name;
-                }
-                else {
-                    #if IOT_DIMMER_MODULE_CHANNELS > 1
-                        fullname = PrintString(F("Dimmer Channel %u"), _channel + 1);
-                    #else
-                        fullname = F("Dimmer");
-                    #endif
-                }
-                discovery->addName(fullname);
-                discovery->addObjectId(baseTopic + MQTT::Client::filterString(fullname, true));
+                #if IOT_ATOMIC_SUN_V2
+                    discovery->addName(_dimmer->getChannelName(_channel));
+                #else
+                    String fullname;
+                    auto name = KFCConfigurationClasses::Plugins::DimmerConfigNS::Dimmer::getChannelName(_channel);
+                    if (*name) {
+                        fullname = KFCConfigurationClasses::System::Device::getName();
+                        fullname += ' ';
+                        fullname += name;
+                    }
+                    else {
+                        #if IOT_DIMMER_MODULE_CHANNELS > 1
+                            fullname = PrintString(F("Dimmer Channel %u"), _channel + 1);
+                        #else
+                            fullname = F("Dimmer");
+                        #endif
+                    }
+                    discovery->addName(fullname);
+                #endif
+                discovery->addObjectId(baseTopic + PrintString(F("dimmer_channel_%u"), _channel + 1));
             }
             break;
     }
@@ -137,28 +141,24 @@ void Channel::onJsonMessage(const MQTT::Json::Reader &json)
             off();
         }
         else if (json.brightness) {
-            _set(json.brightness);
+            _dimmer->setChannel(_channel, json.brightness);
         }
     }
 }
 
 bool Channel::on(float transition)
 {
-    if (!_brightness) {
-        if (!_storedBrightness)  {
-            _storedBrightness = kDefaultLevel;
-        }
-        return _set(_storedBrightness, transition);
+    if (!_storedBrightness)  {
+        _storedBrightness = kDefaultLevel;
     }
-    return false;
+    _dimmer->setChannel(_channel, _storedBrightness, transition);
+    return true;
 }
 
 bool Channel::off(ConfigType *config, float transition, int32_t level)
 {
-   if (_brightness) {
-        return _set(0, transition);
-    }
-    return false;
+    _dimmer->setChannel(_channel, 0, transition);
+    return true;
 }
 
 void Channel::stopFading()
@@ -169,35 +169,29 @@ void Channel::stopFading()
 bool Channel::_set(int32_t level, float transition)
 {
     __LDBG_printf("lvl=%d trans=%f ch=%u", level, transition, _channel);
+    auto prevBrightness = _brightness;
     if (level == 0) {
         // if channel is turned off, store previous brightness
         if (_brightness != 0) {
-            auto prevBrightness = _brightness;
             setStoredBrightness(_brightness);
-            _brightness = 0;
-            _dimmer->_fade(_channel, 0, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
-            _dimmer->_wire.writeEEPROM();
-            _dimmer->publishChannelState(_channel);
-            return true;
         }
+        _brightness = 0;
     }
-    else if (level != _brightness) {
-        // brightness has changed, get min/max. levels and change brightness
+    else {
         auto &cfg = _dimmer->_getConfig()._base;
-        auto prevBrightness = _brightness;
         _brightness = std::clamp<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
         __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, _brightness);
-        _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
-        _dimmer->_wire.writeEEPROM();
-        _dimmer->publishChannelState(_channel);
-        return true;
     }
-    return false;
+    // always send new brightness in case the dimmer is out of sync with the co-processor
+    _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
+    _dimmer->_wire.writeEEPROM();
+    _dimmer->publishChannelState(_channel);
+    return true;
 }
 
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
-    int Channel::_offDelayPrecheck(int16_t level, ConfigType *configPtr, int16_t storeLevel)
+    int Channel::_offDelayPreCheck(int16_t level, ConfigType *configPtr, int16_t storeLevel)
     {
         __LDBG_printf("timer=%p level=%d config=%p store=%d", _delayTimer, level, configPtr, storeLevel);
         if (_delayTimer) {

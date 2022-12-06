@@ -127,7 +127,7 @@ namespace Dimmer {
     void ColorTemperature::getValues(WebUINS::Events &array)
     {
         __LDBG_printf("getValues");
-        array.append(WebUINS::Values(F("d-lck"), _channelLock, true));
+        array.append(WebUINS::Values(F("d-lck"), _channelLock ? 1 : 0, true));
         array.append(WebUINS::Values(F("d-br"), _brightness, true));
         array.append(WebUINS::Values(F("d-ct"), static_cast<uint32_t>(_color), true));
     }
@@ -185,16 +185,13 @@ namespace Dimmer {
                 WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
                     WebUINS::Values(F("d-br"), _brightness, true),
                     WebUINS::Values(F("d-ct"), static_cast<uint32_t>(_color), true),
-                    WebUINS::Values(F("d-lck"), _channelLock, true),
-                    WebUINS::Values(PrintString(F("d-ch%u"), 0), _channels[_channel_ww1].getLevel(), true),
-                    WebUINS::Values(PrintString(F("d-ch%u"), 1), _channels[_channel_ww2].getLevel(), true),
-                    WebUINS::Values(PrintString(F("d-ch%u"), 2), _channels[_channel_cw1].getLevel(), true),
-                    WebUINS::Values(PrintString(F("d-ch%u"), 3), _channels[_channel_cw2].getLevel(), true),
+                    WebUINS::Values(F("d-lck"), _channelLock ? 1 : 0, true),
+                    WebUINS::Values(PrintString(F("d-ch%u"), 0), _channels[0].getLevel(), true),
+                    WebUINS::Values(PrintString(F("d-ch%u"), 1), _channels[1].getLevel(), true),
+                    WebUINS::Values(PrintString(F("d-ch%u"), 2), _channels[2].getLevel(), true),
+                    WebUINS::Values(PrintString(F("d-ch%u"), 3), _channels[3].getLevel(), true),
                     WebUINS::Values(F("group-switch-0"), _channels.getSum() ? 1 : 0, true)
                 )));
-                // for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                //     _channels[i]._publishWebUI();
-                // }
             });
         }
     }

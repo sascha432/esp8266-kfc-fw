@@ -673,8 +673,8 @@ namespace MQTT {
             Brightness(uint16_t brightness) : NamedUnsignedShort(F("brightness"), brightness) {}
         };
 
-        struct ColorTemperature : NamedUnsignedShort {
-            ColorTemperature(uint16_t temp) : NamedUnsignedShort(F("color_temp"), temp) {}
+        struct ColorTemperature : NamedUnsigned {
+            ColorTemperature(uint32_t temp) : NamedUnsigned(F("color_temp"), temp) {}
         };
 
         struct State : NamedVariant<FStr, FStr> {

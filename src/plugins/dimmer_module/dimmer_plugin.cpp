@@ -103,7 +103,10 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
         // obj->add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100);
         // obj->add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100);
 
-        webUI.addRow(WebUINS::ColorTemperatureSlider(F("d-ct"), F("Color Temperature")));
+        auto colorSlider = WebUINS::ColorTemperatureSlider(F("d-ct"), F("Color Temperature"));
+        colorSlider.append(WebUINS::NamedInt32(F("min"), ColorTemperature::kColorMin));
+        colorSlider.append(WebUINS::NamedInt32(F("max"), ColorTemperature::kColorMax));
+        webUI.addRow(colorSlider);
 
         // row = &webUI.addRow();
         // row->addColorTemperatureSlider(F("d-ct"), F("Color Temperature"));

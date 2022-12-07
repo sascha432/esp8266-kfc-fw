@@ -18,10 +18,10 @@ namespace Dimmer {
 
     class ColorTemperature : public MQTTComponent {
     public:
-        static constexpr uint16_t kColorMultiplier = 100;
-        static constexpr uint16_t kColorMin = 153 * kColorMultiplier;
-        static constexpr uint16_t kColorMax = 500 * kColorMultiplier;
-        static constexpr uint16_t kColorRange = (kColorMax - kColorMin);
+        static constexpr uint32_t kColorMultiplier = 1000;
+        static constexpr uint32_t kColorMin = (1000000 / 5000.0/*K*/) * kColorMultiplier;
+        static constexpr uint32_t kColorMax = (1000000 / 2700.0/*K*/) * kColorMultiplier;
+        static constexpr uint32_t kColorRange = (kColorMax - kColorMin);
         static constexpr float kColorRangeFloat = kColorRange;
 
         enum class TopicType : uint8_t {

@@ -62,7 +62,7 @@ $.webUIComponent = {
             group: { columns: 12 },
             switch: { min: 0, max: 1, columns: 2, zero_off: true, name: 0, attributes: [ 'min', 'max', 'name' ] },
             slider: { slider_type: 'slider', min: 0, max: 255, columns: 12, rmin: false, rmax: false, attributes: [ 'min', 'max', 'rmin', 'rmax' ] },
-            color_slider: { slider_type: 'slider color-slider', min: 15300, max: 50000 },
+            color_slider: { slider_type: 'slider color-slider', min: 153000, max: 500000, attributes: [ 'min', 'max' ] },
             color_picker: { },
             listbox: { },
             sensor: { columns: 3, no_value: '-'},
@@ -536,7 +536,13 @@ $.webUIComponent = {
             handle.removeClass('off');
         }
         if (slider_range) {
-            handle.attr('title', ((value - min) * 100 / slider_range).toFixed(1) + '%');
+            if (input.parent().hasClass('color-slider')) {
+                handle.attr('title', (1000000000 / value).toFixed(0) + 'K');
+            }
+            else {
+                handle.attr('title', ((value - min) * 100 / slider_range).toFixed(1) + '%');
+            }
+
         }
     },
     //

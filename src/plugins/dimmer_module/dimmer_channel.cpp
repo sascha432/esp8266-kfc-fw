@@ -182,10 +182,12 @@ bool Channel::_set(int32_t level, float transition)
         _brightness = std::clamp<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
         __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, _brightness);
     }
-    // always send new brightness in case the dimmer is out of sync with the co-processor
-    _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
-    _dimmer->_wire.writeEEPROM();
-    _dimmer->publishChannelState(_channel);
+    if (transition != -1) {
+        // always send new brightness in case the dimmer is out of sync with the co-processor
+        _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
+        _dimmer->_wire.writeEEPROM();
+        _dimmer->publishChannelState(_channel);
+    }
     return true;
 }
 

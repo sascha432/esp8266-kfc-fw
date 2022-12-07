@@ -158,10 +158,10 @@ void Module::_onReceive(size_t length)
                 auto level = _calcLevelReverse(event.level, event.channel);
                 auto curLevel = _channels[event.channel].getLevel();
                 if (curLevel != level) {  // update level if out of sync
-                    __LDBG_printf("resync cur=%u lvl=%u", curLevel, level);
+                    __DBG_printf("resync cur=%u lvl=%u ch=%u", curLevel, level, event.channel);
                     auto publish = (event.level == _calcLevel(curLevel, event.channel)); // check if the error comes from up or down sampling and do not publish in those cases
                     if (publish) {
-                        _channels[event.channel].setLevel(level);
+                        _channels[event.channel].setLevel(level, -1); // -1 = do not send data to dimmer again
                     }
                 }
             }

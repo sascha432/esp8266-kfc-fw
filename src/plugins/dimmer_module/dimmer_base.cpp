@@ -322,11 +322,12 @@ float Base::getTransitionTime(int fromLevel, int toLevel, float transitionTimeOv
 void Base::getValues(WebUINS::Events &array)
 {
     int on = 0;
+    auto &_channels = getChannels();
     for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
         PrintString id(F("d-ch%u"), i);
-        auto value = static_cast<int32_t>(getChannel(i));
+        auto value = _channels[i].getLevel();
         array.append(WebUINS::Values(id, value, true));
-        if (getChannelState(i) && value) {
+        if (_channels[i].getOnState() && value) {
             on = 1;
         }
     }
@@ -340,6 +341,41 @@ void Base::getValues(WebUINS::Events &array)
     #endif
 }
 
+void Base::_setOnOffState(bool val)
+{
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        if (val) {
+            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                on(i);
+            }
+            _color._color = _color._colorStored;
+            _color._brightnessToChannels();
+        }
+        else {
+            _color._colorStored = _color._color;
+            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                off(i);
+            }
+            _color._color = _color._colorStored;
+        }
+    #else
+        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            if (val) {
+                on(i);
+            }
+            else {
+                off(i);
+            }
+        }
+    #endif
+    #if IOT_DIMMER_HAS_COLOR_TEMP
+        _color._publish();
+    #endif
+    #if IOT_DIMMER_HAS_RGB
+        _rgb._publish();
+    #endif
+}
+
 void Base::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     __LDBG_printf("id=%s has_value=%u has_state=%u value=%s state=%u", id.c_str(), hasValue, hasState, value.c_str(), state);
@@ -347,20 +383,7 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
     if (id == F("group-switch-0")) {
         if (hasValue) {
             auto val = value.toInt() != 0;
-            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                if (val) {
-                    on(i);
-                }
-                else {
-                    off(i);
-                }
-            }
-            #if IOT_DIMMER_HAS_COLOR_TEMP
-                _color._publish();
-            #endif
-            #if IOT_DIMMER_HAS_RGB
-                _rgb._publish();
-            #endif
+            _setOnOffState(val);
         }
     }
     else if (id.startsWith(F("d-ch"))) {

@@ -148,9 +148,9 @@ void Channel::onJsonMessage(const MQTT::Json::Reader &json)
 
 bool Channel::on(float transition)
 {
-    if (!_storedBrightness)  {
-        _storedBrightness = kDefaultLevel;
-    }
+    // if (!_storedBrightness)  {
+    //     _storedBrightness = kDefaultLevel;
+    // }
     _dimmer->setChannel(_channel, _storedBrightness, transition);
     return true;
 }

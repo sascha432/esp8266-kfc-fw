@@ -173,6 +173,7 @@ namespace Dimmer {
 
         #if IOT_ATOMIC_SUN_V2
             const __FlashStringHelper *getChannelName(uint8_t channel);
+            uint8_t getTranslateChannel(uint8_t channel);
         #endif
 
     protected:
@@ -209,6 +210,7 @@ namespace Dimmer {
         uint8_t _endTransmission();
 
         bool _isEnabled() const;
+        void _setOnOffState(bool val);
 
     public:
         ConfigType &_getConfig();
@@ -281,6 +283,23 @@ namespace Dimmer {
             }
             else if (channel == _color._channel_cw2) {
                 return F("Cold White #2");
+            }
+            __builtin_unreachable();
+        }
+
+        inline uint8_t Base::getTranslateChannel(uint8_t channel)
+        {
+            if (channel == _color._channel_ww1) {
+                return 0;
+            }
+            else if (channel == _color._channel_ww2) {
+                return 1;
+            }
+            else if (channel == _color._channel_cw1) {
+                return 2;
+            }
+            else if (channel == _color._channel_cw2) {
+                return 3;
             }
             __builtin_unreachable();
         }

@@ -278,7 +278,8 @@
             "codecvt": "cpp",
             "*.yml": "cpp",
             "moontool.h": "c",
-            "julian.h": "c"
+            "julian.h": "c",
+            "cassert": "cpp"
         },
         "terminal.integrated.env.osx": {
             "PATH": "/Users/sascha/.platformio/penv/bin:/Users/sascha/.platformio/penv:/Users/sascha/.platformio/penv/bin:/usr/local/bin:/usr/local/opt/icu4c/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/Wireshark.app/Contents/MacOS",

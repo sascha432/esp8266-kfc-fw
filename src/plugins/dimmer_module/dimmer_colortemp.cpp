@@ -21,7 +21,9 @@ namespace Dimmer {
 
     ColorTemperature::ColorTemperature(Base *base) :
         MQTTComponent(ComponentType::LIGHT),
-        _base(base)
+        _base(base),
+        _color(kColorMin + (kColorRangeFloat / 2.0)),
+        _colorStored(_color)
     {
     }
 
@@ -107,31 +109,23 @@ namespace Dimmer {
                 #endif
                 onJsonMessage(reader);
             }
-
         }
     }
 
     void ColorTemperature::onJsonMessage(const MQTT::Json::Reader &json)
     {
         __LDBG_printf("main state=%d brightness=%d color=%d", json.state, json.brightness, json.color_temp);
-        auto &channels = _getBase().getChannels();
         if (json.state != -1) {
             if (json.state && !_brightness) {
-                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                    channels[i].on();
-                }
+                _getBase()._setOnOffState(true);
             }
             else if (!json.state && _brightness) {
-                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                    channels[i].off();
-                }
+                _getBase()._setOnOffState(false);
             }
         }
         if (json.brightness != -1) {
             if (json.brightness == 0 && _brightness) {
-                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                    channels[i].off();
-                }
+                _getBase()._setOnOffState(false);
             }
             else if (json.brightness) {
                 _brightness = json.brightness;
@@ -149,7 +143,7 @@ namespace Dimmer {
     void ColorTemperature::getValues(WebUINS::Events &array)
     {
         __LDBG_printf("getValues");
-        array.append(WebUINS::Values(F("d-lck"), _channelLock ? 1 : 0, true));
+        array.append(WebUINS::Values(F("d-lck"), static_cast<uint32_t>(_channelLock), true));
         array.append(WebUINS::Values(F("d-br"), _brightness, true));
         array.append(WebUINS::Values(F("d-ct"), static_cast<uint32_t>(_color), true));
     }
@@ -207,12 +201,12 @@ namespace Dimmer {
                 WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
                     WebUINS::Values(F("d-br"), _brightness, true),
                     WebUINS::Values(F("d-ct"), static_cast<uint32_t>(_color), true),
-                    WebUINS::Values(F("d-lck"), _channelLock ? 1 : 0, true),
+                    WebUINS::Values(F("d-lck"), static_cast<uint32_t>(_channelLock), true),
                     WebUINS::Values(PrintString(F("d-ch%u"), 0), _channels[0].getLevel(), true),
                     WebUINS::Values(PrintString(F("d-ch%u"), 1), _channels[1].getLevel(), true),
                     WebUINS::Values(PrintString(F("d-ch%u"), 2), _channels[2].getLevel(), true),
                     WebUINS::Values(PrintString(F("d-ch%u"), 3), _channels[3].getLevel(), true),
-                    WebUINS::Values(F("group-switch-0"), _channels.getSum() ? 1 : 0, true)
+                    WebUINS::Values(F("group-switch-0"), static_cast<uint32_t>(_channels.getSum()), true)
                 )));
             });
         }
@@ -257,8 +251,8 @@ namespace Dimmer {
                 __DBG_panic("color=%f _color=%f min=%d range=%f", color, _color, kColorMin, kColorRangeFloat);
             }
         #endif
-        uint16_t ww = _brightness * color;
-        uint16_t cw = _brightness * (1.0f - color);
+        auto ww = _brightness * color;
+        auto cw = _brightness * (1.0f - color);
         _channels[_channel_ww2].setLevel(ww / _ratio[0]);
         _channels[_channel_ww1].setLevel(ww - _channels[_channel_ww2].getLevel());
         _channels[_channel_cw2].setLevel(cw / _ratio[1]);
@@ -315,21 +309,18 @@ namespace Dimmer {
         if (_channelLock) {
             _ratio[0] = 2;
             _ratio[1] = 2;
+            __LDBG_printf("ratio=%f,%f", _ratio[0], _ratio[1]);
             return;
         }
         auto &_channels = _getBase().getChannels();
         auto ww1 = _channels[_channel_ww1].getLevel();
         auto ww2 = _channels[_channel_ww2].getLevel();
+        auto ww = ww1 + ww2;
         auto cw1 = _channels[_channel_cw1].getLevel();
         auto cw2 = _channels[_channel_cw2].getLevel();
-        _ratio[0] = (ww2 ? ((ww1 + ww2) / static_cast<float>(ww2)) : 2);
-        if (_ratio[0] == 0) {
-            _ratio[0] = 2;
-        }
-        _ratio[1] = (cw2 ? ((cw1 + cw2) / static_cast<float>(cw2)) : 2);
-        if (_ratio[1] == 0) {
-            _ratio[1] = 2;
-        }
+        auto cw = cw1 + cw2;
+        _ratio[0] = ((ww2 && (ww > ww2)) ? (ww / static_cast<float>(ww2)) : 2);
+        _ratio[1] = ((cw2 && (cw > cw2)) ? (cw / static_cast<float>(cw2)) : 2);
         __LDBG_printf("ratio=%f,%f ww=%d/%d cw=%d/%d", _ratio[0], _ratio[1], ww1, ww2, cw1, cw2);
     }
 

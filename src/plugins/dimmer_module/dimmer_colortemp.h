@@ -81,6 +81,7 @@ namespace Dimmer {
         Event::Timer _mqttTimer;
         Event::Timer _webuiTimer;
         float _color;
+        float _colorStored;
         float _colorPublished;
         float _ratio[2];
         int32_t _brightness;

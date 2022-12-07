@@ -50,7 +50,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_DimmerMetrics::getAutoDiscovery(FormatType
             if (discovery->create(this, FSPGM(frequency), format)) {
                 discovery->addStateTopic(_getMetricsTopics());
                 discovery->addValueTemplate(FSPGM(frequency));
-                // discovery->addUnitOfMeasurement(FSPGM(Hz, "Hz"));
                 discovery->addDeviceClass(F("frequency"), FSPGM(Hz, "Hz"));
                 discovery->addName(F("Mains Frequency"));
                 discovery->addObjectId(baseTopic + F("mains_frequency"));
@@ -66,7 +65,7 @@ void Sensor_DimmerMetrics::getValues(WebUINS::Events &array, bool timer)
         WebUINS::Values(F("ntc_temp"), WebUINS::TrimmedFloat(_metrics.metrics.get_ntc_temp(), 1), _metrics.metrics.has_ntc_temp()),
         WebUINS::Values(F("int_temp"), WebUINS::TrimmedFloat(_metrics.metrics.get_int_temp(), 1), _metrics.metrics.has_int_temp()),
         WebUINS::Values(F("vcc"), WebUINS::TrimmedFloat(_metrics.metrics.get_vcc(), 3), _metrics.metrics.has_vcc()),
-        WebUINS::Values(F("frequency"), WebUINS::TrimmedFloat(_metrics.metrics.get_freqency(), 2), _metrics.metrics.has_frequency())
+        WebUINS::Values(F("frequency"), WebUINS::TrimmedFloat(_metrics.metrics.get_frequency(), 2), _metrics.metrics.has_frequency())
     );
 }
 
@@ -89,7 +88,7 @@ void Sensor_DimmerMetrics::publishState()
             NamedTrimmedFormattedDouble(F("int_temp"), _metrics.metrics.get_int_temp(), UnnamedFormattedDouble::getPrecisionFormat(2)),
             NamedTrimmedFormattedDouble(F("ntc_temp"), _metrics.metrics.get_ntc_temp(), UnnamedFormattedDouble::getPrecisionFormat(2)),
             NamedTrimmedFormattedDouble(F("vcc"), _metrics.metrics.get_vcc(), UnnamedFormattedDouble::getPrecisionFormat(2)),
-            NamedFormattedDouble(F("frequency"), _metrics.metrics.get_freqency(), UnnamedFormattedDouble::getPrecisionFormat(2))
+            NamedFormattedDouble(F("frequency"), _metrics.metrics.get_frequency(), UnnamedFormattedDouble::getPrecisionFormat(2))
         ).toString());
     }
 }

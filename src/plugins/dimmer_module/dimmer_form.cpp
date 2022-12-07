@@ -139,7 +139,11 @@ namespace Dimmer {
 
             #endif
 
-            PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_DIMMER_MODULE_CHANNELS, cn, cr, co);
+            #if IOT_ATOMIC_SUN_V2
+                PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_DIMMER_MODULE_CHANNELS, cr, co);
+            #else
+                PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_DIMMER_MODULE_CHANNELS, cn, cr, co);
+            #endif
 
             for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
 

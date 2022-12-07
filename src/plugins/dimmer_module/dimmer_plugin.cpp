@@ -94,7 +94,7 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
     #elif IOT_DIMMER_HAS_COLOR_TEMP
 
         auto slider = WebUINS::Slider(F("d-br"), F("Brightness"), 0, IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-        slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100));
+        slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100));
         slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100));
         webUI.addRow(slider);
 

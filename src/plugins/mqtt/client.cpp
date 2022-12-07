@@ -224,7 +224,7 @@ namespace MQTT {
         _client->onUnsubscribe([](uint16_t packetId) {
             MQTT::Client *client;
             if ((client = MQTT::Client::getClient()) != nullptr) {
-                client->_onPacketAck(packetId, PacketAckType::UNSUBCRIBE);
+                client->_onPacketAck(packetId, PacketAckType::UNSUBSCRIBE);
             }
         });
     }

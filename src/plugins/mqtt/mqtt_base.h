@@ -34,7 +34,7 @@ namespace MQTT {
 
     enum class PacketAckType : uint8_t {
         SUBSCRIBE,
-        UNSUBCRIBE,
+        UNSUBSCRIBE,
         PUBLISH,
         TIMEOUT,
     };

@@ -12,7 +12,7 @@
 #    include "esp_arduino_version.h"
 #endif
 
-#if defined(ESP8266) && ARDUINO_ESP8266_MAJOR >= 3
+#if ESP8266
 
 #include <bearssl/bearssl.h>
 
@@ -72,7 +72,7 @@ public:
 };
 
 
-#elif ESP8266
+#elif defined(ESP8266) && ARDUINO_ESP8266_MAJOR == 2
 
 #include "SHA256.h"
 

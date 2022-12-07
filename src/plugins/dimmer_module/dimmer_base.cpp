@@ -594,7 +594,7 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
                     ptr++;
                 }
                 data->setChannel(channel);
-                LoopFunctions::callOnce([read, channel, data]() {
+                LoopFunctions::callOnce([read, data]() {
                     if (!dimmer_plugin._wire.writeCubicInterpolation(*data)) {
                         __DBG_printf("failed to store ci for channel=%u", data->_channel);
                     }

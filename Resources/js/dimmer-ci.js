@@ -274,7 +274,7 @@ window.initDimmerCubicInterpolation = function () {
                 self.running(false);
             });
             $('#load').on('click', function () {
-                self.load_dataset(parseInt($('#channel').val()))
+                self.load_dataset(parseInt($('#channel').val()));
             });
             $('#save').on('click', function () {
                 self.running(true);
@@ -285,6 +285,16 @@ window.initDimmerCubicInterpolation = function () {
                 self.open_modal(function() {
                     self.restore_defaults();
                 }, 'Discard changes?');
+            });
+            $('#channel').on('change', function () {
+                self.running(true);
+                self.channel = parseInt($('#channel').val());
+                self.chart.data.datasets[0].label = 'Channel #' + (self.channel + 1);
+                self.chart.update();
+                self.open_modal(function() {
+                    self.changes = false;
+                    self.load_dataset(parseInt($('#channel').val()));
+                }, 'Load new channel?');
             });
 
             $('body').click();

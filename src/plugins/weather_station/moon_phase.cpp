@@ -82,7 +82,7 @@ MoonPhaseType calcMoon(time_t unixtime, bool runPhaseHunt)
             double results[5];
             phaseHunt(cur_julian_time, results);
             auto unixtime2 = unixtime + 86400 - 1;
-            auto today_yday = localtime(&unixtime2)->tm_yday;
+            auto today_yday = localtime(&unixtime2)->tm_yday + 1;
             for(int8_t i = 0; i < 5; i++) {
                 auto time = jToUnixtime(results[i]);
                 auto lt_yday = localtime(&time)->tm_yday;

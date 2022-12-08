@@ -116,7 +116,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
         case AutoDiscoveryNumHelperType::VOLTAGE:
             if (discovery->create(this, _getId(TopicType::VOLTAGE), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::VOLTAGE));
-                // discovery->addUnitOfMeasurement('V');
                 discovery->addDeviceClass(F("voltage"), 'V');
                 discovery->addName(_name);
                 discovery->addObjectId(baseTopic + MQTT::Client::filterString(_name, true));
@@ -126,7 +125,6 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
         case AutoDiscoveryNumHelperType::LEVEL:
             if (discovery->create(this, _getId(TopicType::LEVEL), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::LEVEL));
-                // discovery->addUnitOfMeasurement('%');
                 discovery->addDeviceClass(F("battery"), '%');
                 discovery->addName(F("Battery Level"));
                 discovery->addObjectId(baseTopic + F("battery_level"));

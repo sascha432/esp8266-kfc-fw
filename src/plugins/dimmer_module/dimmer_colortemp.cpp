@@ -30,7 +30,7 @@ namespace Dimmer {
 
     #if IOT_ATOMIC_SUN_V2
 
-        void ColorTemperature::setChannel(uint8_t channel, int16_t level, float transition)
+        bool ColorTemperature::setChannel(uint8_t channel, int16_t level, float transition)
         {
             auto &_channels = _getBase().getChannels();
             if (_channelLock) {
@@ -46,6 +46,7 @@ namespace Dimmer {
             else {
                 _channels[channel].setLevel(level, transition);
             }
+            return true;
         }
 
     #endif

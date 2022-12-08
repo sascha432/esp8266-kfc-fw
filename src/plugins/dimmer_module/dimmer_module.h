@@ -43,7 +43,7 @@ namespace Dimmer {
         virtual bool getChannelState(uint8_t channel) const override;
 
         virtual int16_t getChannel(uint8_t channel) const override;
-        virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) override;
+        virtual bool setChannel(uint8_t channel, int16_t level, float transition = NAN) override;
         virtual void stopFading(uint8_t channel) override;
 
         virtual void publishChannel(uint8_t channel) override;
@@ -110,13 +110,13 @@ namespace Dimmer {
         return _channels[channel].getOnState();
     }
 
-    inline void Module::setChannel(uint8_t channel, int16_t level, float transition)
+    inline bool Module::setChannel(uint8_t channel, int16_t level, float transition)
     {
         __LDBG_printf("set ch=%u lvl=%u t=%f p=%u", channel, level, transition);
         #if IOT_ATOMIC_SUN_V2
-            _color.setChannel(channel, level, transition);
+            return _color.setChannel(channel, level, transition);
         #else
-            _channels[channel].setLevel(level, transition);
+            return _channels[channel].setLevel(level, transition);
         #endif
     }
 

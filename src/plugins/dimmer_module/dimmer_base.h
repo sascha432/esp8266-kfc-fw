@@ -153,7 +153,7 @@ namespace Dimmer {
         #endif
         virtual int16_t getChannel(uint8_t channel) const = 0;
         virtual bool getChannelState(uint8_t channel) const = 0;
-        virtual void setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
+        virtual bool setChannel(uint8_t channel, int16_t level, float transition = NAN) = 0;
         virtual void stopFading(uint8_t channel) = 0;
         virtual void publishChannelState(uint8_t channel);
         virtual ChannelsArray &getChannels();

@@ -67,7 +67,7 @@ namespace Dimmer {
         virtual void onMessage(const char *topic, const char *payload, size_t len) override final;
 
         bool on(float transition = NAN);
-        bool off(ConfigType *config = nullptr, float transition = NAN, int32_t level = -1);
+        bool off(ConfigType *config = nullptr, float transition = NAN);
         void publishState();
 
         bool getOnState() const;
@@ -78,10 +78,6 @@ namespace Dimmer {
         void stopFading();
 
     protected:
-        #if IOT_DIMMER_MODULE_HAS_BUTTONS
-            int _offDelayPreCheck(int16_t level, ConfigType *config = nullptr, int16_t storeLevel = -1);
-        #endif
-
         void onJsonMessage(const MQTT::Json::Reader &json);
         virtual void _publishMQTT();
         virtual void _publishWebUI();

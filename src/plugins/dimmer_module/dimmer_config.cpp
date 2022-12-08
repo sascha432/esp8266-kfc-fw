@@ -21,8 +21,6 @@ namespace KFCConfigurationClasses {
                         #endif
                     #endif
                     #if IOT_DIMMER_MODULE_HAS_BUTTONS
-                        off_delay(kDefaultValueFor_off_delay),
-                        off_delay_signal(kDefaultValueFor_off_delay_signal),
                         pin_ch0_down(kDefaultValueFor_pin_ch0_down),
                         pin_ch0_down_inverted(kDefaultValueFor_pin_ch0_down_inverted),
                         pin_ch0_up(kDefaultValueFor_pin_ch0_up),

@@ -151,14 +151,12 @@ bool Channel::on(float transition)
     // if (!_storedBrightness)  {
     //     _storedBrightness = kDefaultLevel;
     // }
-    _dimmer->setChannel(_channel, _storedBrightness, transition);
-    return true;
+    return _dimmer->setChannel(_channel, _storedBrightness, transition);
 }
 
-bool Channel::off(ConfigType *config, float transition, int32_t level)
+bool Channel::off(ConfigType *config, float transition)
 {
-    _dimmer->setChannel(_channel, 0, transition);
-    return true;
+    return _dimmer->setChannel(_channel, 0, transition);
 }
 
 void Channel::stopFading()
@@ -169,6 +167,7 @@ void Channel::stopFading()
 bool Channel::_set(int32_t level, float transition)
 {
     __LDBG_printf("lvl=%d trans=%f ch=%u", level, transition, _channel);
+    bool updateDimmer = false;
     auto prevBrightness = _brightness;
     if (level == 0) {
         // if channel is turned off, store previous brightness
@@ -176,94 +175,22 @@ bool Channel::_set(int32_t level, float transition)
             setStoredBrightness(_brightness);
         }
         _brightness = 0;
+        updateDimmer = true;
     }
-    else {
+    else if (level != _brightness) {
         auto &cfg = _dimmer->_getConfig()._base;
         _brightness = std::clamp<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
+        updateDimmer = true;
         __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, _brightness);
     }
-    if (transition != -1) {
-        // always send new brightness in case the dimmer is out of sync with the co-processor
+    if (updateDimmer && transition != -1) {
         _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
         _dimmer->_wire.writeEEPROM();
         _dimmer->publishChannelState(_channel);
+        return true;
     }
-    return true;
+    return false;
 }
-
-#if IOT_DIMMER_MODULE_HAS_BUTTONS
-
-    int Channel::_offDelayPreCheck(int16_t level, ConfigType *configPtr, int16_t storeLevel)
-    {
-        __LDBG_printf("timer=%p level=%d config=%p store=%d", _delayTimer, level, configPtr, storeLevel);
-        if (_delayTimer) {
-            // restore brightness
-            (*_delayTimer)->_callback(nullptr);
-            delete _delayTimer;
-            _delayTimer = nullptr;
-
-            if (level == 0) {
-                // timer was running, turn off now
-                return off(nullptr) ? -1 : 1;
-            }
-        }
-        if (level != 0 || configPtr == nullptr) {
-            // continue
-            return 0;
-        }
-        auto &config = configPtr->_base;
-        if (_brightness == 0 || config.off_delay == 0) {
-            // no delay, continue
-            return 0;
-        }
-
-        __LDBG_printf("off_delay=%d signal=%d", config.off_delay, config.off_delay_signal);
-        _delayTimer = new Event::Timer();
-
-        if (config.off_delay >= 5 && config.off_delay_signal) {
-            auto delay = config.off_delay - 4;
-            int16_t brightness = storeLevel + (storeLevel * 100 / IOT_DIMMER_MODULE_MAX_BRIGHTNESS > 70 ? IOT_DIMMER_MODULE_MAX_BRIGHTNESS * -0.3 : IOT_DIMMER_MODULE_MAX_BRIGHTNESS * 0.3);
-            // flash once to signal confirmation
-            _Timer(_delayTimer)->add(Event::milliseconds(1900), true, [this, delay, brightness, storeLevel](Event::CallbackTimerPtr timer) {
-                if (timer == nullptr) {
-                    __LDBG_printf("timer=%p fade_to=%d", timer, storeLevel);
-                    _dimmer->_fade(_channel, storeLevel, 0.9);
-                    return;
-                }
-                auto interval = timer->getShortInterval();
-                if (interval == 1900) {
-                    __LDBG_printf("timer=%p fade_to=%d reschedule=%d", timer, brightness, Event::milliseconds(2100).count());
-                    // first callback, dim up or down and reschedule
-                    _dimmer->_fade(_channel, brightness, 0.9);
-                    timer->updateInterval(Event::milliseconds(2100));
-                }
-                else if (interval == 2100) {
-                    __LDBG_printf("timer=%p fade_to=%d reschedule=%d", timer, brightness, Event::seconds(delay).count());
-                    // second callback, dim back and wait
-                    _dimmer->_fade(_channel, storeLevel, 0.9);
-                    timer->updateInterval(Event::seconds(delay));
-                }
-                else {
-                    // third callback
-                    __LDBG_printf("timer=%p store_level=%d off=%u", timer, storeLevel, true);
-                    off(nullptr, storeLevel);
-                    // the timer has been deleted at this point
-                    // make sure to exit
-                    return;
-                }
-            }, Event::PriorityType::HIGHEST);
-        }
-        else {
-            _Timer(_delayTimer)->add(Event::seconds(config.off_delay), false, [this, storeLevel](Event::CallbackTimerPtr timer) {
-                __LDBG_printf("timer=%p store_level=%d off=%u", timer, storeLevel, true);
-                off(nullptr, storeLevel);
-            }, Event::PriorityType::HIGHEST);
-            // abort command
-        }
-        return 1;
-    }
-
-#endif
 
 void Channel::_publishMQTT()
 {

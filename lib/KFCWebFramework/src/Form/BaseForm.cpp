@@ -124,7 +124,7 @@ WebUI::BaseUI &Form::BaseForm::addFormUI(WebUI::BaseUI *formUI)
 Group &Form::BaseForm::addGroup(const __FlashStringHelper *name, const Container::Label &label, bool expanded, RenderType type)
 {
     __LDBG_assert_printf(getGroupType(type) == GroupType::OPEN, "invalid type=%u group type=%u", type, getGroupType(type));
-    __DBG_printf("group=%s start", name);
+    __LDBG_printf("group=%s start", name);
     auto &group = _add<Group>(name, expanded);
     group.setFormUI(&group, type, label);
     return group;

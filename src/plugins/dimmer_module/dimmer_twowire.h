@@ -38,7 +38,9 @@ namespace Dimmer {
 
         uint8_t endTransmission(uint8_t sendStop)
         {
-            return TwoWireBase::endTransmission(sendStop);
+            auto res = TwoWireBase::endTransmission(sendStop);
+            delay(10);
+            return res;
         }
 
         uint8_t endTransmission() {

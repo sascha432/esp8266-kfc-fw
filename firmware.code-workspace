@@ -343,6 +343,7 @@
             "nhps",
             "OSTIMER",
             "PHPEXE",
+            "PINMODE",
             "PIOENV",
             "PIOVERBOSE",
             "platformio",

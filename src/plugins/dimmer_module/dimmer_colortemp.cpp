@@ -65,10 +65,12 @@ namespace Dimmer {
                     discovery->addObjectId(baseTopic + F("main"));
                     discovery->addBrightnessScale(IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
                     discovery->addParameter(F("brightness"), true);
-                    discovery->addParameter(F("color_mode"), true);
+                    discovery->addParameter(FSPGM(mqtt_color_mode), true);
                     discovery->addSupportedColorModes(F("[\"color_temp\"]"));
-                    discovery->addParameter(F("min_mireds"), static_cast<uint16_t>(kColorMin / kColorMultiplier));
-                    discovery->addParameter(F("max_mireds"), static_cast<uint16_t>(kColorMax / kColorMultiplier));
+
+
+                    discovery->addParameter(FSPGM(mqtt_min_mireds), static_cast<uint16_t>(kColorMin / kColorMultiplier));
+                    discovery->addParameter(FSPGM(mqtt_max_mireds), static_cast<uint16_t>(kColorMax / kColorMultiplier));
                 }
                 break;
             case 1:

@@ -152,9 +152,6 @@ void Module::_onReceive(size_t length)
         while(length >= sizeof(event)) {
             length -= _wire.read(event);
             if (event.channel < IOT_DIMMER_MODULE_CHANNELS) {
-                #if IOT_ATOMIC_SUN_V2_1
-                    event.channel = getTranslateChannel(event.channel);
-                #endif
                 auto level = _calcLevelReverse(event.level, event.channel);
                 auto curLevel = _channels[event.channel].getLevel();
                 if (curLevel != level) {  // update level if out of sync

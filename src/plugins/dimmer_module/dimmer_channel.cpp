@@ -197,9 +197,10 @@ void Channel::_publishMQTT()
     if (isConnected()) {
         using namespace MQTT::Json;
         publish(_createTopics(TopicType::COMMAND_STATE), true, UnnamedObject(
-            State(_brightness != 0),
-            Brightness(_brightness),
-            Transition(_dimmer->_getConfig()._base._getFadeTime())).toString()
+                State(_brightness != 0),
+                Brightness(_brightness),
+                Transition(_dimmer->_getConfig()._base._getFadeTime())
+            ).toString()
         );
     }
 }

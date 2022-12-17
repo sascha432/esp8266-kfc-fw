@@ -315,6 +315,7 @@
             "FASTLED",
             "FPSTR",
             "FSPGM",
+            "FSTAT",
             "FSTR",
             "GDBSTUB",
             "GFXCANVAS",

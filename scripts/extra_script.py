@@ -51,6 +51,16 @@ elif esp8266:
 # add extra dirs for modules
 sys.path.insert(0, path.abspath(path.join(env.subst("$PROJECT_DIR"), 'scripts', 'libs')))
 
+verbose_flag = int(ARGUMENTS.get("PIOVERBOSE", 0))
+
+def verbose(msg, color=None):
+    if not verbose_flag:
+        return
+    if color:
+        click.secho(msg, fg=color)
+    else:
+        click.echo(msg)
+
 def new_build(source, target, env):
     args = [ env.subst('$PYTHONEXE'), env.subst('$PROJECT_DIR/scripts/build_number.py'), '-v', env.subst('$PROJECT_DIR/include/build.h.current') ]
     p = subprocess.Popen(args, text=True)
@@ -165,18 +175,7 @@ def disassemble(source, target, env):
     click.secho('Created: ', fg='yellow', nl=False)
     click.secho(target)
 
-
 def firmware_config(source, target, env, action):
-
-    verbose_flag = int(ARGUMENTS.get("PIOVERBOSE", 0))
-
-    def verbose(msg, color=None):
-        if not verbose_flag:
-            return
-        if color:
-            click.secho(msg, fg=color)
-        else:
-            click.echo(msg)
 
     if env["UPLOAD_PROTOCOL"] != 'espota':
         click.secho('UPLOAD_PROTOCOL not espota', fg='yellow')
@@ -237,6 +236,61 @@ def firmware_config(source, target, env, action):
 
     sock.close()
 
+def upload_file(source, target, env):
+
+    src = path.abspath(env.subst(env.GetProjectOption('custom_upload_file_src', '')))
+    dst = env.subst(env.GetProjectOption('custom_upload_file_dst', ''))
+
+    if not src:
+        click.secho('custom_upload_file_src missing', fg='yellow')
+        env.Exit(1)
+    if not os.path.exists(src):
+        click.secho('custom_upload_file_src does not exist: %s' % src, fg='yellow')
+        env.Exit(1)
+    if not dst:
+        click.secho('custom_upload_file_dst missing', fg='yellow')
+        env.Exit(1)
+
+
+    script = path.abspath(env.subst('$PROJECT_DIR/scripts/tools/kfcfw_ota.py'))
+
+    if env["UPLOAD_PROTOCOL"] != 'espota':
+        click.secho('UPLOAD_PROTOCOL not espota', fg='yellow')
+        env.Exit(1)
+
+    auth = env.GetProjectOption('custom_upload_file_auth')
+    click.secho('custom_upload_file_auth missing', fg='yellow')
+    try:
+        m = re.match(r'(?P<username>[^:]+):(?P<password>[^@]+)@(?P<hostname>.+)', auth)
+        if not m:
+            click.echo('custom_upload_file_auth must be <username>:<password>@<hostname>')
+        device = m.groupdict()
+        if not device['username'].startswith("KFC"):
+            raise RuntimeError("invalid username: %s" % device['username'])
+        if len(device['password']) < 6:
+            raise RuntimeError("invalid password: ...")
+        address = socket.gethostbyname(device['hostname'])
+        device['address'] = address
+    except Exception as e:
+        click.echo('Exception: %s' % e)
+        click.secho('requires "custom_upload_file_auth = <username>:<password>@<hostname>" at the environment', fg='yellow')
+        env.Exit(1)
+
+    device['name'] = '%s:***@%s' % (device['username'], device['hostname'])
+
+    args = [ env.subst('$PYTHONEXE'), script, 'uploadfile', device['address'], '-u', device['username'], '-p', device['password'], '-I', src, '--fs-dst', dst ]
+
+    verbose('Uploading to %s: %s: %s' % (device['name'], src, dst))
+
+    return_code = subprocess.run(args, shell=(platform.system() == 'Windows')).returncode
+    if return_code != 0:
+        click.secho('failed to run: %s' % ' '.join(args))
+        env.Exit(1)
+
+    if dst.endswith('.hex'):
+        click.secho('Flash Firmware with command: +STK500V1F=%s' % dst, fg='yellow')
+    else:
+        click.secho('Uploaded %s' % dst, fg='yellow')
 
 # def create_patch_file(source, target, env):
 #     packages_dir = path.abspath(env.subst('$PROJECT_PACKAGES_DIR'))
@@ -301,8 +355,9 @@ env.AlwaysBuild(env.Alias('disassemble', [env['PIOMAINPROG']], disassemble))
 
 env.AlwaysBuild(env.Alias('kfcfw_factory', None, lambda source, target, env: firmware_config(source, target, env, 'factory')))
 env.AlwaysBuild(env.Alias('kfcfw_auto_discovery', None, lambda source, target, env: firmware_config(source, target, env, 'auto_discovery')))
+env.AlwaysBuild(env.Alias('upload_file', None, lambda source, target, env: upload_file(source, target, env)))
 
 env.AddCustomTarget('disassemble', None, [], title='disassemble main prog', description='run objdump to create disassembly', always_build=True)
 env.AddCustomTarget('kfcfw_factory', None, [], title='factory reset', description='KFC firmware OTA factory reset', always_build=False)
 env.AddCustomTarget('kfcfw_auto_discovery', None, [], title='auto discovery', description='KFC firmware OTA publish auto discovery', always_build=False)
-
+env.AddCustomTarget('upload_file', None, [], title='upload file', description='Upload file to file system', always_build=False)

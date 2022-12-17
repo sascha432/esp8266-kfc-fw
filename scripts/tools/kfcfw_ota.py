@@ -77,6 +77,55 @@ class OTA(kfcfw.OTAHelpers):
         shutil.copyfile(src, dst)
         self.verbose('Copied: %s => %s' % (src, dst))
 
+    def get_post_header(self, monitor):
+        return { 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type }
+
+    def upload_file(self, url, sid, src, dst):
+        filesize = os.fstat(src.fileno()).st_size
+        self.verbose("Uploading %u Bytes: %s to %s" % (filesize, src.name, dst))
+        url = url + 'file_manager/upload'
+
+        bar = SimpleProgressBar(max_value=filesize, redirect_stdout=True)
+        bar.start();
+
+        post_data = { "upload_filename": path.basename(dst), "upload_current_dir": path.dirname(dst), "ajax_upload": "1", "overwrite_target": "1", "SID": sid, "upload_file": ("filename", src, "application/octet-stream") }
+        encoder = MultipartEncoder(fields=post_data)
+        monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
+
+        # class to simulate a valid response
+        class MyResponse(object):
+            def __init__(self, status_code, content):
+                self.status_code = status_code
+                self.content = content.encode()
+
+        count = 0
+        while count<10:
+            try:
+                resp = requests.post(url, data=monitor, timeout=30, allow_redirects=False, headers=self.get_post_header(monitor))
+            except Exception as e:
+                if "BadStatusLine('HTTP/1.1 1 " in str(e): # ignore bug in firmware returning invalid http code 1
+                    resp = MyResponse(200, 'Upload successful')
+                    self.verbose('Encountered firmware bug, assuming upload was successful')
+                else:
+                    count += 1
+                    print('Exception %s, retrying %d/10 in 10 seconds...' % (e, count))
+                    time.sleep(10)
+                    continue
+            break
+
+        bar.finish();
+
+        if resp.status_code==200:
+            content = resp.content.decode()
+            if content.startswith('Upload successful'):
+                self.verbose("Update successful")
+            else:
+                self.verbose('Invalid response: %s' % content)
+                sys.exit(1)
+        else:
+            self.verbose('HTTP error %u: %s' % (resp.status_code, url))
+            sys.exit(1)
+
     def flash(self, url, type, target, sid):
 
         if type=="upload":
@@ -144,9 +193,8 @@ class OTA(kfcfw.OTAHelpers):
 
         bar = SimpleProgressBar(max_value=filesize, redirect_stdout=True)
         bar.start();
-        headers = { "image_type": image_type, "SID": sid, "elf_hash": elf_hash, "firmware_image": ("filename", self.args.image, "application/octet-stream") }
-        encoder = MultipartEncoder(fields=headers)
-
+        post_data = { "image_type": image_type, "SID": sid, "elf_hash": elf_hash, "firmware_image": ("filename", self.args.image, "application/octet-stream") }
+        encoder = MultipartEncoder(fields=post_data)
         monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(min(monitor.bytes_read, filesize)))
 
         # resp = requests.post(url + "update", files={ "firmware_image": self.args.image }, data={ "image_type": image_type, "SID": sid }, timeout=30, allow_redirects=False)
@@ -155,7 +203,7 @@ class OTA(kfcfw.OTAHelpers):
         update_url = url + 'update'
         while count<30:
             try:
-                resp = requests.post(update_url, data=monitor, timeout=5, allow_redirects=False, headers={ 'User-Agent': 'KFCFW OTA', "Content-Type": monitor.content_type })
+                resp = requests.post(update_url, data=monitor, timeout=5, allow_redirects=False, headers=self.get_post_header(monitor))
             except Exception as e:
                 count += 1
                 print('Exception %s, retrying %d/30 in 10 seconds...' % (e, count))
@@ -243,12 +291,13 @@ class OTA(kfcfw.OTAHelpers):
 # main
 
 parser = argparse.ArgumentParser(description="OTA for KFC Firmware", formatter_class=argparse.RawDescriptionHelpFormatter, epilog="exit codes:\n  0 - success\n  1 - general error\n  2 - device did not respond\n  3 - update failed\n  4 - device did not respond after update\n  5 - copying ELF firmware failed")
-parser.add_argument("action", help="action to execute", choices=["flash", "upload", "littlefs", "uploadfs", "atmega", "status", "alive", "export", "import", "factoryreset", "safemode", "reset", "console", "startaota"])
+parser.add_argument("action", help="action to execute", choices=["flash", "upload", "littlefs", "uploadfs", "atmega", "status", "alive", "export", "import", "factoryreset", "safemode", "reset", "console", "startaota", "uploadfile"])
 parser.add_argument("hostname", help="web server hostname")
 parser.add_argument("-u", "--user", help="username", required=True)
 parser.add_argument("-p", "--pw", "--pass", help="password", required=True)
 parser.add_argument("-I", "--image", help="firmware image", type=argparse.FileType("rb"))
 parser.add_argument("-O", "--output", help="export settings output file")
+parser.add_argument("--fs-dst", help="upload 'firmware image' to filename (overwrites existing files)", type=None)
 parser.add_argument("--params", help="parameters to import", nargs='*', default=[])
 parser.add_argument("-P", "--port", help="web server port", type=int, default=80)
 parser.add_argument("-t", "--timeout", help="timeout for console commands", type=int, default=30)
@@ -316,6 +365,17 @@ elif args.action=="status":
     ota.get_status(url, target, sid)
 elif args.action=="alive":
     ota.get_alive(url, target)
+elif args.action=="uploadfile":
+    if args.fs_dst==None:
+        ota.verbose('--fs-dst: target filename missing')
+        sys.exit(1)
+    elif not args.image:
+        ota.verbose('-I: file to upload missing')
+        sys.exit(1)
+    else:
+        ota.verbose('deleting: %s' % args.fs_dst)
+        run_commands(['+rm="%s"' % args.fs_dst])
+        ota.upload_file(url, sid, args.image, args.fs_dst)
 elif args.action=="export":
     ota.export_settings(url, target, sid, args.output)
 elif args.action=="import":

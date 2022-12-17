@@ -259,7 +259,10 @@ def upload_file(source, target, env):
         env.Exit(1)
 
     auth = env.GetProjectOption('custom_upload_file_auth')
-    click.secho('custom_upload_file_auth missing', fg='yellow')
+    if not auth:
+        click.secho('custom_upload_file_auth missing', fg='yellow')
+        env.Exit(1)
+
     try:
         m = re.match(r'(?P<username>[^:]+):(?P<password>[^@]+)@(?P<hostname>.+)', auth)
         if not m:

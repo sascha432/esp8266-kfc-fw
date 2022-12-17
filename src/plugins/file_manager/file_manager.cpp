@@ -237,13 +237,10 @@ uint16_t FileManager::upload()
 {
     uint16_t httpCode = 500;
     PrintString message;
-    auto success = false;
     auto uploadDir = _requireDir(F("upload_current_dir"));
     auto filename = _request->arg(F("upload_filename"));
-    // if (!_request->_tempFile) {
-    //     __LDBG_printf("_temFile is closed");
-    //     return httpCode;
-    // }
+    auto overwriteTarget = _request->arg(F("overwrite_target")).toInt();
+
 
     httpCode = 200;
     if (_request->hasParam(FSPGM(upload_file, "upload_file"), true, true)) {
@@ -253,17 +250,27 @@ uint16_t FileManager::upload()
             filename = p->value();
         }
         if (filename.charAt(0) != '/') {
-            append_slash(uploadDir);
-            filename = uploadDir + filename;
+            filename = append_slash(uploadDir) + filename;
         }
         normalizeFilename(filename);
 
         if (FSWrapper::exists(filename)) {
-            httpCode = 409;
-            message = FSPGM(ERROR_);
-            message.printf_P(PSTR("File %s already exists"), filename.c_str());
+            if (overwriteTarget) {
+                if (!KFCFS.remove(filename)) {
+                    httpCode = 409;
+                    message = FSPGM(ERROR_);
+                    message.printf_P(PSTR("Cannot remove %s"), filename.c_str());
+                }
+            }
+            else {
+                httpCode = 409; // 409 Conflict
+                message = FSPGM(ERROR_);
+                message.printf_P(PSTR("File %s already exists"), filename.c_str());
+            }
+        }
 
-        } else {
+        // check if we can an error
+        if (httpCode == 200) {
             if (_request->_tempFile && _request->_tempFile.fullName()) {
                 // get filename before closing the file
                 String fullname = _request->_tempFile.fullName();
@@ -271,22 +278,24 @@ uint16_t FileManager::upload()
 
                 if (FSWrapper::rename(fullname, filename)) {
                     __LDBG_printf("Renamed upload %s to %s", fullname.c_str(), filename.c_str());
-                    success = true;
                     message = F("Upload successful");
                 }
                 else {
+                    httpCode = 410; // 410 Gone
                     // remove temporary file if it cannot be renamed
                     KFCFS.remove(fullname);
                 }
             }
 
-            if (!success) {
+            if (httpCode != 200) {
                 message = FSPGM(ERROR_);
                 message += F("Could not rename temporary file");
             }
         }
 
-    } else {
+    }
+    else {
+        httpCode = 406; // 406 Not Acceptable
         message = FSPGM(ERROR_);
         message += F("Upload file parameter missing");
     }
@@ -296,7 +305,7 @@ uint16_t FileManager::upload()
     uint8_t ajax_request = _request->arg(F("ajax_upload")).toInt();
     __LDBG_printf("File upload status %d, message %s, ajax %d", httpCode, message.c_str(), ajax_request);
 
-    if (success) {
+    if (httpCode == 200) {
         Logger_notice(F("File upload successful. Filename %s, size %d"), filename.c_str(), FSWrapper::open(filename, fs::FileOpenMode::read).size());
     }
     else {
@@ -306,7 +315,7 @@ uint16_t FileManager::upload()
     if (!ajax_request) {
         String url = PrintString(F("/%s?_message="), SPGM(file_manager_html_uri, "file-manager.html"));
         url += urlEncode(message);
-        if (success) {
+        if (httpCode == 200) {
             url += F("&_type=success&_title=Information");
         }
         else {

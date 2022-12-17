@@ -6,22 +6,22 @@
 
 #include <Arduino_compat.h>
 #include "file_manager.h"
-#include <Buffer.h>
-#include <PrintString.h>
-#include <HttpHeaders.h>
-#include <ListDir.h>
-#include "fs_mapping.h"
-#include "async_web_response.h"
 #include "async_web_handler.h"
-#include "misc.h"
+#include "async_web_response.h"
+#include "fs_mapping.h"
 #include "logger.h"
+#include "misc.h"
 #include "plugins.h"
 #include "plugins_menu.h"
+#include <Buffer.h>
+#include <HttpHeaders.h>
+#include <ListDir.h>
+#include <PrintString.h>
 
 #if DEBUG_FILE_MANAGER
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 void FileManagerWebHandler::onRequestHandler(AsyncWebServerRequest *request)
@@ -31,7 +31,7 @@ void FileManagerWebHandler::onRequestHandler(AsyncWebServerRequest *request)
         fm.handleRequest();
     }
     else {
-    WebServer::Plugin::send(403, request);
+        WebServer::Plugin::send(403, request);
     }
 }
 
@@ -323,7 +323,7 @@ uint16_t FileManager::upload()
     }
     __LDBG_printf("msg=%s", message.c_str());
     _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
-    return true;
+    return httpCode;
 }
 
 uint16_t FileManager::view(bool isDownload)

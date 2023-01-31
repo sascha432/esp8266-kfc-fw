@@ -7,17 +7,18 @@
 
 static MoonPhaseType __moonCache[2];
 
+// TODO check phases
 const __FlashStringHelper *moonPhaseName(uint8_t moonPhase)
 {
     switch (moonPhase % 4) {
         case 0:
             return F("Waxing Crescent");
         case 1:
-            return F("Waxing Gibbous");
+            return F("Waxing Gibbous"); // OK 2023-01-31
         case 2:
-            return F("Waning Gibbous");
+            return F("Waning Gibbous"); // OK 2023-01-08
         case 3:
-            return F("Waning Crescent");
+            return F("Waning Crescent"); // OK
     }
     __builtin_unreachable();
 }

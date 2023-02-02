@@ -78,7 +78,7 @@ namespace KFCConfigurationClasses {
                     WorldClockType additionalClocks[kNumClocks];
 
                     uint32_t getPollIntervalMillis() const {
-                        return weather_poll_interval * 60000U;
+                        return weather_poll_interval * 60000UL;
                     }
 
                     Config_t() :

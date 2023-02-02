@@ -90,7 +90,7 @@ public:
     // pause for some time after too many errors
     static constexpr auto kPollDataErrorPauseDelay = static_cast<uint32_t>(Event::minutes(15).count());
     // min. delay between updates in case the configuration is invalid
-    static constexpr auto kMinPollDataInterval = static_cast<uint32_t>(Event::minutes(5).count());
+    static constexpr auto kMinPollDataInterval = static_cast<uint32_t>(Event::minutes(2).count());
 
     static constexpr auto kNumScreens = WSDraw::kNumScreens;
     static constexpr auto kSkipScreen = WSDraw::kSkipScreen;
@@ -135,7 +135,6 @@ protected:
 
 protected:
     Event::Timer _pollDataTimer;
-    uint32_t _pollDataLastMillis;
     uint16_t _pollDataRetries;
 
     uint16_t _backlightLevel;

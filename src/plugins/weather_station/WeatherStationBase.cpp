@@ -16,7 +16,6 @@
 #endif
 
 WeatherStationBase::WeatherStationBase() :
-    _pollDataLastMillis(0),
     _pollDataRetries(0),
     _backlightLevel(1023),
     _updateCounter(0),
@@ -35,14 +34,16 @@ WeatherStationBase::WeatherStationBase() :
 
 void WeatherStationBase::_pollDataTimerCallback(Event::CallbackTimerPtr timer)
 {
+    __DBG_printf("new request");
     ws_plugin._getWeatherInfo([](int16_t code, KFCRestAPI::HttpRequest &request) {
+        __DBG_printf("response=%u", code);
         ws_plugin._openWeatherAPICallback(code, request);
     });
 }
 
 void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request)
 {
-    __LDBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
+    __DBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
     if (code != 200) {
         PrintString message(F("OpenWeatherAPI http status=%d error=%s wifi=%u url=%s"), code, request.getMessage().c_str(), WiFi.isConnected(), request.getUrl());
         Logger_error(message);
@@ -79,9 +80,11 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
         #if IOT_WEATHER_STATION_WS2812_NUM
             _rainbowStatusLED();
         #endif
-        auto next = 5000;
-        __LDBG_printf("poll weather next=%u", next);
-        _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
+        if (!_pollDataTimer) { // poll weather data if the timer is not active
+            auto next = 5000;
+            __DBG_printf("poll weather next=%u", next);
+            _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
+        }
         // #if IOT_WEATHER_STATION_WS2812_NUM
         //     _fadeStatusLED();
         // #endif
@@ -91,20 +94,18 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
 
 void WeatherStationBase::_pollDataUpdateLastTime(bool success)
 {
-    _pollDataLastMillis = millis();
     uint32_t next;
     if (success) {
         _pollDataRetries = 0;
-        next = _config.getPollIntervalMillis();
+        next = _config.getPollIntervalMillis(); // default reload time
+    }
+    else if (_pollDataRetries > kPollDataRetries) {
+        next = 3600UL * 1000UL; // max retries reached, wait one hour...
     }
     else {
-        _pollDataRetries++;
-        next = _config.getPollIntervalMillis();
+        next = _config.getPollIntervalMillis() * (++_pollDataRetries / static_cast<float>(kPollDataRetries)); // increase retry time after each failure
     }
-    if (_pollDataRetries > kPollDataRetries) {
-        next = 3600 * (kPollDataRetries - _pollDataRetries);
-    }
-    __LDBG_printf("success=%u retries=%u next=%u", success, _pollDataRetries, next);
+    __DBG_printf("success=%u retries=%u next=%u", success, _pollDataRetries, next);
     _Timer(_pollDataTimer).add(std::max(kMinPollDataInterval, next), false, _pollDataTimerCallback);
 }
 

@@ -77,6 +77,14 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         form.addFormUI(F("Weather Poll Interval"), FormUI::Suffix(FSPGM(minutes)));
         cfg.addRangeValidatorFor_weather_poll_interval(form);
 
+        form.addStringGetterSetter(F("apk"), Plugins::WeatherStation::getApiKey, Plugins::WeatherStation::setApiKey);
+        Plugins::WeatherStation::addApiKeyLengthValidator(form);
+        form.addFormUI(F("API Key"));
+
+        form.addStringGetterSetter(F("apq"), Plugins::WeatherStation::getApiQuery, Plugins::WeatherStation::setApiQuery);
+        Plugins::WeatherStation::addApiQueryLengthValidator(form);
+        form.addFormUI(F("API Query"), FormUI::Suffix(F("City, Country (ISO 3166)")));
+
         form.addObjectGetterSetter(F("ato"), FormGetterSetter(cfg, api_timeout));
         form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));
         cfg.addRangeValidatorFor_api_timeout(form);

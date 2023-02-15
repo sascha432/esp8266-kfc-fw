@@ -16,9 +16,9 @@ const __FlashStringHelper *moonPhaseName(uint8_t moonPhase)
         case 1:
             return F("Waxing Gibbous"); // OK 2023-01-31
         case 2:
-            return F("Waning Gibbous"); // OK 2023-01-08
+            return F("Waning Gibbous"); // OK 2023-01-08, 2023-02-07
         case 3:
-            return F("Waning Crescent"); // OK
+            return F("Waning Crescent"); // OK 	Feb 13, 2023
     }
     __builtin_unreachable();
 }
@@ -31,7 +31,7 @@ const __FlashStringHelper *moonPhaseHuntName(uint8_t phaseHunt)
         case 1:
             return F("First Quarter");
         case 2:
-            return F("Full Moon");
+            return F("Full Moon"); // OK
         case 3:
             return F("Third Quarter");
     }

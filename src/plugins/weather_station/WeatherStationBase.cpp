@@ -34,16 +34,16 @@ WeatherStationBase::WeatherStationBase() :
 
 void WeatherStationBase::_pollDataTimerCallback(Event::CallbackTimerPtr timer)
 {
-    __DBG_printf("new request");
+    __LDBG_printf("new request");
     ws_plugin._getWeatherInfo([](int16_t code, KFCRestAPI::HttpRequest &request) {
-        __DBG_printf("response=%u", code);
+        __LDBG_printf("response=%u", code);
         ws_plugin._openWeatherAPICallback(code, request);
     });
 }
 
 void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request)
 {
-    __DBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
+    __LDBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
     if (code != 200) {
         PrintString message(F("OpenWeatherAPI http status=%d error=%s wifi=%u url=%s"), code, request.getMessage().c_str(), WiFi.isConnected(), request.getUrl());
         Logger_error(message);
@@ -57,6 +57,7 @@ void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpR
         _pollDataUpdateLastTime(false);
     }
     else {
+        Logger_notice(F("OpenWeatherAPI successfully polled"));
         _pollDataUpdateLastTime(true);
     }
     redraw();
@@ -82,7 +83,7 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
         #endif
         if (!_pollDataTimer) { // poll weather data if the timer is not active
             auto next = 5000;
-            __DBG_printf("poll weather next=%u", next);
+            __LDBG_printf("poll weather next=%u", next);
             _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
         }
         // #if IOT_WEATHER_STATION_WS2812_NUM
@@ -105,7 +106,7 @@ void WeatherStationBase::_pollDataUpdateLastTime(bool success)
     else {
         next = _config.getPollIntervalMillis() * (++_pollDataRetries / static_cast<float>(kPollDataRetries)); // increase retry time after each failure
     }
-    __DBG_printf("success=%u retries=%u next=%u", success, _pollDataRetries, next);
+    __LDBG_printf("success=%u retries=%u next=%u", success, _pollDataRetries, next);
     _Timer(_pollDataTimer).add(std::max(kMinPollDataInterval, next), false, _pollDataTimerCallback);
 }
 

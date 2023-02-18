@@ -1878,4 +1878,3 @@ WebTemplate *KFCConfigurationPlugin::getWebTemplate(const String &name)
 {
     return new StatusTemplate();
 }
-

@@ -8,25 +8,31 @@
 #include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
-#if IOT_LED_MATRIX
-#define MQTT_NAME "rgb_matrix"
+#if IOT_LED_STRIP
+#    define MQTT_NAME "rgb_led_strip"
+#elif IOT_LED_MATRIX_HEXAGON_PANEL
+#    define MQTT_NAME "rgb_hexagon_panel"
+#elif IOT_CLOCK
+#    define MQTT_NAME "clock"
+#elif IOT_LED_MATRIX
+#    define MQTT_NAME "rgb_matrix"
 #else
-#define MQTT_NAME "clock"
+#    error Unknown
 #endif
 
 enum class AutoDiscoverySwitchEnum {
     BRIGHTNESS = 0,
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-    POWER_CONSUMPTION,
-#endif
-#if IOT_LED_MATRIX_FAN_CONTROL
-    FAN_CONTROL,
-#endif
+    #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+        POWER_CONSUMPTION,
+    #endif
+    #if IOT_LED_MATRIX_FAN_CONTROL
+        FAN_CONTROL,
+    #endif
     MAX
 };
 
@@ -53,12 +59,17 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
                 discovery->addName(F("Hexagon Panel"));
                 discovery->addObjectId(baseTopic + F("Hexagon Panel"));
                 discovery->addIcon(F("mdi:hexagon-multiple-outline"));
+            #elif IOT_LED_STRIP
+                discovery->addName(F("Strip"));
+                discovery->addObjectId(baseTopic + F("Strip"));
+            #elif IOT_CLOCK
+                discovery->addName(F("Clock"));
+                discovery->addObjectId(baseTopic + F("Clock"));
             #elif IOT_LED_MATRIX
                 discovery->addName(F("LED Matrix"));
                 discovery->addObjectId(baseTopic + F("LED Matrix"));
             #else
-                discovery->addName(F("Clock"));
-                discovery->addObjectId(baseTopic + F("Clock"));
+                #error Unknown type
             #endif
         }
         break;

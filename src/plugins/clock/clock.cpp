@@ -30,7 +30,13 @@ Clock::AnimationStats Clock::animationStats;
 
 ClockPlugin ClockPlugin_plugin;
 
-#if IOT_LED_MATRIX
+#if IOT_LED_STRIP
+
+#    define PLUGIN_OPTIONS_NAME          "led_strip"
+#    define PLUGIN_OPTIONS_FRIENDLY_NAME "RGB LED Strip"
+#    define PLUGIN_OPTIONS_WEB_TEMPLATES ""
+
+#elif IOT_LED_MATRIX
 
 #    define PLUGIN_OPTIONS_NAME          "led_matrix"
 #    define PLUGIN_OPTIONS_FRIENDLY_NAME "LED Matrix"
@@ -540,17 +546,21 @@ void ClockPlugin::getStatus(Print &output)
 {
     #if IOT_LED_MATRIX
         output.print(F("LED Matrix Plugin" HTML_S(br)));
-    #else
+    #elif IOT_CLOCK
         output.print(F("Clock Plugin" HTML_S(br)));
+    #else
+        output.print(F("LED Strip Plugin" HTML_S(br)));
     #endif
 
     #if IOT_LED_MATRIX_FAN_CONTROL
         output.print(F("Fan control, "));
     #endif
 
-    if (_config.protection.max_temperature > 25 && _config.protection.max_temperature < 85) {
-        output.print(F("Over-temperature protection enabled"));
-    }
+    #if IOT_CLOCK_TEMPERATURE_PROTECTION
+        if (_config.protection.max_temperature > 25 && _config.protection.max_temperature < 85) {
+            output.print(F("Over-temperature protection enabled"));
+        }
+    #endif
 
     #if IOT_LED_MATRIX
         output.printf_P(PSTR(HTML_S(br) "Total pixels %u"), _display.size());
@@ -582,7 +592,8 @@ void ClockPlugin::getStatus(Print &output)
             break;
     }
 
-    #if IOT_CLOCK_BUTTON_PIN != -1
+    #if IOT_LED_MATRIX_NO_BUTTON
+    #elif IOT_CLOCK_BUTTON_PIN != -1
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
             #if IOT_CLOCK_TOUCH_PIN
                 output.printf_P(PSTR(HTML_S(br) "Rotary encoder with capacitive touch sensor and button"));
@@ -594,9 +605,11 @@ void ClockPlugin::getStatus(Print &output)
         #endif
     #endif
 
-    if (isTempProtectionActive()) {
-        output.printf_P(PSTR(HTML_SA(h5, HTML_A("class", "text-danger")) "The temperature exceeded %u" HTML_E(h5)), _config.protection.max_temperature);
-    }
+    #if IOT_CLOCK_TEMPERATURE_PROTECTION
+        if (isTempProtectionActive()) {
+            output.printf_P(PSTR(HTML_SA(h5, HTML_A("class", "text-danger")) "The temperature exceeded %u" HTML_E(h5)), _config.protection.max_temperature);
+        }
+    #endif
 }
 
 void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
@@ -627,7 +640,7 @@ void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
         _fadeTimer.set(std::min<uint32_t>(maxTime, ms * diff / Clock::kMaxBrightness));
         _isFading = true;
         _updateBrightnessSettings();
-        // publish new state immediatelly
+        // publish new state immediately
         _schedulePublishState = true;
     }
 }

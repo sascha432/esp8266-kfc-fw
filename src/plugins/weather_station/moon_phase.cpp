@@ -12,7 +12,7 @@ const __FlashStringHelper *moonPhaseName(uint8_t moonPhase)
 {
     switch (moonPhase % 4) {
         case 0:
-            return F("Waxing Crescent");
+            return F("Waxing Crescent"); // OK 2023-02-20
         case 1:
             return F("Waxing Gibbous"); // OK 2023-01-31
         case 2:
@@ -27,7 +27,7 @@ const __FlashStringHelper *moonPhaseHuntName(uint8_t phaseHunt)
 {
     switch (phaseHunt % 4) {
         case 0:
-            return F("New Moon");
+            return F("New Moon"); // not working shows Waning Crescent 2034-02-19
         case 1:
             return F("First Quarter");
         case 2:

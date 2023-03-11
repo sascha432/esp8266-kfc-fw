@@ -1,6 +1,10 @@
 # Changelog
 
-## Version 0.0.7 (master)
+## Version 0.0.8 (master)
+
+ - Updated deep sleep and quick connect for framework 3.x (work in progress)
+
+## Version 0.0.7
 
  - Removed STK500v1 updates from the WebUI ([use Serial Console](docs/AtModeHelp.md#stk500v1-programmer))
  - Updates/fixes and new firmware for 4 channel dimmer

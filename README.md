@@ -41,12 +41,6 @@ https://github.com/sascha432/Arduino/tree/master
 
 [Version 0.0.2](https://github.com/sascha432/esp8266-kfc-fw/blob/027305464fb486606840fa821595f7bce6e6ef1d/CHANGELOG.md)
 
-## Stable versions
-
-Currently the master branch is stable, but one project is not up-to-date
-
-[Remote Control - Version 0.0.4.7545](https://github.com/sascha432/esp8266-kfc-fw/tree/remote_control_0.0.4.7545)
-
 ## Requirements
 
  - Visual Studio Code for Windows or Linux

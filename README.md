@@ -27,7 +27,9 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 Starting with version 0.0.5, a modified Arduino framework is being used.
 https://github.com/sascha432/Arduino/tree/master
 
-[Version 0.0.7 (master)](./CHANGELOG.md)
+[Version 0.0.8 (master)](./CHANGELOG.md)
+
+[Version 0.0.7](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.7/CHANGELOG.md)
 
 [Version 0.0.6](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.6/CHANGELOG.md)
 

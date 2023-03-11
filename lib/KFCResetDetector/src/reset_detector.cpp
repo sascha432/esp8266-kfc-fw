@@ -28,6 +28,11 @@ using ResetDetectorUninitialized = stdex::UninitializedClass<ResetDetector>;
 static ResetDetectorUninitialized resetDetectorNoInit __attribute__((section(".noinit")));
 ResetDetector &resetDetector = resetDetectorNoInit._object;
 
+void resetDetectorNoInit_init()
+{
+    resetDetectorNoInit.init();
+}
+
 void __preinit(void)
 {
     resetDetectorNoInit.init();

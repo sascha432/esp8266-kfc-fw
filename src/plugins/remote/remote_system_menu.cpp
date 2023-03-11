@@ -136,68 +136,71 @@ namespace RemoteControl {
 
     void Base::_updateSystemComboButton()
     {
-        if (_isSystemComboActive()) {
-            if (millis() >= _systemButtonComboTimeout) {
-                // buttons still down, restart
-                if (_systemButtonComboState == ComboButtonStateType::PRESSED) {
-                    Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Rebooting device"));
+        #if IOT_REMOTE_CONTROL_DISABLE_MENU == 1
+        #else
+            if (_isSystemComboActive()) {
+                if (millis() >= _systemButtonComboTimeout) {
+                    // buttons still down, restart
+                    if (_systemButtonComboState == ComboButtonStateType::PRESSED) {
+                        Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Rebooting device"));
+                        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+                        delay(750);
+                        config.restartDevice();
+                    }
+                    _systemButtonComboTimeout = 0;
+                    _systemButtonComboState = ComboButtonStateType::NONE;
+                    Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Menu timeout"));
                     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-                    delay(750);
-                    config.restartDevice();
+                    KFCFWConfiguration::setWiFiConnectLedMode();
+                    return;
                 }
-                _systemButtonComboTimeout = 0;
-                _systemButtonComboState = ComboButtonStateType::NONE;
-                Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Menu timeout"));
-                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-                KFCFWConfiguration::setWiFiConnectLedMode();
-                return;
+                switch(_systemButtonComboState) {
+                    case ComboButtonStateType::RELEASED:
+                    case ComboButtonStateType::RESET_MENU_TIMEOUT:
+                        // update menu timeout
+                        BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
+                        _systemButtonComboTimeout = millis() + kSystemComboMenuTimeout;
+                        _systemButtonComboState = ComboButtonStateType::TIMEOUT;
+                        break;
+                    case ComboButtonStateType::CONFIRM_EXIT:
+                        Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Exiting menu"));
+                        _updateSystemComboButtonLED();
+                        _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
+                        _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
+                        break;
+                    case ComboButtonStateType::CONFIRM_AUTO_SLEEP_OFF:
+                        Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Auto sleep disabled"));
+                        _updateSystemComboButtonLED();
+                        _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
+                        _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
+                        _disableAutoSleepTimeout();
+                        break;
+                    case ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON:
+                        Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Auto sleep enabled"));
+                        _updateSystemComboButtonLED();
+                        _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
+                        _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
+                        _setAutoSleepTimeout(true);
+                        break;
+                    case ComboButtonStateType::CONFIRM_DEEP_SLEEP:
+                        Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Entering deep sleep"));
+                        _updateSystemComboButtonLED();
+                        _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
+                        _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
+                        _Scheduler.add(Event::milliseconds(750), false, [](Event::CallbackTimerPtr) {
+                            RemoteControlPlugin::getInstance().enterDeepSleep();
+                        });
+                        break;
+                    case ComboButtonStateType::PRESSED:
+                    case ComboButtonStateType::TIMEOUT:
+                    case ComboButtonStateType::EXIT_MENU_TIMEOUT:
+                        // wait for action
+                        break;
+                    case ComboButtonStateType::NONE:
+                        break;
+                }
             }
-            switch(_systemButtonComboState) {
-                case ComboButtonStateType::RELEASED:
-                case ComboButtonStateType::RESET_MENU_TIMEOUT:
-                    // update menu timeout
-                    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
-                    _systemButtonComboTimeout = millis() + kSystemComboMenuTimeout;
-                    _systemButtonComboState = ComboButtonStateType::TIMEOUT;
-                    break;
-                case ComboButtonStateType::CONFIRM_EXIT:
-                    Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Exiting menu"));
-                    _updateSystemComboButtonLED();
-                    _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
-                    _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
-                    break;
-                case ComboButtonStateType::CONFIRM_AUTO_SLEEP_OFF:
-                    Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Auto sleep disabled"));
-                    _updateSystemComboButtonLED();
-                    _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
-                    _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
-                    _disableAutoSleepTimeout();
-                    break;
-                case ComboButtonStateType::CONFIRM_AUTO_SLEEP_ON:
-                    Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Auto sleep enabled"));
-                    _updateSystemComboButtonLED();
-                    _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
-                    _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
-                    _setAutoSleepTimeout(true);
-                    break;
-                case ComboButtonStateType::CONFIRM_DEEP_SLEEP:
-                    Logger_notice(F(SYSTEM_MAINTENANCE_MENU "Entering deep sleep"));
-                    _updateSystemComboButtonLED();
-                    _systemButtonComboTimeout = millis() + kSystemComboConfirmTimeout;
-                    _systemButtonComboState = ComboButtonStateType::EXIT_MENU_TIMEOUT;
-                    _Scheduler.add(Event::milliseconds(750), false, [](Event::CallbackTimerPtr) {
-                        RemoteControlPlugin::getInstance().enterDeepSleep();
-                    });
-                    break;
-                case ComboButtonStateType::PRESSED:
-                case ComboButtonStateType::TIMEOUT:
-                case ComboButtonStateType::EXIT_MENU_TIMEOUT:
-                    // wait for action
-                    break;
-                case ComboButtonStateType::NONE:
-                    break;
-            }
-        }
+        #endif
     }
 
     void Base::_updateSystemComboButtonLED()

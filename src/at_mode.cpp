@@ -1469,7 +1469,7 @@ void at_mode_serial_handle_event(String &commandString)
             args.print(F("Entering deep sleep... time=%ums deep_sleep_max=%.0fms mode=%u"), time.count(), (ESP.deepSleepMax() / 1000.0), mode);
 
             #if ENABLE_DEEP_SLEEP
-                deepSleepParams.enterDeepSleep(time, mode);
+                DeepSleep::deepSleepParams.enterDeepSleep(time, mode);
             #else
                 ESP.deepSleep(time.count() * 1000ULL, mode);
                 ESP.deepSleep(ESP.deepSleepMax() / 2, mode);

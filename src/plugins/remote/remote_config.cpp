@@ -7,9 +7,9 @@
 
 namespace KFCConfigurationClasses {
 
-    using EventNameType = Plugins::RemoteControl::EventNameType;
+    using EventNameType = Plugins::RemoteControlConfigNS::RemoteControlConfig::EventNameType;
 
-    Plugins::RemoteControl::Config_t::Config_t() :
+    Plugins::RemoteControlConfigNS::RemoteControl::Config_t::Config_t() :
         auto_sleep_time(kDefaultValueFor_auto_sleep_time),
         deep_sleep_time(kDefaultValueFor_deep_sleep_time),
         click_time(kDefaultValueFor_click_time),
@@ -25,9 +25,9 @@ namespace KFCConfigurationClasses {
     {}
 
 
-    void Plugins::RemoteControl::defaults()
+    void Plugins::RemoteControlConfigNS::RemoteControl::defaults()
     {
-        setConfig(RemoteControlConfig::Config_t());
+        setConfig(Plugins::RemoteControlConfigNS::RemoteControl::Config_t());
         if (kButtonCount == 2) {
             setName1(F("on"));
             setName2(F("off"));
@@ -54,7 +54,7 @@ namespace KFCConfigurationClasses {
         setEvent9(F("{button_name}-hold-release"));
     }
 
-    void Plugins::RemoteControl::setName(uint8_t num, const char *name)
+    void Plugins::RemoteControlConfigNS::RemoteControl::setName(uint8_t num, const char *name)
     {
         switch(num) {
             case 0:
@@ -90,7 +90,7 @@ namespace KFCConfigurationClasses {
         }
     }
 
-    const char *Plugins::RemoteControl::getName(uint8_t num) {
+    const char *Plugins::RemoteControlConfigNS::RemoteControl::getName(uint8_t num) {
         switch(num) {
             case 0:
                 return getName1();
@@ -117,7 +117,7 @@ namespace KFCConfigurationClasses {
         }
     }
 
-    void Plugins::RemoteControl::setEventName(uint8_t num, const char *name)
+    void Plugins::RemoteControlConfigNS::RemoteControl::setEventName(uint8_t num, const char *name)
     {
         switch(num) {
             case 0:
@@ -150,7 +150,7 @@ namespace KFCConfigurationClasses {
         }
     }
 
-    const char *Plugins::RemoteControl::getEventName(uint8_t num) {
+    const char *Plugins::RemoteControlConfigNS::RemoteControl::getEventName(uint8_t num) {
         switch(num) {
             case 0:
                 return getEvent1();
@@ -174,6 +174,5 @@ namespace KFCConfigurationClasses {
                 return nullptr;
         }
     }
-
 
 }

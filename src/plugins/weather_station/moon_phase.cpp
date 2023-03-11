@@ -29,7 +29,7 @@ const __FlashStringHelper *moonPhaseHuntName(uint8_t phaseHunt)
         case 0:
             return F("New Moon"); // not working shows Waning Crescent 2034-02-19
         case 1:
-            return F("First Quarter");
+            return F("First Quarter"); // OK 2023/03/26
         case 2:
             return F("Full Moon"); // OK
         case 3:

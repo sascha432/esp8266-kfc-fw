@@ -7,12 +7,9 @@
 //
 // collects input PIN state during boot and supports deep sleep without the 3 hour limit
 // using deep sleep for longer periods of time causes the system to wake up every 3 hours to check if the time has passed. that takes
-// about 60-70ms. the total amount per day sums up to ~0.8 seconds. the exact time is stored in _runtime (microseconds) since i do not
-// have any equipmnt that can measure µWh, running a longer test over a few weeks or even months is required
-//
-// TODO record power consumption per wakeup for different WiFi modes (off, nocal, cal...)
-//
-//
+// about 60-70ms. the total amount per day sums up to ~0.8 seconds. this can be optimized by turning the wifi modem off during boot unless a key is pressed
+// otherwise it will affect quick connect by ~30ms
+// TODO: check how to improve that in framework 3.0, since it behaves differently than 2.x
 
 #if ENABLE_DEEP_SLEEP
 
@@ -30,11 +27,8 @@
 #include "../src/plugins/remote/remote_def.h"
 #endif
 
-#    define DEBUG_DEEP_SLEEP (1 || defined(DEBUG_ALL))
-
-// enable debug output
 #    ifndef DEBUG_DEEP_SLEEP
-#        define DEBUG_DEEP_SLEEP 0
+#        define DEBUG_DEEP_SLEEP 1
 #    endif
 
 // include methods in source code = 0, or in header as always inline = 1
@@ -61,6 +55,7 @@
 #    endif
 
 namespace DeepSleep {
+
     using milliseconds = std::chrono::duration<uint32_t, std::milli>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using minutes = std::chrono::duration<uint32_t, std::ratio<60>>;
@@ -71,20 +66,11 @@ namespace DeepSleep {
     static constexpr auto kButtonMask = Interrupt::PinAndMask::mask_of(kPinsToRead);
 
 
-    struct __attribute__packed__ WiFiQuickConnect
+    struct WiFiQuickConnect
     {
         int16_t channel;
         uint8_t wifi_config_num;
         bool use_static_ip;
-
-        // additional 12 bits are available using bitfields
-        // int16_t channel;
-        // uint8_t wifi_config_num: 3;
-        // bool use_static_ip: 1;
-        // uint16_t __reserved: 12;
-        //
-        // additional 16 bit are available if _alignedData is removed from Uint8Array
-        // uint16_t __reserved2;
 
         struct Uint8Array {
             union {
@@ -167,7 +153,7 @@ namespace DeepSleep {
         bool getValue(uint8_t pin) const;
         // get active states for all pins
         uint32_t getStates() const;
-        // get values (states for actgive high and inverted states for active low)
+        // get values (states for active high and inverted states for active low)
         uint32_t getValues() const;
         // get values from states
         uint32_t getValues(uint32_t states) const;

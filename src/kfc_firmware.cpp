@@ -163,7 +163,7 @@ void setup()
     #endif
     DEBUG_BOOT_PRINT_POS();
     #if ENABLE_DEEP_SLEEP
-        deepSleepPinState.merge();
+        DeepSleep::deepSleepPinState.merge();
     #endif
 
     DEBUG_BOOT_PRINT_POS();
@@ -186,7 +186,7 @@ void setup()
 
     #if ENABLE_DEEP_SLEEP
         DEBUG_BOOT_PRINT_POS();
-        deepSleepPinState.merge();
+        DeepSleep::deepSleepPinState.merge();
         DEBUG_BOOT_PRINT_POS();
         bool wakeup = resetDetector.hasWakeUpDetected();
 
@@ -204,13 +204,13 @@ void setup()
         // ---------------------------------------------------------------------------------
 
         DEBUG_BOOT_PRINT_POS();
-        deepSleepPinState.merge();
+        DeepSleep::deepSleepPinState.merge();
         if (wakeup) {
             DEBUG_BOOT_PRINT_POS();
             KFCFWConfiguration::wakeUpFromDeepSleep();
         }
         DEBUG_BOOT_PRINT_POS();
-        deepSleepPinState.merge();
+        DeepSleep::deepSleepPinState.merge();
     #endif
 
     #if DEBUG_BOOT_PRINT
@@ -627,11 +627,11 @@ void setup()
         }
 
         #if DEBUG_DEEP_SLEEP
-            __DBG_printf("wakeup=%u mode=%u", wakeup, deepSleepParams.getWakeupMode());
+            __DBG_printf("wakeup=%u mode=%u", wakeup, DeepSleep::deepSleepParams.getWakeupMode());
             DEBUG_BOOT_PRINT_POS();
-            if (deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
+            if (DeepSleep::deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
                 DEBUG_BOOT_PRINT_POS();
-                Logger_notice(F("Wakeup from deep sleep start-time=" TIME_T_FMT " sleep-time=%.3f rtc-offset=%.6f"), time(nullptr), deepSleepParams.getTotalTime(), DeepSleep::_realTimeOffset / 1000000.0);
+                Logger_notice(F("Wakeup from deep sleep start-time=" TIME_T_FMT " sleep-time=%.3f rtc-offset=%.6f"), time(nullptr), DeepSleep::deepSleepParams.getTotalTime(), DeepSleep::_realTimeOffset / 1000000.0);
             }
         #endif
     }

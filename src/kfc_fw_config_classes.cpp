@@ -31,7 +31,6 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNamePingConfig_t, "MainConfig().plugins.p
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameWeatherStationConfig_t, "MainConfig().plugins.weatherstation.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameRemoteConfig_t, "MainConfig().plugins.remote.cfg");
 
-
 // --------------------------------------------------------------------
 // exported static functions
 

@@ -213,6 +213,7 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
             append = PrintString(F(" after %ums"), _wifiConnected);
         }
         Logger_notice(F("WiFi(#%u) connected to %s%s"), config.getWiFiConfigurationNum() + 1, event.ssid.c_str(), append.c_str());
+
         #if ENABLE_DEEP_SLEEP
             config.storeQuickConnect(event.bssid, event.channel);
 
@@ -222,17 +223,14 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
 
             struct station_config config = {};
             strncpy(reinterpret_cast<char *>(config.ssid), event.ssid.c_str(), sizeof(config.ssid));
-            strncpy(reinterpret_cast<char *>(config.password), Network::WiFi::getPassword(), sizeof(config.password));
-            memcpy(config.bssid, event.bssid, sizeof(event.bssid));
+            strncpy(reinterpret_cast<char *>(config.password), Network::WiFi::getPassword(_wifiNumActive), sizeof(config.password));
+            memmove(config.bssid, event.bssid, sizeof(event.bssid));
             config.bssid_set = 0;
-
-        #error TODO check
-        // to use quickconnect, WiFi needs to be enabled during boot and the default config loaded
 
             // check if something has changed
             if (memcmp(&config, &defaultCfg, sizeof(config)) != 0) {
                 wifi_station_set_config(&config);
-                __DBG_printf("updated WiFi defualt configuration");
+                __DBG_printf("updated WiFi default configuration");
             }
         #endif
 
@@ -425,148 +423,148 @@ void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
 
 #elif USE_WIFI_SET_EVENT_HANDLER_CB
 
-// converter for System_Event_t
+    // converter for System_Event_t
 
-struct WiFiEventStationModeGotIPEx : WiFiEventStationModeGotIP
-{
-    WiFiEventStationModeGotIPEx(const IPAddress &_ip, const IPAddress &_mask, const IPAddress &_gw) : WiFiEventStationModeGotIP({_ip, _mask, _gw}) {}
-};
+    struct WiFiEventStationModeGotIPEx : WiFiEventStationModeGotIP
+    {
+        WiFiEventStationModeGotIPEx(const IPAddress &_ip, const IPAddress &_mask, const IPAddress &_gw) : WiFiEventStationModeGotIP({_ip, _mask, _gw}) {}
+    };
 
-struct WiFiEventStationModeConnectedEx : WiFiEventStationModeConnected {
-    WiFiEventStationModeConnectedEx(const uint8_t *_ssid, size_t ssidLen, const uint8_t *_bssid, size_t bssidLen, uint8_t channel) : WiFiEventStationModeConnected({String(), {}, channel}) {
-        ssid.concat(reinterpret_cast<const char *>(_ssid), ssidLen);
-        memcpy_P(bssid, _bssid, std::min(sizeof(bssid), bssidLen));
-    }
-};
+    struct WiFiEventStationModeConnectedEx : WiFiEventStationModeConnected {
+        WiFiEventStationModeConnectedEx(const uint8_t *_ssid, size_t ssidLen, const uint8_t *_bssid, size_t bssidLen, uint8_t channel) : WiFiEventStationModeConnected({String(), {}, channel}) {
+            ssid.concat(reinterpret_cast<const char *>(_ssid), ssidLen);
+            memcpy_P(bssid, _bssid, std::min(sizeof(bssid), bssidLen));
+        }
+    };
 
-struct WiFiEventStationModeDisconnectedEx : WiFiEventStationModeDisconnected {
-    WiFiEventStationModeDisconnectedEx(const uint8_t *_ssid, size_t ssidLen, const uint8_t *_bssid, size_t bssidLen, uint8_t reason) : WiFiEventStationModeDisconnected({String(), {}, static_cast<WiFiDisconnectReason>(reason)}) {
-        ssid.concat(reinterpret_cast<const char *>(_ssid), ssidLen);
-        memcpy_P(bssid, _bssid, std::min(sizeof(bssid), bssidLen));
-    }
-};
+    struct WiFiEventStationModeDisconnectedEx : WiFiEventStationModeDisconnected {
+        WiFiEventStationModeDisconnectedEx(const uint8_t *_ssid, size_t ssidLen, const uint8_t *_bssid, size_t bssidLen, uint8_t reason) : WiFiEventStationModeDisconnected({String(), {}, static_cast<WiFiDisconnectReason>(reason)}) {
+            ssid.concat(reinterpret_cast<const char *>(_ssid), ssidLen);
+            memcpy_P(bssid, _bssid, std::min(sizeof(bssid), bssidLen));
+        }
+    };
 
-struct WiFiEventSoftAPModeStationDisconnectedEx : WiFiEventSoftAPModeStationDisconnected {
-    WiFiEventSoftAPModeStationDisconnectedEx(const uint8_t *_mac, size_t macLen, uint8_t aid) : WiFiEventSoftAPModeStationDisconnected({{}, aid}) {
-        memcpy_P(mac, _mac, std::min(sizeof(mac), macLen));
-    }
-};
+    struct WiFiEventSoftAPModeStationDisconnectedEx : WiFiEventSoftAPModeStationDisconnected {
+        WiFiEventSoftAPModeStationDisconnectedEx(const uint8_t *_mac, size_t macLen, uint8_t aid) : WiFiEventSoftAPModeStationDisconnected({{}, aid}) {
+            memcpy_P(mac, _mac, std::min(sizeof(mac), macLen));
+        }
+    };
 
-struct WiFiEventSoftAPModeStationConnectedEx : WiFiEventSoftAPModeStationConnected {
-    WiFiEventSoftAPModeStationConnectedEx(uint8_t rssi, const uint8_t *_mac, size_t macLen) : WiFiEventSoftAPModeStationConnected({static_cast<uint8_t>(rssi), {}}) {
-        memcpy_P(mac, _mac, std::min(sizeof(mac), macLen));
-    }
-};
+    struct WiFiEventSoftAPModeStationConnectedEx : WiFiEventSoftAPModeStationConnected {
+        WiFiEventSoftAPModeStationConnectedEx(uint8_t rssi, const uint8_t *_mac, size_t macLen) : WiFiEventSoftAPModeStationConnected({static_cast<uint8_t>(rssi), {}}) {
+            memcpy_P(mac, _mac, std::min(sizeof(mac), macLen));
+        }
+    };
 
-struct WiFiSystemEventEx : System_Event_t {
+    struct WiFiSystemEventEx : System_Event_t {
 
-    operator WiFiEventStationModeConnected() const {
-        auto &info = event_info.connected;
-        return WiFiEventStationModeConnectedEx(info.ssid, sizeof(info.ssid), info.bssid, sizeof(info.ssid_len), info.channel);
-    }
-    operator WiFiEventStationModeDisconnected() const {
-        auto &info = event_info.disconnected;
-        return WiFiEventStationModeDisconnectedEx(info.ssid, info.ssid_len, info.bssid, sizeof(info.bssid), info.reason);
-    }
-    operator WiFiEventStationModeGotIP() const {
-        auto &info = event_info.got_ip;
-        return WiFiEventStationModeGotIPEx(info.ip.addr, info.mask.addr, info.gw.addr);
-    }
-    operator WiFiEventSoftAPModeStationConnected() const {
-        auto &info = event_info.sta_connected;
-        return WiFiEventSoftAPModeStationConnectedEx(info.aid, info.mac, sizeof(info.mac));
-    }
-    operator WiFiEventSoftAPModeStationDisconnected() const {
-        auto &info = event_info.sta_disconnected;
-        return WiFiEventSoftAPModeStationDisconnectedEx(info.mac, sizeof(info.mac), info.aid);
-    }
+        operator WiFiEventStationModeConnected() const {
+            auto &info = event_info.connected;
+            return WiFiEventStationModeConnectedEx(info.ssid, sizeof(info.ssid), info.bssid, sizeof(info.ssid_len), info.channel);
+        }
+        operator WiFiEventStationModeDisconnected() const {
+            auto &info = event_info.disconnected;
+            return WiFiEventStationModeDisconnectedEx(info.ssid, info.ssid_len, info.bssid, sizeof(info.bssid), info.reason);
+        }
+        operator WiFiEventStationModeGotIP() const {
+            auto &info = event_info.got_ip;
+            return WiFiEventStationModeGotIPEx(info.ip.addr, info.mask.addr, info.gw.addr);
+        }
+        operator WiFiEventSoftAPModeStationConnected() const {
+            auto &info = event_info.sta_connected;
+            return WiFiEventSoftAPModeStationConnectedEx(info.aid, info.mac, sizeof(info.mac));
+        }
+        operator WiFiEventSoftAPModeStationDisconnected() const {
+            auto &info = event_info.sta_disconnected;
+            return WiFiEventSoftAPModeStationDisconnectedEx(info.mac, sizeof(info.mac), info.aid);
+        }
 
-    const __FlashStringHelper *eventToString() const {
-        switch(event) {
+        const __FlashStringHelper *eventToString() const {
+            switch(event) {
+                case EVENT_STAMODE_CONNECTED:
+                    return F("STAMODE_CONNECTED");
+                case EVENT_STAMODE_DISCONNECTED:
+                    return F("STAMODE_DISCONNECTED");
+                case EVENT_STAMODE_AUTHMODE_CHANGE:
+                    return F("STAMODE_AUTHMODE_CHANGE");
+                case EVENT_STAMODE_GOT_IP:
+                    return F("STAMODE_GOT_IP");
+                case EVENT_STAMODE_DHCP_TIMEOUT:
+                    return F("STAMODE_DHCP_TIMEOUT");
+                case EVENT_SOFTAPMODE_STACONNECTED:
+                    return F("SOFTAPMODE_STACONNECTED");
+                case EVENT_SOFTAPMODE_STADISCONNECTED:
+                    return F("SOFTAPMODE_STADISCONNECTED");
+                case EVENT_SOFTAPMODE_PROBEREQRECVED:
+                    return F("SOFTAPMODE_PROBEREQRECVED");
+                case EVENT_OPMODE_CHANGED:
+                    return F("OPMODE_CHANGED");
+                case EVENT_SOFTAPMODE_DISTRIBUTE_STA_IP:
+                    return F("SOFTAPMODE_DISTRIBUTE_STA_IP");
+                default:
+                    break;
+            }
+            return F("UNKNOWN");
+        }
+    };
+
+    void KFCFWConfiguration::_onWiFiEvent(System_Event_t *orgEventPtr)
+    {
+        auto &orgEvent = *reinterpret_cast<WiFiSystemEventEx *>(orgEventPtr);
+        __LDBG_printf("event=%u(%s)", orgEvent.event, orgEvent.eventToString());
+        switch(orgEvent.event) {
             case EVENT_STAMODE_CONNECTED:
-                return F("STAMODE_CONNECTED");
+                config._onWiFiConnectCb(orgEvent);
+                break;
             case EVENT_STAMODE_DISCONNECTED:
-                return F("STAMODE_DISCONNECTED");
-            case EVENT_STAMODE_AUTHMODE_CHANGE:
-                return F("STAMODE_AUTHMODE_CHANGE");
+                config._onWiFiDisconnectCb(orgEvent);
+                break;
             case EVENT_STAMODE_GOT_IP:
-                return F("STAMODE_GOT_IP");
+                config._onWiFiGotIPCb(orgEvent);
+                break;
             case EVENT_STAMODE_DHCP_TIMEOUT:
-                return F("STAMODE_DHCP_TIMEOUT");
+                config._onWiFiOnDHCPTimeoutCb();
+                break;
             case EVENT_SOFTAPMODE_STACONNECTED:
-                return F("SOFTAPMODE_STACONNECTED");
+                config._softAPModeStationConnectedCb(orgEvent);
+                break;
             case EVENT_SOFTAPMODE_STADISCONNECTED:
-                return F("SOFTAPMODE_STADISCONNECTED");
-            case EVENT_SOFTAPMODE_PROBEREQRECVED:
-                return F("SOFTAPMODE_PROBEREQRECVED");
-            case EVENT_OPMODE_CHANGED:
-                return F("OPMODE_CHANGED");
-            case EVENT_SOFTAPMODE_DISTRIBUTE_STA_IP:
-                return F("SOFTAPMODE_DISTRIBUTE_STA_IP");
-            default:
+                config._softAPModeStationDisconnectedCb(orgEvent);
                 break;
         }
-        return F("UNKNOWN");
     }
-};
-
-void KFCFWConfiguration::_onWiFiEvent(System_Event_t *orgEventPtr)
-{
-    auto &orgEvent = *reinterpret_cast<WiFiSystemEventEx *>(orgEventPtr);
-    __LDBG_printf("event=%u(%s)", orgEvent.event, orgEvent.eventToString());
-    switch(orgEvent.event) {
-        case EVENT_STAMODE_CONNECTED:
-            config._onWiFiConnectCb(orgEvent);
-            break;
-        case EVENT_STAMODE_DISCONNECTED:
-            config._onWiFiDisconnectCb(orgEvent);
-            break;
-        case EVENT_STAMODE_GOT_IP:
-            config._onWiFiGotIPCb(orgEvent);
-            break;
-        case EVENT_STAMODE_DHCP_TIMEOUT:
-            config._onWiFiOnDHCPTimeoutCb();
-            break;
-        case EVENT_SOFTAPMODE_STACONNECTED:
-            config._softAPModeStationConnectedCb(orgEvent);
-            break;
-        case EVENT_SOFTAPMODE_STADISCONNECTED:
-            config._softAPModeStationDisconnectedCb(orgEvent);
-            break;
-    }
-}
 
 #else
 
-static void __onWiFiConnectCb(const WiFiEventStationModeConnected &event)
-{
-    config._onWiFiConnectCb(event);
-}
+    static void __onWiFiConnectCb(const WiFiEventStationModeConnected &event)
+    {
+        config._onWiFiConnectCb(event);
+    }
 
-static void __onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
-{
-    config._onWiFiGotIPCb(event);
-}
+    static void __onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
+    {
+        config._onWiFiGotIPCb(event);
+    }
 
-static void __onWiFiDisconnectCb(const WiFiEventStationModeDisconnected& event)
-{
-    config._onWiFiDisconnectCb(event);
-}
+    static void __onWiFiDisconnectCb(const WiFiEventStationModeDisconnected& event)
+    {
+        config._onWiFiDisconnectCb(event);
+    }
 
-static void __onWiFiOnDHCPTimeoutCb()
-{
-    config._onWiFiOnDHCPTimeoutCb();
-}
+    static void __onWiFiOnDHCPTimeoutCb()
+    {
+        config._onWiFiOnDHCPTimeoutCb();
+    }
 
-static void __softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event)
-{
-    config._softAPModeStationConnectedCb(event);
-}
+    static void __softAPModeStationConnectedCb(const WiFiEventSoftAPModeStationConnected &event)
+    {
+        config._softAPModeStationConnectedCb(event);
+    }
 
-static void __softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &event)
-{
-    config._softAPModeStationDisconnectedCb(event);
-}
+    static void __softAPModeStationDisconnectedCb(const WiFiEventSoftAPModeStationDisconnected &event)
+    {
+        config._softAPModeStationDisconnectedCb(event);
+    }
 
 #endif
 
@@ -762,45 +760,46 @@ const String KFCFWConfiguration::getShortFirmwareVersion()
 
 #if ENABLE_DEEP_SLEEP
 
-void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
-{
-    __LDBG_printf("bssid=%s channel=%d", mac2String(bssid).c_str(), channel);
+    void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
+    {
+        __LDBG_printf("bssid=%s channel=%d", mac2String(bssid).c_str(), channel);
 
-    using namespace DeepSleep;
+        using namespace DeepSleep;
 
-    WiFiQuickConnect quickConnect;
-    if (!RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
-        quickConnect = WiFiQuickConnect();
-    }
-    quickConnect.channel = channel;
-    quickConnect.bssid = bssid;
-    RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect));
-}
-
-void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway)
-{
-    __LDBG_printf("ip=%s netmask=%s gw=%s",
-        IPAddress(ip).toString().c_str(),
-        IPAddress(netmask).toString().c_str(),
-        IPAddress(gateway).toString().c_str()
-    );
-
-    using namespace DeepSleep;
-
-    auto quickConnect = WiFiQuickConnect();
-    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
-        quickConnect.local_ip = ip;
-        quickConnect.subnet = netmask;
-        quickConnect.gateway = gateway;
-        quickConnect.dns1 = WiFi.dnsIP();
-        quickConnect.dns2 = WiFi.dnsIP(1);
-        auto flags = System::Flags::getConfig();
-        quickConnect.use_static_ip = flags.use_static_ip_during_wakeup || !flags.is_station_mode_dhcp_enabled;
+        WiFiQuickConnect quickConnect;
+        if (!RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
+            quickConnect = WiFiQuickConnect();
+        }
+        quickConnect.channel = channel;
+        quickConnect.bssid = bssid;
         RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect));
-    } else {
-        __DBG_print("reading RTC memory failed");
     }
-}
+
+    void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway)
+    {
+        __LDBG_printf("ip=%s netmask=%s gw=%s",
+            IPAddress(ip).toString().c_str(),
+            IPAddress(netmask).toString().c_str(),
+            IPAddress(gateway).toString().c_str()
+        );
+
+        using namespace DeepSleep;
+
+        auto quickConnect = WiFiQuickConnect();
+        if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
+            quickConnect.local_ip = ip;
+            quickConnect.subnet = netmask;
+            quickConnect.gateway = gateway;
+            quickConnect.dns1 = WiFi.dnsIP();
+            quickConnect.dns2 = WiFi.dnsIP(1);
+            auto flags = System::Flags::getConfig();
+            quickConnect.use_static_ip = flags.use_static_ip_during_wakeup;
+            RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect));
+        }
+        else {
+            __DBG_print("reading RTC memory failed");
+        }
+    }
 
 #endif
 
@@ -1062,58 +1061,56 @@ void KFCFWConfiguration::wifiQuickConnect()
             struct station_config config;
             if (wifi_station_get_config_default(&config)) {
         #endif
-            int32_t channel;
-            uint8_t *bssidPtr;
-            DeepSleep::WiFiQuickConnect quickConnect;
+                int32_t channel;
+                uint8_t *bssidPtr;
+                DeepSleep::WiFiQuickConnect quickConnect;
 
-            if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
-                channel = quickConnect.channel;
-                bssidPtr = quickConnect.bssid;
-            } else {
-                quickConnect = {};
-                channel = 0;
-                // bssidPtr = nullptr;
-            }
+                if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
+                    channel = quickConnect.channel;
+                    bssidPtr = quickConnect.bssid;
+                } else {
+                    quickConnect = {};
+                    channel = 0;
+                    // bssidPtr = nullptr;
+                }
 
-            WiFi.per
+                if (channel <= 0 || !bssidPtr) {
 
-            if (channel <= 0 || !bssidPtr) {
+                    __LDBG_printf("Cannot read quick connect from RTC memory, running WiFi.begin(%s, ***) only", config.ssid);
+                    if (WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password)) != WL_DISCONNECTED) {
+                        Logger_error(F("Failed to start WiFi"));
+                    }
 
-                __LDBG_printf("Cannot read quick connect from RTC memory, running WiFi.begin(%s, ***) only", config.ssid);
-                if (WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password)) != WL_DISCONNECTED) {
-                    Logger_error(F("Failed to start WiFi"));
+                } else {
+
+                    if (quickConnect.use_static_ip && quickConnect.local_ip) {
+                        __LDBG_printf("configuring static ip");
+                        WiFi.config(quickConnect.local_ip, quickConnect.gateway, quickConnect.subnet, quickConnect.dns1, quickConnect.dns2);
+                    }
+
+                    wl_status_t result;
+                    if ((result = WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password), channel, bssidPtr, true)) != WL_DISCONNECTED) {
+                        Logger_error(F("Failed to start WiFi"));
+                    }
+
+                    __LDBG_printf("WiFi.begin() = %d, ssid %.32s, channel %d, bssid %s, config: static ip %d, %s/%s gateway %s, dns %s, %s",
+                        result,
+                        config.ssid,
+                        channel,
+                        mac2String(bssidPtr).c_str(),
+                        quickConnect.use_static_ip ? 1 : 0,
+                        __S(IPAddress(quickConnect.local_ip)),
+                        inet_nto_cstr(quickConnect.gateway),
+                        inet_nto_cstr(quickConnect.subnet),
+                        inet_nto_cstr(quickConnect.dns1),
+                        inet_nto_cstr(quickConnect.dns2)
+                    );
+
                 }
 
             } else {
-
-                if (quickConnect.use_static_ip && quickConnect.local_ip) {
-                    __LDBG_printf("configuring static ip");
-                    WiFi.config(quickConnect.local_ip, quickConnect.gateway, quickConnect.subnet, quickConnect.dns1, quickConnect.dns2);
-                }
-
-                wl_status_t result;
-                if ((result = WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password), channel, bssidPtr, true)) != WL_DISCONNECTED) {
-                    Logger_error(F("Failed to start WiFi"));
-                }
-
-                __LDBG_printf("WiFi.begin() = %d, ssid %.32s, channel %d, bssid %s, config: static ip %d, %s/%s gateway %s, dns %s, %s",
-                    result,
-                    config.ssid,
-                    channel,
-                    mac2String(bssidPtr).c_str(),
-                    quickConnect.use_static_ip ? 1 : 0,
-                    __S(IPAddress(quickConnect.local_ip)),
-                    inet_nto_cstr(quickConnect.gateway),
-                    inet_nto_cstr(quickConnect.subnet),
-                    inet_nto_cstr(quickConnect.dns1),
-                    inet_nto_cstr(quickConnect.dns2)
-                );
-
+                Logger_error(F("Failed to load WiFi configuration"));
             }
-
-        } else {
-            Logger_error(F("Failed to load WiFi configuration"));
-        }
     #endif
 }
 

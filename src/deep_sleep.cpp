@@ -4,15 +4,15 @@
 
 #if ENABLE_DEEP_SLEEP
 
-#include <stl_ext/memory.h>
-#include "reset_detector.h"
-#include "deep_sleep.h"
-#include "save_crash.h"
-#if DEBUG_DEEP_SLEEP
-#include "logger.h"
-#endif
-#include "../src/plugins/plugins.h"
-#include <plugins_menu.h>
+#    include "deep_sleep.h"
+#    include "reset_detector.h"
+#    include "save_crash.h"
+#    include <stl_ext/memory.h>
+#    if DEBUG_DEEP_SLEEP
+#        include "logger.h"
+#    endif
+#    include "../src/plugins/plugins.h"
+#    include <plugins_menu.h>
 
 #    undef __LDBG_printf
 #    if DEBUG_DEEP_SLEEP
@@ -23,20 +23,17 @@
 
 using DeepSleepPinStateUninitialized = stdex::UninitializedClass<DeepSleep::PinState>;
 static DeepSleepPinStateUninitialized deepSleepPinStateNoInit __attribute__((section(".noinit")));
-DeepSleep::PinState &deepSleepPinState = deepSleepPinStateNoInit._object;
+static bool enableWifi = false;
+
+namespace DeepSleep {
+
+    PinState &deepSleepPinState = deepSleepPinStateNoInit._object;
+    DeepSleepParam deepSleepParams;
+    uint64_t _realTimeOffset;
+
+}
 
 using namespace DeepSleep;
-
-inline static void deep_sleep_wakeup_wifi()
-{
-    #if ARDUINO_ESP8266_MAJOR >= 3
-    // Starting from arduino core v3: wifi is disabled at boot time
-    // WiFi.begin() or WiFi.softAP() will wake WiFi up
-    // #error TODO enable wifi or remove disabling via __disableWiFiAtBootTime
-        #warning TODO check if this enables wifi when being called or in general
-        enableWiFiAtBootTime();
-    #endif
-}
 
 inline static void deep_sleep_preinit()
 {
@@ -53,7 +50,7 @@ inline static void deep_sleep_preinit()
             // know how much of the time has passed already
             realTimeOffset = (deepSleepParams._totalSleepTime - deepSleepParams._remainingSleepTime) + (deepSleepParams._runtime / 1000);
             #if DEBUG_DEEP_SLEEP
-                __LDBG_printf("real time offset without the last cycle: %.6f", DeepSleep::_realTimeOffset / 1000000.0);
+                __LDBG_printf("real time offset without the last cycle: %.6f", _realTimeOffset / 1000000.0);
             #endif
         }
     }
@@ -63,7 +60,7 @@ inline static void deep_sleep_preinit()
             __LDBG_printf("reason: %s", resetDetector.getResetReason());
         #endif
         RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
-        RTCMemoryManager::updateTimeOffset((realTimeOffset + (micros() / 1000));
+        RTCMemoryManager::updateTimeOffset((realTimeOffset + (micros() / 1000)));
         return;
     }
 
@@ -74,7 +71,7 @@ inline static void deep_sleep_preinit()
         #endif
         RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
         deepSleepParams = DeepSleepParam(WakeupMode::USER);
-        deep_sleep_wakeup_wifi(); // speed up wifi connection
+        enableWifi = true;
         return;
     }
 
@@ -85,6 +82,7 @@ inline static void deep_sleep_preinit()
             #endif
             RTCMemoryManager::remove(RTCMemoryManager::RTCMemoryId::DEEP_SLEEP);
             deepSleepParams = DeepSleepParam(WakeupMode::USER);
+            enableWifi = true;
             return;
         }
     #endif
@@ -113,7 +111,7 @@ inline static void deep_sleep_preinit()
                 deepSleepParams._remainingSleepTime = 0;
                 deepSleepParams._currentSleepTime = 0;
                 deepSleepParams._wakeupMode = WakeupMode::AUTO;
-                // deep_sleep_wakeup_wifi(); // speed up wifi connection
+                enableWifi = true;
 
             }
             else {
@@ -213,7 +211,7 @@ String PinState::toString(uint32_t state, uint32_t time) const
     for(auto pin: kPinsToRead) {
         str += state & _BV(pin) ? '1' : '0';
     }
-    str.printf_P(PSTR(" state=%s time=%u actve_low=%u"),
+    str.printf_P(PSTR(" state=%s time=%u active_low=%u"),
         BitsToStr<17, true>(state).c_str(),
         time,
         activeLow()
@@ -221,9 +219,33 @@ String PinState::toString(uint32_t state, uint32_t time) const
     return str;
 }
 
+#if ARDUINO_ESP8266_MAJOR >= 3
+
+    // enable WiFi on button press, but keep it offline if entering deep sleep again
+
+    extern "C" void __disableWiFiAtBootTime()
+    {
+        if (enableWifi) {
+            // enable station mode if a button has been pressed
+            // TODO check if the default wifi config (persistent) can be used instead of quick connect
+            wifi_set_opmode_current(WIFI_STA);
+        }
+        else {
+            // default for framework 3.x
+            wifi_set_opmode_current(WIFI_OFF);
+            wifi_fpm_set_sleep_type(MODEM_SLEEP_T);
+            wifi_fpm_open();
+            wifi_fpm_do_sleep(0xFFFFFFF);
+        }
+    }
+
+#endif
+
+extern "C" void resetDetectorNoInit_init();
+
 extern "C" void preinit(void)
 {
-    resetDetectorNoInit.init();
+    resetDetectorNoInit_init();
     deepSleepPinStateNoInit.init();
     componentRegisterNoInit.init();
     resetDetector.begin();
@@ -231,8 +253,8 @@ extern "C" void preinit(void)
     deep_sleep_preinit();
 }
 
-#if !DEEP_SLEEP_INCLUDE_HPP_INLINE
-#include "deep_sleep.hpp"
-#endif
+#    if !DEEP_SLEEP_INCLUDE_HPP_INLINE
+#        include "deep_sleep.hpp"
+#    endif
 
 #endif

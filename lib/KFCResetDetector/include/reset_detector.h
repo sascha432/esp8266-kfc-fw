@@ -15,7 +15,7 @@
 
 // enable debug outout
 #ifndef DEBUG_RESET_DETECTOR
-#    define DEBUG_RESET_DETECTOR 0
+#    define DEBUG_RESET_DETECTOR 1
 #endif
 
 // include methods in source code = 0, or in header as always inline = 1
@@ -176,6 +176,7 @@ public:
 
 class HardwareSerial;
 
+extern "C" void resetDetectorNoInit_init();
 extern ResetDetector &resetDetector;
 
 #if RESET_DETECTOR_INCLUDE_HPP_INLINE

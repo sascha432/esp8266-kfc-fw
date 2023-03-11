@@ -28,14 +28,14 @@
 #include <Buffer.h>
 
 #if DEBUG_RTC_MEMORY_MANAGER
-#include "debug_helper_enable.h"
+#    include "debug_helper_enable.h"
 #else
-#include "debug_helper_disable.h"
+#    include "debug_helper_disable.h"
 #endif
 
 #if ESP8266
-#include <user_interface.h>
-#include <coredecls.h>
+#    include <coredecls.h>
+#    include <user_interface.h>
 #endif
 
 #if ENABLE_DEEP_SLEEP
@@ -44,7 +44,7 @@ namespace DeepSleep {
 }
 #endif
 
-//TODO remove
+// TODO remove
 uint32_t RTCMemoryManager::_bufSize;
 
 #if RTC_SUPPORT == 0
@@ -396,66 +396,66 @@ bool RTCMemoryManager::clear()
 
 #if DEBUG
 
-#include "plugins.h"
+    #include "plugins.h"
 
-bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
+    bool RTCMemoryManager::dump(Print &output, RTCMemoryId displayId) {
 
-    Header_t header __attribute__((aligned(4)));
-    auto memPtr = _readMemory(header, 0);
-    if (!memPtr) {
-        output.println(F("RTC data not set or invalid"));
-        return false;
-    }
-
-    #if RTC_SUPPORT == 0
-        output.printf_P(PSTR("RTC memory time: %u\n"), RTCMemoryManager::readTime().getTime());
-    #endif
-
-    output.printf_P(PSTR("RTC data length: %u\n"), header.data_length());
-
-    bool result = false;
-    DumpBinary dumper(output);
-    auto ptr = header.begin(memPtr);
-    auto endPtr = header.end(memPtr);
-    while(ptr + sizeof(Entry_t) < endPtr) {
-        Entry_t entry(ptr);
-        __LDBG_printf("read id=%u len=%u", entry.mem_id, entry.length);
-        if (!entry) {
-            break;
+        Header_t header __attribute__((aligned(4)));
+        auto memPtr = _readMemory(header, 0);
+        if (!memPtr) {
+            output.println(F("RTC data not set or invalid"));
+            return false;
         }
-        #if DEBUG_RTC_MEMORY_MANAGER
-        {
-            PrintString out;
-            DumpBinary dumper(out);
-            dumper.dump(ptr + sizeof(entry), entry.length);
-            dumper.setPerLine(entry.length);
-            dumper.setGroupBytes(4);
-            __LDBG_printf("rtcm=%d id=0x%02x length=%u data=%s", header.distance(memPtr, ptr), entry.mem_id, entry.length, out.c_str());
-        }
+
+        #if RTC_SUPPORT == 0
+            output.printf_P(PSTR("RTC memory time: %u\n"), RTCMemoryManager::readTime().getTime());
         #endif
-        ptr += sizeof(entry);
-        if (ptr >= endPtr) {
-            __LDBG_printf("entry length exceeds total size. id=0x%02x entry_length=%u size=%u", entry.mem_id, entry.length, header.length);
-            break;
-        }
-        if (displayId == RTCMemoryId::NONE || displayId == static_cast<RTCMemoryId>(entry.mem_id)) {
-            if (entry.length) {
-                result = true;
+
+        output.printf_P(PSTR("RTC data length: %u\n"), header.data_length());
+
+        bool result = false;
+        DumpBinary dumper(output);
+        auto ptr = header.begin(memPtr);
+        auto endPtr = header.end(memPtr);
+        while(ptr + sizeof(Entry_t) < endPtr) {
+            Entry_t entry(ptr);
+            __LDBG_printf("read id=%u len=%u", entry.mem_id, entry.length);
+            if (!entry) {
+                break;
             }
-            #if HAVE_KFC_PLUGINS
-                output.printf_P(PSTR("id: 0x%02x (%s), length %d "), entry.mem_id, PluginComponent::getMemoryIdName(entry.mem_id), entry.length);
-            #else
-                output.printf_P(PSTR("id: 0x%02x, length %d "), entry.mem_id, entry.length);
+            #if DEBUG_RTC_MEMORY_MANAGER
+            {
+                PrintString out;
+                DumpBinary dumper(out);
+                dumper.dump(ptr + sizeof(entry), entry.length);
+                dumper.setPerLine(entry.length);
+                dumper.setGroupBytes(4);
+                __LDBG_printf("rtcm=%d id=0x%02x length=%u data=%s", header.distance(memPtr, ptr), entry.mem_id, entry.length, out.c_str());
+            }
             #endif
-            dumper.setGroupBytes(4);
-            dumper.setPerLine(entry.length);
-            dumper.dump(ptr, entry.length);
+            ptr += sizeof(entry);
+            if (ptr >= endPtr) {
+                __LDBG_printf("entry length exceeds total size. id=0x%02x entry_length=%u size=%u", entry.mem_id, entry.length, header.length);
+                break;
+            }
+            if (displayId == RTCMemoryId::NONE || displayId == static_cast<RTCMemoryId>(entry.mem_id)) {
+                if (entry.length) {
+                    result = true;
+                }
+                #if HAVE_KFC_PLUGINS
+                    output.printf_P(PSTR("id: 0x%02x (%s), length %d "), entry.mem_id, PluginComponent::getMemoryIdName(entry.mem_id), entry.length);
+                #else
+                    output.printf_P(PSTR("id: 0x%02x, length %d "), entry.mem_id, entry.length);
+                #endif
+                dumper.setGroupBytes(4);
+                dumper.setPerLine(entry.length);
+                dumper.dump(ptr, entry.length);
+            }
+            ptr += entry.length;
         }
-        ptr += entry.length;
+        release(memPtr);
+        return result;
     }
-    release(memPtr);
-    return result;
-}
 
 #endif
 
@@ -482,21 +482,21 @@ void RTCMemoryManager::_writeTime(const RtcTime &time)
 
 #if RTC_SUPPORT == 0
 
-void RTCMemoryManager::setupRTC()
-{
-    _rtcTimer.startTimer(1000, true);
-}
-
-void RTCMemoryManager::updateTimeOffset(uint32_t offset)
-{
-    __LDBG_printf("update time offset=%ums", offset);
-    offset /= 1000;
-    if (offset) {
-        auto rtc = _readTime();
-        rtc.time += offset;
-        _writeTime(rtc);
+    void RTCMemoryManager::setupRTC()
+    {
+        _rtcTimer.startTimer(1000, true);
     }
-}
+
+    void RTCMemoryManager::updateTimeOffset(uint32_t offset)
+    {
+        __LDBG_printf("update time offset=%ums", offset);
+        offset /= 1000;
+        if (offset) {
+            auto rtc = _readTime();
+            rtc.time += offset;
+            _writeTime(rtc);
+        }
+    }
 
 #endif
 

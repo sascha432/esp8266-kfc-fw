@@ -104,7 +104,7 @@ void RemoteControlPlugin::_updateButtonConfig()
 
 void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    deepSleepPinState.merge();
+    DeepSleep::deepSleepPinState.merge();
 
 #if PIN_MONITOR_BUTTON_GROUPS
     SingleClickGroupPtr group1;
@@ -118,7 +118,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         auto pin = kButtonPins[n];
 #if PIN_MONITOR_BUTTON_GROUPS
         auto &button = pinMonitor.attach<Button>(pin, n, this);
-        using EventNameType = Plugins::RemoteControlConfig::EventNameType;
+        using EventNameType = Plugins::RemoteControl::EventNameType;
 
         if (!_config.enabled[EventNameType::BUTTON_PRESS]) {
             if (n == 0 || n == 3) {
@@ -158,14 +158,14 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     ETS_GPIO_INTR_DISABLE();
 
     // states during boot
-    auto states = deepSleepPinState.getStates();
+    auto states = DeepSleep::deepSleepPinState.getStates();
     // check if the system menu was activated
     if ((states & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
         systemButtonComboEvent(true); // enable combo
     }
     else {
         // values during boot (digitalRead)
-        interrupt_levels = deepSleepPinState.getValues();
+        interrupt_levels = DeepSleep::deepSleepPinState.getValues();
 
         const auto &handlers = pinMonitor.getHandlers();
         for(auto &pinPtr: pinMonitor.getPins()) {
@@ -229,16 +229,16 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     // enable GPIO interrupts
     ETS_GPIO_INTR_ENABLE();
 
-#if DEBUG_PIN_STATE
-    LoopFunctions::callOnce([]() {
-        // display button states @boot and @now
-        deepSleepPinState.merge();
-        __LDBG_printf("boot pin states: ");
-        for(uint8_t i = 0; i < deepSleepPinState._count; i++) {
-            __LDBG_printf("state %u: %s", i, deepSleepPinState.toString(deepSleepPinState._states[i], deepSleepPinState._times[i]).c_str());
-        }
-    });
-#endif
+    #if DEBUG_PIN_STATE
+        LoopFunctions::callOnce([]() {
+            // display button states @boot and @now
+            DeepSleep::deepSleepPinState.merge();
+            __LDBG_printf("boot pin states: ");
+            for(uint8_t i = 0; i < DeepSleep::deepSleepPinState._count; i++) {
+                __LDBG_printf("state %u: %s", i, DeepSleep::deepSleepPinState.toString(DeepSleep::deepSleepPinState._states[i], DeepSleep::deepSleepPinState._times[i]).c_str());
+            }
+        });
+    #endif
 
     WiFiCallbacks::add(WiFiCallbacks::EventType::ANY, wifiCallback);
     LoopFunctions::add(loop);

@@ -306,7 +306,8 @@ namespace PinMonitor {
     void Monitor::detach(Predicate pred)
     {
         if (_running) {
-            __DBG_panic("PinMonitor::Monitor::_detach() called while running");
+            __DBG_printf("PinMonitor::Monitor::_detach() called while running");
+            end();
         }
         detach(std::remove_if(_handlers.begin(), _handlers.end(), pred), _handlers.end());
     }
@@ -373,7 +374,8 @@ namespace PinMonitor {
     void Monitor::detach(Pin *handler)
     {
         if (_running) {
-            __DBG_panic("PinMonitor::Monitor::_detach() called while running");
+            __DBG_printf("PinMonitor::Monitor::_detach() called while running");
+            end();
         }
         detach(std::remove_if(_handlers.begin(), _handlers.end(), stdex::compare_unique_ptr(handler)), _handlers.end());
     }

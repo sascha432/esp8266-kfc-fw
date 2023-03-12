@@ -7,51 +7,55 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <PinMonitor.h>
-#include <stl_ext/fixed_circular_buffer.h>
 #include <kfc_fw_config.h>
+#include <stl_ext/fixed_circular_buffer.h>
 
 #ifndef DEBUG_IOT_REMOTE_CONTROL
-#define DEBUG_IOT_REMOTE_CONTROL                                1
+#    define DEBUG_IOT_REMOTE_CONTROL 0
 #endif
 
 #if DEBUG_IOT_REMOTE_CONTROL
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 // number of buttons available
 #ifndef IOT_REMOTE_CONTROL_BUTTON_COUNT
-#define IOT_REMOTE_CONTROL_BUTTON_COUNT                         4
+#    define IOT_REMOTE_CONTROL_BUTTON_COUNT 4
 #endif
 
 // button pins
 #ifndef IOT_REMOTE_CONTROL_BUTTON_PINS
-#define  IOT_REMOTE_CONTROL_BUTTON_PINS                         13,12,14,4
-// #define IOT_REMOTE_CONTROL_BUTTON_PINS                          14, 4, 12, 13   // D5, D2, D6, D7
+#    define IOT_REMOTE_CONTROL_BUTTON_PINS 14, 4, 12, 13 // D5, D2, D6, D7
 #endif
 
 // set high while running
 // the default using GPIO15 which has a pulldown to enable energy saving mode during deep sleep
 #ifndef IOT_REMOTE_CONTROL_AWAKE_PIN
-#define IOT_REMOTE_CONTROL_AWAKE_PIN                            15
+#    define IOT_REMOTE_CONTROL_AWAKE_PIN 15
 #endif
 
 // pin for charging detection (active high)
 #ifndef IOT_REMOTE_CONTROL_CHARGING_PIN
-#define IOT_REMOTE_CONTROL_CHARGING_PIN                         5
+#    define IOT_REMOTE_CONTROL_CHARGING_PIN 5
+#endif
+
+// pin for charging complete detection (active high)
+#ifndef IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN
+#    define IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN 3
 #endif
 
 // enable button combinations
 #ifndef IOT_REMOTE_CONTROL_COMBO_BTN
-#define IOT_REMOTE_CONTROL_COMBO_BTN                            1
+#    define IOT_REMOTE_CONTROL_COMBO_BTN 1
 #endif
 
 // #if !PIN_MONITOR_USE_GPIO_INTERRUPT
 // #error PIN_MONITOR_USE_GPIO_INTERRUPT=1 required
 // #endif
 
-#define REMOTE_COMTROL_WEBHANDLER_PREFIX                        "/rc/"
+#define REMOTE_CONTROL_WEB_HANDLER_PREFIX "/rc/"
 
 using namespace PinMonitor;
 
@@ -69,7 +73,7 @@ namespace RemoteControl {
         MAX
     };
 
-    //using ComboActionType = Plugins::RemoteControl::ComboAction_t;
+    // using ComboActionType = Plugins::RemoteControl::ComboAction_t;
     using MultiClickType = KFCConfigurationClasses::Plugins::RemoteControlConfigNS::RemoteControlConfig::MultiClick_t;
     using ActionType = KFCConfigurationClasses::Plugins::RemoteControlConfigNS::RemoteControlConfig::Action_t;
 
@@ -87,12 +91,14 @@ namespace RemoteControl {
 
     class ChargingDetection : public Pin {
     public:
-        ChargingDetection(uint8_t pin, Base *base) : Pin(pin, base, StateType::UP_DOWN, ActiveStateType::ACTIVE_HIGH) {}
+        ChargingDetection(uint8_t pin, Base *base) :
+            Pin(pin, base, StateType::UP_DOWN, ActiveStateType::ACTIVE_HIGH) { }
 
         virtual void event(StateType state, uint32_t now) override;
 
     private:
-        Base &getBase() const {
+        Base &getBase() const
+        {
             return *reinterpret_cast<Base *>(const_cast<void *>(getArg()));
         }
     };

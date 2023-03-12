@@ -7,6 +7,42 @@
 
 namespace PinMonitor {
 
+    const __FlashStringHelper *getActiveStateTypeStr(ActiveStateType type)
+    {
+        switch(type) {
+            case ActiveStateType::ACTIVE_HIGH:
+                return F("High");
+            case ActiveStateType::ACTIVE_LOW:
+                return F("LOW");
+        }
+        __builtin_unreachable();
+    }
+
+    const __FlashStringHelper *getPinModeStr(uint8_t mode)
+    {
+        switch(mode) {
+            case INPUT:
+                return F("INPUT");
+            case INPUT_PULLUP:
+                return F("INPUT_PULLUP");
+            case OUTPUT:
+                return F("OUTPUT");
+            #ifdef INPUT_PULLDOWN_16
+                case INPUT_PULLDOWN_16:
+                    return F("INPUT_PULLUP");
+            #endif
+            #ifdef OUTPUT_OPEN_DRAIN
+               	case OUTPUT_OPEN_DRAIN:
+                    return F("OUTPUT_OPEN_DRAIN");
+            #endif
+            #ifdef WAKEUP_PULLDOWN
+                case WAKEUP_PULLDOWN:
+                    return F("WAKEUP_PULLDOWN");
+            #endif
+        }
+        return F("<Unknown>");
+    }
+
     const __FlashStringHelper *getHardwarePinTypeStr(HardwarePinType type)
     {
         switch(type) {

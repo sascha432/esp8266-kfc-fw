@@ -175,7 +175,8 @@ namespace PinMonitor {
             _pin(pin),
             _count(0),
             _type(type)
-        {}
+        {
+        }
         virtual ~HardwarePin() {}
 
         virtual void clear() {}

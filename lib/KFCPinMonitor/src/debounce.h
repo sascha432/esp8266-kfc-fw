@@ -47,15 +47,6 @@ namespace PinMonitor {
         return static_cast<std::underlying_type<StateType>::type>(state) & static_cast<std::underlying_type<StateType>::type>(bit);
     }
 
-    enum class ActiveStateType : bool {
-        ACTIVE_HIGH             = true,
-        ACTIVE_LOW              = false,
-        PRESSED_WHEN_HIGH       = ACTIVE_HIGH,
-        PRESSED_WHEN_LOW        = ACTIVE_LOW,
-        NON_INVERTED            = ACTIVE_HIGH,
-        INVERTED                = ACTIVE_LOW,
-    };
-
     static inline bool isPressed(StateType state) {
         return state == StateType::PRESSED;
     }

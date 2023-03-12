@@ -4,42 +4,42 @@
 
 #include <Arduino_compat.h>
 // #include <WiFiCallbacks.h>
-#include <LoopFunctions.h>
-#include <BitsToStr.h>
-#include <ReadADC.h>
+#include "WebUISocket.h"
+#include "blink_led_timer.h"
+#include "deep_sleep.h"
 #include "kfc_fw_config.h"
+#include "plugins_menu.h"
+#include "push_button.h"
+#include "remote.h"
+#include "remote_button.h"
+#include "remote_def.h"
 #include "web_server.h"
 #include "web_server_action.h"
-#include "blink_led_timer.h"
-#include "remote.h"
-#include "remote_def.h"
-#include "remote_button.h"
-#include "push_button.h"
-#include "plugins_menu.h"
-#include "WebUISocket.h"
-#include "deep_sleep.h"
+#include <BitsToStr.h>
+#include <LoopFunctions.h>
+#include <ReadADC.h>
 #if HTTP2SERIAL_SUPPORT
-#include "../src/plugins/http2serial/http2serial.h"
-#define IF_HTTP2SERIAL_SUPPORT(...) __VA_ARGS__
+#    include "../src/plugins/http2serial/http2serial.h"
+#    define IF_HTTP2SERIAL_SUPPORT(...) __VA_ARGS__
 #else
-#define IF_HTTP2SERIAL_SUPPORT(...)
+#    define IF_HTTP2SERIAL_SUPPORT(...)
 #endif
 #if SYSLOG_SUPPORT
-#include "../src/plugins/syslog/syslog_plugin.h"
+#    include "../src/plugins/syslog/syslog_plugin.h"
 #endif
 
 #if DEBUG_IOT_REMOTE_CONTROL
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #if ESP8266
-#define SHORT_POINTER_FMT       "%05x"
-#define SHORT_POINTER(ptr)      ((uint32_t)ptr & 0xfffff)
+#    define SHORT_POINTER_FMT  "%05x"
+#    define SHORT_POINTER(ptr) ((uint32_t)ptr & 0xfffff)
 #else
-#define SHORT_POINTER_FMT       "%08x"
-#define SHORT_POINTER(ptr)      ptr
+#    define SHORT_POINTER_FMT  "%08x"
+#    define SHORT_POINTER(ptr) ptr
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
@@ -49,23 +49,23 @@ static RemoteControlPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     RemoteControlPlugin,
-    "remotectrl",       // name
-    "Remote Control",   // friendly name
-    "",                 // web_templates
+    "remotectrl", // name
+    "Remote Control", // friendly name
+    "", // web_templates
     // config_forms
     "general,events,combos,actions,buttons-1,buttons-2,buttons-3,buttons-4",
-    "",                 // reconfigure_dependencies
+    "", // reconfigure_dependencies
     PluginComponent::PriorityType::REMOTE,
     PluginComponent::RTCMemoryId::DEEP_SLEEP,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
-    false,              // allow_safe_mode
-    true,               // setup_after_deep_sleep
-    true,               // has_get_status
-    true,               // has_config_forms
-    false,              // has_web_ui
-    false,              // has_web_templates
-    true,               // has_at_mode
-    0                   // __reserved
+    false, // allow_safe_mode
+    true, // setup_after_deep_sleep
+    true, // has_get_status
+    true, // has_config_forms
+    false, // has_web_ui
+    false, // has_web_templates
+    true, // has_at_mode
+    0 // __reserved
 );
 
 RemoteControlPlugin::RemoteControlPlugin() :
@@ -83,19 +83,18 @@ RemoteControlPlugin &RemoteControlPlugin::getInstance()
 
 void RemoteControlPlugin::_updateButtonConfig()
 {
-    for(const auto &buttonPtr: pinMonitor.getHandlers()) {
+    for (const auto &buttonPtr : pinMonitor.getHandlers()) {
         if (std::find(kButtonPins.begin(), kButtonPins.end(), buttonPtr->getPin()) != kButtonPins.end()) {
             auto &button = static_cast<Button &>(*buttonPtr);
             // __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
             if (button.getBase() == this) { // auto downcast of this
-#if DEBUG_IOT_REMOTE_CONTROL
-                auto &cfg = _getConfig().actions[button.getButtonNum()];
-                __LDBG_printf("button#=%u on_action.id=%u,%u,%u,%u,%u,%u,%u,%u udp.enabled=%s mqtt.enabled=%s",
-                    button.getButtonNum(),
-                    cfg.down, cfg.up, cfg.press, cfg.single_click, cfg.double_click, cfg.long_press, cfg.hold, cfg.hold_released,
-                    BitsToStr<9, true>(cfg.udp.event_bits).c_str(), BitsToStr<9, true>(cfg.udp.event_bits).c_str()
-                );
-#endif
+                #if DEBUG_IOT_REMOTE_CONTROL
+                    auto &cfg = _getConfig().actions[button.getButtonNum()];
+                    __LDBG_printf("button#=%u on_action.id=%u,%u,%u,%u,%u,%u,%u,%u udp.enabled=%s mqtt.enabled=%s",
+                        button.getButtonNum(),
+                        cfg.down, cfg.up, cfg.press, cfg.single_click, cfg.double_click, cfg.long_press, cfg.hold, cfg.hold_released,
+                        BitsToStr<9, true>(cfg.udp.event_bits).c_str(), BitsToStr<9, true>(cfg.udp.event_bits).c_str());
+                #endif
                 button.updateConfig();
             }
         }
@@ -106,52 +105,50 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 {
     DeepSleep::deepSleepPinState.merge();
 
-#if PIN_MONITOR_BUTTON_GROUPS
-    SingleClickGroupPtr group1;
-    group1.reset(_config.click_time);
-    SingleClickGroupPtr group2;
-    group2.reset(_config.click_time);
-#endif
+    #if PIN_MONITOR_BUTTON_GROUPS
+        SingleClickGroupPtr group1;
+        group1.reset(_config.click_time);
+        SingleClickGroupPtr group2;
+        group2.reset(_config.click_time);
+    #endif
 
     // disable interrupts during setup
-    for(uint8_t n = 0; n < kButtonPins.size(); n++) {
+    for (uint8_t n = 0; n < kButtonPins.size(); n++) {
         auto pin = kButtonPins[n];
-#if PIN_MONITOR_BUTTON_GROUPS
-        auto &button = pinMonitor.attach<Button>(pin, n, this);
-        using EventNameType = Plugins::RemoteControl::EventNameType;
+        #if PIN_MONITOR_BUTTON_GROUPS
+            auto &button = pinMonitor.attach<Button>(pin, n, this);
+            using EventNameType = Plugins::RemoteControl::EventNameType;
 
-        if (!_config.enabled[EventNameType::BUTTON_PRESS]) {
-            if (n == 0 || n == 3) {
+            if (!_config.enabled[EventNameType::BUTTON_PRESS]) {
+                if (n == 0 || n == 3) {
+                    button.setSingleClickGroup(group1);
+                } else {
+                    button.setSingleClickGroup(group2);
+                }
+            } else {
                 button.setSingleClickGroup(group1);
+                group1.reset(_config.click_time);
             }
-            else {
-                button.setSingleClickGroup(group2);
-            }
-        }
-        else {
-            button.setSingleClickGroup(group1);
-            group1.reset(_config.click_time);
-        }
-#else
-        pinMonitor.attach<Button>(pin, n, this);
-#endif
+        #else
+            pinMonitor.attach<Button>(pin, n, this);
+        #endif
     }
 
-#if IOT_REMOTE_CONTROL_CHARGING_PIN!=-1
+    #if IOT_REMOTE_CONTROL_CHARGING_PIN != -1
 
-    pinMonitor.attachPinType<ChargingDetection>(HardwarePinType::SIMPLE, IOT_REMOTE_CONTROL_CHARGING_PIN, this);
+        pinMonitor.attachPinType<ChargingDetection>(HardwarePinType::SIMPLE, IOT_REMOTE_CONTROL_CHARGING_PIN, this);
 
-#endif
+    #endif
 
     // _buttonsLocked = 0;
     _readConfig();
     _updateButtonConfig();
 
-#if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN == 15
-    pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
-#elif IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 3 && IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 16
-    pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
-#endif
+    #if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN == 15
+        pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
+    #elif IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 3 && IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 16
+        pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
+    #endif
 
     // start pin monitor after adding the pins
     pinMonitor.begin();
@@ -162,13 +159,12 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     // check if the system menu was activated
     if ((states & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
         systemButtonComboEvent(true); // enable combo
-    }
-    else {
+    } else {
         // values during boot (digitalRead)
         interrupt_levels = DeepSleep::deepSleepPinState.getValues();
 
         const auto &handlers = pinMonitor.getHandlers();
-        for(auto &pinPtr: pinMonitor.getPins()) {
+        for (auto &pinPtr : pinMonitor.getPins()) {
             // only debounced push buttons supported
             if (pinPtr->_type != HardwarePinType::DEBOUNCE) {
                 continue;
@@ -198,7 +194,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 
                     // send down event
                     button.event(Button::EventType::DOWN, 5);
-                    // set debouncer state
+                    // set de-bouncer state
                     pinPtr->getDebounce()->setState(!bootValue);
                     // add event
                     auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
@@ -214,15 +210,13 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
                     if (activeHigh) {
                         // clear bit
                         interrupt_levels &= ~_BV(pinNum);
-                    }
-                    else {
+                    } else {
                         // set bit
                         interrupt_levels |= _BV(pinNum);
                     }
                 }
             }
         }
-
     }
     // clear interrupts for all pins
     GPIEC = kButtonPinsMask;
@@ -234,7 +228,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
             // display button states @boot and @now
             DeepSleep::deepSleepPinState.merge();
             __LDBG_printf("boot pin states: ");
-            for(uint8_t i = 0; i < DeepSleep::deepSleepPinState._count; i++) {
+            for (uint8_t i = 0; i < DeepSleep::deepSleepPinState._count; i++) {
                 __LDBG_printf("state %u: %s", i, DeepSleep::deepSleepPinState.toString(DeepSleep::deepSleepPinState._states[i], DeepSleep::deepSleepPinState._times[i]).c_str());
             }
         });
@@ -256,16 +250,18 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     _updateSystemComboButtonLED();
     __LDBG_printf("setup() done");
 
-    dependencies->dependsOn(F("http"), [](const PluginComponent *plugin, DependencyResponseType response) {
-        if (response != DependencyResponseType::SUCCESS) {
-            return;
-        }
-        auto server = WebServer::Plugin::getWebServerObject();
-        if (!server) {
-            return;
-        }
-        WebServer::Plugin::addHandler(F(REMOTE_COMTROL_WEBHANDLER_PREFIX "*"), webHandler);
-    }, this);
+    dependencies->dependsOn(
+        F("http"), [](const PluginComponent *plugin, DependencyResponseType response) {
+            if (response != DependencyResponseType::SUCCESS) {
+                return;
+            }
+            auto server = WebServer::Plugin::getWebServerObject();
+            if (!server) {
+                return;
+            }
+            WebServer::Plugin::addHandler(F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "*"), webHandler);
+        },
+        this);
 }
 
 void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
@@ -283,8 +279,8 @@ void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
 
     __DBG_printf("remote control web server handler url=%s", request->url().c_str());
 
-    if (request->url() == F(REMOTE_COMTROL_WEBHANDLER_PREFIX "deep_sleep.html")) {
-        auto &session = Handler::getInstance().initSession(request, F(REMOTE_COMTROL_WEBHANDLER_PREFIX "deep_sleep.html"), F("Remote Control"), AuthType::AUTH);
+    if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "deep_sleep.html")) {
+        auto &session = Handler::getInstance().initSession(request, F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "deep_sleep.html"), F("Remote Control"), AuthType::AUTH);
         if (session.isNew()) {
             session.setStatus(F("Device is entering deep sleep... Press any button to wake it up"), MessageType::WARNING);
             session = StateType::EXECUTING;
@@ -294,8 +290,7 @@ void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
                     RemoteControlPlugin::enterDeepSleep();
                 });
             });
-        }
-        else if (session.isExecuting()) {
+        } else if (session.isExecuting()) {
             session = StateType::FINISHED;
             // after displaying the status, goto deep sleep
             request->onDisconnect([]() {
@@ -305,16 +300,13 @@ void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
                 });
             });
         }
-    }
-    else if (request->url() == F(REMOTE_COMTROL_WEBHANDLER_PREFIX "disable_auto_sleep.html")) {
+    } else if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "disable_auto_sleep.html")) {
         RemoteControlPlugin::disableAutoSleep();
         Plugin::message(request, WebServer::MessageType::INFO, F("Auto sleep has been disabled"), F("Remote Control"));
-    }
-    else if (request->url() == F(REMOTE_COMTROL_WEBHANDLER_PREFIX "enable_auto_sleep.html")) {
+    } else if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "enable_auto_sleep.html")) {
         RemoteControlPlugin::enableAutoSleep();
         Plugin::message(request, MessageType::SUCCESS, F("Auto sleep has been enabled"), F("Remote Control"));
-    }
-    else {
+    } else {
         Plugin::send(404, request);
     }
 }
@@ -345,9 +337,9 @@ void RemoteControlPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
 {
     __LDBG_printf("time=%u", sleepTimeMillis);
 
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
-    PinMonitor::GPIOInterruptsDisable();
-#endif
+    #if PIN_MONITOR_USE_GPIO_INTERRUPT
+        PinMonitor::GPIOInterruptsDisable();
+    #endif
 
     ADCManager::getInstance().terminate(false);
     digitalWrite(IOT_REMOTE_CONTROL_AWAKE_PIN, LOW);
@@ -359,8 +351,7 @@ void RemoteControlPlugin::getStatus(Print &output)
     output.printf_P(PSTR("%u Button Remote Control"), kButtonPins.size());
     if (isAutoSleepEnabled()) {
         output.print(F(", auto sleep enabled"));
-    }
-    else {
+    } else {
         output.print(F(", auto sleep disabled"));
     }
     output.printf_P(PSTR(", force deep sleep after %u minutes"), _config.max_awake_time);
@@ -380,17 +371,16 @@ void RemoteControlPlugin::createMenu()
 
     auto device = bootstrapMenu.getMenuItem(navMenu.device);
     device.addDivider();
-    device.addMenuItem(F("Enable Auto Sleep"), FPSTR(PSTR(REMOTE_COMTROL_WEBHANDLER_PREFIX "enable_auto_sleep.html") + 1));
-    device.addMenuItem(F("Disable Auto Sleep"), FPSTR(PSTR(REMOTE_COMTROL_WEBHANDLER_PREFIX "disable_auto_sleep.html") + 1));
-    device.addMenuItem(F("Enter Deep Sleep..."), FPSTR(PSTR(REMOTE_COMTROL_WEBHANDLER_PREFIX "deep_sleep.html") + 1));
+    device.addMenuItem(F("Enable Auto Sleep"), FPSTR(PSTR(REMOTE_CONTROL_WEB_HANDLER_PREFIX "enable_auto_sleep.html") + 1));
+    device.addMenuItem(F("Disable Auto Sleep"), FPSTR(PSTR(REMOTE_CONTROL_WEB_HANDLER_PREFIX "disable_auto_sleep.html") + 1));
+    device.addMenuItem(F("Enter Deep Sleep..."), FPSTR(PSTR(REMOTE_CONTROL_WEB_HANDLER_PREFIX "deep_sleep.html") + 1));
 }
-
 
 #if AT_MODE_SUPPORTED
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCDSLP, "RCDSLP", "[<time in seconds>]", "Set or disable auto sleep");
 
-#if AT_MODE_HELP_SUPPORTED
+#    if AT_MODE_HELP_SUPPORTED
 
 ATModeCommandHelpArrayPtr RemoteControlPlugin::atModeCommandHelp(size_t &size) const
 {
@@ -401,7 +391,7 @@ ATModeCommandHelpArrayPtr RemoteControlPlugin::atModeCommandHelp(size_t &size) c
     return tmp;
 }
 
-#endif
+#    endif
 
 bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 {
@@ -411,8 +401,7 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
             _disableAutoSleepTimeout();
             _updateMaxAwakeTimeout();
             args.printf_P(PSTR("Auto sleep disabled"));
-        }
-        else {
+        } else {
             static constexpr uint32_t kMaxAwakeExtratime = 300; // seconds
             _setAutoSleepTimeout(millis() + (time * 1000U), kMaxAwakeExtratime);
             args.printf_P(PSTR("Auto sleep timeout in %u seconds, deep sleep timeout in %.1f minutes"), time, (time + kMaxAwakeExtratime) / 60.0);
@@ -450,17 +439,14 @@ void RemoteControlPlugin::_loop()
         if (isAutoSleepEnabled()) {
             if (_millis >= __autoSleepTimeout) {
                 if (
-                    (_minAwakeTimeout && (millis() <_minAwakeTimeout)) ||
-                    _hasEvents() ||
-                    _isSystemComboActive() ||
-#if MQTT_AUTO_DISCOVERY
-                    MQTT::Client::safeIsAutoDiscoveryRunning() ||
-#endif
-#if HTTP2SERIAL_SUPPORT
-                    Http2Serial::hasAuthenticatedClients() ||
-#endif
-                    WebUISocket::hasAuthenticatedClients()
-                ) {
+                    (_minAwakeTimeout && (millis() < _minAwakeTimeout)) || _hasEvents() || _isSystemComboActive() ||
+                    #if MQTT_AUTO_DISCOVERY
+                        MQTT::Client::safeIsAutoDiscoveryRunning() ||
+                    #endif
+                    #if HTTP2SERIAL_SUPPORT
+                        Http2Serial::hasAuthenticatedClients() ||
+                    #endif
+                    WebUISocket::hasAuthenticatedClients()) {
                     // check again in 500ms
                     __autoSleepTimeout = _millis + 500;
 
@@ -500,7 +486,6 @@ void RemoteControlPlugin::_enterDeepSleep()
     __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
     config.enterDeepSleep(std::chrono::duration_cast<KFCFWConfiguration::milliseconds>(KFCFWConfiguration::minutes(_config.deep_sleep_time)), WAKE_NO_RFCAL, 1);
 }
-
 
 void RemoteControlPlugin::_readConfig()
 {
@@ -574,9 +559,9 @@ void RemoteControlPlugin::_sendEvents()
         }
 
         ButtonEventList tmp;
-#if DEBUG_IOT_REMOTE_CONTROL
+#    if DEBUG_IOT_REMOTE_CONTROL
         uint32_t start = micros();
-#endif
+#    endif
         noInterrupts();
         for(auto &&item: _events) {
             if (item.getType() != EventType::NONE) {
@@ -586,10 +571,10 @@ void RemoteControlPlugin::_sendEvents()
         _events = std::move(tmp);
         interrupts();
 
-#if DEBUG_IOT_REMOTE_CONTROL
+#    if DEBUG_IOT_REMOTE_CONTROL
         auto dur = micros() - start;
         __LDBG_printf("cleaning events time=%uus (_events=%u bytes)", dur, sizeof(_events));
-#endif
+#    endif
 
         // __LDBG_printf("cleaning events");
         // _events.erase(std::remove_if(_events.begin(), _events.end(), [](const ButtonEvent &event) {
@@ -612,7 +597,7 @@ Action *RemoteControlPlugin::_getAction(ActionIdType id) const
 
 void RemoteControlPlugin::_resolveActionHostnames()
 {
-    for(auto &action: _actions) {
+    for (auto &action : _actions) {
         action->resolve();
     }
 }

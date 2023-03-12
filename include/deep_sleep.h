@@ -28,7 +28,7 @@
 #endif
 
 #    ifndef DEBUG_DEEP_SLEEP
-#        define DEBUG_DEEP_SLEEP 1
+#        define DEBUG_DEEP_SLEEP 0
 #    endif
 
 // include methods in source code = 0, or in header as always inline = 1

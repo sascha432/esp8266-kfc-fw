@@ -81,16 +81,16 @@ void Button::event(EventType eventType, uint32_t now)
             break;
     }
 
-#if 1
-    __DBG_printf("event_type=%s (%ux) button#=%u first_time=%u time=%u pressed=%s",
-        eventTypeToString(eventType),
-        _repeatCount,
-        _button,
-        _getEventTimeForFirstEvent(),
-        _getEventTime(),
-        BitsToStr<kButtonPins.size(), true>(base._pressed).c_str()
-    );
-#endif
+    #if DEBUG_IOT_REMOTE_CONTROL
+        __DBG_printf("event_type=%s (%ux) button#=%u first_time=%u time=%u pressed=%s",
+            eventTypeToString(eventType),
+            _repeatCount,
+            _button,
+            _getEventTimeForFirstEvent(),
+            _getEventTime(),
+            BitsToStr<kButtonPins.size(), true>(base._pressed).c_str()
+        );
+    #endif
 
 }
 

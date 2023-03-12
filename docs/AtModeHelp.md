@@ -24,7 +24,7 @@ Reset device. If ``s`` is provided, it will reboot in SAFE MODE.
 
 Discard changes and load settings from EEPROM
 
-### ``+TORE``
+### ``+STORE``
 
 Store current settings in EEPROM
 
@@ -39,6 +39,18 @@ Restore factory settings, store in EEPROM and reboot device
 ### ``+ATMODE=<1|0>``
 
 Enable/disable AT Mode if compiled in
+
+### ``+HEAP=<interval>``
+
+Display heap usage every interval (can be 1s or 1000ms, 0 shows it once)
+
+### ``+GPIO=<interval>``
+
+Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)
+
+### ``+PWM=<pin>,<input|input_pullup|high|low|waveform|level=0-1023[,<frequency=100-40000Hz>[,<duration/ms>]]``
+
+Control PIN input, output and PWM state. Setting a PIN high or low implicitly sets it to output.
 
 ### ``+DLY=<milliseconds>``
 

@@ -16,21 +16,21 @@
 #include "logger.h"
 
 #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
-#include <Wire.h>
-#include <IOExpander.h>
+#    include <IOExpander.h>
+#    include <Wire.h>
 #endif
 
 #if PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS
-#include <FunctionalInterrupt.h>
+#    include <FunctionalInterrupt.h>
 #else
-#include "interrupt_impl.h"
+#    include "interrupt_impl.h"
 #endif
 #include "interrupt_event.h"
 
 #if DEBUG_PIN_MONITOR
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 namespace PinMonitor {
@@ -46,7 +46,7 @@ namespace PinMonitor {
             // store initial values for GPIO ports
             _states = _getGPIOStates();
             #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
-                // store intial values for GPIO expander ports
+                // store initial values for GPIO expander ports
                 _expanderStates = _getIOExpanderStates();
             #endif
             startTimer(PIN_MONITOR_USE_POLLING_INTERVAL, true);
@@ -76,7 +76,7 @@ namespace PinMonitor {
             // read GPIO
             auto newStates = _getGPIOStates();
             if (newStates != _states) {
-                __LDBG_printf("GPOI %s -> %s", decbin(_states).c_str(), decbin(newStates).c_str());
+                __LDBG_printf("GPIO %s -> %s", decbin(_states).c_str(), decbin(newStates).c_str());
             }
             #if PIN_MONITOR_POLLING_GPIO_EXPANDER_SUPPORT
                 auto newExpanderStates = _getIOExpanderStates();
@@ -212,10 +212,11 @@ namespace PinMonitor {
         #else
             output.print(F("Button Groups: Disabled" HTML_S(br)));
         #endif
-        output.printf_P(PSTR("Loop Mode: %s %s" HTML_S(br) "Default Mode: Active %s" HTML_S(br)  "Handlers/Pins: %u/%u " HTML_S(br)),
+        output.printf_P(PSTR("Loop Mode: %s %s" HTML_S(br) "Default Mode: Active %s/%s" HTML_S(br) "Handlers/Pins: %u/%u " HTML_S(br)),
             _loopTimer ? PSTR("Timer") : PSTR("loop()"),
             (_loopTimer && *_loopTimer) || (!_loopTimer && !_pins.empty()) ? PSTR("Active") : PSTR("Inactive"),
-            PIN_MONITOR_ACTIVE_STATE == ActiveStateType::ACTIVE_HIGH ? PSTR("High") : PSTR("Low"),
+            getActiveStateTypeStr(PIN_MONITOR_ACTIVE_STATE),
+            getPinModeStr(getPinMode()),
             _handlers.size(), _pins.size()
         );
         for(const auto &handler: _handlers) {
@@ -520,7 +521,7 @@ namespace PinMonitor {
                                     event = pin.getEventsClear();
                                 }
                                 if (event != SimpleHardwarePin::SimpleEventType::NONE) {
-                                    Serial.printf_P(PSTR("SIMPLE=%u event=%u\n"), pin.getPin(), event);
+                                    __DBG_printf("SIMPLE=%u event=%u\n", pin.getPin(), event);
                                     _event(pin.getPin(), event == SimpleHardwarePin::SimpleEventType::HIGH_VALUE ? StateType::IS_HIGH : StateType::IS_LOW, now);
                                 }
                             }

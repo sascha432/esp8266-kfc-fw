@@ -9,7 +9,7 @@
 #include <vector>
 
 // Pin Monitor offers interrupt bases PIN monitoring with support for toggle switches, push buttons, rotary encoders with or without software debouncing
-// Arduino interrupt functons can be used or the optimized version of the pin monitor, which saves a couple hundred byte IRAM
+// Arduino interrupt functions can be used or the optimized version of the pin monitor, which saves a couple hundred byte IRAM
 // all callbacks are scheduled in the main loop and not executed from the ISR
 // if the main loop has too many delays, the monitoring can be installed as a timer and gets executed every 5ms. the timer callback is not an ISR and does
 // not require any code to be in the IRAM
@@ -158,7 +158,7 @@
 #endif
 
 // support for button groups
-// allows to detect single/dobule clicks across multiple buttons
+// allows to detect single/double clicks across multiple buttons
 #ifndef PIN_MONITOR_BUTTON_GROUPS
 #    define PIN_MONITOR_BUTTON_GROUPS 0
 #endif
@@ -232,6 +232,17 @@ namespace PinMonitor {
         LAST = RIGHT
     };
 
+    enum class ActiveStateType : bool {
+        ACTIVE_HIGH             = true,
+        ACTIVE_LOW              = false,
+        PRESSED_WHEN_HIGH       = ACTIVE_HIGH,
+        PRESSED_WHEN_LOW        = ACTIVE_LOW,
+        NON_INVERTED            = ACTIVE_HIGH,
+        INVERTED                = ACTIVE_LOW,
+    };
+
+    const __FlashStringHelper *getActiveStateTypeStr(ActiveStateType type);
+    const __FlashStringHelper *getPinModeStr(uint8_t mode);
     const __FlashStringHelper *getHardwarePinTypeStr(HardwarePinType type);
 
 }

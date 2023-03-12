@@ -29,7 +29,9 @@
 #include "logger.h"
 #include "misc.h"
 #include "reset_detector.h"
-#include <Wire.h>
+#ifndef DISABLE_TWO_WIRE
+#   include <Wire.h>
+#endif
 #include <dyn_bitset.h>
 
 #ifdef dhcp_start // defined in framework-arduinoespressif8266@2.20402.4/tools/sdk/lwip2/include/arch/cc.h
@@ -172,7 +174,9 @@ public:
     // 0 = not connected
     static uint32_t getWiFiUp();
 
-    static TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
+    #ifndef DISABLE_TWO_WIRE
+        static TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
+    #endif
 
     struct RtcStatus {
         time_t time;

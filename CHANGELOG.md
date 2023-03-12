@@ -2,6 +2,8 @@
 
 ## Version 0.0.8 (master)
 
+ - AT+GPIO=5s shows state of the GPIO (IN/OUT/IN_PULLUP etc...)
+ - Fixed an issue with GPIO 4 and 5 being set to INPUT_PULLUP without using I2C (add `-D DISABLE_TWO_WIRE=1` to disable it)
  - Updated deep sleep and quick connect for framework 3.x (work in progress)
 
 ## Version 0.0.7

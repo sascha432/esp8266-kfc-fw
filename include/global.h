@@ -380,8 +380,14 @@
 #    error WEBSERVER_KFC_OTA is not defined
 #endif
 
-#ifndef HAVE_I2CSCANNER
-#    define HAVE_I2CSCANNER 1
+// disable I2C scanner if I2C is not used
+#if DISABLE_TWO_WIRE
+#    undef HAVE_I2CSCANNER
+#    define HAVE_I2CSCANNER 0
+#else
+#    ifndef HAVE_I2CSCANNER
+#        define HAVE_I2CSCANNER 1
+#    endif
 #endif
 
 // disable crash counter on FS

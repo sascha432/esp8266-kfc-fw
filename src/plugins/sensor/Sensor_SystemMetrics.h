@@ -7,7 +7,9 @@
 #if IOT_SENSOR_HAVE_SYSTEM_METRICS
 
 #include <Arduino_compat.h>
-#include <Wire.h>
+#ifndef DISABLE_TWO_WIRE
+#   include <Wire.h>
+#endif
 #include <vector>
 #include "WebUIComponent.h"
 #include "plugins.h"

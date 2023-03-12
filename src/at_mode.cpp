@@ -666,6 +666,17 @@ public:
                 if (i == 10 || (i != 1 && !isFlashInterfacePin(i))) { // do not display TX and flash SPI
                     // pinMode(i, INPUT);
                     Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
+                    #if ESP8266
+                        if (i == 16) {
+                            Serial.print((GP16E & 1) ? F("IN ") : F("OUT "));
+                        }
+                        else {
+                            String tmp;
+                            tmp = GPO & (1 << i) ? F("OUT") : F("IN");
+                            tmp += GPF(i) & (1 << GPFPU) ? F("_PULLUP ") : F(" ");
+                            Serial.print(tmp);
+                        }
+                    #endif
                 }
             }
             Serial.printf_P(PSTR("A0=%u\n"), analogRead(A0));
@@ -2036,6 +2047,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     #endif
+    #ifndef DISABLE_TWO_WIRE
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(I2CS))) {
         auto sda = args.toIntMinMax<uint8_t>(0, 0, NUM_DIGITAL_PINS, KFC_TWOWIRE_SDA);
         auto scl = args.toIntMinMax<uint8_t>(1, 0, NUM_DIGITAL_PINS, KFC_TWOWIRE_SCL);
@@ -2100,6 +2112,7 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(F("I2CT")) || args.isCommand(F("I2CA")) || args.isCommand(F("I2CR"))) {
         // ignore SerialTwoWire communication
     }
+    #endif
     #if ENABLE_ARDUINO_OTA
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(AOTA))) {
             auto &plugin = WebServer::Plugin::getInstance();

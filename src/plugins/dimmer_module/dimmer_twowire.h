@@ -7,9 +7,11 @@
 #include <Arduino_compat.h>
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-#include <SerialTwoWire.h>
+#    include <SerialTwoWire.h>
 #else
-#include <Wire.h>
+#    ifndef DISABLE_TWO_WIRE
+#        include <Wire.h>
+#    endif
 #endif
 
 namespace Dimmer {

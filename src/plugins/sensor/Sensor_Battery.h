@@ -7,7 +7,9 @@
 #if IOT_SENSOR_HAVE_BATTERY
 
 #include <Arduino_compat.h>
-#include <Wire.h>
+#ifndef DISABLE_TWO_WIRE
+#   include <Wire.h>
+#endif
 #include <vector>
 #include <ReadADC.h>
 #include "WebUIComponent.h"

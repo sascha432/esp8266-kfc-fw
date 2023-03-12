@@ -51,7 +51,9 @@ SensorPlugin::SensorPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Sensor
 
 void SensorPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    config.initTwoWire();
+    #ifndef DISABLE_TWO_WIRE
+        config.initTwoWire();
+    #endif
 
     using namespace WebUINS;
 

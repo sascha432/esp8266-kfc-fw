@@ -521,7 +521,7 @@ namespace PinMonitor {
                                     event = pin.getEventsClear();
                                 }
                                 if (event != SimpleHardwarePin::SimpleEventType::NONE) {
-                                    __DBG_printf("SIMPLE=%u event=%u\n", pin.getPin(), event);
+                                    __LDBG_printf("SIMPLE=%u event=%u", pin.getPin(), event);
                                     _event(pin.getPin(), event == SimpleHardwarePin::SimpleEventType::HIGH_VALUE ? StateType::IS_HIGH : StateType::IS_LOW, now);
                                 }
                             }

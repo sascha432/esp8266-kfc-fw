@@ -356,6 +356,7 @@
             "PROGMEM",
             "PROJECTDATA",
             "psram",
+            "PULLUP",
             "PWMRANGE",
             "rebuildfs",
             "remotectrl",

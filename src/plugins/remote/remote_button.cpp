@@ -10,9 +10,9 @@
 #include "remote.h"
 
 #if DEBUG_IOT_REMOTE_CONTROL
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using namespace RemoteControl;

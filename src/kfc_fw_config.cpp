@@ -1572,20 +1572,22 @@ uint32_t KFCFWConfiguration::getWiFiUp()
 #    define __DBG_RTC_printf(...) ;
 #endif
 
-TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
-{
-    if (output) {
-        output->printf_P("I2C: SDA=%u, SCL=%u, clock stretch=%u, clock speed=%u, reset=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
+#ifndef DISABLE_TWO_WIRE
+    TwoWire &KFCFWConfiguration::initTwoWire(bool reset, Print *output)
+    {
+        if (output) {
+            output->printf_P("I2C: SDA=%u, SCL=%u, clock stretch=%u, clock speed=%u, reset=%u\n", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
+        }
+        if (!_initTwoWire || reset) {
+            __DBG_RTC_printf("SDA=%u,SCL=%u,stretch=%u,speed=%u,rst=%u", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
+            _initTwoWire = true;
+            Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
+            Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRETCH);
+            Wire.setClock(KFC_TWOWIRE_CLOCK_SPEED);
+        }
+        return Wire;
     }
-    if (!_initTwoWire || reset) {
-        __DBG_RTC_printf("SDA=%u,SCL=%u,stretch=%u,speed=%u,rst=%u", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
-        _initTwoWire = true;
-        Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
-        Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRETCH);
-        Wire.setClock(KFC_TWOWIRE_CLOCK_SPEED);
-    }
-    return Wire;
-}
+#endif
 
 bool KFCFWConfiguration::setRTC(uint32_t unixtime)
 {

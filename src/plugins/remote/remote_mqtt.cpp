@@ -35,7 +35,8 @@ MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, u
         }
         auto baseTopic = MQTT::Client::getBaseTopicPrefix();
         discovery->addStateTopic(MQTT::Client::formatTopic(MQTT_LAST_WILL_TOPIC));
-        discovery->addName(F("Awake State"));
+        discovery->addName(F("Device State"));
+        discovery->addIcon(F("mdi:sleep"));
         discovery->addPayloadOn(MQTT_LAST_WILL_TOPIC_ONLINE);
         discovery->addPayloadOff(MQTT_LAST_WILL_TOPIC_OFFLINE);
         discovery->addObjectId(baseTopic + MQTT_LAST_WILL_TOPIC);

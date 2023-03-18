@@ -206,6 +206,16 @@ Configure MDNS
 
 Open, close a channel, stop motor or run tone test, play imperial march, initial state
 
+## Remote Control
+
+### ``+RCDSLP=<time in seconds|0>``
+
+Disable auto sleep or set timeout in seconds
+
+### ``+RCBAT=<interval in seconds|0>``
+
+Send battery status every n seconds to MQTT and to UDP server, 10 times in a row. If the time is 0, it is sent once.
+
 ## MQTT
 
 ### ``+MQTT=con|dis|set|top|auto|list``

@@ -2,9 +2,11 @@
 
 ## Version 0.0.8 (master)
 
+ - Missing online status and binary awake sensor fixed for remote control
+ - Update battery status over MQTT and UDP on a daily basis (interval can be configured to save battery life)
  - AT+GPIO=5s shows state of the GPIO (IN/OUT/IN_PULLUP etc...)
  - Fixed an issue with GPIO 4 and 5 being set to INPUT_PULLUP without using I2C (add `-D DISABLE_TWO_WIRE=1` to disable it)
- - Updated deep sleep and quick connect for framework 3.x (work in progress)
+ - Updated deep sleep and quick connect for framework 3.x (200ms, quick subsequent wake-ups take 1350ms)
 
 ## Version 0.0.7
 

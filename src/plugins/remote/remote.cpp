@@ -217,6 +217,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     }
 
     _updateSystemComboButtonLED();
+
     __LDBG_printf("setup() done");
 
     dependencies->dependsOn(
@@ -256,7 +257,7 @@ bool RemoteControlPlugin::_sendBatteryStateAndSleep()
             auto batterySensor = reinterpret_cast<Sensor_Battery *>(sensor);
             batterySensor->readADC(batterySensor->kADCNumReads * 4);
             auto status = batterySensor->readSensor();
-            __LDBG_printf("sending battery state voltage=%.3f level=%u", status.getVoltage(), status.getLevel());
+            __DBG_printf("sending battery state voltage=%.3f level=%u", status.getVoltage(), status.getLevel());
             if (_getConfig().udp_enable) {
                 auto payload = _getJsonBatteryStatus(status);
                 WiFiUDP udp;
@@ -370,6 +371,10 @@ void RemoteControlPlugin::getStatus(Print &output)
     if (_getConfig().udp_enable) {
         output.printf_P(PSTR(", UDP %s:%u enabled"), Plugins::RemoteControl::getUdpHost(), _getConfig()._get_udp_port());
     }
+    auto deepSleepTime = _getConfig().deep_sleep_time;
+    if (deepSleepTime) {
+        output.printf_P(PSTR(", Report battery state every %s"), formatTimeShort(F(", "), F(" and "), false, 0, (deepSleepTime % 60), (deepSleepTime / 60) % 24, (deepSleepTime / 1440)).c_str());
+    }
 }
 
 void RemoteControlPlugin::createMenu()
@@ -393,10 +398,10 @@ void RemoteControlPlugin::createMenu()
 
 #if AT_MODE_SUPPORTED
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCDSLP, "RCDSLP", "[<time in seconds>]", "Set or disable auto sleep");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCDSLP, "RCDSLP", "[<time in seconds|0>]", "Set or disable auto sleep");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCBAT, "RCBAT", "[<interval in seconds|0>]", "Publish battery status");
 
-#    if AT_MODE_HELP_SUPPORTED
+#if AT_MODE_HELP_SUPPORTED
 
 ATModeCommandHelpArrayPtr RemoteControlPlugin::atModeCommandHelp(size_t &size) const
 {
@@ -408,7 +413,7 @@ ATModeCommandHelpArrayPtr RemoteControlPlugin::atModeCommandHelp(size_t &size) c
     return tmp;
 }
 
-#    endif
+#endif
 
 bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 {

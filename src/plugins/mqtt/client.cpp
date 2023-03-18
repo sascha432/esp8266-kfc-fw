@@ -80,7 +80,7 @@ namespace MQTT {
         _client(new AsyncMqttClient()),
         _port(_config.getPort()),
         #if MQTT_SET_LAST_WILL_MODE != 0
-            _lastWillPayloadOffline(MQTT_LAST_WILL_TOPIC_ONLINE),
+            _lastWillPayloadOffline(MQTT_LAST_WILL_TOPIC_OFFLINE),
             _lastWillTopic(formatTopic(MQTT_LAST_WILL_TOPIC)),
         #endif
         _connState(ConnectionState::NONE),
@@ -552,7 +552,7 @@ namespace MQTT {
             #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
                 // set status topic
                 auto payload = String(MQTT_AVAILABILITY_TOPIC_OFFLINE);
-                _client->publish(formatTopic(F("status")).c_str(), _translateQosType(getDefaultQos()), true, payload.c_str(), payload.length());
+                _client->publish(formatTopic(MQTT_AVAILABILITY_TOPIC).c_str(), _translateQosType(getDefaultQos()), true, payload.c_str(), payload.length());
             #endif
         }
         _client->disconnect(forceDisconnect);
@@ -607,7 +607,7 @@ namespace MQTT {
         #endif
         #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
             // set status topic
-            publish(formatTopic(F("status")), true, MQTT_AVAILABILITY_TOPIC_ONLINE, getDefaultQos());
+            publish(formatTopic(MQTT_AVAILABILITY_TOPIC), true, MQTT_AVAILABILITY_TOPIC_ONLINE, getDefaultQos());
         #endif
         #if MQTT_SET_LAST_WILL_MODE != 2 && IOT_REMOTE_CONTROL == 1
             #error remote control requires MQTT_SET_LAST_WILL_MODE == 2 for MQTT_AVAILABILITY_TOPIC
@@ -692,30 +692,30 @@ namespace MQTT {
 
     #if MQTT_AUTO_DISCOVERY
 
-    void MQTT::Client::updateAutoDiscoveryTimestamps(bool success)
-    {
-        using namespace MQTT::Json;
+        void MQTT::Client::updateAutoDiscoveryTimestamps(bool success)
+        {
+            using namespace MQTT::Json;
 
-        _resetAutoDiscoveryInitialState();
+            _resetAutoDiscoveryInitialState();
 
-        auto now = time(nullptr);
-        if (!isTimeValid(now)) {
-            now = std::max(_autoDiscoveryLastSuccess, _autoDiscoveryLastFailure) + 1;
+            auto now = time(nullptr);
+            if (!isTimeValid(now)) {
+                now = std::max(_autoDiscoveryLastSuccess, _autoDiscoveryLastFailure) + 1;
+            }
+
+            if (success) {
+                _autoDiscoveryLastSuccess = now;
+            }
+            else {
+                _autoDiscoveryLastFailure = now;
+            }
+
+            auto json = UnnamedObject(
+                NamedUint32(F("last_success"), _autoDiscoveryLastSuccess),
+                NamedUint32(F("last_failure"), _autoDiscoveryLastFailure)
+            ).toString();
+            publish(_autoDiscoveryStatusTopic, true, json, QosType::AT_LEAST_ONCE);
         }
-
-        if (success) {
-            _autoDiscoveryLastSuccess = now;
-        }
-        else {
-            _autoDiscoveryLastFailure = now;
-        }
-
-        auto json = UnnamedObject(
-            NamedUint32(F("last_success"), _autoDiscoveryLastSuccess),
-            NamedUint32(F("last_failure"), _autoDiscoveryLastFailure)
-        ).toString();
-        publish(_autoDiscoveryStatusTopic, true, json, QosType::AT_LEAST_ONCE);
-    }
 
     #endif
 

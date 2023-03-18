@@ -254,9 +254,9 @@ bool RemoteControlPlugin::_sendBatteryStateAndSleep()
         if (sensor->getType() == SensorPlugin::SensorType::BATTERY) {
             sensor->setNextMqttUpdate(sensor->DEFAULT_MQTT_UPDATE_RATE);
             auto batterySensor = reinterpret_cast<Sensor_Battery *>(sensor);
-            batterySensor->readADC(16);
+            batterySensor->readADC(batterySensor->kADCNumReads * 4);
             auto status = batterySensor->readSensor();
-            __DBG_printf("sending battery state voltage=%.3f", status.getVoltage());
+            __LDBG_printf("sending battery state voltage=%.3f level=%u", status.getVoltage(), status.getLevel());
             if (_getConfig().udp_enable) {
                 auto payload = _getJsonBatteryStatus(status);
                 WiFiUDP udp;
@@ -485,7 +485,7 @@ void RemoteControlPlugin::_loop()
                         // BUILTIN_LED_SETP(200, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
                         BlinkLEDTimer::setPattern(__LED_BUILTIN, 100, BlinkLEDTimer::Bitset(0b000000000000000001010101U, 24U));
                         _signalWarning = true;
-                        __DBG_printf("signal warning");
+                        __LDBG_printf("signal warning");
                     }
                 }
                 else {

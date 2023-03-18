@@ -15,8 +15,9 @@ class RemoteControlPlugin;
 // https://www.home-assistant.io/integrations/device_trigger.mqtt/
 //
 // those can be used without home assistant as well
-// using UDP has the advantage to reduce lag when waking up. MQTT requires ~350ms to arrive at the destination, while UDP reaches it in ~220ms.
+// using UDP has the advantage to reduce lag when waking up. MQTT requires at least ~350ms to publish events, while UDP packets reach the remote server within ~205ms.
 // (assuming WiFi Quick Connect works and connects within ~200ms)
+// https://nodered.org/ is an easy solution to parse and handle incoming UDP packets
 
 
 namespace RemoteControl {
@@ -176,7 +177,7 @@ namespace RemoteControl {
         void event(BaseEventType type, StateType state);
 
     protected:
-        // reser auto sleep timer and disable warning LED
+        // reset auto sleep timer and disable warning LED
         void _resetAutoSleep() {
             _setAutoSleepTimeout();
             if (_signalWarning && _isAutoSleepBlocked() == false) {

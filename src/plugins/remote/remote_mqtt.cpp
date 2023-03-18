@@ -14,14 +14,14 @@
 
 using Plugins = KFCConfigurationClasses::PluginsType;
 
-static inline String get_button_name(uint8_t n)
+static inline String getButtonName(uint8_t n)
 {
     return PrintString(F("button_%u"), n + 1);
 }
 
-static void add_subtype_type_payload(MQTT::AutoDiscovery::EntityPtr discovery, uint8_t button, const __FlashStringHelper *subType)
+static void addSubtypeTypePayload(MQTT::AutoDiscovery::EntityPtr discovery, uint8_t button, const __FlashStringHelper *subType)
 {
-    auto name = get_button_name(button);
+    auto name = getButtonName(button);
     __LDBG_printf("discovery name=%s i=%u sub_type=%s", name.c_str(), button, subType);
     discovery->addPayloadAndSubType(name, subType, F("button_"));
 }
@@ -30,12 +30,15 @@ MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, u
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
     if (num == _autoDiscoveryCount - 1) {
-        if (!discovery->create(ComponentType::BINARY_SENSOR, PrintString(F("awake")), format)) {
+        if (!discovery->create(ComponentType::BINARY_SENSOR, String(MQTT_LAST_WILL_TOPIC), format)) {
             return discovery;
         }
-        discovery->addStateTopic(MQTT::Client::formatTopic(F("awake")));
-        discovery->addPayloadOn(F("ON"));
-        discovery->addPayloadOff(F("OFF"));
+        auto baseTopic = MQTT::Client::getBaseTopicPrefix();
+        discovery->addStateTopic(MQTT::Client::formatTopic(MQTT_LAST_WILL_TOPIC));
+        discovery->addName(F("Awake State"));
+        discovery->addPayloadOn(MQTT_LAST_WILL_TOPIC_ONLINE);
+        discovery->addPayloadOff(MQTT_LAST_WILL_TOPIC_OFFLINE);
+        discovery->addObjectId(baseTopic + MQTT_LAST_WILL_TOPIC);
         return discovery;
     }
 
@@ -52,55 +55,55 @@ MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, u
         mqtt.event_bits &= cfg.enabled.event_bits;
         if (mqtt.event_down) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("down"));
+                addSubtypeTypePayload(discovery, i, F("down"));
                 break;
             }
         }
         if (mqtt.event_up) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("up"));
+                addSubtypeTypePayload(discovery, i, F("up"));
                 break;
             }
         }
         if (mqtt.event_press) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("short_press"));
+                addSubtypeTypePayload(discovery, i, F("short_press"));
                 break;
             }
         }
         if (mqtt.event_single_click) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("single_click"));
+                addSubtypeTypePayload(discovery, i, F("single_click"));
                 break;
             }
         }
         if (mqtt.event_double_click) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("double_click"));
+                addSubtypeTypePayload(discovery, i, F("double_click"));
                 break;
             }
         }
         if (mqtt.event_multi_click) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("repeated_click"));
+                addSubtypeTypePayload(discovery, i, F("repeated_click"));
                 break;
             }
         }
         if (mqtt.event_long_press) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("long_press"));
+                addSubtypeTypePayload(discovery, i, F("long_press"));
                 break;
             }
         }
         if (mqtt.event_hold) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("hold_repeat"));
+                addSubtypeTypePayload(discovery, i, F("hold_repeat"));
                 break;
             }
         }
         if (mqtt.event_hold_released) {
             if (count++ == num) {
-                add_subtype_type_payload(discovery, i, F("hold_release"));
+                addSubtypeTypePayload(discovery, i, F("hold_release"));
                 break;
             }
         }
@@ -110,7 +113,7 @@ MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, u
 
 void MqttRemote::_updateAutoDiscoveryCount()
 {
-    _autoDiscoveryCount = 1;
+    _autoDiscoveryCount = 1; // for awake sensor
     auto cfg = Plugins::RemoteControl::getConfig();
     if (!cfg.mqtt_enable) {
         return;

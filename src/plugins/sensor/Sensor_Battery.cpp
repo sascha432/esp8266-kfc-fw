@@ -15,7 +15,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-#define USE_ADC_MANAGER 0
+#define USE_ADC_MANAGER 1
 
 float Sensor_Battery::maxVoltage = 0;
 
@@ -40,7 +40,7 @@ Sensor_Battery::Sensor_Battery(const String &name) :
     reconfigure(nullptr);
 
     #if USE_ADC_MANAGER
-        ADCManager::getInstance().addAutoReadTimer(Event::milliseconds(kReadInterval / 2), Event::milliseconds(10), kADCNumReads);
+        ADCManager::getInstance().addAutoReadTimer(Event::milliseconds(kReadInterval / 2), Event::milliseconds(10), kADCNumReads * 2);
     #endif
 
     _Timer(_timer).add(Event::milliseconds(kReadInterval), true, [this](Event::CallbackTimerPtr) {
@@ -58,10 +58,6 @@ void Sensor_Battery::_readADC(uint8_t num)
     #if USE_ADC_MANAGER
         _adcValue = ADCManager::getInstance().readValue();
     #else
-        if (num < 1) {
-            __DBG_panic("_readADC(0)");
-        }
-
         uint32_t value = analogRead(A0);
         auto count = num;
         while(--count) {

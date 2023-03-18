@@ -367,7 +367,7 @@ void RemoteControlPlugin::getStatus(Print &output)
     else {
         output.print(F(", auto sleep disabled"));
     }
-    output.printf_P(PSTR(", force deep sleep after %u minutes"), _config.max_awake_time);
+    output.printf_P(PSTR(HTML_S(br) "force deep sleep after %u minutes"), _config.max_awake_time);
     if (_getConfig().udp_enable) {
         output.printf_P(PSTR(", UDP %s:%u enabled"), Plugins::RemoteControl::getUdpHost(), _getConfig()._get_udp_port());
     }

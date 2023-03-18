@@ -526,7 +526,7 @@ namespace MQTT {
         _client->setKeepAlive(_config.keepalive);
 
         #if MQTT_SET_LAST_WILL_MODE != 0
-            __DBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayloadOffline.c_str());
+            __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayloadOffline.c_str());
             _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
         #endif
 
@@ -550,9 +550,9 @@ namespace MQTT {
                 _client->publish(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
             #endif
             #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
-                // set availability topic
+                // set status topic
                 auto payload = String(MQTT_AVAILABILITY_TOPIC_OFFLINE);
-                _client->publish(String(MQTT_AVAILABILITY_TOPIC).c_str(), _translateQosType(getDefaultQos()), true, payload.c_str(), payload.length());
+                _client->publish(formatTopic(F("status")).c_str(), _translateQosType(getDefaultQos()), true, payload.c_str(), payload.length());
             #endif
         }
         _client->disconnect(forceDisconnect);
@@ -603,11 +603,11 @@ namespace MQTT {
 
         #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
             // set last will topic
-            publish(_lastWillTopic, true, MQTT_LAST_WILL_TOPIC_ONLINE);
+            publish(_lastWillTopic, true, MQTT_LAST_WILL_TOPIC_ONLINE, getDefaultQos());
         #endif
         #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
-            // set availability topic
-            publish(MQTT_AVAILABILITY_TOPIC, true, MQTT_AVAILABILITY_TOPIC_ONLINE);
+            // set status topic
+            publish(formatTopic(F("status")), true, MQTT_AVAILABILITY_TOPIC_ONLINE, getDefaultQos());
         #endif
         #if MQTT_SET_LAST_WILL_MODE != 2 && IOT_REMOTE_CONTROL == 1
             #error remote control requires MQTT_SET_LAST_WILL_MODE == 2 for MQTT_AVAILABILITY_TOPIC

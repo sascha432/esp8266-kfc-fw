@@ -526,7 +526,8 @@ namespace MQTT {
         _client->setKeepAlive(_config.keepalive);
 
         #if MQTT_SET_LAST_WILL_MODE != 0
-            publishLastWill();
+            __DBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayloadOffline.c_str());
+            _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
         #endif
 
         _connState = ConnectionState::CONNECTING;
@@ -546,26 +547,16 @@ namespace MQTT {
 
             #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
                 // set last will topic
-                publishWithId(nullptr, _lastWillTopic, true, _lastWillPayloadOffline);
+                _client->publish(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
             #endif
             #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
                 // set availability topic
-                publishWithId(nullptr, MQTT_AVAILABILITY_TOPIC, true, MQTT_AVAILABILITY_TOPIC_OFFLINE);
+                auto payload = String(MQTT_AVAILABILITY_TOPIC_OFFLINE);
+                _client->publish(String(MQTT_AVAILABILITY_TOPIC).c_str(), _translateQosType(getDefaultQos()), true, payload.c_str(), payload.length());
             #endif
-            // publish adds new data to the queue, clear it again
-            _queue.clear();
-            _packetQueue.clear();
         }
         _client->disconnect(forceDisconnect);
     }
-
-    #if MQTT_SET_LAST_WILL_MODE != 0
-    void MQTT::Client::publishLastWill()
-    {
-        __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayloadOffline.c_str());
-        _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
-    }
-    #endif
 
     void MQTT::Client::autoReconnect(AutoReconnectType timeout)
     {

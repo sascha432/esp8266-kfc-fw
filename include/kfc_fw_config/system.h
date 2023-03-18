@@ -157,7 +157,7 @@ namespace KFCConfigurationClasses {
             }
 
             CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Password, 6, 64);
-            
+
         };
 
         // --------------------------------------------------------------------
@@ -170,6 +170,7 @@ namespace KFCConfigurationClasses {
             CREATE_STRING_GETTER_SETTER(MainConfig().system.firmware, PluginBlacklist, 255);
             CREATE_STRING_GETTER_SETTER(MainConfig().system.firmware, MD5, 32);
 
+            // return cached MD5 value
             static const char *getFirmwareMD5() {
                 auto md5Str = getMD5();
                 if (!md5Str || !*md5Str) {

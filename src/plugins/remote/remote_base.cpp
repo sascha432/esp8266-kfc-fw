@@ -122,7 +122,7 @@ namespace RemoteControl {
 
         if (_queue.size() && !_queueTimer) {
             __LDBG_printf("arming queue timer");
-            _queueTimer.add(25, true, [this](Event::CallbackTimerPtr timer) {
+            _queueTimer.add(Event::milliseconds(5), true, [this](Event::CallbackTimerPtr timer) {
                 timerCallback(timer);
             }, Event::PriorityType::HIGHEST);
         }
@@ -136,6 +136,9 @@ namespace RemoteControl {
             _resetAutoSleep();
             return;
         }
+        // slow down once connected
+        timer->updateInterval(Event::milliseconds(25));
+
         if (_lock.isAnyLocked(nullptr)) {
             _resetAutoSleep();
             return;
@@ -152,23 +155,29 @@ namespace RemoteControl {
             }
         }
 
-#if DEBUG_IOT_REMOTE_CONTROL
-        auto count = _queue.size();
-#endif
-        noInterrupts();
-        _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [](const Queue::Event &event) {
-            return event.canDelete();
-        }), _queue.end());
-        interrupts();
-#if DEBUG_IOT_REMOTE_CONTROL
-        if (count != _queue.size()) {
-            __LDBG_printf("%u items removed from queue", count - _queue.size());
+        #if DEBUG_IOT_REMOTE_CONTROL
+            auto count = _queue.size();
+        #endif
+        {
+            InterruptLock lock;
+            _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [](const Queue::Event &event) {
+                return event.canDelete();
+            }), _queue.end());
+
+            #if DEBUG_IOT_REMOTE_CONTROL
+                if (count != _queue.size()) {
+                    __LDBG_printf("%u items removed from queue", count - _queue.size());
+                }
+            #endif
         }
-#endif
 
         if (_queue.empty()) {
             __LDBG_printf("disarming queue timer");
             timer->disarm();
+        }
+        else {
+            __LDBG_printf("queue not empty, keep device awake");
+            _resetAutoSleep();
         }
     }
 
@@ -197,12 +206,14 @@ namespace RemoteControl {
                             // the battery level update after disconnecting the charger requires at least 22 seconds
                             for(const auto &sensor: SensorPlugin::getSensors()) {
                                 if (sensor->getType() == SensorPlugin::SensorType::BATTERY) {
-                                    sensor->setMqttUpdateRate(30);
+                                    sensor->setNextMqttUpdate(30);
                                 }
                             }
+                            // goto sleep after publishing the battery state with a 30 second delay
                             _setAutoSleepTimeout(millis() + 35000, ~0U);
                         }
                         else {
+                            // goto sleep if MQTT does not come up within 5 seconds
                             _setAutoSleepTimeout(millis() + 5000, ~0U);
                         }
                     }

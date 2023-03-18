@@ -56,9 +56,9 @@ void PushButton::loop()
     if (_startTimerRunning && _repeatTime) {
         _duration = get_time_diff(_startTimer, millis());
         // between down and up
-        if (_duration >= _longpressTime) {
+        if (_duration >= _longPressTime) {
             // start with 1...
-            uint16_t repeatCount = 1 + ((_duration - _longpressTime) / _repeatTime);
+            uint16_t repeatCount = 1 + ((_duration - _longPressTime) / _repeatTime);
             bool repeatChanged = repeatCount != _repeatCount;
             _repeatCount = repeatCount;
             if (repeatChanged) {
@@ -112,8 +112,8 @@ void PushButton::_buttonReleased()
     _singleClickGroup->stopTimer(this);
 #endif
 
-    if (_duration < _longpressTime) {
-        __LDBG_printf("%s LONG_CLICK=%u duration=%u", name(), _longpressTime, _duration);
+    if (_duration < _longPressTime) {
+        __LDBG_printf("%s LONG_CLICK=%u duration=%u", name(), _longPressTime, _duration);
         _fireEvent(EventType::LONG_CLICK);
         return;
     }

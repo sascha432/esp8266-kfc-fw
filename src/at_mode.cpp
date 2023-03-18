@@ -85,67 +85,7 @@ void __kfcfw_queue_monitor(AsyncWebSocketMessage *dataMessage, AsyncClient *_cli
 }
 
 #if HAVE_I2CSCANNER
-
-void check_if_exist_I2C(TwoWire &wire, Print &output, uint8_t startAddress, uint8_t endAddress, uint32_t delayMillis = 10)
-{
-    wire.setClock(100000);
-    int nDevices = 0;
-    for (auto address = startAddress; address < endAddress; address++ ) {
-        // The i2c_scanner uses the return value of
-        // the Write.endTransmission to see if
-        // a device did acknowledge to the address.
-        wire.beginTransmission(address);
-        uint8_t error = wire.endTransmission(true);
-        if (error == 0 || error == 3) { // 0=ACK, 3=NACK for data
-            output.printf_P(PSTR("I2C device found at address 0x%02x (%u)\n"), address, error);
-            nDevices++;
-        }
-        else if (error == 4) {
-            output.printf_P(PSTR("Unknown error at address 0x%02x\n"), address);
-        }
-        if (delayMillis) {
-            delay(delayMillis);
-        }
-    }
-    if (nDevices == 0) {
-        output.println(F("No I2C devices found"));
-    }
-}
-
-void scanI2C(Print &output, int8_t sda, int8_t scl, uint8_t startAddress, uint8_t endAddress)
-{
-    TwoWire *wire;
-    if (sda == 0xff || scl == 0xff || sda == scl || isFlashInterfacePin(sda) || isFlashInterfacePin(scl)) {
-        output.printf_P(PSTR("Scanning (SDA : SCL) - "));
-        wire = &config.initTwoWire(false, &output);
-    }
-    else {
-        output.printf_P(PSTR("Scanning (SDA : SCL) - GPIO%u : GPIO%u - "), sda, scl);
-        Wire.begin(sda, scl);
-        wire = &Wire;
-    }
-    check_if_exist_I2C(*wire, output, startAddress, endAddress);
-    config.initTwoWire(true);
-}
-
-#define I2C_SCANNER_SKIP_PORT(i) (i == 1 || i == 3 || isFlashInterfacePin(i))
-
-void scanPorts(Print &output, uint8_t startAddress, uint8_t endAddress)
-{
-    output.println(F("\nScanning all PIN pairs..."));
-    for (uint8_t i = 0; i <= 16; i++) {
-        if (I2C_SCANNER_SKIP_PORT(i)) {
-            continue;
-        }
-        for (uint8_t j = 0; j <= 16; j++) {
-            if (i == j || I2C_SCANNER_SKIP_PORT(j)) {
-                continue;
-            }
-            scanI2C(output, i, j, startAddress, endAddress);
-        }
-    }
-}
-
+#   include "i2c_scanner.h"
 #endif
 
 #if AT_MODE_HELP_SUPPORTED
@@ -1065,15 +1005,16 @@ private:
     static constexpr uint16_t FLAGS_LAST_PACKET = 0x0001;
     static constexpr uint16_t FLAGS_DROPPED_PACKETS = 0x0002;
 
-    void resetBuffer() {
+    void resetBuffer()
+    {
         _buffer.setLength(0);
         _buffer.reserve(_webSocket.packetSize + 1);
         Header_t header = { WsClient::BinaryPacketType::ADC_READINGS, FLAGS_NONE, sizeof(Data_t) };
         _buffer.push_back(header);
     }
 
-    virtual void processData(uint16_t reading, uint32_t diff, uint32_t micros) override {
-
+    virtual void processData(uint16_t reading, uint32_t diff, uint32_t micros) override
+    {
         Data_t data;
         uint32_t ms = micros / 1000U;
         auto time = get_time_diff(_webSocket.start, ms);
@@ -1130,11 +1071,11 @@ private:
 
         data._time = time;
         data._value = std::min(reading, (uint16_t)1023);
-#if IOT_BLINDS_CTRL
-        data._value2 = BlindsControlPlugin::getInstance().getCurrent();
-#else
-        data._value2 = 0;
-#endif
+        #if IOT_BLINDS_CTRL
+            data._value2 = BlindsControlPlugin::getInstance().getCurrent();
+        #else
+            data._value2 = 0;
+        #endif
 
         _buffer.push_back(data);
     }
@@ -1301,7 +1242,7 @@ static uintptr_t translateAddress(String str) {
         else if (str.startsWithIgnoreCase(F("savecrash"))) {
             return (uintptr_t)&_SAVECRASH_start;
         }
-        else if (str.startsWithIgnoreCase(F("savcecrash_e"))) {
+        else if (str.startsWithIgnoreCase(F("savecrash_e"))) {
             return (uintptr_t)&_SAVECRASH_end;
         }
         else if (str.startsWithIgnoreCase(F("ee"))) {
@@ -1481,6 +1422,7 @@ void at_mode_serial_handle_event(String &commandString)
             #if ENABLE_DEEP_SLEEP
                 DeepSleep::deepSleepParams.enterDeepSleep(time, mode);
             #else
+                WiFi.disconnect(true);
                 ESP.deepSleep(time.count() * 1000ULL, mode);
                 ESP.deepSleep(ESP.deepSleepMax() / 2, mode);
                 ESP.deepSleep(0, mode);
@@ -2216,7 +2158,7 @@ void at_mode_serial_handle_event(String &commandString)
                         flags.is_softap_standby_mode_enabled = true;
                         flags.is_softap_enabled = false;
                         config.write();
-                        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModehandler);
+                        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModeHandler);
                     }
                     break;
                 case WiFiCommandsType::DIAG:

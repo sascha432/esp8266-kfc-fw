@@ -40,7 +40,7 @@
 // set MQTT_AVAILABILITY_TOPIC to MQTT_AVAILABILITY_TOPIC_ONLINE after connecting
 // and MQTT_AVAILABILITY_TOPIC_OFFLINE when disconnect() is called. set last
 // will to MQTT_LAST_WILL_TOPIC and publish MQTT_LAST_WILL_TOPIC_ONLINE after
-// connecting and MQTT_LAST_WILL_TOPIC_OFFLINE when the connctiong is lost.
+// connecting and MQTT_LAST_WILL_TOPIC_OFFLINE when the connection is lost.
 // the online status will not be affected by losing the connection (while the
 // device is in deep sleep) and publish the real status under a different topic
 //

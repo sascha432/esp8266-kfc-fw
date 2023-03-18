@@ -31,6 +31,7 @@ ResetDetector &resetDetector = resetDetectorNoInit._object;
 void resetDetectorNoInit_init()
 {
     resetDetectorNoInit.init();
+    __DBG_printf("resetDetectorNoInit_init()");
 }
 
 void __preinit(void)

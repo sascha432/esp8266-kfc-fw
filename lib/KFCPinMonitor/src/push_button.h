@@ -228,7 +228,7 @@ namespace PinMonitor {
         //     _subscribedEvents(EventType::NONE),
         //     _clickTime(350),
         //     _singleClickSteps(1),
-        //     _longpressTime(1500),
+        //     _longPressTime(1500),
         //     _repeatTime(2500)
         // {
         // }
@@ -237,7 +237,7 @@ namespace PinMonitor {
             _subscribedEvents(subscribedEvents),
             _clickTime(clickTime),
             _singleClickSteps(singleClickSteps),
-            _longpressTime(longpressTime),
+            _longPressTime(longpressTime),
             _repeatTime(repeatTime),
             _singleClickTime(singleClickTime)
         {
@@ -252,7 +252,7 @@ namespace PinMonitor {
         // 100% / shortpressSteps = level change per click
         uint16_t _singleClickSteps;
         // long press < longpressTime milliseconds
-        uint16_t _longpressTime;
+        uint16_t _longPressTime;
         // button held >= longpressTime, repeated event every _repeatTime milliseconds
         uint16_t _repeatTime;
         // timeout for detecting single and repeated clkicks

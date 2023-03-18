@@ -63,12 +63,14 @@ namespace RemoteControl
 
         inline void Lock::lock(uint8_t buttonNum, ActionPtr action)
         {
+            InterruptLock lock;
             // __LDBG_printf("lock=%u owner=%p", buttonNum, action);
             _buttons |= (1 << buttonNum);
         }
 
         inline void Lock::unlock(uint8_t buttonNum)
         {
+            InterruptLock lock;
             // __LDBG_printf("unlock=%u owner=%p", buttonNum, _lockOwner);
             _buttons &= ~(1 << buttonNum);
             _lockOwner = nullptr;
@@ -76,12 +78,14 @@ namespace RemoteControl
 
         inline void Lock::lockAll(ActionPtr action)
         {
+            InterruptLock lock;
             // __LDBG_printf("lockAll owner=%p", action);
             _buttons |= kAllLockedBit;
         }
 
         inline void Lock::unlockAll()
         {
+            InterruptLock lock;
             // __LDBG_printf("unlockAll owner=%p", _lockOwner);
             _buttons &= ~kAllLockedBit;
             _lockOwner = nullptr;
@@ -89,12 +93,14 @@ namespace RemoteControl
 
         inline void Lock::clear()
         {
+            InterruptLock lock;
             _buttons = 0;
             _lockOwner = nullptr;
         }
 
         inline bool Lock::isLocked(uint8_t buttonNum, ActionPtr action) const
         {
+            InterruptLock lock;
             if (action == _lockOwner) {
                 return false;
             }
@@ -103,6 +109,7 @@ namespace RemoteControl
 
         inline bool Lock::isAnyLocked(ActionPtr action) const
         {
+            InterruptLock lock;
             if (action == _lockOwner) {
                 return false;
             }
@@ -116,16 +123,16 @@ namespace RemoteControl
         // //
         // // if the ordered flag is set, events/actions added later are delayed if any error
         // // occurs sending the action. if the events arrive in the correct order also
-        // // depends on the underlaying protocol
+        // // depends on the underlying protocol
         // //
-        // // using tcp with a single connection and/or acknowlegement ensures the order
+        // // using tcp with a single connection and/or acknowledgment ensures the order
         // class Actions
         // {
         // public:
         //     enum class OrderType {
         //         NONE = 0,
         //         BUTTON,                 // sending further actions for a single button is delayed until the action has been sent
-        //         DEVICE,                 // sending any futher actions is delayed until the action has been sent
+        //         DEVICE,                 // sending any further actions is delayed until the action has been sent
         //     };
 
         // public:

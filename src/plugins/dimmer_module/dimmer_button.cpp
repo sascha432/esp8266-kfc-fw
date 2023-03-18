@@ -28,9 +28,9 @@ Button::Button(uint8_t pin, uint8_t channel, uint8_t button, Buttons &dimmer, Si
     _button(button),
     _repeat(0)
 {
-    if (_longpressTime == 0) {
-        _longpressTime = std::max<uint16_t>(_repeatTime, _clickTime + 50);
-        _repeatTime = _longpressTime;
+    if (_longPressTime == 0) {
+        _longPressTime = std::max<uint16_t>(_repeatTime, _clickTime + 50);
+        _repeatTime = _longPressTime;
         _subscribedEvents = EnumHelper::Bitset::removeBits(_subscribedEvents, EventType::LONG_PRESSED);
     }
     // if (_button == 1) {
@@ -59,7 +59,7 @@ void Button::event(EventType eventType, uint32_t now)
                 // int16_t levelChange = (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / _singleClickSteps);
                 // _level += _button == 1 ? -levelChange : levelChange;
                 // calculate time for a single click to get a smooth transition to hold repeat
-                // _changeLevelSingle(_singleClickSteps, _button == 1, (_longpressTime * config.lp_fadetime / 950.0) / (config.lp_fadetime / _singleClickSteps));
+                // _changeLevelSingle(_singleClickSteps, _button == 1, (_longPressTime * config.lp_fadetime / 950.0) / (config.lp_fadetime / _singleClickSteps));
                 if (config._base.longpress_time == 0) {
                     _changeLevelRepeat(_repeatTime, _button == 1);
                 }

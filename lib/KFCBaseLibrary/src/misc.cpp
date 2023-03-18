@@ -7,6 +7,8 @@
 #include <PrintString.h>
 #include "misc.h"
 
+#include "debug_helper_disable.h"
+
 // extern "C" {
 //     const char SPGM_null[] PROGMEM = { "null" };
 //     const char SPGM_0x_08x[] PROGMEM = { "0x%08x" };
@@ -218,7 +220,7 @@ File createFileRecursive(const String &path, const char *mode)
             }
             parts.concat(str, size);
             if (flags & split::SplitFlagsType::LAST) {
-                __LDBG_printf("create file=%s exists=%u", parts.c_str(), KFCFS.exists(parts));
+                __LDBG_printf("create file=%s exists=%u mode=%s", parts.c_str(), KFCFS.exists(parts), mode);
                 if (!KFCFS.exists(parts)) {
                     file = KFCFS.open(parts, mode);
                 }

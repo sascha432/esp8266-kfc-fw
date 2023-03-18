@@ -450,9 +450,9 @@ namespace MQTT {
 
         // the safe methods verify that the client exists
         static void safePersistantStorage(StorageFrequencyType type, const String &name, const String &data);
-#if MQTT_AUTO_DISCOVERY
-        static bool safeIsAutoDiscoveryRunning();
-#endif
+        #if MQTT_AUTO_DISCOVERY
+            static bool safeIsAutoDiscoveryRunning();
+        #endif
         static bool safeIsConnected();
 
 private:
@@ -465,10 +465,6 @@ public:
         void connect();
         // disconnect from server
         void disconnect(bool forceDisconnect = false);
-#if MQTT_SET_LAST_WILL_MODE != 0
-        // publish last will
-        void publishLastWill();
-#endif
         // returns true for ConnectionState::CONNECTED,
         bool isConnected() const;
         // returns true for ConnectionState::PRE_CONNECT, CONNECTING and CONNECTED

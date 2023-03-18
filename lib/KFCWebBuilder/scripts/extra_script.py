@@ -53,7 +53,9 @@ def build_webui(source, target, env, force = False):
     version = extract_re([r'#define\s+FIRMWARE_VERSION_MAJOR\s+(?P<major>[0-9]+) ', r'#define\s+FIRMWARE_VERSION_MINOR\s+(?P<minor>[0-9]+) ', r'#define\s+FIRMWARE_VERSION_REVISION\s+(?P<rev>[0-9]+) '], env_abspath(env, '$PROJECT_DIR/include/global.h'))
     version = '%s.%s.%s Build %s (%s)' % (version['major'], version['minor'], version['rev'], build['build'], datetime.now().strftime('%b %d %Y %H:%M:%S'))
 
-    with open(env_abspath(env, '$PROJECT_DIR/data/.pvt/build'), 'w') as file:
+    filename = env_abspath(env, '$PROJECT_DIR/data/.pvt/build')
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, 'w') as file:
         file.write(version)
 
     defines = env.get('CPPDEFINES');

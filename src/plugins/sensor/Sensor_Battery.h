@@ -116,25 +116,6 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 #define IOT_SENSOR_BATTERY_NUM_CELLS                            1
 #endif
 
-// allows to configure host and port to receive battery sensor data over UDP to create a charge/discharge curve
-// raw ADC values are sent multiple times per second
-//
-// data records
-//
-// ["<device-name>","<data type>",<unixtime>,<voltage>,<voltage without calibration>,<ADC average value>,<battery level>,<charging indicator>]
-// ["KFCDB1DE7","SEN",1613926400.217,4.2507,4.3324,821.5605,100,0]
-// ["KFCDB1DE7","SEN",1613931008.875,4.015,4.0922,776.0072,81,0]
-//
-// ["<device-name>","<data type>",<unixtime>,<ADC value>,<time since last read in milliseconds>]
-// ["KFCDB1DE7","ADC",1613924992.606,792,122]
-// ["KFCDB1DE7","ADC",1613924992.683,792,76]
-// ["KFCDB1DE7","ADC",1613924992.861,792,179]
-// ["KFCDB1DE7","ADC",1613924992.936,792,75]
-
-#ifndef IOT_SENSOR_HAVE_BATTERY_RECORDER
-#define IOT_SENSOR_HAVE_BATTERY_RECORDER                        0
-#endif
-
 #ifdef IOT_SENSOR_BATTERY_ON_BATTERY_DECL
 IOT_SENSOR_BATTERY_ON_BATTERY_DECL;
 #endif
@@ -175,14 +156,17 @@ public:
     using ConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::BatteryConfigType;
     using RegressFunction = std::function<float(float)>;
 
+    static constexpr uint8_t kADCNumReads = 16; // number of reads for average value
+    static constexpr uint32_t kReadInterval = 1000; // millis
+
     class Status {
     public:
         Status() :
-            _lockLevelTime(0),
+            _voltage(0),
             _state(StateType::RUNNING),
             _charging(ChargingType::NOT_AVAILABLE),
             _chargingBefore(ChargingType::NOT_AVAILABLE),
-            _level(100)
+            _level(0)
         {}
 
         void updateSensor(Sensor_Battery &sensor);
@@ -231,7 +215,6 @@ public:
         }
 
     private:
-        uint32_t _lockLevelTime;
         float _voltage;
         StateType _state;
         ChargingType _charging;
@@ -266,11 +249,12 @@ public:
     virtual void reconfigure(PGM_P source) override;
 
     Status readSensor();
+    void readADC(uint8_t num = kADCNumReads);
 
     // calculate capacity in %
     static float calcLipoCapacity(float voltage, uint8_t cells = 1, bool charging = false, float precision = 1.0);
 
-    #if AT_MODE_SUPPORTED && (IOT_SENSOR_BATTERY_DISPLAY_LEVEL || IOT_SENSOR_HAVE_BATTERY_RECORDER)
+    #if AT_MODE_SUPPORTED && IOT_SENSOR_BATTERY_DISPLAY_LEVEL
         #if AT_MODE_HELP_SUPPORTED
             virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
         #endif
@@ -280,7 +264,7 @@ public:
 private:
     friend Status;
 
-    void _readADC(bool updateSensor);
+    void _readADC(uint8_t num = kADCNumReads);
 
     const __FlashStringHelper *_getId(TopicType type);
     String _getTopic(TopicType type);
@@ -288,9 +272,7 @@ private:
     String _name;
     ConfigType _config;
     Event::Timer _timer;
-    float _adcValue;
-    uint32_t _adcLastUpdateTime;
-    uint32_t _timerCounter;
+    uint32_t _adcValue;
     Status _status;
 
 public:
@@ -300,6 +282,11 @@ public:
 inline Sensor_Battery::Status Sensor_Battery::readSensor()
 {
     return _status;
+}
+
+inline void Sensor_Battery::readADC(uint8_t num)
+{
+    _readADC(num);
 }
 
 inline const __FlashStringHelper *Sensor_Battery::_getId(TopicType type)

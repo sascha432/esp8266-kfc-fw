@@ -55,6 +55,8 @@ const __FlashStringHelper *Logger::getLevelAsString(Level logLevel)
             return F("NOTICE");
         case Level::DEBUG:
             return F("DEBUG");
+        case Level::NONE:
+            return F("NONE");
         case Level::ANY:
             return F("error|security|warning|notice|debug");
         default:

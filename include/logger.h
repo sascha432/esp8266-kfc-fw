@@ -44,6 +44,7 @@ extern Logger _logger;
 class Logger {
 public:
     enum class Level : uint8_t {
+        NONE = 0,
         ERROR = _BV(0),
         SECURITY = _BV(1),
         WARNING = _BV(2),

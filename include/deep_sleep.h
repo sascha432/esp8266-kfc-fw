@@ -119,9 +119,10 @@ namespace DeepSleep {
 
     struct PinState {
 
-        uint32_t _time;
+        uint32_t _first_pressed[16];
         uint32_t _state;
         #if DEBUG_PIN_STATE
+            uint32_t _time;
             uint32_t _states[16];
             uint32_t _times[16];
             uint8_t _count;
@@ -136,7 +137,9 @@ namespace DeepSleep {
             return PIN_MONITOR_ACTIVE_STATE == PinMonitor::ActiveStateType::PRESSED_WHEN_HIGH;
         }
 
+        // initialize and read pin states
         void init();
+        // read pin states. this method should be executed in regular intervals to keep the timestamps in order
         void merge();
 
         // returns true if at least one reading has performed
@@ -145,31 +148,25 @@ namespace DeepSleep {
         // returns true if any pin is active
         bool anyPressed() const;
 
-        // get the active state for the pin
-        // active high: true for value != 0
-        // active low:  true for value == 0
+        // get the active state for the pin, inverted if activeLow() == true
         bool getState(uint8_t pin) const;
-        // get value that was read from the pin
-        bool getValue(uint8_t pin) const;
-        // get active states for all pins
+        // get active states for all pins, inverted if activeLow() == true
         uint32_t getStates() const;
-        // get values (states for active high and inverted states for active low)
-        uint32_t getValues() const;
-        // get values from states
-        uint32_t getValues(uint32_t states) const;
-
-        // time of objection creation
-        uint32_t getMillis() const;
-        uint32_t getMicros() const;
+        // get the GPIO states for all pins, always non inverted
+        uint32_t getGPIOStates() const;
+        // get timestamp in micros when the key press has been detected the first time
+        uint32_t getFirstPressed(uint8_t pin) const;
 
         String toString(uint32_t state = ~0U, uint32_t time = 0) const;
 
-        // read all GPIOs
+        // read all GPIOs and store pin states, states are stored inverted if activeLow() == true
         uint32_t _readStates() const;
         // set GPIO states
         void _setStates(uint32_t state);
         // merge active GPIO states
         void _mergeStates(uint32_t state);
+        // update timestamp to detect the order of the key pressed during boot. the merge function is required to be called frequently to poll the states
+        void _updateFirstPressed(uint32_t time);
 
     };
 
@@ -206,6 +203,7 @@ namespace DeepSleep {
         static uint32_t getDeepSleepMaxMillis();
         float getTotalTime() const;
         void updateRemainingTime();
+        uint32_t getDeepSleepTimeMillis() const;
         uint64_t getDeepSleepTimeMicros() const;
         uint32_t _updateRemainingTime();
         WakeupMode getWakeupMode() const;
@@ -218,6 +216,7 @@ namespace DeepSleep {
     extern "C" uint64_t _realTimeOffset;
     extern "C" PinState &deepSleepPinState;
     extern "C" DeepSleepParam deepSleepParams;
+    extern "C" bool enableWiFiOnBoot;
 
 }
 

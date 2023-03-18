@@ -254,7 +254,7 @@ class PackageFiles {
      */
     public function isHashMatch(string $branch): bool
     {
-        if (($json = file_get_contents($this->hashStorageFile)) === false) {
+        if (($json = @file_get_contents($this->hashStorageFile)) === false) {
             return false;
         }
         if (($json = json_decode($json, true)) === null) {
@@ -277,7 +277,7 @@ class PackageFiles {
      */
     public function storeHash(string $branch): void
     {
-        $json = json_decode(file_get_contents($this->hashStorageFile), true);
+        $json = json_decode(@file_get_contents($this->hashStorageFile), true);
         if ($this->packageHash === self::DIRTY_HASH) {
             $json[$branch] = array(
                 'hash' => $this->packageHash,

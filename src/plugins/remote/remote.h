@@ -29,16 +29,23 @@ using namespace RemoteControl;
 class MqttRemote : public MQTTComponent {
 public:
     MqttRemote() :
-        MQTTComponent(ComponentType::DEVICE_AUTOMATION)
+        MQTTComponent(ComponentType::DEVICE_AUTOMATION),
+        _sendBatteryStateAndGotoSleep(false)
     {
     }
 
     virtual AutoDiscovery::EntityPtr getAutoDiscovery(FormatType format, uint8_t num) override;
     virtual uint8_t getAutoDiscoveryCount() const override;
 
+    virtual bool _sendBatteryStateAndSleep() = 0;
+
     virtual void onConnect() {
         if (_autoDiscoveryPending) {
             publishAutoDiscovery();
+        }
+        else if (_sendBatteryStateAndGotoSleep) {
+            _sendBatteryStateAndGotoSleep = false;
+            _sendBatteryStateAndSleep();
         }
     }
 
@@ -67,6 +74,9 @@ public:
         MQTT::Client::unregisterComponent(this);
     }
 
+protected:
+    bool _sendBatteryStateAndGotoSleep;
+
 private:
     void _updateAutoDiscoveryCount();
 
@@ -92,6 +102,8 @@ class RemoteControlPlugin;
 
 class RemoteControlPlugin : public PluginComponent, public Base, public MqttRemote {
 public:
+    using Base::_setAutoSleepTimeout;
+
     RemoteControlPlugin();
 
     virtual void setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies) override;
@@ -129,12 +141,17 @@ public:
     }
     void _chargingStateChanged(bool active);
 
+protected:
+    // returns true if status has been sent, false if sensor is not ready
+    virtual bool _sendBatteryStateAndSleep();
+
 private:
     // virtual void _onShortPress(Button &button);
     // virtual void _onLongPress(Button &button);
     // virtual void _onRepeat(Button &button);
 
-    void _updateButtonConfig();
+    // update button config, set init to true for first call after boot
+    void _updateButtonConfig(bool init = false);
     // reset buttons states to remove all events. if buttons are pressed the debouncer will filter the events when released
     void _loop();
     void _readConfig();

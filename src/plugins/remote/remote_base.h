@@ -189,11 +189,12 @@ namespace RemoteControl {
         // forcetime == 0 resets the timeout if not disabled
         // forceTime == 1 resets it if disabled
         // forceTime > 1 sets the timeout to "forceTime" even if disabled
-        // maxAwakeExtratimeSeconds == 0 does not change the timeout
+        // maxAwakeExtraTimeSeconds == 0 does not change the timeout
         // maxAwakeExtratimeSecond > 0, _maxAwakeTimeout gets updated to n seconds after auto sleep timeout
-        // maxAwakeExtratimeSeconds == ~0U, the default configuration will be used
-        // maxAwakeExtratimeSeconds is only set *if* the new value exceeds the previous _maxAwakeTimeout
-        void _setAutoSleepTimeout(uint32_t forceTime = 0, uint32_t maxAwakeExtratimeSeconds = 0) {
+        // maxAwakeExtraTimeSeconds == ~0U, the default configuration will be used
+        // maxAwakeExtraTimeSeconds is only set *if* the new value exceeds the previous _maxAwakeTimeout
+        void _setAutoSleepTimeout(uint32_t forceTime = 0, uint32_t maxAwakeExtraTimeSeconds = 0)
+        {
             if (isAutoSleepEnabled() || forceTime) {
                 if (forceTime) {
                     __DBG_printf("__autoSleepTimeout=%u _config.auto_sleep_time=%u forceTime=%d", __autoSleepTimeout, _config.auto_sleep_time, forceTime);
@@ -202,11 +203,11 @@ namespace RemoteControl {
                     forceTime = millis() + (_config.auto_sleep_time * 1000U);
                 }
                 __autoSleepTimeout = forceTime;
-                if (maxAwakeExtratimeSeconds == ~0U) {
-                    maxAwakeExtratimeSeconds = _config.max_awake_time * 60U;
+                if (maxAwakeExtraTimeSeconds == ~0U) {
+                    maxAwakeExtraTimeSeconds = _config.max_awake_time * 60U;
                 }
-                if (maxAwakeExtratimeSeconds) {
-                    _maxAwakeTimeout = std::max<uint32_t>(_maxAwakeTimeout, __autoSleepTimeout + (maxAwakeExtratimeSeconds * 1000U));
+                if (maxAwakeExtraTimeSeconds) {
+                    _maxAwakeTimeout = std::max<uint32_t>(_maxAwakeTimeout, __autoSleepTimeout + (maxAwakeExtraTimeSeconds * 1000U));
                 }
             }
         }

@@ -24,14 +24,16 @@ namespace DeepSleep {
     // ------------------------------------------------------------------------
 
     __DEEP_SLEEP_INLINE_ALWAYS__
-    PinState::PinState() : _time(0), _state(0)
+    PinState::PinState() : _first_pressed{}, _state(0)
     {
+        #if DEBUG_PIN_STATE
+            _time = micros();
+        #endif
     }
 
     __DEEP_SLEEP_INLINE__
     void PinState::init()
     {
-        _time = micros();
         #if DEBUG_PIN_STATE
             _states[0] = _readStates();
             _times[0] = micros();
@@ -40,6 +42,8 @@ namespace DeepSleep {
         #else
             _setStates(_readStates());
         #endif
+
+        _updateFirstPressed(1);
     }
 
     __DEEP_SLEEP_INLINE__
@@ -55,6 +59,18 @@ namespace DeepSleep {
         #else
             _mergeStates(_readStates());
         #endif
+
+        _updateFirstPressed(micros());
+    }
+
+    __DEEP_SLEEP_INLINE__
+    void PinState::_updateFirstPressed(uint32_t time)
+    {
+        for(uint8_t i = 0; i < 16; i++) {
+            if (!_first_pressed[i] && getState(i)) {
+                _first_pressed[i] = time;
+            }
+        }
     }
 
     __DEEP_SLEEP_INLINE_ALWAYS__
@@ -76,15 +92,9 @@ namespace DeepSleep {
     }
 
     __DEEP_SLEEP_INLINE_ALWAYS__
-    uint32_t PinState::getValues() const
+    uint32_t PinState::getGPIOStates() const
     {
-        return getValues(getStates());
-    }
-
-    __DEEP_SLEEP_INLINE_ALWAYS__
-    uint32_t PinState::getValues(uint32_t states) const
-    {
-        return activeHigh() ? states : ~states;
+        return activeHigh() ? _state : ~_state;
     }
 
     __DEEP_SLEEP_INLINE_ALWAYS__
@@ -94,9 +104,9 @@ namespace DeepSleep {
     }
 
     __DEEP_SLEEP_INLINE_ALWAYS__
-    bool PinState::getValue(uint8_t pin) const
+    uint32_t PinState::getFirstPressed(uint8_t pin) const
     {
-        return (_state & _BV(pin)) == activeHigh();
+        return _first_pressed[pin];
     }
 
     __DEEP_SLEEP_INLINE__
@@ -119,18 +129,6 @@ namespace DeepSleep {
     void PinState::_mergeStates(uint32_t state)
     {
         _state |= state;
-    }
-
-    __DEEP_SLEEP_INLINE_ALWAYS__
-    uint32_t PinState::getMillis() const
-    {
-        return _time / 1000;
-    }
-
-    __DEEP_SLEEP_INLINE_ALWAYS__
-    uint32_t PinState::getMicros() const
-    {
-        return _time;
     }
 
     // ------------------------------------------------------------------------
@@ -198,6 +196,12 @@ namespace DeepSleep {
     void DeepSleepParam::updateRemainingTime()
     {
         _currentSleepTime = _updateRemainingTime();
+    }
+
+    __DEEP_SLEEP_INLINE_ALWAYS__
+    uint32_t DeepSleepParam::getDeepSleepTimeMillis() const
+    {
+        return _currentSleepTime;
     }
 
     __DEEP_SLEEP_INLINE_ALWAYS__

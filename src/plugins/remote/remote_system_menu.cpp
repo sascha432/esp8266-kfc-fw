@@ -37,7 +37,7 @@ namespace RemoteControl {
 
     void Base::systemButtonComboEvent(bool state, EventType eventType, uint8_t button, uint16_t repeatCount, uint32_t eventTime)
     {
-return;
+return;//TODO fix
         if (state) {
             Logger_notice(F("Entering system maintenance menu"));
             _systemButtonComboTime = millis();

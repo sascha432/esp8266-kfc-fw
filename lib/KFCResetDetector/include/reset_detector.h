@@ -13,7 +13,7 @@
 #define __RESET_DETECTOR_INCLUDED
 #define __RESET_DETECTOR_INSIDE_INCLUDE
 
-// enable debug outout
+// enable debug output
 #ifndef DEBUG_RESET_DETECTOR
 #    define DEBUG_RESET_DETECTOR 0
 #endif
@@ -116,7 +116,7 @@ public:
 
     // returns the number of resets. starts with 1 after the first reset and increases with
     // each reset that occurs before the device is running longer than RESET_DETECTOR_TIMEOUT
-    // once the timeout has occured, it returns 0
+    // once the timeout has occurred, it returns 0
     Counter_t getResetCounter() const;
     // returns the same value as getResetCounter() but does not reset to 0 after the timeout
     Counter_t getInitialResetCounter() const;

@@ -267,7 +267,11 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
         if (mode == SetupModeType::AUTO_WAKE_UP) {
             __LDBG_printf("auto wakeup");
             if (!dependencies->empty()) {
-                __DBG_printf("unresolved dependencies=%u", dependencies->size());
+                __LDBG_printf("unresolved dependencies=%u", dependencies->size());
+                for(auto dep: dependencies->getVector()) {
+                    __LDBG_printf("name=%s,src=%s", dep._name, dep._source->getName());
+                }
+
                 _delayedStartupTime = PLUGIN_DEEP_SLEEP_DELAYED_START_TIME;
                 _Scheduler.add(1000, true, [dependencies, this](Event::CallbackTimerPtr timer) {
                     if (millis() > _delayedStartupTime) {

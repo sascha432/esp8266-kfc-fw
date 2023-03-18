@@ -278,6 +278,11 @@
 #    define __ICACHE_FLASH_ATTR ICACHE_FLASH_ATTR
 #endif
 
+// time in minutes before the softAP is shutdown in safe mode
+#ifndef SOFTAP_SHUTDOWN_TIME
+#    define SOFTAP_SHUTDOWN_TIME 15
+#endif
+
 // default "0" defines for plugins
 
 #ifndef IOT_SWITCH

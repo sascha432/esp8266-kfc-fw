@@ -156,26 +156,7 @@ const uint16_t note_to_frequency[NOTE_TO_FREQUENCY_COUNT] PROGMEM = {
 };
 #endif
 
-// Config_Button
-
-// void Config_Button::getButtons(ButtonVector &buttons)
-// {
-//     uint16_t length;
-//     auto ptr = config.getBinary(_H(Config().buttons), length);
-//     if (ptr) {
-//         auto items = length / sizeof(Button_t);
-//         buttons.resize(items);
-//         memcpy(buttons.data(), ptr, items * sizeof(Button_t));
-//     }
-// }
-
-// void Config_Button::setButtons(ButtonVector &buttons)
-// {
-//     config.setBinary(_H(Config().buttons), buttons.data(), buttons.size() * sizeof(Button_t));
-// }
-
 // KFCFWConfiguration
-
 
 static_assert(CONFIG_EEPROM_SIZE >= 1024 && (CONFIG_EEPROM_SIZE) <= 4096, "invalid EEPROM size");
 
@@ -212,7 +193,7 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
             _wifiFirstConnectionTime = _wifiConnected;
             append = PrintString(F(" after %ums"), _wifiConnected);
         }
-        Logger_notice(F("WiFi(#%u) connected to %s%s"), config.getWiFiConfigurationNum() + 1, event.ssid.c_str(), append.c_str());
+        Logger_notice(F("WiFi(#%u) connected to %s (%s)%s"), config.getWiFiConfigurationNum() + 1, event.ssid.c_str(), mac2String(event.bssid).c_str(), append.c_str());
 
         #if ENABLE_DEEP_SLEEP
             config.storeQuickConnect(event.bssid, event.channel);
@@ -225,13 +206,8 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
             strncpy(reinterpret_cast<char *>(config.ssid), event.ssid.c_str(), sizeof(config.ssid));
             strncpy(reinterpret_cast<char *>(config.password), Network::WiFi::getPassword(_wifiNumActive), sizeof(config.password));
             memmove(config.bssid, event.bssid, sizeof(event.bssid));
-            config.bssid_set = 0;
+            config.bssid_set = *config.bssid != 0;
 
-            // check if something has changed
-            if (memcmp(&config, &defaultCfg, sizeof(config)) != 0) {
-                wifi_station_set_config(&config);
-                __DBG_printf("updated WiFi default configuration");
-            }
         #endif
 
         // #if defined(ESP32)
@@ -313,6 +289,7 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
         msg.print('/');
         WiFi.dnsIP(1).printTo(msg);
     }
+    msg.printf_P(PSTR(" BSSID/Channel: %s/%u"), WiFi.BSSIDstr().c_str(), WiFi.channel());
     Logger_notice(msg);
 
     setWiFiConnectLedMode();
@@ -372,54 +349,54 @@ void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPM
 
 #if defined(ESP32)
 
-void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
-{
-    switch(event) {
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED: {
-                WiFiEventStationModeConnected dst;
-                dst.ssid = reinterpret_cast<const char *>(info.wifi_sta_connected.ssid);
-                MEMNCPY_S(dst.bssid, info.wifi_sta_connected.bssid);
-                dst.channel = info.wifi_sta_connected.channel;
-                config._onWiFiConnectCb(dst);
-            } break;
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED: {
-                WiFiEventStationModeDisconnected dst;
-                dst.ssid = reinterpret_cast<const char *>(info.wifi_sta_disconnected.ssid);
-                MEMNCPY_S(dst.bssid, info.wifi_sta_disconnected.bssid);
-                dst.reason = (WiFiDisconnectReason)info.wifi_sta_disconnected.reason;
-                config._onWiFiDisconnectCb(dst);
-            } break;
-        #if DEBUG
-            case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP6: {
-                    __DBG_printf("ARDUINO_EVENT_WIFI_STA_GOT_IP6 addr=%04X:%04X:%04X:%04X", info.got_ip6.ip6_info.ip.addr[0], info.got_ip6.ip6_info.ip.addr[1], info.got_ip6.ip6_info.ip.addr[2], info.got_ip6.ip6_info.ip.addr[3]);
+    void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
+    {
+        switch(event) {
+            case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED: {
+                    WiFiEventStationModeConnected dst;
+                    dst.ssid = reinterpret_cast<const char *>(info.wifi_sta_connected.ssid);
+                    MEMNCPY_S(dst.bssid, info.wifi_sta_connected.bssid);
+                    dst.channel = info.wifi_sta_connected.channel;
+                    config._onWiFiConnectCb(dst);
                 } break;
-        #endif
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP: {
-                WiFiEventStationModeGotIP dst;
-                dst.ip = info.got_ip.ip_info.ip.addr;
-                dst.gw = info.got_ip.ip_info.gw.addr;
-                dst.mask = info.got_ip.ip_info.netmask.addr;
-                config._onWiFiGotIPCb(dst);
-            } break;
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_LOST_IP: {
-                config._onWiFiOnDHCPTimeoutCb();
-            } break;
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STACONNECTED: {
-                WiFiEventSoftAPModeStationConnected dst;
-                dst.aid = info.wifi_ap_staconnected.aid;
-                MEMNCPY_S(dst.mac, info.wifi_ap_staconnected.mac);
-                config._softAPModeStationConnectedCb(dst);
-            } break;
-        case WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STADISCONNECTED: {
-                WiFiEventSoftAPModeStationDisconnected dst;
-                dst.aid = info.wifi_ap_stadisconnected.aid;
-                MEMNCPY_S(dst.mac, info.wifi_ap_stadisconnected.mac);
-                config._softAPModeStationDisconnectedCb(dst);
-            } break;
-        default:
-            break;
+            case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED: {
+                    WiFiEventStationModeDisconnected dst;
+                    dst.ssid = reinterpret_cast<const char *>(info.wifi_sta_disconnected.ssid);
+                    MEMNCPY_S(dst.bssid, info.wifi_sta_disconnected.bssid);
+                    dst.reason = (WiFiDisconnectReason)info.wifi_sta_disconnected.reason;
+                    config._onWiFiDisconnectCb(dst);
+                } break;
+            #if DEBUG
+                case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP6: {
+                        __DBG_printf("ARDUINO_EVENT_WIFI_STA_GOT_IP6 addr=%04X:%04X:%04X:%04X", info.got_ip6.ip6_info.ip.addr[0], info.got_ip6.ip6_info.ip.addr[1], info.got_ip6.ip6_info.ip.addr[2], info.got_ip6.ip6_info.ip.addr[3]);
+                    } break;
+            #endif
+            case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP: {
+                    WiFiEventStationModeGotIP dst;
+                    dst.ip = info.got_ip.ip_info.ip.addr;
+                    dst.gw = info.got_ip.ip_info.gw.addr;
+                    dst.mask = info.got_ip.ip_info.netmask.addr;
+                    config._onWiFiGotIPCb(dst);
+                } break;
+            case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_LOST_IP: {
+                    config._onWiFiOnDHCPTimeoutCb();
+                } break;
+            case WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STACONNECTED: {
+                    WiFiEventSoftAPModeStationConnected dst;
+                    dst.aid = info.wifi_ap_staconnected.aid;
+                    MEMNCPY_S(dst.mac, info.wifi_ap_staconnected.mac);
+                    config._softAPModeStationConnectedCb(dst);
+                } break;
+            case WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STADISCONNECTED: {
+                    WiFiEventSoftAPModeStationDisconnected dst;
+                    dst.aid = info.wifi_ap_stadisconnected.aid;
+                    MEMNCPY_S(dst.mac, info.wifi_ap_stadisconnected.mac);
+                    config._softAPModeStationDisconnectedCb(dst);
+                } break;
+            default:
+                break;
+        }
     }
-}
 
 #elif USE_WIFI_SET_EVENT_HANDLER_CB
 
@@ -460,7 +437,7 @@ void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
 
         operator WiFiEventStationModeConnected() const {
             auto &info = event_info.connected;
-            return WiFiEventStationModeConnectedEx(info.ssid, sizeof(info.ssid), info.bssid, sizeof(info.ssid_len), info.channel);
+            return WiFiEventStationModeConnectedEx(info.ssid, sizeof(info.ssid), info.bssid, sizeof(info.bssid), info.channel);
         }
         operator WiFiEventStationModeDisconnected() const {
             auto &info = event_info.disconnected;
@@ -777,24 +754,38 @@ const String KFCFWConfiguration::getShortFirmwareVersion()
 
     void KFCFWConfiguration::storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway)
     {
-        __LDBG_printf("ip=%s netmask=%s gw=%s",
+        __LDBG_printf("ip=%s(%s) netmask=%s gw=%s bssid=%s",
             IPAddress(ip).toString().c_str(),
+            WiFi.localIP().toString().c_str(),
             IPAddress(netmask).toString().c_str(),
-            IPAddress(gateway).toString().c_str()
+            IPAddress(gateway).toString().c_str(),
+            WiFi.BSSIDstr().c_str()
         );
 
         using namespace DeepSleep;
 
         auto quickConnect = WiFiQuickConnect();
         if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
+            auto tmp = quickConnect;
             quickConnect.local_ip = ip;
             quickConnect.subnet = netmask;
             quickConnect.gateway = gateway;
             quickConnect.dns1 = WiFi.dnsIP();
             quickConnect.dns2 = WiFi.dnsIP(1);
+            quickConnect.bssid = WiFi.BSSID();
             auto flags = System::Flags::getConfig();
             quickConnect.use_static_ip = flags.use_static_ip_during_wakeup;
             RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect));
+
+            #if ENABLE_DEEP_SLEEP
+                // check for changes before storing in EEPROM
+                if (memcmp(&tmp, &quickConnect, sizeof(tmp)) != 0) {
+                    __LDBG_printf("update persistent config BSSID=%s ip=%s", mac2String(quickConnect.bssid).c_str(), IPAddress(ip).toString().c_str());
+                    struct station_config config;
+                    wifi_station_get_config(&config);
+                    wifi_station_set_config(&config);
+                }
+            #endif
         }
         else {
             __DBG_print("reading RTC memory failed");
@@ -846,7 +837,6 @@ void SaveCrash::Data::FirmwareVersion::printTo(Print &output, const __FlashStrin
 void KFCFWConfiguration::read(bool wakeup)
 {
     if (!Configuration::read()) {
-
         Logger_error(F("Failed to read configuration, restoring factory settings"));
         config.restoreFactorySettings();
         Configuration::write();
@@ -951,7 +941,7 @@ void KFCFWConfiguration::printDiag(Print &output, const String &prefix)
         if ((WiFi.getMode() & WiFiMode_t::WIFI_STA)) {
             if (WiFi.isConnected()) {
                 output.print(prefix);
-                output.printf_P(PSTR("station_ip=%s gw=%s dns=%s, %s\n"), WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str(), WiFi.dnsIP(0).toString().c_str(), WiFi.dnsIP(1).toString().c_str());
+                output.printf_P(PSTR("station_ip=%s gw=%s dns=%s, %s bssid=%s\n"), WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str(), WiFi.dnsIP(0).toString().c_str(), WiFi.dnsIP(1).toString().c_str(), WiFi.BSSIDstr().c_str());
             }
             else {
                 output.print(prefix);
@@ -1045,108 +1035,120 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
     return pos != -1;
 }
 
-void KFCFWConfiguration::wifiQuickConnect()
-{
-    __LDBG_printf("quick connect");
-    #if ENABLE_DEEP_SLEEP
+#if WIFI_QUICK_CONNECT_MANUAL
 
-        #if defined(ESP32)
-            WiFi.mode(WIFI_STA); // needs to be called to initialize wifi
-            wifi_config_t _config;
-            wifi_sta_config_t &config = _config.sta;
-            if (esp_wifi_get_config(ESP_IF_WIFI_STA, &_config) == ESP_OK) {
-        #elif defined(ESP8266)
+    void KFCFWConfiguration::wifiQuickConnect()
+    {
+        __DBG_printf("quick connect");
+        #if ENABLE_DEEP_SLEEP
 
-            WiFi.persistent(false);
-            struct station_config config;
-            if (wifi_station_get_config_default(&config)) {
+            #if defined(ESP32)
+                WiFi.mode(WIFI_STA); // needs to be called to initialize wifi
+                wifi_config_t _config;
+                wifi_sta_config_t &config = _config.sta;
+                if (esp_wifi_get_config(ESP_IF_WIFI_STA, &_config) == ESP_OK) {
+            #elif defined(ESP8266)
+
+                WiFi.persistent(false);
+                struct station_config config;
+                if (wifi_station_get_config_default(&config)) {
+            #endif
+                    int32_t channel;
+                    uint8_t *bssidPtr;
+                    DeepSleep::WiFiQuickConnect quickConnect;
+
+                    // WiFi.enableSTA(true);
+                    WiFi.mode(WIFI_STA);
+
+                    if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
+                        channel = quickConnect.channel;
+                        bssidPtr = quickConnect.bssid;
+                    }
+                    else {
+                        quickConnect = {};
+                        channel = 0;
+                        // bssidPtr = nullptr;
+                        __DBG_print("error reading quick connect from rtc memory");
+                    }
+
+                    if (channel <= 0 || !bssidPtr) {
+
+                        __DBG_printf("Cannot read quick connect from RTC memory, running WiFi.begin(%s, ***) only", config.ssid);
+                        if (WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password)) != WL_DISCONNECTED) {
+                            Logger_error(F("Failed to start WiFi"));
+                        }
+
+                    }
+                    else {
+
+                        if (quickConnect.use_static_ip && quickConnect.local_ip) {
+                            __DBG_printf("configuring static ip");
+                            WiFi.config(quickConnect.local_ip, quickConnect.gateway, quickConnect.subnet, quickConnect.dns1, quickConnect.dns2);
+                        }
+
+                        wl_status_t result;
+                        if ((result = WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password), channel, bssidPtr, true)) != WL_DISCONNECTED) {
+                            __DBG_printf("Failed to start WiFi");
+                            Logger_error(F("Failed to start WiFi"));
+                        }
+
+                        __DBG_printf("WiFi.begin() = %d, ssid %.32s, channel %d, bssid %s, config: static ip %d, %s/%s gateway %s, dns %s, %s",
+                            result,
+                            config.ssid,
+                            channel,
+                            mac2String(bssidPtr).c_str(),
+                            quickConnect.use_static_ip ? 1 : 0,
+                            __S(IPAddress(quickConnect.local_ip)),
+                            inet_nto_cstr(quickConnect.gateway),
+                            inet_nto_cstr(quickConnect.subnet),
+                            inet_nto_cstr(quickConnect.dns1),
+                            inet_nto_cstr(quickConnect.dns2)
+                        );
+
+                    }
+
+                }
+                else {
+                    Logger_error(F("Failed to load WiFi configuration"));
+                }
         #endif
-                int32_t channel;
-                uint8_t *bssidPtr;
-                DeepSleep::WiFiQuickConnect quickConnect;
+    }
 
-                if (RTCMemoryManager::read(PluginComponent::RTCMemoryId::QUICK_CONNECT, &quickConnect, sizeof(quickConnect))) {
-                    channel = quickConnect.channel;
-                    bssidPtr = quickConnect.bssid;
-                } else {
-                    quickConnect = {};
-                    channel = 0;
-                    // bssidPtr = nullptr;
-                }
-
-                if (channel <= 0 || !bssidPtr) {
-
-                    __LDBG_printf("Cannot read quick connect from RTC memory, running WiFi.begin(%s, ***) only", config.ssid);
-                    if (WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password)) != WL_DISCONNECTED) {
-                        Logger_error(F("Failed to start WiFi"));
-                    }
-
-                } else {
-
-                    if (quickConnect.use_static_ip && quickConnect.local_ip) {
-                        __LDBG_printf("configuring static ip");
-                        WiFi.config(quickConnect.local_ip, quickConnect.gateway, quickConnect.subnet, quickConnect.dns1, quickConnect.dns2);
-                    }
-
-                    wl_status_t result;
-                    if ((result = WiFi.begin(reinterpret_cast<char *>(config.ssid), reinterpret_cast<char *>(config.password), channel, bssidPtr, true)) != WL_DISCONNECTED) {
-                        Logger_error(F("Failed to start WiFi"));
-                    }
-
-                    __LDBG_printf("WiFi.begin() = %d, ssid %.32s, channel %d, bssid %s, config: static ip %d, %s/%s gateway %s, dns %s, %s",
-                        result,
-                        config.ssid,
-                        channel,
-                        mac2String(bssidPtr).c_str(),
-                        quickConnect.use_static_ip ? 1 : 0,
-                        __S(IPAddress(quickConnect.local_ip)),
-                        inet_nto_cstr(quickConnect.gateway),
-                        inet_nto_cstr(quickConnect.subnet),
-                        inet_nto_cstr(quickConnect.dns1),
-                        inet_nto_cstr(quickConnect.dns2)
-                    );
-
-                }
-
-            } else {
-                Logger_error(F("Failed to load WiFi configuration"));
-            }
-    #endif
-}
+#endif
 
 #if ENABLE_DEEP_SLEEP
 
-void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
-{
-    __DBG_printf("time=%d mode=%d delay_prep=%d", time.count(), mode, delayAfterPrepare);
+    void KFCFWConfiguration::enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare)
+    {
+        __LDBG_printf("time=%d mode=%d delay_prep=%d", time.count(), mode, delayAfterPrepare);
 
-    // WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
-    // Scheduler.terminate(); // halt scheduler
+        // WiFiCallbacks::getVector().clear(); // disable WiFi callbacks to speed up shutdown
+        // Scheduler.terminate(); // halt scheduler
 
-    //resetDetector.clearCounter();
-    // SaveCrash::removeCrashCounter();
+        //resetDetector.clearCounter();
+        // SaveCrash::removeCrashCounter();
 
-    delay(1);
+        delay(1);
 
-    for(auto plugin: PluginComponents::Register::getPlugins()) {
-        plugin->prepareDeepSleep(time.count());
+        for(auto plugin: PluginComponents::Register::getPlugins()) {
+            plugin->prepareDeepSleep(time.count());
+        }
+        if (delayAfterPrepare) {
+            delay(delayAfterPrepare);
+        }
+        __LDBG_printf("Entering deep sleep for %u milliseconds, RF mode %d", time.count(), mode);
+
+        #if __LED_BUILTIN == NEOPIXEL_PIN_ID
+            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
+        #endif
+
+        DeepSleep::DeepSleepParam::enterDeepSleep(time, mode);
     }
-    if (delayAfterPrepare) {
-        delay(delayAfterPrepare);
-    }
-    __LDBG_printf("Entering deep sleep for %u milliseconds, RF mode %d", time.count(), mode);
-
-#if __LED_BUILTIN == NEOPIXEL_PIN_ID
-    BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-#endif
-
-    DeepSleep::DeepSleepParam::enterDeepSleep(time, mode);
-}
 
 #endif
 
 #if IOT_LED_MATRIX_OUTPUT_PIN
-extern "C" void ClockPluginClearPixels();
+    extern "C" void ClockPluginClearPixels();
 #endif
 
 static void invoke_ESP_restart()
@@ -1154,23 +1156,28 @@ static void invoke_ESP_restart()
     #if IOT_LED_MATRIX_OUTPUT_PIN
         ClockPluginClearPixels();
     #endif
+
     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
     #if BUILTIN_LED_NEOPIXEL
         WS2812LEDTimer::terminate();
     #endif
+
     __Scheduler.end();
     ETSTimerEx::end();
+
     #if IOT_SWITCH && IOT_SWITCH_STORE_STATES_RTC_MEM
         SwitchPlugin::_rtcMemStoreState();
     #endif
+
     #if RTC_SUPPORT == 0
         RTCMemoryManager::storeTime();
     #endif
+
     ESP.restart();
 }
 
 #if PIN_MONITOR
-#include "pin_monitor.h"
+#    include "pin_monitor.h"
 #endif
 
 void KFCFWConfiguration::resetDevice(bool safeMode)
@@ -1193,11 +1200,10 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 // enable debugging output (::printf) for shutdown sequence
 #define DEBUG_SHUTDOWN_SEQUENCE DEBUG
 #if DEBUG_SHUTDOWN_SEQUENCE
-#   define _DPRINTF(msg, ...) ::printf(PSTR(msg "\n"), ##__VA_ARGS__)
+#    define _DPRINTF(msg, ...) ::printf(PSTR(msg "\n"), ##__VA_ARGS__)
 #else
-#   define _DPRINTF(...)
+#    define _DPRINTF(...)
 #endif
-
 
 void KFCFWConfiguration::restartDevice(bool safeMode)
 {
@@ -1328,6 +1334,7 @@ const __FlashStringHelper *KFCFWConfiguration::getWiFiEncryptionType(uint8_t typ
 
 bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg, uint8_t configNum)
 {
+    __DBG_printf("re-config=%u", configNum);
     if (msg) {
         Logger_notice(msg);
         #if DEBUG_KFC_CONFIG
@@ -1346,6 +1353,7 @@ bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg, uint8_t
 
 bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
 {
+    __DBG_printf("config=%u ign_softap=%u", configNum, ignoreSoftAP);
     setLastError(String());
     if (configNum != kKeepWiFiNetwork) {
         _wifiNumActive = configNum;
@@ -1356,11 +1364,14 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
 
     auto flags = System::Flags::getConfig();
     if (flags.is_station_mode_enabled) {
-        __LDBG_printf("init station mode");
+        __DBG_printf("init station mode");
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
+        WiFi.enableSTA(true);
 
         auto wifiId = getWiFiConfigurationNum();
+        wifiId = scanWifiStrength(wifiId);
+
         auto network = Network::WiFi::getNetworkConfigOrdered(wifiId);
         bool result;
         if (network.isDHCPEnabled()) {
@@ -1374,7 +1385,6 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
             Logger_error(F("%s"), getLastError());
         }
         else {
-
             if (WiFi.begin(Network::WiFi::getSSID(wifiId), Network::WiFi::getPassword(wifiId)) == WL_CONNECT_FAILED) {
                 setLastError(F("Failed to start Station Mode"));
                 Logger_error(F("%s"), getLastError());
@@ -1386,8 +1396,9 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
         }
     }
     else {
-        __LDBG_printf("disabling station mode");
+        __DBG_printf("disabling station mode");
         WiFi.disconnect(true);
+        WiFi.enableSTA(false);
         station_mode_success = true;
     }
 
@@ -1395,6 +1406,8 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
 
         if (flags.is_softap_enabled) {
             __LDBG_printf("init AP mode");
+
+            WiFi.enableAP(true);
 
             auto softAp = Network::SoftAP::getConfig();
             if (!WiFi.softAPConfig(softAp.getAddress(), softAp.getGateway(), softAp.getSubnet())) {
@@ -1457,22 +1470,22 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
                             plugin.ArduinoOTAbegin();
                         }
                     #endif
-
                 }
             }
         }
         else {
             __LDBG_print("disabling AP mode");
             WiFi.softAPdisconnect(true);
+            WiFi.enableAP(false);
             ap_mode_success = true;
         }
 
         // install handler to enable AP mode if station mode goes down
         if (flags.is_softap_standby_mode_enabled) {
-            WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModehandler);
+            WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, KFCFWConfiguration::apStandbyModeHandler);
         }
         else {
-            WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, KFCFWConfiguration::apStandbyModehandler);
+            WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, KFCFWConfiguration::apStandbyModeHandler);
         }
 
     }
@@ -1499,7 +1512,7 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
     return (station_mode_success && ap_mode_success);
 }
 
-String KFCFWConfiguration::getChipModel()
+const __FlashStringHelper *KFCFWConfiguration::getChipModel()
 {
     #if ESP8265
         return F("ESP8265");
@@ -1762,45 +1775,64 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
     #endif
 }
 
-// void KFCFWConfiguration::scanWifiSignalLevel(StationVector &list)
-// {
-//     __DBG_printf("scan wifi signal level size=%u", list.size());
-//     // check if there is any station with priority 0
-//     auto iter = std::find_if(list.begin(), list.end(), [](const StationConfig &station) {
-//         return station._priority == 0;
-//     });
-//     if (iter == list.end()) {
-//         __DBG_printf("no stations in auto mode");
-//         return;
-//     }
+KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(StationConfigType configNum)
+{
+    auto list = Network::WiFi::getStations(nullptr);
+    // check if there is any station with priority 0 / auto detect strength
+    auto iter = std::find_if(list.begin(), list.end(), [](const auto &station) {
+        return station._SSID.length() && (station._priority == 0);
+    });
+    if (iter == list.end()) {
+        __DBG_printf("no stations in auto mode");
+        return configNum;
+    }
 
-//     // scan for available wifi networks
-//     auto num = WiFi.scanNetworks();
-//     __DBG_printf("scanNetworks=%d", num);
-//     if (num <= 0) {
-//         // no networks found
-//         return;
-//     }
-//     for(auto &station: list) {
-//         // find station
-//         for(int8_t i = 0; i < num; i++) {
-//             if (WiFi.SSID(i) == station._SSID) {
-//                 if (station._priority == 0) {
-//                     // update priority
-//                     station._priority = -WiFi.RSSI(i);
-//                 }
-//                 if (WiFi.BSSID(i)) {
-//                     memmove_P(station._bssid, WiFi.BSSID(i), sizeof(station._bssid));
-//                 }
-//             }
-//         }
-//     }
-// }
-
-// KFCFWConfiguration::StationVector KFCFWConfiguration::getStations() const
-// {
-//     return Network::WiFi::getStations(KFCFWConfiguration::scanWifiSignalLevel);
-// }
+    // scan wifi networks and display wifi strength
+    __LDBG_printf("scan wifi");
+    auto num = WiFi.scanNetworks(false, true);
+    __LDBG_printf("num=%u", num);
+    if (num > 0) {
+        #if DEBUG_KFC_CONFIG
+            // display all scanned wifi networks
+            for(uint8_t i = 0; i < num; i++) {
+                String ssid;
+                uint8_t encType = 0;
+                int32_t rssi = 0;
+                uint8_t *bssid = nullptr;
+                int32_t channel = 0;
+                bool hidden = false;
+                auto res = WiFi.getNetworkInfo(i, ssid, encType, rssi, bssid, channel, hidden);
+                if (res) {
+                    __DBG_printf("wifi=%s rssi=%d hidden=%d bssid=%s channel=%d enc=%d", ssid.c_str(), rssi, hidden, mac2String(bssid).c_str(), channel, encType);
+                }
+                else {
+                    __DBG_printf("wifi=%d error", i);
+                }
+            }
+            __DBG_printf("---");
+        #endif
+        for(auto &station: list) {
+            for(uint8_t i = 0; i < num; i++) {
+                if (station._SSID.length()) {
+                    auto ssid = WiFi.SSID(i);
+                    if (ssid == station._SSID) {
+                        if (station._priority == 0) {
+                            station._priority = -WiFi.RSSI(i);
+                            if (WiFi.BSSID(i)) {
+                                // update BSSID for network
+                                memmove(station._bssid, WiFi.BSSID(i), sizeof(station._bssid));
+                            }
+                        }
+                        __LDBG_printf("ssid=%s prio=%d bssid=%s rssi=%d", ssid.c_str(), station._priority, mac2String(WiFi.BSSID(i)).c_str(), WiFi.RSSI(i));
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    __LDBG_printf("scan wifi done");
+    return configNum;
+}
 
 static KFCConfigurationPlugin plugin;
 
@@ -1843,13 +1875,17 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
         Logger_notice(F("RTC time: %s"), nowStr.c_str());
     #endif
 
-    if (WiFi.isConnected() && !resetDetector.hasWakeUpDetected()) {
-        __DBG_assert_printf(false, "WiFi up, skipping init.");
-        #if !IOT_WEATHER_STATION_WS2812_NUM
-            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
-        #endif
-        return;
-    }
+    #if DEBUG
+        if (!resetDetector.hasWakeUpDetected()) {
+            // WiFi should not be connected unless coming back from deep sleep
+            if (WiFi.isConnected()) {
+                __DBG_print("WiFi up, skipping init");
+                Logger_error(F("WiFi already up"));
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
+                return;
+            }
+        }
+    #endif
 
     #if ENABLE_DEEP_SLEEP
         if (!resetDetector.hasWakeUpDetected())

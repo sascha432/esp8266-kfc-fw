@@ -100,7 +100,7 @@ void Button::updateConfig()
     auto &config = base._getConfig();
     _subscribedEvents = ButtonConfig::kDefaultEvents;
     _clickTime = config.click_time;
-    _longpressTime = config.hold_time;
+    _longPressTime = config.hold_time;
     _repeatTime = config.hold_repeat_time;
     // reset states
     _reset();

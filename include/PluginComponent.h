@@ -202,6 +202,10 @@ namespace PluginComponents {
         void cleanup();
         void destroy();
 
+        DependenciesVector &getVector() {
+            return _dependencies;
+        }
+
     private:
         DependenciesVector _dependencies;
     };

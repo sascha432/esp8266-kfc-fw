@@ -117,23 +117,27 @@ public:
         void storeQuickConnect(const uint8_t *bssid, int8_t channel);
         void storeStationConfig(uint32_t ip, uint32_t netmask, uint32_t gateway);
 
-        inline static void wakeUpFromDeepSleep() {
-            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
-            wifiQuickConnect();
-        }
+        #if WIFI_QUICK_CONNECT_MANUAL
+            inline static void wakeUpFromDeepSleep() {
+                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
+                wifiQuickConnect();
+            }
+        #endif
         void enterDeepSleep(milliseconds time, RFMode mode, uint16_t delayAfterPrepare = 0);
 
     #endif
 
 public:
-    static void wifiQuickConnect();
+    #if WIFI_QUICK_CONNECT_MANUAL
+        static void wifiQuickConnect();
+    #endif
 
     // shutdown plugins gracefully and reboot device
     void restartDevice(bool safeMode = false);
     // clear RTC memory and reset device
     void resetDevice(bool safeMode = false);
 
-    static String getChipModel();
+    static const __FlashStringHelper *getChipModel();
     static void printVersion(Print &output);
     void printInfo(Print &output);
 
@@ -145,14 +149,16 @@ public:
     bool isSafeMode() const;
     void setSafeMode(bool mode);
 
-    static void apStandbyModehandler(WiFiCallbacks::EventType event, void *payload);
+    static void apStandbyModeHandler(WiFiCallbacks::EventType event, void *payload);
 
     // return id of the active wifi configuration
     StationConfigType getWiFiConfigurationNum() const;
 
+    StationConfigType scanWifiStrength(StationConfigType configNum);
+
 private:
     void _setupWiFiCallbacks();
-    void _apStandbyModehandler(WiFiCallbacks::EventType event);
+    void _apStandbyModeHandler(WiFiCallbacks::EventType event);
     #if defined(ESP32)
         static void _onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
     #elif USE_WIFI_SET_EVENT_HANDLER_CB
@@ -247,7 +253,7 @@ inline void KFCFWConfiguration::setSafeMode(bool mode)
     _safeMode = mode;
 }
 
-inline void KFCFWConfiguration::_apStandbyModehandler(WiFiCallbacks::EventType event)
+inline void KFCFWConfiguration::_apStandbyModeHandler(WiFiCallbacks::EventType event)
 {
     __LDBG_printf("event=%u", event);
     if (event == WiFiCallbacks::EventType::CONNECTED) {
@@ -260,9 +266,9 @@ inline void KFCFWConfiguration::_apStandbyModehandler(WiFiCallbacks::EventType e
     }
 }
 
-inline void KFCFWConfiguration::apStandbyModehandler(WiFiCallbacks::EventType event, void *payload)
+inline void KFCFWConfiguration::apStandbyModeHandler(WiFiCallbacks::EventType event, void *payload)
 {
-    config._apStandbyModehandler(event);
+    config._apStandbyModeHandler(event);
 }
 
 inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getWiFiConfigurationNum() const

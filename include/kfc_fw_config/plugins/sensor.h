@@ -16,11 +16,6 @@ namespace KFCConfigurationClasses {
         // --------------------------------------------------------------------
         // Sensor
 
-        // send recorded data over UDP
-        #ifndef IOT_SENSOR_HAVE_BATTERY_RECORDER
-        #define IOT_SENSOR_HAVE_BATTERY_RECORDER 0
-        #endif
-
         namespace SensorConfigNS {
 
             #if IOT_SENSOR_HAVE_BATTERY
@@ -39,12 +34,6 @@ namespace KFCConfigurationClasses {
                     CREATE_FLOAT_FIELD(calibration, -100, 100, IOT_SENSOR_BATTERY_VOLTAGE_DIVIDER_CALIBRATION);
                     CREATE_FLOAT_FIELD(offset, -100, 100, 0);
                     CREATE_UINT8_BITFIELD_MIN_MAX(precision, 4, 0, 7, 2, 1);
-
-                    #if IOT_SENSOR_HAVE_BATTERY_RECORDER
-                        CREATE_ENUM_BITFIELD(record, SensorRecordType);
-                        CREATE_UINT16_BITFIELD_MIN_MAX(port, 16, 0, 0xffff, 2, 1);
-                        CREATE_IPV4_ADDRESS(address);
-                    #endif
 
                     BatteryConfigType();
 
@@ -211,34 +200,6 @@ namespace KFCConfigurationClasses {
             class Sensor : public KFCConfigurationClasses::ConfigGetterSetter<SensorConfigType, _H(MainConfig().plugins.sensor.cfg) CIF_DEBUG(, &handleNameSensorConfig_t)> {
             public:
                 static void defaults();
-
-                #if IOT_SENSOR_HAVE_BATTERY_RECORDER
-                    CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.sensor, RecordSensorData, 0, 128);
-
-                    static void setRecordHostAndPort(String host, uint16_t port) {
-                        if (port) {
-                            host += ':';
-                            host + String(port);
-                        }
-                        setRecordSensorData(host);
-                    }
-                    static String getRecordHost() {
-                        String str = getRecordSensorData();
-                        auto pos = str.lastIndexOf(':');
-                        if (pos != -1) {
-                            str.remove(pos);
-                        }
-                        return str;
-                    }
-                    static uint16_t getRecordPort() {
-                        auto str = getRecordSensorData();
-                        auto pos = strrchr(str, ':');
-                        if (!pos) {
-                            return 0;
-                        }
-                        return atoi(pos + 1);
-                    }
-                #endif
             };
 
         }

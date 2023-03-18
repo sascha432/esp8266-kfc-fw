@@ -18,6 +18,7 @@
 #include <BitsToStr.h>
 #include <LoopFunctions.h>
 #include <ReadADC.h>
+#include "../src/plugins/sensor/sensor.h"
 #if HTTP2SERIAL_SUPPORT
 #    include "../src/plugins/http2serial/http2serial.h"
 #    define IF_HTTP2SERIAL_SUPPORT(...) __VA_ARGS__
@@ -81,7 +82,7 @@ RemoteControlPlugin &RemoteControlPlugin::getInstance()
     return plugin;
 }
 
-void RemoteControlPlugin::_updateButtonConfig()
+void RemoteControlPlugin::_updateButtonConfig(bool init)
 {
     for (const auto &buttonPtr : pinMonitor.getHandlers()) {
         if (std::find(kButtonPins.begin(), kButtonPins.end(), buttonPtr->getPin()) != kButtonPins.end()) {
@@ -96,6 +97,22 @@ void RemoteControlPlugin::_updateButtonConfig()
                         BitsToStr<9, true>(cfg.udp.event_bits).c_str(), BitsToStr<9, true>(cfg.udp.event_bits).c_str());
                 #endif
                 button.updateConfig();
+                if (init) {
+                    auto time = DeepSleep::deepSleepPinState.getFirstPressed(button.getPin());
+                    if (time) {
+                        __LDBG_printf("deep sleep button %u down, time=%uus", button.getButtonNum(), time);
+                        time /= 1000U;
+                        button.event(Button::EventType::DOWN, time);
+                        button.event(Button::EventType::PRESSED, time);
+                        button.event(Button::EventType::SINGLE_CLICK, time);
+
+                        // check if button has been released already
+                        if (digitalRead(button.getPin()) != DeepSleep::PinState::activeHigh()) {
+                            __LDBG_printf("deep sleep button %u released, time=%uus", button.getButtonNum(), micros());
+                            button.event(Button::EventType::RELEASED, millis());
+                        }
+                    }
+                }
             }
         }
     }
@@ -137,99 +154,45 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     #if IOT_REMOTE_CONTROL_CHARGING_PIN != -1
 
         pinMonitor.attachPinType<ChargingDetection>(HardwarePinType::SIMPLE, IOT_REMOTE_CONTROL_CHARGING_PIN, this);
+        pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
 
     #endif
 
     // _buttonsLocked = 0;
     _readConfig();
-    _updateButtonConfig();
 
-    #if IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN == 15
-        pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
-    #elif IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 3 && IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN != 16
-        pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT_PULLUP);
-    #endif
+    DeepSleep::deepSleepPinState.merge();
+    _updateButtonConfig(true);
 
     // start pin monitor after adding the pins
     pinMonitor.begin();
     ETS_GPIO_INTR_DISABLE();
 
-    // states during boot
+    // states during boot, button events have been updated in _updateButtonConfig()
+    DeepSleep::deepSleepPinState.merge();
     auto states = DeepSleep::deepSleepPinState.getStates();
     // check if the system menu was activated
     if ((states & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
         systemButtonComboEvent(true); // enable combo
-    } else {
-        // values during boot (digitalRead)
-        interrupt_levels = DeepSleep::deepSleepPinState.getValues();
-
-        const auto &handlers = pinMonitor.getHandlers();
-        for (auto &pinPtr : pinMonitor.getPins()) {
-            // only debounced push buttons supported
-            if (pinPtr->_type != HardwarePinType::DEBOUNCE) {
-                continue;
-            }
-
-            const uint8_t pinNum = pinPtr->getPin();
-            const auto bootState = static_cast<bool>(states & _BV(pinNum));
-            const auto bootValue = static_cast<bool>(interrupt_levels & _BV(pinNum));
-            // button was pressed during boot
-            if (bootState) {
-                // find handler for HardwarePin
-                auto handler = std::find_if(handlers.begin(), handlers.end(), [pinNum](const PinPtr &ptr) {
-                    return ptr->getPin() == pinNum;
-                });
-                if (handler == handlers.end()) {
-                    continue;
-                }
-                const auto activeHigh = (*handler)->isActiveHigh();
-                auto &button = *reinterpret_cast<Button *>(handler->get());
-
-                // get current state
-                const auto currentValue = static_cast<bool>(GPI & _BV(pinNum));
-                const auto currentState = (currentValue == activeHigh);
-                if (currentState == bootState) {
-                    // button is still pressed
-                    // simulate first event and prepare state machine to handle further events
-
-                    // send down event
-                    button.event(Button::EventType::DOWN, 5);
-                    // set de-bouncer state
-                    pinPtr->getDebounce()->setState(!bootValue);
-                    // add event
-                    auto &pin = *reinterpret_cast<DebouncedHardwarePin *>(pinPtr.get());
-                    pin.addEvent(5000, bootValue);
-                }
-                else {
-                    // button already released
-                    // send events
-                    button.event(Button::EventType::DOWN, 5);
-                    button.event(Button::EventType::PRESSED, millis());
-                    button.event(Button::EventType::SINGLE_CLICK, millis());
-                    button.event(Button::EventType::RELEASED, millis());
-                    if (activeHigh) {
-                        // clear bit
-                        interrupt_levels &= ~_BV(pinNum);
-                    } else {
-                        // set bit
-                        interrupt_levels |= _BV(pinNum);
-                    }
-                }
-            }
-        }
     }
+    // store current pin levels
+    interrupt_levels = DeepSleep::deepSleepPinState.getGPIOStates();
     // clear interrupts for all pins
     GPIEC = kButtonPinsMask;
     // enable GPIO interrupts
     ETS_GPIO_INTR_ENABLE();
 
-    #if DEBUG_PIN_STATE
+    #if DEBUG_PIN_STATE && 0
         LoopFunctions::callOnce([]() {
             // display button states @boot and @now
             DeepSleep::deepSleepPinState.merge();
-            __LDBG_printf("boot pin states: ");
+            __LDBG_printf("pin states init time=%uus: ", DeepSleep::deepSleepPinState._time);
             for (uint8_t i = 0; i < DeepSleep::deepSleepPinState._count; i++) {
                 __LDBG_printf("state %u: %s", i, DeepSleep::deepSleepPinState.toString(DeepSleep::deepSleepPinState._states[i], DeepSleep::deepSleepPinState._times[i]).c_str());
+            }
+            __LDBG_printf("sequence: ");
+            for (uint8_t i = 0; i < 16; i++) {
+                __LDBG_printf("down %u @ %uus", i, DeepSleep::deepSleepPinState.getFirstPressed(i));
             }
         });
     #endif
@@ -246,6 +209,12 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         // fire event
         _chargingStateChanged(true);
     }
+    else if (DeepSleep::deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
+        __LDBG_print("AUTO wakeup, sending battery info");
+        // allow up to 30 seconds to connect to WiFi and send MQTT status
+        _setAutoSleepTimeout(millis() + 30000, ~0U);
+        _sendBatteryStateAndGotoSleep = true;
+    }
 
     _updateSystemComboButtonLED();
     __LDBG_printf("setup() done");
@@ -261,7 +230,45 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
             }
             WebServer::Plugin::addHandler(F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "*"), webHandler);
         },
-        this);
+        this
+    );
+}
+
+static String _getJsonBatteryStatus(const Sensor_Battery::Status &status)
+{
+    using KFCConfigurationClasses::System;
+    PrintString json(F("{\"device\":\""));
+    json.print(System::Device::getName());
+    json.print(F("\",\"event\":\"battery\""));
+    json.printf_P(PSTR(",\"voltage\":%.2f"), status.getVoltage());
+    json.printf_P(PSTR(",\"level\":%u"), status.getLevel());
+    json.printf_P(PSTR(",\"status\":\"%s\""), status.getChargingStatus().c_str());
+    json.printf_P(PSTR(",\"ts\":%u}"), millis());
+    return json;
+}
+
+bool RemoteControlPlugin::_sendBatteryStateAndSleep()
+{
+    // send message to MQTT and UDP
+    for(const auto &sensor: SensorPlugin::getSensors()) {
+        if (sensor->getType() == SensorPlugin::SensorType::BATTERY) {
+            sensor->setNextMqttUpdate(sensor->DEFAULT_MQTT_UPDATE_RATE);
+            auto batterySensor = reinterpret_cast<Sensor_Battery *>(sensor);
+            batterySensor->readADC(16);
+            auto status = batterySensor->readSensor();
+            __DBG_printf("sending battery state voltage=%.3f", status.getVoltage());
+            if (_getConfig().udp_enable) {
+                auto payload = _getJsonBatteryStatus(status);
+                WiFiUDP udp;
+                udp.beginPacket(Plugins::RemoteControl::getUdpHost(), _getConfig().udp_port) && (udp.write(payload.c_str(), payload.length()) == payload.length()) && udp.endPacket();
+            }
+            sensor->publishState();
+            break;
+        }
+    }
+    // reset to default auto sleep
+    _resetAutoSleep();
+    return true;
 }
 
 void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
@@ -277,7 +284,7 @@ void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
         return;
     }
 
-    __DBG_printf("remote control web server handler url=%s", request->url().c_str());
+    __LDBG_printf("remote control web server handler url=%s", request->url().c_str());
 
     if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "deep_sleep.html")) {
         auto &session = Handler::getInstance().initSession(request, F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "deep_sleep.html"), F("Remote Control"), AuthType::AUTH);
@@ -290,7 +297,8 @@ void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
                     RemoteControlPlugin::enterDeepSleep();
                 });
             });
-        } else if (session.isExecuting()) {
+        }
+        else if (session.isExecuting()) {
             session = StateType::FINISHED;
             // after displaying the status, goto deep sleep
             request->onDisconnect([]() {
@@ -300,13 +308,16 @@ void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
                 });
             });
         }
-    } else if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "disable_auto_sleep.html")) {
+    }
+    else if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "disable_auto_sleep.html")) {
         RemoteControlPlugin::disableAutoSleep();
         Plugin::message(request, WebServer::MessageType::INFO, F("Auto sleep has been disabled"), F("Remote Control"));
-    } else if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "enable_auto_sleep.html")) {
+    }
+    else if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "enable_auto_sleep.html")) {
         RemoteControlPlugin::enableAutoSleep();
         Plugin::message(request, MessageType::SUCCESS, F("Auto sleep has been enabled"), F("Remote Control"));
-    } else {
+    }
+    else {
         Plugin::send(404, request);
     }
 }
@@ -321,10 +332,10 @@ void RemoteControlPlugin::reconfigure(const String &source)
 
 void RemoteControlPlugin::shutdown()
 {
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
-    // disable GPIO interrupts before detaching the Pin Monitor
-    PinMonitor::GPIOInterruptsDisable();
-#endif
+    #if PIN_MONITOR_USE_GPIO_INTERRUPT
+        // disable GPIO interrupts before detaching the Pin Monitor
+        PinMonitor::GPIOInterruptsDisable();
+    #endif
 
     _shutdown();
     pinMonitor.detach(this);
@@ -351,10 +362,14 @@ void RemoteControlPlugin::getStatus(Print &output)
     output.printf_P(PSTR("%u Button Remote Control"), kButtonPins.size());
     if (isAutoSleepEnabled()) {
         output.print(F(", auto sleep enabled"));
-    } else {
+    }
+    else {
         output.print(F(", auto sleep disabled"));
     }
     output.printf_P(PSTR(", force deep sleep after %u minutes"), _config.max_awake_time);
+    if (_getConfig().udp_enable) {
+        output.printf_P(PSTR(", UDP %s:%u enabled"), Plugins::RemoteControl::getUdpHost(), _getConfig()._get_udp_port());
+    }
 }
 
 void RemoteControlPlugin::createMenu()
@@ -379,13 +394,15 @@ void RemoteControlPlugin::createMenu()
 #if AT_MODE_SUPPORTED
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCDSLP, "RCDSLP", "[<time in seconds>]", "Set or disable auto sleep");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCBAT, "RCBAT", "[<interval in seconds|0>]", "Publish battery status");
 
 #    if AT_MODE_HELP_SUPPORTED
 
 ATModeCommandHelpArrayPtr RemoteControlPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
-        PROGMEM_AT_MODE_HELP_COMMAND(RCDSLP)
+        PROGMEM_AT_MODE_HELP_COMMAND(RCDSLP),
+        PROGMEM_AT_MODE_HELP_COMMAND(RCBAT)
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
@@ -402,10 +419,23 @@ bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
             _updateMaxAwakeTimeout();
             args.printf_P(PSTR("Auto sleep disabled"));
         } else {
-            static constexpr uint32_t kMaxAwakeExtratime = 300; // seconds
-            _setAutoSleepTimeout(millis() + (time * 1000U), kMaxAwakeExtratime);
-            args.printf_P(PSTR("Auto sleep timeout in %u seconds, deep sleep timeout in %.1f minutes"), time, (time + kMaxAwakeExtratime) / 60.0);
+            static constexpr uint32_t kMaxAwakeExtraTime = 300; // seconds
+            _setAutoSleepTimeout(millis() + (time * 1000U), kMaxAwakeExtraTime);
+            args.printf_P(PSTR("Auto sleep timeout in %u seconds, deep sleep timeout in %.1f minutes"), time, (time + kMaxAwakeExtraTime) / 60.0);
         }
+        return true;
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RCBAT))) {
+        int time = args.toInt(0);
+        if (time < 1) {
+            _sendBatteryStateAndSleep();
+        }
+        else {
+            _Scheduler.add(Event::seconds(time), 10, [this](Event::CallbackTimerPtr) {
+                _sendBatteryStateAndSleep();
+            });
+        }
+
         return true;
     }
     return false;
@@ -472,16 +502,16 @@ void RemoteControlPlugin::_loop()
 
 void RemoteControlPlugin::_enterDeepSleep()
 {
-#if PIN_MONITOR_USE_GPIO_INTERRUPT
-    PinMonitor::GPIOInterruptsDisable();
-#endif
+    #if PIN_MONITOR_USE_GPIO_INTERRUPT
+        PinMonitor::GPIOInterruptsDisable();
+    #endif
 
     _maxAwakeTimeout = 0; // avoid calling it repeatedly
     _disableAutoSleepTimeout();
 
-#if SYSLOG_SUPPORT
-    SyslogPlugin::waitForQueue(std::max<uint16_t>(500, std::min<uint16_t>(_config.auto_sleep_time / 10, 1500)));
-#endif
+    #if SYSLOG_SUPPORT
+        SyslogPlugin::waitForQueue(std::clamp<uint16_t>(_config.auto_sleep_time / 10, 500, 1500));
+    #endif
 
     __LDBG_printf("entering deep sleep (auto=%d, time=%us)", _config.deep_sleep_time, _config.deep_sleep_time);
     config.enterDeepSleep(std::chrono::duration_cast<KFCFWConfiguration::milliseconds>(KFCFWConfiguration::minutes(_config.deep_sleep_time)), WAKE_NO_RFCAL, 1);

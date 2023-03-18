@@ -7,9 +7,9 @@
 #include "remote.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
@@ -34,6 +34,8 @@ MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, u
             return discovery;
         }
         discovery->addStateTopic(MQTT::Client::formatTopic(F("awake")));
+        discovery->addPayloadOn(F("ON"));
+        discovery->addPayloadOff(F("OFF"));
         return discovery;
     }
 
@@ -108,7 +110,7 @@ MQTT::AutoDiscovery::EntityPtr MqttRemote::getAutoDiscovery(FormatType format, u
 
 void MqttRemote::_updateAutoDiscoveryCount()
 {
-    _autoDiscoveryCount = 0;
+    _autoDiscoveryCount = 1;
     auto cfg = Plugins::RemoteControl::getConfig();
     if (!cfg.mqtt_enable) {
         return;
@@ -117,7 +119,6 @@ void MqttRemote::_updateAutoDiscoveryCount()
         _autoDiscoveryCount += numberOfSetBits(static_cast<uint16_t>(cfg.actions[i].mqtt.event_bits & cfg.enabled.event_bits));
         // __LDBG_printf("button=%u event=%s mqtt=%s num=%u sum=%u", i, BitsToStr<9, true>(cfg.enabled.event_bits).c_str(), BitsToStr<9, true>(cfg.actions[i].mqtt.event_bits).c_str(), numberOfSetBits(static_cast<uint16_t>(cfg.actions[i].mqtt.event_bits & cfg.enabled.event_bits)),count);
     }
-    _autoDiscoveryCount++;
 }
 
 uint8_t MqttRemote::getAutoDiscoveryCount() const

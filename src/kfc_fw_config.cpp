@@ -1364,7 +1364,7 @@ bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg, uint8_t
 
 bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
 {
-    __DBG_printf("config=%u ign_softap=%u", configNum, ignoreSoftAP);
+    __LDBG_printf("config=%u ign_softap=%u", configNum, ignoreSoftAP);
     setLastError(String());
     if (configNum != kKeepWiFiNetwork) {
         _wifiNumActive = configNum;
@@ -1375,7 +1375,7 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
 
     auto flags = System::Flags::getConfig();
     if (flags.is_station_mode_enabled) {
-        __DBG_printf("init station mode");
+        __LDBG_printf("init station mode");
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
         WiFi.enableSTA(true);
@@ -1794,7 +1794,7 @@ KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(Stati
         return station._SSID.length() && (station._priority == 0);
     });
     if (iter == list.end()) {
-        __DBG_printf("no stations in auto mode");
+        __LDBG_printf("no stations in auto mode");
         return configNum;
     }
 

@@ -24,7 +24,7 @@ namespace PinMonitor {
         virtual ~RotaryEncoderPin();
 
     public:
-        virtual void loop() override;
+        // virtual void loop() override;
 
         RotaryEncoder *getEncoder() const {
             return reinterpret_cast<RotaryEncoder *>(const_cast<void *>(getArg()));

@@ -18,11 +18,6 @@ RotaryEncoderPin::RotaryEncoderPin(uint8_t pin, RotaryEncoderDirection direction
     Pin(pin, encoder, StateType::UP_DOWN, state),
     _direction(direction)
 {
-    #if DEBUG
-        if (pin >= NUM_DIGITAL_PINS) {
-            __DBG_panic("invalid pin=%u", pin);
-        }
-    #endif
 }
 
 RotaryEncoderPin::~RotaryEncoderPin()
@@ -32,12 +27,12 @@ RotaryEncoderPin::~RotaryEncoderPin()
     }
 }
 
-void RotaryEncoderPin::loop()
-{
-    // if (_direction == RotaryEncoderDirection::LAST) {
-    //     // reinterpret_cast<RotaryEncoder *>(const_cast<void *>(getArg()))->loop();
-    // }
-}
+// void RotaryEncoderPin::loop()
+// {
+//     if (_direction == RotaryEncoderDirection::LAST) {
+//         // reinterpret_cast<RotaryEncoder *>(const_cast<void *>(getArg()))->loop();
+//     }
+// }
 
 void RotaryEncoder::attachPins(uint8_t pin1, uint8_t pin2)
 {
@@ -137,51 +132,52 @@ void RotaryEncoder::attachPins(uint8_t pin1, uint8_t pin2)
 //#define HALF_STEP
 
 #ifdef HALF_STEP
-// Use the half-step state table (emits a code at 00 and 11)
-#define R_CCW_BEGIN 0x1
-#define R_CW_BEGIN 0x2
-#define R_START_M 0x3
-#define R_CW_BEGIN_M 0x4
-#define R_CCW_BEGIN_M 0x5
-constexpr uint8_t ttable[6][4] PROGMEM = {
-  // R_START (00)
-  {R_START_M,            R_CW_BEGIN,     R_CCW_BEGIN,  R_START},
-  // R_CCW_BEGIN
-  {R_START_M | DIR_CCW, R_START,        R_CCW_BEGIN,  R_START},
-  // R_CW_BEGIN
-  {R_START_M | DIR_CW,  R_CW_BEGIN,     R_START,      R_START},
-  // R_START_M (11)
-  {R_START_M,            R_CCW_BEGIN_M,  R_CW_BEGIN_M, R_START},
-  // R_CW_BEGIN_M
-  {R_START_M,            R_START_M,      R_CW_BEGIN_M, R_START | DIR_CW},
-  // R_CCW_BEGIN_M
-  {R_START_M,            R_CCW_BEGIN_M,  R_START_M,    R_START | DIR_CCW},
-};
-#else
-// Use the full-step state table (emits a code at 00 only)
-#define R_CW_FINAL 0x1
-#define R_CW_BEGIN 0x2
-#define R_CW_NEXT 0x3
-#define R_CCW_BEGIN 0x4
-#define R_CCW_FINAL 0x5
-#define R_CCW_NEXT 0x6
+    // Use the half-step state table (emits a code at 00 and 11)
+    #define R_CCW_BEGIN 0x1
+    #define R_CW_BEGIN 0x2
+    #define R_START_M 0x3
+    #define R_CW_BEGIN_M 0x4
+    #define R_CCW_BEGIN_M 0x5
 
-const uint8_t ttable_P[7][4] PROGMEM = {
-  // R_START
-  {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
-  // R_CW_FINAL
-  {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW},
-  // R_CW_BEGIN
-  {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},
-  // R_CW_NEXT
-  {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},
-  // R_CCW_BEGIN
-  {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},
-  // R_CCW_FINAL
-  {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW},
-  // R_CCW_NEXT
-  {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},
-};
+    static const uint8_t stateTable_P[6][4] PROGMEM = {
+        // R_START (00)
+        {R_START_M,            R_CW_BEGIN,     R_CCW_BEGIN,  R_START},
+        // R_CCW_BEGIN
+        {R_START_M | DIR_CCW, R_START,        R_CCW_BEGIN,  R_START},
+        // R_CW_BEGIN
+        {R_START_M | DIR_CW,  R_CW_BEGIN,     R_START,      R_START},
+        // R_START_M (11)
+        {R_START_M,            R_CCW_BEGIN_M,  R_CW_BEGIN_M, R_START},
+        // R_CW_BEGIN_M
+        {R_START_M,            R_START_M,      R_CW_BEGIN_M, R_START | DIR_CW},
+        // R_CCW_BEGIN_M
+    {R_START_M,            R_CCW_BEGIN_M,  R_START_M,    R_START | DIR_CCW},
+    };
+#else
+    // Use the full-step state table (emits a code at 00 only)
+    #define R_CW_FINAL 0x1
+    #define R_CW_BEGIN 0x2
+    #define R_CW_NEXT 0x3
+    #define R_CCW_BEGIN 0x4
+    #define R_CCW_FINAL 0x5
+    #define R_CCW_NEXT 0x6
+
+    static const uint8_t stateTable_P[7][4] PROGMEM = {
+        // R_START
+        {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
+        // R_CW_FINAL
+        {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW},
+        // R_CW_BEGIN
+        {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},
+        // R_CW_NEXT
+        {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},
+        // R_CCW_BEGIN
+        {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},
+        // R_CCW_FINAL
+        {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW},
+        // R_CCW_NEXT
+        {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},
+    };
 #endif
 
 void RotaryEncoder::processEvent(const Interrupt::Event &eventData)
@@ -195,12 +191,12 @@ void RotaryEncoder::processEvent(const Interrupt::Event &eventData)
         value ^= 0b11;
     }
 
-    // reads ttable_P[_state & 0xf][value]
-    uint8_t newState = pgm_read_byte(reinterpret_cast<const uint8_t *>(ttable_P) + (((_state & 0xf) * 4) + value));
+    // reads stateTable_P[_state & 0xf][value]
+    uint8_t newState = pgm_read_byte(reinterpret_cast<const uint8_t *>(stateTable_P) + (((_state & 0xf) * 4) + value));
 
-    __DBG_printf("rotary value=0b%u%u state=0x%02x/%u -> 0x%02x %02x", value&1, value>>1, _state&0xf, _state, newState);
+    __LDBG_printf("rotary value=0b%u%u state=0x%02x/%u -> 0x%02x %02x", value&1, value>>1, _state&0xf, _state, newState);
 
-    // _state = ttable[_state & 0xf][state];
+    // _state = stateTable[_state & 0xf][state];
     if (newState >= DIR_CW) {
         event(static_cast<EventType>(newState), eventData.getTime());
     }

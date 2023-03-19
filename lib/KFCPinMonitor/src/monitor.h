@@ -30,17 +30,6 @@ namespace PinMonitor {
 
         void printStatus(Print &output);
 
-// #if DEBUG
-//         // enable debug output on serial port
-//         void beginDebug(Print &outout, uint32_t interval = 1000);
-//         // disable debug mode
-//         void endDebug();
-
-//         bool isDebugRunning() const {
-//             return !!_debugTimer;
-//         }
-// #endif
-
         // add a pin object
         Pin &attach(Pin *pin, HardwarePinType type = HardwarePinType::_DEFAULT);
 
@@ -87,12 +76,9 @@ namespace PinMonitor {
     private:
         Vector _handlers;       // button handler, base class Pin
         PinVector _pins;        // pins class HardwarePin
+        SemaphoreMutex _lock;   // lock for _loop()
         uint32_t _lastRun;
         Event::Timer *_loopTimer;
-#if DEBUG
-        Event::Timer *_debugTimer;
-#endif
-
         uint8_t _pinModeFlag;
         uint8_t _debounceTime;
         bool _running;

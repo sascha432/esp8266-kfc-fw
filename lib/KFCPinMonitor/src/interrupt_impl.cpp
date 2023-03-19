@@ -181,12 +181,12 @@ namespace PinMonitor {
         // noInterrupts();
         ETS_GPIO_INTR_DISABLE();
         uint8_t i = 0;
-        uint32_t changedbits = status & interrupt_reg; // remove bits that do not have an active handler otherwise it results in a nullptr call
-        while (changedbits) {
-            while (!(changedbits & (1 << i))) { // find next set bit
+        uint32_t changedBits = status & interrupt_reg; // remove bits that do not have an active handler otherwise it results in a nullptr call
+        while (changedBits) {
+            while (!(changedBits & (1 << i))) { // find next set bit
                 i++;
             }
-            changedbits &= ~(1 << i);
+            changedBits &= ~(1 << i);
             interrupt_handlers[i].fn(interrupt_handlers[i].arg);
         }
         // interrupts();
@@ -196,7 +196,7 @@ namespace PinMonitor {
     // mode is CHANGE
     void _attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg)
     {
-        if (userFunc == nullptr) { // detach interrupt if userfunc is nullptr. makes the check for nullptr inside the ISR obsolete
+        if (userFunc == nullptr) { // detach interrupt if userFunc is nullptr. makes the check for nullptr inside the ISR obsolete
             _detachInterrupt(pin);
             return;
         }

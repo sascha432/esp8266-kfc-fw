@@ -33,13 +33,6 @@
 using KFCConfigurationClasses::System;
 using Plugins = KFCConfigurationClasses::PluginsType;
 
-#if ESP8266
-static char *_GMT = _tzname[0]; // copy pointer, points to static char gmt[] = "GMT"; during startup
-#else
-static const char _GMT[] = "GMT";
-#endif
-
-
 #if NTP_HAVE_CALLBACKS
 
 static std::vector<TimeUpdatedCallback_t> _callbacks;
@@ -148,7 +141,7 @@ void NTPPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies)
         _execConfigTime();
     }
     else {
-        safeSetTZ(_GMT);
+        safeSetTZ(F("GMT"));
         shutdown();
     }
 }
@@ -232,7 +225,7 @@ void NTPPlugin::_execConfigTime()
     }
 
     auto timezone = Plugins::NTPClient::getPosixTimezone();
-	safeSetTZ(FPSTR(timezone ? timezone : _GMT));
+	safeSetTZ(FPSTR(timezone ? timezone : PSTR("GMT")));
     sntp_init();
 
     auto interval = kCheckInterval + _startUpDelay;

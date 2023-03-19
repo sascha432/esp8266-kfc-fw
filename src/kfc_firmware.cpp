@@ -96,14 +96,17 @@ void delayedSetup(bool delayed)
 }
 
 #if KFC_SAFEMODE_GPIO_COMBO
-    bool isSystemKeyComboPressed()
+    // repeat must be >=1
+    bool isSystemKeyComboPressed(uint8_t repeat = 2)
     {
-        for(uint8_t i = 0; i < 2; i++) {
-            __LDBG_printf("pins=%08x mask=%08x result=%08x masked=%08x", digitalReadAll(), KFC_SAFEMODE_GPIO_MASK, KFC_SAFEMODE_GPIO_RESULT, digitalReadAll() & KFC_SAFEMODE_GPIO_MASK);
+        if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
+            return true;
+        }
+        while(--repeat) {
+            delay(5);
             if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
                 return true;
             }
-            delay(5);
         }
         return false;
     }
@@ -135,9 +138,6 @@ void setup()
 
     #if ENABLE_DEEP_SLEEP
 
-        // config.printDiag(DEBUG_OUTPUT, F("Deep Sleep Boot"));
-
-        DeepSleep::deepSleepPinState.merge();
         bool wakeup = resetDetector.hasWakeUpDetected();
 
         // ---------------------------------------------------------------------------------
@@ -155,11 +155,11 @@ void setup()
 
         #if WIFI_QUICK_CONNECT_MANUAL
             if (wakeup && !DeepSleep::enableWiFiOnBoot) {
-                DeepSleep::deepSleepPinState.merge();
                 KFCFWConfiguration::wakeUpFromDeepSleep();
+                DeepSleep::deepSleepPinState.merge();
             }
         #endif
-        DeepSleep::deepSleepPinState.merge();
+
     #endif
 
     // display loaded plugins
@@ -209,7 +209,17 @@ void setup()
             resetDetector.disarmTimer();
             // delay boot if too many resets are detected
             BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SLOW);
-            delay(delayTime * 1000U);
+            #if KFC_SAFEMODE_GPIO_COMBO
+                auto start = millis();
+                delayTime *= 1000;
+                while(millis() - start < delayTime) {
+                    if (isSystemKeyComboPressed(10)) {
+                        break;
+                    }
+                }
+            #else
+                delay(delayTime * 1000U);
+            #endif
             resetDetector.armTimer();
         }
 
@@ -253,7 +263,7 @@ void setup()
                 auto start = millis();
                 uint8_t mode = 0;
                 BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::MEDIUM);
-                while(isSystemKeyComboPressed()) {
+                while(isSystemKeyComboPressed(10)) {
 
                     uint32_t duration = millis() - start;
 
@@ -440,10 +450,6 @@ void setup()
 
     }
 
-    #if ENABLE_DEEP_SLEEP
-        DeepSleep::deepSleepPinState.merge();
-    #endif
-
     config.read();
     SaveCrash::Data::setMD5(KFCConfigurationClasses::System::Firmware::getFirmwareMD5());
 
@@ -453,10 +459,6 @@ void setup()
 
     auto &componentRegister = PluginComponents::RegisterEx::getInstance();
     componentRegister.sort();
-
-    #if ENABLE_DEEP_SLEEP
-        DeepSleep::deepSleepPinState.merge();
-    #endif
 
     // --------------------------------------------------------------------
     // safe mode
@@ -528,7 +530,7 @@ void setup()
         if (wakeup) {
             // delay file system initialization and other functionality to improve deep sleep wake up performance
             // TODO accessing the FS might cause a crash
-            _Scheduler.add(150, false, [](Event::CallbackTimerPtr) {
+            _Scheduler.add(500, false, [](Event::CallbackTimerPtr) {
                 delayedSetup(true);
             });
         }

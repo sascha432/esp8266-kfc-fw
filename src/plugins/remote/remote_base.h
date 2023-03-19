@@ -170,9 +170,9 @@ namespace RemoteControl {
             return _pressed != 0;
         }
 
-#if DEBUG_IOT_REMOTE_CONTROL
-        const char *_getPressedButtons() const;
-#endif
+        #if DEBUG_IOT_REMOTE_CONTROL
+            const char *_getPressedButtons() const;
+        #endif
 
         void event(BaseEventType type, StateType state);
 
@@ -237,37 +237,35 @@ namespace RemoteControl {
             return config.isSafeMode() || _isSystemComboActive();
         }
 
+    public:
+        enum class ComboButtonStateType {
+            NONE = 0,
+            PRESSED,
+            RELEASED,
+            RESET_MENU_TIMEOUT,
+            CONFIRM_EXIT,
+            CONFIRM_AUTO_SLEEP_OFF,
+            CONFIRM_AUTO_SLEEP_ON,
+            CONFIRM_DEEP_SLEEP,
+            TIMEOUT,
+            EXIT_MENU_TIMEOUT,
+        };
 
-public:
-    enum class ComboButtonStateType {
-        NONE = 0,
-        PRESSED,
-        RELEASED,
-        RESET_MENU_TIMEOUT,
-        CONFIRM_EXIT,
-        CONFIRM_AUTO_SLEEP_OFF,
-        CONFIRM_AUTO_SLEEP_ON,
-        CONFIRM_DEEP_SLEEP,
-        TIMEOUT,
-        EXIT_MENU_TIMEOUT,
-    };
+        static constexpr uint32_t kSystemComboRebootTimeout = 3500;
+        static constexpr uint32_t kSystemComboMenuTimeout = 30000;
+        static constexpr uint32_t kSystemComboConfirmTimeout = 850;
 
-    static constexpr uint32_t kSystemComboRebootTimeout = 3500;
-    static constexpr uint32_t kSystemComboMenuTimeout = 30000;
-    static constexpr uint32_t kSystemComboConfirmTimeout = 850;
+        void systemButtonComboEvent(bool state, EventType type = EventType::DOWN, uint8_t button = 0, uint16_t repeatCount = 0, uint32_t eventTime = 0);
 
-    void systemButtonComboEvent(bool state, EventType type = EventType::DOWN, uint8_t button = 0, uint16_t repeatCount = 0, uint32_t eventTime = 0);
+        inline bool _isSystemComboActive() const {
+            return _systemButtonComboTimeout != 0;
+        }
 
-private:
-    void _systemComboNextState(ComboButtonStateType state);
-    void _updateSystemComboButton();
-    void _updateSystemComboButtonLED();
-    void _resetButtonState();
-
-    inline bool _isSystemComboActive() const {
-        return _systemButtonComboTimeout != 0;
-    }
-
+    private:
+        void _systemComboNextState(ComboButtonStateType state);
+        void _updateSystemComboButton();
+        void _updateSystemComboButtonLED();
+        void _resetButtonState();
 
     protected:
         friend Button;

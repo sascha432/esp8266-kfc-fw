@@ -96,15 +96,31 @@ void delayedSetup(bool delayed)
 }
 
 #if KFC_SAFEMODE_GPIO_COMBO
-    // repeat must be >=1
-    bool isSystemKeyComboPressed(uint8_t repeat = 2)
+    inline static uint32_t getPinState()
     {
-        if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
+        #if ENABLE_DEEP_SLEEP
+            DeepSleep::deepSleepPinState.merge();
+            return DeepSleep::deepSleepPinState.getStates();
+        #else
+            return GPIO32::read();
+        #endif
+    }
+
+    // repeat must be >=1
+    static bool isSystemKeyComboPressed(uint8_t repeat = 2)
+    {
+        if ((getPinState() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
+            #if ENABLE_DEEP_SLEEP
+                DeepSleep::deepSleepPinState.init();
+            #endif
             return true;
         }
         while(--repeat) {
             delay(5);
-            if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
+            if ((getPinState() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
+                #if ENABLE_DEEP_SLEEP
+                    DeepSleep::deepSleepPinState.init();
+                #endif
                 return true;
             }
         }
@@ -268,7 +284,7 @@ void setup()
                     uint32_t duration = millis() - start;
 
                     #if DEBUG
-                        delay(500);
+                        delay(400);
                         KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("System Key Combo Pressed %ums\n"), duration);
                     #endif
 

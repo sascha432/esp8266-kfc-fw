@@ -51,11 +51,11 @@ namespace MQTT {
     void Client::setupInstance()
     {
         __LDBG_printf("enabled=%u", System::Flags::getConfig().is_mqtt_enabled);
-    #if DEBUG
-        if (_mqttClient) {
-            __LDBG_panic("MQTT client already exists");
-        }
-    #endif
+        #if DEBUG
+            if (_mqttClient) {
+                __LDBG_panic("MQTT client already exists");
+            }
+        #endif
         if (System::Flags::getConfig().is_mqtt_enabled) {
             _mqttClient = new Client();
         }
@@ -79,10 +79,6 @@ namespace MQTT {
         _config(Plugins::MqttClient::getConfig()),
         _client(new AsyncMqttClient()),
         _port(_config.getPort()),
-        #if MQTT_SET_LAST_WILL_MODE != 0
-            _lastWillPayloadOffline(MQTT_LAST_WILL_TOPIC_OFFLINE),
-            _lastWillTopic(formatTopic(MQTT_LAST_WILL_TOPIC)),
-        #endif
         _connState(ConnectionState::NONE),
         #if MQTT_AUTO_DISCOVERY
             #if IOT_REMOTE_CONTROL
@@ -93,12 +89,16 @@ namespace MQTT {
         #endif
         _messageProperties(nullptr)
     {
-        constexpr size_t clientIdLength = 18;
-        char *clientIdBuffer = const_cast<char *>(_client->getClientId()); // reuse the existing buffer that is declared private
-        WriteableHeapStream clientId(clientIdBuffer, clientIdLength + 1); // buffer size, max. allowed size is 23
-        clientId.print(F("kfc-"));
-        WebTemplate::printUniqueId(clientId, FSPGM(kfcfw));
-        clientIdBuffer[clientIdLength] = 0;
+        size_t maxLength = 1;
+        char *clientIdBuffer = _client->getClientId(maxLength);
+        PrintString buffer = F("kfc-");
+        WebTemplate::printUniqueId(buffer, FSPGM(kfcfw));
+        strncpy(clientIdBuffer, buffer.c_str(), maxLength - 1)[maxLength - 1] = 0;
+        _client->setClientId(clientIdBuffer);
+
+        #if MQTT_SET_LAST_WILL_MODE != 0
+            _lastWillTopic = formatTopic(MQTT_LAST_WILL_TOPIC);
+        #endif
 
         // add client to all components and call onStartup
         for(auto component: _components) {
@@ -107,7 +107,7 @@ namespace MQTT {
         }
 
         // connect to server
-        __LDBG_printf("hostname=%s port=%u client_id=%s", _hostname.c_str(), _port, clientIdBuffer);
+        __LDBG_printf("hostname=%s port=%u username=%s client_id=%s", _hostname.c_str(), _port, _username.c_str(), __S(_client->getClientId()));
         if (config.hasZeroConf(_hostname)) {
             config.resolveZeroConf(Plugin::getPlugin().getFriendlyName(), _hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
                 this->_zeroConfCallback(hostname, address, port, type);
@@ -256,7 +256,6 @@ namespace MQTT {
         }
         else {
             _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
-
         }
         return size != _components.size();
     }
@@ -309,7 +308,7 @@ namespace MQTT {
             if (topic.getComponent() == component) {
                 __LDBG_printf("topic=%s in_use=%d", topic.getTopic().c_str(), _topicInUse(component, topic));
                 if (!_topicInUse(component, topic)) {
-                    unsubscribe(nullptr, topic.getTopic().c_str());
+                    unsubscribe(nullptr, topic.getTopic());
                 }
                 return true;
             }
@@ -495,8 +494,7 @@ namespace MQTT {
         {
             DEBUG_HELPER_PUSH_STATE();
             DEBUG_HELPER_SILENT();
-            PrintString str(F("%s state=%s auto_reconnect=%u timer=%u"), _client->getAsyncClient().stateToString(), RFPSTR(_getConnStateStr()), _autoReconnectTimeout, (bool)_timer);
-            _connectionStr = std::move(str);
+            _connectionStr = PrintString(F("%s state=%s auto_reconnect=%u timer=%u"), _client->getAsyncClient().stateToString(), RFPSTR(_getConnStateStr()), _autoReconnectTimeout, (bool)_timer);
             DEBUG_HELPER_POP_STATE();
             return _connectionStr.c_str();
         }
@@ -526,8 +524,8 @@ namespace MQTT {
         _client->setKeepAlive(_config.keepalive);
 
         #if MQTT_SET_LAST_WILL_MODE != 0
-            __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), _lastWillPayloadOffline.c_str());
-            _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
+            __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), MQTT_LAST_WILL_TOPIC_OFFLINE);
+            _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, MQTT_LAST_WILL_TOPIC_OFFLINE);
         #endif
 
         _connState = ConnectionState::CONNECTING;
@@ -547,12 +545,11 @@ namespace MQTT {
 
             #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
                 // set last will topic
-                _client->publish(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, _lastWillPayloadOffline.c_str(), _lastWillPayloadOffline.length());
+                _client->publish(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, MQTT_LAST_WILL_TOPIC_OFFLINE);
             #endif
             #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
                 // set status topic
-                auto payload = String(MQTT_AVAILABILITY_TOPIC_OFFLINE);
-                _client->publish(formatTopic(MQTT_AVAILABILITY_TOPIC).c_str(), _translateQosType(getDefaultQos()), true, payload.c_str(), payload.length());
+                _client->publish(formatTopic(MQTT_AVAILABILITY_TOPIC).c_str(), _translateQosType(getDefaultQos()), true, MQTT_AVAILABILITY_TOPIC_OFFLINE);
             #endif
         }
         _client->disconnect(forceDisconnect);
@@ -603,11 +600,11 @@ namespace MQTT {
 
         #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
             // set last will topic
-            publish(_lastWillTopic, true, MQTT_LAST_WILL_TOPIC_ONLINE, getDefaultQos());
+            publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), getDefaultQos());
         #endif
         #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
             // set status topic
-            publish(formatTopic(MQTT_AVAILABILITY_TOPIC), true, MQTT_AVAILABILITY_TOPIC_ONLINE, getDefaultQos());
+            publish(formatTopic(MQTT_AVAILABILITY_TOPIC), true, FPSTR(MQTT_AVAILABILITY_TOPIC_ONLINE), getDefaultQos());
         #endif
         #if MQTT_SET_LAST_WILL_MODE != 2 && IOT_REMOTE_CONTROL == 1
             #error remote control requires MQTT_SET_LAST_WILL_MODE == 2 for MQTT_AVAILABILITY_TOPIC

@@ -65,11 +65,11 @@
 #endif
 
 #ifndef MQTT_AVAILABILITY_TOPIC_ONLINE
-#    define MQTT_AVAILABILITY_TOPIC_ONLINE FSPGM(mqtt_status_topic_online)
+#    define MQTT_AVAILABILITY_TOPIC_ONLINE SPGM(mqtt_status_topic_online)
 #endif
 
 #ifndef MQTT_AVAILABILITY_TOPIC_OFFLINE
-#    define MQTT_AVAILABILITY_TOPIC_OFFLINE FSPGM(mqtt_status_topic_offline)
+#    define MQTT_AVAILABILITY_TOPIC_OFFLINE SPGM(mqtt_status_topic_offline)
 #endif
 
 // add name to each MQTT device
@@ -96,11 +96,11 @@
 
 // default values are for a binary sensor
 #    ifndef MQTT_LAST_WILL_TOPIC_ONLINE
-#        define MQTT_LAST_WILL_TOPIC_ONLINE FSPGM(mqtt_bool_on)
+#        define MQTT_LAST_WILL_TOPIC_ONLINE SPGM(mqtt_bool_on)
 #    endif
 
 #    ifndef MQTT_LAST_WILL_TOPIC_OFFLINE
-#        define MQTT_LAST_WILL_TOPIC_OFFLINE FSPGM(mqtt_bool_off)
+#        define MQTT_LAST_WILL_TOPIC_OFFLINE SPGM(mqtt_bool_off)
 #    endif
 
 #elif MQTT_SET_LAST_WILL_MODE != 0

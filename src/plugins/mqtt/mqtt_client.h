@@ -511,11 +511,11 @@ public:
         // must not be called outside onMessage()
 
         inline const AsyncMqttClientMessageProperties &getMessageProperties() const {
-#if DEBUG_MQTT_CLIENT
-            if (!_messageProperties) {
-                __DBG_panic("getMessageProperties() must not be called outside onMessage()");
-            }
-#endif
+            #if DEBUG_MQTT_CLIENT
+                if (!_messageProperties) {
+                    __DBG_panic("getMessageProperties() must not be called outside onMessage()");
+                }
+            #endif
             return *_messageProperties;
         }
 
@@ -729,21 +729,19 @@ public:
         AsyncMqttClient *_client;
         Event::Timer _timer;
         uint16_t _port;
-#if MQTT_SET_LAST_WILL_MODE != 0
-        // these variables are only required if last will is being used since the MQTT client requires a
-        // pointer to memory and does not support flash strings
-        const String _lastWillPayloadOffline;
-        const String _lastWillTopic;
-#endif
+        #if MQTT_SET_LAST_WILL_MODE != 0
+            // the topic must stay in memory until the connection has been made
+            String _lastWillTopic;
+        #endif
         AutoReconnectType _autoReconnectTimeout;
         TopicVector _topics;
         Buffer _buffer;
         ConnectionState _connState;
-#if MQTT_AUTO_DISCOVERY
-        AutoDiscovery::QueuePtr _autoDiscoveryQueue;
-        Event::Timer _autoDiscoveryRebroadcast;
-        bool _startAutoDiscovery;
-#endif
+        #if MQTT_AUTO_DISCOVERY
+            AutoDiscovery::QueuePtr _autoDiscoveryQueue;
+            Event::Timer _autoDiscoveryRebroadcast;
+            bool _startAutoDiscovery;
+        #endif
         AsyncMqttClientMessageProperties *_messageProperties;
 
     #if DEBUG_MQTT_CLIENT
@@ -752,7 +750,7 @@ public:
         const char *_connection();
         String _connectionStr;
     #else
-    const char *_connection() { return PSTR("NO_DEBUG"); }
+        PGM_P _connection() { return PSTR("N/A"); }
     #endif
 
     private:

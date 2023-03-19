@@ -99,14 +99,13 @@ void delayedSetup(bool delayed)
     // read key combo and debounce
     bool isSystemKeyComboPressed()
     {
-        delay(1);
         uint8_t count = 0;
-        for(uint8_t i = 0; i < 5; i++) {
+        for(uint8_t i = 0; i < 2; i++) {
             __LDBG_printf("readall %08x mask %08x result %08x count=%u masked=%08x", digitalReadAll(), KFC_SAFEMODE_GPIO_MASK, KFC_SAFEMODE_GPIO_RESULT, count, digitalReadAll() & KFC_SAFEMODE_GPIO_MASK);
             if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
                 count++;
             }
-            delay(10);
+            delay(5);
         }
         return (count != 0);
     }
@@ -242,7 +241,7 @@ void setup()
         #endif
 
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
-        KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
+        // KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());
 
         #if KFC_SAFEMODE_GPIO_COMBO
             // boot menu
@@ -518,17 +517,8 @@ void setup()
         // setup internal or external RTC
         KFCFWConfiguration::setupRTC();
 
-        #if ENABLE_DEEP_SLEEP
-            DeepSleep::deepSleepPinState.merge();
-        #endif
-
         #if AT_MODE_SUPPORTED
             at_mode_setup();
-        #endif
-
-        #if ENABLE_DEEP_SLEEP
-            // last merge before the interrupt driven plugin is setup
-            DeepSleep::deepSleepPinState.merge();
         #endif
 
         #if ENABLE_DEEP_SLEEP
@@ -540,7 +530,7 @@ void setup()
         if (wakeup) {
             // delay file system initialization and other functionality to improve deep sleep wake up performance
             // TODO accessing the FS might cause a crash
-            _Scheduler.add(500, false, [](Event::CallbackTimerPtr) {
+            _Scheduler.add(150, false, [](Event::CallbackTimerPtr) {
                 delayedSetup(true);
             });
         }

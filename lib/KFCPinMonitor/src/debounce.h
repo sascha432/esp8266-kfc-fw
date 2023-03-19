@@ -69,7 +69,7 @@ namespace PinMonitor {
         return static_cast<StateType>(((tmp & 0xaa) >> 1) | ((tmp & 0x55) << 1));
     }
 
-    // this class is for push buttons and does not require all events, but the last event (pin, time) and number of interrupts occured
+    // this class is for push buttons and does not require all events, but the last event (pin, time) and number of interrupts occurred
     // since the last call. it does not accept other timestamps and it is not suitable for feeding in multiple events from the past
     // the last state and time is enough to predict the state.
     // after feeding in events, it must be polled until the bounce timer has expired
@@ -92,10 +92,13 @@ namespace PinMonitor {
             }
             return tmp;
 #else
-            return _debounce(lastValue, interruptCount, last,now);
+            return _debounce(lastValue, interruptCount, last, now);
 #endif
         }
         void setState(bool state);
+
+        // set key press at given time
+        void setPressed(uint32_t timestamp);
 
     private:
         StateType _debounce(bool lastValue, uint16_t interruptCount, uint32_t last, uint32_t now);
@@ -114,6 +117,14 @@ namespace PinMonitor {
         _state = state;
         _value = state;
         _debounceTimerRunning = false;
+    }
+
+    inline void Debounce::setPressed(uint32_t timestamp)
+    {
+        _debounceTimerRunning = true;
+        _debounceTimer = timestamp;
+        _value = true;
+        _state = true;
     }
 
     // class Debounce

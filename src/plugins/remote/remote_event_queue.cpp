@@ -43,10 +43,10 @@ namespace RemoteControl {
 
         void Event::send(Lock &lockObj)
         {
-            __LDBG_printf("executing action=%p", _action);
+            // __LDBG_printf("executing action=%p", _action);
             lock(lockObj);
             _action->execute([this, &lockObj](bool status) {
-                __LDBG_printf("action=%p callback status=%u", _action, status);
+                // __LDBG_printf("action=%p callback status=%u", _action, status);
                 if (status) {
                     _state = StateType::SENT;
                 }

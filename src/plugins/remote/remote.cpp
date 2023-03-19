@@ -82,7 +82,7 @@ RemoteControlPlugin &RemoteControlPlugin::getInstance()
     return plugin;
 }
 
-void RemoteControlPlugin::_updateButtonConfig(bool init)
+void RemoteControlPlugin::_updateButtonConfig()
 {
     for (const auto &buttonPtr : pinMonitor.getHandlers()) {
         if (std::find(kButtonPins.begin(), kButtonPins.end(), buttonPtr->getPin()) != kButtonPins.end()) {
@@ -97,22 +97,6 @@ void RemoteControlPlugin::_updateButtonConfig(bool init)
                         BitsToStr<9, true>(cfg.udp.event_bits).c_str(), BitsToStr<9, true>(cfg.udp.event_bits).c_str());
                 #endif
                 button.updateConfig();
-                if (init) {
-                    auto time = DeepSleep::deepSleepPinState.getFirstPressed(button.getPin());
-                    if (time) {
-                        __LDBG_printf("deep sleep button %u down, time=%uus", button.getButtonNum(), time);
-                        time /= 1000U;
-                        button.event(Button::EventType::DOWN, time);
-                        button.event(Button::EventType::PRESSED, time);
-                        button.event(Button::EventType::SINGLE_CLICK, time);
-
-                        // check if button has been released already
-                        if (digitalRead(button.getPin()) != DeepSleep::PinState::activeHigh()) {
-                            __LDBG_printf("deep sleep button %u released, time=%uus", button.getButtonNum(), micros());
-                            button.event(Button::EventType::RELEASED, millis());
-                        }
-                    }
-                }
             }
         }
     }
@@ -152,35 +136,74 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     }
 
     #if IOT_REMOTE_CONTROL_CHARGING_PIN != -1
-
         pinMonitor.attachPinType<ChargingDetection>(HardwarePinType::SIMPLE, IOT_REMOTE_CONTROL_CHARGING_PIN, this);
         pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
-
     #endif
 
     // _buttonsLocked = 0;
     _readConfig();
 
+    // freeze interrupt states
+    ETS_GPIO_INTR_DISABLE();
+    // clear interrupts for all pins
+    GPIEC = kButtonPinsMask;
+
+    // read all pins to setup buttons
     DeepSleep::deepSleepPinState.merge();
-    _updateButtonConfig(true);
+    _updateButtonConfig();
 
     // start pin monitor after adding the pins
     pinMonitor.begin();
-    ETS_GPIO_INTR_DISABLE();
 
-    // states during boot, button events have been updated in _updateButtonConfig()
-    DeepSleep::deepSleepPinState.merge();
-    auto states = DeepSleep::deepSleepPinState.getStates();
+    // apply pressed states to pin monitor
+    for(auto &pin: pinMonitor.getPins()) {
+        if (pin->getHardwarePinType() == HardwarePinType::DEBOUNCE) {
+            auto time = DeepSleep::deepSleepPinState.getFirstPressed(pin->getPin());
+            if (time) {
+                __LDBG_printf("pin=%u pressed=%u", pin->getPin(), time);
+                pin->getDebounce()->setPressed(1);
+            }
+        }
+    }
+
     // check if the system menu was activated
-    if ((states & kButtonSystemComboBitMask) == kButtonSystemComboBitMask) {
+    auto states = DeepSleep::deepSleepPinState.getStates();
+    __LDBG_printf("states=%04x mask=%04x combo=%u", states, kGPIOSystemComboBitMask, (states & kGPIOSystemComboBitMask) == kGPIOSystemComboBitMask);
+    if ((states & kGPIOSystemComboBitMask) == kGPIOSystemComboBitMask) {
         systemButtonComboEvent(true); // enable combo
     }
+
     // store current pin levels
     interrupt_levels = DeepSleep::deepSleepPinState.getGPIOStates();
-    // clear interrupts for all pins
-    GPIEC = kButtonPinsMask;
     // enable GPIO interrupts
     ETS_GPIO_INTR_ENABLE();
+
+    #if 1
+    // TODO if a button is released between 60 and 85ms, the interrupt is not triggered
+    // DeepSleep::deepSleepPinState.getGPIOStates() and GPIO::read() show the difference
+    // find and manually add them to the queue and clear PinMonitor
+    for (uint8_t buttonNum = 0; buttonNum < kButtonPins.size(); buttonNum++) {
+        auto pin = kButtonPins[buttonNum];
+        auto time = DeepSleep::deepSleepPinState.getFirstPressed(pin);
+        if (time) {
+            if ((GPIO::read() & _BV(pin)) == DeepSleep::PinState::activeLow()) {
+                __LDBG_printf("queueEvent pin=%u button=%u", pin, buttonNum);
+                queueEvent(EventType::DOWN, buttonNum, 0, time / 1000U + 1, 0);
+                auto now = millis();
+                queueEvent(EventType::PRESSED, buttonNum, 0, now, 0);
+                queueEvent(EventType::SINGLE_CLICK, buttonNum, 1, now, 0);
+                queueEvent(EventType::UP, buttonNum, 0, now, 0);
+                // clear events
+                for(auto &pinPtr: pinMonitor.getPins()) {
+                    if (pinPtr->getPin() == pin) {
+                        pinPtr->clear();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    #endif
 
     #if DEBUG_PIN_STATE && 0
         LoopFunctions::callOnce([]() {
@@ -210,7 +233,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         _chargingStateChanged(true);
     }
     else if (DeepSleep::deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
-        __LDBG_print("AUTO wakeup, sending battery info");
+        __LDBG_print("auto wakeup, sending battery state");
         // allow up to 30 seconds to connect to WiFi and send MQTT status
         _setAutoSleepTimeout(millis() + 30000, ~0U);
         _sendBatteryStateAndGotoSleep = true;

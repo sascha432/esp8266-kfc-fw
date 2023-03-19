@@ -94,7 +94,7 @@ private:
     // virtual void _onRepeat(Button &button);
 
     // update button config, set init to true for first call after boot
-    void _updateButtonConfig(bool init = false);
+    void _updateButtonConfig();
     // reset buttons states to remove all events. if buttons are pressed the debouncer will filter the events when released
     void _loop();
     void _readConfig();

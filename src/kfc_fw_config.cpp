@@ -1866,7 +1866,7 @@ KFCConfigurationPlugin::KFCConfigurationPlugin() : PluginComponent(PROGMEM_GET_P
 
 void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    __DBG_printf("safe mode %d, wake up %d", (mode == SetupModeType::SAFE_MODE), resetDetector.hasWakeUpDetected());
+    __LDBG_printf("safe mode %d, wake up %d", (mode == SetupModeType::SAFE_MODE), resetDetector.hasWakeUpDetected());
     config.setup();
 
     #if NTP_LOG_TIME_UPDATE
@@ -1879,7 +1879,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
         if (!resetDetector.hasWakeUpDetected()) {
             // WiFi should not be connected unless coming back from deep sleep
             if (WiFi.isConnected()) {
-                __DBG_print("WiFi up, skipping init");
+                __LDBG_print("WiFi up, skipping init");
                 Logger_error(F("WiFi already up"));
                 BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
                 return;

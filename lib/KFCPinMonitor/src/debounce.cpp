@@ -55,7 +55,7 @@ StateType Debounce::_debounce(bool lastValue, uint16_t interruptCount, uint32_t 
 
     if (_debounceTimerRunning && get_time_diff(_debounceTimer, now) >= pinMonitor.getDebounceTime()) {
 
-        // we did not register any changes and the debounce timout has expired
+        // we did not register any changes and the debounce timeout has expired
         // remove timer
         _debounceTimerRunning = false;
 

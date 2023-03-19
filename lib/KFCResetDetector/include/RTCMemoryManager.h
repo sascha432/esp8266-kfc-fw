@@ -158,28 +158,28 @@ public:
     static_assert(sizeof(Header_t) % kBlockSize == 0, "header not aligned");
 
 public:
-    static bool _readHeader(Header_t &header);
-    static uint8_t *_readMemory(Header_t &header, uint16_t extraSize);
-
     // copy data to address
     static uint8_t read(RTCMemoryId id, void *data, uint8_t maxSize);
-    // reuse temporary allocated memory
-    // requires to free the returned pointer using free()
-    static uint8_t *read(RTCMemoryId id, uint8_t &length);
-    // free pointer returned by read()
-    static void release(uint8_t *buffer);
+
+    // // reuse temporarily allocated memory
+    // // requires to free the returned pointer using release()
+    // static uint8_t *read(RTCMemoryId id, uint8_t &length);
+
+    // // free pointer returned by read()
+    // static void release(uint8_t *buffer);
 
     static bool write(RTCMemoryId id, const void *, uint8_t maxSize);
 
-    static bool remove(RTCMemoryId id) {
-        return write(id, nullptr, 0);
-    }
+    static bool remove(RTCMemoryId id);
     static bool clear();
 
     static bool dump(Print &output, RTCMemoryId id);
 
 private:
+    static bool _readHeader(Header_t &header);
+    static uint8_t *_readMemory(Header_t &header, uint16_t extraSize);
     static uint8_t *_read(uint8_t *&data, Header_t &header, Entry_t &entry, RTCMemoryId id);
+    static void _delete(uint8_t *buffer);
 
 // methods to use the internal RTC
 public:
@@ -203,10 +203,6 @@ private:
     static void _writeTime(const RtcTime &time);
     static void _clearTime();
 
-    // TODO remove
-public:
-    static uint32_t _bufSize;
-
     #if RTC_SUPPORT == 0
     public:
         class RtcTimer : public OSTimer {
@@ -225,6 +221,23 @@ public:
 inline RTCMemoryManager::SyncStatus RTCMemoryManager::getSyncStatus()
 {
     return _readTime().status;
+}
+
+// inline void RTCMemoryManager::release(uint8_t *buffer)
+// {
+//     _delete(buffer);
+// }
+
+inline void RTCMemoryManager::_delete(uint8_t *buffer)
+{
+    if (buffer) {
+        delete[] buffer;
+    }
+}
+
+inline bool RTCMemoryManager::remove(RTCMemoryId id)
+{
+    return write(id, nullptr, 0);
 }
 
 inline void RTCMemoryManager::setTime(time_t time, SyncStatus status)

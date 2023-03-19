@@ -32,6 +32,7 @@ AUTO_STRING_DEF(__pure_virtual, "pure virtual call: %s\n")
 PluginComponent *PluginComponent::findPlugin(NameType name, bool isSetup)
 {
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
+        __LDBG_printf("name=%s plugin=%s", __S(name), __S(plugin->getName_P()));
         if (plugin->nameEquals(name) && (!isSetup || plugin->_setupTime)) {
             return plugin;
         }

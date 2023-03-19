@@ -80,6 +80,7 @@ void PluginComponents::Dependencies::destroy()
 
 bool PluginComponents::Dependencies::dependsOn(NameType name, DependencyCallback callback, const PluginComponent *source)
 {
+    __LDBG_printf("dependsOn=%s", __S(name));
     auto plugin = PluginComponent::findPlugin(name, false);
     if (plugin) {
         if (plugin->_setupTime) {

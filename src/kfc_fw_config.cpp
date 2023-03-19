@@ -616,6 +616,15 @@ void KFCFWConfiguration::restoreFactorySettings()
     #define __DBG_CALL(...) \
         __VA_ARGS__;
 
+    #if ESP8266
+        struct station_config config = {};
+        wifi_station_set_config(&config);
+        wifi_station_set_config_current(&config);
+    #endif
+
+    __DBG_CALL(SaveCrash::removeCrashCounterAndSafeMode());
+    __DBG_CALL(RTCMemoryManager::clear());
+
     __DBG_CALL(erase());
     __DBG_CALL(clear());
     __DBG_CALL((SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC));
@@ -921,7 +930,9 @@ void KFCFWConfiguration::write()
 
 void KFCFWConfiguration::printDiag(Print &output, const String &prefix)
 {
-    #if ESP8266
+    #if 1
+        WiFi.printDiag(output);
+    #elif ESP8266
         station_config wifiConfig;
         wifi_station_get_config_default(&wifiConfig);
         output.print(prefix);
@@ -1128,7 +1139,7 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
         //resetDetector.clearCounter();
         // SaveCrash::removeCrashCounter();
 
-        delay(1);
+        delay(5);
 
         for(auto plugin: PluginComponents::Register::getPlugins()) {
             plugin->prepareDeepSleep(time.count());

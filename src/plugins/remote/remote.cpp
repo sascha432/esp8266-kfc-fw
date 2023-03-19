@@ -89,8 +89,8 @@ void RemoteControlPlugin::_updateButtonConfig()
             auto &button = static_cast<Button &>(*buttonPtr);
             // __LDBG_printf("arg=%p btn=%p pin=%u digital_read=%u inverted=%u owner=%u", button.getArg(), &button, button.getPin(), digitalRead(button.getPin()), button.isInverted(), button.getBase() == this);
             if (button.getBase() == this) { // auto downcast of this
-                #if DEBUG_IOT_REMOTE_CONTROL
-                    auto &cfg = _getConfig().actions[button.getButtonNum()];
+                #if DEBUG_IOT_REMOTE_CONTROL && 0
+                    auto &cfg = _config.actions[button.getButtonNum()];
                     __LDBG_printf("button#=%u on_action.id=%u,%u,%u,%u,%u,%u,%u,%u udp.enabled=%s mqtt.enabled=%s",
                         button.getButtonNum(),
                         cfg.down, cfg.up, cfg.press, cfg.single_click, cfg.double_click, cfg.long_press, cfg.hold, cfg.hold_released,
@@ -104,7 +104,12 @@ void RemoteControlPlugin::_updateButtonConfig()
 
 void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
+    if (mode == SetupModeType::DELAYED_AUTO_WAKE_UP) {
+        __LDBG_printf("delayed mode");
+        return;
+    }
     DeepSleep::deepSleepPinState.merge();
+     _readConfig();
 
     #if PIN_MONITOR_BUTTON_GROUPS
         SingleClickGroupPtr group1;
@@ -113,17 +118,17 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         group2.reset(_config.click_time);
     #endif
 
-    // disable interrupts during setup
-    for (uint8_t n = 0; n < kButtonPins.size(); n++) {
-        auto pin = kButtonPins[n];
+    for (uint8_t buttonNum = 0; buttonNum < kButtonPins.size(); buttonNum++) {
+        auto pin = kButtonPins[buttonNum];
         #if PIN_MONITOR_BUTTON_GROUPS
-            auto &button = pinMonitor.attach<Button>(pin, n, this);
+            auto &button = pinMonitor.attach<Button>(pin, buttonNum, this);
             using EventNameType = Plugins::RemoteControl::EventNameType;
 
             if (!_config.enabled[EventNameType::BUTTON_PRESS]) {
-                if (n == 0 || n == 3) {
+                if (buttonNum == 0 || buttonNum == 3) {
                     button.setSingleClickGroup(group1);
-                } else {
+                }
+                else {
                     button.setSingleClickGroup(group2);
                 }
             } else {
@@ -139,9 +144,6 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         pinMonitor.attachPinType<ChargingDetection>(HardwarePinType::SIMPLE, IOT_REMOTE_CONTROL_CHARGING_PIN, this);
         pinMode(IOT_SENSOR_BATTERY_CHARGING_COMPLETE_PIN, INPUT);
     #endif
-
-    // _buttonsLocked = 0;
-    _readConfig();
 
     // freeze interrupt states
     ETS_GPIO_INTR_DISABLE();
@@ -241,7 +243,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 
     _updateSystemComboButtonLED();
 
-    __LDBG_printf("setup() done");
+    __LDBG_printf("setup done");
 
     dependencies->dependsOn(
         F("http"), [](const PluginComponent *plugin, DependencyResponseType response) {
@@ -284,10 +286,10 @@ bool RemoteControlPlugin::_sendBatteryStateAndSleep()
             if (status.getVoltage() == 0) {
                 return false;
             }
-            if (_getConfig().udp_enable) {
+            if (_config.udp_enable) {
                 auto payload = _getJsonBatteryStatus(status);
                 WiFiUDP udp;
-                udp.beginPacket(Plugins::RemoteControl::getUdpHost(), _getConfig().udp_port) && (udp.write(payload.c_str(), payload.length()) == payload.length()) && udp.endPacket();
+                udp.beginPacket(Plugins::RemoteControl::getUdpHost(), _config.udp_port) && (udp.write(payload.c_str(), payload.length()) == payload.length()) && udp.endPacket();
             }
             sensor->publishState();
             break;
@@ -394,10 +396,10 @@ void RemoteControlPlugin::getStatus(Print &output)
         output.print(F(", auto sleep disabled"));
     }
     output.printf_P(PSTR(HTML_S(br) "force deep sleep after %u minutes"), _config.max_awake_time);
-    if (_getConfig().udp_enable) {
-        output.printf_P(PSTR(", UDP %s:%u enabled"), Plugins::RemoteControl::getUdpHost(), _getConfig()._get_udp_port());
+    if (_config.udp_enable) {
+        output.printf_P(PSTR(", UDP %s:%u enabled"), Plugins::RemoteControl::getUdpHost(), _config._get_udp_port());
     }
-    auto deepSleepTime = _getConfig().deep_sleep_time;
+    auto deepSleepTime = _config.deep_sleep_time;
     if (deepSleepTime) {
         output.printf_P(PSTR(", Report battery state every %s"), formatTimeShort(F(", "), F(" and "), false, 0, (deepSleepTime % 60), (deepSleepTime / 60) % 24, (deepSleepTime / 1440)).c_str());
     }

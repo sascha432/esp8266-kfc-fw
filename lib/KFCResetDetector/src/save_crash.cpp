@@ -10,9 +10,9 @@
 #include "section_defines.h"
 
 #if DEBUG_SAVE_CRASH
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 extern "C" {
@@ -115,9 +115,9 @@ namespace SaveCrash {
 
 #if ESP8266
 
-    inline static const __FlashStringHelper *getExceptionFPStr(uint32_t execption)
+    inline static const __FlashStringHelper *getExceptionFPStr(uint32_t exception)
     {
-        switch(execption) {
+        switch(exception) {
             case 0: return F("IllegalInstructionCause");
             case 1: return F("SyscallCause");
             case 2: return F("InstructionFetchErrorCause");
@@ -146,7 +146,7 @@ namespace SaveCrash {
             default:
                 break;
         }
-        return nullptr;
+        return F("N/A");
     }
 
     void Data::printReason(Print &output) const
@@ -379,7 +379,7 @@ inline static bool append_crash_data(SaveCrash::FlashStorage &fs, SPIFlash::Flas
     __LDBG_printf("APPEND_CRASH_DATA %u", header._stack._size);
 
     if (!fs.append(header, result)) {
-        __LDBG_printf("append failed rsult=%u size=%u", result._result, sizeof(header));
+        __LDBG_printf("append failed result=%u size=%u", result._result, sizeof(header));
         return false;
     }
 

@@ -41,8 +41,7 @@ static void enter_deep_sleep(uint32_t timeMillis, RFMode rfMode)
         _logger.setLevel(Logger::Level::NONE);
     #endif
     #if DEBUG
-        __DBG_printf("entering deep sleep for %ums", timeMillis);
-        DEBUG_OUTPUT_flush();
+        __DBG_printf("entering deep sleep for %s", formatTime(timeMillis / 1000U).c_str());
         delay(5);
     #endif
     #if ESP8266

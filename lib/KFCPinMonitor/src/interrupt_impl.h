@@ -59,22 +59,22 @@ namespace PinMonitor {
 
     }
 
-// arduino style interrupt handler with limitations saving 232byte IRAM
-#elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
+    // arduino style interrupt handler with limitations saving 232byte IRAM
+    #elif PIN_MONITOR_USE_FUNCTIONAL_INTERRUPTS == 0
 
 
-    // saves 232 byte IRAM compared to attachInterruptArg/detachInterrupt
-    // cannot be used with arduino functional interrupts
-    // interrupt trigger is CHANGE only
+        // saves 232 byte IRAM compared to attachInterruptArg/detachInterrupt
+        // cannot be used with arduino functional interrupts
+        // interrupt trigger is CHANGE only
 
-    typedef void (* voidFuncPtrArg)(void *);
+        typedef void (* voidFuncPtrArg)(void *);
 
-    // mode is CHANGE
-    void _attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg);
-    // NOTE: this function must not be called from inside the interrupt handler
-    void _detachInterrupt(uint8_t pin);
+        // mode is CHANGE
+        void _attachInterruptArg(uint8_t pin, voidFuncPtrArg userFunc, void *arg);
+        // NOTE: this function must not be called from inside the interrupt handler
+        void _detachInterrupt(uint8_t pin);
 
-#endif
+    #endif
 
     void GPIOInterruptsEnable();
     void GPIOInterruptsDisable();
@@ -83,8 +83,8 @@ namespace PinMonitor {
 
     extern uint16_t interrupt_levels;
 
-#if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
-    extern Interrupt::EventBuffer eventBuffer;
-#endif
+    #if PIN_MONITOR_ROTARY_ENCODER_SUPPORT
+        extern Interrupt::EventBuffer eventBuffer;
+    #endif
 
 }

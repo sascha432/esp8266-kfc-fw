@@ -254,22 +254,26 @@ namespace PinMonitor {
         // void IRAM_ATTR addEvent(bool value) {
         inline __attribute__((__always_inline__))
         void addEvent(bool value) {
+            InterruptLock lock;
             _event = value ? SimpleEventType::HIGH_VALUE : SimpleEventType::LOW_VALUE;
         }
 
         inline __attribute__((__always_inline__))
         void clearEvents() {
+            InterruptLock lock;
             _event = SimpleEventType::NONE;
         }
 
         inline __attribute__((__always_inline__))
         SimpleEventType getEvents() const {
+            InterruptLock lock;
             auto tmp = _event;
             return tmp;
         }
 
         inline __attribute__((__always_inline__))
         SimpleEventType getEventsClear() {
+            InterruptLock lock;
             auto tmp = _event;
             clearEvents();
             return tmp;
@@ -311,6 +315,7 @@ namespace PinMonitor {
         }
 
         virtual void clear() override {
+            InterruptLock lock;
             // _debounce = Debounce(digitalRead(getPin()));
             _debounce.setState(digitalRead(getPin()));
         }
@@ -321,6 +326,7 @@ namespace PinMonitor {
 
         inline __attribute__((__always_inline__))
         void addEvent(uint32_t micros, bool value) {
+            InterruptLock lock;
             _events._micros = micros;
             _events._interruptCount++;
             _events._value = value;
@@ -328,6 +334,7 @@ namespace PinMonitor {
 
         inline __attribute__((__always_inline__))
         void clearEvents() {
+            InterruptLock lock;
             _events._interruptCount = 0;
         }
 
@@ -338,6 +345,7 @@ namespace PinMonitor {
 
         inline __attribute__((__always_inline__))
         Events getEventsClear() {
+            InterruptLock lock;
             auto tmp = __getEvents();
             clearEvents();
             return tmp;
@@ -346,6 +354,7 @@ namespace PinMonitor {
     protected:
         inline __attribute__((__always_inline__))
         Events __getEvents() const {
+            InterruptLock lock;
             auto tmp = Events(_events._micros, _events._interruptCount, _events._value);
             return tmp;
         }
@@ -365,20 +374,6 @@ namespace PinMonitor {
             HardwarePin(pin, HardwarePinType::ROTARY),
             _encoder(*reinterpret_cast<RotaryEncoder *>(const_cast<void *>(handler.getArg())))
         {}
-
-        // virtual void clear() override {
-            // auto iterator = std::remove_if(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end(), [this](const PinPtr &ptr) {
-            //     reeturn ptr->getPin() == _pin;
-
-            // });
-            // if (iterator != PinMonitor::eventBuffer.end()) {
-            //     PinMonitor::eventBuffer.shrink(PinMonitor::eventBuffer.begin(), iterator);
-            // }
-
-            // PinMonitor::eventBuffer.shrink(PinMonitor::eventBuffer.begin(), std::remove_if(PinMonitor::eventBuffer.begin(), PinMonitor::eventBuffer.end(), [this](const PinPtr &ptr) {
-            //     reeturn ptr->getPin() == _pin;
-            // }));
-        // }
 
     public:
         RotaryEncoder &_encoder;

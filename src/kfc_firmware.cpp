@@ -96,18 +96,16 @@ void delayedSetup(bool delayed)
 }
 
 #if KFC_SAFEMODE_GPIO_COMBO
-    // read key combo and debounce
     bool isSystemKeyComboPressed()
     {
-        uint8_t count = 0;
         for(uint8_t i = 0; i < 2; i++) {
-            __LDBG_printf("readall %08x mask %08x result %08x count=%u masked=%08x", digitalReadAll(), KFC_SAFEMODE_GPIO_MASK, KFC_SAFEMODE_GPIO_RESULT, count, digitalReadAll() & KFC_SAFEMODE_GPIO_MASK);
+            __LDBG_printf("pins=%08x mask=%08x result=%08x masked=%08x", digitalReadAll(), KFC_SAFEMODE_GPIO_MASK, KFC_SAFEMODE_GPIO_RESULT, digitalReadAll() & KFC_SAFEMODE_GPIO_MASK);
             if ((digitalReadAll() & KFC_SAFEMODE_GPIO_MASK) == KFC_SAFEMODE_GPIO_RESULT) {
-                count++;
+                return true;
             }
             delay(5);
         }
-        return (count != 0);
+        return false;
     }
 #endif
 

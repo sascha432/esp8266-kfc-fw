@@ -300,7 +300,7 @@ float Sensor_Battery::calcLipoCapacity(float voltage, uint8_t cells, bool chargi
     );
     voltage /= cells;
     if (charging) {
-        voltage -= (4.25 - voltage) * 0.15;
+        voltage -= std::max<float>(0, 4.3 - voltage) * 0.15;
     }
     float powValue = 1;
     float percent = 0;
@@ -357,29 +357,21 @@ bool Sensor_Battery::atModeHandler(AtModeArgs &args)
             if (start > end) {
                 std::swap(start, end);
             }
-            if (start == 0) {
-                start = 3.5;
-            }
-            if (end == 0) {
-                end =  4.25;
-            }
             if (start < 2.5) {
                 start = 2.5;
             }
-            if (end > 4.35) {
-                end = 4.35;
+            if (end == 0) {
+                end = 4.3;
             }
-            args.printf_P(PSTR("Generating table for %.2-%.2fV"), start, end);
+            else if (end > 4.30) {
+                end = 4.30;
+            }
+            args.printf_P(PSTR("Generating table for %.2f-%.2fV"), start, end);
             auto &stream = args.getStream();
-            float prev = -1;
             stream.printf_P("voltage,level\n");
-            for(float v = start; v <= end; v += 0.001) {
+            for(float v = start; v <= end; v += 0.05) {
                 auto n = Sensor_Battery::calcLipoCapacity(v, 1, charging);
-                if (n != prev) {
-                    prev = n;
-                    stream.printf_P("%.3f,%.2f\n", v, n);
-                    delay(5);
-                }
+                stream.printf_P("%.2f,%.2f\n", v, n);
             }
             return true;
         }

@@ -257,7 +257,10 @@ bool RemoteControlPlugin::_sendBatteryStateAndSleep()
             auto batterySensor = reinterpret_cast<Sensor_Battery *>(sensor);
             batterySensor->readADC(batterySensor->kADCNumReads * 4);
             auto status = batterySensor->readSensor();
-            __DBG_printf("sending battery state voltage=%.3f level=%u", status.getVoltage(), status.getLevel());
+            __DBG_printf("battery state voltage=%.3f level=%u", status.getVoltage(), status.getLevel());
+            if (status.getVoltage() == 0) {
+                return false;
+            }
             if (_getConfig().udp_enable) {
                 auto payload = _getJsonBatteryStatus(status);
                 WiFiUDP udp;

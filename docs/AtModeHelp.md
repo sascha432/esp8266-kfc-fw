@@ -216,6 +216,14 @@ Disable auto sleep or set timeout in seconds
 
 Send battery status every n seconds to MQTT and to UDP server, 10 times in a row. If the time is 0, it is sent once.
 
+### ``+BCAP=<voltage>``
+
+Calculate battery capacity for given voltage
+
+### ``+BCTAB=<from>,<to-voltage>[,<true=charging|false>]``
+
+Create a table for the given voltage range
+
 ## MQTT
 
 ### ``+MQTT=con|dis|set|top|auto|list``

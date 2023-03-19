@@ -40,7 +40,7 @@ Sensor_Battery::Sensor_Battery(const String &name) :
     reconfigure(nullptr);
 
     #if USE_ADC_MANAGER
-        ADCManager::getInstance().addAutoReadTimer(Event::milliseconds(kReadInterval / 2), Event::milliseconds(10), kADCNumReads * 2);
+        ADCManager::getInstance().addAutoReadTimer(Event::milliseconds(kReadInterval / 2), Event::milliseconds(10), kReadInterval / 20);
     #endif
 
     _Timer(_timer).add(Event::milliseconds(kReadInterval), true, [this](Event::CallbackTimerPtr) {
@@ -56,16 +56,22 @@ Sensor_Battery::~Sensor_Battery()
 void Sensor_Battery::_readADC(uint8_t num)
 {
     #if USE_ADC_MANAGER
-        _adcValue = ADCManager::getInstance().readValue();
+        auto value = ADCManager::getInstance().readValue();
     #else
-        uint32_t value = analogRead(A0);
+        uint32_t tmp = analogRead(A0);
         auto count = num;
         while(--count) {
             delay(1);
-            value += analogRead(A0);
+            tmp += analogRead(A0);
         }
-        _adcValue = value / num;
+        uint16_t value = tmp / num;
     #endif
+    if (_adcValue == 0) {
+        _adcValue = value;
+    }
+    else {
+        _adcValue = ((_adcValue * 10.0) + value) / 11.0;
+    }
     _status.updateSensor(*this);
 }
 
@@ -282,76 +288,27 @@ void Sensor_Battery::Status::updateSensor(Sensor_Battery &sensor)
     #endif
 }
 
-
-inline static float __regress(float x) {
-    static constexpr auto terms PROGMEM = stdex::array_of<const float>(
-        3.0901165359671228e+000,
-        1.3918435736462101e-001,
-        -1.4396426399182059e-002,
-        8.7076685354720170e-004,
-        -3.1845853329535204e-005,
-        7.2574155135737268e-007,
-        -1.0360837215997591e-008,
-        9.0101915491340791e-011,
-        -4.3670186360225468e-013,
-        9.0520507287591813e-016
-    );
-    float t = 1;
-    float r = 0;
-    for(auto term: terms) {
-        r += term * t;
-        t *= x;
-    }
-    return r;
-}
-
-inline static float __regress_charging(float x) {
-    static constexpr auto terms PROGMEM = stdex::array_of<const float>(
-        3.2930194940793633e+000,
-        2.0635303243176276e-001,
-        -3.5146285982269383e-002,
-        3.4103882409114760e-003,
-        -1.9841294648274642e-004,
-        7.3054359786938261e-006,
-        -1.7598705546951781e-007,
-        2.8107121828560341e-009,
-        -2.9502555631192765e-011,
-        1.9567430256134823e-013,
-        -7.4374991457700413e-016,
-        1.2350426541328422e-018
-    );
-    float t = 1;
-    float r = 0;
-    for(auto term: terms) {
-        r += term * t;
-        t *= x;
-    }
-    return r;
-}
-
-
-float Sensor_Battery::calcLipoCapacity(float voltage, uint8_t cells, bool charging, float precision)
+float Sensor_Battery::calcLipoCapacity(float voltage, uint8_t cells, bool charging)
 {
-    RegressFunction func = charging ? __regress_charging : __regress;
+    static constexpr auto coefficients PROGMEM = stdex::array_of<const float>(
+        -163.25,
+        915.25,
+        -1851.1,
+        1741.2,
+        -745.8,
+        119.98
+    );
     voltage /= cells;
-
-    using IntType = uint16_t;
-    IntType first = 0;
-    IntType last = 100 * precision;
-    IntType count = last;
-    while (count > 0) {
-        IntType it = first;
-        IntType step = count / 2;
-        it += step;
-        if (func(it / precision) < voltage) {
-            first = it + 1;
-            count -= step + 1;
-        }
-        else {
-            count = step;
-        }
+    if (charging) {
+        voltage -= (4.25 - voltage) * 0.15;
     }
-    return first / precision;
+    float powValue = 1;
+    float percent = 0;
+    for(auto coefficient: coefficients) {
+        percent += coefficient * powValue;
+        powValue *= voltage;
+    }
+    return std::clamp<float>(percent / 247.625, 0, 100);
 }
 
 #if AT_MODE_SUPPORTED && IOT_SENSOR_BATTERY_DISPLAY_LEVEL
@@ -359,8 +316,8 @@ float Sensor_Battery::calcLipoCapacity(float voltage, uint8_t cells, bool chargi
 #include "at_mode.h"
 
 #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage>[,<precison=1-10>]", "Calculate battery capacity for given voltage");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCTAB, "BCTAB", "<from>,<to-voltage>[,<true=charging>,<precison>]", "Create a table for the given voltage range");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage>", "Calculate battery capacity for given voltage");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCTAB, "BCTAB", "<from>,<to-voltage>[,<true=charging>]", "Create a table for the given voltage range");
 #endif
 
 #if AT_MODE_HELP_SUPPORTED
@@ -381,57 +338,53 @@ ATModeCommandHelpArrayPtr Sensor_Battery::atModeCommandHelp(size_t &size) const
 
 bool Sensor_Battery::atModeHandler(AtModeArgs &args)
 {
-#if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCAP))) {
-        auto voltage = args.toFloat(0);
-        auto precision = args.toFloatMinMax(1, 1.0, 100.0, 2.0);
-        auto start = micros();
-        float capacity = Sensor_Battery::calcLipoCapacity(voltage, 1, false, precision);
-        auto dur = micros() - start;
-        start = micros();
-        float charging = Sensor_Battery::calcLipoCapacity(voltage, 1, true, precision);
-        auto dur2 = micros() - start;
-        int digits = ceil(log(precision) / log(10));
-        args.printf_P(PSTR("voltage=%.4fV capacity=%.*f%% (%uµs) charging=%.*f%% (%uµs) Umax=%.4f precision=%.2f"), voltage, digits, capacity, dur, digits, charging, dur2, Sensor_Battery::maxVoltage, precision);
-        return true;
-    }
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCTAB))) {
-        auto start = args.toFloat(0);
-        auto end = args.toFloat(1);
-        auto charging = args.isTrue(2);
-        auto precision = args.toFloatMinMax(3, 1.0, 100.0, 2.0);
-        int digits = ceil(log(precision) / log(10));
-        if (start > end) {
-            std::swap(start, end);
+    #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
+        if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCAP))) {
+            auto voltage = args.toFloat(0);
+            auto start = micros();
+            float capacity = Sensor_Battery::calcLipoCapacity(voltage, 1, false);
+            auto dur = micros() - start;
+            start = micros();
+            float charging = Sensor_Battery::calcLipoCapacity(voltage, 1, true);
+            auto dur2 = micros() - start;
+            args.printf_P(PSTR("voltage=%.4fV capacity=%.2f%% (%uµs) charging=%.2f%% (%uµs) Umax=%.4f"), voltage, capacity, dur, charging, dur2, Sensor_Battery::maxVoltage);
+            return true;
         }
-        if (start == 0) {
-            start = 3.5;
-        }
-        if (end == 0) {
-            end =  4.25;
-        }
-        if (start < 2.5) {
-            start = 2.5;
-        }
-        if (end > 4.35) {
-            end = 4.35;
-        }
-        args.printf_P(PSTR("Generating table for %.2-%.2fV"), start, end);
-        auto &stream = args.getStream();
-        float prev = -1;
-        stream.printf_P("voltage,level\n");
-        for(float v = start; v <= end; v += 0.0001) {
-            auto n = Sensor_Battery::calcLipoCapacity(v, 1, charging, precision);
-            if (n != prev) {
-                prev = n;
-                stream.printf_P("%.*f,%.*f\n", (digits / 2) + 3, v, digits, n);
-                delay(5);
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(BCTAB))) {
+            auto start = args.toFloat(0);
+            auto end = args.toFloat(1);
+            auto charging = args.isTrue(2);
+            if (start > end) {
+                std::swap(start, end);
             }
+            if (start == 0) {
+                start = 3.5;
+            }
+            if (end == 0) {
+                end =  4.25;
+            }
+            if (start < 2.5) {
+                start = 2.5;
+            }
+            if (end > 4.35) {
+                end = 4.35;
+            }
+            args.printf_P(PSTR("Generating table for %.2-%.2fV"), start, end);
+            auto &stream = args.getStream();
+            float prev = -1;
+            stream.printf_P("voltage,level\n");
+            for(float v = start; v <= end; v += 0.001) {
+                auto n = Sensor_Battery::calcLipoCapacity(v, 1, charging);
+                if (n != prev) {
+                    prev = n;
+                    stream.printf_P("%.3f,%.2f\n", v, n);
+                    delay(5);
+                }
+            }
+            return true;
         }
-        return true;
-    }
-#endif
-    return false;
+    #endif
+        return false;
 }
 
 #endif

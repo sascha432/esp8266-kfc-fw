@@ -252,7 +252,7 @@ public:
     void readADC(uint8_t num = kADCNumReads);
 
     // calculate capacity in %
-    static float calcLipoCapacity(float voltage, uint8_t cells = 1, bool charging = false, float precision = 1.0);
+    static float calcLipoCapacity(float voltage, uint8_t cells = 1, bool charging = false);
 
     #if AT_MODE_SUPPORTED && IOT_SENSOR_BATTERY_DISPLAY_LEVEL
         #if AT_MODE_HELP_SUPPORTED
@@ -272,7 +272,7 @@ private:
     String _name;
     ConfigType _config;
     Event::Timer _timer;
-    uint32_t _adcValue;
+    float _adcValue;
     Status _status;
 
 public:

@@ -26,7 +26,13 @@ public:
         }
         else if (_sendBatteryStateAndGotoSleep) {
             _sendBatteryStateAndGotoSleep = false;
-            _sendBatteryStateAndSleep();
+            if (!_sendBatteryStateAndSleep()) {
+                _Scheduler.add(Event::milliseconds(250), true, [this](Event::CallbackTimerPtr timer) {
+                    if (_sendBatteryStateAndSleep()) {
+                        timer->disarm();
+                    }
+                });
+            }
         }
     }
 

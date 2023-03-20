@@ -192,8 +192,11 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             }
             break;
         case AnimationType::RAINBOW_FASTLED: {
+                auto &invertHidden = form.addObjectGetterSetter(F("rb_dir"), FormGetterSetter(cfg.rainbow, invert_direction));
+                form.addFormUI(FormUI::Type::HIDDEN);
+
                 form.addObjectGetterSetter(F("rb_bpm"), FormGetterSetter(cfg.rainbow, bpm));
-                form.addFormUI(F("BPM"));
+                form.addFormUI(F("BPM"), FormUI::CheckboxButtonSuffix(invertHidden, F("Invert Direction")));
                 cfg.rainbow.addRangeValidatorFor_bpm(form);
 
                 form.addObjectGetterSetter(F("rb_hue"), FormGetterSetter(cfg.rainbow, hue));
@@ -275,7 +278,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     // sub forms for the WebUI
     if (formName.startsWith(F("ani-"))) {
         auto animation = _getAnimationType(FPSTR(formName.c_str() + 4));
-        __DBG_printf("form=%s animation=%u valid=%u", formName.c_str() + 4, animation, animation != AnimationType::MAX);
+        __LDBG_printf("form=%s animation=%u valid=%u", formName.c_str() + 4, animation, animation != AnimationType::MAX);
         if (animation != AnimationType::MAX) {
             auto &ui = form.createWebUI();
             ui.setContainerId(F("led-matrix-settings"));

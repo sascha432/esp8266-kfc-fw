@@ -23,7 +23,7 @@
             } \
             else if (value >= max && incr > 0) { \
                 incr = -incr; \
-                value = max + incr;\
+                value = max;\
             } \
         }
 
@@ -274,7 +274,7 @@ namespace Clock {
             _source->removeBlendBuffer(_sourceBuffer);
             _target->removeBlendBuffer(_targetBuffer);
             // make target the new animation and delete the source
-            __DBG_printf("source=%p target=%p", _source, _target);
+            __LDBG_printf("source=%p target=%p", _source, _target);
             std::swap(_source, _target);
             delete _target;
         }
@@ -588,10 +588,10 @@ namespace Clock {
 
     class RainbowAnimationFastLED : public Animation {
     public:
-        RainbowAnimationFastLED(ClockPlugin &clock, uint8_t bpm, uint8_t hue) :
+        RainbowAnimationFastLED(ClockPlugin &clock, uint8_t bpm, uint8_t hue, bool inv_dir) :
             Animation(clock),
             _bpm(bpm),
-            _hue(hue)
+            _hue(inv_dir ? ~hue : hue)
         {
         }
 
@@ -616,10 +616,10 @@ namespace Clock {
             fill_rainbow(reinterpret_cast<CRGB *>(display.begin()), display.getNumPixels(), beat8(_bpm, 255), _hue);
         }
 
-        void update(uint8_t bpm, uint8_t hue)
+        void update(uint8_t bpm, uint8_t hue, bool inv_dir)
         {
             _bpm = bpm;
-            _hue = hue;
+            _hue = inv_dir ? ~hue : hue;
         }
 
     private:

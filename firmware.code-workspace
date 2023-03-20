@@ -1,4 +1,29 @@
 {
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "type": "shell",
+                "command": "cmd",
+                "args": [
+                    "/c",
+                    "pio",
+                    "run",
+                    "-t",
+                    "rebuildfs",
+                    ";",
+                    "pio",
+                    "run",
+                    "-t",
+                    "uploadfs",
+                ],
+                "problemMatcher": [
+                    "$platformio"
+                ],
+                "label": "PlatformIO: Build and upload FS"
+            }
+        ]
+    },
 	"launch": {
 		"configurations": [
             {

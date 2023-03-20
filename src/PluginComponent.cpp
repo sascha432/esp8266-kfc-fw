@@ -90,7 +90,7 @@ void PluginComponent::invokeReconfigureNow(const String &source)
 {
     reconfigure(source);
     for(auto plugin: PluginComponents::Register::getPlugins()) {
-        if (plugin != this && plugin->hasReconfigureDependecy(source)) {
+        if (plugin != this && plugin->hasReconfigureDependency(source)) {
             plugin->reconfigure(source);
         }
     }

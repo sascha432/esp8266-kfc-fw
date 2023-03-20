@@ -13,11 +13,21 @@
 
 struct MoonPhaseType
 {
-    static constexpr auto kMoonDay = 29.53058868;
+    // number of days of a synodic month
+    static constexpr auto kSynMonth = 29.53058868;
+
+    // show full moon etc. 10 hours before and after it actually occurs
+    static constexpr auto kWindowInHours = 10;
+    // calculate the pPhase value for kWindowInHours
+    static constexpr auto kWindowAsPhaseValue = 1 / ((kSynMonth * 24.0) / kWindowInHours);
+
+    static const __FlashStringHelper *moonPhaseName(uint8_t moonPhase);
+    static const __FlashStringHelper *moonPhaseHuntName(uint8_t phaseHunt);
 
     double iPhase;
     double pPhase;
     double mAge;
+    double earthDistance;
     const __FlashStringHelper *phaseName;
     time_t unixTime;
     double julianTime;
@@ -48,6 +58,31 @@ struct MoonPhaseType
 
     const __FlashStringHelper *moonPhaseName() const {
         return phaseName;
+    }
+
+    // returns the number for moonPhaseHuntName() or -1 if outside the window
+    int8_t moonPhaseHuntNum() const {
+        for(uint8_t i = 1; i <= 4; i++) {
+            if (abs(pPhase - (i / 4.0)) < kWindowAsPhaseValue) {
+                return i % 4;
+            }
+        }
+        return -1;
+    }
+
+    String moonPhaseHuntNumDebug() const {
+        int8_t phaseNum = -1;
+        float phase = NAN;
+        float distance = 255;
+        for(uint8_t i = 1; i <= 4; i++) {
+            auto d = abs(pPhase - (i / 4.0));
+            if (d < distance) {
+                distance = d;
+                phase = i / 4.0;
+                phaseNum = i % 4;
+            }
+        }
+        return PrintString(F("pPhase=%.4f phase=%.2f/%d(%s) range=%f/%f match=%u"), pPhase, phase, phaseNum, moonPhaseHuntName(phaseNum), distance, kWindowAsPhaseValue, distance < kWindowAsPhaseValue);
     }
 
     double moonPhaseIlluminationPct() const {
@@ -83,4 +118,8 @@ struct MoonPhasesType
 MoonPhasesType calcMoonPhases(time_t unixtime);
 time_t getUnixtimeForCalcMoon();
 time_t getUnixtimeForCalcMoon(time_t unixtime);
-MoonPhaseType calcMoon(time_t time, bool runPhaseHunt);
+MoonPhaseType calcMoon(time_t time);
+
+#if DEBUG_MOON_PHASE
+    void startMoonDebug();
+#endif

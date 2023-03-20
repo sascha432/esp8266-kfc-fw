@@ -197,14 +197,14 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
                 stream.println(F("date,unixtime,phase"));
 
                 time_t lastPhase = 0;
-                for(float i = 0; i < days; i += MoonPhaseType::kMoonDay) {
+                for(float i = 0; i < days; i += MoonPhaseType::kSynMonth) {
                     auto phases = calcMoonPhases(unixtime + (i * incr));
                     for(auto phase: phases._timestamps) {
                         if (phase <= lastPhase) {
                             continue;
                         }
                         lastPhase = phase;
-                        auto moon = calcMoon(phase, true);
+                        auto moon = calcMoon(phase);
                         PrintString dateStr;
                         dateStr.strftime_P(PSTR("%Y-%m-%d %H:%M"), phase);
 
@@ -236,7 +236,7 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
             }
             else if (unixtime) {
                 while(days--) {
-                    auto moon = calcMoon(unixtime, true);
+                    auto moon = calcMoon(unixtime);
 
                     args.print(F("%s mAge=%f pPhase=%f(%s) il=%.3f(%.2f%%) mFont=%c"),
                         FormatTime::getDateTimeStr(true, moon.unixTime).c_str(),

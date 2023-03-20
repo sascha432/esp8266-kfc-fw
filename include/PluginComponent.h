@@ -361,7 +361,7 @@ public:
         return getOptions().setup_after_deep_sleep;
     }
 #endif
-    bool hasReconfigureDependecy(const String &name) const {
+    bool hasReconfigureDependency(const String &name) const {
         return stringlist_find_P_P(reinterpret_cast<PGM_P>(_pluginConfig->reconfigure_dependencies), name.c_str(), ',') != -1;
     }
 

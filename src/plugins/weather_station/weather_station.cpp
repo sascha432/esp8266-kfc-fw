@@ -15,6 +15,7 @@
 #include "web_server.h"
 #include "async_web_response.h"
 #include "blink_led_timer.h"
+#include "moon_phase.h"
 #include "../src/plugins/sensor/sensor.h"
 #if IOT_SENSOR_HAVE_BME280
 #    include "../src/plugins/sensor/Sensor_BME280.h"
@@ -342,6 +343,17 @@ void WeatherStationPlugin::_readConfig()
 void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     __LDBG_printf("setup");
+
+    #if DEBUG_MOON_PHASE
+        if (mode == SetupModeType::DEFAULT) {
+            _Scheduler.add(Event::seconds(60), true, [](Event::CallbackTimerPtr timer) {
+                if (isTimeValid(time(nullptr))) {
+                    startMoonDebug();
+                    timer->disarm();
+                }
+            });
+        }
+    #endif
 
     #if IOT_WEATHER_STATION_WS2812_NUM
         _rainbowStatusLED();

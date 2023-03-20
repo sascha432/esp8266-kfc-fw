@@ -43,7 +43,7 @@ static constexpr auto kEpoch = 2444237.5;
 #define mangsiz   0.5181 /* Moon's angular size at distance a from Earth */
 #define msmax     384401.0 /* Semi-major axis of Moon's orbit in km */
 #define mparallax 0.9507 /* Parallax at distance a from Earth */
-#define synmonth  29.53058868 /* Synodic month (new Moon to new Moon) */
+#define synmonth  MoonPhaseType::kSynMonth /* Synodic month (new Moon to new Moon) */
 #define lunatbase 2423436.0 /* Base date for E. W. Brown's numbered series of lunations (1923 January 16) */
 
 /* Assume not near black hole nor in Tennessee */
@@ -302,15 +302,19 @@ void phaseShort(double pDate, MoonPhaseType &moon)
     /* Calculation of the phase of the Moon */
 
     /* Age of the Moon in degrees */
-    auto MoonAge = lPP - lambdaSun;
+    auto moonAge = lPP - lambdaSun;
 
     /* Illumination of the Moon */
-    moon.iPhase = (1 - dcos(MoonAge)) / 2.0;
+    moon.iPhase = (1 - dcos(moonAge)) / 2.0;
+
+    /* Calculate distance of moon from the centre of the Earth */
+    moon.earthDistance = (msmax * (1 - mecc * mecc)) / (1 + mecc * dcos(MmP + mEc));
 
     /* Phase of the Moon */
-    moon.pPhase = fixAngle(MoonAge) / 360.0;
+    moon.pPhase = fixAngle(moonAge) / 360.0;
 
-    moon.mAge = synmonth * (fixAngle(MoonAge) / 360.0);
+    // age of the moon in days
+    moon.mAge = synmonth * moon.pPhase;
 }
 
 #ifndef _MSC_VER

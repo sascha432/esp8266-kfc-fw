@@ -119,7 +119,7 @@ namespace WSDraw {
     {
         constexpr int16_t _offsetY = Y_START_POSITION_SUN_MOON;
 
-        auto moon = calcMoon(getUnixtimeForCalcMoon(), true);
+        auto moon = calcMoon(getUnixtimeForCalcMoon());
 
         _canvas->setFont(FONTS_SUN_AND_MOON);
         _canvas->setTextColor(COLORS_SUN_AND_MOON);
@@ -597,7 +597,7 @@ namespace WSDraw {
     {
         int16_t _offsetY = Y_START_POSITION_MOON_PHASE;
 
-        auto moon = calcMoon(getUnixtimeForCalcMoon(), false);
+        auto moon = calcMoon(getUnixtimeForCalcMoon());
         time_t time = ::time(nullptr);
 
         // moon image
@@ -626,12 +626,13 @@ namespace WSDraw {
         _canvas->setTextColor(COLORS_MOON_PHASE_TIMEZONE);
         y += _canvas->drawTextAligned(_canvas->getCursorX(), y, FormatTime::getTimezoneStr(_config.time_format_24h, time), AdafruitGFXExtension::LEFT);
 
-        // the previous, current and next    2 moon phases
+        // the previous, current and next 2 moon phases
         auto phases = calcMoonPhases(time);
         auto lastPhase = moon.pPhase - 0.25;
 
+        uint8_t n = 0;
         for(auto phase: phases._timestamps) {
-            auto moon = calcMoon(phase, false);
+            auto moon = calcMoon(phase);
 
             // _canvas->setFont(&Dialog_6pt8b);
 
@@ -643,13 +644,14 @@ namespace WSDraw {
                 _canvas->setTextColor(COLORS_MOON_PHASE_ACTIVE);
             }
 
-            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, moon.moonPhaseName(), AdafruitGFXExtension::CENTER);
+            _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, MoonPhaseType::moonPhaseHuntName(n), AdafruitGFXExtension::CENTER);
             _offsetY += 2;
 
             // _canvas->setFont(&DejaVuSans_5pt8b);
             _canvas->setTextColor(COLORS_MOON_PHASE_DATETIME);
             _offsetY += _canvas->drawTextAligned(TFT_WIDTH / 2, _offsetY, FormatTime::getDateTimeStr(_config.time_format_24h, phase), AdafruitGFXExtension::CENTER);
             _offsetY += 4;
+            n++;
         }
 
         // moon phase name and %

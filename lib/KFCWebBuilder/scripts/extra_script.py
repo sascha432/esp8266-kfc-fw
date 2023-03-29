@@ -13,6 +13,7 @@ import click
 import re
 from datetime import datetime
 import platform
+from shutil import which
 
 symlinks = []
 
@@ -45,6 +46,7 @@ def build_webui(source, target, env, force = False):
         else:
             #php_bin = platform.system() == 'Windows' and 'php.exe' or 'php'
             php_bin = 'php'
+    php_bin = which(php_bin);
 
     php_file = env_abspath(env, '$PROJECT_DIR/lib/KFCWebBuilder/bin/include/cli_tool.php')
     json_file = env_abspath(env, '$PROJECT_DIR/KFCWebBuilder.json')

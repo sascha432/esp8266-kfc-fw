@@ -35,7 +35,8 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 //
 // screen capture
 // http://192.168.0.99/images/screen_capture.bmp
-// http://192.168.0.56/images/screen_capture.bmp
+// http://192.168.0.96/images/screen_capture.bmp
+// http://192.168.0.95/images/screen_capture.bmp
 //
 //
 
@@ -332,6 +333,8 @@ void WeatherStationPlugin::_readConfig()
 
     _backlightLevel = std::min(PWMRANGE * _config.backlight_level / 100, PWMRANGE);
 
+    __LDBG_printf("backlight level=%d pct=%d", _backlightLevel, _config.backlight_level);
+
     _weatherApi.setAPIKey(WSDraw::WSConfigType::getApiKey());
     _weatherApi.setQuery(WSDraw::WSConfigType::getApiQuery());
     _weatherApi.clear();
@@ -558,7 +561,7 @@ String WeatherStationPlugin::_createTopics(TopicType type) const
 void WeatherStationPlugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F("Weather Station"), false));
-    webUI.addRow(WebUINS::Slider(F("bl_br"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(range_max), PWMRANGE)));
+    webUI.addRow(WebUINS::Slider(F("bl_br"), F("Backlight Brightness"), false).append(WebUINS::NamedInt32(J(max), PWMRANGE)));
 }
 
 void WeatherStationPlugin::getValues(WebUINS::Events &array)
@@ -652,6 +655,7 @@ WeatherStationPlugin::IndoorValues WeatherStationPlugin::_getIndoorValues()
 
 void WeatherStationPlugin::_fadeBacklight(uint16_t fromLevel, uint16_t toLevel, uint8_t step)
 {
+    __LDBG_printf("from=%d to=%d step=%d", fromLevel, toLevel, step);
     _setBacklightLevel(fromLevel);
     int8_t direction = fromLevel > toLevel ? -step : step;
 
@@ -676,6 +680,11 @@ void WeatherStationPlugin::_updateBacklight(uint16_t toLevel, uint8_t step)
 {
     _fadeBacklight(_backlightLevel, toLevel, step);
     _backlightLevel = toLevel;
+
+    auto &cfg = Plugins::WeatherStation::getWriteableConfig();
+    cfg.backlight_level = _backlightLevel * 100 / PWMRANGE;
+
+    __LDBG_printf("backlight level=%d pct=%d", _backlightLevel, cfg.backlight_level);
 }
 
 void WeatherStationPlugin::_setRGBLeds(uint32_t color)

@@ -113,15 +113,7 @@ static void _debugMoonToFile(Stream &file)
 
 void startMoonDebug()
 {
-    _debugMoonToFile(DEBUG_OUTPUT);
-    _Scheduler.add(Event::minutes(5), true, [](Event::CallbackTimerPtr timer) {
-        _debugMoonToFile(DEBUG_OUTPUT);
-    });
-
-    auto delay = time(nullptr) % (240 * 60);
-    __LDBG_printf("delay=%u", delay);
-    _Scheduler.add(Event::seconds(delay), true, [](Event::CallbackTimerPtr timer) {
-        timer->updateInterval(Event::minutes(240));
+    _Scheduler.add(Event::seconds(1800), true, [](Event::CallbackTimerPtr timer) {
         auto file = KFCFS.open(F("/.logs/moon_phase.log"), FileOpenMode::appendplus);
         if (file) {
             _debugMoonToFile(file);

@@ -57,7 +57,7 @@ void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpR
         _pollDataUpdateLastTime(false);
     }
     else {
-        Logger_notice(F("OpenWeatherAPI successfully polled"));
+        // Logger_notice(F("OpenWeatherAPI successfully polled"));
         _pollDataUpdateLastTime(true);
     }
     redraw();

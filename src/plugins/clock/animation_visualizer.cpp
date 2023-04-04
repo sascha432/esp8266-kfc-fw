@@ -27,57 +27,119 @@
 
 using namespace Clock;
 
-bool VisualizerAnimation::_parseUdp()
+
+void VisualizerAnimation::begin()
 {
-    size_t size;
-    if (!(size = _udp.parsePacket()) || !_udp.available()) {
-        return false;
-    }
-    if (size && size <= kVisualizerPacketSize) {
-        if (*_incomingPacket) {
-            __LDBG_printf("dropped UDP packet");
-        }
-        auto len = _udp.readBytes(_incomingPacket, size);
-        _incomingPacket[len] = 0;
-        __LDBG_printf("new data size=%u", len);
-        return true;
+    _udp.stop();
+    _clearPacketBuffer();
+
+    _lastUpdate = millis();
+    _updateRate = 1000 / 120;
+    fill_solid(_leds, kNumPixels, CRGB(0));
+    _orientation = _cfg.get_enum_orientation(_cfg);
+    _barLength = _orientation == VisualizerAnimationConfig::OrientationType::VERTICAL ? kCols : kRows;
+
+    if (_cfg.multicast) {
+        auto ip = WiFi.localIP();
+        auto multicastIp = WiFi.broadcastIP();
+        auto result = _udp.beginMulticast(ip, multicastIp, _cfg.port);
+        __DBG_printf("ip=%s multi=%s port=%u begin_multicast=%u", ip.toString().c_str(), multicastIp.toString().c_str(), _cfg.port, result);
     }
     else {
-        __LDBG_printf("dumping size=%u", size);
-        // invalid size
-        while(size-- && _udp.read() != -1) {
-            // read packet and dump it
-        }
+        auto result = _udp.begin(_cfg.port);
+        __DBG_printf("ip=* port=%u begin=%u", _cfg.port, result);
     }
-    return false;
+    __DBG_printf("begin update_rate=%u pixels=%u bar_len=%u", _updateRate, kNumPixels, _barLength);
+}
+
+void VisualizerAnimation::_logPackets()
+{
+    #if DEBUG
+        // _lastUpdate is millis() when the loop function was called
+        if (_lastUpdate - _packets.last_update > 5000)  {
+            _packets.last_update = _lastUpdate;
+            __DBG_printf("UDP incoming=%u dropped=%u valid=%u invalid=%u invalid_size=%u rate=%u", _packets.incoming, _packets.dropped, _packets.valid, _packets.invalid, _packets.invalid_size, _updateRate);
+        }
+    #endif
+}
+
+bool VisualizerAnimation::_parseUdp()
+{
+    int size;
+    // get next packet and discard the last one
+    if ((size = _udp.parsePacket()) == 0) {
+        return false;
+    }
+    _packets.incoming++;
+    for(;;) {
+        if (_hasValidPacketInBuffer()) {
+            // buffer is not empty, skip this packet and keep the last one
+            _packets.dropped++;
+            break;
+        }
+        else if (size <= 0) {
+            // invalid packet size, destroy packet
+        }
+        else {
+            // read data into buffer
+            auto len = std::min<int>(_udp.readBytes(_incomingPacket, std::min(size, kVisualizerPacketSize)), kVisualizerPacketSize);
+            if (len != kNumPixels) {
+                // length does not match the number of pixels
+                _packets.invalid_size++;
+            }
+            // check if we have valid data
+            if (len && _hasValidPacketInBuffer()) {
+                // valid packet
+                // fill the buffer with zeros and add trailing zero byte
+                std::fill(std::begin(_incomingPacket) + len, std::end(_incomingPacket), 0);
+                _packets.valid++;
+                break;
+            }
+
+        }
+        // count as invalid and clean buffer
+        _packets.invalid++;
+        _clearPacketBuffer();
+        _logPackets();
+        return false;
+    }
+    _logPackets();
+    return true;
 }
 
 void VisualizerAnimation::loop(uint32_t millisValue)
 {
-    if (get_time_diff(_loopTimer, millisValue) >= _updateRate) {
-        _loopTimer = millisValue;
-        if (_parseUdp() && *_incomingPacket) {
+    // read udp in every loop
+    _parseUdp();
+
+    if (millisValue - _lastUpdate >= _updateRate) {
+        _lastUpdate = millisValue;
+        // do we have a valid packet in the buffer?
+        if (_hasValidPacketInBuffer()) {
             fadeToBlackBy(_leds, kNumPixels, 150);
             switch(static_cast<VisualizerAnimationConfig::VisualizerType>(_cfg.type)) {
                 case VisualizerAnimationConfig::VisualizerType::SINGLE_COLOR:
-                    _SingleColorVisualizer();
+                    _singleColorVisualizer();
                     break;
                 case VisualizerAnimationConfig::VisualizerType::SINGLE_COLOR_DOUBLE_SIDED:
-                    _SingleColorVisualizerDoubleSided();
+                    _singleColorVisualizerDoubleSided();
                     break;
                 case VisualizerAnimationConfig::VisualizerType::RAINBOW:
-                    _RainbowVisualizer();
+                    _rainbowVisualizer();
                     break;
                 case VisualizerAnimationConfig::VisualizerType::RAINBOW_DOUBLE_SIDED:
-                    _RainbowVisualizerDoubleSided();
+                    _rainbowVisualizerDoubleSided();
                     break;
                 default:
                     break;
             }
-            *_incomingPacket = 0;
+            // mark packet as processed
+            _clearPacketBuffer();
         }
     }
 }
+
+#if 0
 
 int VisualizerAnimation::_getVolume(uint8_t vals[], int start, int end, double factor)
 {
@@ -336,15 +398,16 @@ void VisualizerAnimation::_vuMeterTriColor()
 
 int VisualizerAnimation::_getPeakPosition()
 {
+    auto ptr = _incomingPacket;
     int pos = 0;
-    uint8_t posval = 0;
-    for (int i = 0; i < kVisualizerPacketSize && _incomingPacket[i]; i++) {
-        if (_incomingPacket[i] > posval) {
+    uint8_t posVal = 0;
+    for (int i = 0; i < kVisualizerPacketSize && *ptr; ++i, ++ptr) {
+        if (*ptr > posVal) {
+            posVal = *ptr;
             pos = i;
-            posval = _incomingPacket[i];
         }
     }
-    if (posval < 30) {
+    if (posVal < 30) {
         pos = -1;
     }
     return pos;
@@ -354,113 +417,97 @@ void VisualizerAnimation::_printPeak(CHSV c, int pos, int grpSize)
 {
     fadeToBlackBy(_leds, _parent._display.size(), 12);
     _leds[pos] = c;
-    // CHSV c2 = c;
-    // c2.v = 150;
     for (int i = 0; i < ((grpSize - 1) / 2); i++) {
         _leds[pos + i] = c;
         _leds[pos - i] = c;
     }
 }
 
-void VisualizerAnimation::_setBar(int row, double num, CRGB color, bool fill_ends)
-{
-    _setBar(row, num, rgb2hsv_approximate(color), fill_ends);
-}
+#endif
 
 void VisualizerAnimation::_setBar(int row, int num, CRGB color)
 {
     _setBar(row, num, rgb2hsv_approximate(color));
 }
 
-void VisualizerAnimation::_setBar(int row, double num, CHSV col, bool fill_ends)
+void VisualizerAnimation::_setBar(int row, int num, CHSV color)
 {
-    //fill_solid(leds + (row * kRows), kRows, CRGB::Black);
-    //fadeToBlackBy(leds + (row * kRows), kRows, 100);
-    double f = (num / 255.00) * kRows;
-    for (int l = 0; l < f; l++)
-    {
-        // if (row % 2 == 1 && true) {
-            _leds[row * kRows + l] = col;
-        // }
-        // else {
-            // _leds[(row + 1) * kRows - (l + 1)] = col;
-        // }
-    }
-    if (fill_ends && f != kRows) {
-        // if (row % 2 == 1 && true) {
-            _leds[row * kRows + (int)f + 1] = CHSV(col.hue, col.sat, col.val * (int(f) - f));
-        // }
-        // else {
-            // _leds[(row + 1) * kRows - (int)f - 1] = CHSV(col.hue, col.sat, col.val * (int(f) - f));
-        // }
-    }
-}
-
-void VisualizerAnimation::_setBar(int row, int num, CHSV col)
-{
-        // fill_solid(_leds + (row * kRows), num, col);
-//     // }
-//     // else {
-        for (int i = 0; i < num; i++) {
-            _leds[(row + 1) * kRows - i] = col;
+    if (_orientation == VisualizerAnimationConfig::OrientationType::VERTICAL) {
+        num = std::min<int>(num, kCols);
+        row = std::min<int>(row, kRows) + 1;
+        for (int col = 1; col <= num; col++) {
+            _leds[row * kRows - col] = color;
         }
-//     // }
-}
-
-void VisualizerAnimation::_setBarDoubleSided(int row, double num, CRGB color, bool fill_ends)
-{
-    _setBarDoubleSided(row, num, rgb2hsv_approximate(color), fill_ends);
-}
-
-void VisualizerAnimation::_setBarDoubleSided(int row, double num, CHSV col, bool fill_ends)
-{
-    double f = (num / 255.00) * (kRows / 2);
-    for (int l = 0; l < f; l++) {
-        // if (row % 2 == 1) {
-            _leds[row * kRows + l] = col;
-            _leds[(row + 1) * kRows - (l + 1)] = col;
-        // }
-        // else {
-            // _leds[(row + 1) * kRows - (l + 1)] = col;
-            // _leds[(row)*kRows + l] = col;
-        // }
     }
-    if (fill_ends && f != kRows)
-    {
-        // if (row % 2 == 1) {
-            _leds[row * kRows + (int)f + 1] = CHSV(col.hue, col.sat, col.val * (int(f) - f));
-        // }
-        // else {
-            // _leds[(row + 1) * kRows - (int)f - 1] = CHSV(col.hue, col.sat, col.val * (int(f) - f));
-        // }
+    else {
+        // flip col and row
+        num = std::min<int>(num, kRows);
+        row = std::min<int>(row, kCols) + 1;
+        for (int col = 1; col <= num; col++) {
+            _leds[col * kRows - row] = color;
+        }
     }
 }
 
-void VisualizerAnimation::_RainbowVisualizer()
+void VisualizerAnimation::_setBarDoubleSided(int row, int num, CHSV color)
 {
-    for (int i = 0; i < kCols && _incomingPacket[i]; i++) {
-        _setBar(i, static_cast<double>(_incomingPacket[i]), CHSV(map(i, 0, kCols - 1, 0, 255), 255, 255), false);
+    // split the rectangle in half and mirror the animation starting from the outer edge
+    if (_orientation == VisualizerAnimationConfig::OrientationType::VERTICAL) {
+        // ceil(num / 2)
+        num = std::min<int>(num + 1, kCols) / 2;
+        row = std::min<int>(row, kRows);
+        for (int col = 0; col < num; col++) {
+            _leds[row * kRows + col] = color;
+            _leds[(row + 1) * kRows - col - 1] = color;
+        }
+    }
+    else {
+        num = std::min<int>(num + 1, kRows) / 2;
+        row = std::min<int>(row, kCols);
+        for (int col = 0; col < num; col++) {
+            _leds[col * kRows + row] = color;
+            _leds[(col + 1) * kRows - row - 1] = color;
+        }
     }
 }
 
-void VisualizerAnimation::_RainbowVisualizerDoubleSided()
+void VisualizerAnimation::_setBarDoubleSided(int row, int num, CRGB color)
 {
-    for (int i = 0; i < kCols && _incomingPacket[i]; i++) {
-        _setBarDoubleSided(i, static_cast<double>(_incomingPacket[i]), CHSV(map(i, 0, kCols - 1, 0, 255), 255, 255), false);
+    _setBar(row, num, rgb2hsv_approximate(color));
+}
+
+void VisualizerAnimation::_rainbowVisualizer()
+{
+    auto ptr = _incomingPacket;
+    int maxValue = (_barLength - 1);
+    for (int i = 0, j = 0; i < _barLength && *ptr; j += 255) {
+        // basically map(i, 0, _barLength - 1, 0, 255) with a single division and add operation
+        _setBar(i++, *ptr++, CHSV((j / maxValue), 255, 255));
     }
 }
 
-void VisualizerAnimation::_SingleColorVisualizer()
+void VisualizerAnimation::_rainbowVisualizerDoubleSided()
 {
-    for (int i = 0; i < kCols && _incomingPacket[i]; i++) {
-        _setBar(i, static_cast<double>(_incomingPacket[i]), CRGB(_cfg.color));
+    auto ptr = _incomingPacket;
+    int maxValue = (_barLength - 1);
+    for (int i = 0, j = 0; i < _barLength && *ptr; j += 255) {
+        _setBarDoubleSided(i++, *ptr++, CHSV((j / maxValue), 255, 255));
     }
 }
 
-void VisualizerAnimation::_SingleColorVisualizerDoubleSided()
+void VisualizerAnimation::_singleColorVisualizer()
 {
-    for (int i = 0; i < kCols && _incomingPacket[i]; i++) {
-        _setBarDoubleSided(i, static_cast<double>(_incomingPacket[i]), CRGB(_cfg.color), false);
+    auto ptr = _incomingPacket;
+    for (int i = 0; i < _barLength && *ptr; ) {
+        _setBar(i++, *ptr++, CRGB(_cfg.color));
+    }
+}
+
+void VisualizerAnimation::_singleColorVisualizerDoubleSided()
+{
+    auto ptr = _incomingPacket;
+    for (int i = 0; i < _barLength && *ptr; ) {
+        _setBarDoubleSided(i++, *ptr++, CRGB(_cfg.color));
     }
 }
 

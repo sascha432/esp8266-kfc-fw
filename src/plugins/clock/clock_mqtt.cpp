@@ -192,7 +192,11 @@ void ClockPlugin::_publishState()
         publish(MQTT::Client::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
         publish(MQTT::Client::formatTopic(FSPGM(_effect_state)), true, KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationName(_config.getAnimation()));
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-            publish(MQTT::Client::formatTopic(F("power")), true, String(_getPowerLevel(), 2));
+            auto level = _getPowerLevel();
+            if (!isnormal(level)) {
+                level = 0;
+            }
+            publish(MQTT::Client::formatTopic(F("power")), true, String(level, 2));
         #endif
         #if IOT_LED_MATRIX_FAN_CONTROL
             publish(MQTT::Client::formatTopic(F("/fan/state")), true, MQTT::Client::toBoolOnOff(_fanSpeed >= _config.min_fan_speed));

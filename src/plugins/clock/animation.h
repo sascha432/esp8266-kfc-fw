@@ -1072,36 +1072,26 @@ namespace Clock {
     public:
         VisualizerAnimation(ClockPlugin &clock, VisualizerAnimationConfig &cfg) :
             Animation(clock),
+            _lastUpdate(0),
             _cfg(cfg),
+            _incomingPacket{0},
+            _packets({}),
             _speed(70),
             _gHue(0),
             _iPos(0),
             _lastBrightness(0),
             _lastFinished(true)
         {
-            std::fill(std::begin(_incomingPacket), std::end(_incomingPacket), 0);
             std::fill(_lastVals.begin(), _lastVals.end(), 1);
-
             _disableBlinkColon = true;
-            _udp.begin(cfg.port);
         }
 
-        ~VisualizerAnimation() {
-            // if (_leds) {
-            //     delete[] _leds;
-            // }
-            // _setLeds(nullptr);
-        }
-
-        // void _setLeds(CRGB *leds);
-
-        virtual void begin() override
+        ~VisualizerAnimation()
         {
-            _loopTimer = millis();
-            _updateRate = 1000 / 120;
-            fill_solid(_leds, kNumPixels, CHSV(0, 0, 0));
-            __LDBG_printf("begin update_rate=%u pixels=%u", _updateRate, kNumPixels);
+            _udp.stop();
         }
+
+        virtual void begin() override;
 
         virtual void loop(uint32_t millisValue) override;
 
@@ -1126,6 +1116,8 @@ namespace Clock {
             }
         }
 
+        #if 0
+        // unused and untested code
         int _getVolume(uint8_t vals[], int start, int end, double factor);
         void _BrightnessVisualizer();
         bool _FadeUp(CRGB c, int start, int end, int update_rate, int starting_brightness, bool isNew);
@@ -1139,34 +1131,56 @@ namespace Clock {
         void _vuMeterTriColor();
         int _getPeakPosition();
         void _printPeak(CHSV c, int pos, int grpSize);
-        void _setBar(int row, double num, CRGB color, bool fill_ends);
+        #endif
+
         void _setBar(int row, int num, CRGB color);
-        void _setBar(int row, double num, CHSV col, bool fill_ends);
-        void _setBar(int row, int num, CHSV col);
-        void _setBarDoubleSided(int row, double num, CRGB color, bool fill_ends);
-        void _setBarDoubleSided(int row, double num, CHSV col, bool fill_ends);
+        void _setBar(int row, int num, CHSV color);
+        void _setBarDoubleSided(int row, int num, CRGB color);
+        void _setBarDoubleSided(int row, int num, CHSV color);
 
-
+        void _logPackets();
         bool _parseUdp();
 
-        void _RainbowVisualizer();
-        void _RainbowVisualizerDoubleSided();
-        void _SingleColorVisualizer();
-        void _SingleColorVisualizerDoubleSided();
+        bool _hasValidPacketInBuffer() const {
+            return *_incomingPacket;
+        }
+
+        void _clearPacketBuffer() {
+            *_incomingPacket = 0;
+        }
+
+        void _rainbowVisualizer();
+        void _rainbowVisualizerDoubleSided();
+        void _singleColorVisualizer();
+        void _singleColorVisualizerDoubleSided();
 
     private:
-        static constexpr int kVisualizerPacketSize = 32;
+        static constexpr int kVisualizerPacketSize = kNumPixels;
         static constexpr int kAvgArraySize = 10;
         static constexpr uint8_t kBandStart = 0;
         static constexpr uint8_t kBandEnd = 3;
 
-        uint32_t _loopTimer;
+        uint32_t _lastUpdate;
         uint16_t _updateRate;
         VisualizerAnimationConfig &_cfg;
         WiFiUDP _udp;
         CRGB _leds[kNumPixels];
-        uint8_t _incomingPacket[kVisualizerPacketSize + 1];
+        uint8_t _incomingPacket[kVisualizerPacketSize + 1]; // buffer for the color values + space for zero byte termination
         std::array<uint8_t, kAvgArraySize> _lastVals;
+
+    public:
+        struct {
+            uint32_t incoming;
+            uint32_t dropped;
+            uint32_t valid;
+            uint32_t invalid;
+            uint32_t invalid_size;
+            uint32_t last_update;
+        } _packets;
+
+    private:
+        uint16_t _barLength;
+        VisualizerAnimationConfig::OrientationType _orientation;
         uint8_t _speed;
         uint8_t _gHue;
         int _iPos;

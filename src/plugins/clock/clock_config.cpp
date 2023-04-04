@@ -230,11 +230,18 @@ namespace KFCConfigurationClasses {
                 return nullptr;
             }
 
+            String &ClockConfigType::normalizeSlug(String &slug)
+            {
+                slug.replace(' ', '_');
+                slug.replace('-', '_');
+                return slug.toLowerCase();
+            }
+
             const __FlashStringHelper *ClockConfigType::getAnimationNameSlug(AnimationType type)
             {
                 switch(type) {
                     case AnimationType::GRADIENT:
-                        return F("Gradient");
+                        return F("gradient");
                     case AnimationType::RAINBOW:
                         return F("rainbow");
                     case AnimationType::RAINBOW_FASTLED:

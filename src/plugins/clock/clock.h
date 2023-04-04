@@ -373,7 +373,7 @@ public:
     // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
     void setBrightness(uint8_t brightness, int32_t millis = -1, uint32_t maxTime = ~0U);
     // use NONE to remove all animations
-    // use NEXT to remove the current animation and start the next one. if next animation isnt set, animation is set to NONE
+    // use NEXT to remove the current animation and start the next one. if next animation is not set, animation is set to NONE
     void setAnimation(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
 
     uint16_t _blendTime{Clock::BlendAnimation::kDefaultTime};
@@ -600,7 +600,7 @@ private:
     uint32_t _getColor() const;
 
     void _setAnimation(Clock::Animation *animation);
-    void _setBlendAnimation(Clock::Animation *animation);
+    bool _setBlendAnimation(Clock::Animation *animation);
 
 // ------------------------------------------------------------------------
 // Singleton getter
@@ -725,31 +725,31 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
 
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
-inline uint8_t ClockPlugin::calcPowerFunction(uint8_t scale, uint32_t data)
-{
-    return getInstance()._calcPowerFunction(scale, data);
-}
-
-inline void ClockPlugin::webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
-{
-    if (getInstance()._isRunning) {
-        getInstance()._webSocketCallback(type, client, server, id);
+    inline uint8_t ClockPlugin::calcPowerFunction(uint8_t scale, uint32_t data)
+    {
+        return getInstance()._calcPowerFunction(scale, data);
     }
-}
 
-inline float ClockPlugin::__getPowerLevel(float P, float min) const
-{
-    return std::max<float>(IOT_CLOCK_POWER_CORRECTION_OUTPUT);
-}
-
-inline uint32_t ClockPlugin::_getPowerLevelLimit(uint32_t P_Watt) const
-{
-    if (P_Watt == 0) {
-        return ~0U; // unlimited
+    inline void ClockPlugin::webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
+    {
+        if (getInstance()._isRunning) {
+            getInstance()._webSocketCallback(type, client, server, id);
+        }
     }
-    return P_Watt * 1090;
-    // return std::max<float>(0, IOT_CLOCK_POWER_CORRECTION_LIMIT);
-}
+
+    inline float ClockPlugin::__getPowerLevel(float P, float min) const
+    {
+        return std::max<float>(IOT_CLOCK_POWER_CORRECTION_OUTPUT);
+    }
+
+    inline uint32_t ClockPlugin::_getPowerLevelLimit(uint32_t P_Watt) const
+    {
+        if (P_Watt == 0) {
+            return ~0U; // unlimited
+        }
+        return P_Watt * 1090;
+        // return std::max<float>(0, IOT_CLOCK_POWER_CORRECTION_LIMIT);
+    }
 
 #endif
 
@@ -762,72 +762,72 @@ inline ClockPlugin &ClockPlugin::getInstance()
 
 #if IOT_ALARM_PLUGIN_ENABLED
 
-inline void ClockPlugin::alarmCallback(AlarmModeType mode, uint16_t maxDuration)
-{
-    getInstance()._alarmCallback(mode, maxDuration);
-}
-
-inline bool ClockPlugin::_resetAlarm()
-{
-    __LDBG_printf("alarm_func=%u alarm_state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
-    if (_resetAlarmFunc) {
-        // reset prior clock settings
-        _resetAlarmFunc(*_timer);
-        AlarmPlugin::resetAlarm();
-        _schedulePublishState = true;
-        return true;
+    inline void ClockPlugin::alarmCallback(AlarmModeType mode, uint16_t maxDuration)
+    {
+        getInstance()._alarmCallback(mode, maxDuration);
     }
-    return false;
-}
+
+    inline bool ClockPlugin::_resetAlarm()
+    {
+        __LDBG_printf("alarm_func=%u alarm_state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
+        if (_resetAlarmFunc) {
+            // reset prior clock settings
+            _resetAlarmFunc(*_timer);
+            AlarmPlugin::resetAlarm();
+            _schedulePublishState = true;
+            return true;
+        }
+        return false;
+    }
 
 #endif
 
 #if IOT_SENSOR_HAVE_MOTION_SENSOR && IOT_SENSOR_HAVE_MOTION_AUTO_OFF
 
-inline void ClockPlugin::eventMotionDetected(bool motion)
-{
-    digitalWrite(131, !motion);
-    #if IOT_LED_MATRIX_HAVE_SSD1306
-        ssd1306Blank(!motion);
-    #endif
-}
+    inline void ClockPlugin::eventMotionDetected(bool motion)
+    {
+        digitalWrite(131, !motion);
+        #if IOT_LED_MATRIX_HAVE_SSD1306
+            ssd1306Blank(!motion);
+        #endif
+    }
 
-inline bool ClockPlugin::eventMotionAutoOff(bool state)
-{
-    // state true = turn off
-    if (state && _isEnabled) {
-        _setState(false, true);
-        return true;
+    inline bool ClockPlugin::eventMotionAutoOff(bool state)
+    {
+        // state true = turn off
+        if (state && _isEnabled) {
+            _setState(false, true);
+            return true;
+        }
+        // state false = turn on
+        if (!state && !_isEnabled && _motionAutoOff == true) {
+            _setState(true, false);
+            return true;
+        }
+        return false;
     }
-    // state false = turn on
-    if (!state && !_isEnabled && _motionAutoOff == true) {
-        _setState(true, false);
-        return true;
-    }
-    return false;
-}
 
 #endif
 
 #if IOT_LED_MATRIX_FAN_CONTROL
 
-inline void ClockPlugin::_setFanSpeed(uint8_t speed)
-{
-#if DEBUG_IOT_CLOCK
-    auto setSpeed = speed;
-#endif
-    if (speed < _config.min_fan_speed) {
-        speed = 0;
+    inline void ClockPlugin::_setFanSpeed(uint8_t speed)
+    {
+        #if DEBUG_IOT_CLOCK
+            auto setSpeed = speed;
+        #endif
+        if (speed < _config.min_fan_speed) {
+            speed = 0;
+        }
+        else {
+            speed = std::min<uint8_t>(speed, _config.max_fan_speed);
+        }
+        analogWrite(TINYPWM_BASE_PIN, speed);
+        _fanSpeed = speed;
+        #if DEBUG_IOT_CLOCK
+            __DBG_printf("set %u speed %u result %u", setSpeed, speed, _fanSpeed);
+        #endif
     }
-    else {
-        speed = std::min<uint8_t>(speed, _config.max_fan_speed);
-    }
-    analogWrite(TINYPWM_BASE_PIN, speed);
-    _fanSpeed = speed;
-#if DEBUG_IOT_CLOCK
-    __DBG_printf("set %u speed %u result %u", setSpeed, speed, _fanSpeed);
-#endif
-}
 
 #endif
 
@@ -859,23 +859,23 @@ inline void ClockPlugin::toggleShowMethod()
 
 #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
 
-inline uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
-{
-    return isAutoBrightnessEnabled() ?
-        (_getFadingBrightness() * (getAutoBrightness()) * (temperatureProtection ? getTempProtectionFactor() : 1.0f)) :
-        (temperatureProtection ?
-            (_getFadingBrightness() * getTempProtectionFactor()) :
-            _getFadingBrightness());
-}
+    inline uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
+    {
+        return isAutoBrightnessEnabled() ?
+            (_getFadingBrightness() * (getAutoBrightness()) * (temperatureProtection ? getTempProtectionFactor() : 1.0f)) :
+            (temperatureProtection ?
+                (_getFadingBrightness() * getTempProtectionFactor()) :
+                _getFadingBrightness());
+    }
 
 #else
 
-inline uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
-{
-    return temperatureProtection ?
-        (_getFadingBrightness() * getTempProtectionFactor()) :
-        _getFadingBrightness();
-}
+    inline uint8_t ClockPlugin::_getBrightness(bool temperatureProtection) const
+    {
+        return temperatureProtection ?
+            (_getFadingBrightness() * getTempProtectionFactor()) :
+            _getFadingBrightness();
+    }
 
 #endif
 
@@ -908,15 +908,15 @@ inline const __FlashStringHelper *ClockPlugin::_getAnimationTitle(AnimationType 
 
 #if !IOT_LED_MATRIX
 
-inline void ClockPlugin::setBlinkColon(uint16_t value)
-{
-    if (value < kMinBlinkColonSpeed) {
-        value = 0;
+    inline void ClockPlugin::setBlinkColon(uint16_t value)
+    {
+        if (value < kMinBlinkColonSpeed) {
+            value = 0;
+        }
+        _config.blink_colon_speed = value;
+        _schedulePublishState = true;
+        __LDBG_printf("blinkcolon=%u update_rate=%u", value, value);
     }
-    _config.blink_colon_speed = value;
-    _schedulePublishState = true;
-    __LDBG_printf("blinkcolon=%u update_rate=%u", value, value);
-}
 
 #endif
 
@@ -971,30 +971,38 @@ inline Clock::ClockConfigType &ClockPlugin::getWriteableConfig()
 inline void ClockPlugin::_setAnimation(Clock::Animation *animation)
 {
     __LDBG_printf("animation=%p _ani=%p _blend_ani=%p", animation, _animation, _blendAnimation);
-    if (_animation) {
-        _setBlendAnimation(animation);
+    if (_animation && _setBlendAnimation(animation)) {
+        // blending started
     }
     else {
-        _animation = animation;
-        _animation->begin();
+        // no animation set yet
+        if (_animation) {
+            delete _animation;
+        }
+        if ((_animation = animation) != nullptr) {
+            _animation->begin();
+        }
     }
 }
 
-inline void ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
+inline bool ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
 {
     __LDBG_printf("blend=%p", blendAnimation);
     // we do not support blending more than 2 animations
     // if switched to quickly it will stop and continue with the new one
     if (_blendAnimation) {
         delete _blendAnimation;
+        _blendAnimation = nullptr;
+    }
+    if (!_blendTime) {
+        return false;
     }
     _blendAnimation = new Clock::BlendAnimation(_animation, blendAnimation, _display, _blendTime);
     if (!_blendAnimation) {
-        delete _animation;
-        _animation = blendAnimation;
-        return;
+        return false;
     }
     _blendAnimation->begin();
+    return true;
 }
 
 inline void ClockPlugin::_updateBrightnessSettings()
@@ -1074,24 +1082,24 @@ inline Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
 
 #if IOT_LED_MATRIX == 0
 
-inline Clock::ClockLoopOptions::ClockLoopOptions(ClockPlugin &plugin) :
-    LoopOptionsBase(plugin),
-    _time(plugin._time),
-    _now(time(nullptr)),
-    _tm({}),
-    format_24h(plugin._config.time_format_24h)
-{
-}
-
-inline struct Clock::ClockLoopOptions::tm24 &Clock::ClockLoopOptions::getLocalTime(time_t *nowPtr)
-{
-    if (!nowPtr) {
-        nowPtr = &_now;
+    inline Clock::ClockLoopOptions::ClockLoopOptions(ClockPlugin &plugin) :
+        LoopOptionsBase(plugin),
+        _time(plugin._time),
+        _now(time(nullptr)),
+        _tm({}),
+        format_24h(plugin._config.time_format_24h)
+    {
     }
-    _tm = localtime(nowPtr);
-    _tm.set_format_24h(format_24h);
-    return _tm;
-}
+
+    inline struct Clock::ClockLoopOptions::tm24 &Clock::ClockLoopOptions::getLocalTime(time_t *nowPtr)
+    {
+        if (!nowPtr) {
+            nowPtr = &_now;
+        }
+        _tm = localtime(nowPtr);
+        _tm.set_format_24h(format_24h);
+        return _tm;
+    }
 
 #endif
 

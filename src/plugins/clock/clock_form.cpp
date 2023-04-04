@@ -7,6 +7,7 @@
 #include <KFCForms.h>
 #include "../src/plugins/sensor/sensor.h"
 #include "Utility/ProgMemHelper.h"
+#include "animation.h"
 
 #if DEBUG_IOT_CLOCK
 #include <debug_helper_enable.h>
@@ -84,8 +85,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 form.addFormUI(FormUI::Type::HIDDEN);
 
                 auto orientationItems = FormUI::List(
-                    FireAnimationType::OrientationType::VERTICAL, "Vertical",
-                    FireAnimationType::OrientationType::HORIZONTAL, "Horizontal"
+                    FireAnimationType::OrientationType::VERTICAL, F("Vertical"),
+                    FireAnimationType::OrientationType::HORIZONTAL, F("Horizontal")
                 );
 
                 form.addObjectGetterSetter(F("fiori"), FormGetterSetter(cfg.fire, orientation));
@@ -118,16 +119,24 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             break;
         #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
             case AnimationType::VISUALIZER: {
-                    auto visualizerTypeItems = FormUI::Container::List(
-                        VisualizerType::RAINBOW, "Rainbow",
-                        VisualizerType::RAINBOW_DOUBLE_SIDED, "Rainbow Double Sided",
-                        VisualizerType::SINGLE_COLOR, "Single Color",
-                        VisualizerType::SINGLE_COLOR_DOUBLE_SIDED, "Single Color Double Sided"
+                    using OrientationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerAnimationType::OrientationType;
+                    auto orientationItems = FormUI::List(
+                        OrientationType::VERTICAL, F("Vertical"),
+                        OrientationType::HORIZONTAL, F("Horizontal")
                     );
-                    form.addObjectGetterSetter(F("vln"), FormGetterSetter(cfg.visualizer, type));
-                    form.addFormUI(F("Visualization Type"), visualizerTypeItems);
+                    auto &orientation = form.addObjectGetterSetter(F("v_or"), cfg.visualizer, cfg.visualizer.get_bits_orientation, cfg.visualizer.set_bits_orientation);
+                    form.addFormUI(FormUI::Type::HIDDEN_SELECT, orientationItems);
 
-                    form.add(F("vsc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    auto visualizerTypeItems = FormUI::Container::List(
+                        VisualizerType::RAINBOW, F("Rainbow"),
+                        VisualizerType::RAINBOW_DOUBLE_SIDED, F("Rainbow Double Sided"),
+                        VisualizerType::SINGLE_COLOR, F("Single Color"),
+                        VisualizerType::SINGLE_COLOR_DOUBLE_SIDED, F("Single Color Double Sided")
+                    );
+                    form.addObjectGetterSetter(F("v_ln"), FormGetterSetter(cfg.visualizer, type));
+                    form.addFormUI(F("Visualization Type"), visualizerTypeItems, FormUI::SelectSuffix(orientation));
+
+                    form.add(F("v_sc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
                         if (store) {
                             cfg.visualizer.color = Color::fromString(value);
                         }
@@ -135,8 +144,11 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     });
                     form.addFormUI(F("Color For Single Color Mode"));
 
-                    form.addObjectGetterSetter(F("vport"), FormGetterSetter(cfg.visualizer, port));
-                    form.addFormUI(F("UDP Port"));
+                    auto &multicast = form.addObjectGetterSetter(F("v_muca"), cfg.visualizer, cfg.visualizer.get_bit_multicast, cfg.visualizer.set_bit_multicast);
+                    form.addFormUI(FormUI::Type::HIDDEN);
+
+                    form.addObjectGetterSetter(F("v_port"), FormGetterSetter(cfg.visualizer, port));
+                    form.addFormUI(F("UDP Port"), FormUI::CheckboxButtonSuffix(multicast, F("Multicast")));
                     cfg.visualizer.addRangeValidatorFor_port(form);
                 }
                 break;

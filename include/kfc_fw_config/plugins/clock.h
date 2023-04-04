@@ -216,6 +216,12 @@ namespace KFCConfigurationClasses {
             #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
                 struct __attribute__packed__ VisualizerAnimationType {
                     using Type = VisualizerAnimationType;
+                    enum class OrientationType : uint8_t {
+                        MIN = 0,
+                        VERTICAL = MIN,
+                        HORIZONTAL,
+                        MAX
+                    };
                     enum class VisualizerType : uint8_t {
                         SINGLE_COLOR,
                         SINGLE_COLOR_DOUBLE_SIDED,
@@ -227,11 +233,15 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, 4210);
                     CREATE_ENUM_D_BITFIELD(type, VisualizerType, VisualizerType::RAINBOW);
                     CREATE_COLOR_FIELD(color, 0xff00ff);
+                    CREATE_BOOL_BITFIELD(multicast);
+                    CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::VERTICAL);
 
                     VisualizerAnimationType() :
                         port(kDefaultValueFor_port),
                         type(kDefaultValueFor_type),
-                        color(kDefaultValueFor_color)
+                        color(kDefaultValueFor_color),
+                        multicast(false),
+                        orientation(kDefaultValueFor_orientation)
                     {
                     }
                 };
@@ -376,6 +386,7 @@ namespace KFCConfigurationClasses {
                 static const __FlashStringHelper *getAnimationName(AnimationType type);
                 static const __FlashStringHelper *getAnimationNameSlug(AnimationType type);
                 static const __FlashStringHelper *getAnimationTitle(AnimationType type);
+                static String &normalizeSlug(String &slug);
 
                 ClockConfigType();
             };

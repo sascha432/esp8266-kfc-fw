@@ -7,16 +7,17 @@
 #include <MicrosTimer.h>
 #include <chrono>
 #include <ReadADC.h>
+#include <stl_ext/algorithm.h>
 #include <KFCForms.h>
 #include <WebUISocket.h>
 #include <async_web_response.h>
 #include "clock.h"
 #include "web_server.h"
 #include "blink_led_timer.h"
-#include <stl_ext/algorithm.h>
 #include "../src/plugins/plugins.h"
 #include "../src/plugins/sensor/sensor.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
+#include "animation.h"
 
 #if DEBUG_IOT_CLOCK
 #    include <debug_helper_enable.h>
@@ -605,11 +606,20 @@ void ClockPlugin::getStatus(Print &output)
         #endif
     #endif
 
+    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        if (static_cast<Clock::AnimationType>(_config.animation) == Clock::AnimationType::VISUALIZER) {
+            auto &ani = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
+            output.printf_P(PSTR(HTML_S(br) "UDP%s Active Port %u"), _config.visualizer.multicast ? PSTR(" Multicast") : PSTR(""), _config.visualizer.port);
+            output.printf_P(PSTR(HTML_S(br) "Packets %u Dropped %u Valid %u Invalid %u"), ani._packets.incoming, ani._packets.dropped, ani._packets.valid, ani._packets.invalid);
+        }
+    #endif
+
     #if IOT_CLOCK_TEMPERATURE_PROTECTION
         if (isTempProtectionActive()) {
             output.printf_P(PSTR(HTML_SA(h5, HTML_A("class", "text-danger")) "The temperature exceeded %u" HTML_E(h5)), _config.protection.max_temperature);
         }
     #endif
+
 }
 
 void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
@@ -688,9 +698,9 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
             _setAnimation(new Clock::GradientAnimation(*this, _config.gradient));
             break;
         #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-        case  AnimationType::VISUALIZER:
-            _setAnimation(new Clock::VisualizerAnimation(*this, _config.visualizer));
-            break;
+            case  AnimationType::VISUALIZER:
+                _setAnimation(new Clock::VisualizerAnimation(*this, _config.visualizer));
+                break;
         #endif
         case AnimationType::SOLID:
         default:

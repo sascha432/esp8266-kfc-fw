@@ -241,10 +241,30 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMC))) {
         // vis[ualizer],<type>
         if (args.startsWithIgnoreCase(0, F("vis"))) {
-            IF_IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER(
-                _config.visualizer.type = args.toIntMinMax(1, 1, 4, 2);
-                args.printf_P(PSTR("Visualizer=%u"), _config.visualizer.type);
-            )
+            int visTxtType = -1;
+            auto newType = Clock::AnimationType::RAINBOW_FASTLED;
+            auto newTypeCStr = args.get(1);
+            if (newTypeCStr && *newTypeCStr) {
+                auto newTypeStr = String(newTypeCStr);
+                _config.normalizeSlug(newTypeStr);
+                if (newTypeStr.trim().length()) {
+                    for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::MAX); i++) {
+                        auto name = String(_config.getAnimationNameSlug(static_cast<AnimationType>(i)));
+                        if (_config.normalizeSlug(name) == newTypeStr) {
+                            visTxtType = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (visTxtType == -1) {
+                newType = static_cast<Clock::AnimationType>(args.toIntMinMax(1, static_cast<int>(Clock::AnimationType::MIN), static_cast<int>(Clock::AnimationType::MAX) - 1, static_cast<int>(Clock::AnimationType::RAINBOW_FASTLED)));
+            }
+            else {
+                newType = static_cast<Clock::AnimationType>(visTxtType);
+            }
+            setAnimation(newType, 0);
+            args.printf_P(PSTR("Visualizer=%u (%s)"), _config.animation, _getAnimationName(static_cast<Clock::AnimationType>(_config.animation)));
         }
         // br[ightness],<level>
         else if (args.startsWithIgnoreCase(0, F("br"))) {
@@ -289,9 +309,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         else if (args.startsWithIgnoreCase(0, F("ani"))) {
             if (args.size() <= 1) {
                 for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::MAX); i++) {
-                    auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
-                    name.toLowerCase().replace(' ', '_');
-                    args.print(F("%s animation (+LMC=ani,%s)"), _config.getAnimationName(static_cast<AnimationType>(i)), name.c_str());
+                    auto slug = String(_config.getAnimationNameSlug(static_cast<AnimationType>(i)));
+                    args.print(F("%s animation (+LMC=vis,%s)"), _config.getAnimationName(static_cast<AnimationType>(i)), _config.normalizeSlug(slug).c_str());
                 }
             }
             else {
@@ -604,7 +623,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
         }
         else {
-            args.print(F("Invalid command"));
+            auto subCommand = args.get(0);
+            args.print(F("Invalid command: %s"), subCommand ? subCommand : PSTR("arguments required"));
         }
         return true;
     }

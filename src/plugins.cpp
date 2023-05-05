@@ -216,10 +216,6 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             plugin->setup(mode, dependencies);
             __LDBG_printf("end_setup plugin=%s", plugin->getName_P());
             dependencies->check();
-
-            if (plugin->hasWebUI()) {
-                _enableWebUIMenu = true;
-            }
         }
         if (mode != SetupModeType::DELAYED_AUTO_WAKE_UP) {
             switch (plugin->getMenuType()) {
@@ -249,15 +245,19 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
         }
     }
 
-    if (_enableWebUIMenu && System::Flags::getConfig().is_webui_enabled) {
+    __DBG_printf("webui en=%d", System::Flags::getConfig().is_webui_enabled);
+    if (System::Flags::getConfig().is_webui_enabled) {
         auto url = F("webui.html");
         if (!_bootstrapMenu.isValid(_bootstrapMenu.findMenuByURI(url, _navMenu.device))) {
             __LDBG_printf("adding webui");
             auto webUi = FSPGM(WebUI);
             _bootstrapMenu.addMenuItem(webUi, url, _navMenu.device, _navMenu.device/*insert at the top*/);
 
+            auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
+            (void)home;
+
             #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
-                auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
+                // auto home = _bootstrapMenu.addMenuItem(webUi, url, _navMenu.home, _bootstrapMenu.getId(_bootstrapMenu.findMenuByURI(FSPGM(status_html), _navMenu.home)));
                 _bootstrapMenu.addMenuItem(F("Show Screen"), F("display-screen.html"), _navMenu.home, home);
             #endif
         }

@@ -27,8 +27,7 @@ namespace PluginComponents {
     class Register {
     public:
         Register() :
-            _delayedStartupTime(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME),
-            _enableWebUIMenu(false)
+            _delayedStartupTime(PLUGIN_DEEP_SLEEP_DELAYED_START_TIME)
         {
         }
 
@@ -58,7 +57,6 @@ namespace PluginComponents {
     protected:
         PluginsVector _plugins;
         uint32_t _delayedStartupTime;
-        bool _enableWebUIMenu;
     };
 
     #if DEBUG_PLUGINS

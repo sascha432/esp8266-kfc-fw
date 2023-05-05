@@ -86,8 +86,6 @@ void VisualizerAnimation::begin()
 {
     _udp.stop();
 
-    _lastUpdate = millis();
-    _updateRate = 1000 / 60;
     if (_cfg.get_enum_orientation(_cfg) == OrientationType::HORIZONTAL) {
         _colsInterpolation = kCols / static_cast<float>(kVisualizerPacketSize);
         _rowsInterpolation = kRows / kVisualizerMaxPacketValue;
@@ -102,6 +100,11 @@ void VisualizerAnimation::begin()
     _storedPeaks.fill(PeakType());
     _video.clear();
 
+    _listen();
+}
+
+void VisualizerAnimation::_listen()
+{
     if (_cfg.multicast) {
         auto ip = WiFi.localIP();
         auto multicastIp = WiFi.broadcastIP();
@@ -114,16 +117,15 @@ void VisualizerAnimation::begin()
         (void)result;
         __LDBG_printf("ip=* port=%u begin=%u", _cfg.port, result);
     }
-    __LDBG_printf("begin update_rate=%u pixels=%u", _updateRate, kNumPixels);
+
 }
 
-bool VisualizerAnimation::_parseUdp()
+void VisualizerAnimation::_parseUdp()
 {
-    bool newData = false;
     size_t size;
     while((size = _udp.parsePacket()) != 0) {
         if (!_udp.available()) {
-            return newData;
+            break;
         }
         if (size >= 128) {
             VideoHeaderType header;
@@ -140,7 +142,7 @@ bool VisualizerAnimation::_parseUdp()
             if (_video.isReady()) {
                 // skip this frame, the old one is not processed yet
                 // _video._header.invalidate();
-                return true;
+                return;
             }
 
             size -= header.size();
@@ -157,7 +159,7 @@ bool VisualizerAnimation::_parseUdp()
             }
 
             if (_video.isReady()) {
-                return true;
+                return;
             }
         }
         else if (size == kVisualizerPacketSize) {
@@ -220,41 +222,16 @@ bool VisualizerAnimation::_parseUdp()
 
         // TODO calculate peak values using the timestamp of the last packet etc...
     }
-    return newData;
+    return;
 }
 
 void VisualizerAnimation::loop(uint32_t millisValue)
 {
+    if (!_udp) { // some ohter process stopped our incoming UDP context
+        _listen();
+    }
     // read udp in every loop
     _parseUdp();
-
-    if (millisValue - _lastUpdate >= _updateRate) {
-        _lastUpdate = millisValue;
-    }
-
-    //     // do we have a valid packet in the buffer?
-    //     if (_hasValidPacketInBuffer()) {
-    //         switch(static_cast<VisualizerAnimationConfig::VisualizerAnimationType>(_cfg.type)) {
-    //             case VisualizerAnimationConfig::VisualizerAnimationType::SINGLE_COLOR:
-    //                 _singleColorVisualizer();
-    //                 break;
-    //             case VisualizerAnimationConfig::VisualizerAnimationType::SINGLE_COLOR_DOUBLE_SIDED:
-    //                 _singleColorVisualizerDoubleSided();
-    //                 break;
-    //             case VisualizerAnimationConfig::VisualizerAnimationType::RAINBOW:
-    //                 _rainbowVisualizer();
-    //                 break;
-    //             case VisualizerAnimationConfig::VisualizerAnimationType::RAINBOW_DOUBLE_SIDED:
-    //                 _rainbowVisualizerDoubleSided();
-    //                 break;
-    //             default:
-    //                 break;
-    //         }
-    //         // mark packet as processed
-    //         _clearPacketBuffer();
-    //     }
-    //     fadeToBlackBy(_leds, kNumPixels, 150);
-    // }
 }
 
 #if 0
@@ -513,145 +490,6 @@ void VisualizerAnimation::_vuMeterTriColor()
         fill_solid(_leds + (int(_parent._display.size() * 0.8)), toPaint - _parent._display.size() * 0.8, CRGB::Red);
     }
 }
-
-int VisualizerAnimation::_getPeakPosition()
-{
-    auto ptr = _incomingPacket;
-    int pos = 0;
-    uint8_t posVal = 0;
-    for (int i = 0; i < kVisualizerPacketSize && *ptr; ++i, ++ptr) {
-        if (*ptr > posVal) {
-            posVal = *ptr;
-            pos = i;
-        }
-    }
-    if (posVal < 30) {
-        pos = -1;
-    }
-    return pos;
-}
-
-void VisualizerAnimation::_printPeak(CHSV c, int pos, int grpSize)
-{
-    fadeToBlackBy(_leds, _parent._display.size(), 12);
-    _leds[pos] = c;
-    for (int i = 0; i < ((grpSize - 1) / 2); i++) {
-        _leds[pos + i] = c;
-        _leds[pos - i] = c;
-    }
-}
-
-#endif
-
-#if 0
-
-void VisualizerAnimation::_setBar(int row, int num, CRGB color)
-{
-    _setBar(row, num, rgb2hsv_approximate(color));
-}
-
-#define NUM_PIXELS (sizeof(_leds) / sizeof(*_leds))
-
-void VisualizerAnimation::_setBar(int row, int num, CHSV color)
-{
-    if (_orientation == VisualizerAnimationConfig::OrientationType::VERTICAL) {
-        num = std::min<int>(num, kCols);
-        row = std::min<int>(row, kRows);
-        auto dst = &_leds[row * kRows];
-        auto dstEnd = dst + num;
-        if (dst < std::begin(_leds) || dst >= std::end(_leds)) {
-            __DBG_printf("row=%d max=%d num=%d", row, kRows, num);
-            return;
-        }
-        while(dst < dstEnd) {
-            *dst++ = color;
-        }
-        // for (int col = 0; col < num; col++) {
-        //     *dst++ = color;
-        // }
-    }
-    else {
-        // flip col and row
-        num = std::min<int>(num, kRows);
-        row = std::min<int>(row, kCols) + 1;
-        for (int col = 1; col <= num; col++) {
-            #if DEBUG
-                size_t ofs = col * kRows - row;
-                if (ofs >= NUM_PIXELS) {
-                    __DBG_printf("ofs=%d max=%d", ofs, NUM_PIXELS);
-                    continue;
-                }
-            #endif
-            _leds[col * kRows - row] = color;
-        }
-    }
-}
-
-void VisualizerAnimation::_setBarDoubleSided(int row, int num, CHSV color)
-{
-__DBG_printf("DISABLED");
-delay(100);
-return;
-    // split the rectangle in half and mirror the animation starting from the outer edge
-    if (_orientation == VisualizerAnimationConfig::OrientationType::VERTICAL) {
-        // ceil(num / 2)
-        num = std::min<int>(num + 1, kCols) / 2;
-        row = std::min<int>(row, kRows);
-        for (int col = 0; col < num; col++) {
-            _leds[row * kRows + col] = color;
-            _leds[(row + 1) * kRows - col - 1] = color;
-        }
-    }
-    else {
-        num = std::min<int>(num + 1, kRows) / 2;
-        row = std::min<int>(row, kCols);
-        for (int col = 0; col < num; col++) {
-            _leds[col * kRows + row] = color;
-            _leds[(col + 1) * kRows - row - 1] = color;
-        }
-    }
-}
-
-void VisualizerAnimation::_setBarDoubleSided(int row, int num, CRGB color)
-{
-    _setBar(row, num, rgb2hsv_approximate(color));
-}
-
-void VisualizerAnimation::_rainbowVisualizer()
-{
-    auto ptr = _incomingPacket;
-    int maxValue = (_barLength - 1);
-    for (int i = 0, j = 0; i < _barLength && *ptr; j += 255) {
-        // basically map(i, 0, _barLength - 1, 0, 255) with a single division and add operation
-        _setBar(i++, *ptr++, CHSV((j / maxValue), 255, 255));
-    }
-}
-
-void VisualizerAnimation::_rainbowVisualizerDoubleSided()
-{
-    auto ptr = _incomingPacket;
-    int maxValue = (_barLength - 1);
-    for (int i = 0, j = 0; i < _barLength && *ptr; j += 255) {
-        _setBarDoubleSided(i++, *ptr++, CHSV((j / maxValue), 255, 255));
-    }
-}
-
-void VisualizerAnimation::_singleColorVisualizer()
-{
-    auto ptr = _incomingPacket;
-    for (int i = 0; i < _barLength && *ptr; ) {
-        _setBar(i++, *ptr++, CRGB(_cfg.color));
-    }
-}
-
-void VisualizerAnimation::_singleColorVisualizerDoubleSided()
-{
-    auto ptr = _incomingPacket;
-    for (int i = 0; i < _barLength && *ptr; ) {
-        _setBarDoubleSided(i++, *ptr++, CRGB(_cfg.color));
-    }
-}
-
 
 #endif
 

@@ -698,7 +698,7 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
             break;
         #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
             case  AnimationType::VISUALIZER:
-                _setAnimation(new Clock::VisualizerAnimation(*this, _config.visualizer));
+                _setAnimation(new Clock::VisualizerAnimation(*this, _getColor(), _config.visualizer));
                 break;
         #endif
         case AnimationType::SOLID:

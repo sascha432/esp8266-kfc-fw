@@ -22,17 +22,13 @@ namespace Clock {
         using DisplayType = Clock::DisplayType;
 
     public:
-        VisualizerAnimation(ClockPlugin &clock, VisualizerAnimationConfig &cfg) :
-            Animation(clock),
-            _lastUpdate(0),
+        VisualizerAnimation(ClockPlugin &clock, Clock::Color color, VisualizerAnimationConfig &cfg) :
+            Animation(clock, color),
             _storedLoudness(),
             _storedData(),
             _storedPeaks(),
-            _cfg(cfg),
-            _lastBrightness(0),
-            _lastFinished(true)
+            _cfg(cfg)
         {
-            _lastCol = cfg.color;
             _disableBlinkColon = true;
         }
 
@@ -64,15 +60,15 @@ namespace Clock {
         template<typename _Ta>
         void _copyTo(_Ta &display, uint32_t millisValue)
         {
-
             switch(_cfg.get_enum_type(_cfg)) {
                 case VisualizerAnimationType::LOUDNESS_1D: {
                     display.fill(CRGB(0));
+                    auto color = _getColor();
                     int end = (display.getCols() * _storedLoudness) / (kVisualizerMaxPacketValue);
                     for (int row = 0; row < display.getRows(); row++) {
                         for (int col = 0; col < display.getCols(); col++) {
                             if (col < end) {
-                                display.setPixel(row, col, _lastCol);
+                                display.setPixel(row, col, color);
                             }
                         }
                     }
@@ -98,6 +94,7 @@ namespace Clock {
                     }
                 }
                 break;
+                case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
                 case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D: {
                     display.fill(CRGB(0));
                     CHSV hsv;
@@ -105,8 +102,9 @@ namespace Clock {
                     hsv.val = 255;
                     hsv.sat = 240;
                     int oldIndex = -1;
+                    CRGB color = _getColor();
                     for (int col = 0; col < display.getCols(); col++) {
-                        auto rgb = CRGB(hsv);
+                        auto rgb = _cfg.get_enum_type(_cfg) == VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D ? color : CRGB(hsv);
                         auto index = _getDataIndex(display, col);
                         if (index != oldIndex) {
                             oldIndex = index;
@@ -119,17 +117,11 @@ namespace Clock {
                                 display.setPixel(row, col, rgb);
                             }
                         }
-                    }
-                }
-                break;
-                case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D: {
-                    display.fill(CRGB(0));
-                    for (int col = 0; col < display.getCols(); col++) {
-                        auto index = _getDataIndex(display, col);
-                        auto end = _storedData[index] * _rowsInterpolation;
-                        for (int row = 0; row < display.getRows(); row++) {
-                            if (row < end) {
-                                display.setPixel(row, col, _lastCol);
+                        if (_cfg.peak_color != 0) {
+                            auto peakValue = _storedPeaks[index].getPeakPosition(millisValue);
+                            if (peakValue >= 0) {
+                                auto peak = std::max<uint16_t>(peakValue * _rowsInterpolation, display.getRows() - 1);
+                                display.setPixel(peak, col, _storedPeaks[index].getPeakColor(_cfg.peak_color));
                             }
                         }
                     }
@@ -154,64 +146,77 @@ namespace Clock {
                     uint8_t g = r ? 0 : 32;
                     display.fill(CRGB(r, g, 0));
                     break;
-
-
             }
         }
 
-        #if 0
-        // unused and untested code
-        int _getVolume(uint8_t vals[], int start, int end, double factor);
-        void _BrightnessVisualizer();
-        bool _FadeUp(CRGB c, int start, int end, int update_rate, int starting_brightness, bool isNew);
-        void _TrailingBulletsVisualizer();
-        void _ShiftLeds(int shiftAmount);
-        void _SendLeds(CHSV c, int shiftAmount);
-        void _SendTrailingLeds(CHSV c, int shiftAmount);
-        CHSV _getVisualizerBulletValue(double cd);
-        CHSV _getVisualizerBulletValue(int hue, double cd);
-        void _vuMeter(CHSV c, int mode);
-        void _vuMeterTriColor();
-        int _getPeakPosition();
-        void _printPeak(CHSV c, int pos, int grpSize);
-        #endif
+        void _listen();
+        void _parseUdp();
 
-        bool _parseUdp();
+        void printDebugInfo(Print &output)
+        {
+            uint32_t ms = millis();
+            output.printf_P(PSTR("Max. spectrum bars %u, video data %d, loudness=%.2f%%, peak sink rate=%.4fs\n"), kVisualizerPacketSize, _video._data.size(), (_storedLoudness * 100) / kVisualizerMaxPacketValue, kPeakSinkRate / 1000.0);
+            for(uint8_t i = 0; i < kVisualizerPacketSize; i++) {
+                output.printf_P(PSTR("%02u: val=%d peak=%d/%d age=%dms"), i, _storedData[i], _storedPeaks[i].getPeakValue(), _storedPeaks[i].getPeakPosition(ms), _storedPeaks[i].getLastPeakUpdate(ms));
+
+            }
+            output.println();
+        }
 
     protected:
         static constexpr int kVisualizerPacketSize = 32;
         static constexpr float kVisualizerMaxPacketValue = 254.0;
+        static constexpr uint16_t kPeakSinkRate = 2048;
 
         class PeakType
         {
         public:
-            uint8_t value;
-            uint32_t millis;
-
-            PeakType(uint8_t _value = 0, uint32_t _millis = 0) : value(_value), millis(_millis)
-            {}
-
-            void add(uint8_t _value, uint32_t _millis)
+            PeakType(uint8_t value = 0, uint32_t millis = 0) :
+                _value(value),
+                _millis(millis)
             {
-                // timeout, reset peak
-                if (_millis - millis > 5000) {
-                    value = _value;
-                }
-                else {
-                    value = std::min(value, _value);
-                }
-                millis = _millis;
             }
 
-            uint16_t getPeakPosition() const {
-                //TODO
-                return 0;
+            void add(uint8_t value, uint32_t millis)
+            {
+                if ((value > _value) || (millis - _millis > kPeakSinkRate)) {
+                    _value = value;
+                    _millis = millis;
+                }
             }
 
-            CRGB getPeakColor() const {
-                // TODO
-                return CRGB(0);
+            uint16_t getLastPeakUpdate(uint32_t millis) const
+            {
+                uint32_t diff = (millis - _millis);
+                return std::min(kPeakSinkRate + 1U, diff);
             }
+
+            // this function return -1 if no peak is to be displayed
+            int16_t getPeakPosition(uint32_t millis) const
+            {
+                if (_millis == 0 || _value == 0) {
+                    return -1;
+                }
+                int diff = ((millis - _millis) * kVisualizerMaxPacketValue) / kPeakSinkRate;
+                if (diff > _value) {
+                    return -1;
+                }
+                return _value - diff;
+            }
+
+            uint8_t getPeakValue() const
+            {
+                return _value;
+            }
+
+            CRGB getPeakColor(uint32_t color) const
+            {
+                return CRGB(color);
+            }
+
+        private:
+            uint8_t _value;
+            uint32_t _millis;
         };
 
         enum ColorFormatType : uint8_t {
@@ -323,8 +328,6 @@ namespace Clock {
             CRGB getRGB();
         };
 
-        uint32_t _lastUpdate;
-        uint16_t _updateRate;
         uint8_t _storedLoudness;
         std::array<uint8_t, kVisualizerPacketSize> _storedData;
         std::array<PeakType, kVisualizerPacketSize> _storedPeaks;
@@ -333,9 +336,6 @@ namespace Clock {
         WiFiUDP _udp;
         float _colsInterpolation; // horizontal
         float _rowsInterpolation; // vertical
-        int _lastBrightness;
-        bool _lastFinished;
-        CRGB _lastCol;
     };
 
 }

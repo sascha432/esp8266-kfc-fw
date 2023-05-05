@@ -409,7 +409,9 @@ inline __attribute__((__always_inline__)) static void _custom_crash_callback(str
     auto header = SaveCrash::Data(time(nullptr), stack, stack_end, sp_dump, (void *)umm_last_fail_alloc_addr, umm_last_fail_alloc_size, *rst_info);
 
     #if IOT_LED_MATRIX_OUTPUT_PIN
-        ClockPluginClearPixels();
+        #ifndef ESP32
+            ClockPluginClearPixels();
+        #endif
     #endif
 
     auto fs = SaveCrash::createFlashStorage();

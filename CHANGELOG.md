@@ -2,6 +2,8 @@
 
 ## Version 0.0.8 (master)
 
+ - Added UDP video streaming to the visualizer
+ - Fixed some issues with the visualizer
  - Missing online status and binary awake sensor fixed for remote control
  - Update battery status over MQTT and UDP on a daily basis (interval can be configured to save battery life)
  - AT+GPIO=5s shows state of the GPIO (IN/OUT/IN_PULLUP etc...)

@@ -7,6 +7,11 @@
 #include "animation.h"
 #include <FastLED.h>
 
+// how to create video streaming:
+// ffmpeg -i test.mp4 -vf "fps=10,scale=32:16:flags=lanczos,eq=gamma=0.7" -pix_fmt rgb24 -c:v rawvideo test.rgb -y
+// then use python udp_send_packet.py to broadcast this to one or more devices. 512LEDs 32x16 was not impressive.
+// a lot issues with gamma correction and that LEDs do not seem to work well with RGB conversion from videos.
+
 namespace Clock {
 
     class VisualizerAnimation : public Animation {

@@ -1165,7 +1165,9 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
 static void invoke_ESP_restart()
 {
     #if IOT_LED_MATRIX_OUTPUT_PIN
-        ClockPluginClearPixels();
+        #ifndef ESP32
+            ClockPluginClearPixels();
+        #endif
     #endif
 
     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);

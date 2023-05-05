@@ -214,29 +214,33 @@ namespace KFCConfigurationClasses {
             };
 
             #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-                struct __attribute__packed__ VisualizerAnimationType {
-                    using Type = VisualizerAnimationType;
+                struct __attribute__packed__ VisualizerType {
+                    using Type = VisualizerType;
                     enum class OrientationType : uint8_t {
                         MIN = 0,
                         VERTICAL = MIN,
                         HORIZONTAL,
                         MAX
                     };
-                    enum class VisualizerType : uint8_t {
-                        SINGLE_COLOR,
-                        SINGLE_COLOR_DOUBLE_SIDED,
-                        RAINBOW,
-                        RAINBOW_DOUBLE_SIDED,
+                    enum class VisualizerAnimationType : uint8_t {
+                        LOUDNESS_1D,
+                        LOUDNESS_STEREO_1D,
+                        SPECTRUM_RAINBOW_1D,
+                        SPECTRUM_RAINBOW_STEREO_1D,
+                        SPECTRUM_RAINBOW_BARS_2D,
+                        SPECTRUM_COLOR_BARS_2D,
+                        RGB565_VIDEO,
+                        RGB24_VIDEO,
                         MAX,
                     };
 
                     CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, 4210);
-                    CREATE_ENUM_D_BITFIELD(type, VisualizerType, VisualizerType::RAINBOW);
+                    CREATE_ENUM_D_BITFIELD(type, VisualizerAnimationType, VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D);
                     CREATE_COLOR_FIELD(color, 0xff00ff);
                     CREATE_BOOL_BITFIELD(multicast);
-                    CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::VERTICAL);
+                    CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::HORIZONTAL);
 
-                    VisualizerAnimationType() :
+                    VisualizerType() :
                         port(kDefaultValueFor_port),
                         type(kDefaultValueFor_type),
                         color(kDefaultValueFor_color),
@@ -329,7 +333,7 @@ namespace KFCConfigurationClasses {
                     PowerConfigType power;
                 #endif
                 #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-                    VisualizerAnimationType visualizer;
+                    VisualizerType visualizer;
                 #endif
                 #if IOT_LED_MATRIX_CONFIGURABLE
                     MatrixConfigType matrix;

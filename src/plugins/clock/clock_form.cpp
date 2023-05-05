@@ -119,7 +119,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             break;
         #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
             case AnimationType::VISUALIZER: {
-                    using OrientationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerAnimationType::OrientationType;
+                    using OrientationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::OrientationType;
+                    using VisualizerAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerAnimationType;
                     auto orientationItems = FormUI::List(
                         OrientationType::VERTICAL, F("Vertical"),
                         OrientationType::HORIZONTAL, F("Horizontal")
@@ -127,14 +128,18 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     auto &orientation = form.addObjectGetterSetter(F("v_or"), cfg.visualizer, cfg.visualizer.get_bits_orientation, cfg.visualizer.set_bits_orientation);
                     form.addFormUI(FormUI::Type::HIDDEN_SELECT, orientationItems);
 
-                    auto visualizerTypeItems = FormUI::Container::List(
-                        VisualizerType::RAINBOW, F("Rainbow"),
-                        VisualizerType::RAINBOW_DOUBLE_SIDED, F("Rainbow Double Sided"),
-                        VisualizerType::SINGLE_COLOR, F("Single Color"),
-                        VisualizerType::SINGLE_COLOR_DOUBLE_SIDED, F("Single Color Double Sided")
+                    auto VisualizerAnimationTypeItems = FormUI::Container::List(
+                        VisualizerAnimationType::LOUDNESS_1D, F("Loudness 1D"),
+                        // VisualizerAnimationType::LOUDNESS_STEREO_1D, F("Loudness Stereo 1D"),
+                        VisualizerAnimationType::SPECTRUM_RAINBOW_1D, F("Spectrum Rainbow 1D"),
+                        // VisualizerAnimationType::SPECTRUM_RAINBOW_STEREO_1D, F("Spectrum Rainbow Stereo 1D"),
+                        VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D, F("Spectrum Rainbow Bars 2D"),
+                        VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D, F("Spectrum Single Color Bars 2D"),
+                        VisualizerAnimationType::RGB565_VIDEO, F("RGB565 Video"),
+                        VisualizerAnimationType::RGB24_VIDEO, F("RGB24 Video")
                     );
                     form.addObjectGetterSetter(F("v_ln"), FormGetterSetter(cfg.visualizer, type));
-                    form.addFormUI(F("Visualization Type"), visualizerTypeItems, FormUI::SelectSuffix(orientation));
+                    form.addFormUI(F("Visualization Type"), VisualizerAnimationTypeItems, FormUI::SelectSuffix(orientation));
 
                     form.add(F("v_sc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
                         if (store) {

@@ -228,7 +228,7 @@ public:
     using seconds = std::chrono::duration<uint32_t, std::ratio<1000>>;
     using NamedArray = PluginComponents::NamedArray;
     #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-        using VisualizerType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerAnimationType::VisualizerType;
+        using VisualizerAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerAnimationType;
     #endif
     using FireAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::FireAnimationType;
     using RainbowConfigType = KFCConfigurationClasses::Plugins::ClockConfigNS::RainbowAnimationType;

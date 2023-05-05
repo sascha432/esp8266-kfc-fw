@@ -386,15 +386,15 @@ namespace Clock {
             return true;
         }
 
-        size_t size() const {
+        constexpr size_t size() const {
             return getRows() * getCols();
         }
 
-        CoordinateType getRows() const {
+        constexpr CoordinateType getRows() const {
             return _rows;
         }
 
-        CoordinateType getCols() const {
+        constexpr CoordinateType getCols() const {
             return _cols;
         }
 

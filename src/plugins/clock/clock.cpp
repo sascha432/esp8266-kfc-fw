@@ -608,9 +608,8 @@ void ClockPlugin::getStatus(Print &output)
 
     #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
         if (static_cast<Clock::AnimationType>(_config.animation) == Clock::AnimationType::VISUALIZER) {
-            auto &ani = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
+            // auto &ani = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
             output.printf_P(PSTR(HTML_S(br) "UDP%s Active Port %u"), _config.visualizer.multicast ? PSTR(" Multicast") : PSTR(""), _config.visualizer.port);
-            output.printf_P(PSTR(HTML_S(br) "Packets %u Dropped %u Valid %u Invalid %u"), ani._packets.incoming, ani._packets.dropped, ani._packets.valid, ani._packets.invalid);
         }
     #endif
 

@@ -23,88 +23,204 @@
 // thanks for the great software :)
 
 
-// TODO integrate all available animations and options
-
 using namespace Clock;
 
+bool VisualizerAnimation::VideoType::isValid(const VisualizerAnimation::VideoHeaderType &header)
+{
+    // __DBG_printf("frame %d,%d data %d=%d pxpb=%d tsz=%d", _header._frameId, header._frameId, _data.size(), header.getPosition(), header.getBytesPerPixel(), kNumPixels * header.getBytesPerPixel());
+    _header = header;
+    return true;
+    // if (_header._frameId == header._frameId) {
+    //     if (_data.size() == header.getPosition()) {
+    //         return true;
+    //     }
+    //     clear();
+    //     __DBG_printf("1");
+    //     return false;
+    // }
+    // else if (_data.empty() && header._position == 0) {
+    //     if (header._frameId <= _header._frameId) {
+    //         clear();
+    //         return false;
+    //     }
+    //     _header._frameId = header._frameId;
+    //     __DBG_printf("2");
+    //     return true;
+    // }
+    // else {
+    //     __DBG_printf("3");
+    //     clear();
+    // }
+    // __DBG_printf("4");
+    // return false;
+}
+
+CRGB VisualizerAnimation::VideoType::getRGB()
+{
+    uint8_t r = 128, g = 0, b = 0;
+    switch(_header._format) {
+        case ColorFormatType::RGB565: {
+            uint16_t color;
+            color = *_position++ << 8;
+            color = *_position++;
+            GFXCanvas::convertRGB565ToRGB(color, r, g, b);
+        }
+        break;
+        case ColorFormatType::RGB24: {
+            r = *_position++;
+            g = *_position++;
+            b = *_position++;
+        }
+        break;
+        case ColorFormatType::BGR24: {
+            b = *_position++;
+            g = *_position++;
+            r = *_position++;
+        }
+        break;
+    }
+    return CRGB(r, g, b);
+}
 
 void VisualizerAnimation::begin()
 {
     _udp.stop();
-    _clearPacketBuffer();
 
     _lastUpdate = millis();
-    _updateRate = 1000 / 120;
-    fill_solid(_leds, kNumPixels, CRGB(0));
-    _orientation = _cfg.get_enum_orientation(_cfg);
-    _barLength = _orientation == VisualizerAnimationConfig::OrientationType::VERTICAL ? kCols : kRows;
+    _updateRate = 1000 / 60;
+    if (_cfg.get_enum_orientation(_cfg) == OrientationType::HORIZONTAL) {
+        _colsInterpolation = kCols / static_cast<float>(kVisualizerPacketSize);
+        _rowsInterpolation = kRows / kVisualizerMaxPacketValue;
+    }
+    else {
+        _colsInterpolation = kRows / static_cast<float>(kVisualizerPacketSize);
+        _rowsInterpolation = kCols / kVisualizerMaxPacketValue;
+
+    }
+    _storedLoudness = 0;
+    _storedData.fill(0);
+    _storedPeaks.fill(PeakType());
+    _video.clear();
 
     if (_cfg.multicast) {
         auto ip = WiFi.localIP();
         auto multicastIp = WiFi.broadcastIP();
         auto result = _udp.beginMulticast(ip, multicastIp, _cfg.port);
-        __DBG_printf("ip=%s multi=%s port=%u begin_multicast=%u", ip.toString().c_str(), multicastIp.toString().c_str(), _cfg.port, result);
+        (void)result;
+        __LDBG_printf("ip=%s multi=%s port=%u begin_multicast=%u", ip.toString().c_str(), multicastIp.toString().c_str(), _cfg.port, result);
     }
     else {
         auto result = _udp.begin(_cfg.port);
-        __DBG_printf("ip=* port=%u begin=%u", _cfg.port, result);
+        (void)result;
+        __LDBG_printf("ip=* port=%u begin=%u", _cfg.port, result);
     }
-    __DBG_printf("begin update_rate=%u pixels=%u bar_len=%u", _updateRate, kNumPixels, _barLength);
-}
-
-void VisualizerAnimation::_logPackets()
-{
-    #if DEBUG
-        // _lastUpdate is millis() when the loop function was called
-        if (_lastUpdate - _packets.last_update > 5000)  {
-            _packets.last_update = _lastUpdate;
-            __DBG_printf("UDP incoming=%u dropped=%u valid=%u invalid=%u invalid_size=%u rate=%u", _packets.incoming, _packets.dropped, _packets.valid, _packets.invalid, _packets.invalid_size, _updateRate);
-        }
-    #endif
+    __LDBG_printf("begin update_rate=%u pixels=%u", _updateRate, kNumPixels);
 }
 
 bool VisualizerAnimation::_parseUdp()
 {
-    int size;
-    // get next packet and discard the last one
-    if ((size = _udp.parsePacket()) == 0) {
-        return false;
-    }
-    _packets.incoming++;
-    for(;;) {
-        if (_hasValidPacketInBuffer()) {
-            // buffer is not empty, skip this packet and keep the last one
-            _packets.dropped++;
-            break;
+    bool newData = false;
+    size_t size;
+    while((size = _udp.parsePacket()) != 0) {
+        if (!_udp.available()) {
+            return newData;
         }
-        else if (size <= 0) {
-            // invalid packet size, destroy packet
-        }
-        else {
-            // read data into buffer
-            auto len = std::min<int>(_udp.readBytes(_incomingPacket, std::min(size, kVisualizerPacketSize)), kVisualizerPacketSize);
-            if (len != kNumPixels) {
-                // length does not match the number of pixels
-                _packets.invalid_size++;
+        if (size >= 128) {
+            VideoHeaderType header;
+
+            if (_udp.readBytes(header, header.size()) != header.size()) {
+                _video.clear();
+                continue;
             }
-            // check if we have valid data
-            if (len && _hasValidPacketInBuffer()) {
-                // valid packet
-                // fill the buffer with zeros and add trailing zero byte
-                std::fill(std::begin(_incomingPacket) + len, std::end(_incomingPacket), 0);
-                _packets.valid++;
-                break;
+            if (!_video.isValid(header)) {
+                // invalid video id or position (lost UDP packet, wrong order)
+                __DBG_printf("invalid header");
+                continue;
+            }
+            if (_video.isReady()) {
+                // skip this frame, the old one is not processed yet
+                // _video._header.invalidate();
+                return true;
             }
 
+            size -= header.size();
+            auto ptr = _video.allocateItemBuffer(size);
+            if (!ptr) {
+                // out of ram
+                _video.clear();
+                continue;
+            }
+
+            if (_udp.readBytes(ptr, size) != size) {
+                _video.clear();
+                continue;
+            }
+
+            if (_video.isReady()) {
+                return true;
+            }
         }
-        // count as invalid and clean buffer
-        _packets.invalid++;
-        _clearPacketBuffer();
-        _logPackets();
-        return false;
+        else if (size == kVisualizerPacketSize) {
+            // full packet, read it directly into the buffer and clean the end
+            auto i = _udp.readBytes(_storedData.data(), kVisualizerPacketSize);
+            if (i < kVisualizerPacketSize) {
+                std::fill(_storedData.begin() + i, _storedData.end(), 0);
+            }
+        }
+        else if (size == kVisualizerPacketSize / 2) {
+            // half the size, just double all bytes
+            for(int i = 0; i < kVisualizerPacketSize; i++) {
+                auto data = _udp.read();
+                if (data == -1) {
+                    std::fill(_storedData.begin() + i, _storedData.end(), 0);
+                    break;
+                }
+                _storedData[i++] = data;
+                _storedData[i] = data;
+            }
+        }
+        else if (size == kVisualizerPacketSize * 2) {
+            // double the size, take average of 2 values
+            uint8_t buffer[2];
+            for(int i = 0; i < kVisualizerPacketSize; i++) {
+                auto len = _udp.readBytes(buffer, 2);
+                if (len != 2) {
+                    std::fill(_storedData.begin() + i, _storedData.end(), 0);
+                    break;
+                }
+                _storedData[i] = (static_cast<int>(buffer[0]) + static_cast<int>(buffer[1])) / 2;
+            }
+        }
+        else if (size == 1) {
+            auto data = _udp.read();
+            if (data == -1) {
+                _storedData.fill(0);
+                continue;
+            }
+            _storedData.fill(static_cast<uint8_t>(data));
+        }
+        else {
+            continue;
+        }
+        // we have a valid packet in _storedData
+        auto timeMillis = millis();
+
+        // calculate loudness
+        uint16_t loudness = 0;
+        uint8_t i = 0;
+        for(uint8_t &value: _storedData) {
+            value = std::clamp<int16_t>(value - 1, 0, kVisualizerMaxPacketValue); // change values from 1-255 to 0-254
+            loudness += value;
+            _storedPeaks[i].add(value, timeMillis);
+        }
+        loudness /= _storedData.size();
+        if (loudness != _storedLoudness) {
+            _storedLoudness = loudness;
+        }
+
+        // TODO calculate peak values using the timestamp of the last packet etc...
     }
-    _logPackets();
-    return true;
+    return newData;
 }
 
 void VisualizerAnimation::loop(uint32_t millisValue)
@@ -114,29 +230,31 @@ void VisualizerAnimation::loop(uint32_t millisValue)
 
     if (millisValue - _lastUpdate >= _updateRate) {
         _lastUpdate = millisValue;
-        // do we have a valid packet in the buffer?
-        if (_hasValidPacketInBuffer()) {
-            fadeToBlackBy(_leds, kNumPixels, 150);
-            switch(static_cast<VisualizerAnimationConfig::VisualizerType>(_cfg.type)) {
-                case VisualizerAnimationConfig::VisualizerType::SINGLE_COLOR:
-                    _singleColorVisualizer();
-                    break;
-                case VisualizerAnimationConfig::VisualizerType::SINGLE_COLOR_DOUBLE_SIDED:
-                    _singleColorVisualizerDoubleSided();
-                    break;
-                case VisualizerAnimationConfig::VisualizerType::RAINBOW:
-                    _rainbowVisualizer();
-                    break;
-                case VisualizerAnimationConfig::VisualizerType::RAINBOW_DOUBLE_SIDED:
-                    _rainbowVisualizerDoubleSided();
-                    break;
-                default:
-                    break;
-            }
-            // mark packet as processed
-            _clearPacketBuffer();
-        }
     }
+
+    //     // do we have a valid packet in the buffer?
+    //     if (_hasValidPacketInBuffer()) {
+    //         switch(static_cast<VisualizerAnimationConfig::VisualizerAnimationType>(_cfg.type)) {
+    //             case VisualizerAnimationConfig::VisualizerAnimationType::SINGLE_COLOR:
+    //                 _singleColorVisualizer();
+    //                 break;
+    //             case VisualizerAnimationConfig::VisualizerAnimationType::SINGLE_COLOR_DOUBLE_SIDED:
+    //                 _singleColorVisualizerDoubleSided();
+    //                 break;
+    //             case VisualizerAnimationConfig::VisualizerAnimationType::RAINBOW:
+    //                 _rainbowVisualizer();
+    //                 break;
+    //             case VisualizerAnimationConfig::VisualizerAnimationType::RAINBOW_DOUBLE_SIDED:
+    //                 _rainbowVisualizerDoubleSided();
+    //                 break;
+    //             default:
+    //                 break;
+    //         }
+    //         // mark packet as processed
+    //         _clearPacketBuffer();
+    //     }
+    //     fadeToBlackBy(_leds, kNumPixels, 150);
+    // }
 }
 
 #if 0
@@ -425,25 +543,45 @@ void VisualizerAnimation::_printPeak(CHSV c, int pos, int grpSize)
 
 #endif
 
+#if 0
+
 void VisualizerAnimation::_setBar(int row, int num, CRGB color)
 {
     _setBar(row, num, rgb2hsv_approximate(color));
 }
 
+#define NUM_PIXELS (sizeof(_leds) / sizeof(*_leds))
+
 void VisualizerAnimation::_setBar(int row, int num, CHSV color)
 {
     if (_orientation == VisualizerAnimationConfig::OrientationType::VERTICAL) {
         num = std::min<int>(num, kCols);
-        row = std::min<int>(row, kRows) + 1;
-        for (int col = 1; col <= num; col++) {
-            _leds[row * kRows - col] = color;
+        row = std::min<int>(row, kRows);
+        auto dst = &_leds[row * kRows];
+        auto dstEnd = dst + num;
+        if (dst < std::begin(_leds) || dst >= std::end(_leds)) {
+            __DBG_printf("row=%d max=%d num=%d", row, kRows, num);
+            return;
         }
+        while(dst < dstEnd) {
+            *dst++ = color;
+        }
+        // for (int col = 0; col < num; col++) {
+        //     *dst++ = color;
+        // }
     }
     else {
         // flip col and row
         num = std::min<int>(num, kRows);
         row = std::min<int>(row, kCols) + 1;
         for (int col = 1; col <= num; col++) {
+            #if DEBUG
+                size_t ofs = col * kRows - row;
+                if (ofs >= NUM_PIXELS) {
+                    __DBG_printf("ofs=%d max=%d", ofs, NUM_PIXELS);
+                    continue;
+                }
+            #endif
             _leds[col * kRows - row] = color;
         }
     }
@@ -451,6 +589,9 @@ void VisualizerAnimation::_setBar(int row, int num, CHSV color)
 
 void VisualizerAnimation::_setBarDoubleSided(int row, int num, CHSV color)
 {
+__DBG_printf("DISABLED");
+delay(100);
+return;
     // split the rectangle in half and mirror the animation starting from the outer edge
     if (_orientation == VisualizerAnimationConfig::OrientationType::VERTICAL) {
         // ceil(num / 2)
@@ -510,5 +651,8 @@ void VisualizerAnimation::_singleColorVisualizerDoubleSided()
         _setBarDoubleSided(i++, *ptr++, CRGB(_cfg.color));
     }
 }
+
+
+#endif
 
 #endif

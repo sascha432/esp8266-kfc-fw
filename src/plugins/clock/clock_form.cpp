@@ -149,6 +149,21 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     });
                     form.addFormUI(F("Color For Single Color Mode"));
 
+                    form.add(F("v_pc"), cfg.visualizer.peak_color == 0 ? emptyString : Color(cfg.visualizer.peak_color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                        if (store) {
+                            String tmp = value;
+                            if (tmp.trim().length() == 0) {
+                                cfg.visualizer.peak_color = 0;
+                            }
+                            else {
+                                cfg.visualizer.peak_color = std::max<uint32_t>(1, Color::fromString(value));
+                            }
+                        }
+                        return false;
+                    });
+                    form.addFormUI(F("Peak Color Indicator (empty for none)"));
+
+
                     auto &multicast = form.addObjectGetterSetter(F("v_muca"), cfg.visualizer, cfg.visualizer.get_bit_multicast, cfg.visualizer.set_bit_multicast);
                     form.addFormUI(FormUI::Type::HIDDEN);
 

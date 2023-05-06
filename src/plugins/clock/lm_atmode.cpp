@@ -240,7 +240,19 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //     }
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMC))) {
         // vis[ualizer],<type>
-        if (args.startsWithIgnoreCase(0, F("vis"))) {
+        if (args.startsWithIgnoreCase(0, F("spec"))) {
+            switch(_config.get_enum_animation(_config)) {
+                case ClockPlugin::AnimationType::VISUALIZER: {
+                    auto &vis = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
+                    vis.printDebugInfo(const_cast<Stream &>(args.getStream()));
+                }
+                break;
+                default:
+                    args.print(F("No spectrum available for this animation"));
+                    break;
+            }
+        }
+        else if (args.startsWithIgnoreCase(0, F("vis"))) {
             int visTxtType = -1;
             auto newType = Clock::AnimationType::RAINBOW_FASTLED;
             auto newTypeCStr = args.get(1);

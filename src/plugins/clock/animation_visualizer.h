@@ -29,12 +29,17 @@ namespace Clock {
             _storedPeaks(),
             _cfg(cfg)
         {
+            _udpUsageCounter++;
             _disableBlinkColon = true;
         }
 
         ~VisualizerAnimation()
         {
-            _udp.stop();
+            WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
+            if (--_udpUsageCounter == 0) {
+                // since _udp is shared among all instances of this class, the last one turns it off
+                _udp.stop();
+            }
         }
 
         virtual void begin() override;
@@ -111,7 +116,7 @@ namespace Clock {
                             // change color for each bar
                             hsv.hue += (256 / kVisualizerPacketSize); // show full spectrum over the entire width
                         }
-                        auto end = _storedData[index] * _rowsInterpolation;
+                        int end = _storedData[index] * _rowsInterpolation;
                         for (int row = 0; row < display.getRows(); row++) {
                             if (row < end) {
                                 display.setPixel(row, col, rgb);
@@ -120,7 +125,7 @@ namespace Clock {
                         if (_cfg.peak_color != 0) {
                             auto peakValue = _storedPeaks[index].getPeakPosition(millisValue);
                             if (peakValue >= 0) {
-                                auto peak = std::max<uint16_t>(peakValue * _rowsInterpolation, display.getRows() - 1);
+                                auto peak = std::clamp<uint16_t>(peakValue * _rowsInterpolation, end - 1, display.getRows() - 1);
                                 display.setPixel(peak, col, _storedPeaks[index].getPeakColor(_cfg.peak_color));
                             }
                         }
@@ -157,16 +162,15 @@ namespace Clock {
             uint32_t ms = millis();
             output.printf_P(PSTR("Max. spectrum bars %u, video data %d, loudness=%.2f%%, peak sink rate=%.4fs\n"), kVisualizerPacketSize, _video._data.size(), (_storedLoudness * 100) / kVisualizerMaxPacketValue, kPeakSinkRate / 1000.0);
             for(uint8_t i = 0; i < kVisualizerPacketSize; i++) {
-                output.printf_P(PSTR("%02u: val=%d peak=%d/%d age=%dms"), i, _storedData[i], _storedPeaks[i].getPeakValue(), _storedPeaks[i].getPeakPosition(ms), _storedPeaks[i].getLastPeakUpdate(ms));
+                output.printf_P(PSTR("%02u: val=%d peak=%d/%d age=%dms\n"), i, _storedData[i], _storedPeaks[i].getPeakValue(), _storedPeaks[i].getPeakPosition(ms), _storedPeaks[i].getLastPeakUpdate(ms));
 
             }
-            output.println();
         }
 
     protected:
         static constexpr int kVisualizerPacketSize = 32;
         static constexpr float kVisualizerMaxPacketValue = 254.0;
-        static constexpr uint16_t kPeakSinkRate = 2048;
+        static constexpr uint16_t kPeakSinkRate = 4096;
 
         class PeakType
         {
@@ -333,9 +337,11 @@ namespace Clock {
         std::array<PeakType, kVisualizerPacketSize> _storedPeaks;
         VideoType _video;
         VisualizerAnimationConfig &_cfg;
-        WiFiUDP _udp;
         float _colsInterpolation; // horizontal
         float _rowsInterpolation; // vertical
+
+        static WiFiUDP _udp;
+        static int _udpUsageCounter;
     };
 
 }

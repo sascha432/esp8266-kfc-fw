@@ -119,7 +119,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             // }
         } else
 #endif
-            if (id == F("ani")) {
+        if (id == F("ani")) {
             setAnimation(static_cast<AnimationType>(val));
             _saveStateDelayed();
         } else if (id.startsWith(F("ani-"))) {

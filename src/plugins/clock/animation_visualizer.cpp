@@ -25,6 +25,9 @@
 
 using namespace Clock;
 
+WiFiUDP Clock::VisualizerAnimation::_udp;
+int Clock::VisualizerAnimation::_udpUsageCounter = 0;
+
 bool VisualizerAnimation::VideoType::isValid(const VisualizerAnimation::VideoHeaderType &header)
 {
     // __DBG_printf("frame %d,%d data %d=%d pxpb=%d tsz=%d", _header._frameId, header._frameId, _data.size(), header.getPosition(), header.getBytesPerPixel(), kNumPixels * header.getBytesPerPixel());
@@ -100,6 +103,11 @@ void VisualizerAnimation::begin()
     _storedPeaks.fill(PeakType());
     _video.clear();
 
+    // make sure the UDP socket is listening after a reconnect
+    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
+        this->_listen();
+    }, this);
+
     _listen();
 }
 
@@ -117,7 +125,6 @@ void VisualizerAnimation::_listen()
         (void)result;
         __LDBG_printf("ip=* port=%u begin=%u", _cfg.port, result);
     }
-
 }
 
 void VisualizerAnimation::_parseUdp()
@@ -213,7 +220,7 @@ void VisualizerAnimation::_parseUdp()
         for(uint8_t &value: _storedData) {
             value = std::clamp<int16_t>(value - 1, 0, kVisualizerMaxPacketValue); // change values from 1-255 to 0-254
             loudness += value;
-            _storedPeaks[i].add(value, timeMillis);
+            _storedPeaks[i++].add(value, timeMillis);
         }
         loudness /= _storedData.size();
         if (loudness != _storedLoudness) {
@@ -227,9 +234,6 @@ void VisualizerAnimation::_parseUdp()
 
 void VisualizerAnimation::loop(uint32_t millisValue)
 {
-    if (!_udp) { // some ohter process stopped our incoming UDP context
-        _listen();
-    }
     // read udp in every loop
     _parseUdp();
 }

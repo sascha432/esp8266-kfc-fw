@@ -86,7 +86,7 @@ namespace Clock {
                     hsv.val = 255;
                     hsv.sat = 240;
                     float hue = 0;
-                    float hueIncr = 256.0 / display.getCols();
+                    float hueIncr = 232 / static_cast<float>(display.getCols()); // starts with red and ends with pink
                     for (int col = 0; col < display.getCols(); col++) {
                         hsv.hue = hue;
                         hue += hueIncr;
@@ -114,7 +114,7 @@ namespace Clock {
                         if (index != oldIndex) {
                             oldIndex = index;
                             // change color for each bar
-                            hsv.hue += (256 / kVisualizerPacketSize); // show full spectrum over the entire width
+                            hsv.hue += (224 / kVisualizerPacketSize); // starts with red and ends with pink
                         }
                         int end = _storedData[index] * _rowsInterpolation;
                         for (int row = 0; row < display.getRows(); row++) {

@@ -176,6 +176,20 @@ void VisualizerAnimation::_parseUdp()
                 std::fill(_storedData.begin() + i, _storedData.end(), 0);
             }
         }
+        else if (size == kVisualizerPacketSize / 4) {
+            // half the size, just double all bytes
+            for(int i = 0; i < kVisualizerPacketSize; i++) {
+                auto data = _udp.read();
+                if (data == -1) {
+                    std::fill(_storedData.begin() + i, _storedData.end(), 0);
+                    break;
+                }
+                _storedData[i++] = data;
+                _storedData[i++] = data;
+                _storedData[i++] = data;
+                _storedData[i] = data;
+            }
+        }
         else if (size == kVisualizerPacketSize / 2) {
             // half the size, just double all bytes
             for(int i = 0; i < kVisualizerPacketSize; i++) {

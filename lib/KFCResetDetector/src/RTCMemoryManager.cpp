@@ -26,6 +26,7 @@
 #include <crc16.h>
 #include <DumpBinary.h>
 #include <Buffer.h>
+#include <reset_detector.h>
 
 #if DEBUG_RTC_MEMORY_MANAGER
 #    include "debug_helper_enable.h"
@@ -38,13 +39,30 @@
 #    include <user_interface.h>
 #endif
 
+#undef __LDBG_printf
+#if DEBUG_RESET_DETECTOR
+#    if ESP32
+#        define __LDBG_printf(fmt, ...) log_printf("RTCM%04u (line %u): " fmt "\r\n", micros() / 1000, __LINE__, ##__VA_ARGS__)
+#    else
+#        define __LDBG_printf(fmt, ...) ::printf_P(PSTR("RTCM%04u (line %u): " fmt "\r\n"), micros() / 1000, __LINE__, ##__VA_ARGS__)
+#    endif
+#else
+#    define __LDBG_printf(...)
+#endif
+
 #if ENABLE_DEEP_SLEEP
 namespace DeepSleep {
     extern "C" uint64_t _realTimeOffset;
 }
 #endif
 
-static SemaphoreMutex _lock;
+#if ESP32
+// causes assertion "( pxQueue )" failed: file "IDF/components/freertos/queue.c", line 1447, function: xQueueSemaphoreTake
+#    undef MUTEX_LOCK_BLOCK
+#    define MUTEX_LOCK_BLOCK(mutex)
+#endif
+
+SemaphoreMutex RTCMemoryManager::_lock;
 
 #if RTC_SUPPORT == 0
 RTCMemoryManager::RtcTimer RTCMemoryManager::_rtcTimer;
@@ -228,7 +246,9 @@ uint8_t RTCMemoryManager::read(RTCMemoryId id, void *dataPtr, uint8_t maxSize)
 
 uint8_t *RTCMemoryManager::_read(uint8_t *&data, Header_t &header, Entry_t &entry, RTCMemoryId id)
 {
+    __LDBG_printf("_read");
     MUTEX_LOCK_BLOCK(_lock) {
+        __LDBG_printf("_readMemory %p", &header);
         auto memPtr = _readMemory(header, 0);
         if (!memPtr) {
             __LDBG_printf("read = nullptr");
@@ -236,6 +256,7 @@ uint8_t *RTCMemoryManager::_read(uint8_t *&data, Header_t &header, Entry_t &entr
         }
         auto ptr = header.begin(memPtr);
         auto endPtr = header.end(memPtr);
+        __LDBG_printf("read from=%p to=%p", ptr, endPtr);
         while(ptr + sizeof(Entry_t) < endPtr) {
             entry = Entry_t(ptr);
             if (!entry) {

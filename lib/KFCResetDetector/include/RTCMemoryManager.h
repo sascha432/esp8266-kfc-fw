@@ -175,6 +175,8 @@ public:
 
     static bool dump(Print &output, RTCMemoryId id);
 
+    static SemaphoreMutex _lock;
+
 private:
     static bool _readHeader(Header_t &header);
     static uint8_t *_readMemory(Header_t &header, uint16_t extraSize);

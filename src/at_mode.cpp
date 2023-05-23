@@ -557,7 +557,7 @@ public:
     void setType(DisplayType type, Event::milliseconds interval) {
         _type = type;
         if (_type == DisplayType::HEAP) {
-            LoopFunctions::add(loop);
+            LOOP_FUNCTION_ADD(loop);
         }
         else {
             LoopFunctions::remove(loop);
@@ -878,7 +878,7 @@ public:
         _timerCount = 0;
         _lastUpdate = 0;
         _readDelay = readDelayMicros;
-        LoopFunctions::add(at_mode_adc_loop);
+        LOOP_FUNCTION_ADD(at_mode_adc_loop);
         _timer.start();
         return true;
     }
@@ -983,7 +983,7 @@ public:
 
         _lastUpdate = 0;
         _readDelay = interval;
-        LoopFunctions::add(at_mode_adc_loop);
+        LOOP_FUNCTION_ADD(at_mode_adc_loop);
         _timer.start();
         return true;
     }
@@ -1114,7 +1114,7 @@ class CommandQueue {
 public:
     CommandQueue(Stream &stream) : _output(stream), _queue(), _start(millis()), _commands(0) {
         _output.printf_P(PSTR("+QUEUE: started\n"));
-        LoopFunctions::add([this]() { loop(); }, this);
+        LOOP_FUNCTION_ADD_ARG([this]() { loop(); }, this);
     }
 
     virtual ~CommandQueue() {

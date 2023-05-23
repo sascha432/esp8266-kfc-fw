@@ -578,7 +578,16 @@ void loop()
         }
         else {
             __Scheduler.run(Event::PriorityType::NORMAL); // check priority above NORMAL after every loop function
-            loopFunctions[i].callback();
+            #if DEBUG_LOOP_FUNCTIONS
+                uint32_t start = millis();
+                loopFunctions[i].callback();
+                uint32_t dur = millis() - start;
+                if (dur > DEBUG_LOOP_FUNCTIONS_MAX_TIME) {
+                    __DBG_printf("loop function time=%u source=%s line=%u", dur, loopFunctions[i]._source.c_str(), loopFunctions[i]._line);
+                }
+            #else
+                loopFunctions[i].callback();
+            #endif
             #if ESP32 && defined(CONFIG_HEAP_POISONING_COMPREHENSIVE)
                 heap_caps_check_integrity_all(true);
             #endif

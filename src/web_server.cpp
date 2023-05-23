@@ -833,7 +833,7 @@ void Plugin::end()
         #else
             ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled);
         #endif
-        LoopFunctions::add(ArduinoOTALoop);
+        LOOP_FUNCTION_ADD(ArduinoOTALoop);
         _AOTAInfo._runnning = true;
 
         __LDBG_printf("Arduino OTA running on %s", ArduinoOTA.getHostname().c_str());

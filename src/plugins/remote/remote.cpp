@@ -223,7 +223,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
     #endif
 
     WiFiCallbacks::add(WiFiCallbacks::EventType::ANY, wifiCallback);
-    LoopFunctions::add(loop);
+    LOOP_FUNCTION_ADD(loop);
 
     _setup();
     _resetAutoSleep();

@@ -260,7 +260,7 @@ bool ADCManager::requestAverage(uint8_t numSamples, uint32_t readIntervalMicros,
         return false;
     }
     if (_queue.empty()) {
-        LoopFunctions::add(loop);
+        LOOP_FUNCTION_ADD(loop);
     }
     _queue.emplace_back(numSamples, readIntervalMicros, callback, queueId);
     return true;

@@ -579,7 +579,7 @@ bool Mpr121Touchpad::begin(uint8_t address, uint8_t irqPin, TwoWire *wire)
 
     _timer.startTimer(5, true);
 
-    LoopFunctions::add([this]() {
+    LOOP_FUNCTION_ADD_ARG([this]() {
         _loop();
     }, this);
     return true;

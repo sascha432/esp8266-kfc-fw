@@ -2,6 +2,9 @@
 
 ## Version 0.0.8 (master)
 
+ - Support for up to 4 LED output pins (TODO add option to configure strip segments in the UI)
+ - Added LED Matrix and Strip support to ESP32 (wled_esp32_controller, compatible with many WLED LED controllers or my own version [EasyEDA schematics and PCB](https://oshwlab.com/sascha23095123423/wled-controller_copy))
+ - Fixed a crash in RTCMemoryManager for ESP32
  - Added UDP video streaming to the visualizer
  - Fixed some issues with the visualizer
  - Missing online status and binary awake sensor fixed for remote control

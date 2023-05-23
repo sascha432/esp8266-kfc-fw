@@ -23,7 +23,7 @@ extern "C" uint8_t getNeopixelShowMethodInt();
 // class to address LED matrix displays by x and y coordinates mapping it to its real coordinates
 // the mapping is done during compilation and fixed for best performance
 //
-// the required memory is total pixels (including pixels that are not display, see _PixelOffset) * 3 byte and 32bit padded, plus an additonal pointer
+// the required memory is total pixels (including pixels that are not display, see _PixelOffset) * 3 byte and 32bit padded, plus an additional pointer
 // 118 pixel * 3 / 4 = 88.5 = with padding 89 * 4 + 4 byte = 360 byte
 
 namespace Clock {
@@ -162,7 +162,7 @@ namespace Clock {
             static constexpr int kInterleaved = _Interleaved ? 1 : 0;
         };
 
-#if __GNUG__ < 10
+#if __GNUG__ < 8
 
         #warning this code might not be up to date
 
@@ -593,7 +593,7 @@ namespace Clock {
             return _get(point);
         }
 
-#if __GNUG__ < 10
+#if __GNUG__ < 8
 
         #warning this code might not be up to date
 
@@ -733,17 +733,9 @@ namespace Clock {
         #define FASTLED_LED_CONTROLLER NEOPIXEL
     #endif
 
-    template<uint8_t _OutputPin>
-    class NeoPixelController {
-    public:
-        static CLEDController &addLeds(CRGB *data, int sizeOrOffset, int size = 0) {
-            return FastLED.addLeds<FASTLED_LED_CONTROLLER, _OutputPin>(data, sizeOrOffset, size);
-        }
-    };
-
     // FastLED display
 
-    template<typename _ControllerType, typename _PixelDisplayBufferType>
+    template<typename _PixelDisplayBufferType>
     class PixelDisplay : public _PixelDisplayBufferType
     {
     public:
@@ -768,7 +760,17 @@ namespace Clock {
 
     public:
         PixelDisplay() :
-            _controller(_ControllerType::addLeds(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
+            // TODO add dynamic segments for 4 controllers
+            _controller(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN>(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
+            #if IOT_LED_MATRIX_OUTPUT_PIN1
+                , _controller1(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN1>(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
+            #endif
+            #if IOT_LED_MATRIX_OUTPUT_PIN2
+                , _controller2(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN2>(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
+            #endif
+            #if IOT_LED_MATRIX_OUTPUT_PIN3
+                , _controller3(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN3>(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
+            #endif
         {
             setDither(false);
         }
@@ -806,10 +808,12 @@ namespace Clock {
                     FastLED.show(brightness);
                     break;
                 case Clock::ShowMethodType::NEOPIXEL:
+                    //TODO add controller1-3
                     NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), getNumBytes(), brightness, NeoPixelEx::Context::validate(nullptr));
                     break;
                 case Clock::ShowMethodType::NEOPIXEL_REPEAT:
                     for(uint8_t i = 0; i < 5; i++) {
+                        //TODO add controller1-3
                         if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), getNumBytes(), brightness, NeoPixelEx::Context::validate(nullptr))) {
                             break;
                         }
@@ -838,6 +842,15 @@ namespace Clock {
 
     protected:
         CLEDController &_controller;
+        #if IOT_LED_MATRIX_OUTPUT_PIN1
+            CLEDController &_controller1;
+        #endif
+        #if IOT_LED_MATRIX_OUTPUT_PIN2
+            CLEDController &_controller2;
+        #endif
+        #if IOT_LED_MATRIX_OUTPUT_PIN3
+            CLEDController &_controller3;
+        #endif
     };
 
 }

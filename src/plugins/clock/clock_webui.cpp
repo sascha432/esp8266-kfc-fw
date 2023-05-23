@@ -18,9 +18,9 @@ void ClockPlugin::getValues(WebUINS::Events &array)
 {
     auto enabled = _getEnabledState();
 
-#if IOT_LED_MATRIX == 0
-    array.append(WebUINS::Values(F("colon"), enabled && (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 500 : 1000), enabled));
-#endif
+    #if IOT_LED_MATRIX == 0
+        array.append(WebUINS::Values(F("colon"), enabled && (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 500 : 1000), enabled));
+    #endif
 
     array.append(
         WebUINS::Values(F("ani"), static_cast<int>(_config.animation), enabled),
@@ -37,17 +37,17 @@ void ClockPlugin::getValues(WebUINS::Events &array)
         }
     }
 
-#if IOT_CLOCK_SAVE_STATE
-    array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), true));
-#endif
+    #if IOT_CLOCK_SAVE_STATE
+        array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), true));
+    #endif
 
-#if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-    array.append(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()));
-#endif
+    #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+        array.append(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()));
+    #endif
 
-#if IOT_LED_MATRIX_FAN_CONTROL
-    array.append(WebUINS::Values(F("fanspeed"), _fanSpeed, true));
-#endif
+    #if IOT_LED_MATRIX_FAN_CONTROL
+        array.append(WebUINS::Values(F("fanspeed"), _fanSpeed, true));
+    #endif
 }
 
 // bool ClockPlugin::getValue(const String &id, String &value, bool &state)
@@ -94,42 +94,48 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 {
     __LDBG_printf("id=%s has_value=%u value=%s has_state=%u state=%u", id.c_str(), hasValue, value.c_str(), hasState, state);
     if (hasValue) {
-#if IOT_ALARM_PLUGIN_ENABLED
-        _resetAlarm();
-#endif
+        #if IOT_ALARM_PLUGIN_ENABLED
+            _resetAlarm();
+        #endif
         auto val = static_cast<uint32_t>(value.toInt());
-#if IOT_LED_MATRIX == 0
-        if (id == F("colon")) {
-            setBlinkColon(val);
-            _saveStateDelayed();
-        } else
-#endif
-#if IOT_CLOCK_SAVE_STATE
-            if (id == F("power")) {
-            _setState(val);
-        } else
-#endif
-#if IOT_LED_MATRIX_FAN_CONTROL
-            if (id == F("fanspeed")) {
-            _setFanSpeed(val);
-            _config.fan_speed = _fanSpeed;
-            _saveStateDelayed();
-            // if (val != _fanSpeed) {
-            //     _webUIUpdateFanSpeed();
-            // }
-        } else
-#endif
+        #if IOT_LED_MATRIX == 0
+            if (id == F("colon")) {
+                setBlinkColon(val);
+                _saveStateDelayed();
+            }
+            else
+        #endif
+        #if IOT_CLOCK_SAVE_STATE
+                if (id == F("power")) {
+                _setState(val);
+            }
+            else
+        #endif
+        #if IOT_LED_MATRIX_FAN_CONTROL
+                if (id == F("fanspeed")) {
+                _setFanSpeed(val);
+                _config.fan_speed = _fanSpeed;
+                _saveStateDelayed();
+                // if (val != _fanSpeed) {
+                //     _webUIUpdateFanSpeed();
+                // }
+            }
+            else
+        #endif
         if (id == F("ani")) {
             setAnimation(static_cast<AnimationType>(val));
             _saveStateDelayed();
-        } else if (id.startsWith(F("ani-"))) {
+        }
+        else if (id.startsWith(F("ani-"))) {
             // create AsyncWebServerRequest from web socket post data and submit form
             auto request = WebServer::AsyncWebServerRequestParser(value);
             WebServer::Plugin::getInstance().handleFormData(id, &request, *this);
-        } else if (id == F("color")) {
+        }
+        else if (id == F("color")) {
             setColorAndRefresh(val);
             _saveStateDelayed();
-        } else if (id == FSPGM(brightness)) {
+        }
+        else if (id == FSPGM(brightness)) {
             setBrightness(std::clamp<uint8_t>(val, 0, kMaxBrightness));
             _saveStateDelayed();
         }
@@ -144,7 +150,8 @@ String ClockPlugin::_getPowerLevelStr()
     auto level = _getPowerLevel();
     if (!std::isnormal(level)) {
         powerLevelStr = '0';
-    } else {
+    }
+    else {
         MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);
     }
     if (_config.power_limit) {
@@ -180,7 +187,8 @@ uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPo
     if (_config.enabled) {
         _powerLevelCurrentmW = (targetBrightness == newBrightness) ? requestedPower_mW : maxPower_mW;
         _calcPowerLevel();
-    } else {
+    }
+    else {
         _powerLevelCurrentmW = 0;
         _powerLevelUpdateTimer = 0;
     }
@@ -196,7 +204,8 @@ void ClockPlugin::_webSocketCallback(WsClient::ClientCallbackType type, WsClient
     if (type == WsClient::ClientCallbackType::ON_START) {
         _powerLevelUpdateRate = (IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE * kPowerLevelUpdateRateMultiplier);
         _calcPowerLevel();
-    } else if (type == WsClient::ClientCallbackType::ON_END) {
+    }
+    else if (type == WsClient::ClientCallbackType::ON_END) {
         _powerLevelUpdateRate = (kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier);
     }
 }
@@ -206,7 +215,8 @@ void ClockPlugin::_calcPowerLevel()
     if (_powerLevelUpdateTimer == 0) {
         _powerLevelUpdateTimer = micros();
         _powerLevelAvg = _powerLevelCurrentmW;
-    } else {
+    }
+    else {
         auto ms = micros();
         auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_diff(_powerLevelUpdateTimer, ms));
         _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
@@ -220,11 +230,13 @@ void ClockPlugin::_calcPowerLevel()
 void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
 {
     __LDBG_printf("createWebUI");
-#if IOT_LED_MATRIX
-    webUI.addRow(WebUINS::Group(F("LED Matrix"), false));
-#else
-    webUI.addRow(WebUINS::Group(F("Clock"), false));
-#endif
+    #if IOT_LED_STRIP
+        webUI.addRow(WebUINS::Group(F("LED Strip"), false));
+    #elif IOT_LED_MATRIX
+        webUI.addRow(WebUINS::Group(F("LED Matrix"), false));
+    #else
+        webUI.addRow(WebUINS::Group(F("Clock"), false));
+    #endif
 
     webUI.addRow(WebUINS::Slider(FSPGM(brightness), FSPGM(brightness), 0, kMaxBrightness, true));
     webUI.addRow(WebUINS::RGBSlider(F("color"), F("Color")));
@@ -278,18 +290,22 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
             }
         #endif
 
-        // calculated power and power limit
-        auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W');
-        // #if IOT_SENSOR_HAVE_INA219
-        //     F("Power / Limit") : F("Power"), 'W'
-        // #else
-        //     F("Calculated Power / Limit") : F("Calculated Power"), 'W'
-        // #endif
-        // );
-        power.append(
-            WebUINS::NamedString(J(height), height),
-            WebUINS::NamedUint32(J(columns), colspan));
-        row.append(power);
+        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+
+            // calculated power and power limit
+            auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W');
+            // #if IOT_SENSOR_HAVE_INA219
+            //     F("Power / Limit") : F("Power"), 'W'
+            // #else
+            //     F("Calculated Power / Limit") : F("Calculated Power"), 'W'
+            // #endif
+            // );
+            power.append(
+                WebUINS::NamedString(J(height), height),
+                WebUINS::NamedUint32(J(columns), colspan));
+            row.append(power);
+
+        #endif
 
         #if IOT_CLOCK_HAVE_MOTION_SENSOR
             {

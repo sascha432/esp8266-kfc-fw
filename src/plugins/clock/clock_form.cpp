@@ -440,9 +440,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         auto &powerGroup = form.addCardGroup(F("pow"), F("Power"), true);
 
-        form.addObjectGetterSetter(F("pl"), FormGetterSetter(cfg, power_limit));
-        form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt")), FormUI::IntAttribute(F("disabled-value"), 0));
-        cfg.addRangeValidatorFor_fading_time(form, true);
+        #if IOT_CLOCK_HAVE_POWER_LIMIT
+            form.addObjectGetterSetter(F("pl"), FormGetterSetter(cfg, power_limit));
+            form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt")), FormUI::IntAttribute(F("disabled-value"), 0));
+            cfg.addRangeValidatorFor_fading_time(form, true);
+        #endif
 
         form.addObjectGetterSetter(F("plr"), FormGetterSetter(cfg.power, red));
         form.addFormUI(F("Power Consumption For 256 LEDs at 100% Red"), FormUI::Suffix(F("mW")));
@@ -565,7 +567,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         #if IOT_LED_MATRIX_STANDBY_PIN != -1
             form.addObjectGetterSetter(F("sbl"), cfg, cfg.get_bits_standby_led, cfg.set_bits_standby_led);
-            form.addFormUI(F("Standby LED"), FormUI::BoolItems(F("Enable"), F("Disable")));
+            form.addFormUI(F("Standby LED/Relay or MOSFET"), FormUI::BoolItems(F("Enable"), F("Disable")));
         #endif
 
         mainGroup.end();

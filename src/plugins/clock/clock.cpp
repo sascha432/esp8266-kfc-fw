@@ -388,7 +388,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
                     pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
 
                     LoopFunctions::remove(standbyLoop);
-                    LoopFunctions::remove(loop);
+                    _removeLoop();
                     _fps = NAN;
                 }
 
@@ -528,7 +528,7 @@ void ClockPlugin::shutdown()
         ssd1306End();
     #endif
 
-    LoopFunctions::remove(loop);
+    _removeLoop();
 
     // turn all LEDs off
     _disable();
@@ -574,7 +574,10 @@ void ClockPlugin::getStatus(Print &output)
             #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
                 extern uint32_t _frame_cnt;
                 extern uint32_t _retry_cnt;
-                output.printf_P(PSTR(", aborted frames %u/%u (%.2f%%)"), _retry_cnt, _frame_cnt, !_frame_cnt ? NAN : (_retry_cnt * 100 / static_cast<float>(_frame_cnt)));
+                // TODO shows weird values
+                if (_retry_cnt) {
+                    output.printf_P(PSTR(", aborted frames %u/%u (%.2f%%)"), _retry_cnt, _frame_cnt, !_frame_cnt ? NAN : (_retry_cnt * 100 / static_cast<float>(_frame_cnt)));
+                }
             #endif
             break;
         case Clock::ShowMethodType::NEOPIXEL:
@@ -791,12 +794,24 @@ void ClockPlugin::_enable()
         return;
     }
 
+    // reset stats when turning LEDs on
+    NeoPixelEx::Context::validate(nullptr).getStats().clear();
+
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(true));
         __LDBG_printf("enable LED pin %u state %u (is_enabled=%u, config=%u)", IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(true), _isEnabled, _config.enabled);
     #endif
 
     pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
+    #if IOT_LED_MATRIX_OUTPUT_PIN1
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN1, OUTPUT);
+    #endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN2
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN2, OUTPUT);
+    #endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN3
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN3, OUTPUT);
+    #endif
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
@@ -836,6 +851,18 @@ void ClockPlugin::_disable()
     // this will stop the LEDs from getting powered through data line
     pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
     digitalWrite(IOT_LED_MATRIX_OUTPUT_PIN, LOW);
+    #if IOT_LED_MATRIX_OUTPUT_PIN1
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN1, OUTPUT);
+        digitalWrite(IOT_LED_MATRIX_OUTPUT_PIN1, LOW);
+    #endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN2
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN2, OUTPUT);
+        digitalWrite(IOT_LED_MATRIX_OUTPUT_PIN2, LOW);
+    #endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN3
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN3, OUTPUT);
+        digitalWrite(IOT_LED_MATRIX_OUTPUT_PIN3, LOW);
+    #endif
 
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(false));
@@ -851,8 +878,10 @@ void ClockPlugin::_disable()
         _setFanSpeed(0);
     #endif
 
-    LoopFunctions::remove(loop);
-    LoopFunctions::add(standbyLoop);
+    _removeLoop();
+    LOOP_FUNCTION_ADD(standbyLoop);
+
+    NeoPixelEx::Context::validate(nullptr).getStats().clear();
 }
 
 #if IOT_ALARM_PLUGIN_ENABLED
@@ -930,7 +959,7 @@ void ClockPlugin::_loop()
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
 
-    uint16_t frames = std::clamp<uint16_t>(_fps * 10, 100, 65535);
+    auto frames = std::clamp<uint32_t>(_fps * 10, 100, 0xffffff);
     auto fps = FastLED.getFPS();
     if (fps) {
         _fps = ((_fps * frames) + fps) / (frames + 1.0);
@@ -1012,21 +1041,24 @@ void ClockPlugin::_loop()
     }
 
     _display.show();
-    if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
-        // give system time to process the requests
-        // if the cpu is overloaded, the animation will get very choppy and the web server will be slow
-        uint32_t count = WebServer::Plugin::getRunningRequestsAndResponses();
-        delay(count > 2 ? 50 : count > 1 ? 25 : 5);
 
-        #if DEBUG_IOT_CLOCK
-            static uint32_t lastValue = 0;
-            uint32_t currentValue;
-            if ((currentValue = WebServer::Plugin::getRunningRequestsAndResponsesUint32()) != lastValue) {
-                lastValue = currentValue;
-                __DBG_printf("requests=%u responses=%u sum=%u _fps=%.1f fps=%u", WebServer::Plugin::getRunningRequests(), WebServer::Plugin::getRunningResponses(), count, _fps, FastLED.getFPS());
-            }
-        #endif
-    }
+    #if ESP8266
+        if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
+            // give system time to process the requests
+            // if the cpu is overloaded, the animation will get very choppy and the web server will be slow
+            uint32_t count = WebServer::Plugin::getRunningRequestsAndResponses();
+            delay(count > 2 ? 50 : count > 1 ? 25 : 5);
+
+            #if DEBUG_IOT_CLOCK
+                static uint32_t lastValue = 0;
+                uint32_t currentValue;
+                if ((currentValue = WebServer::Plugin::getRunningRequestsAndResponsesUint32()) != lastValue) {
+                    lastValue = currentValue;
+                    __DBG_printf("requests=%u responses=%u sum=%u _fps=%.1f fps=%u", WebServer::Plugin::getRunningRequests(), WebServer::Plugin::getRunningResponses(), count, _fps, FastLED.getFPS());
+                }
+            #endif
+        }
+    #endif
 }
 
 void ClockPluginClearPixels()

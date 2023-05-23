@@ -94,7 +94,7 @@ namespace StreamOutput {
                     output.printf_P(PSTR("+CAT: file=%s:\n"), _file.fullName());
                 }
                 _loopAdded = true;
-                LoopFunctions::add([this]() {
+                LOOP_FUNCTION_ADD_ARG([this]() {
                     loop();
                 }, this);
             }

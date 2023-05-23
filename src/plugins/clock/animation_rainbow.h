@@ -118,7 +118,7 @@ namespace Clock {
             float _red;
             float _green;
             float _blue;
-            ColorFactor(uint32 value) : _red(value & 0xff), _green((value >> 8) & 0xff), _blue((value >> 16) & 0xff) {}
+            ColorFactor(uint32_t value) : _red(value & 0xff), _green((value >> 8) & 0xff), _blue((value >> 16) & 0xff) {}
             float red() const {
                 return _red;
             }

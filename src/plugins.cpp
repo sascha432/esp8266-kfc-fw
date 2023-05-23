@@ -18,9 +18,9 @@
 #define PLUGIN_RTC_MEM_MAX_ID 255
 
 #if DEBUG_PLUGINS
-#include "debug_helper_enable.h"
+#    include "debug_helper_enable.h"
 #else
-#include "debug_helper_disable.h"
+#    include "debug_helper_disable.h"
 #endif
 
 using KFCConfigurationClasses::System;
@@ -73,14 +73,12 @@ void Register::_add(PluginComponent *plugin)
 
 void Register::dumpList(Print &output)
 {
-#if DEBUG
-
     #define BOOL_STR(value) (value ? SPGM(yes) : SPGM(no))
 
-    //                    123456789   12345   123456789   123456789012   1234567890    123456   123456  12345  123456789012
-    PGM_P header = PSTR("+-----------+------+-----------+--------------+------------+--------+--------+-------+------------+\n");
-    PGM_P titles = PSTR("| Name      | Prio | Safe Mode | Auto Wake-Up | RTC Mem Id | Status | ATMode | WebUI | Setup Time +\n");
-    PGM_P format = PSTR("| %-9.9s | % 4d | %-9.9s | %-12.12s | % 10u | %-6.6s | %-6.6s | %-5.5s | %10u |\n");
+    //                     123456789012345   12345  123456789   123456789012   1234567890   123456   123456   12345   1234567890
+    PGM_P header = PSTR("+-----------------+------+-----------+--------------+------------+--------+--------+-------+------------+\n");
+    PGM_P titles = PSTR("| Name            | Prio | Safe Mode | Auto Wake-Up | RTC Mem Id | Status | ATMode | WebUI | Setup Time +\n");
+    PGM_P format = PSTR("| %-15.15s | % 4d | %-9.9s | %-12.12s | % 10u | %-6.6s | %-6.6s | %-5.5s | %10u |\n");
 
     output.print(FPSTR(header));
     output.printf_P(titles);
@@ -105,8 +103,6 @@ void Register::dumpList(Print &output)
         );
     }
     output.print(FPSTR(header));
-#endif
-
 }
 
 void RegisterEx::_createMenu()
@@ -245,7 +241,6 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
         }
     }
 
-    __DBG_printf("webui en=%d", System::Flags::getConfig().is_webui_enabled);
     if (System::Flags::getConfig().is_webui_enabled) {
         auto url = F("webui.html");
         if (!_bootstrapMenu.isValid(_bootstrapMenu.findMenuByURI(url, _navMenu.device))) {

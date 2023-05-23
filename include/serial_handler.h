@@ -233,8 +233,8 @@ namespace SerialHandler {
 
     inline void Wrapper::addLoop()
     {
-        // LoopFunctions::add(pollSerial);
-        LoopFunctions::add([this]() {
+        // LOOP_FUNCTION_ADD(pollSerial);
+        LOOP_FUNCTION_ADD_ARG([this]() {
             this->_loop();
         }, this);
     }

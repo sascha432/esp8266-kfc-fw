@@ -818,7 +818,7 @@ void KFCFWConfiguration::setup()
         #endif
     }
 
-    LoopFunctions::add(KFCFWConfiguration::loop);
+    LOOP_FUNCTION_ADD(KFCFWConfiguration::loop);
 }
 
 #include "build.h"

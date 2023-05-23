@@ -397,7 +397,7 @@ namespace PinMonitor {
             _Timer(_loopTimer)->add(Event::kMinDelay, true, loopTimer, Event::PriorityType::TIMER);
         }
         else {
-            LoopFunctions::add(loop);
+            LOOP_FUNCTION_ADD(loop);
         }
         #if PIN_MONITOR_USE_POLLING
             pollingTimer.start();

@@ -38,7 +38,7 @@ Sensor_INA219::Sensor_INA219(const String &name, uint8_t address, TwoWire &wire)
     __LDBG_printf("address=%x voltage_range=%x gain=%x shunt_ADC_res=%x", _address, IOT_SENSOR_INA219_BUS_URANGE, IOT_SENSOR_INA219_GAIN, IOT_SENSOR_INA219_SHUNT_ADC_RES);
 
     setUpdateRate(_config.webui_update_rate);
-    LoopFunctions::add([this]() {
+    LOOP_FUNCTION_ADD_ARG([this]() {
         this->_loop();
     }, this);
 }

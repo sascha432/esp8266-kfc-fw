@@ -465,22 +465,19 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         // res[et][,<pixels>]
         else if (args.startsWithIgnoreCase(0, F("res"))) {
             enableLoop(true);
-            auto num = args.toIntMinMax<uint16_t>(1, 0, 2048, 0);
-            if (num > 0) {
-                _display.clear();
-                if (num > IOT_CLOCK_NUM_PIXELS) {
-                    args.print(F("clearing %u pixels"), num);
-                    NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(num);
-                }
-                else {
-                    NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(IOT_CLOCK_NUM_PIXELS);
-                }
-            }
-            else {
-                _display.setBrightness(32);
-                _display.clear();
-                _display.show();
-            }
+            auto num = args.toIntMinMax<uint16_t>(1, 0, 2048, IOT_CLOCK_NUM_PIXELS);
+            _display.clear();
+            args.print(F("clearing %u pixels"), num);
+            NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(num);
+            #if IOT_LED_MATRIX_OUTPUT_PIN1
+                NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN1>(num);
+            #endif
+            #if IOT_LED_MATRIX_OUTPUT_PIN2
+                NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN2>(num);
+            #endif
+            #if IOT_LED_MATRIX_OUTPUT_PIN3
+                NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(num);
+            #endif
             args.print(F("display reset"));
         }
         // cl[ear]

@@ -71,18 +71,16 @@ namespace KFCConfigurationClasses {
                 MAX
             };
 
-            #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-                struct __attribute__packed__ PowerConfigType {
-                    using Type = PowerConfigType;
-                    static constexpr uint16_t kPowerNumLeds = 256;
-                    #define kMultiplyNumLeds(value) static_cast<uint16_t>(value * 256)
-                    CREATE_UINT16_BITFIELD_MIN_MAX(red, 16, 0, 0xffff, kMultiplyNumLeds(79.7617), 1);
-                    CREATE_UINT16_BITFIELD_MIN_MAX(green, 16, 0, 0xffff, kMultiplyNumLeds(79.9648), 1);
-                    CREATE_UINT16_BITFIELD_MIN_MAX(blue, 16, 0, 0xffff, kMultiplyNumLeds(79.6055), 1);
-                    CREATE_UINT16_BITFIELD_MIN_MAX(idle, 16, 0, 0xffff, kMultiplyNumLeds(4.0586), 1);
-                    PowerConfigType() : red(kDefaultValueFor_red), green(kDefaultValueFor_green), blue(kDefaultValueFor_blue), idle(kDefaultValueFor_idle) {}
-                };
-            #endif
+            struct __attribute__packed__ PowerConfigType {
+                using Type = PowerConfigType;
+                static constexpr uint16_t kPowerNumLeds = 256;
+                #define kMultiplyNumLeds(value) static_cast<uint16_t>(value * 256)
+                CREATE_UINT16_BITFIELD_MIN_MAX(red, 16, 0, 0xffff, kMultiplyNumLeds(79.7617), 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(green, 16, 0, 0xffff, kMultiplyNumLeds(79.9648), 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(blue, 16, 0, 0xffff, kMultiplyNumLeds(79.6055), 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(idle, 16, 0, 0xffff, kMultiplyNumLeds(4.0586), 1);
+                PowerConfigType() : red(kDefaultValueFor_red), green(kDefaultValueFor_green), blue(kDefaultValueFor_blue), idle(kDefaultValueFor_idle) {}
+            };
 
             struct __attribute__packed__ ProtectionConfigType {
                 using Type = ProtectionConfigType;
@@ -331,9 +329,7 @@ namespace KFCConfigurationClasses {
                 FireAnimationType fire;
                 AlarmType alarm;
                 InterleavedAnimationType interleaved;
-                #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-                    PowerConfigType power;
-                #endif
+                PowerConfigType power;
                 #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
                     VisualizerType visualizer;
                 #endif

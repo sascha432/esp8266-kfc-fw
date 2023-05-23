@@ -532,6 +532,9 @@ private:
         Event::Callback _resetAlarmFunc;
     #endif
 
+        void _addLoop();
+        void _removeLoop();
+
     #if !IOT_LED_MATRIX
 
     // ------------------------------------------------------------------------
@@ -714,11 +717,11 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
     __LDBG_printf("enable loop=%u", enable);
     LoopFunctions::remove(standbyLoop);
     if (enable) {
-        LoopFunctions::add(loop);
+        _addLoop();
         _fps = 0;
     }
     else {
-        LoopFunctions::remove(loop);
+        _removeLoop();
         _fps = NAN;
     }
 }
@@ -1026,15 +1029,43 @@ inline void ClockPlugin::_reset()
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(true));
     #endif
     NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(IOT_CLOCK_NUM_PIXELS);
+    #if IOT_LED_MATRIX_OUTPUT_PIN1
+        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN1>(IOT_CLOCK_NUM_PIXELS);
+    #endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN2
+        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN2>(IOT_CLOCK_NUM_PIXELS);
+    #endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN3
+        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(IOT_CLOCK_NUM_PIXELS);
+    #endif
     #if IOT_LED_MATRIX_ENABLE_PIN != -1
         digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(false));
     #endif
     pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
+    #if IOT_LED_MATRIX_OUTPUT_PIN1
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN1, INPUT);
+    #endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN2
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN2, INPUT);
+    #endif
+    #if IOT_LED_MATRIX_OUTPUT_PIN3
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN3, INPUT);
+    #endif
 }
 
 inline void ClockPlugin::loop()
 {
     getInstance()._loop();
+}
+
+inline void ClockPlugin::_addLoop()
+{
+    LOOP_FUNCTION_ADD(loop);
+}
+
+inline void ClockPlugin::_removeLoop()
+{
+    LoopFunctions::remove(loop);
 }
 
 inline const __FlashStringHelper *ClockPlugin::getShowMethodStr()

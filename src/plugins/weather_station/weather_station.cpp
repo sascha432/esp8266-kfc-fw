@@ -453,7 +453,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
         });
     #endif
 
-    LoopFunctions::add(loop);
+    LOOP_FUNCTION_ADD(loop);
 
     _weatherApi.clear();
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, wifiCallback);

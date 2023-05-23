@@ -22,6 +22,19 @@
 //
 // thanks for the great software :)
 
+static inline void convertRGB565ToRGB(uint32_t color, uint8_t& r, uint8_t& g, uint8_t& b)
+{
+    r = ((color >> 11) * 527 + 23) >> 6;
+    g = (((color >> 5) & 0x3f) * 259 + 33) >> 6;
+    b = ((color & 0x1f) * 527 + 23) >> 6;
+}
+
+static inline uint32_t convertRGB565ToRGB(uint32_t color)
+{
+    uint8_t r, g, b;
+    convertRGB565ToRGB(color, r, g, b);
+    return (r << 16) | (g << 8) | b;
+}
 
 using namespace Clock;
 
@@ -66,7 +79,7 @@ CRGB VisualizerAnimation::VideoType::getRGB()
             uint16_t color;
             color = *_position++ << 8;
             color = *_position++;
-            GFXCanvas::convertRGB565ToRGB(color, r, g, b);
+            convertRGB565ToRGB(color, r, g, b);
         }
         break;
         case ColorFormatType::RGB24: {
@@ -116,7 +129,11 @@ void VisualizerAnimation::_listen()
     if (_cfg.multicast) {
         auto ip = WiFi.localIP();
         auto multicastIp = WiFi.broadcastIP();
-        auto result = _udp.beginMulticast(ip, multicastIp, _cfg.port);
+        #if ESP32
+            auto result = _udp.beginMulticast(multicastIp, _cfg.port);
+        #else
+            auto result = _udp.beginMulticast(ip, multicastIp, _cfg.port);
+        #endif
         (void)result;
         __LDBG_printf("ip=%s multi=%s port=%u begin_multicast=%u", ip.toString().c_str(), multicastIp.toString().c_str(), _cfg.port, result);
     }

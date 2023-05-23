@@ -49,7 +49,7 @@ Http2Serial::Http2Serial() :
     #endif
     resetOutputBufferTimer();
 
-    LoopFunctions::add(Http2Serial::outputLoop);
+    LOOP_FUNCTION_ADD(Http2Serial::outputLoop);
 }
 
 Http2Serial::~Http2Serial()

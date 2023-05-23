@@ -7,28 +7,11 @@
 #include <Arduino_compat.h>
 #include "color.h"
 #include "pixel_display.h"
-#include "GFXCanvas.h"
-
-
-// inline void convertRGB565ToRGB(ColorType color, uint8_t& r, uint8_t& g, uint8_t& b)
-// {
-//     r = ((color >> 11) * 527 + 23) >> 6;
-//     g = (((color >> 5) & 0x3f) * 259 + 33) >> 6;
-//     b = ((color & 0x1f) * 527 + 23) >> 6;
-// }
-
-// inline RGBColorType convertRGB565ToRGB(ColorType color)
-// {
-//     uint8_t r, g, b;
-//     convertRGB565ToRGB(color, r, g, b);
-//     return (r << 16) | (g << 8) | b;
-// }
-
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #define _INCREMENT(value, min, max, incr) \
@@ -59,7 +42,6 @@ namespace Clock {
 #if IOT_LED_MATRIX
 
     using DisplayType = Clock::PixelDisplay<
-            Clock::NeoPixelController<IOT_LED_MATRIX_OUTPUT_PIN>,
             Clock::PixelDisplayBuffer<
                 IOT_LED_MATRIX_PIXEL_OFFSET,
                 IOT_LED_MATRIX_ROWS,
@@ -78,7 +60,6 @@ namespace Clock {
 #else
 
     using BaseDisplayType = Clock::PixelDisplay<
-            Clock::NeoPixelController<IOT_LED_MATRIX_OUTPUT_PIN>,
             Clock::PixelDisplayBuffer<
                 IOT_LED_MATRIX_PIXEL_OFFSET,
                 IOT_LED_MATRIX_ROWS,

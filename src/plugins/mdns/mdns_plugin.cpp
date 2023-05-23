@@ -172,7 +172,7 @@ void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)
         if (wasEmpty) {
             __LDBG_printf("MDNS disabled, calling begin");
             MDNS.begin(System::Device::getName());
-            LoopFunctions::add(loop);
+            LOOP_FUNCTION_ADD(loop);
         }
         query->begin();
     }
@@ -217,7 +217,7 @@ void MDNSPlugin::begin()
     __LDBG_printf("hostname=%s WiFi=%u running=%u", hostname, WiFi.isConnected(), _running);
     if (MDNS.begin(hostname)) {
         _running = true;
-        LoopFunctions::add(loop);
+        LOOP_FUNCTION_ADD(loop);
         MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353);
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), String(__BUILD_NUMBER_INT));

@@ -90,13 +90,13 @@ Serial2TcpBase *Serial2TcpBase::createInstance(const Serial2TCP::Serial2Tcp_t &c
                 serialPort = softwareSerial;
                 __DBGS2T("SoftwareSerial: rx=%d tx=%d baud=%d\n", cfg.rx_pin, cfg.tx_pin, cfg.baudrate);
             }
-            LoopFunctions::add(Serial2TcpBase::handleSerialDataLoop);
+            LOOP_FUNCTION_ADD(Serial2TcpBase::handleSerialDataLoop);
             break;
         case Serial2TCP::SerialPortType::SERIAL1:
             serialPort = &Serial1;
             Serial1.begin(cfg.baudrate);
             __DBGS2T("Serial1 baud %u\n", cfg.baudrate);
-            LoopFunctions::add(Serial2TcpBase::handleSerialDataLoop);
+            LOOP_FUNCTION_ADD(Serial2TcpBase::handleSerialDataLoop);
             break;
         default:
         case Serial2TCP::SerialPortType::SERIAL0:

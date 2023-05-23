@@ -68,7 +68,7 @@ void STK500v1Programmer::begin(Callback_t cleanup)
     }
 
     _readResponseTimeout = _defaultTimeout;
-    LoopFunctions::add(STK500v1Programmer::loopFunction);
+    LOOP_FUNCTION_ADD(STK500v1Programmer::loopFunction);
 
     _flash();
 }

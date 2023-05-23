@@ -91,7 +91,7 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
 
     // singleton
     hlwSensor = this;
-    LoopFunctions::add(Sensor_HLW8012::loop);
+    LOOP_FUNCTION_ADD(Sensor_HLW8012::loop);
     attachInterrupt(digitalPinToInterrupt(_pinCF), Sensor_HLW8012_callbackCF, CHANGE);
     attachInterrupt(digitalPinToInterrupt(_pinCF1), Sensor_HLW8012_callbackCF1, CHANGE);
 }

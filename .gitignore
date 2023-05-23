@@ -98,3 +98,5 @@ lib/KFCWebBuilder/bin/json2php/composer.lock
 lib/KFCWebBuilder/bin/json2php/tests/*
 src/plugins/weather_station/fonts/fontconvert/fontconvert
 piorunnall
+.ipynb_checkpoints/spectrum-checkpoint.ipynb
+spectrum.ipynb

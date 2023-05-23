@@ -55,7 +55,7 @@ void BlindsControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
 {
     _setup();
     MQTT::Client::registerComponent(this);
-    LoopFunctions::add(loopMethod);
+    LOOP_FUNCTION_ADD(loopMethod);
 
     // update states when wifi has been connected
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
@@ -83,7 +83,7 @@ void BlindsControlPlugin::shutdown()
 {
     _stop();
     WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTED, this);
-    LoopFunctions::add(loopMethod);
+    LOOP_FUNCTION_ADD(loopMethod);
     MQTT::Client::unregisterComponent(this);
 }
 

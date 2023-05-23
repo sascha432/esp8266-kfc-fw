@@ -4,7 +4,10 @@
 
 #pragma once
 
-// #ifndef DEBUG_LOOP_FUNCTIONS
+#define DEBUG_LOOP_FUNCTIONS          0
+#define DEBUG_LOOP_FUNCTIONS_MAX_TIME 20
+
+// #if DEBUG_LOOP_FUNCTIONS
 // #define DEBUG_LOOP_FUNCTIONS            0
 // #include <debug_helper_enable.h>
 // #endif
@@ -26,6 +29,18 @@
 #if defined(ESP32) || defined(_MSC_VER)
 bool IRAM_ATTR schedule_function(const std::function<void(void)> &fn);
 void run_scheduled_functions();
+#endif
+
+#if DEBUG_LOOP_FUNCTIONS
+#    define LOOP_FUNCTION_ADD_ARG(callback, arg) LoopFunctions::add(callback, arg, __BASENAME_FILE__, __LINE__)
+#    define LOOP_FUNCTION_ADD(callback)          LoopFunctions::add(callback, __BASENAME_FILE__, __LINE__)
+#    define LOOP_FUNCTIONS_DEBUG_ARGS            , const char *source, uint32_t line
+#    define LOOP_FUNCTIONS_DEBUG_ARGS_PASS       , source, line
+#else
+#    define LOOP_FUNCTION_ADD_ARG(callback, arg) LoopFunctions::add(callback, arg)
+#    define LOOP_FUNCTION_ADD(callback)          LoopFunctions::add(callback)
+#    define LOOP_FUNCTIONS_DEBUG_ARGS
+#    define LOOP_FUNCTIONS_DEBUG_ARGS_PASS
 #endif
 
 class LoopFunctions {
@@ -90,24 +105,28 @@ public:
         Callback callback;
         CallbackPtr callbackPtr;
         bool deleteCallback;
-    };
 
+        #if DEBUG_LOOP_FUNCTIONS
+            String _source;
+            uint32_t _line;
+        #endif
+    };
 
     inline __attribute__((__always_inline__))
     static void clear() {
         _functions.clear();
     }
 
-    static void add(Callback callback, CallbackPtr callbackPtr);  // for lambda functions, use any unique pointer as id
+    static void add(Callback callback, CallbackPtr callbackPtr LOOP_FUNCTIONS_DEBUG_ARGS);  // for lambda functions, use any unique pointer as id
 
     inline __attribute__((__always_inline__))
-    static void add(Callback callback, CallbackId id) {
-        add(callback, static_cast<CallbackPtr>(id));
+    static void add(Callback callback, CallbackId id LOOP_FUNCTIONS_DEBUG_ARGS) {
+        add(callback, static_cast<CallbackPtr>(id) LOOP_FUNCTIONS_DEBUG_ARGS_PASS);
     }
 
     inline __attribute__((__always_inline__))
-    static void add(CallbackPtr callbackPtr) {  // for functon pointers, the address of the function is used as id
-        add(callbackPtr, callbackPtr);
+    static void add(CallbackPtr callbackPtr LOOP_FUNCTIONS_DEBUG_ARGS) {  // for function pointers, the address of the function is used as id
+        add(callbackPtr, callbackPtr LOOP_FUNCTIONS_DEBUG_ARGS_PASS);
     }
 
     inline __attribute__((__always_inline__))
@@ -147,11 +166,15 @@ private:
     static FunctionsVector _functions;
 };
 
-inline void LoopFunctions::add(Callback callback, CallbackPtr callbackPtr)
+inline void LoopFunctions::add(Callback callback, CallbackPtr callbackPtr LOOP_FUNCTIONS_DEBUG_ARGS)
 {
     auto iterator = std::find(_functions.begin(), _functions.end(), callbackPtr);
     if (iterator == _functions.end()) {
         _functions.emplace_back(callback, callbackPtr, false);
+        #if DEBUG_LOOP_FUNCTIONS
+            _functions.back()._source = source;
+            _functions.back()._line = line;
+        #endif
         return;
     }
     iterator->deleteCallback = false;

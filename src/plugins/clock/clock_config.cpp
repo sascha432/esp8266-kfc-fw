@@ -98,6 +98,7 @@ namespace KFCConfigurationClasses {
                 #else
                     enabled(true),
                 #endif
+                method(kDefaultValueFor_method),
                 fading_time(kDefaultValueFor_fading_time),
                 #if IOT_CLOCK_HAVE_POWER_LIMIT
                     power_limit(kDefaultValueFor_power_limit),

@@ -324,6 +324,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT8_BITFIELD_MIN_MAX(dithering, 1, false, true, false, 1);
                 CREATE_UINT8_BITFIELD_MIN_MAX(standby_led, 1, false, true, true, 1);
                 CREATE_UINT8_BITFIELD(enabled, 1);
+                CREATE_UINT8_BITFIELD_MIN_MAX(method, 3, 1/*MIN + 1*/, 3/*MAX - 1*/, 1/*FASTLED*/, 1); // Clock::ShowMethodType
                 CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 6, 0, 60, 10, 1);
                 #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
                     CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 8, 0, 255, 0, 1);

@@ -602,6 +602,15 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             cfg.addRangeValidatorFor_blink_colon_speed(form, true);
         #endif
 
+        auto displayMethodItems = FormUI::Container::List(
+            Clock::ShowMethodType::FASTLED, F("FastLED"),
+            Clock::ShowMethodType::NEOPIXEL_EX, F("NeoPixelEx"),
+            Clock::ShowMethodType::AF_NEOPIXEL, F("Adafruit NeoPixel")
+        );
+
+        form.addObjectGetterSetter(F("dm"), FormGetterSetter(cfg, method));
+        form.addFormUI(F("Display Method"), displayMethodItems);
+
         form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
         form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
 

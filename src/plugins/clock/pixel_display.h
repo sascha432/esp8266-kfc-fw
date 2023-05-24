@@ -731,6 +731,7 @@ namespace Clock {
     #endif
 
     #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) || defined(IOT_LED_MATRIX_OUTPUT_PIN2) || defined(IOT_LED_MATRIX_OUTPUT_PIN3)
+    #    warning using more than one PIN is not well supported by FastLED on leads to wdt timeouts, tested versions 3.4, 3.5.0
     #    define IOT_LED_MATRIX_MULTI_OUTPUT 1
     #    ifndef IOT_LED_MATRIX_OUTPUT_PIN1
     #        define IOT_LED_MATRIX_OUTPUT_PIN1 -1

@@ -88,7 +88,11 @@ void ResetDetector::begin(HardwareSerial *serial, int baud)
             }
             __LDBG_printf("serial=%p begin=%u", serial, baud);
         #endif
-        serial->begin(baud);
+        #if IOT_LED_MATRIX_STANDBY_PIN == 0
+            serial->begin(baud, SERIAL_8N1, SERIAL_TX_ONLY, 1);
+        #else
+            serial->begin(baud, SERIAL_8N1);
+        #endif
     #elif ESP32
         serial->begin(baud);
     #endif

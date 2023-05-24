@@ -48,7 +48,7 @@ namespace Clock {
     template<size_t _PixelOffset, size_t _Rows, size_t _Columns>
     class Types {
     protected:
-        static constexpr size_t kMaxPixelAddress = (_Rows * _Columns) + _PixelOffset;
+        static constexpr size_t kMaxPixelAddress = IOT_CLOCK_NUM_PIXELS + _PixelOffset;//(_Rows * _Columns) + _PixelOffset;
 
     private:
         static constexpr size_t _kCols = _Columns;

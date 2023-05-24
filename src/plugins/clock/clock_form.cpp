@@ -496,35 +496,75 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
                 return false;
             }));
 
-            form.addObjectGetterSetter(F("mx_px"), FormGetterSetter(cfg.matrix, pixels));
-            form.addFormUI(F("Number Of Pixels"), FormUI::ReadOnlyAttribute());
-            // cfg.matrix.addRangeValidatorFor_pixels(form);
-
-            form.addObjectGetterSetter(F("mx_ofs"), FormGetterSetter(cfg.matrix, offset));
-            form.addFormUI(F("First Pixel Offset"));
-            form.addValidator(FormUI::Validator::Range(0, _display.getMaxNumPixels()));
-            validator = &form.addValidator(FormUI::Validator::CallbackTemplate<uint16_t>([&cfg, &validator, this](uint16_t offset, Field::BaseField &field) {
-                auto rows = field.getForm().getField(F("mx_rows"))->getValue().toInt();
-                auto cols = field.getForm().getField(F("mx_cols"))->getValue().toInt();
-                if ((rows * cols) + offset <= static_cast<long>(_display.getMaxNumPixels())) {
-                    return true;
-                }
-                validator->setMessage(PrintString(F("offset + (rows * cols) = %u + (%u * %u) = %u exceeds exceeds maximum number of pixels (%u)"),
-                    static_cast<unsigned>(offset),
-                    static_cast<unsigned>(rows),
-                    static_cast<unsigned>(cols),
-                    static_cast<unsigned>((rows * cols) + offset),
-                    static_cast<unsigned>(_display.getMaxNumPixels()))
-                );
-                return false;
-            }));
-
-
             form.addObjectGetterSetter(F("mx_rt"), FormGetterSetter(cfg.matrix, rotate));
             form.addFormUI(F("90\xc2\xb0 Rotation"), FormUI::BoolItems());
 
             form.addObjectGetterSetter(F("mx_il"), FormGetterSetter(cfg.matrix, interleaved));
             form.addFormUI(F("Interleaved"), FormUI::BoolItems());
+
+            form.addObjectGetterSetter(F("mx_px"), FormGetterSetter(cfg.matrix, pixels));
+            form.addFormUI(F("Maximum Number Of Pixels"), FormUI::ReadOnlyAttribute());
+            // cfg.matrix.addRangeValidatorFor_pixels(form);
+
+            form.addObjectGetterSetter(F("mx_px0"), FormGetterSetter(cfg.matrix, pixels0));
+            form.addFormUI(F("Segment 1 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN)));
+            form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels0, cfg.matrix.kMaxValueFor_pixels0));
+
+            form.addObjectGetterSetter(F("mx_ofs0"), FormGetterSetter(cfg.matrix, offset0));
+            form.addFormUI(F("Segment 1 Offset"));
+            form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset0, cfg.matrix.kMaxValueFor_offset0));
+
+            #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+
+                form.addObjectGetterSetter(F("mx_px1"), FormGetterSetter(cfg.matrix, pixels1));
+                form.addFormUI(F("Segment 2 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN1)));
+                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels1, cfg.matrix.kMaxValueFor_pixels1));
+
+                form.addObjectGetterSetter(F("mx_ofs1"), FormGetterSetter(cfg.matrix, offset1));
+                form.addFormUI(F("Segment 2 Offset"));
+                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset1, cfg.matrix.kMaxValueFor_offset1));
+
+            #endif
+
+            #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+
+                form.addObjectGetterSetter(F("mx_px2"), FormGetterSetter(cfg.matrix, pixels2));
+                form.addFormUI(F("Segment 3 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN2)));
+                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels2, cfg.matrix.kMaxValueFor_pixels2));
+
+                form.addObjectGetterSetter(F("mx_ofs2"), FormGetterSetter(cfg.matrix, offset2));
+                form.addFormUI(F("Segment 3 Offset"));
+                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset2, cfg.matrix.kMaxValueFor_offset2));
+
+            #endif
+
+            #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+
+                form.addObjectGetterSetter(F("mx_px3"), FormGetterSetter(cfg.matrix, pixels3));
+                form.addFormUI(F("Segment 3 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN3)));
+                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels3, cfg.matrix.kMaxValueFor_pixels3));
+
+                form.addObjectGetterSetter(F("mx_ofs3"), FormGetterSetter(cfg.matrix, offset3));
+                form.addFormUI(F("Segment 3 Offset"));
+                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset3, cfg.matrix.kMaxValueFor_offset3));
+
+            #endif
+
+            // validator = &form.addValidator(FormUI::Validator::CallbackTemplate<uint16_t>([&cfg, &validator, this](uint16_t offset, Field::BaseField &field) {
+            //     auto rows = field.getForm().getField(F("mx_rows"))->getValue().toInt();
+            //     auto cols = field.getForm().getField(F("mx_cols"))->getValue().toInt();
+            //     if ((rows * cols) + offset <= static_cast<long>(_display.getMaxNumPixels())) {
+            //         return true;
+            //     }
+            //     validator->setMessage(PrintString(F("offset + (rows * cols) = %u + (%u * %u) = %u exceeds exceeds maximum number of pixels (%u)"),
+            //         static_cast<unsigned>(offset),
+            //         static_cast<unsigned>(rows),
+            //         static_cast<unsigned>(cols),
+            //         static_cast<unsigned>((rows * cols) + offset),
+            //         static_cast<unsigned>(_display.getMaxNumPixels()))
+            //     );
+            //     return false;
+            // }));
 
             mainGroup.end();
 

@@ -80,6 +80,7 @@ ClockPlugin::ClockPlugin() :
     _isEnabled(false),
     _forceUpdate(false),
     _isRunning(false),
+    _display(),
     __color(0, 0, 0xff),
     _lastUpdateTime(0),
     _tempOverride(0),
@@ -568,13 +569,13 @@ void ClockPlugin::getStatus(Print &output)
     #else
         output.printf_P(PSTR(HTML_S(br) "Total pixels %u, digits pixels %u"), Clock::DisplayType::kNumPixels, Clock::SevenSegment::kNumPixelsDigits);
     #endif
+
     switch(static_cast<Clock::ShowMethodType>(getNeopixelShowMethodInt())) {
         case Clock::ShowMethodType::FASTLED:
-            output.printf_P(PSTR(", FastLED %.1ffps"), _fps);
+            output.printf_P(PSTR(", FastLED %u.%u.%u, %.1ffps, dithering %s"), FASTLED_VERSION / 1000000, (FASTLED_VERSION / 1000) % 1000, FASTLED_VERSION % 1000,_fps, _display.getDither() ? PSTR("on") : PSTR("off"));
             #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
                 extern uint32_t _frame_cnt;
                 extern uint32_t _retry_cnt;
-                // TODO shows weird values
                 if (_retry_cnt) {
                     output.printf_P(PSTR(", aborted frames %u/%u (%.2f%%)"), _retry_cnt, _frame_cnt, !_frame_cnt ? NAN : (_retry_cnt * 100 / static_cast<float>(_frame_cnt)));
                 }
@@ -729,16 +730,34 @@ void ClockPlugin::readConfig(bool setup)
     #endif
     _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
 
-    _display.setDither(_config.dithering);
+    // set configured segments
+    _display.updateSegments(_config.matrix.pixels0, _config.matrix.offset0, _config.matrix.pixels1, _config.matrix.offset1, _config.matrix.pixels2, _config.matrix.offset2, _config.matrix.pixels3, _config.matrix.offset3);
 
-    if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved, _config.matrix.offset)) {
+    // update matrix configuration
+    if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved)) {
         __DBG_printf("_display.setParams() failed");
     }
 
+    _display.setDither(_config.dithering);
+
     #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         __LDBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
-        FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(, &calcPowerFunction));
-        FastLED.setPowerConsumptionInMilliwattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+        #if FASTLED_VERSION >= 3005000
+            if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
+                FastLED.m_pPowerFunc = nullptr;
+            }
+            else {
+                FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit));
+            }
+        #else
+            if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
+                FastLED.setMaxPowerInMilliWatts(0);
+            }
+            else {
+                FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(, &calcPowerFunction));
+            }
+            FastLED.setPowerConsumptionInMilliwattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+        #endif
     #endif
 
     // reset temperature protection
@@ -1042,23 +1061,21 @@ void ClockPlugin::_loop()
 
     _display.show();
 
-    #if ESP8266
-        if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
-            // give system time to process the requests
-            // if the cpu is overloaded, the animation will get very choppy and the web server will be slow
-            uint32_t count = WebServer::Plugin::getRunningRequestsAndResponses();
-            delay(count > 2 ? 50 : count > 1 ? 25 : 5);
+    if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
+        // give system time to process the requests
+        // if the cpu is overloaded, the animation will get very choppy and the web server will be slow
+        uint32_t count = WebServer::Plugin::getRunningRequestsAndResponses();
+        delay(count > 2 ? 50 : count > 1 ? 25 : 5);
 
-            #if DEBUG_IOT_CLOCK
-                static uint32_t lastValue = 0;
-                uint32_t currentValue;
-                if ((currentValue = WebServer::Plugin::getRunningRequestsAndResponsesUint32()) != lastValue) {
-                    lastValue = currentValue;
-                    __DBG_printf("requests=%u responses=%u sum=%u _fps=%.1f fps=%u", WebServer::Plugin::getRunningRequests(), WebServer::Plugin::getRunningResponses(), count, _fps, FastLED.getFPS());
-                }
-            #endif
-        }
-    #endif
+        #if DEBUG_IOT_CLOCK
+            static uint32_t lastValue = 0;
+            uint32_t currentValue;
+            if ((currentValue = WebServer::Plugin::getRunningRequestsAndResponsesUint32()) != lastValue) {
+                lastValue = currentValue;
+                __DBG_printf("requests=%u responses=%u sum=%u _fps=%.1f fps=%u", WebServer::Plugin::getRunningRequests(), WebServer::Plugin::getRunningResponses(), count, _fps, FastLED.getFPS());
+            }
+        #endif
+    }
 }
 
 void ClockPluginClearPixels()

@@ -416,13 +416,17 @@ public:
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
     public:
-        static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
+        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+            static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
+        #endif
         static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 
     private:
         String _getPowerLevelStr();
         void _updatePowerLevelWebUI();
-        uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
+        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+            uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
+        #endif
         void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
         void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
         void _calcPowerLevel();
@@ -728,10 +732,14 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
 
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
-    inline uint8_t ClockPlugin::calcPowerFunction(uint8_t scale, uint32_t data)
-    {
-        return getInstance()._calcPowerFunction(scale, data);
-    }
+    #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+
+        inline uint8_t ClockPlugin::calcPowerFunction(uint8_t scale, uint32_t data)
+        {
+            return getInstance()._calcPowerFunction(scale, data);
+        }
+
+    #endif
 
     inline void ClockPlugin::webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
     {

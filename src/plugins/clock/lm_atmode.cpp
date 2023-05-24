@@ -430,15 +430,14 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>,<offset>
         else if (args.startsWithIgnoreCase(0, F("map"))) {
-            if (args.size() >= 7) {
+            if (args.size() >= 6) {
                 if (!_display.setParams(
                     args.toInt(1, _display.getRows()),
                     args.toInt(2, _display.getCols()),
                     args.isTrue(3, _display.isRowsReversed()),
                     args.isTrue(4, _display.isColsReversed()),
                     args.isTrue(5, _display.isRotated()),
-                    args.isTrue(6, _display.isInterleaved()),
-                    args.toInt(7, _display.getOffset())
+                    args.isTrue(6, _display.isInterleaved())
                 )) {
                     args.print(F("failed to set parameters"));
                 }

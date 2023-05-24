@@ -262,10 +262,17 @@ namespace KFCConfigurationClasses {
             #if IOT_LED_MATRIX_CONFIGURABLE
             struct __attribute__packed__ MatrixConfigType {
                 using Type = MatrixConfigType;
-                CREATE_UINT16_BITFIELD_MIN_MAX(rows, 16, 1, 0xffff, IOT_LED_MATRIX_ROWS, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(cols, 16, 1, 0xffff, IOT_LED_MATRIX_COLS, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(pixels, 16, 1, 0xffff, IOT_CLOCK_NUM_PIXELS, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(offset, 16, 1, 0xffff, IOT_LED_MATRIX_PIXEL_OFFSET, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(rows, 16, 1, 0xffff, IOT_LED_MATRIX_ROWS, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(cols, 16, 1, 0xffff, IOT_LED_MATRIX_COLS, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(pixels, 16, 1, 0xffff, IOT_CLOCK_NUM_PIXELS, 1); // all pixels
+                CREATE_UINT32_BITFIELD_MIN_MAX(pixels0, 12, 0, 1024, std::min(1024, IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS), 1); // segment 1
+                CREATE_UINT32_BITFIELD_MIN_MAX(offset0, 12, 0, 1024, IOT_LED_MATRIX_PIXEL_OFFSET, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(pixels1, 12, 0, 1024, 0, 1); // segment 2
+                CREATE_UINT32_BITFIELD_MIN_MAX(offset1, 12, 0, 1024, 0, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(pixels2, 12, 0, 1024, 0, 1); // segment 3
+                CREATE_UINT32_BITFIELD_MIN_MAX(offset2, 12, 0, 1024, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(pixels3, 12, 0, 1024, 0, 1); // segment 4
+                CREATE_UINT16_BITFIELD_MIN_MAX(offset3, 12, 0, 1024, 0, 1);
                 CREATE_UINT8_BITFIELD_MIN_MAX(reverse_rows, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, 1);
                 CREATE_UINT8_BITFIELD_MIN_MAX(reverse_cols, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_COLS, 1);
                 CREATE_UINT8_BITFIELD_MIN_MAX(rotate, 1, false, true, IOT_LED_MATRIX_OPTS_ROTATE, 1);
@@ -274,7 +281,14 @@ namespace KFCConfigurationClasses {
                     uint16_t _rows = kDefaultValueFor_rows,
                     uint16_t _cols = kDefaultValueFor_cols,
                     uint16_t _pixels = kDefaultValueFor_pixels,
-                    uint16_t _offset = kDefaultValueFor_offset,
+                    uint16_t _pixels0 = kDefaultValueFor_pixels0,
+                    uint16_t _offset0 = kDefaultValueFor_offset0,
+                    uint16_t _pixels1 = kDefaultValueFor_pixels1,
+                    uint16_t _offset1 = kDefaultValueFor_offset1,
+                    uint16_t _pixels2 = kDefaultValueFor_pixels2,
+                    uint16_t _offset2 = kDefaultValueFor_offset2,
+                    uint16_t _pixels3 = kDefaultValueFor_pixels3,
+                    uint16_t _offset3 = kDefaultValueFor_offset3,
                     bool _reverse_rows = kDefaultValueFor_reverse_rows,
                     bool _reverse_cols = kDefaultValueFor_reverse_cols,
                     bool _rotate = kDefaultValueFor_rotate,
@@ -283,7 +297,14 @@ namespace KFCConfigurationClasses {
                     rows(_rows),
                     cols(_cols),
                     pixels(_pixels),
-                    offset(_offset),
+                    pixels0(_pixels0),
+                    offset0(_offset0),
+                    pixels1(_pixels1),
+                    offset1(_offset1),
+                    pixels2(_pixels2),
+                    offset2(_offset2),
+                    pixels3(_pixels3),
+                    offset3(_offset3),
                     reverse_rows(_reverse_rows),
                     reverse_cols(_reverse_cols),
                     rotate(_rotate),

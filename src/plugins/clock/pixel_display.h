@@ -121,7 +121,7 @@ namespace Clock {
             return kPixelOffset;
         }
 
-        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType offset) {
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved) {
             return false;
         }
 
@@ -368,12 +368,9 @@ namespace Clock {
             return _offset;
         }
 
-        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType offset)
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved)
         {
-            if (offset >= kMaxPixelAddress) {
-                return false;
-            }
-            if (static_cast<size_t>((rows * cols) + offset) > kMaxPixelAddress) {
+            if (static_cast<size_t>((rows * cols) + _PixelOffset) > kMaxPixelAddress) {
                 return false;
             }
             _rows = rows;
@@ -382,7 +379,7 @@ namespace Clock {
             _reverseColumns = colsReversed;
             _rotate = rotated;
             _interleaved = interleaved;
-            _offset = offset;
+            __DBG_printf("size=%u ofs=%u max=%u", size(), _PixelOffset, kMaxPixelAddress);
             return true;
         }
 
@@ -533,8 +530,8 @@ namespace Clock {
         {
         }
 
-        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType offset) {
-            if (!PixelMappingType::setParams(rows, cols, rowsReversed, colsReversed, rotated, interleaved, offset)) {
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved) {
+            if (!PixelMappingType::setParams(rows, cols, rowsReversed, colsReversed, rotated, interleaved)) {
                 return true;
             }
             _pixels = __pixels.data() + getOffset();
@@ -733,6 +730,25 @@ namespace Clock {
         #define FASTLED_LED_CONTROLLER NEOPIXEL
     #endif
 
+    #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) || defined(IOT_LED_MATRIX_OUTPUT_PIN2) || defined(IOT_LED_MATRIX_OUTPUT_PIN3)
+    #    define IOT_LED_MATRIX_MULTI_OUTPUT 1
+    #    ifndef IOT_LED_MATRIX_OUTPUT_PIN1
+    #        define IOT_LED_MATRIX_OUTPUT_PIN1 -1
+    #    endif
+    #    ifndef IOT_LED_MATRIX_OUTPUT_PIN2
+    #        define IOT_LED_MATRIX_OUTPUT_PIN2 -1
+    #    endif
+    #    ifndef IOT_LED_MATRIX_OUTPUT_PIN3
+    #        define IOT_LED_MATRIX_OUTPUT_PIN3 -1
+    #    endif
+    #    if IOT_LED_MATRIX_OUTPUT_PIN1 == -1 && (IOT_LED_MATRIX_OUTPUT_PIN2 != -1 || IOT_LED_MATRIX_OUTPUT_PIN3 != -1)
+    #        #error if PIN2 or PIN3 are defined, PIN1 must be defined as well
+    #    endif
+    #    if IOT_LED_MATRIX_OUTPUT_PIN2 == -1 && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+    #        #error if PIN3 is defined, PIN2 must be defined as well
+    #    endif
+    #endif
+
     // FastLED display
 
     template<typename _PixelDisplayBufferType>
@@ -754,79 +770,206 @@ namespace Clock {
         using PixelBufferType::isInterleaved;
         using PixelBufferType::getOffset;
         using PixelBufferType::setParams;
-        using PixelBufferType::size;
         using PixelBufferType::getRows;
         using PixelBufferType::getCols;
+        using PixelBufferType::size;
 
     public:
+
+        // all segments need to be added, the size can be changed later
         PixelDisplay() :
-            // TODO add dynamic segments for 4 controllers
-            _controller(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN>(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
-            #if IOT_LED_MATRIX_OUTPUT_PIN1
-                , _controller1(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN1>(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
-            #endif
-            #if IOT_LED_MATRIX_OUTPUT_PIN2
-                , _controller2(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN2>(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
-            #endif
-            #if IOT_LED_MATRIX_OUTPUT_PIN3
-                , _controller3(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN3>(__pixels.data(), __pixels.size(), _PixelDisplayBufferType::kPixelOffset))
-            #endif
+            _emptyPixel(0),
+            _controller(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN>(&_emptyPixel, 1, _PixelDisplayBufferType::kPixelOffset))
         {
             setDither(false);
+            #if IOT_LED_MATRIX_MULTI_OUTPUT
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+                    FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN1>(&_emptyPixel, 1, _PixelDisplayBufferType::kPixelOffset);
+                #endif
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+                    FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN2>(&_emptyPixel, 1, _PixelDisplayBufferType::kPixelOffset);
+                #endif
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+                    FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN3>(&_emptyPixel, 1, _PixelDisplayBufferType::kPixelOffset);
+                #endif
+            #endif
+        }
+
+        // updates the size of the segments
+        void updateSegments(uint16_t num0, uint16_t ofs0, uint16_t num1, uint16_t ofs1, uint16_t num2, uint16_t ofs2, uint16_t num3, uint16_t ofs3)
+        {
+            FastLED.clear(true);
+
+            auto ptr = &_controller;
+            __DBG_printf("segment 0 ptr=%p ofs=%u num=%u", ptr, ofs0, num0);
+            if (num0) {
+                ptr->setLeds(__pixels.data() + ofs0, num0);
+            }
+            else {
+                ptr->setLeds(&_emptyPixel, 0);
+            }
+            #if IOT_LED_MATRIX_MULTI_OUTPUT
+                for(;;) {
+                    if (!(ptr = ptr->next())) {
+                        break;
+                    }
+                    __DBG_printf("segment 1 ptr=%p ofs=%u num=%u", ptr, ofs1, num1);
+                    if (num1 || IOT_LED_MATRIX_OUTPUT_PIN1 == -1) {
+                        ptr->setLeds(__pixels.data() + ofs1, num1);
+                    }
+                    else {
+                        ptr->setLeds(&_emptyPixel, 1);
+                    }
+                    if (!(ptr = ptr->next())) {
+                        break;
+                    }
+                    __DBG_printf("segment 2 ptr=%p ofs=%u num=%u", ptr, ofs2, num2);
+                    if (num2 || IOT_LED_MATRIX_OUTPUT_PIN2 == -1) {
+                        ptr->setLeds(__pixels.data() + ofs2, num2);
+                    }
+                    else {
+                        ptr->setLeds(&_emptyPixel, 1);
+                    }
+                    if (!(ptr = ptr->next())) {
+                        break;
+                    }
+                    __DBG_printf("segment 3 ptr=%p ofs=%u num=%u", ptr, ofs3, num3);
+                    if (num3 || IOT_LED_MATRIX_OUTPUT_PIN3 == -1) {
+                        ptr->setLeds(__pixels.data() + ofs3, num3);
+                    }
+                    else {
+                        ptr->setLeds(&_emptyPixel, 1);
+                    }
+                    break;
+                }
+            #endif
         }
 
         inline __attribute__((__always_inline__))
-        void setDither(bool enable) {
+        void setDither(bool enable)
+        {
             FastLED.setDither(enable ? BINARY_DITHER : DISABLE_DITHER);
         }
 
-        void reset() {
+        void reset()
+        {
             PixelBufferType::reset();
             show();
         }
 
         inline __attribute__((__always_inline__))
-        void setBrightness(uint8_t brightness) {
+        void setBrightness(uint8_t brightness)
+        {
             FastLED.setBrightness(brightness);
         }
 
         inline __attribute__((__always_inline__))
-        void show() {
+        void show()
+        {
             show(FastLED.getBrightness());
         }
 
-        void showRepeat(uint8_t num, uint32_t delayMillis = 1) {
+        void showRepeat(uint8_t num, uint32_t delayMillis = 1)
+        {
             while(num--) {
                 show(FastLED.getBrightness());
                 ::delay(delayMillis);
             }
         }
 
-        void show(uint8_t brightness) {
+        void show(uint8_t brightness)
+        {
             switch(getNeopixelShowMethodType()) {
-                case Clock::ShowMethodType::FASTLED:
+                case Clock::ShowMethodType::FASTLED: {
                     FastLED.show(brightness);
-                    break;
-                case Clock::ShowMethodType::NEOPIXEL:
-                    //TODO add controller1-3
-                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), getNumBytes(), brightness, NeoPixelEx::Context::validate(nullptr));
-                    break;
-                case Clock::ShowMethodType::NEOPIXEL_REPEAT:
-                    for(uint8_t i = 0; i < 5; i++) {
-                        //TODO add controller1-3
-                        if (NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_pixels), getNumBytes(), brightness, NeoPixelEx::Context::validate(nullptr))) {
+                }
+                break;
+                case Clock::ShowMethodType::NEOPIXEL: {
+                    auto ptr = &_controller;
+                    uint8_t i = 0;
+                    while(ptr) {
+                        if (ptr->leds() == &_emptyPixel) {
                             break;
                         }
-                        ::delay(1);
+                        switch(i) {
+                            case 0:
+                                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                break;
+                            #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+                                case 1:
+                                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN1, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                    break;
+                            #endif
+                            #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+                                case 2:
+                                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN2, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                    break;
+                            #endif
+                            #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+                                case 3:
+                                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN3, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                    break;
+                            #endif
+                        }
+                        ptr = ptr->next();
+                        i++;
                     }
-                    break;
+                }
+                break;
+                case Clock::ShowMethodType::NEOPIXEL_REPEAT: {
+                    auto ptr = &_controller;
+                    uint8_t j = 0;
+                    while(ptr) {
+                        for(uint8_t i = 0; i < 5; i++) {
+                            if (ptr->leds() == &_emptyPixel) {
+                                break;
+                            }
+                            bool result;
+                            switch(j) {
+                                case 0:
+                                    result = NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                    break;
+                                #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+                                    case 1:
+                                        result = NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN1, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                        break;
+                                #endif
+                                #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+                                    case 2:
+                                        result = NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN2, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                        break;
+                                #endif
+                                #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+                                    case 3:
+                                        result = NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN3, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                        break;
+                                #endif
+                                default:
+                                    result = true;
+                                    break;
+                            }
+                            if (result) {
+                                break;
+                            }
+                            ::delay(1);
+                        }
+                        ptr = ptr->next();
+                    }
+                }
+                break;
                 default:
                     break;
             }
         }
 
-        void delay(unsigned long ms) {
-            if ((getNeopixelShowMethodType() == Clock::ShowMethodType::FASTLED) && (_controller.getDither() != DISABLE_DITHER) && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
+        bool getDither() const
+        {
+            return (_controller.getDither() != DISABLE_DITHER);
+        }
+
+        void delay(unsigned long ms)
+        {
+            if ((getNeopixelShowMethodType() == Clock::ShowMethodType::FASTLED) && getDither() && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
                 // use FastLED.delay for dithering
                 FastLED.delay(ms);
             }
@@ -835,22 +978,15 @@ namespace Clock {
             }
         }
 
-        inline __attribute__((__always_inline__))
-        constexpr size_t getNumBytes() const {
-            return size() * 3;
-        }
+        // inline __attribute__((__always_inline__))
+        // constexpr size_t getNumBytes() const
+        // {
+        //     return size() * 3;
+        // }
 
     protected:
+        CRGB _emptyPixel;
         CLEDController &_controller;
-        #if IOT_LED_MATRIX_OUTPUT_PIN1
-            CLEDController &_controller1;
-        #endif
-        #if IOT_LED_MATRIX_OUTPUT_PIN2
-            CLEDController &_controller2;
-        #endif
-        #if IOT_LED_MATRIX_OUTPUT_PIN3
-            CLEDController &_controller3;
-        #endif
     };
 
 }

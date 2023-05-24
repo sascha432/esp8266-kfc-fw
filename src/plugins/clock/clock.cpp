@@ -570,9 +570,13 @@ void ClockPlugin::getStatus(Print &output)
         output.printf_P(PSTR(HTML_S(br) "Total pixels %u, digits pixels %u"), Clock::DisplayType::kNumPixels, Clock::SevenSegment::kNumPixelsDigits);
     #endif
 
+    if (_display.getNumSegments() > 1) {
+        output.printf_P(PSTR(", segments %u"), _display.getNumSegments());
+    }
+
     switch(static_cast<Clock::ShowMethodType>(getNeopixelShowMethodInt())) {
         case Clock::ShowMethodType::FASTLED:
-            output.printf_P(PSTR(", FastLED %u.%u.%u, %.1ffps, dithering %s"), FASTLED_VERSION / 1000000, (FASTLED_VERSION / 1000) % 1000, FASTLED_VERSION % 1000,_fps, _display.getDither() ? PSTR("on") : PSTR("off"));
+            output.printf_P(PSTR(", FastLED %u.%u.%u, %.1ffps, dithering %s"), FASTLED_VERSION / 1000000, (FASTLED_VERSION / 1000) % 1000, FASTLED_VERSION % 1000, _fps, _display.getDither() ? PSTR("on") : PSTR("off"));
             #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
                 extern uint32_t _frame_cnt;
                 extern uint32_t _retry_cnt;
@@ -581,17 +585,19 @@ void ClockPlugin::getStatus(Print &output)
                 }
             #endif
             break;
-        case Clock::ShowMethodType::NEOPIXEL:
-        case Clock::ShowMethodType::NEOPIXEL_REPEAT: {
+        case Clock::ShowMethodType::NEOPIXEL_EX: {
             #if NEOPIXEL_HAVE_STATS
                     auto &stats = NeoPixelEx::Context::validate(nullptr).getStats();
-                    output.printf_P(PSTR(", NeoPixel %dfps, aborted frames %u/%u (%.2f%%)"), stats.getFps(), stats.getAbortedFrames(), stats.getFrames(), stats.getFrames() ? (stats.getAbortedFrames() * 100.0 / stats.getFrames()) : NAN);
+                    output.printf_P(PSTR(", NeoPixelEx %dfps, aborted frames %u/%u (%.2f%%)"), stats.getFps(), stats.getAbortedFrames(), stats.getFrames(), stats.getFrames() ? (stats.getAbortedFrames() * 100.0 / stats.getFrames()) : NAN);
                     if (stats.getTime() > 10000) {
                         stats.clear();
                     }
                 #else
                     output.printf_P(PSTR(", NeoPixel"));
                 #endif
+            } break;
+        case Clock::ShowMethodType::AF_NEOPIXEL: {
+                output.printf_P(PSTR(", Adafruit NeoPixel"));
             } break;
         default:
             break;
@@ -729,6 +735,8 @@ void ClockPlugin::readConfig(bool setup)
         }
     #endif
     _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
+
+    _method = static_cast<Clock::ShowMethodType>(_config.method);
 
     // set configured segments
     _display.updateSegments(_config.matrix.pixels0, _config.matrix.offset0, _config.matrix.pixels1, _config.matrix.offset1, _config.matrix.pixels2, _config.matrix.offset2, _config.matrix.pixels3, _config.matrix.offset3);

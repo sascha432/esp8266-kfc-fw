@@ -297,17 +297,17 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
         }
-        // met[hod][,<fastled|neopixel|none|toggle>]
+        // met[hod][,<fastled|neoex|neo|none|toggle>]
         // +lmc=method,tog
         else if (args.startsWithIgnoreCase(0, F("met"))) {
             if (args.startsWithIgnoreCase(1, F("fast"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::FASTLED);
             }
-            else if (args.startsWithIgnoreCase(1, F("neo"))) {
-                ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL);
+            else if (args.startsWithIgnoreCase(1, F("neoex"))) {
+                ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL_EX);
             }
-            else if (args.startsWithIgnoreCase(1, F("neo_rep"))) {
-                ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL_REPEAT);
+            else if (args.startsWithIgnoreCase(1, F("neo"))) {
+                ClockPlugin::setShowMethod(Clock::ShowMethodType::AF_NEOPIXEL);
             }
             else if (args.startsWithIgnoreCase(1, F("none"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::NONE);
@@ -576,10 +576,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             auto range = args.toRange(1, 0, _display.size() - 1, PrintString(F("0,1")));
 
             if (_display.getRows() > 1) {
-                args.print(F("Matrix %ux%u"), _display.getCols(), _display.getRows());
+                args.print(F("Matrix %ux%u, segments=%u"), _display.getCols(), _display.getRows(), _display.getNumSegments());
             }
             else {
-                args.print(F("Strip, %u pixels"), _display.getCols() * _display.getRows());
+                args.print(F("Strip, %u pixels, segments=%u"), _display.size(), _display.getNumSegments());
             }
             // <set>,[<any|*>[,<range>,<#color>]
             if (args.equalsIgnoreCase(0, F("set"))) {

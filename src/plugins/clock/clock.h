@@ -19,6 +19,7 @@
 #if IOT_LED_MATRIX_HAVE_SSD1306
 #    include <Adafruit_SSD1306.h>
 #endif
+#include <Adafruit_NeoPixelEx.h>
 
 namespace WebServer {
     class AsyncUpdateWebHandler;
@@ -1083,10 +1084,10 @@ inline const __FlashStringHelper *ClockPlugin::getShowMethodStr()
             return F("None");
         case Clock::ShowMethodType::FASTLED:
             return F("FastLED");
-        case Clock::ShowMethodType::NEOPIXEL:
-            return F("NeoPixel");
-        case Clock::ShowMethodType::NEOPIXEL_REPEAT:
-            return F("NeoPixelRepeat");
+        case Clock::ShowMethodType::NEOPIXEL_EX:
+            return F("NeoPixelEx");
+        case Clock::ShowMethodType::AF_NEOPIXEL:
+            return F("Adafruit NeoPixel");
         default:
             break;
     }

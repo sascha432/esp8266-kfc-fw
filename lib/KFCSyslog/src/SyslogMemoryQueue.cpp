@@ -97,16 +97,16 @@ bool SyslogMemoryQueue::_isAvailable() const
     return _timer == 0 && _items.empty() == false;
 }
 
-const SyslogQueue::Item &SyslogMemoryQueue::get()
+const SyslogQueue::Item *SyslogMemoryQueue::get()
 {
     for(auto &item: _items) {
         if (item.try_lock()) {
             managerQueueSize(_items.size(), false);
-            return item;
+            return &item;
         }
     }
-    assert(false);
-    return _items.at(0);
+    __DBG_panic("size=%u", _items.size());
+    return nullptr;
 }
 
 void SyslogMemoryQueue::remove(uint32_t id, bool success)

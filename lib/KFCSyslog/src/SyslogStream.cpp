@@ -10,9 +10,9 @@
 #include "SyslogStream.h"
 
 #if DEBUG_SYSLOG
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 // ------------------------------------------------------------------------
@@ -47,7 +47,11 @@ void SyslogStream::deliverQueue()
 {
     _startMillis = _timeout + millis();
     while(millis() < _startMillis && !_syslog.isSending() && _syslog._queue.isAvailable()) {
-        _syslog.transmit(_syslog._queue.get());
+        auto item = _syslog._queue.get();
+        if (!item) {
+            break;
+        }
+        _syslog.transmit(*item);
 	}
 }
 

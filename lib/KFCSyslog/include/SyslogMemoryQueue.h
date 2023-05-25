@@ -18,7 +18,7 @@ public:
     SyslogMemoryQueue(SyslogQueueManager &manager, size_t maxSize);
 
     virtual bool isAvailable() override;
-    virtual const Item &get() override;
+    virtual const Item *get() override;
     virtual uint32_t add(const String &message) override;
     virtual size_t size() const override;
     virtual void remove(uint32_t id, bool success);

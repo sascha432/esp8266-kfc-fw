@@ -177,7 +177,7 @@ public:
 
     // get one item from the queue
     // isAvailable() must be checked before
-    virtual const Item &get() = 0;
+    virtual const Item *get() = 0;
 
     // remove item after it has been delivered
     virtual void remove(uint32_t id, bool success) = 0;

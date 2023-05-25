@@ -152,6 +152,7 @@ void VisualizerAnimation::_parseUdp()
             break;
         }
         if (size >= 128) {
+            // video data is sent in big chunks
             VideoHeaderType header;
 
             if (_udp.readBytes(header, header.size()) != header.size()) {
@@ -194,13 +195,14 @@ void VisualizerAnimation::_parseUdp()
             }
         }
         else if (size == kVisualizerPacketSize / 4) {
-            // half the size, just double all bytes
+            // 1/4 of the size, just quadruple all bytes
             for(int i = 0; i < kVisualizerPacketSize; i++) {
                 auto data = _udp.read();
                 if (data == -1) {
                     std::fill(_storedData.begin() + i, _storedData.end(), 0);
                     break;
                 }
+                // quadruple data
                 _storedData[i++] = data;
                 _storedData[i++] = data;
                 _storedData[i++] = data;
@@ -215,12 +217,13 @@ void VisualizerAnimation::_parseUdp()
                     std::fill(_storedData.begin() + i, _storedData.end(), 0);
                     break;
                 }
+                // double data
                 _storedData[i++] = data;
                 _storedData[i] = data;
             }
         }
         else if (size == kVisualizerPacketSize * 2) {
-            // double the size, take average of 2 values
+            // double the size, take the peak of 2 values
             uint8_t buffer[2];
             for(int i = 0; i < kVisualizerPacketSize; i++) {
                 auto len = _udp.readBytes(buffer, 2);
@@ -228,10 +231,11 @@ void VisualizerAnimation::_parseUdp()
                     std::fill(_storedData.begin() + i, _storedData.end(), 0);
                     break;
                 }
-                _storedData[i] = (static_cast<int>(buffer[0]) + static_cast<int>(buffer[1])) / 2;
+                _storedData[i] = std::max<int>(buffer[0], buffer[1]); // peak value
             }
         }
         else if (size == 1) {
+            // single value, fill the entire spectrum with it
             auto data = _udp.read();
             if (data == -1) {
                 _storedData.fill(0);
@@ -250,10 +254,13 @@ void VisualizerAnimation::_parseUdp()
         uint8_t i = 0;
         for(uint8_t &value: _storedData) {
             value = std::clamp<int16_t>(value - 1, 0, kVisualizerMaxPacketValue); // change values from 1-255 to 0-254
+            // TODO loudness and spectrum (value) are not linear. the logarithmic scale of "value" might compensate enough to calculate the loudness this way
+            // low frequencies might still add too much
+            // this might improve the loudness value https://community.sw.siemens.com/servlet/rtaImage?eid=ka64O000000gPzq&feoid=00N4O000006Yxpf&refid=0EM4O000001130J
             loudness += value;
             _storedPeaks[i++].add(value, timeMillis);
         }
-        loudness /= _storedData.size();
+        loudness /= _storedData.size(); // TODO loudness is not linear
         if (loudness != _storedLoudness) {
             _storedLoudness = loudness;
         }

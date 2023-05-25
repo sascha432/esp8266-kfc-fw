@@ -1030,6 +1030,7 @@ inline void ClockPlugin::_updateBrightnessSettings()
 
 inline void ClockPlugin::_reset()
 {
+    // turn off all LEDs during restart or a crash
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
         pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);

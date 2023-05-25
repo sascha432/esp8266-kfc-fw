@@ -91,7 +91,7 @@ ClockPlugin::ClockPlugin() :
     _targetBrightness(0),
     _animation(nullptr),
     _blendAnimation(nullptr),
-    _method(Clock::ShowMethodType::FASTLED)
+    _method(Clock::ShowMethodType::NONE)
 {
     REGISTER_PLUGIN(this, "ClockPlugin");
 }
@@ -103,7 +103,9 @@ uint8_t getNeopixelShowMethodInt()
 
 void ClockPlugin::createMenu()
 {
-    #if IOT_LED_MATRIX
+    #if IOT_LED_STRIP
+        #define MENU_URI_PREFIX "led-strip/"
+    #elif IOT_LED_MATRIX
         #define MENU_URI_PREFIX "led-matrix/"
     #else
         #define MENU_URI_PREFIX "clock/"
@@ -574,7 +576,7 @@ void ClockPlugin::getStatus(Print &output)
         output.printf_P(PSTR(", segments %u"), _display.getNumSegments());
     }
 
-    switch(static_cast<Clock::ShowMethodType>(getNeopixelShowMethodInt())) {
+    switch(Clock::getNeopixelShowMethodType()) {
         case Clock::ShowMethodType::FASTLED:
             output.printf_P(PSTR(", FastLED %u.%u.%u, %.1ffps, dithering %s"), FASTLED_VERSION / 1000000, (FASTLED_VERSION / 1000) % 1000, FASTLED_VERSION % 1000, _fps, _display.getDither() ? PSTR("on") : PSTR("off"));
             #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
@@ -986,10 +988,12 @@ void ClockPlugin::_loop()
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
 
-    auto frames = std::clamp<uint32_t>(_fps * 10, 100, 0xffffff);
-    auto fps = FastLED.getFPS();
-    if (fps) {
-        _fps = ((_fps * frames) + fps) / (frames + 1.0);
+    if (_method == Clock::ShowMethodType::FASTLED) {
+        auto frames = std::clamp<uint32_t>(_fps * 10, 100, 0xffffff);
+        auto fps = FastLED.getFPS();
+        if (fps) {
+            _fps = ((_fps * frames) + fps) / (frames + 1.0);
+        }
     }
 
     if (_animation) {

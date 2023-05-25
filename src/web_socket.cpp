@@ -363,8 +363,9 @@ static bool __get_server(AsyncWebSocket *&server, AsyncWebSocketClient *client)
 void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
     #if ESP32
-        if (esp_task_wdt_add(nullptr) != ESP_OK) {
-            __DBG_printf_E("esp_task_wdt_add failed");
+        esp_err_t err;
+        if ((err = esp_task_wdt_add(nullptr)) != ESP_OK) {
+            __DBG_printf_E("esp_task_wdt_add failed err=%x", err);
         }
     #endif
     auto qDelay = getQueueDelay();

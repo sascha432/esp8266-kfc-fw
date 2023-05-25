@@ -942,21 +942,21 @@ namespace Clock {
                         if (ptr->leds() != &_emptyPixel) {
                             switch(i) {
                                 case 0:
-                                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
                                     break;
                                 #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
                                     case 1:
-                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN1, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN1, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
                                         break;
                                 #endif
                                 #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
                                     case 2:
-                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN2, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN2, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
                                         break;
                                 #endif
                                 #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
                                     case 3:
-                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN3, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
+                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN3, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
                                         break;
                                 #endif
                             }

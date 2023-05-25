@@ -70,18 +70,12 @@
 #   endif
 #endif
 
-// -1 to disable standby LED
+// -1 to disable standby LED/Relay/MOSFET
 #ifndef IOT_LED_MATRIX_STANDBY_PIN
 #    define IOT_LED_MATRIX_STANDBY_PIN -1
 #endif
 
-#if IOT_LED_MATRIX_STANDBY_PIN != -1
-#    define IF_IOT_LED_MATRIX_STANDBY_PIN(...) __VA_ARGS__
-#else
-#    define IF_IOT_LED_MATRIX_STANDBY_PIN(...)
-#endif
-
-// standby LED is inverted/active low
+// set to 1 for inverted/active low for the standby LED/Relay/MOSFET
 #ifndef IOT_LED_MATRIX_STANDBY_PIN_INVERTED
 #    define IOT_LED_MATRIX_STANDBY_PIN_INVERTED 0
 #endif
@@ -90,14 +84,6 @@
 #    define IOT_LED_MATRIX_STANDBY_PIN_STATE(value) (value ? LOW : HIGH)
 #else
 #    define IOT_LED_MATRIX_STANDBY_PIN_STATE(value) (value ? HIGH : LOW)
-#endif
-
-#ifndef IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION
-#   define IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION 3
-#endif
-
-#ifndef IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION
-#   define IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION 3
 #endif
 
 // first pixel to use, others can be controlled separately and are reset during reboot only
@@ -210,17 +196,6 @@
 #    define IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(...)
 #endif
 
-// enable/disable power to all LEDs per GPIO
-// -1 to disable
-#ifndef IOT_LED_MATRIX_ENABLE_PIN
-#    define IOT_LED_MATRIX_ENABLE_PIN 15
-#endif
-
-// IOT_LED_MATRIX_ENABLE_PIN_INVERTED=1 sets IOT_LED_MATRIX_ENABLE_PIN to active low
-#ifndef IOT_LED_MATRIX_ENABLE_PIN_INVERTED
-#    define IOT_LED_MATRIX_ENABLE_PIN_INVERTED 0
-#endif
-
 // type of light sensor
 // 0 = disabled
 // 1 = sensor connected to ADC
@@ -256,17 +231,17 @@
 #   endif
 #endif
 
-#ifndef IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED
-#   if IOT_LED_MATRIX_ENABLE_PIN_INVERTED
-#       define IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(a, b) (a)
-#   else
-#       define IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(a, b) (b)
-#   endif
-#endif
-
 // add sensor for calculated power level to webui/mqtt
 #ifndef IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 #   define IOT_CLOCK_DISPLAY_POWER_CONSUMPTION 0
+#endif
+
+#ifndef IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION
+#   define IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION 3
+#endif
+
+#ifndef IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION
+#   define IOT_LED_MATRIX_WEBUI_COLSPAN_PROTECTION 3
 #endif
 
 // update rate for webui

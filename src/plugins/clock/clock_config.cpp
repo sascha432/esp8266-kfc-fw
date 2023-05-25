@@ -76,11 +76,9 @@ namespace KFCConfigurationClasses {
 
         namespace ClockConfigNS {
 
-
             AlarmType::AlarmType() : color(IOT_CLOCK_ALARM_COLOR), speed(IOT_CLOCK_ALARM_FLASHING_SPEED)
             {
             }
-
 
             ClockConfigType::ClockConfigType() :
                 #if IOT_LED_MATRIX

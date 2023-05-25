@@ -239,20 +239,23 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //         return true;
 //     }
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMC))) {
-        // vis[ualizer],<type>
-        if (args.startsWithIgnoreCase(0, F("spec"))) {
-            switch(_config.get_enum_animation(_config)) {
-                case ClockPlugin::AnimationType::VISUALIZER: {
-                    auto &vis = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
-                    vis.printDebugInfo(const_cast<Stream &>(args.getStream()));
-                }
-                break;
-                default:
-                    args.print(F("No spectrum available for this animation"));
+        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+            // vis[ualizer],<type>
+            if (args.startsWithIgnoreCase(0, F("spec"))) {
+                switch(_config.get_enum_animation(_config)) {
+                    case ClockPlugin::AnimationType::VISUALIZER: {
+                        auto &vis = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
+                        vis.printDebugInfo(const_cast<Stream &>(args.getStream()));
+                    }
                     break;
+                    default:
+                        args.print(F("No spectrum available for this animation"));
+                        break;
+                }
             }
-        }
-        else if (args.startsWithIgnoreCase(0, F("vis"))) {
+            else
+        #endif
+        if (args.startsWithIgnoreCase(0, F("vis"))) {
             int visTxtType = -1;
             auto newType = Clock::AnimationType::RAINBOW_FASTLED;
             auto newTypeCStr = args.get(1);
@@ -533,8 +536,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 default:
                     break;
             }
-            #if IOT_LED_MATRIX_ENABLE_PIN != -1
-                auto state = digitalRead(IOT_LED_MATRIX_ENABLE_PIN) == kEnablePinState(true);
+            #if IOT_LED_MATRIX_STANDBY_PIN != -1
+                auto state = digitalRead(IOT_LED_MATRIX_STANDBY_PIN) == IOT_LED_MATRIX_STANDBY_PIN_STATE(true);
                 args.print(F("enable pin=%u initial state=%s"), state, initialState);
             #else
                 args.print(F("initial state=%s"), initialState);

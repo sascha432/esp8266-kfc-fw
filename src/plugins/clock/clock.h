@@ -250,10 +250,6 @@ public:
 
     static constexpr int16_t kAutoBrightnessOff = -1;
 
-    constexpr static uint8_t kEnablePinState(bool active) {
-        return IF_IOT_LED_MATRIX_ENABLE_PIN_INVERTED(active ? LOW : HIGH, active ? HIGH : LOW);
-    }
-
     enum class DisplaySensorType : uint8_t {
         OFF  = 0,
         SHOW = 1,
@@ -1034,8 +1030,9 @@ inline void ClockPlugin::_updateBrightnessSettings()
 
 inline void ClockPlugin::_reset()
 {
-    #if IOT_LED_MATRIX_ENABLE_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(true));
+    #if IOT_LED_MATRIX_STANDBY_PIN != -1
+        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
+        pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
     #endif
     NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(IOT_CLOCK_NUM_PIXELS);
     #if IOT_LED_MATRIX_OUTPUT_PIN1
@@ -1047,18 +1044,8 @@ inline void ClockPlugin::_reset()
     #if IOT_LED_MATRIX_OUTPUT_PIN3
         NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(IOT_CLOCK_NUM_PIXELS);
     #endif
-    #if IOT_LED_MATRIX_ENABLE_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_ENABLE_PIN, kEnablePinState(false));
-    #endif
-    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, INPUT);
-    #if IOT_LED_MATRIX_OUTPUT_PIN1
-        pinMode(IOT_LED_MATRIX_OUTPUT_PIN1, INPUT);
-    #endif
-    #if IOT_LED_MATRIX_OUTPUT_PIN2
-        pinMode(IOT_LED_MATRIX_OUTPUT_PIN2, INPUT);
-    #endif
-    #if IOT_LED_MATRIX_OUTPUT_PIN3
-        pinMode(IOT_LED_MATRIX_OUTPUT_PIN3, INPUT);
+    #if IOT_LED_MATRIX_STANDBY_PIN != -1
+        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
     #endif
 }
 

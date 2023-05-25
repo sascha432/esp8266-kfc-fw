@@ -103,9 +103,7 @@ uint8_t getNeopixelShowMethodInt()
 
 void ClockPlugin::createMenu()
 {
-    #if IOT_LED_STRIP
-        #define MENU_URI_PREFIX "led-strip/"
-    #elif IOT_LED_MATRIX
+    #if IOT_LED_MATRIX
         #define MENU_URI_PREFIX "led-matrix/"
     #else
         #define MENU_URI_PREFIX "clock/"

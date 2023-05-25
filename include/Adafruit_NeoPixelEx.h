@@ -11,7 +11,7 @@
 #include <Arduino_compat.h>
 #include <Adafruit_NeoPixel.h>
 
-#define DEBUG_ADAFRUIT_NEOPIXEL_EX 1
+#define DEBUG_ADAFRUIT_NEOPIXEL_EX 0
 
 #if DEBUG_ADAFRUIT_NEOPIXEL_EX
 #    include <debug_helper_enable.h>
@@ -33,6 +33,8 @@ public:
 private:
     // do not allow this method to be called
     void updateLength(uint16_t n) {}
+
+private:
     int _brightness;
 };
 

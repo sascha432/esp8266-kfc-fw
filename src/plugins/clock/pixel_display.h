@@ -969,14 +969,12 @@ namespace Clock {
                 case Clock::ShowMethodType::AF_NEOPIXEL: {
                     auto ptr = _neoPixels;
                     while(*ptr) {
-                        if ((*ptr)->numPixels()) {
-                            (*ptr)->setBrightness(brightness);
-                            #if ESP32
-                                // WDT timeouts
-                            #else
-                                (*ptr)->show();
-                            #endif
-                        }
+                        (*ptr)->setBrightness(brightness);
+                        #if ESP32
+                            // WDT timeouts
+                        #else
+                            (*ptr)->show();
+                        #endif
                         ptr++;
                     }
                 }

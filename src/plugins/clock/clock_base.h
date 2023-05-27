@@ -23,6 +23,9 @@
 
 #define FASTLED_INTERNAL
 #include <FastLED.h>
+#if ESP32
+#    include <platforms/esp/32/clockless_rmt_esp32.h>
+#endif
 
 class ClockPlugin;
 
@@ -56,15 +59,15 @@ namespace Clock {
         static constexpr size_t _kPixelOffset = _PixelOffset;
 
     public:
-        using PixelAddressType = typename std::conditional<(kMaxPixelAddress > 255), uint16_t, uint8_t>::type;
-        using CoordinateType = typename std::conditional<(_kRows > 255 || _kCols > 255), uint16_t, uint8_t>::type;
+        using PixelAddressType = uint16_t; //typename std::conditional<(kMaxPixelAddress > 255), uint16_t, uint8_t>::type;
+        using CoordinateType = uint16_t; //typename std::conditional<(_kRows > 255 || _kCols > 255), uint16_t, uint8_t>::type;
         using PixelCoordinatesType = PixelCoordinates<CoordinateType, _Rows, _Columns>;
 
     public:
         static constexpr CoordinateType kCols = _Columns;
         static constexpr CoordinateType kRows = _Rows;
         static constexpr PixelAddressType kPixelOffset = _PixelOffset;
-        static constexpr PixelAddressType kNumPixels = kRows * kCols;
+        static constexpr PixelAddressType kNumPixels = kMaxPixelAddress;
     };
 }
 

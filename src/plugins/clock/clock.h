@@ -686,6 +686,9 @@ public:
     static const __FlashStringHelper *getShowMethodStr();
     static void setShowMethod(Clock::ShowMethodType method);
     static void toggleShowMethod();
+
+protected:
+    void _setShowMethod(Clock::ShowMethodType method);
 };
 
 inline void ClockPlugin::setColor(Color color)
@@ -844,9 +847,19 @@ inline Clock::ShowMethodType ClockPlugin::getShowMethod()
     return getInstance()._method;
 }
 
+inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
+{
+    _method = method;
+    #if ESP32
+        if (_method != Clock::ShowMethodType::FASTLED) {
+            ESP32RMTController::deinit();
+        }
+    #endif
+}
+
 inline void ClockPlugin::setShowMethod(Clock::ShowMethodType method)
 {
-    getInstance()._method = method;
+    getInstance()._setShowMethod(method);
 }
 
 inline void ClockPlugin::toggleShowMethod()
@@ -861,7 +874,7 @@ inline void ClockPlugin::toggleShowMethod()
     else {
         method %= kRange;
     }
-    getInstance()._method = static_cast<Clock::ShowMethodType>(method + kFirst);
+    getInstance()._setShowMethod(static_cast<Clock::ShowMethodType>(method + kFirst));
 }
 
 
@@ -1032,21 +1045,25 @@ inline void ClockPlugin::_reset()
 {
     // turn off all LEDs during restart or a crash
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
+        auto state = digitalRead(IOT_LED_MATRIX_STANDBY_PIN);
         digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
         pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
     #endif
-    NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(IOT_CLOCK_NUM_PIXELS);
-    #if IOT_LED_MATRIX_OUTPUT_PIN1
-        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN1>(IOT_CLOCK_NUM_PIXELS);
+    #if ESP32
+        ESP32RMTController::deinit();
     #endif
-    #if IOT_LED_MATRIX_OUTPUT_PIN2
-        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN2>(IOT_CLOCK_NUM_PIXELS);
+    NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
+    #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN1>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
     #endif
-    #if IOT_LED_MATRIX_OUTPUT_PIN3
-        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(IOT_CLOCK_NUM_PIXELS);
+    #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN2>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
+    #endif
+    #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
     #endif
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, state);
     #endif
 }
 

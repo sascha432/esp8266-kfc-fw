@@ -254,8 +254,8 @@ namespace KFCConfigurationClasses {
             struct __attribute__packed__ InterleavedAnimationType {
                 using Type = InterleavedAnimationType;
                 CREATE_UINT32_BITFIELD_MIN_MAX(time, 32, 0, 0xffffffffU, 60000, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(rows, 8, 0, 0xff, 2, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(cols, 8, 0, 0xff, 0, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(rows, 12, 0, 1024, 2, 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(cols, 12, 0, 1024, 0, 1);
                 InterleavedAnimationType() : time(kDefaultValueFor_time), rows(kDefaultValueFor_rows), cols(kDefaultValueFor_cols) {}
             };
 
@@ -271,12 +271,12 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT32_BITFIELD_MIN_MAX(offset1, 12, 0, 1024, 0, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(pixels2, 12, 0, 1024, 0, 1); // segment 3
                 CREATE_UINT32_BITFIELD_MIN_MAX(offset2, 12, 0, 1024, 0, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(pixels3, 12, 0, 1024, 0, 1); // segment 4
-                CREATE_UINT16_BITFIELD_MIN_MAX(offset3, 12, 0, 1024, 0, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(reverse_rows, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(reverse_cols, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_COLS, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(rotate, 1, false, true, IOT_LED_MATRIX_OPTS_ROTATE, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(interleaved, 1, false, true, IOT_LED_MATRIX_OPTS_INTERLEAVED, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(pixels3, 12, 0, 1024, 0, 1); // segment 4
+                CREATE_UINT32_BITFIELD_MIN_MAX(offset3, 12, 0, 1024, 0, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(reverse_rows, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(reverse_cols, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_COLS, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(rotate, 1, false, true, IOT_LED_MATRIX_OPTS_ROTATE, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(interleaved, 1, false, true, IOT_LED_MATRIX_OPTS_INTERLEAVED, 1);
                 MatrixConfigType(
                     uint16_t _rows = kDefaultValueFor_rows,
                     uint16_t _cols = kDefaultValueFor_cols,

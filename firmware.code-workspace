@@ -381,6 +381,7 @@
             "NTPCLIENT",
             "OPMODE",
             "OSTIMER",
+            "PERFMON",
             "PHPEXE",
             "PINMODE",
             "PIOENV",

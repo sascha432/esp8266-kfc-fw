@@ -920,11 +920,39 @@ namespace Clock {
             show(FastLED.getBrightness());
         }
 
-        void showRepeat(uint8_t num, uint32_t delayMillis = 1)
+        void _showNeoPixelEx(uint8_t brightness)
         {
-            while(num--) {
-                show(FastLED.getBrightness());
-                ::delay(delayMillis);
+            auto ptr = &_controller;
+            uint8_t i = 0;
+            while(ptr) {
+                if (ptr->leds() != &_emptyPixel) {
+                    // we need a switch since the output pin is hardcoded for performance reasons
+                    using PixelType = NeoPixelEx::CRGB;
+                    using DefaultTimings = NeoPixelEx::DefaultTimings;
+                    using StripType = NeoPixelEx::Strip<0, 0, PixelType, DefaultTimings>;
+                    switch(i) {
+                        case 0:
+                            StripType::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, DefaultTimings, PixelType>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(PixelType), brightness, NeoPixelEx::Context::validate(nullptr));
+                            break;
+                        #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+                            case 1:
+                                StripType::externalShow<IOT_LED_MATRIX_OUTPUT_PIN1, DefaultTimings, PixelType>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(PixelType), brightness, NeoPixelEx::Context::validate(nullptr));
+                                break;
+                        #endif
+                        #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+                            case 2:
+                                StripType::externalShow<IOT_LED_MATRIX_OUTPUT_PIN2, DefaultTimings, PixelType>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(PixelType), brightness, NeoPixelEx::Context::validate(nullptr));
+                                break;
+                        #endif
+                        #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+                            case 3:
+                                StripType::externalShow<IOT_LED_MATRIX_OUTPUT_PIN3, DefaultTimings, PixelType>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(PixelType), brightness, NeoPixelEx::Context::validate(nullptr));
+                                break;
+                        #endif
+                    }
+                }
+                ptr = ptr->next();
+                i++;
             }
         }
 
@@ -936,48 +964,25 @@ namespace Clock {
                 }
                 break;
                 case Clock::ShowMethodType::NEOPIXEL_EX: {
-                    auto ptr = &_controller;
-                    uint8_t i = 0;
-                    while(ptr) {
-                        if (ptr->leds() != &_emptyPixel) {
-                            switch(i) {
-                                case 0:
-                                    NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
-                                    break;
-                                #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
-                                    case 1:
-                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN1, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
-                                        break;
-                                #endif
-                                #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
-                                    case 2:
-                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN2, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
-                                        break;
-                                #endif
-                                #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
-                                    case 3:
-                                        NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN3, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(ptr->leds()), ptr->size() * sizeof(NeoPixelEx::CRGB), brightness, NeoPixelEx::Context::validate(nullptr));
-                                        break;
-                                #endif
-                            }
-                        }
-                        ptr = ptr->next();
-                        i++;
-                    }
+                    _showNeoPixelEx(brightness);
+                    #if ESP32
+                        // release some cpu time
+                        ::delay(1);
+                    #endif
                 }
                 break;
                 case Clock::ShowMethodType::AF_NEOPIXEL: {
                     auto ptr = _neoPixels;
                     while(*ptr) {
                         (*ptr)->setBrightness(brightness);
-                        #if ESP32
-                            // WDT timeouts
-                        #else
-                            (*ptr)->show();
-                        #endif
+                        (*ptr)->show();
                         ptr++;
                     }
                 }
+                #if ESP32
+                    // release some cpu time
+                    ::delay(1);
+                #endif
                 break;
                 default:
                     break;

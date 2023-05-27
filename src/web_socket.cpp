@@ -363,9 +363,15 @@ static bool __get_server(AsyncWebSocket *&server, AsyncWebSocketClient *client)
 void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
     #if ESP32
-        esp_err_t err;
-        if ((err = esp_task_wdt_add(nullptr)) != ESP_OK) {
-            __DBG_printf_E("esp_task_wdt_add failed err=%x", err);
+        bool deleteWdt = false;
+        esp_err_t err = esp_task_wdt_status(nullptr);
+        if (err == ESP_ERR_NOT_FOUND) {
+            if ((err = esp_task_wdt_add(nullptr)) != ESP_OK) {
+                __DBG_printf("esp_task_wdt_add failed err=%x", err);
+            }
+            else {
+                deleteWdt = true;
+            }
         }
     #endif
     auto qDelay = getQueueDelay();
@@ -385,7 +391,9 @@ void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSock
     buffer->unlock();
     server->_cleanBuffers();
     #if ESP32
-        esp_task_wdt_delete(NULL);
+        if (deleteWdt) {
+            esp_task_wdt_delete(nullptr);
+        }
     #endif
 }
 

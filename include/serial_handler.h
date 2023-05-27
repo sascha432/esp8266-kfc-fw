@@ -288,8 +288,17 @@ namespace SerialHandler {
     inline void Wrapper::_loop()
     {
         #if ESP32
-            if (esp_task_wdt_add(nullptr) != ESP_OK) {
-                __DBG_printf_E("esp_task_wdt_add failed");
+            bool deleteWdt = false;
+            esp_err_t err = esp_task_wdt_status(NULL);
+            if (err == ESP_ERR_NOT_FOUND) {
+                if ((err = esp_task_wdt_add(NULL)) != ESP_OK) {
+                    if (err != ESP_ERR_INVALID_ARG) {
+                        __DBG_printf_E("esp_task_wdt_add failed err=%x", err);
+                    }
+                }
+                else {
+                    deleteWdt = true;
+                }
             }
         #endif
         MUTEX_LOCK_BLOCK(_lock) {
@@ -298,7 +307,9 @@ namespace SerialHandler {
             _transmitClientsTx();
         }
         #if ESP32
-            esp_task_wdt_delete(NULL);
+            if (deleteWdt) {
+                esp_task_wdt_delete(NULL);
+            }
         #endif
     }
 

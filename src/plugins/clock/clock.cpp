@@ -192,6 +192,7 @@ void ClockPlugin::_setupTimer()
                             digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, LOW);
                             #if IOT_LED_MATRIX_STANDBY_PIN != -1
                                 digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+                                pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
                             #endif
                         #endif
 
@@ -379,9 +380,8 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
                     // enable LEDs and clear them to show status
                     #if IOT_LED_MATRIX_STANDBY_PIN != -1
-                        if (_config.standby_led) {
-                            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
-                        }
+                        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
+                        pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
                     #endif
                     pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
 
@@ -393,7 +393,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
                 uint8_t color2 = (progress * progress * progress * progress) / 1000000;
                 uint8_t kBrightnessDivider = 4; // use fill to reduce the brightness to avoid show() to adjust brightness for each pixel
                 _display.fill((((100 - progress) / kBrightnessDivider) << 16) | ((color2 / kBrightnessDivider) << 8));
-                NeoPixelEx::StaticStrip::externalShow<IOT_LED_MATRIX_OUTPUT_PIN, NeoPixelEx::DefaultTimings, NeoPixelEx::CRGB>(reinterpret_cast<uint8_t *>(_display.begin()), _display.size() * sizeof(NeoPixelEx::CRGB), 255, NeoPixelEx::Context::validate(nullptr));
+                display._showNeoPixelEx(255);
 
                 progressValue = progress;
             }
@@ -733,7 +733,7 @@ void ClockPlugin::readConfig(bool setup)
     #endif
     _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
 
-    _method = static_cast<Clock::ShowMethodType>(_config.method);
+    _setShowMethod(static_cast<Clock::ShowMethodType>(_config.method));
 
     // set configured segments
     _display.updateSegments(_config.matrix.pixels0, _config.matrix.offset0, _config.matrix.pixels1, _config.matrix.offset1, _config.matrix.pixels2, _config.matrix.offset2, _config.matrix.pixels3, _config.matrix.offset3);
@@ -769,6 +769,12 @@ void ClockPlugin::readConfig(bool setup)
     _tempBrightness = 1.0;
     #if IOT_CLOCK_HAVE_OVERHEATED_PIN
         digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, HIGH);
+    #endif
+
+    #if IOT_LED_MATRIX_STANDBY_PIN != -1
+        if (!_config.standby_led) {
+            pinMode(IOT_LED_MATRIX_STANDBY_PIN, INPUT);
+        }
     #endif
 
     _setColor(_config.solid_color.value);
@@ -824,7 +830,6 @@ void ClockPlugin::_enable()
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
             digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
-            pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
         }
         __LDBG_printf("enable LED pin=%u state=%u (cfg_enable=%u, is_enabled=%u, config=%u)", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true), _config.standby_led, _isEnabled, _config.enabled);
     #endif
@@ -861,7 +866,6 @@ void ClockPlugin::_disable()
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
             digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
-            pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
         }
     #endif
 
@@ -1035,21 +1039,23 @@ void ClockPlugin::_loop()
 
     _display.show();
 
-    if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
-        // give system time to process the requests
-        // if the cpu is overloaded, the animation will get very choppy and the web server will be slow
-        uint32_t count = WebServer::Plugin::getRunningRequestsAndResponses();
-        delay(count > 2 ? 50 : count > 1 ? 25 : 5);
+    #if ESP8266
+        if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
+            // give system time to process the requests
+            // if the cpu is overloaded, the animation will get very choppy and the web server will be slow
+            uint32_t count = WebServer::Plugin::getRunningRequestsAndResponses();
+            delay(count > 2 ? 50 : count > 1 ? 25 : 5);
 
-        #if DEBUG_IOT_CLOCK
-            static uint32_t lastValue = 0;
-            uint32_t currentValue;
-            if ((currentValue = WebServer::Plugin::getRunningRequestsAndResponsesUint32()) != lastValue) {
-                lastValue = currentValue;
-                __DBG_printf("requests=%u responses=%u sum=%u _fps=%.1f fps=%u", WebServer::Plugin::getRunningRequests(), WebServer::Plugin::getRunningResponses(), count, _fps, FastLED.getFPS());
-            }
-        #endif
-    }
+            #if DEBUG_IOT_CLOCK
+                static uint32_t lastValue = 0;
+                uint32_t currentValue;
+                if ((currentValue = WebServer::Plugin::getRunningRequestsAndResponsesUint32()) != lastValue) {
+                    lastValue = currentValue;
+                    __DBG_printf("requests=%u responses=%u sum=%u _fps=%.1f fps=%u", WebServer::Plugin::getRunningRequests(), WebServer::Plugin::getRunningResponses(), count, _fps, FastLED.getFPS());
+                }
+            #endif
+        }
+    #endif
 }
 
 void ClockPluginClearPixels()

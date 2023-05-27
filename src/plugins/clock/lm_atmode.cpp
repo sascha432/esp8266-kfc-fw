@@ -354,7 +354,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             auto brightness = args.toIntMinMax<uint8_t>(3, 1, 255, 128);
             _display.setBrightness(brightness);
             _display.clear();
-            _display.showRepeat(5);
+            _display.show();
+            delay(1);
+            _display.show();
             auto color = Color::fromString(args.toString(2, F("#330033")));
             args.print(F("test=%u color=%s speed=%ums brightness=%u"), mode, color.toString().c_str(), speed, brightness);
             auto displayPtr = &_display;
@@ -367,11 +369,15 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         stream->printf_P(PSTR("pixel=%u x=%u y=%u addr=%u\n"), n, point.col(), point.row(), display.getAddress(point));
                         display.fill(0);
                         display.setPixel(n, color);
-                        display.showRepeat(5);
+                        display.show();
+                        delay(1);
+                        display.show();
                         n++;
                         if (n >= display.size()) {
                             display.clear();
-                            display.showRepeat(5);
+                            display.show();
+                            delay(1);
+                            display.show();
                             timer->disarm();
                         }
                     });
@@ -384,11 +390,15 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         display.fill(color);
                         display.hideAll();
                         display.setPixelState(n, true);
-                        display.showRepeat(5);
+                        display.show();
+                        delay(1);
+                        display.show();
                         n++;
                         if (n >= display.size()) {
                             display.clear();
-                            display.showRepeat(5);
+                            display.show();
+                            delay(1);
+                            display.show();
                             timer->disarm();
                         }
                     });
@@ -400,13 +410,17 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         stream->printf_P(PSTR("pixel=%u x=%u y=%u\n"), addr, x, y);
                         display.fill(0);
                         display.setPixel(y, x, color);
-                        display.showRepeat(5);
+                        display.show();
+                        delay(1);
+                        display.show();
                         x++;
                         if (x >= display.getCols()) {
                             y++;
                             if (y >= display.getRows()) {
                                 display.clear();
-                                display.showRepeat(5);
+                                display.show();
+                                delay(1);
+                                display.show();
                                 timer->disarm();
                             }
                         }
@@ -461,31 +475,20 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 #if DEBUG_MEASURE_ANIMATION
                     Clock::animationStats.clear();
                 #endif
-                args.print(F("reset"));
+                args.print(F("stats reset"));
             }
         }
         // res[et][,<pixels>]
         else if (args.startsWithIgnoreCase(0, F("res"))) {
-            enableLoop(true);
-            auto num = args.toIntMinMax<uint16_t>(1, 0, 2048, IOT_CLOCK_NUM_PIXELS);
-            _display.clear();
-            args.print(F("clearing %u pixels"), num);
-            NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(num);
-            #if IOT_LED_MATRIX_OUTPUT_PIN1
-                NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN1>(num);
-            #endif
-            #if IOT_LED_MATRIX_OUTPUT_PIN2
-                NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN2>(num);
-            #endif
-            #if IOT_LED_MATRIX_OUTPUT_PIN3
-                NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(num);
-            #endif
+            _reset();
             args.print(F("display reset"));
         }
         // cl[ear]
         else if (args.startsWithIgnoreCase(0, F("cl"))) {
             enableLoop(false);
             _display.clear();
+            _display.show();
+            delay(1);
             _display.show();
             args.print(F("display cleared"));
         }
@@ -514,6 +517,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         // lo[op],<enable|disable>
         else if (args.startsWithIgnoreCase(0, F("lo"))) {
             _display.clear();
+            _display.show();
+            delay(1);
             _display.show();
             auto value = args.isTrue(1);
             enableLoop(value);
@@ -603,6 +608,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     _display.setPixel(i, color);
                     _display.setPixelState(i, true);
                 }
+                _display.show();
+                delay(1);
                 _display.show();
             }
             else {

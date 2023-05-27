@@ -55,6 +55,10 @@
 #   endif
 #endif
 
+#if ESP32
+#    include "esp32_perfmon.hpp"
+#endif
+
 #if DEBUG_AT_MODE
 #    include <debug_helper_enable.h>
 #else
@@ -343,6 +347,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RSSI, "RSSI", "[interval in seconds|0=disa
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(GPIO, "GPIO", "[interval in seconds|0=disable]", "Display GPIO states");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|input_pullup|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ADC, "ADC", "<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]", "Read the ADC and display values");
+#if ESP32
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CPU, "CPU", "Toggle displaying CPU usage");
+#endif
 #if defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
 #endif
@@ -350,7 +357,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Displ
 
 #if DEBUG
 
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistant storage");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistent storage");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
@@ -425,6 +432,9 @@ void at_mode_help_commands()
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(GPIO), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(PWM), name);
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(ADC), name);
+#if ESP32
+    at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CPU), name);
+#endif
 #if defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
     at_mode_add_help(PROGMEM_AT_MODE_HELP_COMMAND(CPU), name);
 #endif
@@ -2597,7 +2607,19 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     }
-    #if defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
+    #if ESP32
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
+            if (perfmon_start(&const_cast<Stream &>(args.getStream())) == ESP_OK) {
+                args.print(F("started"));
+            }
+            else if (perfmon_stop() == ESP_OK) {
+                args.print(F("stopped"));
+            }
+            else {
+                args.print(F("unknown error"));
+            }
+        }
+    #elif defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CPU))) {
             if (args.size() == 1) {
                 auto speed = (uint8_t)args.toInt(0, ESP.getCpuFreqMHz());

@@ -105,7 +105,6 @@ const SyslogQueue::Item *SyslogMemoryQueue::get()
             return &item;
         }
     }
-    __DBG_panic("size=%u", _items.size());
     return nullptr;
 }
 

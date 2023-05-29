@@ -4,7 +4,7 @@
   <description asmv2:iconFile="AppIcon.ico" xmlns="urn:schemas-microsoft-com:asm.v1" />
   <application />
   <entryPoint>
-    <assemblyIdentity name="Analyzer" version="1.0.0.5" language="neutral" processorArchitecture="msil" />
+    <assemblyIdentity name="Analyzer" version="1.0.0.6" language="neutral" processorArchitecture="msil" />
     <commandLine file="Analyzer.exe" parameters="" />
   </entryPoint>
   <trustInfo>
@@ -43,14 +43,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Analyzer.exe" size="2737152">
-      <assemblyIdentity name="Analyzer" version="1.0.0.5" language="neutral" processorArchitecture="msil" />
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Analyzer.exe" size="2737664">
+      <assemblyIdentity name="Analyzer" version="1.0.0.6" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>HHg9Ib1IfNZKP3uvy4TkMh1QFXmpD7Ea+c2/OiAQieY=</dsig:DigestValue>
+        <dsig:DigestValue>XEuyoA+wOMYBoRd9PcO9dV9zDzmaUKB4+Z1l7TRwP/M=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

@@ -77,7 +77,7 @@ namespace Clock {
             uint32_t ms = millis();
             output.printf_P(PSTR("Max. spectrum bars %u, video data %d, loudness=%.2f%%, peak sink rate=%.4fs\n"), kVisualizerPacketSize, _video._data.size(), (_storedLoudness * 100) / kVisualizerMaxPacketValue, _cfg.peak_falling_speed / 1000.0);
             for(uint8_t i = 0; i < kVisualizerPacketSize; i++) {
-                output.printf_P(PSTR("%02u: val=%d peak=%d/%d age=%dms\n"), i, _storedData[i], _storedPeaks[i].getPeakValue(), _storedPeaks[i].getPeakPosition(ms), _storedPeaks[i].getLastPeakUpdate(ms));
+                output.printf_P(PSTR("%02u: val=%d peak=%d/%d age=%dms\n"), i, _storedData[i], _storedPeaks[i].getPeakValue(), _storedPeaks[i].getPeakPosition(ms, getRows()), _storedPeaks[i].getLastPeakUpdate(ms));
 
             }
         }
@@ -101,7 +101,7 @@ namespace Clock {
             {
                 _peakSinkRate = peakSinkRate;
                 _peakType = peakType;
-                if ((value > _value) || (millis - _millis) > _peakSinkRate) {
+                if (value > _value || (_peakType == VisualizerPeakType::FADING && getFading(millis) == 255)) {
                     _value = value;
                     _millis = millis;
                 }
@@ -109,18 +109,16 @@ namespace Clock {
 
             uint16_t getLastPeakUpdate(uint32_t millis) const
             {
-                uint32_t diff = (millis - _millis);
-                return std::min(_peakSinkRate + 1U, diff);
+                return std::min(_peakSinkRate + 1U, _diff(millis));
             }
 
             uint8_t getFading(uint32_t millis) const
             {
-                uint32_t diff = (millis - _millis);
-                return std::max<uint32_t>((diff * 256) / _peakSinkRate, 255);
+                return std::min<uint32_t>(_diff(millis) * 256 / _peakSinkRate, 255);
             }
 
             // this function return -1 if no peak is to be displayed
-            int16_t getPeakPosition(uint32_t millis) const
+            int16_t getPeakPosition(uint32_t millis, uint16_t rows) const
             {
                 if (_peakType == VisualizerPeakType::FADING) {
                     return _value;
@@ -128,7 +126,7 @@ namespace Clock {
                 if (_millis == 0 || _value == 0) {
                     return -1;
                 }
-                int diff = ((millis - _millis) * kVisualizerMaxPacketValue) / _peakSinkRate;
+                int diff = (_diff(millis) * rows) / _peakSinkRate;
                 if (diff > _value) {
                     return -1;
                 }
@@ -140,21 +138,31 @@ namespace Clock {
                 return _value;
             }
 
-            CRGB getPeakColor(uint32_t color) const
+            CRGB getPeakColor(uint32_t color, uint32_t millis) const
             {
-                auto value = CRGB(color);
+                CRGB value;
                 switch(_peakType) {
                     case VisualizerPeakType::FADING:
-                        fadeToBlackBy(&value, 1, getFading(_millis));
+                        value = CRGB(color);
+                        fadeToBlackBy(&value, 1, getFading(millis));
                         break;
                     case VisualizerPeakType::DISABLED:
                         return CRGB(0);
                     case VisualizerPeakType::ENABLED:
                     case VisualizerPeakType::FALLING_DOWN:
                     default:
+                        value = CRGB(color);
                         break;
                 }
                 return value;
+            }
+
+        private:
+
+            inline __attribute__((__always_inline__))
+            uint32_t _diff(uint32_t millis) const
+            {
+                return millis - _millis;
             }
 
         private:

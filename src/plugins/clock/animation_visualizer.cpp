@@ -254,6 +254,7 @@ void VisualizerAnimation::_parseUdp()
         auto timeMillis = millis();
 
         float loudness = 0;
+        float totalLoudness = 0.001;
         uint16_t i = 0;
         auto showPeaks = _cfg.get_enum_peak_show(_cfg);
         for(uint8_t &value: _storedData) {
@@ -279,11 +280,11 @@ void VisualizerAnimation::_parseUdp()
             #endif
             // add a linear correction that is actually a curve cause bands are logarithmic
             constexpr float kMul2 = (1.0 / float(kVisualizerPacketSize - 1)); // to avoid division
-            bandCorrection += 1.0f;
+            totalLoudness += bandCorrection;
             loudness += value / bandCorrection;
             _storedPeaks[i++].add(value, timeMillis, _cfg.peak_falling_speed, showPeaks);
         }
-        loudness = std::min<float>(std::sqrt(loudness) * m_factor, 255.0f);
+        loudness = std::min<float>(std::sqrt(loudness * m_factor) / totalLoudness, 255.0f);
         if (loudness != _storedLoudness) {
             _storedLoudness = loudness;
         }
@@ -382,10 +383,13 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                     }
                 }
                 if (_cfg.get_enum_peak_show(_cfg) != VisualizerPeakType::DISABLED) {
-                    auto peakValue = _storedPeaks[index].getPeakPosition(millisValue);
+                    // update time, the udp handler updates the pixels in real time in an interrupt
+                    millisValue = millis();
+                    auto numRows = display.getRows();
+                    auto peakValue = _storedPeaks[index].getPeakPosition(millisValue, numRows);
                     if (peakValue >= 0) {
-                        auto peak = std::clamp<uint16_t>(peakValue * _rowsInterpolation, end - 1, display.getRows() - 1);
-                        display.setPixel(peak, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb));
+                        auto peak = std::clamp<uint16_t>(peakValue * _rowsInterpolation, end - 1, numRows - 1);
+                        display.setPixel(peak, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb, millisValue));
                     }
                 }
                 if (_showLoudness) {

@@ -175,7 +175,7 @@ private:
             });
         }
         ~ReadTimer() {
-            _timer.remove();
+            _Timer(_timer).remove();
         }
 
         void timerCallback(ADCManager &adc, Event::CallbackTimerPtr timer);

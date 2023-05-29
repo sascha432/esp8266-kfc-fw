@@ -176,7 +176,7 @@ void CollectTopicsComponent::onBegin()
 void CollectTopicsComponent::onEnd(ErrorType error)
 {
     __LDBG_printf("error=%u callback=%u timer=%u", error, (bool)_callback, (bool)_timer);
-    _timer.remove();
+    _Timer(_timer).remove();
     if (_callback) {
         __LDBG_printf("callback crcs=%u", _crcs.size());
         auto tmp = std::move(_callback); // make sure the callback is removed. the object might get destroyed inside the callback
@@ -222,7 +222,7 @@ void RemoveTopicsComponent::onBegin()
 void RemoveTopicsComponent::onEnd(ErrorType error)
 {
     __LDBG_printf("error=%u callback=%u packets=%u timer=%u", error, (bool)_callback, _packets.size(), (bool)_timer);
-    _timer.remove();
+    _Timer(_timer).remove();
     if (_callback) {
         __LDBG_printf("callback=%u", error);
         auto tmp = std::move(_callback); // make sure the callback is removed. the object might get destroyed inside the callback

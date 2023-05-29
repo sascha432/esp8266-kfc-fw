@@ -16,7 +16,7 @@
 void ClockPlugin::_saveStateDelayed()
 {
     if (get_time_diff(_saveTimestamp, millis()) > IOT_CLOCK_SAVE_STATE_DELAY * 1000U) {
-        __DBG_printf("save state delay skipped");
+        __LDBG_printf("save state delay skipped");
         _saveState();
     }
     else {
@@ -31,11 +31,11 @@ void ClockPlugin::_saveState()
 {
     auto state = _getState();
     auto newState = StoredState(_config, (_isEnabled && _targetBrightness), (_targetBrightness == 0 && _savedBrightness) ? _savedBrightness : _targetBrightness);
-    __DBG_printf("save brightness=%u enabled=%u", newState.getConfig().getBrightness(), newState.getConfig().enabled);
+    __LDBG_printf("save brightness=%u enabled=%u", newState.getConfig().getBrightness(), newState.getConfig().enabled);
     if (state != newState) {
         auto file = KFCFS.open(FSPGM(iot_clock_save_state_file, "/.pvt/device.state"), fs::FileOpenMode::write);
         if (file) {
-            _saveTimer.remove();
+            _Timer(_saveTimer).remove();
             _saveTimestamp = millis();
 
             __LDBG_printf("saving state enabled=%u brightness=%u animation=%u solid_color=%s blink_colon=%u",
@@ -54,7 +54,7 @@ void ClockPlugin::_saveState()
     }
     else {
         __LDBG_printf("state did not change");
-        _saveTimer.remove();
+        _Timer(_saveTimer).remove();
     }
 }
 
@@ -65,7 +65,7 @@ ClockPlugin::StoredState ClockPlugin::_getState()
     if (file) {
         auto state = StoredState::load(file);
         if (state.hasValidData()) {
-            _saveTimer.remove();
+            _Timer(_saveTimer).remove();
             #if DEBUG_IOT_CLOCK
                 auto &cfg = state.getConfig();
                 __DBG_printf("loaded state enabled=%u brightness=%u animation=%u solid_color=%s blink_colon=%u", cfg.enabled, cfg.getBrightness(), cfg.getAnimation(), Color(cfg.solid_color).toString().c_str(), IF_IOT_CLOCK(cfg.blink_colon_speed) IF_IOT_LED_MATRIX(0));

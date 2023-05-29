@@ -33,7 +33,7 @@ namespace MQTT {
 
         void clear() {
             vector::clear();
-            _timer.remove();
+            _Timer(_timer).remove();
         }
 
         iterator erase(iterator first, iterator last) {
@@ -53,7 +53,7 @@ namespace MQTT {
         }
 
         void removeTimer() {
-            _timer.remove();
+            _Timer(_timer).remove();
         }
 
         Event::Timer &getTimer() {
@@ -71,7 +71,7 @@ namespace MQTT {
 
         void clear() {
             vector::clear();
-            _timer.remove();
+            _Timer(_timer).remove();
             _internalPacketQueueId = 1;
         }
 
@@ -95,7 +95,7 @@ namespace MQTT {
         }
 
         void removeTimer() {
-            _timer.remove();
+            _Timer(_timer).remove();
         }
 
         Event::Timer &getTimer() {

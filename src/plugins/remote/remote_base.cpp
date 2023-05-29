@@ -122,7 +122,7 @@ namespace RemoteControl {
 
         if (_queue.size() && !_queueTimer) {
             __LDBG_printf("arming queue timer");
-            _queueTimer.add(Event::milliseconds(5), true, [this](Event::CallbackTimerPtr timer) {
+            _Timer(_queueTimer).add(Event::milliseconds(5), true, [this](Event::CallbackTimerPtr timer) {
                 timerCallback(timer);
             }, Event::PriorityType::HIGHEST);
         }

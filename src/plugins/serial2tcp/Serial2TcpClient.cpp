@@ -21,7 +21,7 @@ Serial2TcpClient::Serial2TcpClient(Stream &serial, const char *hostname, const S
 
 Serial2TcpClient::~Serial2TcpClient()
 {
-    _timer.remove();
+    _Timer(_timer).remove();
     end();
 }
 
@@ -141,7 +141,7 @@ void Serial2TcpClient::_connect()
 void Serial2TcpClient::_disconnect()
 {
     __DBGS2T("disconnect conn=%p client=%p\n", _connection, _connection ? _connection->getClient() : nullptr);
-    _timer.remove();
+    _Timer(_timer).remove();
     if (_connection) {
         _stopClient();
         _connection->close();

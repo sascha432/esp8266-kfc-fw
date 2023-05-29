@@ -468,7 +468,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
             if (args.requireArgs(1, 4)) {
                 char ch = args.toLowerChar(0);
                 if (args.size() >= 3) {
-                    _dumpTimer.remove();
+                    _Timer(_dumpTimer).remove();
                     float value = (args.toFloat(2) * args.toFloat(3, 1.0f)) / args.toFloat(1);
                     auto &sensor = Plugins::Sensor::getWriteableConfig();
                     if (ch == 'u') {
@@ -491,7 +491,7 @@ bool Sensor_HLW8012::atModeHandler(AtModeArgs &args)
                     }
                 }
                 else {
-                    _dumpTimer.remove();
+                    _Timer(_dumpTimer).remove();
 
                     struct {
                         float sum;

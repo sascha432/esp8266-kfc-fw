@@ -294,7 +294,7 @@ public:
                 LedMatrixDisplayTimer(void *pClientId, uint32_t pMaxErrors) : clientId(pClientId), udpPort(0), wsPort(0), errors(0), maxErrors(pMaxErrors) {
                 }
                 ~LedMatrixDisplayTimer() {
-                    timer.remove();
+                    _Timer(timer).remove();
                     clientId = nullptr;
                 }
                 void print(const String &str) {

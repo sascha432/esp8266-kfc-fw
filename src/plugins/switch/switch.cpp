@@ -117,7 +117,7 @@ void SwitchPlugin::shutdown()
 {
     WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTED, this);
     #if IOT_SWITCH_PUBLISH_MQTT_INTERVAL
-        _updateTimer.remove();
+        _Timer(_updateTimer).remove();
     #endif
     #if IOT_SWITCH_STORE_STATES_FS
         if (_delayedWrite) {

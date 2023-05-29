@@ -82,7 +82,7 @@ void ClockPlugin::setRotaryAction(uint8_t action)
         });
     }
     else {
-        _rotaryActionTimer.remove();
+        _Timer(_rotaryActionTimer).remove();
     }
     auto &_PCF8574 = IOExpander::config._device;
     switch(action) {

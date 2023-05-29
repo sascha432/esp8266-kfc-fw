@@ -155,7 +155,7 @@ void NTPPlugin::reconfigure(const String &source)
 void NTPPlugin::shutdown()
 {
     _callbackState = CallbackState::SHUTDOWN;
-    _checkTimer.remove();
+    _Timer(_checkTimer).remove();
     settimeofday_cb((settimeofday_cb_t)nullptr);
     sntp_stop();
     for (uint8_t i = 0; i < Plugins::NTPClient::kServersMax; i++) {
@@ -251,7 +251,7 @@ void NTPPlugin::_updateNtpCallback()
     __LDBG_printf("new time=" TIME_T_FMT " @ %.3fs valid=%u lk_time=" TIME_T_FMT " timer=%u callback_state=%s",now, millis() / 1000.0, isTimeValid(now), getLastKnownTimeOfDay(), (bool)_checkTimer, getCallbackState());
 
     _callbackState = CallbackState::WAITING_FOR_REFRESH;
-    _checkTimer.remove();
+    _Timer(_checkTimer).remove();
 
     PrintString timeStr;
     timeStr.strftime(FSPGM(strftime_date_time_zone, "%FT%T %Z"), now);

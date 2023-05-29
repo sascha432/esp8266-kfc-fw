@@ -47,7 +47,7 @@ namespace Dimmer {
 
         void end()
         {
-            _publishTimer.remove();
+            _Timer(_publishTimer).remove();
         }
 
         #if IOT_DIMMER_MODULE_HAS_BUTTONS

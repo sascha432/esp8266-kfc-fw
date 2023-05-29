@@ -88,7 +88,7 @@ void Base::end()
             // enable_at_mode(Serial);
         #endif
     #else
-        _timer.remove();
+        _Timer(_timer).remove();
     #endif
 }
 

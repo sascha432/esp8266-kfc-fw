@@ -278,7 +278,7 @@ inline void SensorPlugin::_sortSensors()
 
 inline void SensorPlugin::shutdown()
 {
-    _timer.remove();
+    _Timer(_timer).remove();
     for(const auto sensor: _sensors) {
         __LDBG_printf("type=%u", sensor->getType());
         sensor->shutdown();

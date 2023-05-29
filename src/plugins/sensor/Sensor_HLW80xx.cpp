@@ -378,7 +378,7 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
         }
     #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP))) {
-        _dumpTimer.remove();
+        _Timer(_dumpTimer).remove();
 
         auto interval = args.toMillis(0, 500, ~0, 0, String('s'));
         if (interval) {

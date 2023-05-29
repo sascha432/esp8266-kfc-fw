@@ -57,7 +57,7 @@ inline void SyslogManagedStream::timerCallback()
 inline void SyslogManagedStream::queueSize(uint32_t size, bool isAvailable)
 {
     if (size == 0) {
-        _timer.remove();
+        _Timer(_timer).remove();
     }
     else if (isAvailable && !_timer) {
         _Timer(_timer).add(_interval, true, [this](Event::CallbackTimerPtr timer) {

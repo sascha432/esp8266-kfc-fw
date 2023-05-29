@@ -680,11 +680,11 @@ public:
     }
 
     bool removeTimer() {
-        return _timer.remove();
+        return _Timer(_timer).remove();
     }
 
     void remove() {
-        _timer.remove();
+        _Timer(_timer).remove();
         LoopFunctions::remove(loop);
         delete this;
     }
@@ -867,7 +867,7 @@ public:
     AtModeADC() : _adcIntegralMultiplier(0), _adc(ADCManager::getInstance()) {
     }
     virtual ~AtModeADC() {
-        _displayTimer.remove();
+        _Timer(_displayTimer).remove();
         if (_adcIntegralMultiplier) {
             LoopFunctions::remove(at_mode_adc_loop);
         }
@@ -875,7 +875,7 @@ public:
 
     // useable values for integrating the average value is 1-100 (averagePeriodMillis)
     bool init(uint16_t averagePeriodMillis, float convertMultiplier, const String &unit, uint32_t readDelayMicros = 5000) {
-        _displayTimer.remove();
+        _Timer(_displayTimer).remove();
         if (!averagePeriodMillis) {
             return false;
         }
@@ -977,7 +977,7 @@ public:
     using AtModeADC::AtModeADC;
 
     bool init(uint32_t interval, uint32_t duration, uint16_t packetSize, AsyncWebSocketClient *client) {
-        _displayTimer.remove();
+        _Timer(_displayTimer).remove();
         if (!interval) {
             return false;
         }
@@ -1158,7 +1158,7 @@ public:
 
     void setDelay(uint32_t delay) {
         __DBG_printf("delay %u", delay);
-        _timer.add(delay, false, [](Event::CallbackTimerPtr timer) {});
+        _Timer(_timer).add(delay, false, [](Event::CallbackTimerPtr timer) {});
     }
 
     bool hasQueue() const {

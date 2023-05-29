@@ -150,7 +150,7 @@ bool ConfigReaderWriter::readConfig(uint8_t retries, uint16_t retryDelay, Callba
     _valid = 0;
 
     if (_callback) {
-        _timer.add(Event::milliseconds(initialDelay), false, [this](Event::CallbackTimerPtr timer) {
+        _Timer(_timer).add(Event::milliseconds(initialDelay), false, [this](Event::CallbackTimerPtr timer) {
             __LDBG_printf("getConfig timer _valid=%u", _valid);
             _readConfigTimer(timer);
         });

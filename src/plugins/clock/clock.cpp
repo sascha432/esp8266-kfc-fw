@@ -472,7 +472,7 @@ void ClockPlugin::shutdown()
 
     #if IOT_CLOCK_SAVE_STATE
         if (_saveTimer) {
-            _saveTimer.remove();
+            _Timer(_saveTimer).remove();
             _saveState();
         }
     #endif
@@ -493,7 +493,7 @@ void ClockPlugin::shutdown()
     #endif
 
     #if IOT_CLOCK_HAVE_ROTARY_ENCODER
-        _rotaryActionTimer.remove();
+        _Timer(_rotaryActionTimer).remove();
     #endif
 
     #if IOT_CLOCK_BUTTON_PIN != -1
@@ -505,7 +505,7 @@ void ClockPlugin::shutdown()
         WsClient::removeClientCallback(this);
     #endif
 
-    _timer.remove();
+    _Timer(_timer).remove();
 
     #if IOT_ALARM_PLUGIN_ENABLED
         _resetAlarm();

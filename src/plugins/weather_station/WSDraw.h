@@ -444,7 +444,7 @@ namespace WSDraw {
         }
 
         ~ScrollCanvas() {
-            _timer.remove();
+            _Timer(_timer).remove();
             _draw._scrollCanvas = nullptr;
         }
 

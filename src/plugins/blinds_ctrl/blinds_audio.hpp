@@ -90,7 +90,7 @@ inline void BlindsControl::_playNote(uint8_t pin, uint16_t pwm, uint8_t note)
 inline void BlindsControl::_stopToneTimer()
 {
     __LDBG_printf("stopping tone timer and disabling motors");
-    _toneTimer.remove();
+    _Timer(_toneTimer).remove();
     _disableMotors();
 }
 

@@ -104,7 +104,7 @@ bool Queue::isEnabled(bool force)
 void Queue::clear()
 {
     __LDBG_printf("clear entities=%u done=%u", _entities.size(), _iterator == _entities.end());
-    _timer.remove();
+    _Timer(_timer).remove();
     _crcs.clear();
     _iterator = _entities.end();
     // stop proxies if still running

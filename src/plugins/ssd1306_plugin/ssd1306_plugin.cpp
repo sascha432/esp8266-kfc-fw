@@ -203,14 +203,14 @@ void ssd1306_wifi_event(uint8_t event, void *payload) {
 void ssd1306_disable_status() {
     _debug_println(F("ssd1306_disable_status()"));
     if (ssd1306_status_timer.active()) {
-        ssd1306_status_timer.remove();
+        _Timer(ssd1306_status_timer).remove();
         ssd1306_clear_display();
     }
 }
 
 void ssd1306_enable_status() {
     _debug_println(F("ssd1306_enable_status()"));
-    ssd1306_status_timer.remove();
+    _Timer(ssd1306_status_timer).remove();
     ssd1306_clear_display();
     ssd1306_update_status();
     _Timer(ssd1306_status_timer).add(1000, true, ssd1306_update_time);

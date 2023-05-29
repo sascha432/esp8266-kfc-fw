@@ -100,7 +100,7 @@ String Channel::_createTopics(TopicType type, bool full) const
 void Channel::onConnect()
 {
     subscribe(_createTopics(TopicType::COMMAND_SET));
-    _publishTimer.remove();
+    _Timer(_publishTimer).remove();
     publishState();
 }
 

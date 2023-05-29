@@ -27,12 +27,12 @@ void ClockPlugin::ssd1306Begin()
     _ssd1306.display();
 
     // start updating after 15 seconds
-    _ssd1306Timer.add(Event::seconds(15), false, ssd1306InitTimer);
+    _Timer(_ssd1306Timer).add(Event::seconds(15), false, ssd1306InitTimer);
 }
 
 void ClockPlugin::ssd1306End()
 {
-    _ssd1306Timer.remove();
+    _Timer(_ssd1306Timer).remove();
     ssd1306Clear();
     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
 }
@@ -121,7 +121,7 @@ void ClockPlugin::ssd1306InitTimer(Event::CallbackTimerPtr)
         }
     }
 
-    plugin._ssd1306Timer.add(Event::seconds(1), true, ssd1306UpdateTimer);
+    _Timer(plugin._ssd1306Timer).add(Event::seconds(1), true, ssd1306UpdateTimer);
 }
 
 void ClockPlugin::ssd1306UpdateTimer(Event::CallbackTimerPtr)

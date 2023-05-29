@@ -92,7 +92,7 @@ inline void SyslogTCP::_reconnect()
 
 inline SyslogTCP::~SyslogTCP()
 {
-    _reconnectTimer.remove();
+    _Timer(_reconnectTimer).remove();
     _queueId = 0;
     _freeClient();
     if (_host) {
@@ -113,7 +113,7 @@ inline uint16_t SyslogTCP::getPort() const
 
 inline void SyslogTCP::_disconnect()
 {
-    _reconnectTimer.remove();
+    _Timer(_reconnectTimer).remove();
     _client->close();
 }
 

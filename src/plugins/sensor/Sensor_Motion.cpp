@@ -131,7 +131,7 @@ void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInv
     pinMode(_pin, INPUT);
     _handler = handler;
     _reset();
-    _timer.add(Event::seconds(1), true, [this](Event::CallbackTimerPtr) {
+    _Timer(_timer).add(Event::seconds(1), true, [this](Event::CallbackTimerPtr) {
         _timerCallback();
     });
 }
@@ -139,17 +139,17 @@ void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInv
 void Sensor_Motion::end()
 {
     _reset();
-    _timer.remove();
+    _Timer(_timer).remove();
     _handler = nullptr;
 }
 
 void Sensor_Motion::_reset()
 {
     _motionState = false;
-    _sensorTimeout.remove();
+    _Timer(_sensorTimeout).remove();
     #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
         if (_handler) {
-            _handler->_autoOffTimeout.remove();
+            _Timer(_handler)->_autoOffTimeout.remove();
         }
     #endif
 }
@@ -163,7 +163,7 @@ void Sensor_Motion::_timerCallback()
 
     if (state) {
         // reset timeout
-        _sensorTimeout.add(Event::minutes(_config.motion_trigger_timeout), false, [this](Event::CallbackTimerPtr) {
+        _Timer(_sensorTimeout).add(Event::minutes(_config.motion_trigger_timeout), false, [this](Event::CallbackTimerPtr) {
             __LDBG_printf("motion timeout event: %umin", _config.motion_trigger_timeout);
             _motionState = false;
             publishState();
@@ -174,7 +174,7 @@ void Sensor_Motion::_timerCallback()
                 #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
                     // start auto off timeout
                     if (_config.motion_auto_off && _handler->_getMotionAutoOff() == false) {
-                        _handler->_autoOffTimeout.add(Event::minutes(_config.motion_auto_off), false, [this](Event::CallbackTimerPtr) {
+                        _Timer(_handler->_autoOffTimeout).add(Event::minutes(_config.motion_auto_off), false, [this](Event::CallbackTimerPtr) {
                             __LDBG_printf("motion auto off event: %umin", _config.motion_auto_off);
                             _handler->_setMotionAutoOff(true);
                             if (_handler->eventMotionAutoOff(true)) {
@@ -188,7 +188,7 @@ void Sensor_Motion::_timerCallback()
         // remove auto off timeout
         #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
             if (_handler && _config.motion_auto_off) {
-                _handler->_autoOffTimeout.remove();
+                _Timer(_handler)->_autoOffTimeout.remove();
             }
         #endif
 

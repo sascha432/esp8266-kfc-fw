@@ -74,7 +74,7 @@ void SyslogPlugin::queueSize(uint32_t size, bool isAvailable)
     }
     if (size == 0) {
         __LDBG_print("remove timer");
-        _timer.remove();
+        _Timer(_timer).remove();
     }
     else if (isAvailable && !_timer) {
         __LDBG_print("add timer");
@@ -149,7 +149,7 @@ void SyslogPlugin::_zeroConfCallback(const SyslogStream *stream, const String &h
 void SyslogPlugin::_end()
 {
     if (_stream) {
-        _timer.remove();
+        _Timer(_timer).remove();
         _logger.setSyslog(nullptr);
         delete _stream;
         _stream = nullptr;
@@ -179,7 +179,7 @@ void SyslogPlugin::_kill(uint32_t timeout)
         //stream->_syslog._queue.setManager(nullptr);
         auto stream = _stream;
         _stream = nullptr;
-        _timer.remove();
+        _Timer(_timer).remove();
 
         _waitForQueue(stream, timeout);
         stream->clearQueue();

@@ -235,7 +235,7 @@ namespace Dimmer {
             _retryDelay(rw._retryDelay),
             _callback(std::exchange(rw._callback, nullptr))
         {
-            rw._timer.remove();
+            _Timer(rw._timer).remove();
         }
 
 
@@ -286,7 +286,7 @@ namespace Dimmer {
     inline void ConfigReaderWriter::begin()
     {
         _valid = 0;
-        _timer.remove();
+        _Timer(_timer).remove();
     }
 
     inline void ConfigReaderWriter::end()

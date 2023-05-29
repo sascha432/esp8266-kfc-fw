@@ -29,7 +29,7 @@ public:
     Serial2Udp(const IPAddress &address, uint16_t port, uint flushDelay = 25) : _address(address), _port(port), _client(serialHandler.addClient([this, flushDelay](Stream &stream) {
             if (stream.available()) {
                 if (!_flushTimer) {
-                    _flushTimer.add(Event::milliseconds(flushDelay), false, [this, &stream](Event::CallbackTimerPtr timer) {
+                    _Timer(_flushTimer).add(Event::milliseconds(flushDelay), false, [this, &stream](Event::CallbackTimerPtr timer) {
                         WiFiUDP udp;
                         if (udp.beginPacket(_address, _port)) {
                             while(stream.available()) {

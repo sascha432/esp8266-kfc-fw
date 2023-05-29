@@ -233,7 +233,7 @@ namespace PingMonitor {
     void Task::_cancelPing()
     {
         __LDBG_printf("ping=%p timer=%u", _ping.get(), (bool)_nextTimer);
-        _nextTimer.remove();
+        _Timer(_nextTimer).remove();
         _ping.reset();
     }
 

@@ -201,7 +201,7 @@ void SyslogTCP::_allocClient()
 void SyslogTCP::_freeClient()
 {
     if (_client) {
-        _reconnectTimer.remove();
+        _Timer(_reconnectTimer).remove();
         // remove all callbacks before aborting the connection
         _client->onConnect(nullptr);
         _client->onPoll(nullptr);

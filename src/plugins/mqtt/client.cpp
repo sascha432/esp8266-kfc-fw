@@ -124,7 +124,7 @@ namespace MQTT {
         __LDBG_printf("conn=%s", _connection());
         WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTION, MQTT::Client::handleWiFiEvents);
         _resetClient();
-        _timer.remove();
+        _Timer(_timer).remove();
 
         _autoReconnectTimeout = kAutoReconnectDisabled;
         auto state = setConnState(ConnectionState::DISCONNECTED);
@@ -514,7 +514,7 @@ namespace MQTT {
 
         // remove reconnect timer if running and force disconnect
         auto timeout = _autoReconnectTimeout;
-        _timer.remove();
+        _Timer(_timer).remove();
 
         _autoReconnectTimeout = kAutoReconnectDisabled; // disable auto reconnect
         disconnect(true);

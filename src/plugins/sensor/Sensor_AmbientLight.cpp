@@ -198,14 +198,14 @@ void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const Sensor
     if (_handler) {
         _handler->_ambientLightSensor = this;
     }
-    _timer.add(Event::milliseconds(interval), true, [this](Event::CallbackTimerPtr timer) {
+    _Timer(_timer).add(Event::milliseconds(interval), true, [this](Event::CallbackTimerPtr timer) {
         _timerCallback();
     });
 }
 
 void Sensor_AmbientLight::end()
 {
-    _timer.remove();
+    _Timer(_timer).remove();
     if (_handler) {
         _handler->_ambientLightSensor = nullptr;
         _handler = nullptr;

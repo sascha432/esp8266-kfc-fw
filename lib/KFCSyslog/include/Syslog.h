@@ -5,7 +5,7 @@
 #pragma once
 
 #ifndef DEBUG_SYSLOG
-#    define DEBUG_SYSLOG (0 || defined(DEBUG_ALL))
+#    define DEBUG_SYSLOG (1 || defined(DEBUG_ALL))
 #endif
 
 #include "SyslogParameter.h"

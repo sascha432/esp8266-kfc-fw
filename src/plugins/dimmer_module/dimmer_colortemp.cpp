@@ -340,8 +340,8 @@ namespace Dimmer {
 
     void ColorTemperature::end()
     {
-        _mqttTimer.remove();
-        _webuiTimer.remove();
+        _Timer(_mqttTimer).remove();
+        _Timer(_webuiTimer).remove();
     }
 
     String ColorTemperature::_createTopics(TopicType type)

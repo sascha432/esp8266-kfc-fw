@@ -91,7 +91,7 @@ class MainApp(tk.Tk):
 
     def udp_init(self):
         ip = '192.168.0.62'
-        port = 4210
+        port = 21324
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.setblocking(True)

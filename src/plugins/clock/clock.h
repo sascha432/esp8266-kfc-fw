@@ -458,6 +458,30 @@ public:
         _reset();
     }
 
+    // if the system crashed
+    void lock()
+    {
+        Logger_warning("The LED subsystem has been locked cause of a crash or hard reset");
+        if (_isEnabled) {
+            _disable();
+        }
+        #if IOT_LED_MATRIX_STANDBY_PIN != -1
+            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
+            pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
+        #endif
+        _isLocked = true;
+        auto &cfg = Plugins::Clock::getWriteableConfig();
+        cfg.setInitialState(InitialStateType::OFF);
+        cfg.setAnimation(AnimationType::RAINBOW_FASTLED);
+        cfg.setBrightness(5);
+        config.write();
+        auto state = _getState();
+        state.setBrightness(5);
+        state.setEnabled(false);
+        state.setAnimation(Clock::AnimationType::RAINBOW_FASTLED);
+        _saveState();
+    }
+
 private:
     static void _reset();
     void _enable();
@@ -474,7 +498,7 @@ private:
     public:
         void _saveStateDelayed();
         void _saveState();
-        StoredState _getState() const;
+        StoredState _getState();
 
         Event::Timer _saveTimer;
         uint32_t _saveTimestamp{0};
@@ -629,6 +653,7 @@ private:
     bool _isEnabled;
     bool _forceUpdate;
     bool _isRunning;
+    bool _isLocked;
 
     using Animation = Clock::Animation;
     friend Animation;

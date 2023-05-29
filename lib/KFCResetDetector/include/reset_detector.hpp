@@ -102,6 +102,16 @@ bool ResetDetector::hasCrashDetected() const
 }
 
 __RESET_DETECTOR_INLINE__
+bool ResetDetector::hasBrownoutDetected() const
+{
+    #if ESP32
+       return (_data.getReason() == ESP_RST_BROWNOUT);
+    #else
+        return false;
+    #endif
+}
+
+__RESET_DETECTOR_INLINE__
 bool ResetDetector::hasResetDetected() const
 {
     switch(_data.getReason()) {

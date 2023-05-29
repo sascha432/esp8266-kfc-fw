@@ -102,20 +102,19 @@ void VisualizerAnimation::begin()
 {
     _udp.stop();
 
-    _showLoudness = _cfg.loudness_show ? 1 : 0;
     if (_cfg.get_enum_orientation(_cfg) == OrientationType::HORIZONTAL) {
         _colsInterpolation = _parent._display.getCols() / static_cast<float>(kVisualizerPacketSize);
-        _rowsInterpolation = (_parent._display.getRows() - _showLoudness) / kVisualizerMaxPacketValue;
+        _rowsInterpolation = (_parent._display.getRows() - _cfg.loudness_show) / kVisualizerMaxPacketValue;
     }
     else {
         _colsInterpolation = _parent._display.getRows() / static_cast<float>(kVisualizerPacketSize);
-        _rowsInterpolation = (_parent._display.getCols() - _showLoudness) / kVisualizerMaxPacketValue;
+        _rowsInterpolation = (_parent._display.getCols() - _cfg.loudness_show) / kVisualizerMaxPacketValue;
 
     }
-    _storedLoudness = 0;
-    _storedData.fill(0);
-    _storedPeaks.fill(PeakType());
-    _video.clear();
+
+    _clear();
+    _timeout = 5;
+    _lastPacketTime = millis();
 
     // make sure the UDP socket is listening after a reconnect
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
@@ -123,6 +122,17 @@ void VisualizerAnimation::begin()
     }, this);
 
     _listen();
+}
+
+void VisualizerAnimation::_clear()
+{
+    _storedLoudness.clear();
+    _peakLoudness.clear();
+    _peakLoudnessTime = 0;
+    _storedData.fill(0);
+    _storedPeaks.fill(PeakType());
+    _video.clear();
+    _lastPacketTime = 0;
 }
 
 void VisualizerAnimation::_listen()
@@ -148,13 +158,159 @@ void VisualizerAnimation::_listen()
 extern "C" float m_factor;
 
 
+enum class UdpProtocolType : uint8_t {
+    /*
+        byte zero is the protocol id
+        byte one is idle timeout (255 = no timeout)
+
+        realistically, we can update about 150-250 LEDs, before UDP packets are getting to big
+
+
+
+        WARLS (max 256 LEDs, up to 1026 byte, any of the 256 LEDs can be addressed)
+
+        2 + n*4	LED Index
+        3 + n*4	Red Value
+        4 + n*4	Green Value
+        5 + n*4	Blue Value
+   */
+    WARLS = 1,
+    /*
+
+        DRGB - NOT SUPPORTED (max 490 LEDs, 1470 byte, updating LED 490)
+
+        2 + n*3	Red Value
+        3 + n*3	Green Value
+        4 + n*3	Blue Value
+    */
+    DRGB = 2,
+    /*
+
+        DRGBW - NOT SUPPORTED (max 367 LEDs, 1470 byte)
+
+        2 + n*4	Red Value
+        3 + n*4	Green Value
+        4 + n*4	Blue Value
+        5 + n*4	White Value
+     * */
+    DRGBW = 3,
+    /*
+
+        DNRGB (max. 65535 LEDs, up to 488 LEDs per 1470 byte packet, any of the 65535 LEDs can be addressed)
+
+        2	Start index high byte
+        3	Start index low byte
+        4 + n*3	Red Value
+        5 + n*3	Green Value
+        6 + n*3	Blue Value
+
+     */
+    DNRGB = 4,
+    /*
+        WLEN_NOTIFIER - NOT SUPPORTED
+    */
+    WLEN_NOTIFIER = 5,
+    /*
+        if the first protocol byte is unknown and the packet size can be divided by 3, assume it is raw data
+
+        for example https://github.com/scottlawsonbc/audio-reactive-led-strip/tree/master
+        It can be modifed to use the WARLS protocol easily:
+        Insert the following code in led.py after line 66: m.append(1); m.append(2); These are the first two bytes of the protocol. (line numbers probably outdated)
+
+    */
+    RAW = 255,
+};
+
 void VisualizerAnimation::_parseUdp()
 {
+    if (_timeout != 255 && _timeout != 0) {
+        if (millis() - _lastPacketTime >= _timeout) {
+            // clear display and set timeout to 0
+            _parent._display.fill(CRGB(0));
+            _timeout = 0;
+            return;
+        }
+    }
     size_t size;
     while((size = _udp.parsePacket()) != 0) {
         if (!_udp.available()) {
             break;
         }
+        int firstByte = _udp.peek();
+        if (firstByte - 1) {
+            break;
+        }
+        switch(static_cast<UdpProtocolType>(firstByte)) {
+            case UdpProtocolType::WARLS: {
+                struct ExitScope {
+                    ExitScope(VisualizerAnimation *parent) : _parent(parent) {}
+                    ~ExitScope() {
+                        if (_parent) {
+                            _parent->_clear();
+                            __DBG_printf("UDP receive error");
+                        }
+                    }
+                    void end() {
+                        _parent = nullptr;
+                    }
+                    VisualizerAnimation *_parent;
+                } exitScope(this);
+
+                if (size < 6 && ((size - 2) & 3) != 0) {
+                    // invalid packet size
+                    return;
+                }
+                _udp.read();
+                _timeout = _udp.read();
+                if (_timeout == 0) {
+                    // timeout 0 ignores the packet
+                    return;
+                }
+                // verify magic
+                if (_udp.read() != 255) {
+                    return;
+                }
+                if (_udp.read() != 99) {
+                    return;
+                }
+                if (_udp.read() != 88) {
+                    return;
+                }
+                if (_udp.read() != 77) {
+                    return;
+                }
+                if (_udp.read() != 66) {
+                    return;
+                }
+                if (_udp.read() != 55) {
+                    return;
+                }
+                _storedLoudness.setLeftChannel(_udp.read());
+                _storedLoudness.setRightChannel(_udp.read());
+                if (_udp.read() != 44) {
+                    return;
+                }
+                uint8_t lines = _udp.read();
+                if (lines != kVisualizerPacketSize) {
+                    // invalid size
+                    // we have no reshaping yet
+                    return;
+                }
+                int read = _udp.readBytes(_storedData.begin(), lines);
+                if (read != lines) {
+                    // read failed
+                    return;
+                }
+                // we do not read the rest...
+                _lastPacketTime = millis();
+                exitScope.end();
+                _processNewData();
+                return;
+            }
+            default:
+                break;
+        }
+
         if (size >= 128) {
             // video data is sent in big chunks
             VideoHeaderType header;
@@ -184,6 +340,7 @@ void VisualizerAnimation::_parseUdp()
 
             if (_udp.readBytes(ptr, size) != size) {
                 _video.clear();
+                _lastPacketTime = millis();
                 continue;
             }
 
@@ -191,6 +348,8 @@ void VisualizerAnimation::_parseUdp()
                 return;
             }
         }
+
+/*
         else if (size == kVisualizerPacketSize) {
             // full packet, read it directly into the buffer and clean the end
             auto i = _udp.readBytes(_storedData.data(), kVisualizerPacketSize);
@@ -250,69 +409,83 @@ void VisualizerAnimation::_parseUdp()
         else {
             continue;
         }
-        // we have a valid packet in _storedData
-        auto timeMillis = millis();
-
-        float loudness = 0;
-        float totalLoudness = 0.001;
-        uint16_t i = 0;
-        auto showPeaks = _cfg.get_enum_peak_show(_cfg);
-        for(uint8_t &value: _storedData) {
-            // correct the logarithmic scales to something that represents the human ear
-            #if 1
-                // 3.2x faster... 72us
-                // tested with GCC 8.4.0 and ESP32
-                constexpr uint32_t kShift = 10; // 1024
-                constexpr float kSquareNum = 7.97;
-                constexpr float kMul = (1.0 / (1 << (kShift >> 1)/* for sqrt(i * 1024) * sqrt(1024) */))/* 1.0 / sqrt(1024) */;
-                constexpr uint16_t kMax = (kSquareNum / kMul); // kSquareNum * 32.0
-                constexpr float kReducedMul = kMul / (kSquareNum / 2.25); // limit multiplier to 2.25
-                static_assert(kMax >= 100 && kMax <= 255, "kMax should above 100 for more precision and must be below 256");
-                static_assert((kVisualizerPacketSize << kShift) < 0xffff, "sqrt16() out of range");
-                static_assert(std::sqrt(float(1 << kShift)) == float(1 << (kShift >> 1)), "sqrt(1 << kShift) does not match 1 << (kShift >> 1)");
-                // increase the small values (0-31) up to 31744 to fit into uint16_t, it uses full 8 bit precision
-                float bandCorrection = ((sqrt16(i << kShift/* i * 1024 */))) * kReducedMul/* ((kMax - uint16_t(sqrt(i * 1024))) / 32.0) *  */;
-            #else
-                // correction factor for loudness value per band, 220-230us
-                constexpr float kMul = 5.65685424949238f; // sqrt(32)
-                constexpr float kReducedMul = 1 / (kMul / 2.25); // limit multiplier to 2.25
-                float bandCorrection = ((kMul - std::sqrt(float(i)))) * kReducedMul;
-            #endif
-            // add a linear correction that is actually a curve cause bands are logarithmic
-            constexpr float kMul2 = (1.0 / float(kVisualizerPacketSize - 1)); // to avoid division
-            totalLoudness += bandCorrection;
-            loudness += value / bandCorrection;
-            _storedPeaks[i++].add(value, timeMillis, _cfg.peak_falling_speed, showPeaks);
-        }
-        loudness = std::min<float>(std::sqrt(loudness * m_factor) / totalLoudness, 255.0f);
-        if (loudness != _storedLoudness) {
-            _storedLoudness = loudness;
-        }
-        if (timeMillis - _peakLoudnessTime > 750) {
-            _peakLoudness = 0;
-            _peakLoudnessTime = timeMillis;
-        }
-        _peakLoudness = std::clamp<uint16_t>(_storedLoudness + 1, _peakLoudness, 255);
+        */
     }
-    return;
+}
+
+void VisualizerAnimation::_processNewData()
+{
+    auto timeMillis = millis();
+
+    uint16_t i = 0;
+    auto showPeaks = _cfg.get_enum_peak_show(_cfg);
+    for(uint8_t &value: _storedData) {
+        _storedPeaks[i++].add(value, timeMillis, _cfg.peak_falling_speed, showPeaks);
+    }
+    if (timeMillis - _peakLoudnessTime > 750) {
+        _peakLoudness.clear();
+        _peakLoudnessTime = timeMillis;
+    }
+    _peakLoudness.updatePeaks(_storedLoudness);
 }
 
 template<typename _Ta>
 void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
 {
     switch(_cfg.get_enum_type(_cfg)) {
-        case VisualizerAnimationType::LOUDNESS_1D: {
+        case VisualizerAnimationType::VUMETER_COLOR_1D:
+        case VisualizerAnimationType::VUMETER_1D: {
             display.fill(CRGB(0));
             auto color = _getColor();
-            CoordinateType end = std::max((_storedLoudness * display.getCols()) / 256, display.getCols() - 1);
-            CoordinateType peak = std::max((_peakLoudness * display.getCols()) / 256, display.getCols() - 1);
+            auto cols = display.getCols();
+            auto visType = _cfg.get_enum_type(_cfg);
+            auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
+            CoordinateType end = std::min(((_storedLoudness.getLeftLevel() + _storedLoudness.getRightLevel()) * cols) / 512, cols - 1);
+            CoordinateType peak = std::min((peakLevel * cols) / 256, cols - 1);
             for (int row = 0; row < display.getRows(); row++) {
-                for (int col = 0; col < display.getCols(); col++) {
-                    if (col == peak) {
-                        display.setPixel(row, col, CRGB(255, 0, 0));
+                for (int col = 0; col < cols; col++) {
+                    auto colOfs = _cfg.loudness_offset ? ((col + _cfg.loudness_offset) % cols) : cols;
+                    if (_cfg.loudness_peaks && col == peak) {
+                        display.setPixel(row, colOfs, CRGB(255, 0, 0));
                     }
                     else if (col < end) {
-                        display.setPixel(row, col, color);
+                        if (visType == VisualizerAnimationType::VUMETER_COLOR_1D) {
+                            display.setPixel(row, colOfs, color);
+                        }
+                        else {
+                            display.setPixel(row, colOfs, CRGB(255, std::max(255 - peakLevel, 0), 0));
+                        }
+                    }
+                }
+            }
+        }
+        break;
+        case VisualizerAnimationType::VUMETER_COLOR_STEREO_1D:
+        case VisualizerAnimationType::VUMETER_STEREO_1D: {
+            display.fill(CRGB(0));
+            auto color = _getColor();
+            auto cols = display.getCols();
+            auto visType = _cfg.get_enum_type(_cfg);
+            auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
+            CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
+            CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
+            CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
+            CoordinateType peakLoudnessColLeft = std::max(centerCol - ((_peakLoudness.getLeftLevel() * centerCol) >> 8) - 1, 0);
+            CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
+            for (int row = 0; row < display.getRows(); row++) {
+                for (int col = 0; col < cols; col++) {
+                    auto colOfs = _cfg.loudness_offset ? ((col + _cfg.loudness_offset) % cols) : cols;
+                    if (_cfg.loudness_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
+                        display.setPixel(row, colOfs, CRGB(255, 0, 0));
+                    }
+                    else if (col >= loudnessLeft && col < loudnessRight) {
+                        if (visType == VisualizerAnimationType::VUMETER_COLOR_STEREO_1D) {
+                            display.setPixel(row, colOfs, color);
+                        }
+                        else {
+                            int pos = (col < centerCol ? _peakLoudness.getLeftLevel() : _peakLoudness.getRightLevel()) >> 1;
+                            display.setPixel(row, colOfs, CRGB(255, std::max(255 - pos, 0), 0));
+                        }
                     }
                 }
             }
@@ -324,16 +497,18 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             hsv.hue = 0;
             hsv.val = 255;
             hsv.sat = 240;
+            auto cols = display.getCols();
             float hue = 0;
-            float hueIncr = 232 / static_cast<float>(display.getCols()); // starts with red and ends with pink
-            for (int col = 0; col < display.getCols(); col++) {
+            float hueIncr = 232 / static_cast<float>(cols); // starts with red and ends with pink
+            for (int col = 0; col < cols; col++) {
+                auto colOfs = _cfg.loudness_offset ? ((col + _cfg.loudness_offset) % cols) : cols;
                 hsv.hue = hue;
                 hue += hueIncr;
                 auto rgb = CRGB(hsv);
                 auto index = _getDataIndex(display, col);
                 rgb.fadeToBlackBy(kVisualizerMaxPacketValue - _storedData[index]);
                 for (int row = 0; row < display.getRows(); row++) {
-                    display.setPixel(row, col, rgb);
+                    display.setPixel(row, colOfs, rgb);
                 }
             }
         }
@@ -348,12 +523,12 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             hsv.sat = 240;
             int16_t oldIndex = -1;
             CRGB color = _getColor();
-            CoordinateType lastRow = display.getRows() - _showLoudness;
+            CoordinateType lastRow = display.getRows() - _cfg.loudness_show;
             CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
-            CoordinateType loudnessLen = std::min<int>((_storedLoudness * centerCol) >> 8, centerCol);
-            CoordinateType peakLoudnessCol = std::min<int>((_peakLoudness * centerCol) >> 8, centerCol);
-            CoordinateType peakLoudnessColLeft = std::max(centerCol - peakLoudnessCol - 1, 0);
-            CoordinateType peakLoudnessColRight = std::min(centerCol + peakLoudnessCol, display.getCols() - 1);
+            CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
+            CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
+            CoordinateType peakLoudnessColLeft = std::max(centerCol - ((_peakLoudness.getLeftLevel() * centerCol) >> 8) - 1, 0);
+            CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
             for (CoordinateType col = 0; col < display.getCols(); col++) {
                 CRGB rgb;
                 switch(_cfg.get_enum_type(_cfg)) {
@@ -366,43 +541,52 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                         break;
 
                 }
-                    int8_t index = _getDataIndex(display, col);
+                int8_t index = _getDataIndex(display, col);
                 if (index != oldIndex) {
                     oldIndex = index;
                     // change color for each bar
                     hsv.hue += (224 / kVisualizerPacketSize); // starts with red and ends with pink
                 }
-                int end = _storedData[index] * _rowsInterpolation;
-                for (CoordinateType row = 0; row < lastRow; row++) {
-                    if (row < end) {
-                        if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D) {
-                            int pos = ((row * 255) / lastRow);
-                            rgb = CRGB(pos, std::max(168 - pos, 0), 0);
-                        }
-                        display.setPixel(row, col, rgb);
+                // bar pixels
+                CoordinateType endRow = std::min<int>(((_storedData[index] * (lastRow + 1)) >> 8), lastRow);
+                for (CoordinateType row = 0; row < endRow; row++) {
+                    if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D) {
+                        int pos = ((row * 256) / lastRow);
+                        rgb = CRGB(pos, std::max(255 - pos, 0), 0);
                     }
+                    display.setPixel(row, col, rgb);
                 }
+                // peak pixels
                 if (_cfg.get_enum_peak_show(_cfg) != VisualizerPeakType::DISABLED) {
-                    // update time, the udp handler updates the pixels in real time in an interrupt
                     millisValue = millis();
-                    auto numRows = display.getRows();
-                    auto peakValue = _storedPeaks[index].getPeakPosition(millisValue, numRows);
-                    if (peakValue >= 0) {
-                        auto peak = std::clamp<uint16_t>(peakValue * _rowsInterpolation, end - 1, numRows - 1);
-                        display.setPixel(peak, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb, millisValue));
+                    auto peakLoudness = _storedPeaks[index].getPeakPosition(millisValue);
+                    if (peakLoudness) {
+                        // update time, the udp handler updates the pixels in real time in an interrupt
+                        CoordinateType peakLoudnessRow = std::min<int>(((peakLoudness * (lastRow + 1)) >> 8), lastRow - 1);
+                        if (peakLoudnessRow >= endRow - 1) {
+                            display.setPixel(peakLoudnessRow, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb, millisValue));
+                        }
+                        else {
+                            // the pixel has fallen below the current level
+                            // get the stored peak value
+                            peakLoudnessRow = std::min<int>(((_storedPeaks[index].getPeakValue() * (lastRow + 1)) >> 8), lastRow - 1);
+                            if (peakLoudnessRow >= endRow - 1) {
+                                display.setPixel(peakLoudnessRow, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb, millisValue));
+                            }
+                        }
                     }
                 }
-                if (_showLoudness) {
-                    auto row = display.getRows() - 1;
+                // VU Meter
+                if (_cfg.loudness_show) {
                     if (_cfg.loudness_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
-                        display.setPixel(row, col, CRGB(255, 0, 0));
+                        display.setPixel(lastRow, col, CRGB(255, 0, 0));
                     }
-                    else if (col >= centerCol - loudnessLen && col < centerCol + loudnessLen) {
-                        int position = ((centerCol - col) * 255) / centerCol;
+                    else if (col >= loudnessLeft && col < loudnessRight) {
+                        int position = ((centerCol - col) * 256) / centerCol;
                         if (position < 0) {
                             position = -position;
                         }
-                        display.setPixel(row, col, CRGB(position, std::max(200 - position, 0), 0));
+                        display.setPixel(lastRow, col, CRGB(position, std::max(200 - position, 0), 0));
                     }
                 }
             }
@@ -422,7 +606,7 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
         }
         break;
         default:
-            //TODO
+            //TODO blink red green to show an error has occurred
             uint8_t r = ((millis() / 500) % 2) ? 32 : 0;
             uint8_t g = r ? 0 : 32;
             display.fill(CRGB(r, g, 0));

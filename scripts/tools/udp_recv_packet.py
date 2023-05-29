@@ -20,7 +20,7 @@ if multicast:
 
 sock.setblocking(True)
 sock.settimeout(1 / 1000.0)
-sock.bind((ip, 4210))
+sock.bind((ip, 21324))
 
 cols = 64
 rows = 20

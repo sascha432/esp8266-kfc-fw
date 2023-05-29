@@ -130,10 +130,11 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addFormUI(FormUI::Type::HIDDEN_SELECT, orientationItems);
 
                     auto VisualizerAnimationTypeItems = FormUI::Container::List(
-                        VisualizerAnimationType::LOUDNESS_1D, F("Loudness 1D"),
-                        // VisualizerAnimationType::LOUDNESS_STEREO_1D, F("Loudness Stereo 1D"),
+                        VisualizerAnimationType::VUMETER_1D, F("VU Meter Mono Gradient"),
+                        VisualizerAnimationType::VUMETER_COLOR_1D, F("VU Meter Mono Color"),
+                        VisualizerAnimationType::VUMETER_STEREO_1D, F("VU Meter Stereo Gradient"),
+                        VisualizerAnimationType::VUMETER_COLOR_STEREO_1D, F("VU Meter Stereo Color"),
                         VisualizerAnimationType::SPECTRUM_RAINBOW_1D, F("Spectrum Rainbow 1D"),
-                        // VisualizerAnimationType::SPECTRUM_RAINBOW_STEREO_1D, F("Spectrum Rainbow Stereo 1D"),
                         VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D, F("Spectrum Rainbow Bars 2D"),
                         VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D, F("Spectrum Gradient 2D"),
                         VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D, F("Spectrum Single Color Bars 2D"),
@@ -154,8 +155,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     auto showPeaksItems = FormUI::List(
                         VisualizerPeakType::DISABLED, F("Disabled"),
                         VisualizerPeakType::ENABLED, F("Enabled"),
-                        VisualizerPeakType::FADING, F("Fading (time in ms)"),
-                        VisualizerPeakType::FALLING_DOWN, F("Falling (time in ms)")
+                        VisualizerPeakType::FADING, F("Fading (time in ms) - recommended time is 1000-1500ms"),
+                        VisualizerPeakType::FALLING_DOWN, F("Falling (time in ms) - recommended time is 2500-3000ms")
                     );
                     form.addObjectGetterSetter(F("v_psh"), cfg.visualizer, cfg.visualizer.get_bits_peak_show, cfg.visualizer.set_bits_peak_show);
                     form.addFormUI(F("Show Peaks"), FormUI::Type::SELECT, showPeaksItems);
@@ -180,6 +181,10 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
 
                     form.addObjectGetterSetter(F("v_sln"), cfg.visualizer, cfg.visualizer.get_bits_loudness_show, cfg.visualizer.set_bits_loudness_show);
                     form.addFormUI(F("Show Loudness at the top"), FormUI::Type::SELECT, FormUI::BoolItems(F("Yes"), F("No")), FormUI::CheckboxButtonSuffix(showLoudnessPeaks, F("Show Peaks")));
+
+                    form.addObjectGetterSetter(F("v_svo"), cfg.visualizer, cfg.visualizer.get_bits_loudness_offset, cfg.visualizer.set_bits_loudness_offset);
+                    form.addFormUI(F("VU Meter Offset"), FormUI::Type::NUMBER_RANGE);
+                    cfg.visualizer.addRangeValidatorFor_loudness_offset(form);
 
                     auto &multicast = form.addObjectGetterSetter(F("v_muca"), cfg.visualizer, cfg.visualizer.get_bit_multicast, cfg.visualizer.set_bit_multicast);
                     form.addFormUI(FormUI::Type::HIDDEN);

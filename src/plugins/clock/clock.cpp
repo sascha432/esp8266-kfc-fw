@@ -80,6 +80,7 @@ ClockPlugin::ClockPlugin() :
     _isEnabled(false),
     _forceUpdate(false),
     _isRunning(false),
+    _isLocked(false),
     _display(),
     __color(0, 0, 0xff),
     _lastUpdateTime(0),
@@ -664,7 +665,12 @@ void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
 void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
 {
     __LDBG_printf("animation=%d blend_time=%u", animation, blendTime);
-    _blendTime = blendTime;
+    if (_animation && _animation->hasBlendSupport()) {
+        _blendTime = 0;
+    }
+    else {
+        _blendTime = blendTime;
+    }
     #if IOT_LED_MATRIX == 0
         switch(animation) {
             case AnimationType::COLON_SOLID:
@@ -815,6 +821,10 @@ void ClockPlugin::_setBrightness(uint8_t brightness, bool useEnable)
 
 void ClockPlugin::_enable()
 {
+    if (_isLocked) {
+        _isLocked = false;
+        return;
+    }
     if (_isEnabled) {
         __LDBG_printf("enable LED pin=%u state=%u (cfg_enable=%u, is_enabled=%u, config=%u) SKIPPED", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true), _config.standby_led, _isEnabled, _config.enabled);
         return;

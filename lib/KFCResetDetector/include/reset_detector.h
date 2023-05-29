@@ -133,6 +133,7 @@ public:
 
     bool hasCrashDetected() const;
     bool hasResetDetected() const;
+    bool hasBrownoutDetected() const;
     bool hasRebootDetected() const;
     bool hasWakeUpDetected() const;
     const String getResetInfo() const;

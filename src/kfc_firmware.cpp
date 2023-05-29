@@ -537,6 +537,13 @@ void setup()
             at_mode_setup();
         #endif
 
+        #if IOT_CLOCK || IOT_LED_MATRIX || IOT_LED_STRIP
+            // disable the LEDs tif it was caused by a power surge when turning on
+            if (resetDetector.hasCrashDetected() || resetDetector.hasBrownoutDetected()) {
+                ClockPlugin::getInstance().lock();
+           }
+        #endif
+
         #if ENABLE_DEEP_SLEEP
             componentRegister.setup(wakeup ? PluginComponent::SetupModeType::AUTO_WAKE_UP : PluginComponent::SetupModeType::DEFAULT);
         #else

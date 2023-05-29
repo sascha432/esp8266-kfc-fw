@@ -14,6 +14,48 @@
 
 namespace Clock {
 
+    class VisualizerLoudnessLevel {
+    public:
+        VisualizerLoudnessLevel() : _leftLevel(0), _rightLevel(0)
+        {}
+
+        void clear()
+        {
+            _leftLevel = 0;
+            _rightLevel = 0;
+        }
+
+        void updatePeaks(const VisualizerLoudnessLevel &levels)
+        {
+            _leftLevel = std::clamp<uint32_t>(levels._leftLevel + 1, _leftLevel, 255);
+            _rightLevel = std::clamp<uint32_t>(levels._rightLevel + 1, _rightLevel, 255);
+        }
+
+        uint16_t getLeftLevel() const
+        {
+            return _leftLevel;
+        }
+
+        uint16_t getRightLevel() const
+        {
+            return _rightLevel;
+        }
+
+        void setLeftChannel(uint8_t level)
+        {
+            _leftLevel = level;
+        }
+
+        void setRightChannel(uint8_t level)
+        {
+            _rightLevel = level;
+        }
+
+    private:
+        uint8_t _leftLevel;
+        uint8_t _rightLevel;
+    };
+
     class VisualizerAnimation : public Animation {
     public:
         using VisualizerAnimationConfig = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType;
@@ -25,12 +67,12 @@ namespace Clock {
     public:
         VisualizerAnimation(ClockPlugin &clock, Clock::Color color, VisualizerAnimationConfig &cfg) :
             Animation(clock, color),
-            _storedLoudness(0),
-            _peakLoudness(0),
             _peakLoudnessTime(0),
             _storedData(),
             _storedPeaks(),
             _video(getNumPixels()),
+            _timeout(5),
+            _lastPacketTime(0),
             _cfg(cfg)
         {
             _udpUsageCounter++;
@@ -50,6 +92,11 @@ namespace Clock {
 
         virtual void loop(uint32_t millisValue) override;
 
+        virtual bool hasBlendSupport() const override
+        {
+            return false;
+        }
+
         virtual void copyTo(DisplayType &display, uint32_t millisValue) override
         {
             _copyTo(display, millisValue);
@@ -63,28 +110,21 @@ namespace Clock {
         template<typename _Ta>
         uint8_t _getDataIndex(_Ta &display, int col)
         {
-            return std::clamp<uint8_t>((col * kVisualizerPacketSize) / static_cast<float>(display.getCols()), 0, kVisualizerPacketSize - 1);
+            return std::clamp<uint16_t>((col * kVisualizerPacketSize) / static_cast<float>(display.getCols()), 0, kVisualizerPacketSize - 1);
         }
 
         template<typename _Ta>
         void _copyTo(_Ta &display, uint32_t millisValue);
 
+        void _clear();
         void _listen();
         void _parseUdp();
-
-        void printDebugInfo(Print &output)
-        {
-            uint32_t ms = millis();
-            output.printf_P(PSTR("Max. spectrum bars %u, video data %d, loudness=%.2f%%, peak sink rate=%.4fs\n"), kVisualizerPacketSize, _video._data.size(), (_storedLoudness * 100) / kVisualizerMaxPacketValue, _cfg.peak_falling_speed / 1000.0);
-            for(uint8_t i = 0; i < kVisualizerPacketSize; i++) {
-                output.printf_P(PSTR("%02u: val=%d peak=%d/%d age=%dms\n"), i, _storedData[i], _storedPeaks[i].getPeakValue(), _storedPeaks[i].getPeakPosition(ms, getRows()), _storedPeaks[i].getLastPeakUpdate(ms));
-
-            }
-        }
 
     protected:
         static constexpr int kVisualizerPacketSize = 32;
         static constexpr float kVisualizerMaxPacketValue = 254.0;
+
+        void _processNewData();
 
         class PeakType
         {
@@ -101,7 +141,12 @@ namespace Clock {
             {
                 _peakSinkRate = peakSinkRate;
                 _peakType = peakType;
-                if (value > _value || (_peakType == VisualizerPeakType::FADING && getFading(millis) == 255)) {
+                if (
+                    (value > _value) ||
+                    (_peakType == VisualizerPeakType::FADING && getFading(millis) == 255) ||
+                    (_peakType == VisualizerPeakType::ENABLED && _diff(millis) > _peakSinkRate) ||
+                    (_peakType == VisualizerPeakType::FALLING_DOWN && getPeakPosition(millis) <= 0)
+                ) {
                     _value = value;
                     _millis = millis;
                 }
@@ -118,15 +163,15 @@ namespace Clock {
             }
 
             // this function return -1 if no peak is to be displayed
-            int16_t getPeakPosition(uint32_t millis, uint16_t rows) const
+            int16_t getPeakPosition(uint32_t millis) const
             {
-                if (_peakType == VisualizerPeakType::FADING) {
+                if (_peakType != VisualizerPeakType::FALLING_DOWN) {
                     return _value;
                 }
                 if (_millis == 0 || _value == 0) {
                     return -1;
                 }
-                int diff = (_diff(millis) * rows) / _peakSinkRate;
+                int diff = _diff(millis) * 256 / _peakSinkRate;
                 if (diff > _value) {
                     return -1;
                 }
@@ -167,9 +212,9 @@ namespace Clock {
 
         private:
             uint32_t _millis;
-            uint8_t _value;
+            uint8_t _value; // the current position, 0-255 not the number of rows...
             VisualizerPeakType _peakType;
-            uint16_t _peakSinkRate;
+            uint16_t _peakSinkRate; // milliseconds
         };
 
         enum ColorFormatType : uint8_t {
@@ -282,16 +327,17 @@ namespace Clock {
             uint32_t _numPixels;
         };
 
-        uint8_t _storedLoudness;
-        uint8_t _peakLoudness;
+        VisualizerLoudnessLevel _storedLoudness;
+        VisualizerLoudnessLevel _peakLoudness;
         uint32_t _peakLoudnessTime;
         std::array<uint8_t, kVisualizerPacketSize> _storedData;
         std::array<PeakType, kVisualizerPacketSize> _storedPeaks;
         VideoType _video;
+        uint8_t _timeout;
+        uint32_t _lastPacketTime;
         VisualizerAnimationConfig &_cfg;
         float _colsInterpolation; // horizontal
         float _rowsInterpolation; // vertical
-        uint8_t _showLoudness;
 
         static WiFiUDP _udp;
         static int _udpUsageCounter;

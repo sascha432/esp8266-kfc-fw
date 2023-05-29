@@ -221,8 +221,10 @@ namespace KFCConfigurationClasses {
                         MAX
                     };
                     enum class VisualizerAnimationType : uint8_t {
-                        LOUDNESS_1D,
-                        LOUDNESS_STEREO_1D,
+                        VUMETER_1D,
+                        VUMETER_COLOR_1D,
+                        VUMETER_STEREO_1D,
+                        VUMETER_COLOR_STEREO_1D,
                         SPECTRUM_RAINBOW_1D,
                         SPECTRUM_RAINBOW_STEREO_1D,
                         SPECTRUM_RAINBOW_BARS_2D,
@@ -241,11 +243,12 @@ namespace KFCConfigurationClasses {
                         MAX,
                     };
 
-                    CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, 4210);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(peak_falling_speed, 15, 500, 15000, 6500, 100);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, 21324);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(peak_falling_speed, 15, 250, 15000, 2000, 100);
                     CREATE_UINT32_BITFIELD_MIN_MAX(peak_extra_color, 1, 0, 1, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(loudness_show, 1, 0, 1, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(loudness_peaks, 1, 0, 1, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(loudness_offset, 12, 0, 1024, 0, 1);
                     CREATE_COLOR_FIELD(color, 0xff00ff);
                     CREATE_COLOR_FIELD(peak_color, 0x0000ff);
                     CREATE_BOOL_BITFIELD(multicast);
@@ -259,6 +262,7 @@ namespace KFCConfigurationClasses {
                         peak_extra_color(kDefaultValueFor_peak_extra_color),
                         loudness_show(kDefaultValueFor_loudness_show),
                         loudness_peaks(kDefaultValueFor_loudness_peaks),
+                        loudness_offset(kDefaultValueFor_loudness_offset),
                         color(kDefaultValueFor_color),
                         peak_color(kDefaultValueFor_peak_color),
                         multicast(false),
@@ -378,29 +382,37 @@ namespace KFCConfigurationClasses {
                     MatrixConfigType matrix;
                 #endif
 
-                uint16_t getBrightness() const {
+                uint16_t getBrightness() const
+                {
                     return brightness;
                 }
-                void setBrightness(uint8_t pBrightness) {
+
+                void setBrightness(uint8_t pBrightness)
+                {
                     brightness = pBrightness;
                 }
 
-                uint32_t getFadingTimeMillis() const {
+                uint32_t getFadingTimeMillis() const
+                {
                     return fading_time * 1000;
                 }
-                void setFadingTimeMillis(uint32_t time) {
+                void setFadingTimeMillis(uint32_t time)
+                {
                     fading_time = time / 1000;
                 }
 
-                AnimationType getAnimation() const {
+                AnimationType getAnimation() const
+                {
                     return get_enum_animation(*this);
                 }
 
-                void setAnimation(AnimationType animation) {
+                void setAnimation(AnimationType animation)
+                {
                     set_enum_animation(*this, animation);
                 }
 
-                bool hasColorSupport() const {
+                bool hasColorSupport() const
+                {
                     switch(getAnimation()) {
                         case AnimationType::FADING:
                         case AnimationType::SOLID:
@@ -416,10 +428,13 @@ namespace KFCConfigurationClasses {
                     return false;
                 }
 
-                InitialStateType getInitialState() const {
+                InitialStateType getInitialState() const
+                {
                     return get_enum_initial_state(*this);
                 }
-                void setInitialState(InitialStateType state) {
+
+                void setInitialState(InitialStateType state)
+                {
                     set_enum_initial_state(*this, state);
                 }
 

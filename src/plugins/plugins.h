@@ -31,7 +31,7 @@
 #    include "../src/plugins/remote/remote.h"
 #endif
 
-#if IOT_CLOCK
+#if IOT_CLOCK || IOT_LED_MATRIX || IOT_LED_STRIP
 #    include "../src/plugins/clock/clock.h"
 #endif
 

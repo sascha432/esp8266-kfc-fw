@@ -53,7 +53,7 @@ try:
                 if position == -1:
                     continue
                 header = struct.pack('IHBB', video_id, position, format, 0)
-                total_data += sock.sendto(header + data, (ip, 4210))
+                total_data += sock.sendto(header + data, (ip, 21324))
                 position += to_read // pixel_size
             time.sleep(1 / fps)
             video_id += 1

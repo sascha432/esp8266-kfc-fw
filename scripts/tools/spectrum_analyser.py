@@ -59,9 +59,9 @@ try:
                     out[k] = n
             b0 = b1 + 1
 
-        sock.sendto(out, (DEST_IP, 4210))
+        sock.sendto(out, (DEST_IP, 21324))
 except KeyboardInterrupt:
     pass
 
 print()
-sock.sendto(np.linspace(0, 0, 32, dtype='B'), (DEST_IP, 4210))
+sock.sendto(np.linspace(0, 0, 32, dtype='B'), (DEST_IP, 21324))

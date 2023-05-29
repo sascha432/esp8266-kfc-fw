@@ -69,8 +69,19 @@ namespace Clock {
             return _storage._config;
         }
 
-        void setEnabled(bool enabled) {
+        void setEnabled(bool enabled)
+        {
             _storage._config.enabled = enabled;
+        }
+
+        void setBrightness(uint8_t brightness)
+        {
+            _storage._config.brightness = brightness;
+        }
+
+        void setAnimation(Clock::AnimationType type)
+        {
+            _storage._config.animation = uint8_t(type);
         }
 
         bool store(Stream &stream) {

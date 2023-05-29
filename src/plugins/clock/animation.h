@@ -113,9 +113,6 @@ namespace Clock {
     class Animation {
     public:
         static constexpr bool kDefaultDisableBlinkColon = true;
-        // static constexpr CoordinateType kRows = IOT_LED_MATRIX_ROWS;
-        // static constexpr CoordinateType kCols = IOT_LED_MATRIX_COLS;
-        // static constexpr PixelAddressType kNumPixels = kRows * kCols;
 
         enum class ModeType {
             NONE,
@@ -129,7 +126,6 @@ namespace Clock {
             _parent(clock),
             _buffer(nullptr),
             _disableBlinkColon(kDefaultDisableBlinkColon),
-            // _mode(ModeType::NONE),
             _color(color)
         {
         }
@@ -176,6 +172,11 @@ namespace Clock {
         {
         }
 
+        virtual bool hasBlendSupport() const
+        {
+            return true;
+        }
+
         // bool hasDisplay() const
         // {
         //     return _display != nullptr;
@@ -203,7 +204,8 @@ namespace Clock {
         // return the buffer or create a new one
         // to avoid allocating another one, at least one frame must be created before calling the method
         template<typename _Ta>
-        DisplayBufferType *getBlendBuffer(_Ta &display) {
+        DisplayBufferType *getBlendBuffer(_Ta &display)
+        {
             if (_buffer) {
                 return _buffer;
             }
@@ -213,7 +215,8 @@ namespace Clock {
         }
 
         // check if the buffer is _buffer and delete it, if not
-        void removeBlendBuffer(DisplayBufferType *buffer) {
+        void removeBlendBuffer(DisplayBufferType *buffer)
+        {
             if (buffer != _buffer) {
                 delete buffer;
             }
@@ -238,7 +241,8 @@ namespace Clock {
         Color _getColor() const;
         void _setColor(Color color);
 
-        void _freeBuffer(DisplayBufferType *newBuffer = nullptr) {
+        void _freeBuffer(DisplayBufferType *newBuffer = nullptr)
+        {
             if (_buffer) {
                 __LDBG_printf("delete _buffer=%p", _buffer);
                 delete _buffer;
@@ -275,7 +279,8 @@ namespace Clock {
         {
         }
 
-        ~BlendAnimation() {
+        ~BlendAnimation()
+        {
             _source->removeBlendBuffer(_sourceBuffer);
             _target->removeBlendBuffer(_targetBuffer);
             // make target the new animation and delete the source
@@ -284,7 +289,8 @@ namespace Clock {
             delete _target;
         }
 
-        void begin() {
+        void begin()
+        {
             _timer = millis();
             // create first frame to get the buffer
             _target->begin();
@@ -294,19 +300,23 @@ namespace Clock {
             _targetBuffer = _target->getBlendBuffer(_display);
         }
 
-        void loop(uint32_t millis) {
+        void loop(uint32_t millis)
+        {
             _target->loop(millis);
         }
 
-        void nextFrame(uint32_t millis) {
+        void nextFrame(uint32_t millis)
+        {
             _target->nextFrame(millis);
         }
 
-        void copyTo(DisplayType &display, uint32_t millis) {
+        void copyTo(DisplayType &display, uint32_t millis)
+        {
             _target->copyTo(display, millis);
         }
 
-        void copyTo(DisplayBufferType &buffer, uint32_t millis) {
+        void copyTo(DisplayBufferType &buffer, uint32_t millis)
+        {
             _target->copyTo(buffer, millis);
         }
 

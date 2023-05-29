@@ -21,7 +21,7 @@
 #include "at_mode.h"
 
 extern "C" float m_factor;
-float m_factor = 3.75;
+float m_factor = 1.0;
 #if IOT_SENSOR_HAVE_INA219
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMTESTP, "LMTESTP", "<#color>[,<time=500ms>]", "Test peak values. WARNING! This command will bypass all protections and limits");
 #endif
@@ -241,22 +241,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //         return true;
 //     }
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LMC))) {
-        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-            // vis[ualizer],<type>
-            if (args.startsWithIgnoreCase(0, F("spec"))) {
-                switch(_config.get_enum_animation(_config)) {
-                    case ClockPlugin::AnimationType::VISUALIZER: {
-                        auto &vis = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
-                        vis.printDebugInfo(const_cast<Stream &>(args.getStream()));
-                    }
-                    break;
-                    default:
-                        args.print(F("No spectrum available for this animation"));
-                        break;
-                }
-            }
-            else
-        #endif
+        // vis[ualizer],<type>
         if (args.startsWithIgnoreCase(0, F("vis"))) {
             int visTxtType = -1;
             auto newType = Clock::AnimationType::RAINBOW_FASTLED;

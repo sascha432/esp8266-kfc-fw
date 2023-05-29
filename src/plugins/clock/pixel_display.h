@@ -38,7 +38,8 @@ namespace Clock {
         MAX
     };
 
-    inline static ShowMethodType getNeopixelShowMethodType() {
+    inline static ShowMethodType getNeopixelShowMethodType()
+    {
         return static_cast<ShowMethodType>(getNeopixelShowMethodInt());
     }
 
@@ -51,29 +52,41 @@ namespace Clock {
         static constexpr CoordinateType kCols = _Columns;
 
     public:
-        PixelCoordinates(CoordinateType row = 0, CoordinateType col = 0) : _row(row), _col(col) {}
-
-        CoordinateType row() const {
-            return _row;
-        }
-        CoordinateType &row() {
-            return _row;
-        }
-        CoordinateType col() const {
-            return _col;
-        }
-        CoordinateType &col() {
-            return _col;
+        PixelCoordinates(CoordinateType row = 0, CoordinateType col = 0) : _row(row), _col(col)
+        {
         }
 
-        void invertColumn() {
+        CoordinateType row() const
+        {
+            return _row;
+        }
+
+        CoordinateType &row()
+        {
+            return _row;
+        }
+
+        CoordinateType col() const
+        {
+            return _col;
+        }
+
+        CoordinateType &col()
+        {
+            return _col;
+        }
+
+        void invertColumn()
+        {
             _col = (kCols - 1) - _col;
         }
-        void invertRow() {
+        void invertRow()
+        {
             _row = (kRows - 1) - _row;
         }
 
-        void rotate() {
+        void rotate()
+        {
             std::swap(_row, _col);
         }
 
@@ -115,43 +128,53 @@ namespace Clock {
         static constexpr uint8_t kMappingTypeId = (_ReverseRows ? 0x01 : 0x00) | (_ReverseColumns ? 0x02 : 0x00) | (_Rotate ? 0x04 : 0) | (_Interleaved ? 0x08 : 0);
 
     public:
-        constexpr uint8_t getMappingTypeId() const {
+        constexpr uint8_t getMappingTypeId() const
+        {
             return kMappingTypeId;
         }
 
-        constexpr PixelAddressType getOffset() const {
+        constexpr PixelAddressType getOffset() const
+        {
             return kPixelOffset;
         }
 
-        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved) {
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved)
+        {
             return false;
         }
 
-        constexpr size_t size() const {
+        constexpr size_t size() const
+        {
             return kRows * kCols;
         }
 
-        constexpr CoordinateType getRows() const {
+        constexpr CoordinateType getRows() const
+        {
             return kRows;
         }
 
-        constexpr CoordinateType getCols() const {
+        constexpr CoordinateType getCols() const
+        {
             return kCols;
         }
 
-        constexpr bool isRowsReversed() const{
+        constexpr bool isRowsReversed() const
+        {
             return _ReverseRows;
         }
 
-        constexpr bool isColsReversed() const{
+        constexpr bool isColsReversed() const
+        {
             return _ReverseColumns;
         }
 
-        constexpr bool isRotated() const{
+        constexpr bool isRotated() const
+        {
             return _Rotate;
         }
 
-        constexpr bool isInterleaved() const{
+        constexpr bool isInterleaved() const
+        {
             return _Interleaved;
         }
 
@@ -172,12 +195,14 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kRotate, int>::type = 0>
         inline __attribute__((__always_inline__))
-        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const
+        {
             return col;
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kRotate, int>::type = 0>
-        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const
+        {
             return row;
         }
 
@@ -185,13 +210,15 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kRotate, int>::type = 0>
         inline __attribute__((__always_inline__))
-        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const
+        {
             return row;
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kRotate, int>::type = 0>
         inline __attribute__((__always_inline__))
-        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const
+        {
             return col;
         }
 
@@ -199,18 +226,21 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseRows && !_Ta::kInterleaved, int>::type = 0>
         inline __attribute__((__always_inline__))
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
+        {
             return row;
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kReverseRows && !_Ta::kInterleaved, int>::type = 0>
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
+        {
             return (kRows - 1) - row;
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseRows && _Ta::kInterleaved, int>::type = 0>
         inline __attribute__((__always_inline__))
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
+        {
             if ((col & 1) == _Ta::kInterleaved) {
                 return row;
             }
@@ -219,7 +249,8 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kReverseRows && _Ta::kInterleaved, int>::type = 0>
         inline __attribute__((__always_inline__))
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
+        {
             if ((col & 1) == _Ta::kInterleaved) {
                 return (kRows - 1) - row;
             }
@@ -230,13 +261,15 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseColumns, int>::type = 0>
         inline __attribute__((__always_inline__))
-        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const
+        {
             return col;
         }
 
         template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kReverseColumns, int>::type = 0>
         inline __attribute__((__always_inline__))
-        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const
+        {
             return (kCols - 1) - col;
         }
 
@@ -246,7 +279,8 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType>
         inline __attribute__((__always_inline__))
-        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const
+        {
             if __CONSTEXPR17 (_Ta::kRotate) {
                 return col;
             }
@@ -257,7 +291,8 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType>
         inline __attribute__((__always_inline__))
-        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const
+        {
             if __CONSTEXPR17 (_Ta::kRotate) {
                 return row;
             }
@@ -270,7 +305,8 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType>
         inline __attribute__((__always_inline__))
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
+        {
             if __CONSTEXPR17 (_Ta::kInterleaved) {
                 if __CONSTEXPR17 (_Ta::kReverseRows) {
                     if ((col & 1) == _Ta::kInterleaved) {
@@ -299,7 +335,8 @@ namespace Clock {
 
         template<typename _Ta = CoordinateHelperType>
         inline __attribute__((__always_inline__))
-        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const {
+        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const
+        {
             if __CONSTEXPR17 (_Ta::kReverseColumns) {
                 return (kCols - 1) - col;
             }
@@ -312,18 +349,21 @@ namespace Clock {
 #endif
 
         inline __attribute__((__always_inline__))
-        PixelAddressType getAddress(CoordinateType row, CoordinateType col) const {
+        PixelAddressType getAddress(CoordinateType row, CoordinateType col) const
+        {
             // return row + col * kRows;
             return _row(getRow(row, col), getCol(row, col)) + (_col(getRow(row, col), getCol(row, col)) * kRows);
         }
 
         inline __attribute__((__always_inline__))
-        PixelAddressType getAddress(PixelCoordinatesType coords) const {
+        PixelAddressType getAddress(PixelCoordinatesType coords) const
+        {
             return getAddress(coords.row(), coords.col());
         }
 
         inline __attribute__((__always_inline__))
-        PixelCoordinatesType getPoint(PixelAddressType address) const {
+        PixelCoordinatesType getPoint(PixelAddressType address) const
+        {
             if __CONSTEXPR17 (kRows == 1) {
                 return PixelCoordinatesType(_row(getRow(0, address), getCol(0, address)), _col(getRow(0, address), getCol(0, address)));
             }
@@ -362,11 +402,13 @@ namespace Clock {
         PixelAddressType _offset{_PixelOffset};
 
     public:
-        uint8_t getMappingTypeId() const {
+        uint8_t getMappingTypeId() const
+        {
             return (_reverseRows ? 0x01 : 0x00) | (_reverseColumns ? 0x02 : 0x00) | (_rotate ? 0x04 : 0) | (_interleaved ? 0x08 : 0);
         }
 
-        PixelAddressType getOffset() const {
+        PixelAddressType getOffset() const
+        {
             return _offset;
         }
 
@@ -381,41 +423,50 @@ namespace Clock {
             _reverseColumns = colsReversed;
             _rotate = rotated;
             _interleaved = interleaved;
-            __DBG_printf("size=%u ofs=%u max=%u method=%s", size(), _PixelOffset, kMaxPixelAddress, (PGM_P)getNeopixelShowMethodStr());
+            __LDBG_printf("size=%u ofs=%u max=%u method=%s", size(), _PixelOffset, kMaxPixelAddress, (PGM_P)getNeopixelShowMethodStr());
             return true;
         }
 
-        constexpr size_t size() const {
+        constexpr size_t size() const
+        {
             return getRows() * getCols();
         }
 
-        constexpr CoordinateType getRows() const {
+        constexpr CoordinateType getRows() const
+        {
             return _rows;
         }
 
-        constexpr CoordinateType getCols() const {
+        constexpr CoordinateType getCols() const
+        {
             return _cols;
         }
 
-        bool isRowsReversed() const{
+        bool isRowsReversed() const
+        {
             return _reverseRows;
+
         }
 
-        bool isColsReversed() const{
+        bool isColsReversed() const
+        {
             return _reverseColumns;
         }
 
-        bool isRotated() const{
+        bool isRotated() const
+        {
             return _rotate;
         }
 
-        bool isInterleaved() const{
+        bool isInterleaved() const
+        {
             return _interleaved;
         }
 
         // rotation
         inline __attribute__((__always_inline__))
-        CoordinateType getRow(CoordinateType row, CoordinateType col) const {
+        CoordinateType getRow(CoordinateType row, CoordinateType col) const
+        {
             if (_rotate) {
                 return col;
             }
@@ -425,7 +476,8 @@ namespace Clock {
         }
 
         inline __attribute__((__always_inline__))
-        CoordinateType getCol(CoordinateType row, CoordinateType col) const {
+        CoordinateType getCol(CoordinateType row, CoordinateType col) const
+        {
             if (_rotate) {
                 return row;
             }
@@ -436,7 +488,8 @@ namespace Clock {
 
         // reversed and interleaved rows
         inline __attribute__((__always_inline__))
-        CoordinateType _row(CoordinateType row, CoordinateType col) const {
+        CoordinateType _row(CoordinateType row, CoordinateType col) const
+        {
             if (_interleaved) {
                 if (_reverseRows) {
                     if ((col & 1) == _interleaved) {
@@ -843,13 +896,13 @@ namespace Clock {
             auto fastLedPtr = &_controller;
             neoPixelPtr = _neoPixels;
             if (num0) {
-                __DBG_printf("segment 0 pixels=%p ofs=%u num=%u", __pixels.data() + ofs0, ofs0, num0);
+                __LDBG_printf("segment 0 pixels=%p ofs=%u num=%u", __pixels.data() + ofs0, ofs0, num0);
                 fastLedPtr->setLeds(__pixels.data() + ofs0, num0);
                 (*neoPixelPtr++)->updateLength(num0, reinterpret_cast<uint8_t *>(__pixels.data() + ofs0));
                 _numSegments++;
             }
             else {
-                __DBG_printf("segment 0 pixels=%p ofs=%u num=%u", &_emptyPixel, ofs0, num0);
+                __LDBG_printf("segment 0 pixels=%p ofs=%u num=%u", &_emptyPixel, ofs0, num0);
                 fastLedPtr->setLeds(&_emptyPixel, 0);
                 (*neoPixelPtr++)->updateLength(0, nullptr);
             }
@@ -859,13 +912,13 @@ namespace Clock {
                         break;
                     }
                     if (num1 || IOT_LED_MATRIX_OUTPUT_PIN1 == -1) {
-                        __DBG_printf("segment 1 pixels=%p ofs=%u num=%u", __pixels.data() + ofs1, ofs1, num1);
+                        __LDBG_printf("segment 1 pixels=%p ofs=%u num=%u", __pixels.data() + ofs1, ofs1, num1);
                         fastLedPtr->setLeds(__pixels.data() + ofs1, num1);
                         (*neoPixelPtr++)->updateLength(num1, reinterpret_cast<uint8_t *>(__pixels.data() + ofs1));
                         _numSegments++;
                     }
                     else {
-                        __DBG_printf("segment 1 pixels=%p ofs=%u num=%u", &_emptyPixel, ofs1, num1);
+                        __LDBG_printf("segment 1 pixels=%p ofs=%u num=%u", &_emptyPixel, ofs1, num1);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
                         (*neoPixelPtr++)->updateLength(0, nullptr);
                     }
@@ -873,13 +926,13 @@ namespace Clock {
                         break;
                     }
                     if (num2 || IOT_LED_MATRIX_OUTPUT_PIN2 == -1) {
-                        __DBG_printf("segment 2 pixels=%p ofs=%u num=%u", __pixels.data() + ofs2, ofs2, num2);
+                        __LDBG_printf("segment 2 pixels=%p ofs=%u num=%u", __pixels.data() + ofs2, ofs2, num2);
                         fastLedPtr->setLeds(__pixels.data() + ofs2, num2);
                         (*neoPixelPtr++)->updateLength(num2, reinterpret_cast<uint8_t *>(__pixels.data() + ofs2));
                         _numSegments++;
                     }
                     else {
-                        __DBG_printf("segment 2 pixels=%p ofs=%u num=%u", &_emptyPixel, ofs2, num2);
+                        __LDBG_printf("segment 2 pixels=%p ofs=%u num=%u", &_emptyPixel, ofs2, num2);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
                         (*neoPixelPtr++)->updateLength(0, nullptr);
                     }
@@ -887,13 +940,13 @@ namespace Clock {
                         break;
                     }
                     if (num3 || IOT_LED_MATRIX_OUTPUT_PIN3 == -1) {
-                        __DBG_printf("segment 3 pixels=%p ofs=%u num=%u", __pixels.data() + ofs3, ofs3, num3);
+                        __LDBG_printf("segment 3 pixels=%p ofs=%u num=%u", __pixels.data() + ofs3, ofs3, num3);
                         fastLedPtr->setLeds(__pixels.data() + ofs3, num3);
                         (*neoPixelPtr++)->updateLength(num3, reinterpret_cast<uint8_t *>(__pixels.data() + ofs3));
                         _numSegments++;
                     }
                     else {
-                        __DBG_printf("segment 3 pixels=%p ofs=%u num=%u", &_emptyPixel, ofs3, num3);
+                        __LDBG_printf("segment 3 pixels=%p ofs=%u num=%u", &_emptyPixel, ofs3, num3);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
                         (*neoPixelPtr++)->updateLength(0, nullptr);
                     }

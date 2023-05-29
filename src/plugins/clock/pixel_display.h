@@ -540,8 +540,14 @@ namespace Clock {
             return true;
         }
 
+        void setSize(CoordinateType rows, CoordinateType cols)
+        {
+            PixelMappingType::_rows = rows;
+            PixelMappingType::_cols = cols;
+        }
+
         size_t getMaxNumPixels() const {
-            return PixelMappingType::kNumPixels;
+            return PixelMappingType::_rows * PixelMappingType::_cols;
         }
 
         void reset() {

@@ -113,9 +113,9 @@ namespace Clock {
     class Animation {
     public:
         static constexpr bool kDefaultDisableBlinkColon = true;
-        static constexpr CoordinateType kRows = IOT_LED_MATRIX_ROWS;
-        static constexpr CoordinateType kCols = IOT_LED_MATRIX_COLS;
-        static constexpr PixelAddressType kNumPixels = kRows * kCols;
+        // static constexpr CoordinateType kRows = IOT_LED_MATRIX_ROWS;
+        // static constexpr CoordinateType kCols = IOT_LED_MATRIX_COLS;
+        // static constexpr PixelAddressType kNumPixels = kRows * kCols;
 
         enum class ModeType {
             NONE,
@@ -142,6 +142,10 @@ namespace Clock {
         virtual void begin()
         {
         }
+
+        CoordinateType getCols() const;
+        CoordinateType getRows() const;
+        PixelAddressType getNumPixels() const;
 
         // copy frame into display/buffer
         // if the target buffer is the own _buffer, this step can be skipped
@@ -198,11 +202,14 @@ namespace Clock {
 
         // return the buffer or create a new one
         // to avoid allocating another one, at least one frame must be created before calling the method
-        DisplayBufferType *getBlendBuffer() {
+        template<typename _Ta>
+        DisplayBufferType *getBlendBuffer(_Ta &display) {
             if (_buffer) {
                 return _buffer;
             }
-            return new DisplayBufferType();
+            auto buf = new DisplayBufferType();
+            buf->setSize(display.getRows(), display.getCols());
+            return buf;
         }
 
         // check if the buffer is _buffer and delete it, if not
@@ -260,7 +267,7 @@ namespace Clock {
         BlendAnimation(Animation *&source, Animation *target, DisplayType &display, uint16_t duration) :
             _source(source),
             _target(target),
-            _sourceBuffer(source->getBlendBuffer()),
+            _sourceBuffer(source->getBlendBuffer(display)),
             _targetBuffer(nullptr),
             _display(display),
             _timer(0),
@@ -284,7 +291,7 @@ namespace Clock {
             uint32_t ms = millis();
             _target->loop(ms);
             _target->nextFrame(ms);
-            _targetBuffer = _target->getBlendBuffer();
+            _targetBuffer = _target->getBlendBuffer(_display);
         }
 
         void loop(uint32_t millis) {

@@ -18,15 +18,19 @@ namespace Clock {
     public:
         using VisualizerAnimationConfig = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType;
         using VisualizerAnimationType = VisualizerAnimationConfig::VisualizerAnimationType;
+        using VisualizerPeakType = VisualizerAnimationConfig::VisualizerPeakType;
         using OrientationType = VisualizerAnimationConfig::OrientationType;
         using DisplayType = Clock::DisplayType;
 
     public:
         VisualizerAnimation(ClockPlugin &clock, Clock::Color color, VisualizerAnimationConfig &cfg) :
             Animation(clock, color),
-            _storedLoudness(),
+            _storedLoudness(0),
+            _peakLoudness(0),
+            _peakLoudnessTime(0),
             _storedData(),
             _storedPeaks(),
+            _video(getNumPixels()),
             _cfg(cfg)
         {
             _udpUsageCounter++;
@@ -59,100 +63,11 @@ namespace Clock {
         template<typename _Ta>
         uint8_t _getDataIndex(_Ta &display, int col)
         {
-            return std::clamp<uint8_t>((col * kVisualizerPacketSize) / static_cast<float>(display.getCols()), 0, kVisualizerPacketSize);
+            return std::clamp<uint8_t>((col * kVisualizerPacketSize) / static_cast<float>(display.getCols()), 0, kVisualizerPacketSize - 1);
         }
 
         template<typename _Ta>
-        void _copyTo(_Ta &display, uint32_t millisValue)
-        {
-            switch(_cfg.get_enum_type(_cfg)) {
-                case VisualizerAnimationType::LOUDNESS_1D: {
-                    display.fill(CRGB(0));
-                    auto color = _getColor();
-                    int end = (display.getCols() * _storedLoudness) / (kVisualizerMaxPacketValue);
-                    for (int row = 0; row < display.getRows(); row++) {
-                        for (int col = 0; col < display.getCols(); col++) {
-                            if (col < end) {
-                                display.setPixel(row, col, color);
-                            }
-                        }
-                    }
-                }
-                break;
-                case VisualizerAnimationType::SPECTRUM_RAINBOW_1D: {
-                    display.fill(CRGB(0));
-                    CHSV hsv;
-                    hsv.hue = 0;
-                    hsv.val = 255;
-                    hsv.sat = 240;
-                    float hue = 0;
-                    float hueIncr = 232 / static_cast<float>(display.getCols()); // starts with red and ends with pink
-                    for (int col = 0; col < display.getCols(); col++) {
-                        hsv.hue = hue;
-                        hue += hueIncr;
-                        auto rgb = CRGB(hsv);
-                        auto index = _getDataIndex(display, col);
-                        rgb.fadeToBlackBy(kVisualizerMaxPacketValue - _storedData[index]);
-                        for (int row = 0; row < display.getRows(); row++) {
-                            display.setPixel(row, col, rgb);
-                        }
-                    }
-                }
-                break;
-                case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
-                case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D: {
-                    display.fill(CRGB(0));
-                    CHSV hsv;
-                    hsv.hue = 0;
-                    hsv.val = 255;
-                    hsv.sat = 240;
-                    int oldIndex = -1;
-                    CRGB color = _getColor();
-                    for (int col = 0; col < display.getCols(); col++) {
-                        auto rgb = _cfg.get_enum_type(_cfg) == VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D ? color : CRGB(hsv);
-                        auto index = _getDataIndex(display, col);
-                        if (index != oldIndex) {
-                            oldIndex = index;
-                            // change color for each bar
-                            hsv.hue += (224 / kVisualizerPacketSize); // starts with red and ends with pink
-                        }
-                        int end = _storedData[index] * _rowsInterpolation;
-                        for (int row = 0; row < display.getRows(); row++) {
-                            if (row < end) {
-                                display.setPixel(row, col, rgb);
-                            }
-                        }
-                        if (_cfg.peak_color != 0) {
-                            auto peakValue = _storedPeaks[index].getPeakPosition(millisValue);
-                            if (peakValue >= 0) {
-                                auto peak = std::clamp<uint16_t>(peakValue * _rowsInterpolation, end - 1, display.getRows() - 1);
-                                display.setPixel(peak, col, _storedPeaks[index].getPeakColor(_cfg.peak_color));
-                            }
-                        }
-                    }
-                }
-                break;
-                case VisualizerAnimationType::RGB24_VIDEO:
-                case VisualizerAnimationType::RGB565_VIDEO: {
-                    if (_video.isReady()) {
-                        _video.begin();
-                        for (int row = display.getRows() - 1; row >= 0; row--) {
-                            for (int col = 0; col < display.getCols(); col++) {
-                                display.setPixel(row, col, _video.getRGB());
-                            }
-                        }
-                        _video.clear();
-                    }
-                }
-                break;
-                default:
-                    //TODO
-                    uint8_t r = ((millis() / 500) % 2) ? 32 : 0;
-                    uint8_t g = r ? 0 : 32;
-                    display.fill(CRGB(r, g, 0));
-                    break;
-            }
-        }
+        void _copyTo(_Ta &display, uint32_t millisValue);
 
         void _listen();
         void _parseUdp();
@@ -160,7 +75,7 @@ namespace Clock {
         void printDebugInfo(Print &output)
         {
             uint32_t ms = millis();
-            output.printf_P(PSTR("Max. spectrum bars %u, video data %d, loudness=%.2f%%, peak sink rate=%.4fs\n"), kVisualizerPacketSize, _video._data.size(), (_storedLoudness * 100) / kVisualizerMaxPacketValue, kPeakSinkRate / 1000.0);
+            output.printf_P(PSTR("Max. spectrum bars %u, video data %d, loudness=%.2f%%, peak sink rate=%.4fs\n"), kVisualizerPacketSize, _video._data.size(), (_storedLoudness * 100) / kVisualizerMaxPacketValue, _cfg.peak_falling_speed / 1000.0);
             for(uint8_t i = 0; i < kVisualizerPacketSize; i++) {
                 output.printf_P(PSTR("%02u: val=%d peak=%d/%d age=%dms\n"), i, _storedData[i], _storedPeaks[i].getPeakValue(), _storedPeaks[i].getPeakPosition(ms), _storedPeaks[i].getLastPeakUpdate(ms));
 
@@ -170,20 +85,23 @@ namespace Clock {
     protected:
         static constexpr int kVisualizerPacketSize = 32;
         static constexpr float kVisualizerMaxPacketValue = 254.0;
-        static constexpr uint16_t kPeakSinkRate = 4096;
 
         class PeakType
         {
         public:
-            PeakType(uint8_t value = 0, uint32_t millis = 0) :
+            PeakType(uint8_t value = 0, uint32_t millis = 0, uint16_t peakSinkRate = 0, VisualizerPeakType peakType = VisualizerPeakType::DISABLED) :
+                _millis(millis),
                 _value(value),
-                _millis(millis)
+                _peakType(peakType),
+                _peakSinkRate(peakSinkRate)
             {
             }
 
-            void add(uint8_t value, uint32_t millis)
+            void add(uint8_t value, uint32_t millis, uint16_t peakSinkRate, VisualizerPeakType peakType)
             {
-                if ((value > _value) || (millis - _millis > kPeakSinkRate)) {
+                _peakSinkRate = peakSinkRate;
+                _peakType = peakType;
+                if ((value > _value) || (millis - _millis) > _peakSinkRate) {
                     _value = value;
                     _millis = millis;
                 }
@@ -192,16 +110,25 @@ namespace Clock {
             uint16_t getLastPeakUpdate(uint32_t millis) const
             {
                 uint32_t diff = (millis - _millis);
-                return std::min(kPeakSinkRate + 1U, diff);
+                return std::min(_peakSinkRate + 1U, diff);
+            }
+
+            uint8_t getFading(uint32_t millis) const
+            {
+                uint32_t diff = (millis - _millis);
+                return std::max<uint32_t>((diff * 256) / _peakSinkRate, 255);
             }
 
             // this function return -1 if no peak is to be displayed
             int16_t getPeakPosition(uint32_t millis) const
             {
+                if (_peakType == VisualizerPeakType::FADING) {
+                    return _value;
+                }
                 if (_millis == 0 || _value == 0) {
                     return -1;
                 }
-                int diff = ((millis - _millis) * kVisualizerMaxPacketValue) / kPeakSinkRate;
+                int diff = ((millis - _millis) * kVisualizerMaxPacketValue) / _peakSinkRate;
                 if (diff > _value) {
                     return -1;
                 }
@@ -215,12 +142,26 @@ namespace Clock {
 
             CRGB getPeakColor(uint32_t color) const
             {
-                return CRGB(color);
+                auto value = CRGB(color);
+                switch(_peakType) {
+                    case VisualizerPeakType::FADING:
+                        fadeToBlackBy(&value, 1, getFading(_millis));
+                        break;
+                    case VisualizerPeakType::DISABLED:
+                        return CRGB(0);
+                    case VisualizerPeakType::ENABLED:
+                    case VisualizerPeakType::FALLING_DOWN:
+                    default:
+                        break;
+                }
+                return value;
             }
 
         private:
-            uint8_t _value;
             uint32_t _millis;
+            uint8_t _value;
+            VisualizerPeakType _peakType;
+            uint16_t _peakSinkRate;
         };
 
         enum ColorFormatType : uint8_t {
@@ -286,7 +227,7 @@ namespace Clock {
             VideoStorageType _data;
             VideoStorageType::iterator _position;
 
-            VideoType() : _header()
+            VideoType(uint32_t pixels) : _header(), _numPixels(pixels)
             {
             }
 
@@ -321,7 +262,7 @@ namespace Clock {
 
             size_t getTotalDataSize() const
             {
-                return kNumPixels * _header.getBytesPerPixel();
+                return _numPixels * _header.getBytesPerPixel();
             }
 
             void begin()
@@ -330,15 +271,19 @@ namespace Clock {
             }
 
             CRGB getRGB();
+            uint32_t _numPixels;
         };
 
         uint8_t _storedLoudness;
+        uint8_t _peakLoudness;
+        uint32_t _peakLoudnessTime;
         std::array<uint8_t, kVisualizerPacketSize> _storedData;
         std::array<PeakType, kVisualizerPacketSize> _storedPeaks;
         VideoType _video;
         VisualizerAnimationConfig &_cfg;
         float _colsInterpolation; // horizontal
         float _rowsInterpolation; // vertical
+        uint8_t _showLoudness;
 
         static WiFiUDP _udp;
         static int _udpUsageCounter;

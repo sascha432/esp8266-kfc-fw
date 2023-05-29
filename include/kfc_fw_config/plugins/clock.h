@@ -226,25 +226,44 @@ namespace KFCConfigurationClasses {
                         SPECTRUM_RAINBOW_1D,
                         SPECTRUM_RAINBOW_STEREO_1D,
                         SPECTRUM_RAINBOW_BARS_2D,
+                        SPECTRUM_GRADIENT_BARS_2D,
                         SPECTRUM_COLOR_BARS_2D,
                         RGB565_VIDEO,
                         RGB24_VIDEO,
                         MAX,
                     };
+                    enum class VisualizerPeakType : uint8_t {
+                        MIN = 0,
+                        DISABLED,
+                        ENABLED,
+                        FADING,
+                        FALLING_DOWN,
+                        MAX,
+                    };
 
                     CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, 4210);
-                    CREATE_ENUM_D_BITFIELD(type, VisualizerAnimationType, VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(peak_falling_speed, 15, 500, 15000, 6500, 100);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(peak_extra_color, 1, 0, 1, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(loudness_show, 1, 0, 1, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(loudness_peaks, 1, 0, 1, 1);
                     CREATE_COLOR_FIELD(color, 0xff00ff);
                     CREATE_COLOR_FIELD(peak_color, 0x0000ff);
                     CREATE_BOOL_BITFIELD(multicast);
+                    CREATE_ENUM_D_BITFIELD(peak_show, VisualizerPeakType, VisualizerPeakType::ENABLED);
+                    CREATE_ENUM_D_BITFIELD(type, VisualizerAnimationType, VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D);
                     CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::HORIZONTAL);
 
                     VisualizerType() :
                         port(kDefaultValueFor_port),
-                        type(kDefaultValueFor_type),
+                        peak_falling_speed(kDefaultValueFor_peak_falling_speed),
+                        peak_extra_color(kDefaultValueFor_peak_extra_color),
+                        loudness_show(kDefaultValueFor_loudness_show),
+                        loudness_peaks(kDefaultValueFor_loudness_peaks),
                         color(kDefaultValueFor_color),
                         peak_color(kDefaultValueFor_peak_color),
                         multicast(false),
+                        type(kDefaultValueFor_type),
+                        peak_show(kDefaultValueFor_peak_show),
                         orientation(kDefaultValueFor_orientation)
                     {
                     }

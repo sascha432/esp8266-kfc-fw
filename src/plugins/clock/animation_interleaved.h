@@ -20,12 +20,10 @@ namespace Clock {
             _time(time),
             _row(row),
             _col(col)
-        //     _loopTimer(0)
         {
         }
 
         virtual void begin() override {
-            // _loopTimer = millis();
             _disableBlinkColon = true;
         }
 
@@ -46,18 +44,18 @@ namespace Clock {
             CoordinateType rPos;
             CoordinateType cPos;
             if (_time) {
-                rPos = (millisValue / _time) % kRows;
-                cPos = (millisValue / _time) % kCols;
+                rPos = (millisValue / _time) % display.getRows();
+                cPos = (millisValue / _time) % display.getCols();
             }
             else {
                 rPos = 0;
                 cPos = 0;
             }
-            for(CoordinateType i = 0; i < kRows; i++) {
+            for(CoordinateType i = 0; i < display.getRows(); i++) {
                 Color rowColor = (_row > 1) ?
                     (i % _row == rPos ? Color() : _color) :
                     (_color);
-                for(CoordinateType j = 0; j < kCols; j++) {
+                for(CoordinateType j = 0; j < display.getCols(); j++) {
                     display.setPixel(i, j, (_col > 1) ?
                         (i % _col == cPos ? Color() : rowColor) :
                         (rowColor)
@@ -70,7 +68,6 @@ namespace Clock {
         uint32_t _time;
         uint16_t _row;
         uint16_t _col;
-        // uint32_t _loopTimer;
     };
 
 }

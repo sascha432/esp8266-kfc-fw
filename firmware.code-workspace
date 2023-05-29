@@ -328,6 +328,7 @@
             "BSSID",
             "BUILDFS",
             "CCMP",
+            "CHSV",
             "CLED",
             "CPPDEFINES",
             "CRCS",

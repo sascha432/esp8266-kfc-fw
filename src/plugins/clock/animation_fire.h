@@ -127,9 +127,9 @@ namespace Clock {
     public:
         FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg) :
             Animation(clock),
-            _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? kCols : kRows),
+            _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? getCols() : getRows()),
             _lines(new Line[_lineCount]),
-            _lineBuffer(new uint8_t[kNumPixels]),
+            _lineBuffer(new uint8_t[getNumPixels()]),
             _cfg(cfg)
         {
             _disableBlinkColon = false;
@@ -139,13 +139,11 @@ namespace Clock {
             else {
                 for(uint16_t i = 0; i < _lineCount; i++) {
                     if (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) {
-                        _lines[i].init(&_lineBuffer[i * kRows], kRows);
+                        _lines[i].init(&_lineBuffer[i * getRows()], getRows());
                     }
                     else {
-                        _lines[i].init(&_lineBuffer[i * kCols], kCols);
-
+                        _lines[i].init(&_lineBuffer[i * getCols()], getCols());
                     }
-                    // _lines[i].init(_lineBuffer[] (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? kRows : kCols);
                 }
             }
         }
@@ -195,9 +193,9 @@ namespace Clock {
         void _copyTo(_Ta &output, uint32_t millisValue)
         {
             uint8_t mapping = ((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction ? 1 : 0));
-            for(CoordinateType i = 0; i < kRows; i++) {
+            for(CoordinateType i = 0; i < output.getRows(); i++) {
                 auto &line = _lines[i];
-                for(CoordinateType j = 0; j < kCols; j++) {
+                for(CoordinateType j = 0; j < output.getCols(); j++) {
                     auto color = line.getHeatColor(j, _cfg.factor);
                     auto coords = PixelCoordinatesType(i, j);
                     switch(mapping) {

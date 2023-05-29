@@ -102,13 +102,14 @@ void VisualizerAnimation::begin()
 {
     _udp.stop();
 
+    _showLoudness = _cfg.loudness_show ? 1 : 0;
     if (_cfg.get_enum_orientation(_cfg) == OrientationType::HORIZONTAL) {
-        _colsInterpolation = kCols / static_cast<float>(kVisualizerPacketSize);
-        _rowsInterpolation = kRows / kVisualizerMaxPacketValue;
+        _colsInterpolation = _parent._display.getCols() / static_cast<float>(kVisualizerPacketSize);
+        _rowsInterpolation = (_parent._display.getRows() - _showLoudness) / kVisualizerMaxPacketValue;
     }
     else {
-        _colsInterpolation = kRows / static_cast<float>(kVisualizerPacketSize);
-        _rowsInterpolation = kCols / kVisualizerMaxPacketValue;
+        _colsInterpolation = _parent._display.getRows() / static_cast<float>(kVisualizerPacketSize);
+        _rowsInterpolation = (_parent._display.getCols() - _showLoudness) / kVisualizerMaxPacketValue;
 
     }
     _storedLoudness = 0;
@@ -143,6 +144,9 @@ void VisualizerAnimation::_listen()
         __LDBG_printf("ip=* port=%u begin=%u", _cfg.port, result);
     }
 }
+
+extern "C" float m_factor;
+
 
 void VisualizerAnimation::_parseUdp()
 {
@@ -249,290 +253,184 @@ void VisualizerAnimation::_parseUdp()
         // we have a valid packet in _storedData
         auto timeMillis = millis();
 
-        // calculate loudness
-        uint16_t loudness = 0;
-        uint8_t i = 0;
+        float loudness = 0;
+        uint16_t i = 0;
+        auto showPeaks = _cfg.get_enum_peak_show(_cfg);
         for(uint8_t &value: _storedData) {
-            value = std::clamp<int16_t>(value - 1, 0, kVisualizerMaxPacketValue); // change values from 1-255 to 0-254
-            // TODO loudness and spectrum (value) are not linear. the logarithmic scale of "value" might compensate enough to calculate the loudness this way
-            // low frequencies might still add too much
-            // this might improve the loudness value https://community.sw.siemens.com/servlet/rtaImage?eid=ka64O000000gPzq&feoid=00N4O000006Yxpf&refid=0EM4O000001130J
-            loudness += value;
-            _storedPeaks[i++].add(value, timeMillis);
+            // correct the logarithmic scales to something that represents the human ear
+            #if 1
+                // 3.2x faster... 72us
+                // tested with GCC 8.4.0 and ESP32
+                constexpr uint32_t kShift = 10; // 1024
+                constexpr float kSquareNum = 7.97;
+                constexpr float kMul = (1.0 / (1 << (kShift >> 1)/* for sqrt(i * 1024) * sqrt(1024) */))/* 1.0 / sqrt(1024) */;
+                constexpr uint16_t kMax = (kSquareNum / kMul); // kSquareNum * 32.0
+                constexpr float kReducedMul = kMul / (kSquareNum / 2.25); // limit multiplier to 2.25
+                static_assert(kMax >= 100 && kMax <= 255, "kMax should above 100 for more precision and must be below 256");
+                static_assert((kVisualizerPacketSize << kShift) < 0xffff, "sqrt16() out of range");
+                static_assert(std::sqrt(float(1 << kShift)) == float(1 << (kShift >> 1)), "sqrt(1 << kShift) does not match 1 << (kShift >> 1)");
+                // increase the small values (0-31) up to 31744 to fit into uint16_t, it uses full 8 bit precision
+                float bandCorrection = ((sqrt16(i << kShift/* i * 1024 */))) * kReducedMul/* ((kMax - uint16_t(sqrt(i * 1024))) / 32.0) *  */;
+            #else
+                // correction factor for loudness value per band, 220-230us
+                constexpr float kMul = 5.65685424949238f; // sqrt(32)
+                constexpr float kReducedMul = 1 / (kMul / 2.25); // limit multiplier to 2.25
+                float bandCorrection = ((kMul - std::sqrt(float(i)))) * kReducedMul;
+            #endif
+            // add a linear correction that is actually a curve cause bands are logarithmic
+            constexpr float kMul2 = (1.0 / float(kVisualizerPacketSize - 1)); // to avoid division
+            bandCorrection += 1.0f;
+            loudness += value / bandCorrection;
+            _storedPeaks[i++].add(value, timeMillis, _cfg.peak_falling_speed, showPeaks);
         }
-        loudness /= _storedData.size(); // TODO loudness is not linear
+        loudness = std::min<float>(std::sqrt(loudness) * m_factor, 255.0f);
         if (loudness != _storedLoudness) {
             _storedLoudness = loudness;
         }
-
-        // TODO calculate peak values using the timestamp of the last packet etc...
+        if (timeMillis - _peakLoudnessTime > 750) {
+            _peakLoudness = 0;
+            _peakLoudnessTime = timeMillis;
+        }
+        _peakLoudness = std::clamp<uint16_t>(_storedLoudness + 1, _peakLoudness, 255);
     }
     return;
 }
+
+template<typename _Ta>
+void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
+{
+    switch(_cfg.get_enum_type(_cfg)) {
+        case VisualizerAnimationType::LOUDNESS_1D: {
+            display.fill(CRGB(0));
+            auto color = _getColor();
+            CoordinateType end = std::max((_storedLoudness * display.getCols()) / 256, display.getCols() - 1);
+            CoordinateType peak = std::max((_peakLoudness * display.getCols()) / 256, display.getCols() - 1);
+            for (int row = 0; row < display.getRows(); row++) {
+                for (int col = 0; col < display.getCols(); col++) {
+                    if (col == peak) {
+                        display.setPixel(row, col, CRGB(255, 0, 0));
+                    }
+                    else if (col < end) {
+                        display.setPixel(row, col, color);
+                    }
+                }
+            }
+        }
+        break;
+        case VisualizerAnimationType::SPECTRUM_RAINBOW_1D: {
+            display.fill(CRGB(0));
+            CHSV hsv;
+            hsv.hue = 0;
+            hsv.val = 255;
+            hsv.sat = 240;
+            float hue = 0;
+            float hueIncr = 232 / static_cast<float>(display.getCols()); // starts with red and ends with pink
+            for (int col = 0; col < display.getCols(); col++) {
+                hsv.hue = hue;
+                hue += hueIncr;
+                auto rgb = CRGB(hsv);
+                auto index = _getDataIndex(display, col);
+                rgb.fadeToBlackBy(kVisualizerMaxPacketValue - _storedData[index]);
+                for (int row = 0; row < display.getRows(); row++) {
+                    display.setPixel(row, col, rgb);
+                }
+            }
+        }
+        break;
+        case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
+        case VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D:
+        case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D: {
+            display.fill(CRGB(0));
+            CHSV hsv;
+            hsv.hue = 0;
+            hsv.val = 255;
+            hsv.sat = 240;
+            int16_t oldIndex = -1;
+            CRGB color = _getColor();
+            CoordinateType lastRow = display.getRows() - _showLoudness;
+            CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
+            CoordinateType loudnessLen = std::min<int>((_storedLoudness * centerCol) >> 8, centerCol);
+            CoordinateType peakLoudnessCol = std::min<int>((_peakLoudness * centerCol) >> 8, centerCol);
+            CoordinateType peakLoudnessColLeft = std::max(centerCol - peakLoudnessCol - 1, 0);
+            CoordinateType peakLoudnessColRight = std::min(centerCol + peakLoudnessCol, display.getCols() - 1);
+            for (CoordinateType col = 0; col < display.getCols(); col++) {
+                CRGB rgb;
+                switch(_cfg.get_enum_type(_cfg)) {
+                    case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D:
+                        rgb = CRGB(hsv);
+                        break;
+                    case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
+                    default:
+                        rgb = color;
+                        break;
+
+                }
+                    int8_t index = _getDataIndex(display, col);
+                if (index != oldIndex) {
+                    oldIndex = index;
+                    // change color for each bar
+                    hsv.hue += (224 / kVisualizerPacketSize); // starts with red and ends with pink
+                }
+                int end = _storedData[index] * _rowsInterpolation;
+                for (CoordinateType row = 0; row < lastRow; row++) {
+                    if (row < end) {
+                        if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D) {
+                            int pos = ((row * 255) / lastRow);
+                            rgb = CRGB(pos, std::max(168 - pos, 0), 0);
+                        }
+                        display.setPixel(row, col, rgb);
+                    }
+                }
+                if (_cfg.get_enum_peak_show(_cfg) != VisualizerPeakType::DISABLED) {
+                    auto peakValue = _storedPeaks[index].getPeakPosition(millisValue);
+                    if (peakValue >= 0) {
+                        auto peak = std::clamp<uint16_t>(peakValue * _rowsInterpolation, end - 1, display.getRows() - 1);
+                        display.setPixel(peak, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb));
+                    }
+                }
+                if (_showLoudness) {
+                    auto row = display.getRows() - 1;
+                    if (_cfg.loudness_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
+                        display.setPixel(row, col, CRGB(255, 0, 0));
+                    }
+                    else if (col >= centerCol - loudnessLen && col < centerCol + loudnessLen) {
+                        int position = ((centerCol - col) * 255) / centerCol;
+                        if (position < 0) {
+                            position = -position;
+                        }
+                        display.setPixel(row, col, CRGB(position, std::max(200 - position, 0), 0));
+                    }
+                }
+            }
+        }
+        break;
+        case VisualizerAnimationType::RGB24_VIDEO:
+        case VisualizerAnimationType::RGB565_VIDEO: {
+            if (_video.isReady()) {
+                _video.begin();
+                for (int row = display.getRows() - 1; row >= 0; row--) {
+                    for (int col = 0; col < display.getCols(); col++) {
+                        display.setPixel(row, col, _video.getRGB());
+                    }
+                }
+                _video.clear();
+            }
+        }
+        break;
+        default:
+            //TODO
+            uint8_t r = ((millis() / 500) % 2) ? 32 : 0;
+            uint8_t g = r ? 0 : 32;
+            display.fill(CRGB(r, g, 0));
+            break;
+    }
+}
+
 
 void VisualizerAnimation::loop(uint32_t millisValue)
 {
     // read udp in every loop
     _parseUdp();
 }
-
-#if 0
-
-int VisualizerAnimation::_getVolume(uint8_t vals[], int start, int end, double factor)
-{
-    double result = 0;
-    int iter = 0;
-    // int cnt = 0;
-    __DBG_printf("Nr: %d, %d, start: %d, end: %d", iter, vals[iter], start, end);
-    for (iter = start; iter <= end && vals[iter] != '\0'; iter++) {
-        __DBG_printf("Nr: %d, %d, start: %d, end: %d", iter, vals[iter], start, end);
-        result += ((double)vals[iter]*factor)/(end-start + 1);
-    }
-    __DBG_printf("Result: %f", stdex::clamp_signed<int>(result, 1, 255));
-    // if (result <= 1) result = 0;
-    // if (result > 255)result = 255;
-    return stdex::clamp_signed<int>(result, 1, 255);
-}
-
-void VisualizerAnimation::_BrightnessVisualizer()
-{
-    int currentVolume = 0;
-    int avgVolume = 0;
-    double cd = 0;
-    // CHSV toSend;
-
-    if (!*_incomingPacket) {
-        return;
-    }
-
-    currentVolume = _getVolume(_incomingPacket, kBandStart, kBandEnd, 1);
-    avgVolume = _getVolume(_lastVals.data(), 0, kAvgArraySize - 1, 1);
-    if (avgVolume != 0) {
-        cd = ((double)currentVolume) / ((double)avgVolume);
-    }
-    if (currentVolume < 30) {
-        cd = 0;
-    }
-    if (!_lastFinished) {
-        _lastFinished = _FadeUp(_lastCol, 0, kNumPixels, map(_speed, 0, 255, 1, 15), 50, false);
-        return;
-    };
-
-    int decay = map(_speed, 0, 255, 8, 200);
-    int b = std::clamp<int>(map(cd * 100, 30, 130, 0, 255), 0, 255);
-    if (b == 0) {
-        fadeToBlackBy(_leds, kNumPixels, decay);
-    }
-    _lastBrightness = b;
-
-    if (++_iPos >= kAvgArraySize) {
-        _iPos = 0;
-    }
-    _lastVals[_iPos] = currentVolume;
-}
-
-
-bool VisualizerAnimation::_FadeUp(CRGB c, int start, int end, int update_rate, int starting_brightness, bool isNew)
-{
-    static uint8_t b = 0; // start out at 0
-    if (isNew) {
-        b = starting_brightness;
-    }
-    bool retval = false;
-
-    // slowly increase the brightness
-  //EVERY_N_MILLISECONDS(update_rate)
-  //{
-    if (b < 255) {
-        b += update_rate;
-    }
-    else {
-        retval = true;
-    }
-
-    CRGB color((int)(c.r * ((double)(b / 255.0))), (int)(c.g * ((double)(b / 255.0))), (int)(c.b * ((double)(b / 255.0))));
-    fill_solid(_leds + start, end - start, color);
-    return retval;
-}
-
-void VisualizerAnimation::_ShiftLeds(int shiftAmount)
-{
-    int cnt = shiftAmount;
-    for (int i = _parent._display.size() - 1; i >= cnt; i--) {
-        _leds[i] = _leds[i - cnt];
-    }
-    // memmove(&_leds[cnt], &_leds[0], (_parent._display.size() - cnt) * sizeof(_leds[0]));
-    // std::copy(std::begin(_leds) + shiftAmount, std::begin(_leds), std::end(_leds));
-}
-
-void VisualizerAnimation::_TrailingBulletsVisualizer()
-{
-    int currentVolume = 0;
-    int avgVolume = 0;
-    double cd = 0;
-    CHSV toSend;
-
-    if (*_incomingPacket) {
-        _ShiftLeds(1);
-        return;
-    }
-
-    currentVolume = _getVolume(_incomingPacket, kBandStart, kBandEnd, 1);
-    avgVolume = _getVolume(_lastVals.data(), 0, kAvgArraySize - 1, 1);
-    if (avgVolume != 0)  {
-        cd = ((double)currentVolume) / ((double)avgVolume);
-    }
-    if (currentVolume < 25) {
-        cd = 0;
-    }
-    if (currentVolume > 230) {
-        cd += 0.15;
-    }
-
-    toSend = _getVisualizerBulletValue(cd);
-
-    int update_rate = map(_speed, 0, 255, 1, 15);
-    _ShiftLeds(update_rate);
-    _SendTrailingLeds(toSend, update_rate);
-    _ShiftLeds(update_rate / 2);
-    _SendTrailingLeds(CHSV(0, 0, 0), update_rate);
-    if (++_iPos >= kAvgArraySize) {
-        _iPos = 0;
-    }
-    _lastVals[_iPos] = currentVolume;
-}
-
-
-void VisualizerAnimation::_SendLeds(CHSV c, int shiftAmount)
-{
-    for (int i = 0; i < shiftAmount; i++) {
-        _leds[i] = c;
-    }
-}
-
-void VisualizerAnimation::_SendTrailingLeds(CHSV c, int shiftAmount)
-{
-    double shiftMult = 1.0 / static_cast<double>(shiftAmount);
-    int i = shiftAmount;
-   _leds[i] = c;
-    for (int t = shiftAmount - 1; t >= 0; t--) {
-        CHSV c2 = rgb2hsv_approximate(_leds[i]);
-        c2.v *= (shiftAmount - t) * shiftMult;
-        _ShiftLeds(1);
-        _SendLeds(c2, 1);
-    }
-}
-
-CHSV VisualizerAnimation::_getVisualizerBulletValue(double cd)
-{
-    CHSV toSend;
-    if (cd < 1.05) {
-        toSend = CHSV(0, 0, 0);
-    }
-    if (cd < 1.10) {
-        toSend = CHSV(_gHue, 255, 5);
-    }
-    else if (cd < 1.15) {
-        toSend = CHSV(_gHue, 255, 150);
-    }
-    else if (cd < 1.20) {
-        toSend = CHSV(_gHue + 20, 255, 200);
-    }
-    else if (cd < 1.25) {
-        toSend = CHSV(_gHue + 40, 255, 255);
-    }
-    else if (cd < 1.30) {
-        toSend = CHSV(_gHue + 60, 255, 255);
-    }
-    else if (cd < 1.45) {
-        toSend = CHSV(_gHue + 100, 255, 255);
-    }
-    else {
-        toSend = CHSV(_gHue, 255, 255);
-    }
-    return toSend;
-}
-
-CHSV VisualizerAnimation::_getVisualizerBulletValue(int hue, double cd)
-{
-    CHSV toSend;
-    if (cd < 1.05) {
-        toSend = CHSV(0, 0, 0);
-    }
-    if (cd < 1.10) {
-        toSend = CHSV(hue, 255, 5);
-    }
-    else if (cd < 1.15) {
-        toSend = CHSV(hue, 255, 150);
-    }
-    else if (cd < 1.20) {
-        toSend = CHSV(hue, 255, 200);
-    }
-    else if (cd < 1.25) {
-        toSend = CHSV(hue, 255, 255);
-    }
-    else if (cd < 1.30) {
-        toSend = CHSV(hue, 255, 255);
-    }
-    else if (cd < 1.45) {
-        toSend = CHSV(hue, 255, 255);
-    }
-    else {
-        toSend = CHSV(hue, 255, 255);
-    }
-    return toSend;
-}
-
-void VisualizerAnimation::_vuMeter(CHSV c, int mode)
-{
-    int vol = _getVolume(_incomingPacket, kBandStart, kBandEnd, 1.75);
-    fill_solid(_leds, kNumPixels, CRGB::Black);
-    int toPaint = map(vol, 0, 255, 0, kNumPixels);
-
-    if (mode == 0) {
-        for (int i = 0; i < toPaint; i++) {
-            for (int i = 0; i < toPaint; i++) {
-                _leds[i] = c;
-            }
-        }
-    }
-    else if (mode == 1) {
-        for (int i = 0; i < toPaint; i++) {
-            for (int i = 0; i < toPaint; i++) {
-                _leds[i] = CHSV(map(i, 0, kNumPixels, 0, 255), 255, 255);
-            }
-        }
-    }
-    else {
-        for (int i = 0; i < toPaint; i++) {
-            _leds[i] = CHSV(((uint8_t)map(i, 0, _parent._display.size(), 0, 255)) + _gHue, 255, 255);
-        }
-    }
-}
-
-void VisualizerAnimation::_vuMeterTriColor()
-{
-    if (!*_incomingPacket) {
-        fadeToBlackBy(_leds, _parent._display.size(), 5);
-        return;
-    }
-    int vol = _getVolume(_incomingPacket, kBandStart, kBandEnd, 1.75);
-    fill_solid(_leds, _parent._display.size(), CRGB::Black);
-    int toPaint = map(vol, 0, 255, 0, _parent._display.size());
-    if (vol < 153) {
-        fill_solid(_leds, toPaint, CRGB::Green);
-    }
-    else if (vol < 204) {
-        fill_solid(_leds, _parent._display.size() * 0.6, CRGB::Green);
-        fill_solid(_leds + (int(_parent._display.size() * 0.6)), toPaint - _parent._display.size() * 0.6, CRGB::Orange);
-    }
-    else if (vol >= 204) {
-        fill_solid(_leds, _parent._display.size() * 0.6, CRGB::Green);
-        fill_solid(_leds + (int(_parent._display.size() * 0.6)), _parent._display.size() * 0.2, CRGB::Orange);
-        fill_solid(_leds + (int(_parent._display.size() * 0.8)), toPaint - _parent._display.size() * 0.8, CRGB::Red);
-    }
-}
-
-#endif
 
 #endif

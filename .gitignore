@@ -100,3 +100,9 @@ src/plugins/weather_station/fonts/fontconvert/fontconvert
 piorunnall
 .ipynb_checkpoints/spectrum-checkpoint.ipynb
 spectrum.ipynb
+**/.ipynb_checkpoints/*
+scripts/tools/Untitled.ipynb
+scripts/tools/untitled.py
+scripts/tools/loudness_from_spectrum.ipynb
+Untitled1.ipynb
+Untitled.ipynb

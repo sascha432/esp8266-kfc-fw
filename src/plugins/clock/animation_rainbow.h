@@ -93,7 +93,7 @@ namespace Clock {
                 // }
                 display.setPixel(row, col, color);
                 row++;
-                if (row >= kRows) {
+                if (row >= display.getRows()) {
                     row = 0;
                     col++;
                 }

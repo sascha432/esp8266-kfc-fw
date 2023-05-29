@@ -26,6 +26,23 @@ void Animation::_setColor(Color color)
     _parent._webUIUpdateColor(color);
 }
 
+CoordinateType Animation::getCols() const
+{
+    return _parent._display.getCols();
+}
+
+CoordinateType Animation::getRows() const
+{
+    return _parent._display.getRows();
+}
+
+PixelAddressType Animation::getNumPixels() const
+{
+    return getCols() * getRows();
+}
+
+
+
 #if 0
 
 // several effect from atmega328p

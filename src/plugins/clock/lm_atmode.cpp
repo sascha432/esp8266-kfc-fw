@@ -20,6 +20,8 @@
 
 #include "at_mode.h"
 
+extern "C" float m_factor;
+float m_factor = 3.75;
 #if IOT_SENSOR_HAVE_INA219
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LMTESTP, "LMTESTP", "<#color>[,<time=500ms>]", "Test peak values. WARNING! This command will bypass all protections and limits");
 #endif
@@ -344,6 +346,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         // test,<1=pixel order|2=clock|3=row/col>[,#color=#330033][,<brightness=128>][,<speed=100ms>]
         // +lmc=test,1,#ff0000,255,5000ms
+        else if (args.startsWithIgnoreCase(0, F("fac"))) {
+            m_factor = args.toFloatMinMax(1, 0.1f, 1000.0f);
+            args.printf("m factor %f", m_factor);
+        }
         else if (args.startsWithIgnoreCase(0, F("test"))) {
             enableLoop(false);
             uint16_t x = 0;

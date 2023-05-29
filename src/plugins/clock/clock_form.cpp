@@ -121,6 +121,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             case AnimationType::VISUALIZER: {
                     using OrientationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::OrientationType;
                     using VisualizerAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerAnimationType;
+                    using VisualizerPeakType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerPeakType;
                     auto orientationItems = FormUI::List(
                         OrientationType::VERTICAL, F("Vertical"),
                         OrientationType::HORIZONTAL, F("Horizontal")
@@ -134,6 +135,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         VisualizerAnimationType::SPECTRUM_RAINBOW_1D, F("Spectrum Rainbow 1D"),
                         // VisualizerAnimationType::SPECTRUM_RAINBOW_STEREO_1D, F("Spectrum Rainbow Stereo 1D"),
                         VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D, F("Spectrum Rainbow Bars 2D"),
+                        VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D, F("Spectrum Gradient 2D"),
                         VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D, F("Spectrum Single Color Bars 2D"),
                         VisualizerAnimationType::RGB565_VIDEO, F("RGB565 Video"),
                         VisualizerAnimationType::RGB24_VIDEO, F("RGB24 Video")
@@ -149,20 +151,35 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     });
                     form.addFormUI(F("Color For Single Color Mode"));
 
-                    form.add(F("v_pc"), cfg.visualizer.peak_color == 0 ? emptyString : Color(cfg.visualizer.peak_color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    auto showPeaksItems = FormUI::List(
+                        VisualizerPeakType::DISABLED, F("Disabled"),
+                        VisualizerPeakType::ENABLED, F("Enabled"),
+                        VisualizerPeakType::FADING, F("Fading (time in ms)"),
+                        VisualizerPeakType::FALLING_DOWN, F("Falling (time in ms)")
+                    );
+                    form.addObjectGetterSetter(F("v_psh"), cfg.visualizer, cfg.visualizer.get_bits_peak_show, cfg.visualizer.set_bits_peak_show);
+                    form.addFormUI(F("Show Peaks"), FormUI::Type::SELECT, showPeaksItems);
+
+                    auto &peakExtraColor = form.addObjectGetterSetter(F("v_pxc"), cfg.visualizer, cfg.visualizer.get_bits_peak_extra_color, cfg.visualizer.set_bits_peak_extra_color);
+                    form.addFormUI(FormUI::Type::HIDDEN);
+
+                    auto &peakFallingSpeed = form.addObjectGetterSetter(F("v_pfs"), cfg.visualizer, cfg.visualizer.get_bits_peak_falling_speed, cfg.visualizer.set_bits_peak_falling_speed);
+                    // cfg.visualizer.addRangeValidatorFor_peak_falling_speed(form, true);
+                    form.addFormUI(FormUI::Type::HIDDEN);
+
+                    form.add(F("v_pc"), Color(cfg.visualizer.peak_color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
                         if (store) {
-                            String tmp = value;
-                            if (tmp.trim().length() == 0) {
-                                cfg.visualizer.peak_color = 0;
-                            }
-                            else {
-                                cfg.visualizer.peak_color = std::max<uint32_t>(1, Color::fromString(value));
-                            }
+                            cfg.visualizer.peak_color = std::max<uint32_t>(1, Color::fromString(value));
                         }
                         return false;
                     });
-                    form.addFormUI(F("Peak Color Indicator (empty for none)"));
+                    form.addFormUI(F("Peak Color Indicator"), FormUI::CheckboxButtonSuffix(peakExtraColor, F("Use Color")), FormUI::TextInputSuffix(peakFallingSpeed));
 
+                    auto &showLoudnessPeaks = form.addObjectGetterSetter(F("v_lnp"), cfg.visualizer, cfg.visualizer.get_bits_loudness_peaks, cfg.visualizer.set_bits_loudness_peaks);
+                    form.addFormUI(FormUI::Type::HIDDEN, FormUI::BoolItems(F("Yes"), F("No")));
+
+                    form.addObjectGetterSetter(F("v_sln"), cfg.visualizer, cfg.visualizer.get_bits_loudness_show, cfg.visualizer.set_bits_loudness_show);
+                    form.addFormUI(F("Show Loudness at the top"), FormUI::Type::SELECT, FormUI::BoolItems(F("Yes"), F("No")), FormUI::CheckboxButtonSuffix(showLoudnessPeaks, F("Show Peaks")));
 
                     auto &multicast = form.addObjectGetterSetter(F("v_muca"), cfg.visualizer, cfg.visualizer.get_bit_multicast, cfg.visualizer.set_bit_multicast);
                     form.addFormUI(FormUI::Type::HIDDEN);

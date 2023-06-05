@@ -52,9 +52,9 @@
 #endif
 
 NullStream NullSerial;
-HardwareSerial Serial0(UART0);
+// HardwareSerial Serial0(UART0);
 // stream wrapper allows to intercept send and receive on Serial
-SerialHandler::Wrapper serialHandler(&Serial0);
+// SerialHandler::Wrapper serialHandler(&Serial0);
 Stream &Serial = serialHandler;
 // Stream &Serial = Serial0;
 

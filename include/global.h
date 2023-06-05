@@ -478,4 +478,4 @@ class HardwareSerial;
 
 extern Stream &Serial;
 extern Stream &DebugSerial;
-extern HardwareSerial Serial0;
+extern HardwareSerial &Serial0;

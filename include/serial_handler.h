@@ -316,10 +316,10 @@ namespace SerialHandler {
 };
 
 extern NullStream NullSerial;
-extern HardwareSerial Serial0;
+extern HardwareSerial &Serial0;
 extern Stream &Serial;
 extern Stream &DebugSerial;
-extern SerialHandler::Wrapper serialHandler;
+extern SerialHandler::Wrapper &serialHandler;
 extern StreamWrapper debugStreamWrapper;
 
 namespace SerialHandler {

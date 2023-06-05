@@ -27,7 +27,7 @@
                 "./Resources/html/dimmer-ci.html",
                 "./Resources/js/forms/dimmer.js",
                 "./Resources/js/dimmer-ci.js",
-                "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/*",
+                "./lib/KFCLibrary/KFCWebBuilder/Resources/charts-js-2.9.3-dist/*",
                 "./Resources/js/charts/*"
             ],
             "#if !STK500V1": [
@@ -56,7 +56,7 @@
             ],
             "#if !HTTP2SERIAL_SUPPORT": [
                 "./Resources/html/serial-console.html",
-                "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
+                "./lib/KFCLibrary/KFCWebBuilder/Resources/js/selectize.min.js",
                 "./Resources/js/http2serial.js",
                 "./Resources/js/led-matrix.js",
                 "./Resources/css/http2serial.css"
@@ -130,14 +130,14 @@
             "js_main": {
                 "target_dirs": {
                     "/data/webui/js": [
-                        "./lib/KFCWebBuilder/Resources/jquery-3.5.2-dist/jquery.js",
-                        "./lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/js/bootstrap.bundle.js",
-                        "./lib/KFCWebBuilder/Resources/js/jquery.color-2.1.2.js",
-                        "./lib/KFCWebBuilder/Resources/js/js.cookie.js",
-                        "./lib/KFCWebBuilder/Resources/js/selectize.min.js",
-                        "./lib/KFCWebBuilder/Resources/js/rangeslider.min.js",
-                        "./lib/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/tinycolor-min.js",
-                        "./lib/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/bootstrap.colorpickersliders.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/jquery-3.5.2-dist/jquery.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/js/bootstrap.bundle.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/js/jquery.color-2.1.2.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/js/js.cookie.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/js/selectize.min.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/js/rangeslider.min.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/tinycolor-min.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/bootstrap.colorpickersliders.js",
                         "./Resources/js/jQuery.base64.js",
                         "./Resources/js/common.js",
                         "./Resources/js/forms.js",
@@ -150,7 +150,7 @@
                         "./Resources/js/ping-console.js",
                         "./Resources/js/webui.js",
                         "./Resources/js/webui-led-matrix.js",
-                        "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js",
                         "./Resources/js/charts/chartjs-plugin-dragdata.min.js",
                         "./Resources/js/dimmer-ci.js"
                     ]
@@ -186,12 +186,12 @@
             "css_main": {
                 "target_dirs": {
                     "./data/webui/css": [
-                        "./lib/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/css/bootstrap.css",
-                        "./lib/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
-                        "./lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
-                        "./lib/KFCWebBuilder/Resources/css/rangeslider.css",
-                        "./lib/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/bootstrap.colorpickersliders.css",
-                        "./lib/KFCWebBuilder/Resources/css/math.css",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/bootstrap-4.5.2-dist/css/bootstrap.css",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/css/selectize.bootstrap4.css",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/css/rangeslider.css",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/bootstrap-colorpickersliders-master/dist/bootstrap.colorpickersliders.css",
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/css/math.css",
                         "./Resources/css/styles.css",
                         "./Resources/css/http2serial.css",
                         "./Resources/css/ping-console.css",
@@ -202,7 +202,7 @@
                         "./Resources/css/input-text-range.css",
                         "./Resources/css/clock-led-matrix.css",
                         "./Resources/css/hexagon-panel.css",
-                        "./lib/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css"
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css"
                     ]
                 },
                 "processors":  {
@@ -252,8 +252,8 @@
             },
             "static_content": {
                 "target_dirs": {
-                    "./data/webui/images": [ "./lib/KFCWebBuilder/Resources/images/spinner.gif", "./Resources/images/light.svg" ],
-                    "./data/webui/fonts": { "./lib/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/" }
+                    "./data/webui/images": [ "./lib/KFCLibrary/KFCWebBuilder/Resources/images/spinner.gif", "./Resources/images/light.svg" ],
+                    "./data/webui/fonts": { "./lib/KFCLibrary/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/" }
                 },
                 "processors":  {
                     "compress": {
@@ -301,6 +301,6 @@
         }
     },
     "includes": [
-        "./lib/KFCWebBuilder/KFCWebBuilder.json"
+        "./lib/KFCLibrary/KFCWebBuilder/KFCWebBuilder.json"
     ]
 }

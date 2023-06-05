@@ -1,0 +1,11 @@
+run
+
+git clone https://github.com/sascha432/KFCLibrary.git
+
+in here
+
+or add
+
+https://github.com/sascha432/KFCLibrary.git
+
+in common.ini

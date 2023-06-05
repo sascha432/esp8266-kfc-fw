@@ -224,7 +224,6 @@ namespace PluginComponents {
     class Component {
     public:
     };
-
 }
 
 class PluginComponentAtModeHelpInterface {

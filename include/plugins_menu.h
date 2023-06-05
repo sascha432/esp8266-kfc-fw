@@ -73,7 +73,5 @@ namespace PluginComponents {
         return _navMenu;
     }
 
+    extern RegisterEx _pluginRegister;
 }
-
-using RegisterExUninitialized = stdex::UninitializedClass<PluginComponents::RegisterEx>;
-extern RegisterExUninitialized componentRegisterNoInit __attribute__((section(".noinit")));

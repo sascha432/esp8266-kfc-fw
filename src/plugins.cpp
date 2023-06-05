@@ -27,26 +27,12 @@ using KFCConfigurationClasses::System;
 
 using namespace PluginComponents;
 
-// #if ESP8266
-
-using RegisterExUninitialized = stdex::UninitializedClass<PluginComponents::RegisterEx>;
-RegisterExUninitialized componentRegisterNoInit __attribute__((section(".noinit")));
+PluginComponents::RegisterEx PluginComponents::_pluginRegister __attribute__((section(".noinit")));
 
 Register *Register::getInstance()
 {
-    return &componentRegisterNoInit._object;
+    return &_pluginRegister;
 }
-
-// #else
-
-// PluginComponents::RegisterEx componentRegister __attribute__((section(".noinit")));;
-
-// Register *Register::getInstance()
-// {
-//     return &componentRegister;
-// }
-
-// #endif
 
 #if DEBUG_PLUGINS
 

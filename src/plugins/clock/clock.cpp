@@ -666,10 +666,10 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
 {
     __LDBG_printf("animation=%d blend_time=%u", animation, blendTime);
     if (_animation && _animation->hasBlendSupport()) {
-        _blendTime = 0;
+        _blendTime = blendTime;
     }
     else {
-        _blendTime = blendTime;
+        _blendTime = 0;
     }
     #if IOT_LED_MATRIX == 0
         switch(animation) {

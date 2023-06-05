@@ -466,7 +466,7 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             auto color = _getColor();
             auto cols = display.getCols();
             auto visType = _cfg.get_enum_type(_cfg);
-            auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
+            // auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
             CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
             CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
             CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), cols - 1);

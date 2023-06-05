@@ -43,10 +43,12 @@ namespace PluginComponents {
         NavMenu _navMenu;
     };
 
+    extern RegisterEx &_pluginRegister;
+
     inline __attribute__((__always_inline__))
     RegisterEx &RegisterEx::getInstance()
     {
-        return *reinterpret_cast<RegisterEx *>(Register::getInstance());
+        return _pluginRegister;
     }
 
     inline __attribute__((__always_inline__))
@@ -72,6 +74,4 @@ namespace PluginComponents {
     {
         return _navMenu;
     }
-
-    extern RegisterEx _pluginRegister;
 }

@@ -21,14 +21,8 @@
 #        define __LDBG_printf(...)
 #    endif
 
-using DeepSleepPinStateUninitialized = stdex::UninitializedClass<DeepSleep::PinState>;
-static DeepSleepPinStateUninitialized deepSleepPinStateNoInit __attribute__((section(".noinit")));
-
 namespace DeepSleep {
 
-    PinState &deepSleepPinState = deepSleepPinStateNoInit._object;
-    DeepSleepParam deepSleepParams;
-    uint64_t _realTimeOffset;
     bool enableWiFiOnBoot;
 
 }
@@ -59,7 +53,7 @@ static void enter_deep_sleep(uint32_t timeMillis, RFMode rfMode)
     }
 }
 
-inline static void deep_sleep_preinit()
+void DeepSleep::preinit()
 {
     uint32_t realTimeOffset = 0;
     // store states of all PINs
@@ -74,7 +68,7 @@ inline static void deep_sleep_preinit()
             // know how much of the time has passed already
             realTimeOffset = (deepSleepParams._totalSleepTime - deepSleepParams._remainingSleepTime) + (deepSleepParams._runtime / 1000);
             #if DEBUG_DEEP_SLEEP
-                __LDBG_printf("real time offset without the last cycle: %.6f", _realTimeOffset / 1000000.0);
+                __LDBG_printf("real time offset without the last cycle: %.6f", realTimeOffset / 1000000.0);
             #endif
         }
     }
@@ -249,17 +243,17 @@ String PinState::toString(uint32_t state, uint32_t time) const
 
 #endif
 
-extern "C" void resetDetectorNoInit_init();
+// extern "C" void resetDetectorNoInit_init();
 
-extern "C" void preinit(void)
-{
-    resetDetectorNoInit_init();
-    enableWiFiOnBoot = false;
-    deepSleepPinStateNoInit.init();
-    componentRegisterNoInit.init();
-    resetDetector.begin();
-    deep_sleep_preinit();
-}
+// extern "C" void preinit(void)
+// {
+//     resetDetectorNoInit_init();
+//     enableWiFiOnBoot = false;
+//     deepSleepPinStateNoInit.init();
+//     componentRegisterNoInit.init();
+//     resetDetector.begin();
+//     deep_sleep_preinit();
+// }
 
 #    if !DEEP_SLEEP_INCLUDE_HPP_INLINE
 #        include "deep_sleep.hpp"

@@ -8,6 +8,7 @@
 
 #include <Arduino_compat.h>
 #include <memory>
+#include <list>
 #include <Mutex.h>
 #if ESP8266
 #include <ESP8266mDNS.h>

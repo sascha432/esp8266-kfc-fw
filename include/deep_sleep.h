@@ -213,10 +213,11 @@ namespace DeepSleep {
 
     static constexpr size_t DeepSleepParamSize = sizeof(DeepSleepParam);
 
-    extern "C" uint64_t _realTimeOffset;
-    extern "C" PinState &deepSleepPinState;
-    extern "C" DeepSleepParam deepSleepParams;
-    extern "C" bool enableWiFiOnBoot;
+    extern void preinit();
+
+    extern PinState &deepSleepPinState;
+    extern DeepSleepParam &deepSleepParams;
+    extern bool enableWiFiOnBoot;
 
 }
 

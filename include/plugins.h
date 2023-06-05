@@ -47,17 +47,18 @@ namespace PluginComponents {
 
     protected:
         #if DEBUG_PLUGINS
-            void _add(PluginComponent *plugin, const char *name);
+            static void _add(PluginComponent *plugin, const char *name);
         #else
-            void _add(PluginComponent *plugin);
+            static void _add(PluginComponent *plugin);
         #endif
         void _setDelayedStartupTime(uint32_t delayedStartupTime);
         PluginsVector &_getPlugins();
 
     protected:
-        PluginsVector _plugins;
         uint32_t _delayedStartupTime;
     };
+
+    extern PluginsVector &_plugins;
 
     #if DEBUG_PLUGINS
 
@@ -65,7 +66,7 @@ namespace PluginComponents {
         void Register::add(PluginComponent *plugin, const char *name)
         {
             ets_printf("Register::add() plugin=%s\n", name);
-            getInstance()->_add(plugin, name);
+            _add(plugin, name);
         }
 
     #else
@@ -73,7 +74,7 @@ namespace PluginComponents {
         inline __attribute__((__always_inline__))
         void Register::add(PluginComponent *plugin)
         {
-            getInstance()->_add(plugin);
+            _add(plugin);
         }
 
     #endif

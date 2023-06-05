@@ -333,7 +333,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         // +lmc=test,1,#ff0000,255,5000ms
         else if (args.startsWithIgnoreCase(0, F("fac"))) {
             m_factor = args.toFloatMinMax(1, 0.1f, 1000.0f);
-            args.printf("m factor %f", m_factor);
+            args.print(F("m factor %f"), m_factor);
         }
         else if (args.startsWithIgnoreCase(0, F("test"))) {
             enableLoop(false);

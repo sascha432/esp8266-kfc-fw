@@ -27,8 +27,6 @@ using KFCConfigurationClasses::System;
 
 using namespace PluginComponents;
 
-PluginComponents::RegisterEx PluginComponents::_pluginRegister __attribute__((section(".noinit")));
-
 Register *Register::getInstance()
 {
     return &_pluginRegister;

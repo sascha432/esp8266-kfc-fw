@@ -564,7 +564,7 @@ void setup()
         #if DEBUG_DEEP_SLEEP
             __DBG_printf("wakeup=%u mode=%u", wakeup, DeepSleep::deepSleepParams.getWakeupMode());
             if (DeepSleep::deepSleepParams.getWakeupMode() == DeepSleep::WakeupMode::AUTO) {
-                Logger_notice(F("Wakeup from deep sleep start-time=" TIME_T_FMT " sleep-time=%.3f rtc-offset=%.6f"), time(nullptr), DeepSleep::deepSleepParams.getTotalTime(), DeepSleep::_realTimeOffset / 1000000.0);
+                Logger_notice(F("Wakeup from deep sleep start-time=" TIME_T_FMT " sleep-time=%.3f rtc-offset=%.6f"), time(nullptr), DeepSleep::deepSleepParams.getTotalTime(), realTimeOffset / 1000000.0);
             }
         #endif
     }

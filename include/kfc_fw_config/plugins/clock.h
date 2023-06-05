@@ -266,8 +266,8 @@ namespace KFCConfigurationClasses {
                         color(kDefaultValueFor_color),
                         peak_color(kDefaultValueFor_peak_color),
                         multicast(false),
-                        type(kDefaultValueFor_type),
                         peak_show(kDefaultValueFor_peak_show),
+                        type(kDefaultValueFor_type),
                         orientation(kDefaultValueFor_orientation)
                     {
                     }

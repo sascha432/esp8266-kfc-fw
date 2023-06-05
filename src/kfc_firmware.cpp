@@ -49,6 +49,28 @@
 #    include "PluginComponent.h"
 #endif
 
+#if ESP8266
+
+extern "C" void preinit(void)
+{
+    reset_detector_setup_global_ctors();
+}
+
+#elif ESP32
+
+extern "C" bool btInUse()
+{
+    ::printf("btInUse\n");
+    return false;
+}
+
+extern "C" void init()
+{
+    ::printf("init\n");
+}
+
+#endif
+
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 
@@ -130,6 +152,7 @@ void delayedSetup(bool delayed)
 
 void setup()
 {
+    ::printf("setup\n");
     #if ESP32
         resetDetector.armTimer();
     #endif

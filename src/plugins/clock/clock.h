@@ -783,8 +783,10 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
         if (P_Watt == 0) {
             return ~0U; // unlimited
         }
-        return P_Watt * 1090;
-        // return std::max<float>(0, IOT_CLOCK_POWER_CORRECTION_LIMIT);
+        // get the estimated power level and subtract it from the level set
+        // the correction can account for non linear power loss in thin cables due to high currents
+        auto diff = P_Watt - __getPowerLevel(P_Watt, 0);
+        return (P_Watt + diff) * 1000;
     }
 
 #endif

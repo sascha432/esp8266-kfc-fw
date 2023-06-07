@@ -266,29 +266,14 @@
 // For further details check <see cref="./POWER_CALIBRATION.md" />
 // </remarks>
 //
-// #define IOT_CLOCK_POWER_CORRECTION_OUTPUT <min_output_watt>, <formula>
-// #define IOT_CLOCK_POWER_CORRECTION_OUTPUT 0.54, -0.131491 + 0.990507 * P + 0.015167 * P * P
-//
-// if IOT_CLOCK_POWER_CORRECTION_LIMIT is not defined, it uses IOT_CLOCK_POWER_CORRECTION_OUTPUT * 0.975
-//
-// #define IOT_CLOCK_POWER_CORRECTION_LIMIT <formula>
-// #define IOT_CLOCK_POWER_CORRECTION_LIMIT -0.063393 + 0.920029 * P + 0.014318 * P * P
+// #define IOT_CLOCK_POWER_CORRECTION_OUTPUT <formula>
+// #define IOT_CLOCK_POWER_CORRECTION_OUTPUT -0.063393 + 0.920029 * P + 0.014318 * P * P
 //
 // for build_flags:
-// -D IOT_CLOCK_POWER_CORRECTION_OUTPUT=0.54,-0.133437+0.990644*P+0.015165*P*P
-// -D IOT_CLOCK_POWER_CORRECTION_LIMIT=-0.063393+0.920029*P+0.014318*P*P
+// -D IOT_CLOCK_POWER_CORRECTION_OUTPUT=.3,\(P-\(P*P*0.025\)\)     ; compensate for the long USB power cable
+// -D IOT_CLOCK_POWER_CORRECTION_OUTPUT=.3,\(P-\(P*P*0.02\)\)      ; this led strip has a long thin cable and quite some powerloss with high currents
 #ifndef IOT_CLOCK_POWER_CORRECTION_OUTPUT
-#    define IOT_CLOCK_POWER_CORRECTION_OUTPUT 1.0, P
-#endif
-
-#ifndef IOT_CLOCK_POWER_CORRECTION_LIMIT
-#    define IOT_CLOCK_POWER_CORRECTION_LIMIT (P)
-#endif
-
-#if IOT_CLOCK_HAVE_POWER_LIMIT
-#   define IF_IOT_CLOCK_HAVE_POWER_LIMIT(...) __VA_ARGS__
-#else
-#   define IF_IOT_CLOCK_HAVE_POWER_LIMIT(...)
+#    define IOT_CLOCK_POWER_CORRECTION_OUTPUT 0.3, (P-(P*P*0.01))   ; assume a non linear loss due to high currents
 #endif
 
 // support for motion sensor

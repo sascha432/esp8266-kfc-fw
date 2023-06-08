@@ -322,9 +322,9 @@ void SwitchPlugin::_rtcMemLoadState()
     static const uint8_t pins[] PROGMEM = { IOT_SWITCH_CHANNEL_PINS };
 
     _statesInitialized = false;
-    pinsNoInit.init();
+    pinsNoInit.ctor();
     memcpy_P(_pins.data(), pins, sizeof(_pins));
-    statesNoInit.init();
+    statesNoInit.ctor();
 
     States states;
     if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::SWITCH, states, states.size()) == states.size()) {

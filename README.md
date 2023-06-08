@@ -2,8 +2,6 @@
 
 Firmware for ESP8266/ESP32 and IoT devices
 
-***Most plugins require major updates after adding support for ESP32 and won't work with version 0.0.6***
-
 The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, GPIO expanders, EEPROM, improved and stable internal ADC, RTC memory access, a (more or less) precise RTC during deep sleep, a maximum of 30 days deep sleep, an event/task scheduler, direct access to flash storage (copy on write) without file system overhead, crash logs with stack traces, etc... via API functions. Support for deep sleep, quick boot (~37ms) and WiFi Quick Connect (<230ms) after wake up is also available
 
 ## Required flash size
@@ -20,7 +18,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 ## ChangeLog
 
-**UPDATE**: First version with support for ESP32 with Arduino Core 2.0.0 is working, but not stable yet.
+**UPDATE**: First version with support for ESP32 with Arduino Core 2.0.0 is working, not all plugins are supported yet.
 
 **SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
 

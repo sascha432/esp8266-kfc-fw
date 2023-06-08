@@ -741,16 +741,10 @@ bool at_mode_enabled()
     return is_at_mode_enabled;
 }
 
-static String *_line = nullptr;
-
 void at_mode_setup()
 {
     is_at_mode_enabled = System::Flags::getConfig().is_at_mode_enabled;
     __LDBG_printf("AT_MODE_ENABLED=%u", is_at_mode_enabled);
-
-    if (!_line) {
-        _line = new String();
-    }
 
     if (_client) {
         serialHandler.removeClient(*_client);
@@ -1811,7 +1805,9 @@ void at_mode_serial_handle_event(String &commandString)
         else {
             args.print(F("Software reset..."));
         }
-        config.restartDevice(safeMode);
+        LoopFunctions::callOnce([safeMode]() {
+            config.restartDevice(safeMode);
+        });
     }
     // else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CMDS))) {
     //     output.print(F("+CMDS="));
@@ -1875,7 +1871,9 @@ void at_mode_serial_handle_event(String &commandString)
         config.restoreFactorySettings();
         config.write();
         args.ok();
-        config.restartDevice(false);
+        LoopFunctions::callOnce([]() {
+            config.restartDevice(false);
+        });
     }
     #if DEBUG
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
@@ -2906,7 +2904,7 @@ void at_mode_serial_input_handler(Stream &client)
 {
     if (is_at_mode_enabled) {
         static bool lastWasCR = false;
-        auto &line = *_line; // static String line; casues the ESP32 to crash
+        auto &line = serialHandler.inputBuffer;
 
         auto serial = StreamWrapper(serialHandler.getStreams(), serialHandler.getInput()); // local output only
         while(client.available()) {
@@ -2937,13 +2935,13 @@ void at_mode_serial_input_handler(Stream &client)
                     lastWasCR = false;
                     serial.write('\n');
                     at_mode_serial_handle_event(line);
-                    line = String();
+                    line.clear();
                     break;
                 case '\r':
                     lastWasCR = true;
                     serial.println();
                     at_mode_serial_handle_event(line);
-                    line = String();
+                    line.clear();
                     break;
                 default:
                     if (ch > 128) {
@@ -2955,7 +2953,7 @@ void at_mode_serial_input_handler(Stream &client)
                     if (line.length() >= SERIAL_HANDLER_INPUT_BUFFER_MAX) {
                         serial.write('\n');
                         at_mode_serial_handle_event(line);
-                        line = String();
+                        line.clear();
                     }
                     break;
             }

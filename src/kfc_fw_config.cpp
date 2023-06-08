@@ -1218,9 +1218,12 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 #    define _DPRINTF(...)
 #endif
 
+extern bool is_at_mode_enabled;
+
 void KFCFWConfiguration::restartDevice(bool safeMode)
 {
     __LDBG_println();
+    is_at_mode_enabled = false;
 
     String msg = F("Device is being restarted");
     if (safeMode) {
@@ -1814,7 +1817,11 @@ KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(Stati
                 uint8_t *bssid = nullptr;
                 int32_t channel = 0;
                 bool hidden = false;
-                auto res = WiFi.getNetworkInfo(i, ssid, encType, rssi, bssid, channel, hidden);
+                #if ESP8266
+                    auto res = WiFi.getNetworkInfo(i, ssid, encType, rssi, bssid, channel, hidden);
+                #else
+                    auto res = WiFi.getNetworkInfo(i, ssid, encType, rssi, bssid, channel);
+                #endif
                 if (res) {
                     __DBG_printf("wifi=%s rssi=%d hidden=%d bssid=%s channel=%d enc=%d", ssid.c_str(), rssi, hidden, mac2String(bssid).c_str(), channel, encType);
                 }

@@ -6,6 +6,7 @@
 #include <stl_ext/memory>
 #include "PluginComponent.h"
 #include "plugins_menu.h"
+#include "reset_detector.h"
 #include <Form.h>
 #include <algorithm>
 #include "kfc_fw_config.h"
@@ -18,7 +19,10 @@
 #define PLUGIN_RTC_MEM_MAX_ID 255
 
 #if DEBUG_PLUGINS
-#    include "debug_helper_enable.h"
+#    if !DEBUG_RESET_DETECTOR
+#        error set DEBUG_RESET_DETECTOR=1
+#    endif
+#    include "debug_pre_setup.h"
 #else
 #    include "debug_helper_disable.h"
 #endif
@@ -32,26 +36,13 @@ Register *Register::getInstance()
     return &_pluginRegister;
 }
 
-#if DEBUG_PLUGINS
-
 void Register::_add(PluginComponent *plugin, const char *name)
 {
-    #if ESP8266
-        KFC_SAFE_MODE_SERIAL_PORT.begin(KFC_SERIAL_RATE);
+    __LDBG_printf("name=%s plugin=%p", __S(name), plugin);
+    #if ESP32
+        reset_detector_setup_global_ctors();
     #endif
-    ::printf(PSTR("register_plugin(%p): name=%s\r\n"), plugin, name);
-#else
-void Register::_add(PluginComponent *plugin)
-{
-#endif
-    __LDBG_printf("register_plugin %s priority %d", plugin->getName_P(), plugin->getOptions().priority);
-    //// insert sorted
-    // auto iterator = std::upper_bound(_plugins.begin(), _plugins.end(), plugin, [](const PluginComponent *a, const PluginComponent *b) {
-    //     return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
-    // });
-    // _plugins.insert(iterator, plugin);
-
-    // push_back + sort is faster
+    __LDBG_printf("register_plugin=%s priority=%d plugins=%u", plugin->getName_P(), plugin->getOptions().priority, _plugins.size());
     _plugins.push_back(plugin);
 }
 
@@ -91,8 +82,6 @@ void Register::dumpList(Print &output)
 
 void RegisterEx::_createMenu()
 {
-    //TODO move to PROGMEM
-
     _navMenu.home = _bootstrapMenu.addMenu(FSPGM(Home));
     _bootstrapMenu.getItem(_navMenu.home)->setUri(FSPGM(index_html));
 
@@ -136,6 +125,7 @@ void RegisterEx::_createMenu()
 
 void Register::sort()
 {
+    __LDBG_printf("sort=%u", _plugins.size());
     std::sort(_plugins.begin(), _plugins.end(), [](const PluginComponent *a, const PluginComponent *b) {
         return static_cast<int>(b->getOptions().priority) >= static_cast<int>(a->getOptions().priority);
     });

@@ -9,7 +9,7 @@
 #include "PluginComponent.h"
 
 #ifndef DEBUG_PLUGINS
-#    define DEBUG_PLUGINS (0 || defined(DEBUG_ALL))
+#    define DEBUG_PLUGINS (ESP32 || defined(DEBUG_ALL))
 #endif
 
 #if ENABLE_DEEP_SLEEP
@@ -32,11 +32,7 @@ namespace PluginComponents {
         }
 
         static Register *getInstance();
-        #if DEBUG_PLUGINS
-            static void add(PluginComponent *plugin, const char *name);
-        #else
-            static void add(PluginComponent *plugin);
-        #endif
+        static void add(PluginComponent *plugin, const char *name = nullptr);
         static void setDelayedStartupTime(uint32_t delayedStartupTime);
         static PluginsVector &getPlugins();
 
@@ -46,11 +42,7 @@ namespace PluginComponents {
         void dumpList(Print &output);
 
     protected:
-        #if DEBUG_PLUGINS
-            static void _add(PluginComponent *plugin, const char *name);
-        #else
-            static void _add(PluginComponent *plugin);
-        #endif
+        static void _add(PluginComponent *plugin, const char *name = nullptr);
         void _setDelayedStartupTime(uint32_t delayedStartupTime);
         PluginsVector &_getPlugins();
 
@@ -60,24 +52,11 @@ namespace PluginComponents {
 
     extern PluginsVector &_plugins;
 
-    #if DEBUG_PLUGINS
-
-        inline __attribute__((__always_inline__))
-        void Register::add(PluginComponent *plugin, const char *name)
-        {
-            ets_printf("Register::add() plugin=%s\n", name);
-            _add(plugin, name);
-        }
-
-    #else
-
-        inline __attribute__((__always_inline__))
-        void Register::add(PluginComponent *plugin)
-        {
-            _add(plugin);
-        }
-
-    #endif
+    inline __attribute__((__always_inline__))
+    void Register::add(PluginComponent *plugin, const char *name)
+    {
+        _add(plugin, name);
+    }
 
     inline __attribute__((__always_inline__))
     PluginsVector &Register::getPlugins()

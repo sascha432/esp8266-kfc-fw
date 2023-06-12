@@ -277,9 +277,9 @@ public:
     } Config_t;
     using PGM_Config_t = const Config_t *;
 
-
 public:
-    PluginComponent(PGM_Config_t config) : _setupTime(0), _pluginConfig(config) {
+    PluginComponent(PGM_Config_t config) : _setupTime(0), _pluginConfig(config)
+    {
     }
 
 // static functions
@@ -346,6 +346,7 @@ public:
 
 
     Options_t getOptions() const {
+        ::printf("getOptions()\n");
         Options_t options;
         // memcpy_P(&options, &_pluginConfig->options, sizeof(options));
         options.__dword = pgm_read_dword(&_pluginConfig->options);

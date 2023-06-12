@@ -17,6 +17,7 @@ partitions1 = [
     [ 'nvs',        'data',     'nvs',          20, '' ],
     [ 'otadata',    'data',     'ota',           8, '' ],
     [ 'uf2',        'app',      'factory',    2048, '' ],
+    # [ 'uf2',        'app',      'factory',    2432, '' ],
     [ 'eeprom',     'data',     'fat',           4, '' ],
     [ 'savecrash',  'data',     'fat',          64, '' ],
     [ 'kfcfw',      'data',     'fat',          64, '' ],
@@ -68,3 +69,4 @@ if not os.path.isdir(eagle_dir):
 
 # create_partitions('-', start_addr, end_addr, partitions1);
 create_partitions(path.join(eagle_dir, 'partitions.csv'), start_addr, end_addr, partitions1);
+# create_partitions(path.join(eagle_dir, 'partitions_maxapp.csv'), start_addr, end_addr, partitions1);

@@ -53,6 +53,8 @@ public:
 
     static void waitForQueue(uint32_t maxMillis);
 
+    static SyslogPlugin &getInstance();
+
 private:
     void _zeroConfCallback(const SyslogStream *stream, const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
 
@@ -69,3 +71,10 @@ private:
     SyslogStream *_stream;
     Event::Timer _timer;
 };
+
+extern "C" SyslogPlugin syslogPlugin;
+
+inline SyslogPlugin &SyslogPlugin::getInstance()
+{
+    return syslogPlugin;
+}

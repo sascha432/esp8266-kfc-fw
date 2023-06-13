@@ -28,9 +28,9 @@
 #include "Sensor_AmbientLight.h"
 
 #if DEBUG_IOT_SENSOR
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #ifndef IOT_SENSOR_NAMES_LM75A
@@ -193,6 +193,13 @@ private:
     AddCustomSensorCallback _addCustomSensors;
 };
 
+extern "C" SensorPlugin sensorPlugin;
+
+inline SensorPlugin &SensorPlugin::getInstance()
+{
+    return sensorPlugin;
+}
+
 inline SensorPlugin::SensorVector &SensorPlugin::getSensors()
 {
     return getInstance()._sensors;
@@ -311,5 +318,5 @@ inline bool SensorPlugin::_hasConfigureForm() const
 }
 
 #if DEBUG_IOT_SENSOR
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif

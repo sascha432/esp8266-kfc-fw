@@ -176,6 +176,13 @@ private:
     SemaphoreMutex _lock;
 };
 
+extern "C" MDNSPlugin mDNSPlugin;
+
+inline MDNSPlugin &MDNSPlugin::getInstance()
+{
+    return mDNSPlugin;
+}
+
 inline void MDNSPlugin::_stopQueries()
 {
     MUTEX_LOCK_BLOCK(_lock) {

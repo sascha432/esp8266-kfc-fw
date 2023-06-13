@@ -59,9 +59,7 @@ private:
 
 class FileManagerWebHandler : public AsyncWebHandler {
 public:
-    FileManagerWebHandler(const __FlashStringHelper *uri) : AsyncWebHandler() {
-        _uri = uri;
-    }
+    FileManagerWebHandler(const __FlashStringHelper *uri);
 
     virtual bool canHandle(AsyncWebServerRequest *request) override;
     virtual void handleRequest(AsyncWebServerRequest *request) override;
@@ -71,5 +69,11 @@ public:
 private:
     const __FlashStringHelper *_uri;
 };
+
+FileManagerWebHandler::FileManagerWebHandler(const __FlashStringHelper *uri) :
+    AsyncWebHandler()
+{
+    _uri = uri;
+}
 
 #endif

@@ -55,11 +55,12 @@
 #    include <debug_helper_disable_ptr_validation.h>
 #endif
 
+namespace WebServer {
+    Plugin webServerPlugin;
+}
+
 using KFCConfigurationClasses::System;
-
 using namespace WebServer;
-
-static Plugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     Plugin,
@@ -201,11 +202,11 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             for(;;) {
                 auto statusStr = F("Enabled");
                 if (url.startsWith(F("/start-"))) {
-                    plugin.ArduinoOTAbegin();
+                    getInstance().ArduinoOTAbegin();
                 }
                 else if (url.startsWith(F("/stop-"))) {
                     statusStr = F("Diabled");
-                    plugin.ArduinoOTAend();
+                    getInstance().ArduinoOTAend();
                 }
                 else {
                     break;
@@ -226,17 +227,17 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
     // --------------------------------------------------------------------
     else if (url == F("/webui-handler")) {
-        plugin._handlerWebUI(request, headers);
+        getInstance()._handlerWebUI(request, headers);
         return;
     }
     // --------------------------------------------------------------------
     else if (url == F("/alerts")) {
-        plugin._handlerAlerts(request, headers);
+        getInstance()._handlerAlerts(request, headers);
         return;
     }
     // --------------------------------------------------------------------
     else if (url == F("/sync-time")) {
-        if (!plugin.isAuthenticated(request)) {
+        if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403);
             _logRequest(request, response);
             request->send(response);
@@ -253,17 +254,17 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
     // --------------------------------------------------------------------
     else if (url == F("/export-settings")) {
-        plugin._handlerExportSettings(request, headers);
+        getInstance()._handlerExportSettings(request, headers);
         return;
     }
     // --------------------------------------------------------------------
     else if (url == F("/import-settings")) {
-        plugin._handlerImportSettings(request, headers);
+        getInstance()._handlerImportSettings(request, headers);
         return;
     }
     // --------------------------------------------------------------------
     else if (url == F("/scan-wifi")) {
-        if (!plugin.isAuthenticated(request)) {
+        if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403, FSPGM(mime_text_html));
             _logRequest(request, response);
             request->send(response);
@@ -290,7 +291,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
     // --------------------------------------------------------------------
     else if (url == F("/mqtt-publish-ad.html")) {
-        if (!plugin.isAuthenticated(request)) {
+        if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403, FSPGM(mime_text_html));
             _logRequest(request, response);
             request->send(response);
@@ -336,7 +337,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
     // --------------------------------------------------------------------
     else if (url == F("/zeroconf")) {
-        if (!plugin.isAuthenticated(request)) {
+        if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403);
             _logRequest(request, response);
             request->send(response);
@@ -357,7 +358,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     #endif
     // --------------------------------------------------------------------
     else if (url == F("/savecrash.json")) {
-        if (!plugin.isAuthenticated(request)) {
+        if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403);
             _logRequest(request, response);
             request->send(response);
@@ -369,7 +370,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
         // --------------------------------------------------------------------
         else if (url == F("/ambient_light_sensor")) {
-            if (!plugin.isAuthenticated(request)) {
+            if (!getInstance().isAuthenticated(request)) {
                 auto response = request->beginResponse(403);
                 _logRequest(request, response);
                 request->send(response);
@@ -398,7 +399,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // --------------------------------------------------------------------
     #if WEBSERVER_SPEED_TEST
         else if (url.startsWith(F("/speedtest."))) { // handles speedtest.zip and speedtest.bmp
-            plugin._handlerSpeedTest(request, !url.endsWith(F(".bmp")), headers);
+            getInstance()._handlerSpeedTest(request, !url.endsWith(F(".bmp")), headers);
             return;
         }
     #endif
@@ -411,7 +412,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
 
     // else section
-    if (plugin._handleFileRead(url, plugin._clientAcceptsGzip(request), request, headers)) {
+    if (getInstance()._handleFileRead(url, getInstance()._clientAcceptsGzip(request), request, headers)) {
         return;
     }
     send(404, request);
@@ -583,7 +584,7 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
 
 void Plugin::_handlerWebUI(AsyncWebServerRequest *request, HttpHeaders &headers)
 {
-    if (!plugin.isAuthenticated(request)) {
+    if (!getInstance().isAuthenticated(request)) {
         send(403, request);
         return;
     }
@@ -1257,30 +1258,30 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
     }
 
     if (action == WebSocketAction::NONE) {
-        __LDBG_printf("plugin=%s form=%s invalid action=%s", plugin.getName_P(), formName.c_str(), actionStr.c_str());
+        __LDBG_printf("plugin=%s form=%s invalid action=%s", getInstance().getName_P(), formName.c_str(), actionStr.c_str());
     }
-    else if (!plugin.canHandleForm(formName)) {
-        __LDBG_printf("plugin=%s cannot handle form=%s", plugin.getName_P(), formName.c_str());
+    else if (!getInstance().canHandleForm(formName)) {
+        __LDBG_printf("plugin=%s cannot handle form=%s", getInstance().getName_P(), formName.c_str());
     }
     else {
         FormUI::Form::BaseForm *form = new SettingsForm(request);
-        plugin.createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
+        getInstance().createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
         bool modified = config.isDirty();
         if (action == WebSocketAction::DISCARD || !form->validate()) {
             modified = modified || form->hasChanged();
             // form->dump(DEBUG_OUTPUT, emptyString);
-            __LDBG_printf("plugin=%s discard config changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
+            __LDBG_printf("plugin=%s discard config changed=%u dirty=%u modified=%u form=%s action=%s", getInstance().getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
             if (modified) {
-                plugin.createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
+                getInstance().createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
                 config.discard();
-                plugin.reconfigure(formName);
+                getInstance().reconfigure(formName);
             }
         }
         else {
             // form->dump(DEBUG_OUTPUT, emptyString);
             modified = modified || form->hasChanged();
-            __LDBG_printf("plugin=%s validated changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
-            plugin.createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
+            __LDBG_printf("plugin=%s validated changed=%u dirty=%u modified=%u form=%s action=%s", getInstance().getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
+            getInstance().createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
             if (action == WebSocketAction::SAVE && modified) {
                 // save current and previous changes from apply
                 config.write();
@@ -1288,8 +1289,8 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
             // only reconfigure if the form has changed
             // if config is dirty, those changes have been applied already
             if (form->hasChanged()) {
-                __LDBG_printf("reconfigure plugin=%s", plugin.getName_P());
-                plugin.reconfigure(formName);
+                __LDBG_printf("reconfigure plugin=%s", getInstance().getName_P());
+                getInstance().reconfigure(formName);
             }
         }
         delete form;
@@ -1414,24 +1415,14 @@ void Plugin::getStatus(Print &output)
     }
 }
 
-Plugin &Plugin::getInstance()
-{
-    return plugin;
-}
-
-AsyncWebServerEx *Plugin::getWebServerObject()
-{
-    return plugin._server.get();
-}
-
 bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri)
 {
     __DBG_validatePointerCheck(handler, VP_HSU);
-    __LDBG_assert_printf(!!plugin._server, "_server is nullptr");
-    if (!plugin._server) {
+    __LDBG_assert_printf(!!getInstance()._server, "_server is nullptr");
+    if (!getInstance()._server) {
         return false;
     }
-    plugin._server->addHandler(handler);
+    getInstance()._server->addHandler(handler);
     __LDBG_printf("handler=%p uri=%s", handler, uri);
     return true;
 }
@@ -1439,8 +1430,8 @@ bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri
 AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerFunction onRequest)
 {
     __DBG_validatePointerCheck(uri, VP_HS);
-    __LDBG_assert_printf(!!plugin._server, "_server is nullptr");
-    if (!plugin._server) {
+    __LDBG_assert_printf(!!getInstance()._server, "_server is nullptr");
+    if (!getInstance()._server) {
         return nullptr;
     }
     auto handler = new AsyncCallbackWebHandler();
@@ -1450,7 +1441,7 @@ AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerF
     __LDBG_printf("handler=%p uri=%s", handler, uri.c_str());
     handler->setUri(uri);
     handler->onRequest(onRequest);
-    plugin._server->addHandler(handler);
+    getInstance()._server->addHandler(handler);
     return handler;
 }
 

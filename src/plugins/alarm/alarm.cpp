@@ -17,7 +17,7 @@
 #include <debug_helper_disable.h>
 #endif
 
-static AlarmPlugin plugin;
+AlarmPlugin alarmPlugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     AlarmPlugin,
@@ -317,11 +317,6 @@ void AlarmPlugin::_publishState()
         publish(_formatTopic(F("/rgb/state")), true, MQTT::Client::toRGB(_color));
     }
 }
-
-AlarmPlugin &AlarmPlugin::getInstance()
- {
-     return plugin;
- }
 
 #if IOT_ALARM_PLUGIN_HAS_BUZZER
 

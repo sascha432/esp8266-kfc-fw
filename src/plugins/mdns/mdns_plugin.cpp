@@ -23,9 +23,9 @@
 // servicedomain missing, using instance name instead. querying the servicedomain crashes with nullptr exception
 
 #if DEBUG_MDNS_SD
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #include "build.h"
@@ -33,7 +33,7 @@
 using KFCConfigurationClasses::System;
 using Plugins = KFCConfigurationClasses::PluginsType;
 
-static MDNSPlugin plugin;
+MDNSPlugin mDNSPlugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     MDNSPlugin,
@@ -74,8 +74,8 @@ void MDNSService::announce()
 
 void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 {
-    __LDBG_printf("running=%u", plugin._isRunning());
-    if (plugin._isRunning()) {
+    __LDBG_printf("running=%u", getInstance()._isRunning());
+    if (getInstance()._isRunning()) {
         if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
             auto timeout = request->arg(F("timeout")).toInt();
             if (timeout == 0) {
@@ -89,7 +89,7 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
                     auto service = String(FSPGM(kfcmdns));
                     auto name = String(FSPGM(udp));
                     output->_serviceQuery = MDNS.installServiceQuery(service.c_str(), name.c_str(), [output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                        plugin.serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
+                        getInstance().serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
                     });
                 #elif ESP32
                     __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", PSTR("_kfcmdns"), PSTR("_udp"), timeout);
@@ -152,11 +152,6 @@ void MDNSPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesP
     if (isEnabled()) {
         begin();
     }
-}
-
-MDNSPlugin &MDNSPlugin::getInstance()
-{
-    return plugin;
 }
 
 void MDNSPlugin::resolveZeroConf(MDNSResolver::Query *query)

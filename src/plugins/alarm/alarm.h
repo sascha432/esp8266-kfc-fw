@@ -123,6 +123,12 @@ private:
     int32_t _color;
 };
 
+extern "C" AlarmPlugin alarmPlugin;
+
+inline AlarmPlugin &AlarmPlugin::getInstance()
+{
+    return alarmPlugin;
+}
 
 inline void AlarmPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {

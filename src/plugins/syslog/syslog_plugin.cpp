@@ -8,16 +8,16 @@
 #include <SyslogFactory.h>
 
 #if DEBUG_SYSLOG
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
+
+SyslogPlugin syslogPlugin;
 
 using Plugins = KFCConfigurationClasses::PluginsType;
 using namespace KFCConfigurationClasses::Plugins::SyslogConfigNS;
 using KFCConfigurationClasses::System;
-
-static SyslogPlugin plugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     SyslogPlugin,
@@ -39,7 +39,9 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     0                   // __reserved
 );
 
-SyslogPlugin::SyslogPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SyslogPlugin)), _stream(nullptr)
+SyslogPlugin::SyslogPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SyslogPlugin)),
+    _stream(nullptr)
 {
     REGISTER_PLUGIN(this, "SyslogPlugin");
 }
@@ -63,7 +65,7 @@ void SyslogPlugin::shutdown()
 
 void SyslogPlugin::timerCallback(Event::CallbackTimerPtr timer)
 {
-    plugin._timerCallback(timer);
+    getInstance()._timerCallback(timer);
 }
 
 void SyslogPlugin::queueSize(uint32_t size, bool isAvailable)
@@ -127,7 +129,7 @@ void SyslogPlugin::_begin()
             if (zeroconf) {
                 auto stream = _stream;
                 config.resolveZeroConf(getFriendlyName(), hostname, port, [stream](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-                    plugin._zeroConfCallback(stream, hostname, address, port, type);
+                    getInstance()._zeroConfCallback(stream, hostname, address, port, type);
                 });
             }
         }
@@ -158,7 +160,7 @@ void SyslogPlugin::_end()
 
 void SyslogPlugin::waitForQueue(uint32_t maxMillis)
 {
-    plugin._waitForQueue(plugin._stream, maxMillis);
+    getInstance()._waitForQueue(getInstance()._stream, maxMillis);
 }
 
 void SyslogPlugin::_waitForQueue(SyslogStream *stream, uint32_t timeout)
@@ -191,48 +193,48 @@ void SyslogPlugin::_kill(uint32_t timeout)
 
 void SyslogPlugin::getStatus(Print &output)
 {
-#if SYSLOG_SUPPORT
-    if (_stream) {
-        auto proto = protocolToString(Plugins::SyslogClient::getConfig()._get_enum_protocol());
-        if (!proto) {
+    #if SYSLOG_SUPPORT
+        if (_stream) {
+            auto proto = protocolToString(Plugins::SyslogClient::getConfig()._get_enum_protocol());
+            if (!proto) {
+                output.print(FSPGM(Disabled));
+                return;
+            }
+            output.print(proto);
+
+            auto &syslog = _stream->_syslog;
+            if (syslog.getPort() == SyslogFactory::kZeroconfPort) {
+                output.print(F(" @ resolving zeroconf"));
+            }
+            else {
+                output.printf_P(PSTR(" @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
+            }
+            auto &queue = _stream->_syslog._queue;
+            if (queue.empty()) {
+                output.print(F(" - queue empty"));
+            }
+            else {
+                output.printf_P(PSTR(" - %u message(s) queued, state %s"), queue.size(), syslog.isSending() ? PSTR("sending") : PSTR("waiting"));
+            }
+            if (queue.getDropped()) {
+                output.printf_P(PSTR(", %u dropped"), queue.getDropped());
+            }
+        }
+        else {
             output.print(FSPGM(Disabled));
-            return;
         }
-        output.print(proto);
 
-        auto &syslog = _stream->_syslog;
-        if (syslog.getPort() == SyslogFactory::kZeroconfPort) {
-            output.print(F(" @ resolving zeroconf"));
-        }
-        else {
-            output.printf_P(PSTR(" @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
-        }
-        auto &queue = _stream->_syslog._queue;
-        if (queue.empty()) {
-            output.print(F(" - queue empty"));
-        }
-        else {
-            output.printf_P(PSTR(" - %u message(s) queued, state %s"), queue.size(), syslog.isSending() ? PSTR("sending") : PSTR("waiting"));
-        }
-        if (queue.getDropped()) {
-            output.printf_P(PSTR(", %u dropped"), queue.getDropped());
-        }
-    }
-    else {
-        output.print(FSPGM(Disabled));
-    }
-
-#else
-    output.print(FSPGM(Not_supported));
-#endif
+    #else
+        output.print(FSPGM(Not_supported));
+    #endif
 }
 
 #if ENABLE_DEEP_SLEEP
 
-void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
-{
-    _kill((sleepTimeMillis > 60000) ? 1000 : 250);
-}
+    void SyslogPlugin::prepareDeepSleep(uint32_t sleepTimeMillis)
+    {
+        _kill((sleepTimeMillis > 60000) ? 1000 : 250);
+    }
 
 #endif
 
@@ -252,9 +254,9 @@ ATModeCommandHelpArrayPtr SyslogPlugin::atModeCommandHelp(size_t &size) const
 {
     static ATModeCommandHelpArray tmp PROGMEM = {
         PROGMEM_AT_MODE_HELP_COMMAND(SQ),
-#if LOGGER
-        PROGMEM_AT_MODE_HELP_COMMAND(LOG),
-#endif
+        #if LOGGER
+            PROGMEM_AT_MODE_HELP_COMMAND(LOG),
+        #endif
     };
     size = sizeof(tmp) / sizeof(tmp[0]);
     return tmp;
@@ -302,19 +304,19 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-#if LOGGER
-    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
-        if (atModeHasStream(args)) {
-            if (args.size() == 2) {
-                _logger.log(_logger.getLevelFromString(args.get(0)), PSTR("%s"), args.get(1));
+    #if LOGGER
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LOG))) {
+            if (atModeHasStream(args)) {
+                if (args.size() == 2) {
+                    _logger.log(_logger.getLevelFromString(args.get(0)), PSTR("%s"), args.get(1));
+                }
+                else if (args.requireArgs(1, 1)) {
+                    Logger_error(F("%s"), args.get(0));
+                }
             }
-            else if (args.requireArgs(1, 1)) {
-                Logger_error(F("%s"), args.get(0));
-            }
+            return true;
         }
-        return true;
-    }
-#endif
+    #endif
 
     return false;
 }

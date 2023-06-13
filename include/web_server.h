@@ -464,7 +464,6 @@ namespace WebServer {
     }
 #endif
 
-
     class AsyncWebServerEx : public AsyncWebServer {
     public:
         using AsyncWebServer::AsyncWebServer;
@@ -475,6 +474,18 @@ namespace WebServer {
 
         RestHandlerVector _restCallbacks;
     };
+
+    extern "C" Plugin webServerPlugin;
+
+    inline Plugin &Plugin::getInstance()
+    {
+        return webServerPlugin;
+    }
+
+    inline AsyncWebServerEx *Plugin::getWebServerObject()
+    {
+        return webServerPlugin._server.get();
+    }
 
 }
 

@@ -197,6 +197,7 @@ namespace SerialHandler {
     void Wrapper::removeClient(const Client &client)
     {
         auto ptr = std::addressof(client);
+        __DBGSHIO("remove client %p", ptr);
         // remove outside interrupts
         LoopFunctions::callOnce([ptr, this]() {
             MUTEX_LOCK_BLOCK(_lock) {
@@ -303,7 +304,7 @@ namespace SerialHandler {
                     uint8_t buf[Wrapper::kMinBufferSize / 2];
                     size_t len;
                     while((len = tx.read(reinterpret_cast<char *>(buf), sizeof(buf))) != 0) {
-                        __DBGSHIO("transmit tx client %p size %u", &client, len);
+                        __DBGSHIO("transmit tx client %p size %u", clientPtr.get(), len);
                         _writeClientsRx(clientPtr.get(), buf, len, EventType::READ);
                     }
                 }

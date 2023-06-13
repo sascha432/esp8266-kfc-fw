@@ -120,13 +120,14 @@ namespace KFCConfigurationClasses {
                 }
 
                 uint32_t getLastFactoryResetTimestamp() const {
-                    if (isTimeValid(factory_reset_unixtime)) {
+                    if (factory_reset_unixtime > TIME_T_MIN) {
                         return factory_reset_unixtime;
                     }
-                    time_t now = time(nullptr);
-                    if (isTimeValid(now)) {
-                        return factory_reset_unixtime + now;
-                    }
+                    // time_t now = time(nullptr);
+                    // if (isTimeValid(now) && factory_reset_unixtime < 86400 * 90) {
+                    //     // TODO save new timestamp
+                    //     return now - factory_reset_unixtime;
+                    // }
                     return 0;
                 }
 

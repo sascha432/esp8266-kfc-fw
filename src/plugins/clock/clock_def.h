@@ -273,7 +273,7 @@
 // -D IOT_CLOCK_POWER_CORRECTION_OUTPUT=.3,\(P-\(P*P*0.025\)\)     ; compensate for the long USB power cable
 // -D IOT_CLOCK_POWER_CORRECTION_OUTPUT=.3,\(P-\(P*P*0.02\)\)      ; this led strip has a long thin cable and quite some powerloss with high currents
 #ifndef IOT_CLOCK_POWER_CORRECTION_OUTPUT
-#    define IOT_CLOCK_POWER_CORRECTION_OUTPUT 0.3, (P-(P*P*0.01))   ; assume a non linear loss due to high currents
+#    define IOT_CLOCK_POWER_CORRECTION_OUTPUT 0.3, (P-(P*P*0.01))   // assume a non linear loss due to high currents
 #endif
 
 // support for motion sensor

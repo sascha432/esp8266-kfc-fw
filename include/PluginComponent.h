@@ -248,6 +248,10 @@ public:
 // set to one to copy PROGMEM to the stack before reading the data
 #define PLUGINS_USE_MEMCPY_P_TO_READ_CONFIG ESP8266
 
+#if ESP8266
+using prog_uint32_t = uint32_t;
+#endif
+
 class PluginComponent : public PluginComponents::Component, public PluginComponentAtModeHelpInterface {
 public:
     using Dependencies = PluginComponents::Dependencies;

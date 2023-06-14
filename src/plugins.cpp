@@ -38,10 +38,10 @@ Register *Register::getInstance()
 
 void Register::_add(PluginComponent *plugin, const char *name)
 {
-    __LDBG_printf("name=%s plugin=%p", __S(name), plugin);
     #if ESP32
         reset_detector_setup_global_ctors();
     #endif
+    __LDBG_printf("name=%s plugin=%p", __S(name), plugin);
     __LDBG_printf("register_plugin=%s priority=%d plugins=%u", plugin->getName_P(), plugin->getOptions().priority, _plugins.size());
     _plugins.push_back(plugin);
 }

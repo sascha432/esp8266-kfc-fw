@@ -17,17 +17,17 @@
 #include "ntp_plugin.h"
 
 #if defined(ESP8266)
-#include <sntp.h>
-#include <coredecls.h>
+#    include <coredecls.h>
+#    include <sntp.h>
 #elif defined(ESP32)
-#include <lwip/apps/sntp.h>
-#include <esp_sntp.h>
+#    include <esp_sntp.h>
+#    include <lwip/apps/sntp.h>
 #endif
 
 #if DEBUG_NTP_CLIENT
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using KFCConfigurationClasses::System;

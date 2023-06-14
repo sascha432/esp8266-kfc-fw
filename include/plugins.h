@@ -9,7 +9,7 @@
 #include "PluginComponent.h"
 
 #ifndef DEBUG_PLUGINS
-#    define DEBUG_PLUGINS (ESP32 || defined(DEBUG_ALL))
+#    define DEBUG_PLUGINS (0 || defined(DEBUG_ALL))
 #endif
 
 #if ENABLE_DEEP_SLEEP

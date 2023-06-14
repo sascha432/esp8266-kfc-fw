@@ -87,7 +87,7 @@ HttpCookieHeader *createRemoveSessionIdCookie()
     return new HttpCookieHeader(FSPGM(SID, "SID"), String(), String('/'), HttpCookieHeader::COOKIE_EXPIRED);
 }
 
-const __FlashStringHelper *getContentType(const String &path)
+static inline const __FlashStringHelper *_getContentType(const String &path)
 {
     if (path.endsWith(FSPGM(_html)) || path.endsWith(F(".htm"))) {
         return FSPGM(mime_text_html, "text/html");
@@ -145,8 +145,15 @@ const __FlashStringHelper *getContentType(const String &path)
     }
 }
 
+const __FlashStringHelper *getContentType(const String &path)
+{
+    __LDBG_printf("getContentType(%s)", __S(path), __S(_getContentType(path)));
+    return _getContentType(path);
+}
+
 void Plugin::executeDelayed(AsyncWebServerRequest *request, std::function<void()> callback)
 {
+    __LDBG_printf("executeDelayed url=%s callback=%p", request->url().c_str(), std::addressof(callback));
     request->onDisconnect([callback]() {
         _Scheduler.add(2000, false, [callback](Event::CallbackTimerPtr timer) {
             callback();
@@ -157,7 +164,7 @@ void Plugin::executeDelayed(AsyncWebServerRequest *request, std::function<void()
 bool Plugin::_isPublic(const String &pathString) const
 {
     auto path = pathString.c_str();
-    if (strstr_P(path, PSTR(".."))) {
+    if (strstr_P(path, PSTR(".."))) { // deny any path traversing attempts
         return false;
     }
     else if (*path++ == '/') {
@@ -186,6 +193,7 @@ bool Plugin::_clientAcceptsGzip(AsyncWebServerRequest *request) const
 // to avoid having multiple handlers and save RAM, all custom handlers are executed here
 void Plugin::handlerNotFound(AsyncWebServerRequest *request)
 {
+    __LDBG_printf("not found handler=%s", request->url().c_str());
     HttpHeaders headers;
     AsyncWebServerResponse *response = nullptr;
 

@@ -1795,6 +1795,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
             #endif
         }
+        else
     #endif
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RST))) {
         bool safeMode = false;

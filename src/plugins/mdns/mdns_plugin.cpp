@@ -93,7 +93,7 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
                     });
                 #elif ESP32
                     __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", PSTR("_kfcmdns"), PSTR("_udp"), timeout);
-                    output->_serviceQuery = mdns_query_async_new(nullptr, PSTR("_kfcmdns"), PSTR("_udp"), MDNS_TYPE_PTR, timeout, 64);
+                    output->_serviceQuery = mdns_query_async_new(nullptr, PSTR("_kfcmdns"), PSTR("_udp"), MDNS_TYPE_PTR, timeout, 64, NULL);
                     if (!output->_serviceQuery) {
                         __LDBG_printf("mdns_query_async_new failed");
                     }

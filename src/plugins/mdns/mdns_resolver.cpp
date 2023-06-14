@@ -172,7 +172,7 @@ void MDNSResolver::Query::begin()
         });
     #elif ESP32
         __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", _service.c_str(), _proto.c_str(), _timeout);
-        _serviceQuery = mdns_query_async_new(nullptr, _service.c_str(), _proto.c_str(), MDNS_TYPE_PTR, _timeout, 1);
+        _serviceQuery = mdns_query_async_new(nullptr, _service.c_str(), _proto.c_str(), MDNS_TYPE_PTR, _timeout, 1, NULL);
         if (!_serviceQuery) {
             __LDBG_printf("mdns_query_async_new failed");
             _state = StateType::FINISHED;

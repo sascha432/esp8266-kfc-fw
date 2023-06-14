@@ -216,7 +216,7 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                         serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
                     });
                 #elif ESP32
-                    output->_serviceQuery = mdns_query_async_new(emptyString.c_str(), args.toString(0).c_str(), args.toString(1).c_str(), MDNS_TYPE_PTR, timeout, 64);
+                    output->_serviceQuery = mdns_query_async_new(emptyString.c_str(), args.toString(0).c_str(), args.toString(1).c_str(), MDNS_TYPE_PTR, timeout, 64, NULL);
                 #endif
 
                 if (output->_serviceQuery) {

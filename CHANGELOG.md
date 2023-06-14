@@ -2,6 +2,7 @@
 
 ## Version 0.0.8 (master)
 
+ - Merged framework-arduinoespressif32 2.0.9 into 2.0.0-mod
  - Split KFCLibrary and added support for github or local copy in ./lib
  - Added Adafruit NeoPixel support
  - Support for up to 4 LED output pins

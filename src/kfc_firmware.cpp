@@ -58,6 +58,15 @@ extern "C" void preinit(void)
 
 #endif
 
+#if ESP32 && CONFIG_BT_ENABLED
+
+extern "C" bool btInUse()
+{
+    return false;
+}
+
+#endif
+
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 

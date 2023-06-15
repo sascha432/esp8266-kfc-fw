@@ -66,7 +66,7 @@ namespace MQTT {
             }
         };
 
-        class Reader : public ::JsonBaseReader {
+        class Reader : KFCJson::JsonBaseReader {
         public:
             Reader();
             Reader(Stream* stream);

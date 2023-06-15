@@ -11,6 +11,8 @@
 #include "mdns_plugin.h"
 #include "at_mode.h"
 
+using namespace KFCJson;
+
 #if DEBUG_MDNS_SD
 #include <debug_helper_enable.h>
 #else

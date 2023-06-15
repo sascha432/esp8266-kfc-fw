@@ -6,6 +6,7 @@
 #include "web_server.h"
 
 using namespace WebServer;
+using namespace KFCJson;
 
 // ------------------------------------------------------------------------
 // RestRequest

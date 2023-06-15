@@ -20,6 +20,8 @@ void NTPClient::defaults()
     #endif
     setTimezoneName(F("Etc/Universal"));
     setPosixTimezone(F("UTC0"));
+
+    // config._jsonConfig
 }
 
 bool NTPClient::isEnabled()

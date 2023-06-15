@@ -21,6 +21,8 @@ namespace MQTT {
 
     namespace Json {
 
+        using namespace KFCJson;
+
         // UnnamedArrayWriter, UnnamedObjectWriter write JSON to the attached PrintStringInterface
         //
         // JsonStringWriter is a template with an embedded PrintString using the two base classes

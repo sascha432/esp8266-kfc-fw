@@ -142,7 +142,7 @@ namespace WebServer {
         AuthType getAuth() const;
 
         RestHandler &getHandler();
-        JsonMapReader &getJsonReader();
+        KFCJson::JsonMapReader &getJsonReader();
 
         AsyncWebServerResponse *createResponse(AsyncWebServerRequest *request);
         void writeBody(uint8_t *data, size_t len);
@@ -154,7 +154,7 @@ namespace WebServer {
         RestHandler _handler;
         AuthType _auth;
         HeapStream _stream;
-        JsonMapReader _reader;
+        KFCJson::JsonMapReader _reader;
         bool _readerError;
     };
 

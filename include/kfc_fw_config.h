@@ -29,6 +29,7 @@
 #include "logger.h"
 #include "misc.h"
 #include "reset_detector.h"
+#include "kfc_json_config.h"
 #ifndef DISABLE_TWO_WIRE
 #   include <Wire.h>
 #endif
@@ -226,6 +227,7 @@ private:
     uint8_t _wifiErrorCount;
     bool _dirty;
     bool _safeMode;
+    // KFCJsonConfig _jsonConfig;
 
     static bool _initTwoWire;
 

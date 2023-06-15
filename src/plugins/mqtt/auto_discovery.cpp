@@ -22,6 +22,7 @@
 
 using KFCConfigurationClasses::System;
 using namespace MQTT::AutoDiscovery;
+using namespace KFCJson;
 
 bool Entity::create(ComponentPtr component, const String &componentName, FormatType format)
 {

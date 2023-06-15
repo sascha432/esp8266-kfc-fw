@@ -61,6 +61,7 @@ namespace WebServer {
 
 using KFCConfigurationClasses::System;
 using namespace WebServer;
+using namespace KFCJson;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     Plugin,

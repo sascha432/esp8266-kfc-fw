@@ -43,7 +43,7 @@ using Plugins = KFCConfigurationClasses::PluginsType;
 
 #endif
 
-SwitchPlugin plugin;
+SwitchPlugin switchPlugin;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     SwitchPlugin,

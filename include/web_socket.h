@@ -24,9 +24,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#define WS_PREFIX "ws[%s][%u] "
-#define WS_PREFIX_ARGS server->url(), client->id()
-
 class WsClient;
 class WsClientAsyncWebSocket;
 // class JsonUnnamedObject;
@@ -42,7 +39,7 @@ class WsClient {
 public:
     enum WsErrorType {
         ERROR_FROM_SERVER,
-        ERROR_AUTHENTTICATION_FAILED,
+        ERROR_AUTHENTICATION_FAILED,
     };
 
     enum class BinaryPacketType : uint16_t {
@@ -168,6 +165,7 @@ public:
         }
     }
 
+    void _logRequest(const __FlashStringHelper *message, ...);
 
 public:
     enum class ClientCallbackType {
@@ -241,7 +239,7 @@ public:
         return _authenticatedClients;
     }
 
-    uint16_t getAuthtenticatedClients() const {
+    uint16_t getAuthenticatedClients() const {
         return _authenticatedClients;
     }
 

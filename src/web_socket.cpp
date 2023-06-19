@@ -11,6 +11,7 @@
 #include "kfc_fw_config.h"
 #include "logger.h"
 #include "web_socket.h"
+#include "web_server.h"
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
 
@@ -134,10 +135,10 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
 
     if (type == WS_EVT_CONNECT) {
 
-        Logger_notice(F(WS_PREFIX "%s: Client connected"), WS_PREFIX_ARGS, client->remoteIP().toString().c_str());
+        wsClient->_logRequest(F("%s[%u]: Client connected"), server->url(), client->id());
         client->text(F("+REQ_AUTH"));
         client->keepAlivePeriod(60);
-        // was acutally caused by reading the ADC too fast... analogRead(A0) every 150-200us
+        // was actually caused by reading the ADC too fast... analogRead(A0) every 150-200us
         // client->client()->setAckTimeout(30000); // added for bad WiFi connections
 
         wsClient->onConnect(data, len);
@@ -149,7 +150,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
     }
     else if (type == WS_EVT_DISCONNECT) {
 
-        Logger_notice(F(WS_PREFIX "Client disconnected"), WS_PREFIX_ARGS);
+        wsClient->_logRequest(F("%s[%u]: Client disconnected"), server->url(), client->id());
         wsClient->onDisconnect(data, len);
 
         WsClient::invokeStartOrEndCallback(wsClient, false);
@@ -169,7 +170,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
 
         auto str = printable_string(data, len, 16);
         str.trim();
-        Logger_notice(F(WS_PREFIX "Error(%u): data=%s"), WS_PREFIX_ARGS, *reinterpret_cast<uint16_t *>(arg), str.c_str());
+        wsClient->_logRequest(F("%s[%u]: Error(%u): data=%s"), server->url(), client->id(), *reinterpret_cast<uint16_t *>(arg), str.c_str());
         wsClient->onError(WsClient::ERROR_FROM_SERVER, data, len);
 
     }
@@ -232,7 +233,7 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
             else {
                 wsClient->setAuthenticated(false);
                 client->text(F("+AUTH_ERROR"));
-                wsClient->onError(ERROR_AUTHENTTICATION_FAILED, data, len);
+                wsClient->onError(ERROR_AUTHENTICATION_FAILED, data, len);
                 client->close();
             }
         }
@@ -603,5 +604,28 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
     });
     #if ESP32
         esp_task_wdt_delete(NULL);
+    #endif
+}
+
+void WsClient::_logRequest(const __FlashStringHelper *format, ...)
+{
+    #if WEBSERVER_LOG_SERIAL
+        PrintString log;
+        if (getClient() && getClient()->client()) {
+            getClient()->client()->remoteIP().printTo(log);
+        }
+        else {
+            log = F("[SRV]");
+        }
+        log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
+        log.print(F("WS "));
+
+        va_list arg;
+        va_start(arg, format);
+        auto fmtStr = PrintString(format, arg);
+        log.print(fmtStr);
+        va_end(arg);
+
+        Serial.println(log);
     #endif
 }

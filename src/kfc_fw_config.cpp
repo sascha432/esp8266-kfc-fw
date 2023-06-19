@@ -612,6 +612,8 @@ void KFCFWConfiguration::restoreFactorySettings()
 {
     PrintString str;
 
+    Logger_security(F("Restoring factory settings"));
+
     #undef __DBG_CALL
     #define __DBG_CALL(...) \
         __VA_ARGS__;
@@ -686,7 +688,7 @@ void KFCFWConfiguration::restoreFactorySettings()
     #if CUSTOM_CONFIG_PRESET
         __DBG_CALL(customSettings());
     #endif
-    Logger_warning(F("Factory settings restored"));
+    Logger_security(F("Factory settings restored (flash write pending, see error log for details...)"));
 
     #if SECURITY_LOGIN_ATTEMPTS
         __DBG_CALL(KFCFS.remove(FSPGM(login_failure_file)));

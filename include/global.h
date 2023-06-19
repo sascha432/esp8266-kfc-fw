@@ -96,20 +96,17 @@
 
 #ifndef LOGGER_MAX_FILESIZE
 // max. size of the log file. if the size is exceeded, a backup is created
-// and a new log started. 0 = no size limit
-#    if DEBUG
-#        define LOGGER_MAX_FILESIZE 4096
-#    else
-#        define LOGGER_MAX_FILESIZE 65535
-#    endif
+// and a new log started. 0 = no size limit (NOT recommended)
+#    define LOGGER_MAX_FILESIZE (4096 * 16)      // 64kb
 #endif
 
 #ifndef LOGGER_MAX_BACKUP_FILES
 // max. number of backup files to keep
+// make sure that the file system has enough free space at all times
 #    if DEBUG
-#        define LOGGER_MAX_BACKUP_FILES 32
+#        define LOGGER_MAX_BACKUP_FILES 3
 #    else
-#        define LOGGER_MAX_BACKUP_FILES 4
+#        define LOGGER_MAX_BACKUP_FILES 1
 #    endif
 #endif
 

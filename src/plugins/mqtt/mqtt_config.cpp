@@ -4,6 +4,7 @@
 
 #include <Configuration.hpp>
 #include <kfc_fw_config.h>
+#include <kfc_json_config.h>
 
 namespace KFCConfigurationClasses {
 
@@ -19,7 +20,6 @@ namespace KFCConfigurationClasses {
                 setBaseTopic(F("home/${object_id}"));
                 setAutoDiscoveryPrefix(F("homeassistant"));
                 setAutoDiscoveryName(F("${device_name}"));
-                // setSharedTopic(F("home/kfcfw/shared"));
             }
 
             bool MqttClient::isEnabled()

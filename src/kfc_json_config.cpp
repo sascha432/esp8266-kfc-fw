@@ -1,65 +1,77 @@
-// /**
-// * Author: sascha_lammers@gmx.de
-// */
+/**
+* Author: sascha_lammers@gmx.de
+*/
 
-// #include <Arduino_compat.h>
-// #include <ArduinoJson.h>
-// #include <PrintString.h>
-// #include "kfc_json_config.h"
+#include <Arduino_compat.h>
+#include <ArduinoJson.h>
+#include <PrintString.h>
+#include "kfc_json_config.h"
 
-// #include "debug_helper_enable.h"
+#if DEBUG_KFC_JSON_CONFIG
+#    include <debug_helper_enable.h>
+#else
+#    include <debug_helper_disable.h>
+#endif
 
-// // TODO PROGMEM
-// static const char *mainConfigFile = { "/.cfg/main_cfg.json" };
-// static const char *stateConfigFile = { "/.cfg/state_cfg.json" };
+KFCJsonConfig::KFCJsonConfig() :
+    _jsonDoc(0),
+    _modified(false)
+{
+}
 
-// KFCJsonConfig::KFCJsonConfig() :
-//     _json(1024),
-//     _configType(0),
-//     _modified(false)
-// {
-// }
+bool KFCJsonConfig::begin()
+{
+    if (_modified) {
+        __LDBG_printf("modified state set, calling end");
+        end();
+    }
+    __LDBG_printf("begin");
+    _modified = false;
+    _file = KFCFS.open(PrintString(F("/.cfg/kfc_config.json")), FileOpenMode::writeplus);
+    if (_file) {
+        // read config from file
+        _jsonDoc = DynamicJsonDocument(2048);
+        deserializeJson(_jsonDoc, _file);
+        // deserializeMsgPack(_jsonDoc, _file);
+        return true;
+    }
+    return false;
+}
 
-// void KFCJsonConfig::begin(const __FlashStringHelper *subConfig)
-// {
-//     if (_modified) {
-//         __LDBG_printf("modified state set, calling end");
-//         end();
-//     }
-//     _modified = false;
-//     _configType = pgm_read_byte(subConfig);
-//     String realFilename = _configType == 'm' ? mainConfigFile : stateConfigFile;
-//     String filename = PrintString(F("%c%08x.json"), _configType, crc32(realFilename.c_str(), realFilename.length()));
-//     _file = KFCFS.open(filename, FileOpenMode::writeplus);
-//     if (_file) {
-//         // read config from file
-//         deserializeMsgPack(_json, _file);
-//         if (!_json["rfn"]) {
-//             _json["rfn"] = realFilename;
-//             _modified = true;
-//         }
-//     }
-// }
+void KFCJsonConfig::end()
+{
+    __LDBG_printf("end modified=%u", _modified);
+    if (_modified) {
+        // save changes
+        _file.truncate(0);
+        serializeJson(_jsonDoc, _file);
+    }
+    _modified = false;
+    _file.close();
+    _jsonDoc.clear();
+}
 
-// void KFCJsonConfig::end()
-// {
-//     switch(_configType) {
-//         case 'm':
-//             __LDBG_printf("end type main");
-//             break;
-//         case 's':
-//             __LDBG_printf("end type state");
-//             break;
-//         default:
-//             __LDBG_printf("end without type");
-//             break;
-//     }
-//     if (_modified) {
-//         // save changes
-//         _file.truncate(0);
-//         serializeJson(_json, _file);
-//     }
-//     _modified = false;
-//     _configType = 0;
-//     _file.close();
-// }
+void KFCJsonConfig::erase()
+{
+    __LDBG_printf("end modified=%u", _modified);
+    _jsonDoc.clear();
+    _modified = false;
+    _file.truncate(0);
+    _file.close();
+}
+
+void KFCJsonConfig::setString(const __FlashStringHelper *name, const __FlashStringHelper *value)
+{
+    __LDBG_printf("setString(%s)=%s", __S(name), __S(value));
+    _jsonDoc[name] = value;
+    _modified = true;
+}
+
+void KFCJsonConfig::setBlob(const __FlashStringHelper *name, const uint8_t *value, size_t len)
+{
+    __LDBG_printf("setBlob(%s, %u)=%s", __S(name), len);
+    // deserializeMsgPack()
+
+    // _jsonDoc[name] =
+
+}

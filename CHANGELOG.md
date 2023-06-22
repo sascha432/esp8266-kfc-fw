@@ -2,6 +2,7 @@
 
 ## Version 0.0.8 (master)
 
+ - Updated ESPAsyncWebServer to fix issues with ESP32, requires more RAM (old ESP8266 version that saves up to 2kb RAM is still available https://github.com/sascha432/ESPAsyncWebServer, changes will be merged soon)
  - Merged framework-arduinoespressif8266 3.0.0 into 3.1.2-mod
  - Merged framework-arduinoespressif32 2.0.0 into 2.0.9-mod
  - Split KFCLibrary and added support for github or local copy in ./lib

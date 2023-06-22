@@ -86,6 +86,11 @@
 #    define IOT_LED_MATRIX_STANDBY_PIN_STATE(value) (value ? HIGH : LOW)
 #endif
 
+// IR remote control PIN
+#ifndef IOT_LED_MATRIX_IR_REMOTE_PIN
+#    define IOT_LED_MATRIX_IR_REMOTE_PIN -1
+#endif
+
 // first pixel to use, others can be controlled separately and are reset during reboot only
 #ifndef IOT_LED_MATRIX_PIXEL_OFFSET
 #    define IOT_LED_MATRIX_PIXEL_OFFSET 0
@@ -131,24 +136,41 @@
 #    error NTP_CLIENT=1 and NTP_HAVE_CALLBACKS=1 required
 #endif
 
-// pin for the button
+// pin for the multifunctional button
 #ifndef IOT_CLOCK_BUTTON_PIN
-#    define IOT_CLOCK_BUTTON_PIN 14
+#    define IOT_CLOCK_BUTTON_PIN -1
+#endif
+
+// pin for increasing brightness
+#ifndef IOT_LED_MATRIX_INCREASE_BRIGHTNESS
+#    define IOT_LED_MATRIX_INCREASE_BRIGHTNESS_PIN -1
+#endif
+
+// pin for decreasing brightness
+#ifndef IOT_LED_MATRIX_DECREASE_BRIGHTNESS_PIN
+#    define IOT_LED_MATRIX_DECREASE_BRIGHTNESS_PIN -1
+#endif
+
+// pin for toggling on/off
+#ifndef IOT_LED_MATRIX_TOGGLE_PIN
+#    define IOT_LED_MATRIX_TOGGLE_PIN -1
+#endif
+
+// 0 for no action
+// 1 for switching to the next animation
+#ifndef IOT_LED_MATRIX_TOGGLE_PIN_LONG_PRESS_TYPE
+#    define IOT_LED_MATRIX_TOGGLE_PIN_LONG_PRESS_TYPE 0
+#endif
+
+// pin for next animation
+#ifndef IOT_LED_MATRIX_NEXT_ANIMATION_PIN
+#    define IOT_LED_MATRIX_NEXT_ANIMATION_PIN -1
 #endif
 
 // save animation and brightness state
 // if disabled, the configuration defaults are loaded if the device is restarted
 #ifndef IOT_CLOCK_SAVE_STATE
 #    define IOT_CLOCK_SAVE_STATE 1
-#endif
-
-#if IOT_CLOCK_BUTTON_PIN != -1
-#    define IF_IOT_CLOCK_BUTTON_PIN(...) __VA_ARGS__
-#    if !defined(PIN_MONITOR) || PIN_MONITOR == 0
-#        error requires PIN_MONITOR=1
-#    endif
-#else
-#    define IF_IOT_CLOCK_BUTTON_PIN(...)
 #endif
 
 #if IOT_CLOCK_SAVE_STATE

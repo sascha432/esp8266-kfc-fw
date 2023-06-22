@@ -19,6 +19,15 @@
 #if IOT_LED_MATRIX_HAVE_SSD1306
 #    include <Adafruit_SSD1306.h>
 #endif
+#if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+#    pragma push_macro("DEBUG")
+#    undef DEBUG
+#    include <IRrecv.h>
+#    include <IRremoteESP8266.h>
+#    include <IRutils.h>
+#    include <IRac.h>
+#    pragma pop_macro("DEBUG")
+#endif
 #include <Adafruit_NeoPixelEx.h>
 
 namespace WebServer {
@@ -372,6 +381,12 @@ public:
     // use NONE to remove all animations
     // use NEXT to remove the current animation and start the next one. if next animation is not set, animation is set to NONE
     void setAnimation(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
+    void nextAnimation()
+    {
+        auto tmp = int(_animation) + 1;
+        tmp %= int(AnimationType::MAX);
+        setAnimation(AnimationType(tmp), 1000);
+    }
 
     uint16_t _blendTime{Clock::BlendAnimation::kDefaultTime};
 
@@ -404,6 +419,29 @@ public:
 
     private:
         uint8_t _fanSpeed{0};
+
+    #endif
+
+    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+
+        private:
+            void beginIRReceiver();
+            void endIRReceiver();
+
+        private:
+            IRrecv *_irReceiver{nullptr};
+            decode_results _irResults{};
+            Event::Timer _irTimer;
+
+            static constexpr uint32_t kStandbyLoopDelay = 10;
+
+    #else
+
+        private:
+            void beginIRReceiver() {}
+            void endIRReceiver() {}
+
+            static constexpr uint32_t kStandbyLoopDelay = 50;
 
     #endif
 
@@ -515,11 +553,12 @@ private:
     // ------------------------------------------------------------------------
     // Button
     // ------------------------------------------------------------------------
-    #if IOT_CLOCK_BUTTON_PIN != -1
+    #if PIN_MONITOR
 
     public:
         using EventType = Clock::Button::EventType;
-        void buttonCallback(uint8_t button, EventType eventType, uint16_t repeatCount);
+        using ButtonType = Clock::ButtonType;
+        void buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount);
 
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
             void rotaryCallback(bool decrease, uint32_t now);
@@ -636,6 +675,8 @@ private:
 public:
     static ClockPlugin &getInstance();
 
+    MQTT::Json::UnnamedObject getWLEDJson();
+
 // ------------------------------------------------------------------------
 // private variables
 // ------------------------------------------------------------------------
@@ -728,7 +769,7 @@ inline ClockPlugin::Color ClockPlugin::getColor() const
 
 inline void ClockPlugin::standbyLoop()
 {
-    ::delay(50); // energy saving mode
+    ::delay(kStandbyLoopDelay); // energy saving mode
 }
 
 inline void ClockPlugin::enableLoop(bool enable)

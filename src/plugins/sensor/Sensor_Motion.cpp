@@ -90,7 +90,7 @@ void Sensor_Motion::getStatus(Print &output)
     #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
         output.print(F(HTML_S(br) "Device auto off "));
         if (_config.motion_auto_off) {
-            output.printf_P(PSTR("%u minutes"), _config.motion_auto_off);
+            output.printf_P(PSTR("after %u minutes"), _config.motion_auto_off);
         }
         else {
             output.print(F("disabled"));
@@ -125,33 +125,34 @@ void Sensor_Motion::reconfigure(PGM_P source)
 
 void Sensor_Motion::begin(MotionSensorHandler *handler, uint8_t pin, bool pinInverted)
 {
-    _handler = nullptr;
+    _handler = handler;
     _pin = pin;
     _pinInverted = pinInverted;
     pinMode(_pin, INPUT);
-    _handler = handler;
     _reset();
-    _Timer(_timer).add(Event::seconds(1), true, [this](Event::CallbackTimerPtr) {
-        _timerCallback();
-    });
 }
 
 void Sensor_Motion::end()
 {
-    _reset();
-    _Timer(_timer).remove();
+    _reset(true);
     _handler = nullptr;
 }
 
-void Sensor_Motion::_reset()
+void Sensor_Motion::_reset(bool shutdown)
 {
     _motionState = false;
     _Timer(_sensorTimeout).remove();
+    _Timer(_timer).remove();
     #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
         if (_handler) {
             _Timer(_handler)->_autoOffTimeout.remove();
         }
     #endif
+    if (!shutdown) {
+        _Timer(_timer).add(kPollPinInterval, true, [this](Event::CallbackTimerPtr) {
+            _timerCallback();
+        });
+    }
 }
 
 void Sensor_Motion::_timerCallback()

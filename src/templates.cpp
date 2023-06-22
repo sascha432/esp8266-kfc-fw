@@ -301,7 +301,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 }
             #endif
             output.printf_P(PSTR("Temperature %.1f%s"),
-                temperatureRead(),
+                esp32TemperatureRead(),
                 SPGM(UTF8_degreeC)
             );
         #else

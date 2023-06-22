@@ -33,6 +33,9 @@
 #if IOT_BLINDS_CTRL && IOT_BLINDS_CTRL_SAVE_STATE
 #    include "../src/plugins/blinds_ctrl/blinds_plugin.h"
 #endif
+#if IOT_CLOCK
+#    include "../src/plugins/clock/clock.h"
+#endif
 #if IOT_WEATHER_STATION
 #    include "../src/plugins/weather_station/WeatherStationBase.h"
 #endif
@@ -234,11 +237,21 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.addNoCache(true);
         headers.setResponseHeaders(response);
     }
-    else if (url == F("/json")) {
-        response = request->beginResponse(200, FSPGM(mime_application_json), F("{}"));
-        headers.addNoCache(true);
-        headers.setResponseHeaders(response);
-    }
+    #if IOT_CLOCK && 0 //TODO implement WLED json API
+        // --------------------------------------------------------------------
+        else if (url == F("/json")) {
+            auto json = ClockPlugin::getInstance().getWLEDJson();
+            response = request->beginResponse(200, FSPGM(mime_application_json), json.c_str());
+            headers.addNoCache(true);
+            headers.setResponseHeaders(response);
+        }
+        // --------------------------------------------------------------------
+        else if (url == F("/presets.json")) {
+            response = request->beginResponse(200, FSPGM(mime_application_json), F("{}"));
+            headers.addNoCache(true);
+            headers.setResponseHeaders(response);
+        }
+    #endif
     // --------------------------------------------------------------------
     else if (url == F("/webui-handler")) {
         getInstance()._handlerWebUI(request, headers);
@@ -435,6 +448,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
 bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *headers)
 {
     if (headers) {
+        // check if the output is html
         auto header = headers->find(F("Content-Type"));
         if (header) {
             if (header->getValue().indexOf(F("text/html")) == -1) {
@@ -443,6 +457,7 @@ bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *head
             }
         }
     }
+    // ignore these user agents
     auto &userAgent = request->header(F("User-Agent"));
     if (userAgent.startsWith(F("KFCFW OTA"))) {
         __LDBG_printf("user-agent %s", userAgent.c_str());
@@ -464,7 +479,11 @@ bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *head
         return false;
     }
     auto &accept = request->header(F("Accept"));
-    if (request->hasHeader(accept) && accept.indexOf(F("text/html")) == -1) {
+    if (accept.length() == 0) {
+        __LDBG_printf("accept header missing");
+        return false;
+    }
+    if (accept.indexOf(F("text/html")) == -1) {
         // most clients accept html even for pictures, but not in this case
         __LDBG_printf("accept %s", accept.c_str());
         return false;

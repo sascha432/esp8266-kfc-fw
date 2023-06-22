@@ -139,9 +139,9 @@ namespace KFCConfigurationClasses {
         public:
             static void defaults(bool factoryReset = false);
 
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Name, 3, 16);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Title, 3, 32);
-            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, _ObjectId, 3, 32); // private, use getObjectIdOrName()
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Name, 3, 32);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, Title, 3, 64);
+            CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().system.device, _ObjectId, 3, 64); // private, use getObjectIdOrName()
 
             static const char *getObjectIdOrName() {
                 auto id = get_ObjectId();

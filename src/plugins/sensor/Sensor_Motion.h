@@ -6,19 +6,22 @@
 
 #if IOT_SENSOR_HAVE_MOTION_SENSOR
 
-#include <Arduino_compat.h>
+#include "MQTTSensor.h"
 #include "WebUIComponent.h"
 #include "plugins.h"
-#include "MQTTSensor.h"
+#include <Arduino_compat.h>
 
 #ifndef IOT_SENSOR_MOTION_RENDER_TYPE
-#define IOT_SENSOR_MOTION_RENDER_TYPE WebUINS::SensorRenderType::COLUMN
+#    define IOT_SENSOR_MOTION_RENDER_TYPE WebUINS::SensorRenderType::COLUMN
 #endif
 
 #ifndef IOT_SENSOR_MOTION_RENDER_HEIGHT
-#define IOT_SENSOR_MOTION_RENDER_HEIGHT F("15rem")
+#    define IOT_SENSOR_MOTION_RENDER_HEIGHT F("15rem")
 #endif
 
+#ifndef IOT_SENSOR_MOTION_POLL_INTERVAL
+#    define IOT_SENSOR_MOTION_POLL_INTERVAL Event::seconds(1)
+#endif
 
 class Sensor_Motion;
 
@@ -58,6 +61,8 @@ public:
     using Plugins = KFCConfigurationClasses::PluginsType;
     using ConfigType = KFCConfigurationClasses::Plugins::SensorConfigNS::MotionSensorConfigType;
 
+    static constexpr auto kPollPinInterval = IOT_SENSOR_MOTION_POLL_INTERVAL;
+
 public:
     Sensor_Motion(const String &name);
     virtual ~Sensor_Motion();
@@ -83,7 +88,7 @@ public:
     bool getMotionState() const;
 
 private:
-    void _reset();
+    void _reset(bool shutdown = false);
     void _timerCallback();
     const __FlashStringHelper *_getId();
     String _getTopic();

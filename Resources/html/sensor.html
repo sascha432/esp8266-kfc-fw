@@ -27,6 +27,10 @@
     <div class="container">
         <form method="POST" action="sensor.html">
             %FORM_HTML%
+            <div class="form-help-block">
+                <div data-target="#msto">Delay after the last motion has been detected. If the sensor has its own delay, this adds to the total delay</div>
+                <div data-target="#msao">Delay until the LEDs are turned off without any motion detected</div>
+            </div>
         </form>
         <!--%%FOOT-->
         <div class="row">

@@ -15,7 +15,7 @@
 #    include <debug_helper_disable.h>
 #endif
 
-#if IOT_CLOCK_BUTTON_PIN != -1
+#if PIN_MONITOR
 #    include <PinMonitor.h>
 #    include <push_button.h>
 #    include <rotary_encoder.h>

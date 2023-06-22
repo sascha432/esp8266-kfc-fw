@@ -22,7 +22,7 @@
 //      change animation
 //
 
-#if IOT_CLOCK_BUTTON_PIN != -1
+#if PIN_MONITOR
 
 #include <Arduino_compat.h>
 #include "clock_base.h"
@@ -30,6 +30,16 @@
 using namespace PinMonitor;
 
 namespace Clock {
+
+    enum class ButtonType : uint8_t {
+        MAIN = 0,
+        TOUCH,
+        INCREASE_BRIGHTNESS,
+        DECREASE_BRIGHTNESS,
+        TOGGLE_ON_OFF,
+        NEXT_ANIMATION,
+        MAX
+    };
 
     class ButtonConfig : public PushButtonConfig
     {
@@ -42,8 +52,10 @@ namespace Clock {
     class Button : public PushButton {
     public:
         Button();
+        Button(uint8_t pin, ButtonType button, ClockPlugin &clock);
         Button(uint8_t pin, uint8_t button, ClockPlugin &clock);
 
+        ButtonType getButtonType() const;
         uint8_t getButtonNum() const;
 
         virtual void event(EventType state, uint32_t now) override;
@@ -60,10 +72,20 @@ namespace Clock {
     {
     }
 
+    inline Button::Button(uint8_t pin, ButtonType button, ClockPlugin &clock) :
+        Button(pin, static_cast<uint8_t>(button), clock)
+    {
+    }
+
     inline Button::Button(uint8_t pin, uint8_t button, ClockPlugin &clock) :
         PushButton(pin, &clock, std::move(ButtonConfig(button))),
         _button(button)
     {
+    }
+
+    inline ButtonType Button::getButtonType() const
+    {
+        return ButtonType(getButtonNum());
     }
 
     inline uint8_t Button::getButtonNum() const
@@ -93,16 +115,16 @@ namespace Clock {
         }
     };
 
-#if IOT_CLOCK_HAVE_ROTARY_ENCODER
+    #if IOT_CLOCK_HAVE_ROTARY_ENCODER
 
-    class RotaryEncoder : public PinMonitor::RotaryEncoder {
-        using PinMonitor::RotaryEncoder::RotaryEncoder;
-        using PinMonitor::RotaryEncoder::EventType;
+        class RotaryEncoder : public PinMonitor::RotaryEncoder {
+            using PinMonitor::RotaryEncoder::RotaryEncoder;
+            using PinMonitor::RotaryEncoder::EventType;
 
-        virtual void event(EventType eventType, uint32_t now) override;
-    };
+            virtual void event(EventType eventType, uint32_t now) override;
+        };
 
-#endif
+    #endif
 
 }
 

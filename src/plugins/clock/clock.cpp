@@ -102,6 +102,59 @@ uint8_t getNeopixelShowMethodInt()
     return static_cast<uint8_t>(ClockPlugin::getInstance().getShowMethod());
 }
 
+MQTT::Json::UnnamedObject ClockPlugin::getWLEDJson()
+{
+    using MQTT::Json::UnnamedObject;
+    using MQTT::Json::NamedObject;
+    using MQTT::Json::NamedBool;
+    using MQTT::Json::NamedUint32;
+    using MQTT::Json::NamedString;
+    using MQTT::Json::UnnamedString;
+    using MQTT::Json::NamedArray;
+    using MQTT::Json::NamedStoredString;
+    using MQTT::Json::NamedArray;
+    using KFCConfigurationClasses::System;
+
+    UnnamedObject json;
+
+    json.append(
+        NamedObject(F("state"),
+            NamedBool(F("on"), isEnabled()),
+            NamedUint32(F("bri"), _targetBrightness)
+        )
+    );
+    auto mac = WiFi.macAddress();
+    mac.replace(F(":"), F(""));
+    json.append(
+        NamedObject(F("info"),
+            NamedString(F("ver"), config.getShortFirmwareVersion_P()),
+            NamedStoredString(F("name"), System::Device::getName()),
+            #if ESP8266
+                NamedString(F("arch"), F("ESP8622")),
+            #elif ESP32
+                NamedString(F("arch"), F("ESP32")),
+            #endif
+            NamedString(F("brand"), F("KFCFW")),
+            NamedUint32(F("freeheap"), ESP.getFreeHeap()),
+            NamedUint32(F("uptime"), getSystemUptime()),
+            NamedStoredString(F("mac"), mac)
+        )
+    );
+
+    using KFCConfigurationClasses::Plugins::ClockConfigNS::Clock;
+    using KFCConfigurationClasses::Plugins::ClockConfigNS::AnimationType;
+    auto effects = NamedArray(F("effects"));
+    for(auto i = AnimationType::MIN; i < AnimationType::MAX; i = AnimationType(int(i) + 1)) {
+        auto name = Clock::getAnimationName(i);
+        if (name) {
+            effects.append(UnnamedString(name));
+        }
+    }
+    json.append(effects);
+
+    return json;
+}
+
 void ClockPlugin::createMenu()
 {
     #if IOT_LED_MATRIX
@@ -270,14 +323,16 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     readConfig(true);
     _targetBrightness = 0;
 
-    #if IOT_CLOCK_BUTTON_PIN != -1
+    #if PIN_MONITOR
 
-        __LDBG_printf("button at pin %u", IOT_CLOCK_BUTTON_PIN);
-        pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, 0, *this);
+        #if IOT_CLOCK_BUTTON_PIN != -1
+            __LDBG_printf("button at pin %u", IOT_CLOCK_BUTTON_PIN);
+            pinMonitor.attach<Clock::Button>(IOT_CLOCK_BUTTON_PIN, Clock::ButtonType::MAIN, *this);
+        #endif
 
         #if IOT_CLOCK_TOUCH_PIN != -1
             __LDBG_printf("touch sensor at pin %u", IOT_CLOCK_TOUCH_PIN);
-            pinMonitor.attach<Clock::TouchButton>(IOT_CLOCK_TOUCH_PIN, 1, *this);
+            pinMonitor.attach<Clock::TouchButton>(IOT_CLOCK_TOUCH_PIN, ButtonType::TOUCH, *this);
         #endif
 
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
@@ -286,7 +341,26 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             encoder->attachPins(IOT_CLOCK_ROTARY_ENC_PINA, IOT_CLOCK_ROTARY_ENC_PINB);
         #endif
 
-        pinMonitor.begin();
+        #if IOT_LED_MATRIX_INCREASE_BRIGHTNESS_PIN != -1
+            pinMonitor.attach<Clock::Button>(IOT_LED_MATRIX_INCREASE_BRIGHTNESS_PIN, Clock::ButtonType::INCREASE_BRIGHTNESS, *this);
+        #endif
+
+        #if IOT_LED_MATRIX_DECREASE_BRIGHTNESS_PIN != -1
+            pinMonitor.attach<Clock::Button>(IOT_LED_MATRIX_DECREASE_BRIGHTNESS_PIN, Clock::ButtonType::DECREASE_BRIGHTNESS, *this);
+        #endif
+
+        #if IOT_LED_MATRIX_TOGGLE_PIN != -1
+            pinMonitor.attach<Clock::Button>(IOT_LED_MATRIX_TOGGLE_PIN, Clock::ButtonType::TOGGLE_ON_OFF, *this);
+        #endif
+
+        #if IOT_LED_MATRIX_NEXT_ANIMATION_PIN != -1
+            pinMonitor.attach<Clock::Button>(IOT_LED_MATRIX_NEXT_ANIMATION_PIN, Clock::ButtonType::NEXT_ANIMATION, *this);
+        #endif
+
+        if (pinMonitor.getPins().size()) {
+            __DBG_printf("pins attached=%u", pinMonitor.getPins().size());
+            pinMonitor.begin();
+        }
 
     #endif
 
@@ -422,6 +496,9 @@ void ClockPlugin::reconfigure(const String &source)
     }
     readConfig(false);
 
+    endIRReceiver();
+    beginIRReceiver();
+
     #if IOT_LED_MATRIX_FAN_CONTROL
         _setFanSpeed(_config.fan_speed);
     #endif
@@ -496,8 +573,7 @@ void ClockPlugin::shutdown()
         _Timer(_rotaryActionTimer).remove();
     #endif
 
-    #if IOT_CLOCK_BUTTON_PIN != -1
-        // pinMonitor.detach(this);
+    #if PIN_MONITOR
         pinMonitor.end();
     #endif
 
@@ -531,6 +607,8 @@ void ClockPlugin::shutdown()
 
     // turn all LEDs off
     _disable();
+
+    endIRReceiver();
 
     if (_animation) {
         delete _animation;
@@ -610,8 +688,15 @@ void ClockPlugin::getStatus(Print &output)
                 output.printf_P(PSTR(HTML_S(br) "Rotary encoder with button"));
             #endif
         #else
-            output.printf_P(PSTR(HTML_S(br) "Single button"));
         #endif
+        auto numPins = int(PinMonitor::pinMonitor.getPins().size());
+        #if IOT_CLOCK_HAVE_ROTARY_ENCODER
+            numPins -= 2;
+        #endif
+        if (numPins > 0) {
+            output.printf_P(PSTR(HTML_S(br) "Total buttons: %u"), numPins);
+        }
+
     #endif
 
     #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
@@ -782,6 +867,8 @@ void ClockPlugin::readConfig(bool setup)
             pinMode(IOT_LED_MATRIX_STANDBY_PIN, INPUT);
         }
     #endif
+
+    beginIRReceiver();
 
     _setColor(_config.solid_color.value);
     _setBrightness(_config.getBrightness(), false);

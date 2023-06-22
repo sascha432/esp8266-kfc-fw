@@ -125,6 +125,7 @@ namespace Clock {
         static constexpr float kVisualizerMaxPacketValue = 254.0;
 
         void _processNewData();
+        SemaphoreMutex _processingLock;
 
         class PeakType
         {

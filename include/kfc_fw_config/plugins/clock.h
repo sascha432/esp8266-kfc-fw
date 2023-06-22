@@ -251,7 +251,7 @@ namespace KFCConfigurationClasses {
                     CREATE_COLOR_FIELD(color, 0x00ff00);
                     CREATE_COLOR_FIELD(peak_color, 0xff0000);
                     CREATE_BOOL_BITFIELD(multicast);
-                    CREATE_ENUM_D_BITFIELD(peak_show, VisualizerPeakType, VisualizerPeakType::ENABLED);
+                    CREATE_ENUM_D_BITFIELD(peak_show, VisualizerPeakType, VisualizerPeakType::FALLING_DOWN);
                     CREATE_ENUM_D_BITFIELD(type, VisualizerAnimationType, VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D);
                     CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::HORIZONTAL);
 

@@ -1379,6 +1379,12 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
     bool station_mode_success = false;
     bool ap_mode_success = false;
 
+    #if ESP32
+        auto hostname = System::Device::getName();
+        WiFi.setHostname(hostname);
+        WiFi.softAPsetHostname(hostname);
+    #endif
+
     auto flags = System::Flags::getConfig();
     if (flags.is_station_mode_enabled) {
         __LDBG_printf("init station mode");
@@ -1518,11 +1524,8 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
         }
     #endif
 
-    auto hostname = System::Device::getName();
-    #if defined(ESP32)
-        WiFi.setHostname(hostname);
-        WiFi.softAPsetHostname(hostname);
-    #elif defined(ESP8266)
+    #if ESP8266
+        auto hostname = System::Device::getName();
         WiFi.hostname(hostname);
     #endif
 

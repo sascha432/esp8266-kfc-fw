@@ -234,6 +234,11 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.addNoCache(true);
         headers.setResponseHeaders(response);
     }
+    else if (url == F("/json")) {
+        response = request->beginResponse(200, FSPGM(mime_application_json), F("{}"));
+        headers.addNoCache(true);
+        headers.setResponseHeaders(response);
+    }
     // --------------------------------------------------------------------
     else if (url == F("/webui-handler")) {
         getInstance()._handlerWebUI(request, headers);

@@ -283,18 +283,37 @@ namespace WebServer {
         static AuthType getAuthenticated(AsyncWebServerRequest *request);
         static bool isAuthenticated(AsyncWebServerRequest *request);
 
-        static uint16_t getRunningResponses() {
-            return AsyncWebServer::_responseCounter;
-        }
-        static uint16_t getRunningRequests() {
-            return AsyncWebServer::_requestCounter;
-        }
-        static uint16_t getRunningRequestsAndResponses() {
-            return AsyncWebServer::_requestCounter + AsyncWebServer::_responseCounter;
-        }
-        static uint32_t getRunningRequestsAndResponsesUint32() {
-            return (AsyncWebServer::_requestCounter << 16) | AsyncWebServer::_responseCounter;
-        }
+        #if HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
+
+            static uint16_t getRunningResponses() {
+                return AsyncWebServer::_responseCounter;
+            }
+            static uint16_t getRunningRequests() {
+                return AsyncWebServer::_requestCounter;
+            }
+            static uint16_t getRunningRequestsAndResponses() {
+                return AsyncWebServer::_requestCounter + AsyncWebServer::_responseCounter;
+            }
+            static uint32_t getRunningRequestsAndResponsesUint32() {
+                return (AsyncWebServer::_requestCounter << 16) | AsyncWebServer::_responseCounter;
+            }
+
+        #else
+
+            static uint16_t getRunningResponses() {
+                return 0;
+            }
+            static uint16_t getRunningRequests() {
+                return 0;
+            }
+            static uint16_t getRunningRequestsAndResponses() {
+                return 0;
+            }
+            static uint32_t getRunningRequestsAndResponsesUint32() {
+                return 0;
+            }
+
+        #endif
 
     private:
         friend AsyncRestWebHandler;

@@ -733,13 +733,21 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                                 auto client = Http2Serial::getClientById(_displayLedTimer->clientId);
                                 if (client) {
                                     auto server = client->server();
-                                    if (server->getQueuedMessageCount() < 5 && client->canSend()) {
+                                    if (
+                                        #if HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
+                                            server->getQueuedMessageCount() < 5 &&
+                                        #endif
+                                        client->canSend()) {
                                         constexpr size_t frameSize = IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS * sizeof(uint16_t);
                                         auto sBuf = server->makeBuffer(frameSize + sizeof(uint16_t) * 2);
                                         auto buf = reinterpret_cast<uint16_t *>(sBuf->get());
                                         *buf++ = (uint16_t)WsClient::BinaryPacketType::LED_MATRIX_DATA;
                                         // 4 / 12 bit
-                                        *buf++ = (server->getQueuedMessageCount() & 0x0f) | ((server->getQueuedMessageSize() >> 1) & 0xfff0);
+                                        #if HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
+                                            *buf++ = (server->getQueuedMessageCount() & 0x0f) | ((server->getQueuedMessageSize() >> 1) & 0xfff0);
+                                        #else
+                                            *buf++ = 0;
+                                        #endif
 
                                         for(uint16_t i = IOT_LED_MATRIX_PIXEL_OFFSET; i < (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET; i++) {
                                             #if !IOT_LED_MATRIX

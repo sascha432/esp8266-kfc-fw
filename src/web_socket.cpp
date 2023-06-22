@@ -71,7 +71,7 @@ WsClientAsyncWebSocket::~WsClientAsyncWebSocket()
 
 void WsClientAsyncWebSocket::shutdown()
 {
-    closeAll(503, FSPGM(Device_is_rebooting, "Device is rebooting...\n"));
+    closeAll(503, String(F("Device is rebooting...\n")).c_str());
     disableSocket();
 }
 
@@ -101,7 +101,7 @@ void WsClientAsyncWebSocket::_enableAuthentication()
         }
         ptr++;
     }
-    setAuthentication(String('\xff'), password);
+    setAuthentication(String('\xff').c_str(), password.c_str());
 }
 
 void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance)
@@ -303,29 +303,33 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
 
 uint16_t WsClient::getQueueDelay()
 {
-    // calculate delay depending on the queue size
-    auto qCount = AsyncWebSocket::_getQueuedMessageCount();
-    auto qSize = AsyncWebSocket::_getQueuedMessageSize();
-    uint16_t qDelay = 1;
-    if (qCount > 10) {
-        qDelay = 50;
-    }
-    else if (qCount > 5) {
-        qDelay = 10;
-    }
-    else if (qCount > 3) {
-        qDelay = 5;
-    }
-    if (qSize > 8192) {
-        qDelay = std::max(qDelay, (uint16_t)50);
-    }
-    else if (qSize > 4096) {
-        qDelay = std::max(qDelay, (uint16_t)10);
-    }
-    else if (qSize > 1024) {
-        qDelay = std::max(qDelay, (uint16_t)5);
-    }
-    return qDelay;
+    #if HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
+        // calculate delay depending on the queue size
+        auto qCount = AsyncWebSocket::_getQueuedMessageCount();
+        auto qSize = AsyncWebSocket::_getQueuedMessageSize();
+        uint16_t qDelay = 1;
+        if (qCount > 10) {
+            qDelay = 50;
+        }
+        else if (qCount > 5) {
+            qDelay = 10;
+        }
+        else if (qCount > 3) {
+            qDelay = 5;
+        }
+        if (qSize > 8192) {
+            qDelay = std::max(qDelay, (uint16_t)50);
+        }
+        else if (qSize > 4096) {
+            qDelay = std::max(qDelay, (uint16_t)10);
+        }
+        else if (qSize > 1024) {
+            qDelay = std::max(qDelay, (uint16_t)5);
+        }
+        return qDelay;
+    #else
+        return 1;
+    #endif
 }
 
 // validate server and sender
@@ -428,7 +432,7 @@ AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, cons
     stdex::conv::utf8::strlen<stdex::conv::utf8::DefaultReplacement>(str, buflen, length);
     auto buffer = server->makeBuffer(buflen);
     if (buffer) {
-        buffer->_len = buflen;
+        buffer->setLength(buflen);
         stdex::conv::utf8::strcpy<stdex::conv::utf8::DefaultReplacement>(reinterpret_cast<char *>(buffer->get()), str, buflen, length);
         buffer->get()[buflen] = 0;
     }
@@ -437,17 +441,15 @@ AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, cons
 
 AsyncWebSocketMessageBuffer *WsClient::moveStringToBuffer(AsyncWebSocket *server, String &&str)
 {
-    size_t len = str.length();
-    auto cStr = str.__release();
-    if (!cStr) {
-        cStr = reinterpret_cast<char *>(calloc(1, len));
-    }
-    return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
-    // auto buffer = server->makeBuffer(str.length());
-    // if (buffer) {
-    //     memcpy((char *)buffer->get(), cStr, len + 1);
+    // size_t len = str.length();
+    // auto cStr = str.__release();
+    // if (!cStr) {
+    //     cStr = reinterpret_cast<char *>(calloc(1, len));
     // }
-    // return buffer;
+    // return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
+    auto buffer = server->makeBuffer(reinterpret_cast<uint8_t *>(const_cast<char *>(str.c_str())), str.length());
+    str.clear();
+    return buffer;
 }
 
 // void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json)

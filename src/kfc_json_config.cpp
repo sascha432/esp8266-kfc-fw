@@ -2,6 +2,8 @@
 * Author: sascha_lammers@gmx.de
 */
 
+#if HAVE_ARDUINO_JSON_CFG
+
 #include <Arduino_compat.h>
 #include <ArduinoJson.h>
 #include <PrintString.h>
@@ -75,3 +77,5 @@ void KFCJsonConfig::setBlob(const __FlashStringHelper *name, const uint8_t *valu
     // _jsonDoc[name] =
 
 }
+
+#endif

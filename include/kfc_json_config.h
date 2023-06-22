@@ -4,6 +4,8 @@
 
 #pragma once
 
+#if HAVE_ARDUINO_JSON_CFG
+
 #include <Arduino_compat.h>
 #include <ArduinoJson.h>
 
@@ -51,4 +53,6 @@ private:
 
 #if DEBUG_KFC_JSON_CONFIG
 #    include <debug_helper_disable.h>
+#endif
+
 #endif

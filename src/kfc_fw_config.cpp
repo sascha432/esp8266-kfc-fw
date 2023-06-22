@@ -724,14 +724,13 @@ const String KFCFWConfiguration::getFirmwareVersion()
 {
     #if DEBUG
         #if ARDUINO_ESP8266_DEV
-            return getShortFirmwareVersion() + F("." _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " ) + FPSTR(__compile_date__);
-        #elif defined(ESP8266)
+            return getShortFirmwareVersion() + F("." _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " ) + FPSTR(__compile_date__);
+        #elif ESP8266
             return getShortFirmwareVersion() + F("." ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
         #else
             return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
         #endif
-
-    #else // #if DEBUG
+    #else
         return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
     #endif
 }

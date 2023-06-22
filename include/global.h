@@ -19,7 +19,7 @@
 #   include <core_version.h>
 
 #    if ARDUINO_ESP8266_MAJOR == 0
-#        error Invalid coe comnfig
+#        error Invalid coe config
 #   endif
 
 #elif defined(ESP32)

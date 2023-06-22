@@ -459,7 +459,7 @@ bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *head
         return false;
     }
     auto &accept = request->header(F("Accept"));
-    if (request->headerExists(accept) && accept.indexOf(F("text/html")) == -1) {
+    if (request->hasHeader(accept) && accept.indexOf(F("text/html")) == -1) {
         // most clients accept html even for pictures, but not in this case
         __LDBG_printf("accept %s", accept.c_str());
         return false;
@@ -1469,7 +1469,7 @@ AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request)
             return AuthType::NONE;
         }
         if (verify_session_id(cSID.c_str(), System::Device::getUsername(), System::Device::getPassword())) {
-            __SID(__DBG_printf("valid SID=%s type=%s", cSID.c_str(), isCookie ? FSPGM(cookie, "cookie") : request->methodToString()));
+            // __SID(__DBG_printf("valid SID=%s type=%s", cSID.c_str(), isCookie ? FSPGM(cookie, "cookie") : request->methodToString()));
             return isCookie ? AuthType::SID_COOKIE : AuthType::SID;
         }
         __SID(__DBG_printf("invalid SID=%s", cSID.c_str()));
@@ -1495,7 +1495,7 @@ namespace SaveCrash {
         auto fs = SaveCrash::createFlashStorage();
 
         auto &cmd = request->arg(F("cmd"));
-        if (request->argExists(cmd)) {
+        if (request->hasArg(cmd.c_str())) {
             if (cmd == F("clear")) {
                 fs.clear(SPIFlash::ClearStorageType::ERASE);
                 response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));

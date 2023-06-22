@@ -1,11 +1,13 @@
 run
 
 git clone https://github.com/sascha432/KFCLibrary.git
+git clone https://github.com/KFCLabs/ESPAsyncWebServer.git
 
-in here
+in here. This requires manual updates
 
 or add
 
 https://github.com/sascha432/KFCLibrary.git
+https://github.com/KFCLabs/ESPAsyncWebServer.git
 
-in common.ini
+in common.ini (lib_deps =)

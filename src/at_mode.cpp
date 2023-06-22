@@ -1029,10 +1029,9 @@ private:
 
             if (Http2Serial::getClientById(_client)) {
                 if (_client->canSend()) {
-                    uint8_t *ptr;
                     _buffer.write(0); // terminate with NUL byte
                     size_t len = _buffer.length() - 1;
-                    _buffer.move(&ptr);
+                    auto ptr = _buffer.get();
                     _webSocket.sent += len;
 
                     if (len >= sizeof(Header_t)) {
@@ -1046,13 +1045,12 @@ private:
                         ((Header_t *)&ptr[0])->flags |= flags;
                     }
 
-                    auto wsBuffer = _client->server()->makeBuffer(ptr, len, false);
+                    auto wsBuffer = _client->server()->makeBuffer(ptr, len);
                     if (wsBuffer) {
                         _client->binary(wsBuffer);
                     }
                 }
                 else {
-                    //__DBG_printf("dropped ADC packet size=%u", _buffer.length());
                     _webSocket.dropped += _buffer.length();
                 }
             }

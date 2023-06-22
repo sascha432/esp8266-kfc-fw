@@ -113,8 +113,6 @@ void VisualizerAnimation::begin()
     }
 
     _clear();
-    _timeout = 5;
-    _lastPacketTime = millis();
 
     // make sure the UDP socket is listening after a reconnect
     WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
@@ -132,7 +130,8 @@ void VisualizerAnimation::_clear()
     _storedData.fill(0);
     _storedPeaks.fill(PeakType());
     _video.clear();
-    _lastPacketTime = 0;
+    _lastPacketTime = millis();
+    _timeout = kUDPInfiniteTimeout;
 }
 
 void VisualizerAnimation::_listen()
@@ -223,11 +222,11 @@ enum class UdpProtocolType : uint8_t {
 
 void VisualizerAnimation::_parseUdp()
 {
-    if (_timeout != 255 && _timeout != 0) {
+    if (_timeout != kUDPInfiniteTimeout) {
         if (millis() - _lastPacketTime >= _timeout) {
-            // clear display and set timeout to 0
-            _parent._display.fill(CRGB(0));
-            _timeout = 0;
+            // clear data set
+            _clear();
+            _timeout = kUDPInfiniteTimeout;
             return;
         }
     }
@@ -240,115 +239,119 @@ void VisualizerAnimation::_parseUdp()
         if (firstByte - 1) {
             break;
         }
-        MUTEX_LOCK_BLOCK(_processingLock) {
-            switch(static_cast<UdpProtocolType>(firstByte)) {
-                case UdpProtocolType::WARLS: {
-                    struct ExitScope {
-                        ExitScope(VisualizerAnimation *parent) : _parent(parent) {}
-                        ~ExitScope() {
-                            if (_parent) {
-                                _parent->_clear();
-                                __DBG_printf("UDP receive error");
-                            }
+        switch(static_cast<UdpProtocolType>(firstByte)) {
+            case UdpProtocolType::WARLS: {
+                struct ExitScope { // clear data on read error
+                    ExitScope(VisualizerAnimation *parent) :
+                        _parent(parent)
+                    {
+                    }
+                    ~ExitScope()
+                    {
+                        if (_parent) {
+                            _parent->_clear();
+                            __DBG_printf("UDP receive error");
                         }
-                        void release() {
-                            _parent = nullptr;
-                        }
-                        VisualizerAnimation *_parent;
-                    } exitScope(this);
+                    }
+                    void release()
+                    {
+                        _parent = nullptr;
+                    }
+                    VisualizerAnimation *_parent;
+                } exitScope(this);
 
-                    if (size < 6 && ((size - 2) & 3) != 0) {
-                        // invalid packet size
-                        return;
-                    }
-                    _udp.read();
-                    _timeout = _udp.read();
-                    if (_timeout == 0) {
-                        // timeout 0 ignores the packet
-                        return;
-                    }
-                    // verify magic
-                    if (_udp.read() != 255) {
-                        return;
-                    }
-                    if (_udp.read() != 99) {
-                        return;
-                    }
-                    if (_udp.read() != 88) {
-                        return;
-                    }
-                    if (_udp.read() != 77) {
-                        return;
-                    }
-                    if (_udp.read() != 66) {
-                        return;
-                    }
-                    if (_udp.read() != 55) {
-                        return;
-                    }
-                    _storedLoudness.setLeftChannel(_udp.read());
-                    _storedLoudness.setRightChannel(_udp.read());
-                    if (_udp.read() != 44) {
-                        return;
-                    }
-                    uint8_t lines = _udp.read();
-                    if (lines != kVisualizerPacketSize) {
-                        // invalid size
-                        // we have no reshaping yet
-                        return;
-                    }
-                    int read = _udp.readBytes(_storedData.begin(), lines);
-                    if (read != lines) {
-                        // read failed
-                        return;
-                    }
-                    // we do not read the rest...
-                    _lastPacketTime = millis();
-                    exitScope.release();
-                    _processNewData();
+                if (size < 6 && ((size - 2) & 3) != 0) {
+                    // invalid packet size
                     return;
                 }
-                default:
-                    break;
+                _udp.read();
+                auto timeout = _udp.read();
+                if (timeout <= 0) {
+                    // timeout 0 ignores the packet, -1 is a read error
+                    return;
+                }
+                _timeout = timeout * kUDPTimeoutMultiplier;
+                // verify magic
+                if (_udp.read() != 255) {
+                    return;
+                }
+                if (_udp.read() != 99) {
+                    return;
+                }
+                if (_udp.read() != 88) {
+                    return;
+                }
+                if (_udp.read() != 77) {
+                    return;
+                }
+                if (_udp.read() != 66) {
+                    return;
+                }
+                if (_udp.read() != 55) {
+                    return;
+                }
+                _storedLoudness.setLeftChannel(_udp.read());
+                _storedLoudness.setRightChannel(_udp.read());
+                if (_udp.read() != 44) {
+                    return;
+                }
+                uint8_t lines = _udp.read();
+                if (lines != kVisualizerPacketSize) {
+                    // invalid size
+                    // we have no reshaping yet
+                    return;
+                }
+                int read = _udp.readBytes(_storedData.begin(), lines);
+                if (read != lines) {
+                    // read failed
+                    return;
+                }
+                // we do not read the rest...
+                _lastPacketTime = millis();
+                exitScope.release();
+                return;
+            }
+            default:
+                break;
+        }
+
+        if (size >= 128) {
+            // video data is sent in big chunks
+            VideoHeaderType header;
+
+            if (_udp.readBytes(header, header.size()) != header.size()) {
+                _video.clear();
+                continue;
+            }
+            if (!_video.isValid(header)) {
+                // invalid video id or position (lost UDP packet, wrong order)
+                __DBG_printf("invalid header");
+                continue;
+            }
+            if (_video.isReady()) {
+                // skip this frame, the old one is not processed yet
+                // _video._header.invalidate();
+                return;
             }
 
-            if (size >= 128) {
-                // video data is sent in big chunks
-                VideoHeaderType header;
-
-                if (_udp.readBytes(header, header.size()) != header.size()) {
-                    _video.clear();
-                    continue;
-                }
-                if (!_video.isValid(header)) {
-                    // invalid video id or position (lost UDP packet, wrong order)
-                    __DBG_printf("invalid header");
-                    continue;
-                }
-                if (_video.isReady()) {
-                    // skip this frame, the old one is not processed yet
-                    // _video._header.invalidate();
-                    return;
-                }
-
-                size -= header.size();
-                auto ptr = _video.allocateItemBuffer(size);
-                if (!ptr) {
-                    // out of ram
-                    _video.clear();
-                    continue;
-                }
-
-                if (_udp.readBytes(ptr, size) != size) {
-                    _video.clear();
-                    _lastPacketTime = millis();
-                    continue;
-                }
-
-                if (_video.isReady()) {
-                    return;
-                }
+            size -= header.size();
+            auto ptr = _video.allocateItemBuffer(size);
+            if (!ptr) {
+                // out of ram
+                _video.clear();
+                continue;
             }
+
+            if (_udp.readBytes(ptr, size) != size) {
+                _video.clear();
+                _lastPacketTime = millis();
+                continue;
+            }
+
+            if (_video.isReady()) {
+                return;
+            }
+        }
 
 #if 0
         else if (size == kVisualizerPacketSize) {
@@ -411,22 +414,19 @@ void VisualizerAnimation::_parseUdp()
             continue;
         }
 #endif
-        }
     }
 }
 
-void VisualizerAnimation::_processNewData()
+void VisualizerAnimation::_updatePeakData(uint32_t millisValue)
 {
-    auto timeMillis = millis();
-
-    uint16_t i = 0;
+    CoordinateType i = 0;
     auto showPeaks = _cfg.get_enum_peak_show(_cfg);
     for(uint8_t &value: _storedData) {
-        _storedPeaks[i++].add(value, timeMillis, _cfg.peak_falling_speed, showPeaks);
+        _storedPeaks[i++].add(value, millisValue, _cfg.peak_falling_speed, showPeaks);
     }
-    if (timeMillis - _peakLoudnessTime > 750) {
+    if (millisValue - _peakLoudnessTime > 750) {
         _peakLoudness.clear();
-        _peakLoudnessTime = timeMillis;
+        _peakLoudnessTime = millisValue;
     }
     _peakLoudness.updatePeaks(_storedLoudness);
 }
@@ -434,189 +434,189 @@ void VisualizerAnimation::_processNewData()
 template<typename _Ta>
 void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
 {
-    MUTEX_LOCK_BLOCK(_processingLock) {
-        switch(_cfg.get_enum_type(_cfg)) {
-            case VisualizerAnimationType::VUMETER_COLOR_1D:
-            case VisualizerAnimationType::VUMETER_1D: {
-                display.fill(CRGB(0));
-                auto color = _getColor();
-                auto cols = display.getCols();
-                auto visType = _cfg.get_enum_type(_cfg);
-                auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
-                CoordinateType end = std::min(((_storedLoudness.getLeftLevel() + _storedLoudness.getRightLevel()) * cols) / 512, cols - 1);
-                CoordinateType peak = std::min((peakLevel * cols) / 256, cols - 1);
-                for (int row = 0; row < display.getRows(); row++) {
-                    for (int col = 0; col < cols; col++) {
-                        const auto colOfs = cols;
-                        if (_cfg.vumeter_peaks && col == peak) {
-                            display.setPixel(row, colOfs, CRGB(255, 0, 0));
+    _updatePeakData(millisValue);
+
+    // display data
+    switch(_cfg.get_enum_type(_cfg)) {
+        case VisualizerAnimationType::VUMETER_COLOR_1D:
+        case VisualizerAnimationType::VUMETER_1D: {
+            display.fill(CRGB(0));
+            auto color = _getColor();
+            auto cols = display.getCols();
+            auto visType = _cfg.get_enum_type(_cfg);
+            auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
+            CoordinateType end = std::min(((_storedLoudness.getLeftLevel() + _storedLoudness.getRightLevel()) * cols) / 512, cols - 1);
+            CoordinateType peak = std::min((peakLevel * cols) / 256, cols - 1);
+            for (int row = 0; row < display.getRows(); row++) {
+                for (int col = 0; col < cols; col++) {
+                    const auto colOfs = cols;
+                    if (_cfg.vumeter_peaks && col == peak) {
+                        display.setPixel(row, colOfs, CRGB(255, 0, 0));
+                    }
+                    else if (col < end) {
+                        if (visType == VisualizerAnimationType::VUMETER_COLOR_1D) {
+                            display.setPixel(row, colOfs, color);
                         }
-                        else if (col < end) {
-                            if (visType == VisualizerAnimationType::VUMETER_COLOR_1D) {
-                                display.setPixel(row, colOfs, color);
-                            }
-                            else {
-                                display.setPixel(row, colOfs, CRGB(255, std::max(255 - peakLevel, 0), 0));
-                            }
+                        else {
+                            display.setPixel(row, colOfs, CRGB(255, std::max(255 - peakLevel, 0), 0));
                         }
                     }
                 }
             }
-            break;
-            case VisualizerAnimationType::VUMETER_COLOR_STEREO_1D:
-            case VisualizerAnimationType::VUMETER_STEREO_1D: {
-                display.fill(CRGB(0));
-                auto color = _getColor();
-                auto cols = display.getCols();
-                auto visType = _cfg.get_enum_type(_cfg);
-                // auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
-                CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
-                CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
-                CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
-                CoordinateType peakLoudnessColLeft = std::max(centerCol - ((_peakLoudness.getLeftLevel() * centerCol) >> 8) - 1, 0);
-                CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
+        }
+        break;
+        case VisualizerAnimationType::VUMETER_COLOR_STEREO_1D:
+        case VisualizerAnimationType::VUMETER_STEREO_1D: {
+            display.fill(CRGB(0));
+            auto color = _getColor();
+            auto cols = display.getCols();
+            auto visType = _cfg.get_enum_type(_cfg);
+            // auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
+            CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
+            CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
+            CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
+            CoordinateType peakLoudnessColLeft = std::max(centerCol - ((_peakLoudness.getLeftLevel() * centerCol) >> 8) - 1, 0);
+            CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
+            for (int row = 0; row < display.getRows(); row++) {
+                for (int col = 0; col < cols; col++) {
+                    const auto colOfs = cols;
+                    if (_cfg.vumeter_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
+                        display.setPixel(row, colOfs, CRGB(255, 0, 0));
+                    }
+                    else if (col >= loudnessLeft && col < loudnessRight) {
+                        if (visType == VisualizerAnimationType::VUMETER_COLOR_STEREO_1D) {
+                            display.setPixel(row, colOfs, color);
+                        }
+                        else {
+                            int pos = (col < centerCol ? _peakLoudness.getLeftLevel() : _peakLoudness.getRightLevel()) >> 1;
+                            display.setPixel(row, colOfs, CRGB(255, std::max(255 - pos, 0), 0));
+                        }
+                    }
+                }
+            }
+        }
+        break;
+        case VisualizerAnimationType::SPECTRUM_RAINBOW_1D: {
+            display.fill(CRGB(0));
+            CHSV hsv;
+            hsv.hue = 0;
+            hsv.val = 255;
+            hsv.sat = 240;
+            auto cols = display.getCols();
+            float hue = 0;
+            float hueIncr = 232 / static_cast<float>(cols); // starts with red and ends with pink
+            for (int col = 0; col < cols; col++) {
+                hsv.hue = hue;
+                hue += hueIncr;
+                auto rgb = CRGB(hsv);
+                auto index = _getDataIndex(display, col);
+                rgb.fadeToBlackBy(kVisualizerMaxPacketValue - _storedData[index]);
                 for (int row = 0; row < display.getRows(); row++) {
-                    for (int col = 0; col < cols; col++) {
-                        const auto colOfs = cols;
+                    display.setPixel(row, cols, rgb);
+                }
+            }
+        }
+        break;
+        case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
+        case VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D:
+        case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D: {
+            display.fill(CRGB(0));
+            CHSV hsv;
+            hsv.hue = 0;
+            hsv.val = 255;
+            hsv.sat = 240;
+            int16_t oldIndex = -1;
+            CRGB color = _getColor();
+            CoordinateType lastRow = display.getRows() - _cfg.vumeter_rows;
+            CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
+            CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
+            CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
+            CoordinateType peakLoudnessColLeft = std::max(centerCol - ((_peakLoudness.getLeftLevel() * centerCol) >> 8) - 1, 0);
+            CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
+            for (CoordinateType col = 0; col < display.getCols(); col++) {
+                CRGB rgb;
+                switch(_cfg.get_enum_type(_cfg)) {
+                    case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D:
+                        rgb = CRGB(hsv);
+                        break;
+                    case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
+                    default:
+                        rgb = color;
+                        break;
+
+                }
+                int8_t index = _getDataIndex(display, col);
+                if (index != oldIndex) {
+                    oldIndex = index;
+                    // change color for each bar
+                    hsv.hue += (224 / kVisualizerPacketSize); // starts with red and ends with pink
+                }
+                // bar pixels
+                CoordinateType endRow = std::min<int>(((_storedData[index] * (lastRow + 1)) >> 8), lastRow);
+                for (CoordinateType row = 0; row < endRow; row++) {
+                    if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D) {
+                        // int pos = ((row << 8) / lastRow);
+                        // rgb = CRGB(pos, std::max(255 - pos, 0), 0);
+                        int pos = ((row << (8 + 7)) / lastRow); // multiply by 128 shifting another 7 bits to the left
+                        pos = std::min(pos / 115, 255); // now we can use 7 bits additional precision: pos * (128/115==1.113)
+                        rgb = CRGB(pos, 255 - pos, 0);
+                    }
+                    // reduce brightness for spectrum pixels
+                    // CRGB rgbTmp = rgb;
+                    // fadeToBlackBy(&rgbTmp, 1, 200);
+                    display.setPixel(row, col, rgb);
+                }
+                // peak pixels
+                if (_cfg.get_enum_peak_show(_cfg) != VisualizerPeakType::DISABLED) {
+                    millisValue = millis();
+                    auto peakLoudness = _storedPeaks[index].getPeakPosition(millisValue);
+                    if (peakLoudness) {
+                        // the udp handler updates the pixels in real time in an interrupt
+                        // make sure the peak is above the current level at all times
+                        CoordinateType peakLoudnessRow = std::min<int>(((std::max<int16_t>(_storedData[index] + 1, peakLoudness) * (lastRow + 1)) >> 8), lastRow - 1);
+                        if (peakLoudnessRow >= endRow - 1) {
+                            display.setPixel(peakLoudnessRow, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb, millisValue));
+                        }
+                    }
+                }
+                // VU Meter
+                if (_cfg.vumeter_rows) {
+                    constexpr auto colOfs = 0;
+                    for (CoordinateType row = lastRow; row < display.getRows(); row++) {
                         if (_cfg.vumeter_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
-                            display.setPixel(row, colOfs, CRGB(255, 0, 0));
+                            display.setPixel(row, col + colOfs, CRGB(255, 0, 0));
                         }
                         else if (col >= loudnessLeft && col < loudnessRight) {
-                            if (visType == VisualizerAnimationType::VUMETER_COLOR_STEREO_1D) {
-                                display.setPixel(row, colOfs, color);
+                            int position = ((centerCol - col) * 256) / centerCol;
+                            if (position < 0) {
+                                position = -position;
                             }
-                            else {
-                                int pos = (col < centerCol ? _peakLoudness.getLeftLevel() : _peakLoudness.getRightLevel()) >> 1;
-                                display.setPixel(row, colOfs, CRGB(255, std::max(255 - pos, 0), 0));
-                            }
+                            display.setPixel(row, col + colOfs, CRGB(position, std::max(200 - position, 0), 0));
                         }
                     }
                 }
             }
-            break;
-            case VisualizerAnimationType::SPECTRUM_RAINBOW_1D: {
-                display.fill(CRGB(0));
-                CHSV hsv;
-                hsv.hue = 0;
-                hsv.val = 255;
-                hsv.sat = 240;
-                auto cols = display.getCols();
-                float hue = 0;
-                float hueIncr = 232 / static_cast<float>(cols); // starts with red and ends with pink
-                for (int col = 0; col < cols; col++) {
-                    hsv.hue = hue;
-                    hue += hueIncr;
-                    auto rgb = CRGB(hsv);
-                    auto index = _getDataIndex(display, col);
-                    rgb.fadeToBlackBy(kVisualizerMaxPacketValue - _storedData[index]);
-                    for (int row = 0; row < display.getRows(); row++) {
-                        display.setPixel(row, cols, rgb);
-                    }
-                }
-            }
-            break;
-            case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
-            case VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D:
-            case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D: {
-                display.fill(CRGB(0));
-                CHSV hsv;
-                hsv.hue = 0;
-                hsv.val = 255;
-                hsv.sat = 240;
-                int16_t oldIndex = -1;
-                CRGB color = _getColor();
-                CoordinateType lastRow = display.getRows() - _cfg.vumeter_rows;
-                CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
-                CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
-                CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
-                CoordinateType peakLoudnessColLeft = std::max(centerCol - ((_peakLoudness.getLeftLevel() * centerCol) >> 8) - 1, 0);
-                CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
-                for (CoordinateType col = 0; col < display.getCols(); col++) {
-                    CRGB rgb;
-                    switch(_cfg.get_enum_type(_cfg)) {
-                        case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D:
-                            rgb = CRGB(hsv);
-                            break;
-                        case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
-                        default:
-                            rgb = color;
-                            break;
-
-                    }
-                    int8_t index = _getDataIndex(display, col);
-                    if (index != oldIndex) {
-                        oldIndex = index;
-                        // change color for each bar
-                        hsv.hue += (224 / kVisualizerPacketSize); // starts with red and ends with pink
-                    }
-                    // bar pixels
-                    CoordinateType endRow = std::min<int>(((_storedData[index] * (lastRow + 1)) >> 8), lastRow);
-                    for (CoordinateType row = 0; row < endRow; row++) {
-                        if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D) {
-                            int pos = ((row << 8) / lastRow);
-                            rgb = CRGB(pos, std::max(255 - pos, 0), 0);
-                        }
-                        display.setPixel(row, col, rgb);
-                    }
-                    // peak pixels
-                    if (_cfg.get_enum_peak_show(_cfg) != VisualizerPeakType::DISABLED) {
-                        millisValue = millis();
-                        auto peakLoudness = _storedPeaks[index].getPeakPosition(millisValue);
-                        if (peakLoudness) {
-                            // update time, the udp handler updates the pixels in real time in an interrupt
-                            CoordinateType peakLoudnessRow = std::min<int>(((peakLoudness * (lastRow + 1)) >> 8), lastRow - 1);
-                            if (peakLoudnessRow >= endRow - 1) {
-                                display.setPixel(peakLoudnessRow, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb, millisValue));
-                            }
-                            else {
-                                // the pixel has fallen below the current level
-                                // get the stored peak value
-                                peakLoudnessRow = std::min<int>(((_storedPeaks[index].getPeakValue() * (lastRow + 1)) >> 8), lastRow - 1);
-                                if (peakLoudnessRow >= endRow - 1) {
-                                    display.setPixel(peakLoudnessRow, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb, millisValue));
-                                }
-                            }
-                        }
-                    }
-                    // VU Meter
-                    if (_cfg.vumeter_rows) {
-                        constexpr auto colOfs = 0;
-                        for (CoordinateType row = lastRow; row < display.getRows(); row++) {
-                            if (_cfg.vumeter_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
-                                display.setPixel(row, col + colOfs, CRGB(255, 0, 0));
-                            }
-                            else if (col >= loudnessLeft && col < loudnessRight) {
-                                int position = ((centerCol - col) * 256) / centerCol;
-                                if (position < 0) {
-                                    position = -position;
-                                }
-                                display.setPixel(row, col + colOfs, CRGB(position, std::max(200 - position, 0), 0));
-                            }
-                        }
-                    }
-                }
-            }
-            break;
-            case VisualizerAnimationType::RGB24_VIDEO:
-            case VisualizerAnimationType::RGB565_VIDEO: {
-                if (_video.isReady()) {
-                    _video.begin();
-                    for (int row = display.getRows() - 1; row >= 0; row--) {
-                        for (int col = 0; col < display.getCols(); col++) {
-                            display.setPixel(row, col, _video.getRGB());
-                        }
-                    }
-                    _video.clear();
-                }
-            }
-            break;
-            default:
-                //TODO blink red green to show an error has occurred
-                uint8_t r = ((millis() / 500) % 2) ? 32 : 0;
-                uint8_t g = r ? 0 : 32;
-                display.fill(CRGB(r, g, 0));
-                break;
         }
+        break;
+        case VisualizerAnimationType::RGB24_VIDEO:
+        case VisualizerAnimationType::RGB565_VIDEO: {
+            if (_video.isReady()) {
+                _video.begin();
+                for (int row = display.getRows() - 1; row >= 0; row--) {
+                    for (int col = 0; col < display.getCols(); col++) {
+                        display.setPixel(row, col, _video.getRGB());
+                    }
+                }
+                _video.clear();
+            }
+        }
+        break;
+        default:
+            //TODO blink red green to show an error has occurred
+            uint8_t r = ((millis() / 500) % 2) ? 32 : 0;
+            uint8_t g = r ? 0 : 32;
+            display.fill(CRGB(r, g, 0));
+            break;
     }
 }
 

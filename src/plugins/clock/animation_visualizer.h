@@ -110,7 +110,7 @@ namespace Clock {
         template<typename _Ta>
         uint8_t _getDataIndex(_Ta &display, int col)
         {
-            return std::clamp<uint16_t>((col * kVisualizerPacketSize) / static_cast<float>(display.getCols()), 0, kVisualizerPacketSize - 1);
+            return std::clamp<uint16_t>((col * kVisualizerPacketSize) / display.getCols(), 0, kVisualizerPacketSize - 1);
         }
 
         template<typename _Ta>
@@ -124,8 +124,7 @@ namespace Clock {
         static constexpr int kVisualizerPacketSize = 32;
         static constexpr float kVisualizerMaxPacketValue = 254.0;
 
-        void _processNewData();
-        SemaphoreMutex _processingLock;
+        void _updatePeakData(uint32_t millisValue);
 
         class PeakType
         {
@@ -334,11 +333,14 @@ namespace Clock {
         std::array<uint8_t, kVisualizerPacketSize> _storedData;
         std::array<PeakType, kVisualizerPacketSize> _storedPeaks;
         VideoType _video;
-        uint8_t _timeout;
+        uint32_t _timeout;
         uint32_t _lastPacketTime;
         VisualizerAnimationConfig &_cfg;
         float _colsInterpolation; // horizontal
         float _rowsInterpolation; // vertical
+
+        static constexpr auto kUDPTimeoutMultiplier = 1000U;
+        static constexpr auto kUDPInfiniteTimeout = 255 * kUDPTimeoutMultiplier;
 
         static WiFiUDP _udp;
         static int _udpUsageCounter;

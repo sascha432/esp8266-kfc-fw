@@ -244,13 +244,12 @@ namespace KFCConfigurationClasses {
                     };
 
                     CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, 21324);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(peak_falling_speed, 15, 250, 15000, 2000, 100);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(peak_falling_speed, 15, 250, 15000, 2500, 100);
                     CREATE_UINT32_BITFIELD_MIN_MAX(peak_extra_color, 1, 0, 1, 1);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(loudness_show, 1, 0, 1, 1);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(loudness_peaks, 1, 0, 1, 1);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(loudness_offset, 12, 0, 1024, 0, 1);
-                    CREATE_COLOR_FIELD(color, 0xff00ff);
-                    CREATE_COLOR_FIELD(peak_color, 0x0000ff);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(vumeter_rows, 4, 0, 8, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(vumeter_peaks, 1, 0, 1, 1);
+                    CREATE_COLOR_FIELD(color, 0x00ff00);
+                    CREATE_COLOR_FIELD(peak_color, 0xff0000);
                     CREATE_BOOL_BITFIELD(multicast);
                     CREATE_ENUM_D_BITFIELD(peak_show, VisualizerPeakType, VisualizerPeakType::ENABLED);
                     CREATE_ENUM_D_BITFIELD(type, VisualizerAnimationType, VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D);
@@ -260,9 +259,8 @@ namespace KFCConfigurationClasses {
                         port(kDefaultValueFor_port),
                         peak_falling_speed(kDefaultValueFor_peak_falling_speed),
                         peak_extra_color(kDefaultValueFor_peak_extra_color),
-                        loudness_show(kDefaultValueFor_loudness_show),
-                        loudness_peaks(kDefaultValueFor_loudness_peaks),
-                        loudness_offset(kDefaultValueFor_loudness_offset),
+                        vumeter_rows(kDefaultValueFor_vumeter_rows),
+                        vumeter_peaks(kDefaultValueFor_vumeter_peaks),
                         color(kDefaultValueFor_color),
                         peak_color(kDefaultValueFor_peak_color),
                         multicast(false),

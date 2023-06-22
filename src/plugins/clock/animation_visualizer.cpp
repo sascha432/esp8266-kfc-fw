@@ -104,11 +104,11 @@ void VisualizerAnimation::begin()
 
     if (_cfg.get_enum_orientation(_cfg) == OrientationType::HORIZONTAL) {
         _colsInterpolation = _parent._display.getCols() / static_cast<float>(kVisualizerPacketSize);
-        _rowsInterpolation = (_parent._display.getRows() - _cfg.loudness_show) / kVisualizerMaxPacketValue;
+        _rowsInterpolation = (_parent._display.getRows() - _cfg.vumeter_rows) / kVisualizerMaxPacketValue;
     }
     else {
         _colsInterpolation = _parent._display.getRows() / static_cast<float>(kVisualizerPacketSize);
-        _rowsInterpolation = (_parent._display.getCols() - _cfg.loudness_show) / kVisualizerMaxPacketValue;
+        _rowsInterpolation = (_parent._display.getCols() - _cfg.vumeter_rows) / kVisualizerMaxPacketValue;
 
     }
 
@@ -444,8 +444,8 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             CoordinateType peak = std::min((peakLevel * cols) / 256, cols - 1);
             for (int row = 0; row < display.getRows(); row++) {
                 for (int col = 0; col < cols; col++) {
-                    auto colOfs = _cfg.loudness_offset ? ((col + _cfg.loudness_offset) % cols) : cols;
-                    if (_cfg.loudness_peaks && col == peak) {
+                    const auto colOfs = cols;
+                    if (_cfg.vumeter_peaks && col == peak) {
                         display.setPixel(row, colOfs, CRGB(255, 0, 0));
                     }
                     else if (col < end) {
@@ -474,8 +474,8 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
             for (int row = 0; row < display.getRows(); row++) {
                 for (int col = 0; col < cols; col++) {
-                    auto colOfs = _cfg.loudness_offset ? ((col + _cfg.loudness_offset) % cols) : cols;
-                    if (_cfg.loudness_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
+                    const auto colOfs = cols;
+                    if (_cfg.vumeter_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
                         display.setPixel(row, colOfs, CRGB(255, 0, 0));
                     }
                     else if (col >= loudnessLeft && col < loudnessRight) {
@@ -501,14 +501,13 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             float hue = 0;
             float hueIncr = 232 / static_cast<float>(cols); // starts with red and ends with pink
             for (int col = 0; col < cols; col++) {
-                auto colOfs = _cfg.loudness_offset ? ((col + _cfg.loudness_offset) % cols) : cols;
                 hsv.hue = hue;
                 hue += hueIncr;
                 auto rgb = CRGB(hsv);
                 auto index = _getDataIndex(display, col);
                 rgb.fadeToBlackBy(kVisualizerMaxPacketValue - _storedData[index]);
                 for (int row = 0; row < display.getRows(); row++) {
-                    display.setPixel(row, colOfs, rgb);
+                    display.setPixel(row, cols, rgb);
                 }
             }
         }
@@ -523,7 +522,7 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             hsv.sat = 240;
             int16_t oldIndex = -1;
             CRGB color = _getColor();
-            CoordinateType lastRow = display.getRows() - _cfg.loudness_show;
+            CoordinateType lastRow = display.getRows() - _cfg.vumeter_rows;
             CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
             CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
             CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
@@ -577,16 +576,19 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                     }
                 }
                 // VU Meter
-                if (_cfg.loudness_show) {
-                    if (_cfg.loudness_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
-                        display.setPixel(lastRow, col, CRGB(255, 0, 0));
-                    }
-                    else if (col >= loudnessLeft && col < loudnessRight) {
-                        int position = ((centerCol - col) * 256) / centerCol;
-                        if (position < 0) {
-                            position = -position;
+                if (_cfg.vumeter_rows) {
+                    constexpr auto colOfs = 0;
+                    for (CoordinateType row = lastRow; row < display.getRows(); row++) {
+                        if (_cfg.vumeter_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
+                            display.setPixel(row, col + colOfs, CRGB(255, 0, 0));
                         }
-                        display.setPixel(lastRow, col, CRGB(position, std::max(200 - position, 0), 0));
+                        else if (col >= loudnessLeft && col < loudnessRight) {
+                            int position = ((centerCol - col) * 256) / centerCol;
+                            if (position < 0) {
+                                position = -position;
+                            }
+                            display.setPixel(row, col + colOfs, CRGB(position, std::max(200 - position, 0), 0));
+                        }
                     }
                 }
             }

@@ -176,15 +176,22 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     });
                     form.addFormUI(F("Peak Color Indicator"), FormUI::CheckboxButtonSuffix(peakExtraColor, F("Use Color")), FormUI::TextInputSuffix(peakFallingSpeed));
 
-                    auto &showLoudnessPeaks = form.addObjectGetterSetter(F("v_lnp"), cfg.visualizer, cfg.visualizer.get_bits_loudness_peaks, cfg.visualizer.set_bits_loudness_peaks);
+                    auto &showLoudnessPeaks = form.addObjectGetterSetter(F("v_lnp"), cfg.visualizer, cfg.visualizer.get_bits_vumeter_peaks, cfg.visualizer.set_bits_vumeter_peaks);
                     form.addFormUI(FormUI::Type::HIDDEN, FormUI::BoolItems(F("Yes"), F("No")));
 
-                    form.addObjectGetterSetter(F("v_sln"), cfg.visualizer, cfg.visualizer.get_bits_loudness_show, cfg.visualizer.set_bits_loudness_show);
-                    form.addFormUI(F("Show Loudness at the top"), FormUI::Type::SELECT, FormUI::BoolItems(F("Yes"), F("No")), FormUI::CheckboxButtonSuffix(showLoudnessPeaks, F("Show Peaks")));
-
-                    form.addObjectGetterSetter(F("v_svo"), cfg.visualizer, cfg.visualizer.get_bits_loudness_offset, cfg.visualizer.set_bits_loudness_offset);
-                    form.addFormUI(F("VU Meter Offset"), FormUI::Type::NUMBER_RANGE);
-                    cfg.visualizer.addRangeValidatorFor_loudness_offset(form);
+                    auto showVuMeterRows = FormUI::List(
+                        0, F("Disable"),
+                        1, F("1 Row"),
+                        2, F("2 Rows"),
+                        3, F("3 Rows"),
+                        4, F("4 Rows"),
+                        5, F("5 Rows"),
+                        6, F("6 Rows"),
+                        7, F("7 Rows"),
+                        8, F("8 Rows")
+                    );
+                    form.addObjectGetterSetter(F("v_sln"), cfg.visualizer, cfg.visualizer.get_bits_vumeter_rows, cfg.visualizer.set_bits_vumeter_rows);
+                    form.addFormUI(F("Show VUMeter at the top"), FormUI::Type::SELECT, showVuMeterRows, FormUI::CheckboxButtonSuffix(showLoudnessPeaks, F("Show Peaks")));
 
                     auto &multicast = form.addObjectGetterSetter(F("v_muca"), cfg.visualizer, cfg.visualizer.get_bit_multicast, cfg.visualizer.set_bit_multicast);
                     form.addFormUI(FormUI::Type::HIDDEN);

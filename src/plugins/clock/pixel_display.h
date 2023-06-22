@@ -1050,7 +1050,7 @@ namespace Clock {
 
         bool getDither() const
         {
-            return (_controller.getDither() != DISABLE_DITHER);
+            return (_controller.getDither() == BINARY_DITHER);
         }
 
         uint8_t getNumSegments() const

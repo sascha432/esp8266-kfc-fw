@@ -122,6 +122,7 @@ namespace Clock {
 
     protected:
         static constexpr int kVisualizerPacketSize = 32;
+        static constexpr int kVisualizerInterpolation = 16;
         static constexpr float kVisualizerMaxPacketValue = 254.0;
 
         void _updatePeakData(uint32_t millisValue);

@@ -7,11 +7,12 @@
 #include "clock.h"
 #include "animation.h"
 #include "stl_ext/algorithm.h"
+#include <InterpolationLib.h>
 
-#if false
-#include <debug_helper_enable.h>
+#if 0
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 // most code is from
@@ -227,193 +228,183 @@ void VisualizerAnimation::_parseUdp()
             // clear data set
             _clear();
             _timeout = kUDPInfiniteTimeout;
+            __LDBG_printf("UDP timeout");
             return;
         }
     }
     size_t size;
-    while((size = _udp.parsePacket()) != 0) {
-        if (!_udp.available()) {
-            break;
-        }
-        int firstByte = _udp.peek();
-        if (firstByte - 1) {
-            break;
-        }
-        switch(static_cast<UdpProtocolType>(firstByte)) {
-            case UdpProtocolType::WARLS: {
-                struct ExitScope { // clear data on read error
-                    ExitScope(VisualizerAnimation *parent) :
-                        _parent(parent)
-                    {
+    while((size = _udp.parsePacket()) != 0 && _udp.available()) {
+        // read data
+        {
+            // clear data on read error
+            struct ExitScope {
+                ExitScope(VisualizerAnimation *parent) :
+                    _parent(parent)
+                {
+                }
+                ~ExitScope()
+                {
+                    #if ESP32
+                        _udp.flush();
+                    #endif
+                    if (_parent) {
+                        _parent->_clear();
+                        __LDBG_printf("UDP receive error");
                     }
-                    ~ExitScope()
-                    {
-                        if (_parent) {
-                            _parent->_clear();
-                            __DBG_printf("UDP receive error");
+                }
+                void release()
+                {
+                    _parent = nullptr;
+                }
+                VisualizerAnimation *_parent;
+            } exitScope(this);
+
+            if (size >= 128) {
+                // video data is sent in big chunks
+                VideoHeaderType header;
+
+                if (_udp.readBytes(header, header.size()) != header.size()) {
+                    _video.clear();
+                    __LDBG_printf("read error=%u", header.size());
+                    continue;
+                }
+                if (!_video.isValid(header)) {
+                    // invalid video id or position (lost UDP packet, wrong order)
+                    __DBG_printf("invalid header");
+                    continue;
+                }
+                if (_video.isReady()) {
+                    // skip this frame, the old one is not processed yet
+                    // _video._header.invalidate();
+                    __LDBG_printf("skipping frame");
+                    return;
+                }
+
+                size -= header.size();
+                auto ptr = _video.allocateItemBuffer(size);
+                if (!ptr) {
+                    // out of ram
+                    _video.clear();
+                    __LDBG_printf("malloc failed=%u", size);
+                    continue;
+                }
+
+                if (_udp.readBytes(ptr, size) != size) {
+                    _video.clear();
+                    __LDBG_printf("read error=%u", size);
+                    continue;
+                }
+
+                if (_video.isReady()) {
+                    __LDBG_printf("frame ready size=%u", _video.getTotalDataSize());
+                    _lastPacketTime = millis();
+                    exitScope.release();
+                    return;
+                }
+
+                // try next one
+                __LDBG_printf("unknown state");
+                continue;
+            }
+
+            int firstByte = _udp.peek();
+            switch(static_cast<UdpProtocolType>(firstByte)) {
+                case UdpProtocolType::WARLS: {
+                    struct WARLSProtocol_t {
+                        uint8_t protocolId;
+                        uint8_t timeout;
+                        uint16_t magic1;
+                        uint8_t leftChannel;
+                        uint8_t rightChannel;
+                        uint8_t magic2;
+                        uint8_t lines;
+                    };
+
+                    if (size < (sizeof(WARLSProtocol_t) + 2)) {
+                        __LDBG_printf("size=%u required=%u", size, (sizeof(WARLSProtocol_t) + 2));
+                        return; // invalid packet size
+                    }
+                    if (((size - 2) & 3) != 0) {
+                        __LDBG_printf("size=%u aligned=%u", size, ((size - 2) & 3));
+                        return; // invalid packet size
+                    }
+                    WARLSProtocol_t protocol;
+                    if (_udp.readBytes(reinterpret_cast<uint8_t *>(&protocol), sizeof(protocol)) != sizeof(protocol)) {
+                        __LDBG_printf("read error=%u", sizeof(protocol));
+                        return; // read error
+                    }
+                    if (protocol.timeout == 0) {
+                        __LDBG_printf("timeout is zero");
+                        return; // timeout 0 ignores the packet
+                    }
+                    if (protocol.magic1 != ((77 << 8) | 222)) { // 0x4dde
+                        __LDBG_printf("magic1!=%04x", protocol.magic1);
+                        return; // invalid magic
+                    }
+                    if (protocol.magic2 != 66) { // 0x42
+                        __LDBG_printf("magic2!=%02x", protocol.magic2);
+                        return; // invalid magic
+                    }
+                    if (protocol.lines < 2 || protocol.lines > kVisualizerPacketSize) {
+                        // invalid size
+                        __LDBG_printf("invalid lines=%u required=2-%u", protocol.lines, kVisualizerPacketSize);
+                        return;
+                    }
+
+                    // copy values
+                    _timeout = protocol.timeout * kUDPTimeoutMultiplier;
+                    __LDBG_printf("timeout=%d left=%u right=%u lines=%u", _timeout, protocol.leftChannel, protocol.rightChannel, protocol.lines);
+                    _storedLoudness.setLeftChannel(protocol.leftChannel);
+                    _storedLoudness.setRightChannel(protocol.rightChannel);
+
+                    if (kVisualizerPacketSize == protocol.lines) {
+                        int read = _udp.readBytes(_storedData.begin(), protocol.lines);
+                        if (read != protocol.lines) {
+                            __LDBG_printf("read error=%u", protocol.lines);
+                            return; // read failed
                         }
                     }
-                    void release()
-                    {
-                        _parent = nullptr;
+                    else if (kVisualizerPacketSize / 2 == protocol.lines) {
+                        auto outPtr = _storedData.begin();
+                        for(uint8_t i = 0; i < protocol.lines; i++) {
+                            auto data = _udp.read();
+                            *outPtr++ = data;
+                            *outPtr++ = data;
+                        }
                     }
-                    VisualizerAnimation *_parent;
-                } exitScope(this);
+                    else if (kVisualizerPacketSize / 4 == protocol.lines) {
+                        auto outPtr = _storedData.begin();
+                        for(uint8_t i = 0; i < protocol.lines; i++) {
+                            auto data = _udp.read();
+                            *outPtr++ = data;
+                            *outPtr++ = data;
+                            *outPtr++ = data;
+                            *outPtr++ = data;
+                        }
+                    }
+                    else {
+                        double xValues[kVisualizerPacketSize];
+                        double yValues[kVisualizerPacketSize];
+                        for(uint8_t i = 0; i < protocol.lines; i++) {
+                            xValues[i] = i;
+                            yValues[i] = _udp.read();
+                        }
+                        auto outPtr = _storedData.begin();
+                        for(uint8_t i = 0; i < kVisualizerPacketSize; i++) {
+                            *outPtr++ = Interpolation::CatmullSpline(xValues, yValues, protocol.lines, i * protocol.lines / float(kVisualizerPacketSize));
+                        }
+                    }
 
-                if (size < 6 && ((size - 2) & 3) != 0) {
-                    // invalid packet size
-                    return;
-                }
-                _udp.read();
-                auto timeout = _udp.read();
-                if (timeout <= 0) {
-                    // timeout 0 ignores the packet, -1 is a read error
-                    return;
-                }
-                _timeout = timeout * kUDPTimeoutMultiplier;
-                // verify magic
-                if (_udp.read() != 255) {
-                    return;
-                }
-                if (_udp.read() != 99) {
-                    return;
-                }
-                if (_udp.read() != 88) {
-                    return;
-                }
-                if (_udp.read() != 77) {
-                    return;
-                }
-                if (_udp.read() != 66) {
-                    return;
-                }
-                if (_udp.read() != 55) {
-                    return;
-                }
-                _storedLoudness.setLeftChannel(_udp.read());
-                _storedLoudness.setRightChannel(_udp.read());
-                if (_udp.read() != 44) {
-                    return;
-                }
-                uint8_t lines = _udp.read();
-                if (lines != kVisualizerPacketSize) {
-                    // invalid size
-                    // we have no reshaping yet
-                    return;
-                }
-                int read = _udp.readBytes(_storedData.begin(), lines);
-                if (read != lines) {
-                    // read failed
-                    return;
-                }
-                // we do not read the rest...
-                _lastPacketTime = millis();
-                exitScope.release();
-                return;
-            }
-            default:
-                break;
-        }
+                    _lastPacketTime = millis();
 
-        if (size >= 128) {
-            // video data is sent in big chunks
-            VideoHeaderType header;
-
-            if (_udp.readBytes(header, header.size()) != header.size()) {
-                _video.clear();
-                continue;
-            }
-            if (!_video.isValid(header)) {
-                // invalid video id or position (lost UDP packet, wrong order)
-                __DBG_printf("invalid header");
-                continue;
-            }
-            if (_video.isReady()) {
-                // skip this frame, the old one is not processed yet
-                // _video._header.invalidate();
-                return;
-            }
-
-            size -= header.size();
-            auto ptr = _video.allocateItemBuffer(size);
-            if (!ptr) {
-                // out of ram
-                _video.clear();
-                continue;
-            }
-
-            if (_udp.readBytes(ptr, size) != size) {
-                _video.clear();
-                _lastPacketTime = millis();
-                continue;
-            }
-
-            if (_video.isReady()) {
-                return;
-            }
-        }
-
-#if 0
-        else if (size == kVisualizerPacketSize) {
-            // full packet, read it directly into the buffer and clean the end
-            auto i = _udp.readBytes(_storedData.data(), kVisualizerPacketSize);
-            if (i < kVisualizerPacketSize) {
-                std::fill(_storedData.begin() + i, _storedData.end(), 0);
-            }
-        }
-        else if (size == kVisualizerPacketSize / 4) {
-            // 1/4 of the size, just quadruple all bytes
-            for(int i = 0; i < kVisualizerPacketSize; i++) {
-                auto data = _udp.read();
-                if (data == -1) {
-                    std::fill(_storedData.begin() + i, _storedData.end(), 0);
+                    exitScope.release();
+                    return;
+                }
+                default:
+                    __LDBG_printf("protocol %d not supported", firstByte);
                     break;
-                }
-                // quadruple data
-                _storedData[i++] = data;
-                _storedData[i++] = data;
-                _storedData[i++] = data;
-                _storedData[i] = data;
             }
         }
-        else if (size == kVisualizerPacketSize / 2) {
-            // half the size, just double all bytes
-            for(int i = 0; i < kVisualizerPacketSize; i++) {
-                auto data = _udp.read();
-                if (data == -1) {
-                    std::fill(_storedData.begin() + i, _storedData.end(), 0);
-                    break;
-                }
-                // double data
-                _storedData[i++] = data;
-                _storedData[i] = data;
-            }
-        }
-        else if (size == kVisualizerPacketSize * 2) {
-            // double the size, take the peak of 2 values
-            uint8_t buffer[2];
-            for(int i = 0; i < kVisualizerPacketSize; i++) {
-                auto len = _udp.readBytes(buffer, 2);
-                if (len != 2) {
-                    std::fill(_storedData.begin() + i, _storedData.end(), 0);
-                    break;
-                }
-                _storedData[i] = std::max<int>(buffer[0], buffer[1]); // peak value
-            }
-        }
-        else if (size == 1) {
-            // single value, fill the entire spectrum with it
-            auto data = _udp.read();
-            if (data == -1) {
-                _storedData.fill(0);
-                continue;
-            }
-            _storedData.fill(static_cast<uint8_t>(data));
-        }
-        else {
-            continue;
-        }
-#endif
     }
 }
 

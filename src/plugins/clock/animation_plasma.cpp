@@ -45,3 +45,16 @@ int8_t Clock::PlasmaAnimation::_readSineTab(uint8_t ofs)
 {
      return pgm_read_byte(sineTable + ofs);
 }
+
+void Clock::PlasmaAnimation::loop(uint32_t millisValue)
+{
+    if (millisValue - _lastUpdate < (1000 / 50)) { // 50fps update rate
+        return;
+    }
+    _lastUpdate = millisValue;
+    _angle1 += (_cfg.angle1 / 20000.0);
+    _angle2 -= (_cfg.angle2 / 20000.0);
+    _angle3 += (_cfg.angle3 / 20000.0);
+    _angle4 -= (_cfg.angle4 / 20000.0);
+    _hueShift += (_cfg.hueShift / 200.0);
+}

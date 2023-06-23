@@ -6,9 +6,9 @@
 #include "clock.h"
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #if IOT_CLOCK_SAVE_STATE
@@ -21,7 +21,7 @@ void ClockPlugin::_saveStateDelayed()
     }
     else {
         _Timer(_saveTimer).add(Event::seconds(IOT_CLOCK_SAVE_STATE_DELAY), false, [this](Event::CallbackTimerPtr) {
-            __DBG_printf("executing save state delay");
+            __DBG_printf("executing save state delayed");
             _saveState();
         });
     }

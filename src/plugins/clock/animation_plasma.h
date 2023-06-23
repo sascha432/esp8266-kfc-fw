@@ -33,8 +33,11 @@ namespace Clock {
         {
             _angle1 = _angle2 = _angle3 = _angle4 = 0;
             _hueShift = 0;
+            _lastUpdate = millis();
             __LDBG_printf("begin");
         }
+
+        virtual void loop(uint32_t millisValue) override;
 
         virtual void copyTo(DisplayType &display, uint32_t millisValue) override
         {
@@ -88,12 +91,6 @@ namespace Clock {
                 y3--;
                 y4--;
             }
-
-            _angle1 += (_cfg.angle1 / 10000.0);
-            _angle2 -= (_cfg.angle2 / 10000.0);
-            _angle3 += (_cfg.angle3 / 10000.0);
-            _angle4 -= (_cfg.angle4 / 10000.0);
-            _hueShift += (_cfg.hueShift / 100.0);
         }
 
     private:
@@ -101,6 +98,7 @@ namespace Clock {
 
     private:
         PlasmaAnimationConfig &_cfg;
+        uint32_t _lastUpdate;
         float _angle1;
         float _angle2;
         float _angle3;

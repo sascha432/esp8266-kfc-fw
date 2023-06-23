@@ -145,7 +145,7 @@ void Sensor_Motion::_reset(bool shutdown)
     _Timer(_timer).remove();
     #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
         if (_handler) {
-            _Timer(_handler)->_autoOffTimeout.remove();
+            _Timer(_handler->_autoOffTimeout).remove();
         }
     #endif
     if (!shutdown) {
@@ -189,7 +189,7 @@ void Sensor_Motion::_timerCallback()
         // remove auto off timeout
         #if IOT_SENSOR_HAVE_MOTION_AUTO_OFF
             if (_handler && _config.motion_auto_off) {
-                _Timer(_handler)->_autoOffTimeout.remove();
+                _Timer(_handler->_autoOffTimeout).remove();
             }
         #endif
 

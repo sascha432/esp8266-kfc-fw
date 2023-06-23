@@ -13,7 +13,7 @@ class PixelColorFormat:
 multicast = False
 cols = 32
 rows = 16
-fps = 10.0
+fps = 5.0
 
 format = PixelColorFormat.RGB24
 pixel_size = format == PixelColorFormat.RGB565 and 2 or 3
@@ -27,7 +27,7 @@ total_data = 0
 if multicast:
     ip = '192.168.0.255'
 else:
-    ip = '192.168.0.15'
+    ip = '192.168.0.21'
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

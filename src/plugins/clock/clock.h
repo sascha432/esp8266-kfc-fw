@@ -865,7 +865,9 @@ inline ClockPlugin &ClockPlugin::getInstance()
 
     inline void ClockPlugin::eventMotionDetected(bool motion)
     {
-        digitalWrite(131, !motion);
+        #if defined(IOT_CLOCK_MOTION_SENSOR_OUTPUT_PIN) && IOT_CLOCK_MOTION_SENSOR_OUTPUT_PIN != -1
+            digitalWrite(IOT_CLOCK_MOTION_SENSOR_OUTPUT_PIN, !motion);
+        #endif
         #if IOT_LED_MATRIX_HAVE_SSD1306
             ssd1306Blank(!motion);
         #endif

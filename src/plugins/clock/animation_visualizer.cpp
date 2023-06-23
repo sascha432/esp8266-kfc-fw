@@ -304,6 +304,7 @@ void VisualizerAnimation::_parseUdp()
 
                 // try next one
                 __LDBG_printf("unknown state");
+                exitScope.release();
                 continue;
             }
 

@@ -788,6 +788,9 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
         case AnimationType::FIRE:
             _setAnimation(new Clock::FireAnimation(*this, _config.fire));
             break;
+        case AnimationType::PLASMA:
+            _setAnimation(new Clock::PlasmaAnimation(*this, _getColor(), _config.plasma));
+            break;
         case AnimationType::INTERLEAVED:
             _setAnimation(new Clock::InterleavedAnimation(*this, _getColor(), _config.interleaved.rows, _config.interleaved.cols, _config.interleaved.time));
             break;

@@ -336,6 +336,7 @@
             "CPPDEFINES",
             "CRCS",
             "CRGB",
+            "CURRENTMW",
             "DCOS",
             "DEBOUNCER",
             "DHCPD",

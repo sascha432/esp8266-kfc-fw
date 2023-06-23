@@ -129,6 +129,7 @@ namespace KFCConfigurationClasses {
                     "Flash,"
                     "Color Fade,"
                     "Fire,"
+                    "Plasma,"
                     #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
                         "Visualizer,"
                     #endif
@@ -145,10 +146,11 @@ namespace KFCConfigurationClasses {
                     "\042Rainbow FastLED\042,"
                     "\042Flash\042,"
                     "\042Color Fade\042,"
+                    "\042Fire\042,"
+                    "\042Plasma\042,"
                     #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
                         "\042Visualizer\042,"
                     #endif
-                    "\042Fire\042,"
                     "\042Interleaved\042"
                     #if !IOT_LED_MATRIX
                         ",\042Colon: Solid\042,"
@@ -206,6 +208,8 @@ namespace KFCConfigurationClasses {
                         return F("Color Fade");
                     case AnimationType::FIRE:
                         return F("Fire");
+                    case AnimationType::PLASMA:
+                        return F("Plasma");
                     case AnimationType::INTERLEAVED:
                         return F("Interleaved");
                     case AnimationType::SOLID:
@@ -251,6 +255,8 @@ namespace KFCConfigurationClasses {
                         return F("color-fade");
                     case AnimationType::FIRE:
                         return F("fire");
+                    case AnimationType::PLASMA:
+                        return F("plasma");
                     case AnimationType::INTERLEAVED:
                         return F("interleaved");
                     case AnimationType::SOLID:
@@ -288,6 +294,8 @@ namespace KFCConfigurationClasses {
                         return F("Color Fading");
                     case AnimationType::FIRE:
                         return F("Fire Animation");
+                    case AnimationType::PLASMA:
+                        return F("Plasma Animation");
                     case AnimationType::INTERLEAVED:
                         return F("Interleaved Animation");
                     case AnimationType::SOLID:
@@ -314,7 +322,6 @@ namespace KFCConfigurationClasses {
                 setConfig(ClockConfigType());
                 KFCFS.remove(FSPGM(iot_clock_save_state_file));
             }
-
 
         }
     }

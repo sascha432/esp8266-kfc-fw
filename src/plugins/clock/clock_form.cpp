@@ -312,6 +312,40 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 }
             }
             break;
+        case AnimationType::PLASMA: {
+                form.addObjectGetterSetter(F("plma1"), FormGetterSetter(cfg.plasma, angle1));
+                form.addFormUI(F("Angle 1 Change"));
+                cfg.plasma.addRangeValidatorFor_angle1(form);
+
+                form.addObjectGetterSetter(F("plma2"), FormGetterSetter(cfg.plasma, angle2));
+                form.addFormUI(F("Angle 2 Change"));
+                cfg.plasma.addRangeValidatorFor_angle2(form);
+
+                form.addObjectGetterSetter(F("plma3"), FormGetterSetter(cfg.plasma, angle3));
+                form.addFormUI(F("Angle 3 Change"));
+                cfg.plasma.addRangeValidatorFor_angle3(form);
+
+                form.addObjectGetterSetter(F("plma4"), FormGetterSetter(cfg.plasma, angle4));
+                form.addFormUI(F("Angle 4 Change"));
+                cfg.plasma.addRangeValidatorFor_angle4(form);
+
+                form.addObjectGetterSetter(F("plmhs"), FormGetterSetter(cfg.plasma, hueShift));
+                form.addFormUI(F("Hue Shift"));
+                cfg.plasma.addRangeValidatorFor_hueShift(form);
+
+                form.addObjectGetterSetter(F("plmhm"), FormGetterSetter(cfg.plasma, hueMul));
+                form.addFormUI(F("Hue Multiplier"));
+                cfg.plasma.addRangeValidatorFor_hueMul(form);
+
+                form.addObjectGetterSetter(F("plmxd"), FormGetterSetter(cfg.plasma, xDiv));
+                form.addFormUI(F("X Divider"));
+                cfg.plasma.addRangeValidatorFor_xDiv(form);
+
+                form.addObjectGetterSetter(F("plmyd"), FormGetterSetter(cfg.plasma, yDiv));
+                form.addFormUI(F("Y Divider"));
+                cfg.plasma.addRangeValidatorFor_yDiv(form);
+            }
+            break;
         case AnimationType::MAX:
         #if !IOT_LED_MATRIX
             case AnimationType::COLON_SOLID:
@@ -386,6 +420,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         // --------------------------------------------------------------------
         _createConfigureFormAnimation(AnimationType::FIRE, form, cfg, TitleType::ADD_GROUP);
+
+        // --------------------------------------------------------------------
+        _createConfigureFormAnimation(AnimationType::PLASMA, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
         _createConfigureFormAnimation(AnimationType::INTERLEAVED, form, cfg, TitleType::ADD_GROUP);

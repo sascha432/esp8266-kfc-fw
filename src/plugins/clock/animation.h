@@ -364,12 +364,12 @@ namespace Clock {
 
 #include "animation_gradient.h"
 
+#include "animation_plasma.h"
+
 #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
-
-    #include "animation_visualizer.h"
-
+#    include "animation_visualizer.h"
 #endif
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif

@@ -214,23 +214,23 @@ namespace KFCConfigurationClasses {
 
             struct __attribute__packed__ PlasmaAnimationType {
                 using Type = PlasmaAnimationType;
-                CREATE_UINT8_BITFIELD_MIN_MAX(angle1, 8, 0, 255, 30, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(angle2, 8, 0, 255, 50, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(angle3, 8, 0, 255, 80, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(angle4, 8, 0, 255, 150, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(hueShift, 8, 0, 255, 20, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(hueMul, 8, 1, 255, 192, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(xDiv, 8, 1, 255, 8, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(yDiv, 8, 1, 255, 16, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(angle1, 9, 0, 360, 30, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(angle2, 9, 0, 360, 50, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(angle3, 9, 0, 360, 80, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(angle4, 9, 0, 360, 150, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(hue_shift, 8, 0, 255, 20, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(speed, 8, 1, 255, 32, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(x_size, 8, 1, 255, 8, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(y_size, 8, 1, 255, 16, 1);
                 PlasmaAnimationType() :
                     angle1(kDefaultValueFor_angle1),
                     angle2(kDefaultValueFor_angle2),
                     angle3(kDefaultValueFor_angle3),
                     angle4(kDefaultValueFor_angle4),
-                    hueShift(kDefaultValueFor_hueShift),
-                    hueMul(kDefaultValueFor_hueMul),
-                    xDiv(kDefaultValueFor_xDiv),
-                    yDiv(kDefaultValueFor_yDiv)
+                    hue_shift(kDefaultValueFor_hue_shift),
+                    speed(kDefaultValueFor_speed),
+                    x_size(kDefaultValueFor_x_size),
+                    y_size(kDefaultValueFor_y_size)
                 {
                 }
             };

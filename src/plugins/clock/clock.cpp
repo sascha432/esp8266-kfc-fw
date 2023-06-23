@@ -352,7 +352,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         #endif
 
         if (pinMonitor.getPins().size()) {
-            __DBG_printf("pins attached=%u", pinMonitor.getPins().size());
+            __LDBG_printf("pins attached=%u", pinMonitor.getPins().size());
             pinMonitor.begin();
         }
 

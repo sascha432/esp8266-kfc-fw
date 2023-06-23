@@ -178,11 +178,11 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_SWITCH_CHANNEL_NUM, chan, name, ico, state, webui);
 
     for (uint8_t i = 0; i < _pins.size(); i++) {
-        auto &group = form.addCardGroup(F_VAR(chan, i), PrintString(F("Channel %u"), i), true);
+        auto channelStr = PrintString(F("Channel %u"), i);
+        auto &group = form.addCardGroup(F_VAR(chan, i), channelStr, true);
 
-        form.add(F_VAR(name, i), _names[i]);
-        form.addFormUI(F("Name"));
-        _configs[i]._data.addRangeValidatorFor_length(form, true);
+        form.add(F_VAR(name, i), _names[i], InputFieldType::TEXT);
+        form.addFormUI(F("Name"), FormUI::PlaceHolder(channelStr));
 
         form.addObjectGetterSetter(F_VAR(state, i), FormGetterSetter(_configs[i]._data, state));
         form.addFormUI(F("Default State"), states);

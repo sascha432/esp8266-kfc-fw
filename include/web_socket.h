@@ -11,7 +11,8 @@
 #include <Arduino_compat.h>
 #include <algorithm>
 #include <vector>
-#include <ESPAsyncWebServer.h>
+#include "web_server.h"
+// #include <ESPAsyncWebServer.h>
 #if ESP8266
 #include <interrupts.h>
 #endif
@@ -19,9 +20,9 @@
 #include "../src/plugins/mqtt/mqtt_json.h"
 
 #if DEBUG_WEB_SOCKETS
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 class WsClient;
@@ -84,7 +85,6 @@ public:
     virtual void onBinary(uint8_t *data, size_t len) {
         // debug_println("WebSocket::onBinary()");
     }
-
 
     /**
      *  gets called when the first client has been authenticated.
@@ -165,7 +165,12 @@ public:
         }
     }
 
-    void _logRequest(const __FlashStringHelper *message, ...);
+    void _logRequest(AsyncWebSocketClient *client, const __FlashStringHelper *message, ...);
+
+private:
+    #if WEBSERVER_LOG_SERIAL
+        IPAddress _clientAddr;
+    #endif
 
 public:
     enum class ClientCallbackType {

@@ -402,7 +402,6 @@ namespace MQTT {
             topic.indexOf(F("${device_name}")),
             topic.indexOf(F("${object_id}")),
             topic.indexOf(F("${device_title}")),
-            topic.indexOf(F("${device_title}")),
             topic.indexOf(F("${device_title_no_space}"))
         );
         if (topic.indexOf(F("${device_name}")) != -1) {

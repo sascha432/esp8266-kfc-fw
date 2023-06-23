@@ -313,37 +313,37 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             }
             break;
         case AnimationType::PLASMA: {
+                form.addObjectGetterSetter(F("plmsp"), FormGetterSetter(cfg.plasma, speed));
+                form.addFormUI(F("Speed"));
+                cfg.plasma.addRangeValidatorFor_speed(form);
+
                 form.addObjectGetterSetter(F("plma1"), FormGetterSetter(cfg.plasma, angle1));
-                form.addFormUI(F("Angle 1 Change"));
+                form.addFormUI(F("Angle 1"));
                 cfg.plasma.addRangeValidatorFor_angle1(form);
 
                 form.addObjectGetterSetter(F("plma2"), FormGetterSetter(cfg.plasma, angle2));
-                form.addFormUI(F("Angle 2 Change"));
+                form.addFormUI(F("Angle 2"));
                 cfg.plasma.addRangeValidatorFor_angle2(form);
 
                 form.addObjectGetterSetter(F("plma3"), FormGetterSetter(cfg.plasma, angle3));
-                form.addFormUI(F("Angle 3 Change"));
+                form.addFormUI(F("Angle 3"));
                 cfg.plasma.addRangeValidatorFor_angle3(form);
 
                 form.addObjectGetterSetter(F("plma4"), FormGetterSetter(cfg.plasma, angle4));
-                form.addFormUI(F("Angle 4 Change"));
+                form.addFormUI(F("Angle 4"));
                 cfg.plasma.addRangeValidatorFor_angle4(form);
 
-                form.addObjectGetterSetter(F("plmhs"), FormGetterSetter(cfg.plasma, hueShift));
+                form.addObjectGetterSetter(F("plmhs"), FormGetterSetter(cfg.plasma, hue_shift));
                 form.addFormUI(F("Hue Shift"));
-                cfg.plasma.addRangeValidatorFor_hueShift(form);
+                cfg.plasma.addRangeValidatorFor_hue_shift(form);
 
-                form.addObjectGetterSetter(F("plmhm"), FormGetterSetter(cfg.plasma, hueMul));
-                form.addFormUI(F("Hue Multiplier"));
-                cfg.plasma.addRangeValidatorFor_hueMul(form);
+                form.addObjectGetterSetter(F("plmxs"), FormGetterSetter(cfg.plasma, x_size));
+                form.addFormUI(F("X Size"));
+                cfg.plasma.addRangeValidatorFor_x_size(form);
 
-                form.addObjectGetterSetter(F("plmxd"), FormGetterSetter(cfg.plasma, xDiv));
-                form.addFormUI(F("X Divider"));
-                cfg.plasma.addRangeValidatorFor_xDiv(form);
-
-                form.addObjectGetterSetter(F("plmyd"), FormGetterSetter(cfg.plasma, yDiv));
-                form.addFormUI(F("Y Divider"));
-                cfg.plasma.addRangeValidatorFor_yDiv(form);
+                form.addObjectGetterSetter(F("plmys"), FormGetterSetter(cfg.plasma, y_size));
+                form.addFormUI(F("Y Size"));
+                cfg.plasma.addRangeValidatorFor_y_size(form);
             }
             break;
         case AnimationType::MAX:

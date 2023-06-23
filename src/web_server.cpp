@@ -40,6 +40,7 @@
 #    include "../src/plugins/weather_station/WeatherStationBase.h"
 #endif
 #include "spgm_auto_def.h"
+
 #if DEBUG_WEB_SERVER
 #    include <debug_helper_enable.h>
 #else
@@ -151,7 +152,7 @@ static inline const __FlashStringHelper *_getContentType(const String &path)
 
 const __FlashStringHelper *getContentType(const String &path)
 {
-    __LDBG_printf("getContentType(%s)", __S(path), __S(_getContentType(path)));
+    __LDBG_printf("getContentType(%s)=%s", __S(path), __S(_getContentType(path)));
     return _getContentType(path);
 }
 
@@ -447,6 +448,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
 
 bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *headers)
 {
+    __LDBG_printf("isHtmlContentType(%s)", __S(request->url()));
     if (headers) {
         // check if the output is html
         auto header = headers->find(F("Content-Type"));
@@ -488,6 +490,7 @@ bool Plugin::isHtmlContentType(AsyncWebServerRequest *request, HttpHeaders *head
         __LDBG_printf("accept %s", accept.c_str());
         return false;
     }
+    __LDBG_printf("return true");
     return true;
 }
 
@@ -504,11 +507,12 @@ bool Plugin::sendFileResponse(uint16_t code, const String &path, AsyncWebServerR
         if (!webTemplate->isAuthenticationSet()) {
             __LDBG_printf("not authenticated %s", path.c_str());
         }
-        auto response = new AsyncTemplateResponse(FSPGM(mime_text_html), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
+        AsyncWebServerResponse *response = new AsyncTemplateResponse(FSPGM(mime_text_html), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
         if (!response) {
             __LDBG_printf("memory allocation failed");
+            response = request->beginResponse(503);
         }
         if (code) {
             response->setCode(code);
@@ -585,23 +589,29 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
     request->send(response);
 }
 
+static String _getUrlAndPostDataFromRequest(AsyncWebServerRequest *request)
+{
+    auto url = PrintString(urlEncode(request->url(), F("\r\n\" ")));
+    if (request->args()) {
+        for(size_t i = 0; i < request->args(); i++) {
+            auto param = request->getParam(i);
+            url.printf_P(PSTR("%c%s=%s"), (i == 0 ? '?' : '&'), param->name().c_str(), urlEncode(param->value(), F("\r\n\" ?=")).c_str());
+        }
+    }
+    return url;
+}
+
 #if WEBSERVER_LOG_SERIAL
 
     void Plugin::_logRequest(AsyncWebServerRequest *request, AsyncWebServerResponse *response)
     {
+        __LDBG_printf("_logRequest(%s)", __S(request->url()));
         PrintString log;
         IPAddress(request->client()->getRemoteAddress()).printTo(log);
         log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
         log.print(request->methodToString());
         log.print(' ');
-        auto url = PrintString(urlEncode(request->url(), F("\r\n\" ")));
-        if (request->args()) {
-            for(size_t i = 0; i < request->args(); i++) {
-                auto param = request->getParam(i);
-                url.printf_P(PSTR("%c%s=%s"), (i == 0 ? '?' : '&'), param->name().c_str(), urlEncode(param->value(), F("\r\n\" ?=")).c_str());
-            }
-        }
-        log.print(url);
+        log.print(_getUrlAndPostDataFromRequest(request));
         if (response) {
             auto contentLength = response->getContentLength();
             auto contentLengthStr = contentLength ? String(contentLength) : String('-');
@@ -1278,6 +1288,7 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
 
 void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *request, PluginComponent &plugin)
 {
+    uint32_t code = 200;
     auto action = WebSocketAction::NONE;
     auto actionStr = request->arg(F("__websocket_action"));
     if (actionStr == F("discard")) {
@@ -1289,45 +1300,62 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
     else if (actionStr == F("apply")) {
         action = WebSocketAction::APPLY;
     }
+    __LDBG_printf("actionStr=%s action=%u", __S(actionStr), action);
 
     if (action == WebSocketAction::NONE) {
-        __LDBG_printf("plugin=%s form=%s invalid action=%s", getInstance().getName_P(), formName.c_str(), actionStr.c_str());
+        __LDBG_printf("plugin=%s form=%s invalid action=%s", plugin.getName_P(), formName.c_str(), actionStr.c_str());
+        code = 400;
     }
-    else if (!getInstance().canHandleForm(formName)) {
-        __LDBG_printf("plugin=%s cannot handle form=%s", getInstance().getName_P(), formName.c_str());
+    else if (!plugin.canHandleForm(formName)) {
+        __LDBG_printf("plugin=%s cannot handle form=%s", plugin.getName_P(), formName.c_str());
+        code = 404;
     }
     else {
         FormUI::Form::BaseForm *form = new SettingsForm(request);
-        getInstance().createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
+        plugin.createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
         bool modified = config.isDirty();
         if (action == WebSocketAction::DISCARD || !form->validate()) {
             modified = modified || form->hasChanged();
             // form->dump(DEBUG_OUTPUT, emptyString);
-            __LDBG_printf("plugin=%s discard config changed=%u dirty=%u modified=%u form=%s action=%s", getInstance().getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
+            __LDBG_printf("plugin=%s discard config changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
             if (modified) {
-                getInstance().createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
+                __LDBG_printf("discarding modified data");
+                plugin.createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
                 config.discard();
-                getInstance().reconfigure(formName);
+                plugin.reconfigure(formName);
             }
         }
         else {
             // form->dump(DEBUG_OUTPUT, emptyString);
             modified = modified || form->hasChanged();
-            __LDBG_printf("plugin=%s validated changed=%u dirty=%u modified=%u form=%s action=%s", getInstance().getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
-            getInstance().createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
+            __LDBG_printf("plugin=%s validated changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
+            plugin.createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
             if (action == WebSocketAction::SAVE && modified) {
+                __LDBG_printf("saving modified data");
                 // save current and previous changes from apply
                 config.write();
             }
             // only reconfigure if the form has changed
             // if config is dirty, those changes have been applied already
             if (form->hasChanged()) {
-                __LDBG_printf("reconfigure plugin=%s", getInstance().getName_P());
-                getInstance().reconfigure(formName);
+                __LDBG_printf("reconfigure plugin=%s", plugin.getName_P());
+                plugin.reconfigure(formName);
             }
         }
         delete form;
     }
+    #if WEBSERVER_LOG_SERIAL
+        {
+            PrintString log;
+            log.print(reinterpret_cast<const char *>(request->_tempObject));
+            log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
+            log.print(request->methodToString());
+            log.print(' ');
+            log.print(_getUrlAndPostDataFromRequest(request));
+            log.printf_P(PSTR(" HTTP/1.%u\" %d %u \"%s\""), request->version(), code, request->contentLength(), PSTR("application/x-www-form-urlencoded"));
+            Serial.println(log);
+        }
+    #endif
 }
 
 Plugin::Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(Plugin))

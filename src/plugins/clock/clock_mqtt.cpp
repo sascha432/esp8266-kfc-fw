@@ -13,14 +13,14 @@
 #    include <debug_helper_disable.h>
 #endif
 
-#if IOT_LED_STRIP
-#    define MQTT_NAME "rgb_led_strip"
-#elif IOT_LED_MATRIX_HEXAGON_PANEL
+#if IOT_LED_MATRIX_HEXAGON_PANEL
 #    define MQTT_NAME "rgb_hexagon_panel"
-#elif IOT_CLOCK
-#    define MQTT_NAME "clock"
+#elif IOT_LED_STRIP
+#    define MQTT_NAME "rgb_led_strip"
 #elif IOT_LED_MATRIX
 #    define MQTT_NAME "rgb_matrix"
+#elif IOT_CLOCK
+#    define MQTT_NAME "clock"
 #else
 #    error Unknown
 #endif
@@ -42,7 +42,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(static_cast<AutoDiscoverySwitchEnum>(num)) {
         case AutoDiscoverySwitchEnum::BRIGHTNESS: {
-            if (!discovery->create(this, MQTT_NAME, format)) {
+            if (!discovery->create(this, F(MQTT_NAME), format)) {
                 return discovery;
             }
             discovery->addStateTopicAndPayloadOnOff(MQTT::Client::formatTopic(FSPGM(_state)));
@@ -57,17 +57,17 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addEffectList(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNamesJsonArray());
             #if IOT_LED_MATRIX_HEXAGON_PANEL
                 discovery->addName(F("Hexagon Panel"));
-                discovery->addObjectId(baseTopic + F("Hexagon Panel"));
+                discovery->addObjectId(baseTopic + F("hexagon_panel"));
                 discovery->addIcon(F("mdi:hexagon-multiple-outline"));
             #elif IOT_LED_STRIP
-                discovery->addName(F("Strip"));
-                discovery->addObjectId(baseTopic + F("Strip"));
-            #elif IOT_CLOCK
-                discovery->addName(F("Clock"));
-                discovery->addObjectId(baseTopic + F("Clock"));
+                discovery->addName(F("LED Strip"));
+                discovery->addObjectId(baseTopic + F("led_strip"));
             #elif IOT_LED_MATRIX
                 discovery->addName(F("LED Matrix"));
-                discovery->addObjectId(baseTopic + F("LED Matrix"));
+                discovery->addObjectId(baseTopic + F("led_matrix"));
+            #elif IOT_CLOCK
+                discovery->addName(F("Clock"));
+                discovery->addObjectId(baseTopic + F("clock"));
             #else
                 #error Unknown type
             #endif

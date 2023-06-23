@@ -10,20 +10,17 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 1M with most features activated, no OTA updates<br>2M with OTA
 
+Running on a modified framework-arduinoespressif8266 v3.1.2
+
 ### ESP32
 
 4M and 8M with OTA
 
-**OTA for 4M is work in progress**
+Running on a modified framework-arduinoespressif32 v2.0.9
 
 ## ChangeLog
 
-**UPDATE**: First version with support for ESP32 with Arduino Core 2.0.0 is working, not all plugins are supported yet.
-
 **SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
-
-Starting with version 0.0.5, a modified Arduino framework is being used.
-https://github.com/sascha432/Arduino/tree/master
 
 [Version 0.0.8 (master)](./CHANGELOG.md)
 
@@ -49,7 +46,7 @@ https://github.com/sascha432/Arduino/tree/master
 ### ESP8266
 
 - GCC 10.x
-- Arduino Core 3.x with modified WString class
+- Modified framework-arduinoespressif8266 v3.1.2
 
 Since this device has not enough memory and CPU power, a SSL webserver is not possible for most environments. To secure a connection, use haproxy with a certificate from https://letsencrypt.org/. Something like *.mydomain.com and redirect all traffic to the devices. Like https://bathroom.mydomain.com to 192.168.0.88, Like https://kitchen.mydomain.com to 192.168.0.77, etc...
 
@@ -58,24 +55,23 @@ The modified version of the core is available on github and used by default
 | System Info | |
 |---|---|
 | Hardware | ESP8266 4.00MB Flash, 80 Mhz, Free RAM 22.56KB |
-| Software | KFC FW 0.0.5 Build 9509.3.0.2-17-g5266f22b-dev Aug 17 2021 18:12:25 |
-| Framework | Arduino ESP8266 3.0.1-dev 3.0.2-17-g5266f22b 0x5266f22b |
+| Framework | Arduino ESP8266 3.1.2 |
 | SDK | 2.2.2-dev(38a443e) |
 | Core | 3.0.2-17-g5266f22b=30002017 |
-| lwIP | STABLE-2_1_2_RELEASE/glue:1.2-48-g7421258/BearSSL:6105635 |
+| lwIP | lwIP:STABLE-2_1_3_RELEASE |
 
 ### ESP32
 
-- GCC 8.x with gnu++17
-- Arduino Core 2.x with modified WString class and ESP8266 compatibility extensions
+- GCC 8.4.x with gnu++17
+- Modified framework-arduinoespressif32 v2.0.9
 
 The modified version of the core is available on github and used by default. `framework-arduinoespressif32#feature/arduino-upstream` is used in order to get the GCC 8.x toolchain instead of 5.x
 
 | System Info | |
 |---|---|
-| Hardware  | ESP32 4.00MB Flash, 240 Mhz, Free RAM 154.59KB, Temperature 36.7°C |
-| Software | KFC FW 0.0.5 Build 9681 Aug 22 2021 18:18:35<br>ESP-IDF Version v4.4-dev-2313-gc69f0ec32  |
-| Framework | Arduino ESP32 2.0.0 |
+| Hardware | ESP32 4.00MB Flash, 240 Mhz, Free RAM 154.59KB, Temperature 36.7°C |
+| Framework | Arduino ESP32 2.0.9 |
+| SDK | ESP-IDF Version v4.4.4  |
 
 ## Libraries
 
@@ -219,6 +215,9 @@ Plugin based on the clock plugin to control a WS2812 LED matrix or LED string. T
 Support for motion detection sensors, LED power limit and temperature protection. A maximum of 1024 LEDs are supported.
 
 Compatible with my [EasyEDA WS2812 WiFi Controller](https://easyeda.com/sascha23095123423/iot_wifi_clock_controller)
+
+WLED compatible ESP32 controller, 4 outputs, 160W, max. 4096 LEDs (4x512 recommended for 60fps)
+[ESP32 WLED Controller](https://oshwlab.com/sascha23095123423/wled-controller_copy)
 
 ### Dimmer
 

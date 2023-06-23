@@ -27,6 +27,12 @@
 #    include <platforms/esp/32/clockless_rmt_esp32.h>
 #endif
 
+#if IOT_LED_MATRIX
+#    define LED_MATRIX_MENU_URI_PREFIX "led-matrix/"
+#else
+#    define LED_MATRIX_MENU_URI_PREFIX "clock/"
+#endif
+
 class ClockPlugin;
 
 namespace Clock {

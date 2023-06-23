@@ -62,7 +62,7 @@
                             dlg.find('.modal-body').html('<form>' + form.html() + '</form>');
                             dlg.addClass('modal-lg');
                             var form = dlg.find('form').on('submit', function(event) {
-console.log('form submit', $(this).serialize());
+// console.log('form submit', $(this).serialize());
                                 event.preventDefault();
                                 self.socket.send('+set ani-' + animation + ' ' + $(this).serialize());
                             });

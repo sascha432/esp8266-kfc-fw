@@ -31,6 +31,12 @@
 #    include <ArduinoOTA.h>
 #endif
 
+#if DEBUG_WEB_SERVER
+#    include <debug_helper_enable.h>
+#else
+#    include <debug_helper_disable.h>
+#endif
+
 class FileMapping;
 #if SECURITY_LOGIN_ATTEMPTS
     class FailureCounterContainer;
@@ -204,16 +210,16 @@ namespace WebServer {
     class AsyncWebServerRequestParser : public AsyncWebServerRequest
     {
     public:
-        enum { PARSE_REQ_START, PARSE_REQ_HEADERS, PARSE_REQ_BODY, PARSE_REQ_END, PARSE_REQ_FAIL };
-
-    public:
-        AsyncWebServerRequestParser(const String &postData) : AsyncWebServerRequest(nullptr, nullptr) {
-            // create fake request
+        AsyncWebServerRequestParser(const String &postData) :
+            AsyncWebServerRequest(nullptr, nullptr)
+        {
+            // create fake post request
             _method = HTTP_POST;
             _version = 1;
+            // parse body
             _parseState = PARSE_REQ_BODY;
             _contentLength = postData.length();
-            auto ptr = reinterpret_cast<uint8_t *>(const_cast<char *>(postData.c_str()));
+            auto ptr = reinterpret_cast<const uint8_t *>(postData.c_str());
             auto size = _contentLength;
             // prevent the parser from ending the state
             _contentLength += 2;
@@ -221,7 +227,9 @@ namespace WebServer {
             while(size--) {
                 _parsePlainPostChar(*ptr++);
             }
-            _parsePlainPostChar(0);
+            // terminate last key value pair
+            _parsePlainPostChar(uint8_t(0));
+            // request done, nothing else to do
             _parseState = PARSE_REQ_END;
         }
 
@@ -514,3 +522,7 @@ namespace WebServer {
 inline bool operator ==(const WebServer::AuthType &auth, bool value) {
     return (static_cast<int>(auth) >= static_cast<int>(WebServer::AuthType::ANY)) == value;
 }
+
+#if DEBUG_WEB_SERVER
+#    include <debug_helper_disable.h>
+#endif

@@ -157,20 +157,14 @@ MQTT::Json::UnnamedObject ClockPlugin::getWLEDJson()
 
 void ClockPlugin::createMenu()
 {
-    #if IOT_LED_MATRIX
-        #define MENU_URI_PREFIX "led-matrix/"
-    #else
-        #define MENU_URI_PREFIX "clock/"
-    #endif
-
     auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
     auto subMenu = configMenu.addSubMenu(getFriendlyName());
-    subMenu.addMenuItem(F("Settings"), F(MENU_URI_PREFIX "settings.html"));
-    subMenu.addMenuItem(F("Animations"), F(MENU_URI_PREFIX "animations.html"));
+    subMenu.addMenuItem(F("Settings"), F(LED_MATRIX_MENU_URI_PREFIX "settings.html"));
+    subMenu.addMenuItem(F("Animations"), F(LED_MATRIX_MENU_URI_PREFIX "animations.html"));
     #if IOT_LED_MATRIX_CONFIGURABLE
-        subMenu.addMenuItem(F("Matrix"), F(MENU_URI_PREFIX "matrix.html"));
+        subMenu.addMenuItem(F("Matrix"), F(LED_MATRIX_MENU_URI_PREFIX "matrix.html"));
     #endif
-    subMenu.addMenuItem(F("Protection"), F(MENU_URI_PREFIX "protection.html"));
+    subMenu.addMenuItem(F("Protection"), F(LED_MATRIX_MENU_URI_PREFIX "protection.html"));
 }
 
 void ClockPlugin::_setupTimer()

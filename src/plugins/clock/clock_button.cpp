@@ -247,6 +247,8 @@ void ClockPlugin::buttonCallback(ButtonType button, EventType eventType, uint16_
             }
         }
         break;
+        case ButtonType::MAX:
+            break;
     }
 }
 

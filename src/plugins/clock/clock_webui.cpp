@@ -129,6 +129,8 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         else if (id.startsWith(F("ani-"))) {
             // create AsyncWebServerRequest from web socket post data and submit form
             auto request = WebServer::AsyncWebServerRequestParser(value);
+            request.setUrl(PrintString(F("/" LED_MATRIX_MENU_URI_PREFIX "%s.html"), id.c_str()));
+            request._tempObject = (void *)strdup_P(WebUISocket::hasAuthenticatedClients() ? WebUISocket::getSender()->getClient()->remoteIP().toString().c_str() : PSTR("[WebSocket]"));
             WebServer::Plugin::getInstance().handleFormData(id, &request, *this);
         }
         else if (id == F("color")) {

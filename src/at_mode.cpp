@@ -1686,16 +1686,7 @@ void at_mode_serial_handle_event(String &commandString)
                     args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
                     args.print(F("ESP-IDF version %s"), esp_get_idf_version());
                 #else
-                    #if ARDUINO_ESP8266_DEV
-                        #ifndef ARDUINO_ESP8266_RELEASE_EX
-                            #define ARDUINO_ESP8266_RELEASE_EX _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " _STRINGIFY(ARDUINO_ESP8266_GIT_DESC) " " _STRINGIFY(ARDUINO_ESP8266_GIT_VER)
-                        #endif
-                    #else
-                        #ifndef ARDUINO_ESP8266_RELEASE_EX
-                            #define ARDUINO_ESP8266_RELEASE_EX ARDUINO_ESP8266_RELEASE
-                        #endif
-                    #endif
-                    args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE_EX));
+                    args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE " " _STRINGIFY(ARDUINO_ESP8266_VERSION)));
                 #endif
                 #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
                 {
@@ -1735,25 +1726,6 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                     #endif
                 #endif
-                PGM_P flashModeStr;
-                switch(ESP.getFlashChipMode()) {
-                    case FM_DIO:
-                        flashModeStr = PSTR("DIO");
-                        break;
-                    case FM_DOUT:
-                        flashModeStr = PSTR("DOUT");
-                        break;
-                    case FM_QIO:
-                        flashModeStr = PSTR("QIO");
-                        break;
-                    case FM_QOUT:
-                        flashModeStr = PSTR("QOUT");
-                        break;
-                    case FM_UNKNOWN:
-                    default:
-                        flashModeStr = PSTR("UNKNOWN");
-                        break;
-                }
 
                 #if ESP8266
                     args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
@@ -1764,14 +1736,18 @@ void at_mode_serial_handle_event(String &commandString)
                 #if ESP8266
                     args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
                     args.print(F("HEAP: 0x%08x-0x%08x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
-                    args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&flashModeStr, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&flashModeStr);
+                    {
+                        int stackAddresss = 0;
+                        args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&stackAddresss, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&stackAddresss);
+                    }
                 #endif
-                args.print(F("CPU frequency: %uMHz"), ESP.getCpuFreqMHz());
+                args.print(F("CPU frequency: %uMHz %u core(s)"), ESP.getCpuFreqMHz(), ESP.getChipCores());
                 #if ESP32
                     args.print(F("Chip model %s (%s)"), KFCFWConfiguration::getChipModel(), ESP.getChipModel());
+                    args.print(F("Flash size / mode: %s / %s"), formatBytes(ESP.getFlashChipSize()).c_str(), ESPGetFlashChipSpeedAndModeStr().c_str());
                 #elif ESP8266
                     args.print(F("Chip model %s"), KFCFWConfiguration::getChipModel());
-                    args.print(F("Flash size / Vendor / Mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), flashModeStr);
+                    args.print(F("Flash size / vendor / mode: %s / %02x / %s"), formatBytes(ESP.getFlashChipRealSize()).c_str(), ESP.getFlashChipVendorId(), ESPGetFlashChipSpeedAndModeStr().c_str());
                     args.print(F("SDK / Core: %s / %s"), ESP.getSdkVersion(), ESP.getFullVersion().c_str());
                     args.print(F("Boot mode: %u, %u"), ESP.getBootVersion(), ESP.getBootMode());
                 #endif
@@ -1787,6 +1763,7 @@ void at_mode_serial_handle_event(String &commandString)
                     PrintString tmp;
                     PinMonitor::pinMonitor.printStatus(tmp);
                     tmp.replace(F(HTML_S(br)), "\n");
+                    tmp.rtrim('\n');
                     args.print(tmp);
                 #endif
 

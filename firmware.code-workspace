@@ -354,6 +354,7 @@
             "FSTAT",
             "FSTR",
             "GDBSTUB",
+            "GETHANDLE",
             "GFXCANVAS",
             "GFXCANVASCOMPRESSED",
             "GPIE",

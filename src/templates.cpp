@@ -282,14 +282,17 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     // ------------------------------------------------------------------------------------
     else if (key == F("HARDWARE")) {
         #if ESP8266
-            output.printf_P(PSTR("ESP8266 %s Flash, %d Mhz, Free RAM %s"),
+            output.printf_P(PSTR("ESP8266 %s Flash %s, %d Mhz, Free RAM %s"),
                 formatBytes(ESP.getFlashChipRealSize()).c_str(),
+                ESPGetFlashChipSpeedAndModeStr().c_str(),
                 system_get_cpu_freq(),
                 formatBytes(ESP.getFreeHeap()).c_str()
             );
         #elif ESP32
-            output.printf_P(PSTR("ESP32 %s Flash, %d Mhz, Free RAM %s, "),
+            output.printf_P(PSTR("ESP32 %s Flash %s, %ux%d Mhz, Free RAM %s, "),
                 formatBytes(ESP.getFlashChipSize()).c_str(),
+                ESPGetFlashChipSpeedAndModeStr().c_str(),
+                ESP.getChipCores(),
                 ESP.getCpuFreqMHz(),
                 formatBytes(ESP.getFreeHeap()).c_str()
             );

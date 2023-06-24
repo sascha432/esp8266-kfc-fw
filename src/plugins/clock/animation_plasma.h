@@ -42,7 +42,7 @@ namespace Clock {
             float angle2 = _cfg.angle2 * t;
             float angle3 = _cfg.angle3 * t;
             float angle4 = _cfg.angle4 * t;
-            uint32_t hueShift = _cfg.hue_shift / (millisValue >> 14); // limit hue_shift to 16.384 per second
+            uint32_t hueShift = _cfg.hue_shift / ((millisValue >> 14) + 1); // limit hue_shift to 16.384 per second
 
             float x1, x2, x3, x4, y1, y2, y3, y4, sx1, sx2, sx3, sx4;
             sx1 = cos(angle1) * radius1 + centerX1;

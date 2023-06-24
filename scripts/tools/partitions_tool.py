@@ -19,9 +19,9 @@ partitions1 = [
     [ 'uf2',        'app',      'factory',    2048, '' ],
     # [ 'uf2',        'app',      'factory',    2432, '' ],
     [ 'eeprom',     'data',     'fat',           4, '' ],
-    [ 'savecrash',  'data',     'fat',          64, '' ],
+    [ 'savecrash',  'data',     'fat',          16, '' ],
     # [ 'savecrash',  'data',     'fat',          48, '' ],
-    [ 'kfcfw',      'data',     'fat',          64, '' ],
+    [ 'kfcfw',      'data',     'nvs',          64, '' ],
     # [ 'coredump',   'data',     'coredump',     16, '' ],
     [ 'spiffs',     'data',     'spiffs',        0, '' ],
 ]

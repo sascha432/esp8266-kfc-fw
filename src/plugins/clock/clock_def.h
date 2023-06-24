@@ -142,7 +142,7 @@
 #endif
 
 // pin for increasing brightness
-#ifndef IOT_LED_MATRIX_INCREASE_BRIGHTNESS
+#ifndef IOT_LED_MATRIX_INCREASE_BRIGHTNESS_PIN
 #    define IOT_LED_MATRIX_INCREASE_BRIGHTNESS_PIN -1
 #endif
 

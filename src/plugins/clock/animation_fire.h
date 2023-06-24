@@ -193,23 +193,22 @@ namespace Clock {
         void _copyTo(_Ta &output, uint32_t millisValue)
         {
             uint8_t mapping = ((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction ? 1 : 0));
-            for(CoordinateType i = 0; i < output.getRows(); i++) {
+            for(uint16_t i = 0; i < _lineCount; i++) {
                 auto &line = _lines[i];
-                for(CoordinateType j = 0; j < output.getCols(); j++) {
+                for(uint16_t j = 0; j < line.getNum(); j++) {
                     auto color = line.getHeatColor(j, _cfg.factor);
                     auto coords = PixelCoordinatesType(i, j);
                     switch(mapping) {
                         case 1:
-                            coords.invertColumn();
+                            coords.invertColumn(output.getCols());
                             break;
                         case 2:
                             coords.rotate();
                             break;
                         case 3:
                             coords.rotate();
-                            coords.invertColumn();
+                            coords.invertRow(output.getRows());
                             break;
-                        case 0:
                         default:
                             break;
                     }

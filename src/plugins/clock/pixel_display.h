@@ -80,9 +80,20 @@ namespace Clock {
         {
             _col = (kCols - 1) - _col;
         }
+
+        void invertColumn(CoordinateType numCols)
+        {
+            _col = (numCols - 1) - _col;
+        }
+
         void invertRow()
         {
             _row = (kRows - 1) - _row;
+        }
+
+        void invertRow(CoordinateType numRows)
+        {
+            _row = (numRows - 1) - _row;
         }
 
         void rotate()

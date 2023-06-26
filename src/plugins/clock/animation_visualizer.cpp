@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+#if IOT_LED_MATRIX_ENABLE_VISUALIZER
 
 #include "clock.h"
 #include "animation.h"

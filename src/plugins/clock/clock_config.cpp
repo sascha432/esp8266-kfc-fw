@@ -130,7 +130,7 @@ namespace KFCConfigurationClasses {
                     "Color Fade,"
                     "Fire,"
                     "Plasma,"
-                    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         "Visualizer,"
                     #endif
                     "Interleaved"
@@ -148,7 +148,7 @@ namespace KFCConfigurationClasses {
                     "\042Color Fade\042,"
                     "\042Fire\042,"
                     "\042Plasma\042,"
-                    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         "\042Visualizer\042,"
                     #endif
                     "\042Interleaved\042"
@@ -214,7 +214,7 @@ namespace KFCConfigurationClasses {
                         return F("Interleaved");
                     case AnimationType::SOLID:
                         return F("Solid");
-                    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         case AnimationType::VISUALIZER:
                             return F("Visualizer");
                     #endif
@@ -261,7 +261,7 @@ namespace KFCConfigurationClasses {
                         return F("interleaved");
                     case AnimationType::SOLID:
                         return F("solid");
-                    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         case AnimationType::VISUALIZER:
                             return F("visualizer");
                     #endif
@@ -300,7 +300,7 @@ namespace KFCConfigurationClasses {
                         return F("Interleaved Animation");
                     case AnimationType::SOLID:
                         return F("Solid Color");
-                    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         case AnimationType::VISUALIZER:
                             return F("Music Visualizer");
                     #endif

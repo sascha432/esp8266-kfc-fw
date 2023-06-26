@@ -335,16 +335,16 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             encoder->attachPins(IOT_CLOCK_ROTARY_ENC_PINA, IOT_CLOCK_ROTARY_ENC_PINB);
         #endif
 
+        #if IOT_LED_MATRIX_TOGGLE_PIN != -1
+            pinMonitor.attach<Clock::Button>(IOT_LED_MATRIX_TOGGLE_PIN, Clock::ButtonType::TOGGLE_ON_OFF, *this);
+        #endif
+
         #if IOT_LED_MATRIX_INCREASE_BRIGHTNESS_PIN != -1
             pinMonitor.attach<Clock::Button>(IOT_LED_MATRIX_INCREASE_BRIGHTNESS_PIN, Clock::ButtonType::INCREASE_BRIGHTNESS, *this);
         #endif
 
         #if IOT_LED_MATRIX_DECREASE_BRIGHTNESS_PIN != -1
             pinMonitor.attach<Clock::Button>(IOT_LED_MATRIX_DECREASE_BRIGHTNESS_PIN, Clock::ButtonType::DECREASE_BRIGHTNESS, *this);
-        #endif
-
-        #if IOT_LED_MATRIX_TOGGLE_PIN != -1
-            pinMonitor.attach<Clock::Button>(IOT_LED_MATRIX_TOGGLE_PIN, Clock::ButtonType::TOGGLE_ON_OFF, *this);
         #endif
 
         #if IOT_LED_MATRIX_NEXT_ANIMATION_PIN != -1
@@ -693,7 +693,7 @@ void ClockPlugin::getStatus(Print &output)
 
     #endif
 
-    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
         if (static_cast<Clock::AnimationType>(_config.animation) == Clock::AnimationType::VISUALIZER) {
             // auto &ani = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
             output.printf_P(PSTR(HTML_S(br) "UDP%s Active Port %u"), _config.visualizer.multicast ? PSTR(" Multicast") : PSTR(""), _config.visualizer.port);
@@ -791,7 +791,7 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
         case AnimationType::GRADIENT:
             _setAnimation(new Clock::GradientAnimation(*this, _config.gradient));
             break;
-        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        #if IOT_LED_MATRIX_ENABLE_VISUALIZER
             case  AnimationType::VISUALIZER:
                 _setAnimation(new Clock::VisualizerAnimation(*this, _getColor(), _config.visualizer));
                 break;
@@ -835,6 +835,10 @@ void ClockPlugin::readConfig(bool setup)
 
     #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         __LDBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+        _powerLevelAvg = NAN;
+        _powerLevelCurrentmW = 0;
+        _powerLevelUpdateTimer = 0;
+
         #if FASTLED_VERSION >= 3005000
             if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
                 FastLED.m_pPowerFunc = nullptr;
@@ -847,9 +851,9 @@ void ClockPlugin::readConfig(bool setup)
                 FastLED.setMaxPowerInMilliWatts(0);
             }
             else {
+                FastLED.setPowerConsumptionInMilliwattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
                 FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(, &calcPowerFunction));
             }
-            FastLED.setPowerConsumptionInMilliwattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
         #endif
     #endif
 

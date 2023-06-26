@@ -634,6 +634,7 @@ public:
             for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
                 Serial.printf_P(PSTR("%u=%u%c"), i, digitalRead(i), (i == NUM_DIGITAL_PINS - 1) ? '\n' : ' ');
             }
+            // Serial.println(PinMonitor::GPIO::read(), 2);
             // static const uint8_t pins[] PROGMEM = {36, 39};
             // auto ptr = pins;
             // for(uint8_t i = 0; i < sizeof(pins); i++) {
@@ -1686,8 +1687,9 @@ void at_mode_serial_handle_event(String &commandString)
                     args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
                     args.print(F("ESP-IDF version %s"), esp_get_idf_version());
                 #else
-                    args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE " " _STRINGIFY(ARDUINO_ESP8266_VERSION)));
+                    args.print(F(ARDUINO_ESP8266_RELEASE));
                 #endif
+                // args.print(F("Git describe: " KFCFW_GIT_DESCRIBE));
                 #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
                 {
                     String options;
@@ -1741,7 +1743,7 @@ void at_mode_serial_handle_event(String &commandString)
                         args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&stackAddresss, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&stackAddresss);
                     }
                 #endif
-                args.print(F("CPU frequency: %uMHz %u core(s)"), ESP.getCpuFreqMHz(), ESP.getChipCores());
+                args.print(F("CPU frequency: %uMHz %u core(s)"), ESP.getCpuFreqMHz(), ESPGetChipCores());
                 #if ESP32
                     args.print(F("Chip model %s (%s)"), KFCFWConfiguration::getChipModel(), ESP.getChipModel());
                     args.print(F("Flash size / mode: %s / %s"), formatBytes(ESP.getFlashChipSize()).c_str(), ESPGetFlashChipSpeedAndModeStr().c_str());

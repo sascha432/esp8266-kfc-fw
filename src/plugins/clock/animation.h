@@ -366,7 +366,7 @@ namespace Clock {
 
 #include "animation_plasma.h"
 
-#if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+#if IOT_LED_MATRIX_ENABLE_VISUALIZER
 #    include "animation_visualizer.h"
 #endif
 

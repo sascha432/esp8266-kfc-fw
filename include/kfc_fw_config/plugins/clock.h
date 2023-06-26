@@ -52,7 +52,7 @@ namespace KFCConfigurationClasses {
                 FADING,
                 FIRE,
                 PLASMA,
-                #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                     VISUALIZER,
                 #endif
                 INTERLEAVED,
@@ -235,7 +235,7 @@ namespace KFCConfigurationClasses {
                 }
             };
 
-            #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+            #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                 struct __attribute__packed__ VisualizerType {
                     using Type = VisualizerType;
                     enum class OrientationType : uint8_t {
@@ -266,8 +266,18 @@ namespace KFCConfigurationClasses {
                         FALLING_DOWN,
                         MAX,
                     };
+                    enum class AudioInputType : uint8_t {
+                        MIN = 0,
+                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
+                            UDP,
+                        #endif
+                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                            MICROPHONE,
+                        #endif
+                        MAX,
+                    };
 
-                    CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, 21324);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT);
                     CREATE_UINT32_BITFIELD_MIN_MAX(peak_falling_speed, 15, 250, 15000, 2500, 100);
                     CREATE_UINT32_BITFIELD_MIN_MAX(peak_extra_color, 1, 0, 1, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(vumeter_rows, 4, 0, 8, 1);
@@ -278,6 +288,7 @@ namespace KFCConfigurationClasses {
                     CREATE_ENUM_D_BITFIELD(peak_show, VisualizerPeakType, VisualizerPeakType::FALLING_DOWN);
                     CREATE_ENUM_D_BITFIELD(type, VisualizerAnimationType, VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D);
                     CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::HORIZONTAL);
+                    CREATE_ENUM_BITFIELD_SIZE_DEFAULT(input, 1, AudioInputType, std::underlying_type<AudioInputType>::type, uint8, AudioInputType(int(AudioInputType::MIN) + 1));
 
                     VisualizerType() :
                         port(kDefaultValueFor_port),
@@ -290,7 +301,8 @@ namespace KFCConfigurationClasses {
                         multicast(false),
                         peak_show(kDefaultValueFor_peak_show),
                         type(kDefaultValueFor_type),
-                        orientation(kDefaultValueFor_orientation)
+                        orientation(kDefaultValueFor_orientation),
+                        input(kDefaultValueFor_input)
                     {
                     }
                 };
@@ -372,7 +384,7 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT8_BITFIELD_MIN_MAX(method, 3, 1/*MIN + 1*/, 3/*MAX - 1*/, 1/*FASTLED*/, 1); // Clock::ShowMethodType
                 CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 6, 0, 60, 10, 1);
                 #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-                    CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 8, 0, 255, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 12, 0, 2047, 0, 1);
                 #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(brightness, 8, 0, 255, 255 / 4, 1);
                 #if !IOT_LED_MATRIX
@@ -398,7 +410,7 @@ namespace KFCConfigurationClasses {
                 AlarmType alarm;
                 InterleavedAnimationType interleaved;
                 PowerConfigType power;
-                #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                     VisualizerType visualizer;
                 #endif
                 #if IOT_LED_MATRIX_CONFIGURABLE
@@ -442,7 +454,7 @@ namespace KFCConfigurationClasses {
                         case AnimationType::FLASHING:
                         case AnimationType::INTERLEAVED:
                         case AnimationType::PLASMA:
-                        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                             case AnimationType::VISUALIZER:
                         #endif
                             return true;

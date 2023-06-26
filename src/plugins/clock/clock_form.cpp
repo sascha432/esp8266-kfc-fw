@@ -117,9 +117,10 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 form.addFormUI(FSPGM(Solid_Color));
             }
             break;
-        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        #if IOT_LED_MATRIX_ENABLE_VISUALIZER
             case AnimationType::VISUALIZER: {
                     using OrientationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::OrientationType;
+                    using AudioInputType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::AudioInputType;
                     using VisualizerAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerAnimationType;
                     using VisualizerPeakType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerPeakType;
                     auto orientationItems = FormUI::List(
@@ -179,7 +180,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     auto &showLoudnessPeaks = form.addObjectGetterSetter(F("v_lnp"), cfg.visualizer, cfg.visualizer.get_bits_vumeter_peaks, cfg.visualizer.set_bits_vumeter_peaks);
                     form.addFormUI(FormUI::Type::HIDDEN, FormUI::BoolItems(F("Yes"), F("No")));
 
-                    auto showVuMeterRows = FormUI::List(
+                    auto showVuMeterRowsItems = FormUI::List(
                         0, F("Disable"),
                         1, F("1 Row"),
                         2, F("2 Rows"),
@@ -191,7 +192,25 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         8, F("8 Rows")
                     );
                     form.addObjectGetterSetter(F("v_sln"), cfg.visualizer, cfg.visualizer.get_bits_vumeter_rows, cfg.visualizer.set_bits_vumeter_rows);
-                    form.addFormUI(F("Show VUMeter at the top"), FormUI::Type::SELECT, showVuMeterRows, FormUI::CheckboxButtonSuffix(showLoudnessPeaks, F("Show Peaks")));
+                    form.addFormUI(F("Show VUMeter at the top"), FormUI::Type::SELECT, showVuMeterRowsItems, FormUI::CheckboxButtonSuffix(showLoudnessPeaks, F("Show Peaks")));
+
+                    #if !IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT && !IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                    #    error No audio input type defined
+                    #endif
+
+                    auto inputTypeItems = FormUI::List(
+                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
+                            AudioInputType::UDP, F("UDP")
+                        #endif
+                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                            #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
+                                ,
+                            #endif
+                            AudioInputType::MICROPHONE, F("Microphone")
+                        #endif
+                    );
+                    form.addObjectGetterSetter(F("v_ait"), cfg.visualizer, cfg.visualizer.get_bits_input, cfg.visualizer.set_bits_input);
+                    form.addFormUI(F("Audio Input Source"), FormUI::Type::SELECT, inputTypeItems);
 
                     auto &multicast = form.addObjectGetterSetter(F("v_muca"), cfg.visualizer, cfg.visualizer.get_bit_multicast, cfg.visualizer.set_bit_multicast);
                     form.addFormUI(FormUI::Type::HIDDEN);
@@ -414,7 +433,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         _createConfigureFormAnimation(AnimationType::RAINBOW_FASTLED, form, cfg, TitleType::ADD_GROUP);
 
         // --------------------------------------------------------------------
-        #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+        #if IOT_LED_MATRIX_ENABLE_VISUALIZER
             _createConfigureFormAnimation(AnimationType::VISUALIZER, form, cfg, TitleType::ADD_GROUP);
         #endif
 
@@ -509,7 +528,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         #if IOT_CLOCK_HAVE_POWER_LIMIT
             form.addObjectGetterSetter(F("pl"), FormGetterSetter(cfg, power_limit));
             form.addFormUI(F("Limit Maximum Power"), FormUI::Suffix(F("Watt")), FormUI::IntAttribute(F("disabled-value"), 0));
-            cfg.addRangeValidatorFor_fading_time(form, true);
+            cfg.addRangeValidatorFor_power_limit(form, true);
         #endif
 
         form.addObjectGetterSetter(F("plr"), FormGetterSetter(cfg.power, red));

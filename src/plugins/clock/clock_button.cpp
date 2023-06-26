@@ -106,9 +106,26 @@ void ClockPlugin::setRotaryAction(uint8_t action)
 
 void ClockPlugin::buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount)
 {
+    LoopFunctions::callOnce([this, button, eventType, repeatCount]() {
+        _buttonCallback(button, eventType, repeatCount);
+    });
+}
+
+static constexpr int _getBrightnessChange(float pct)
+{
+    return ((pct * 255) / 100) + 1;
+}
+
+static constexpr int kBrightnessChangeClick = _getBrightnessChange(2);
+static constexpr int kBrightnessChangeLongPress = _getBrightnessChange(10);
+static constexpr int kBrightnessChangeHold = _getBrightnessChange(1);
+
+void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount)
+{
+    __LDBG_printf("button=%u event_type=%u repeat=%u", button, eventType, repeatCount);
     switch(button) {
-        case ButtonType::MAIN: {
-            #if IOT_CLOCK_BUTTON_PIN != -1
+        #if IOT_CLOCK_BUTTON_PIN != -1
+            case ButtonType::MAIN: {
                 switch (eventType) {
                     case EventType::PRESSED:
                         if (!_config.enabled) {
@@ -121,12 +138,7 @@ void ClockPlugin::buttonCallback(ButtonType button, EventType eventType, uint16_
                         )
                         break;
                     case EventType::LONG_PRESSED:
-                        if (_config.enabled) {
-                            _setState(false);
-                        }
-                        else {
-                            _setState(true);
-                        }
+                        _setState(!_config.enabled);
                         break;
                     case EventType::HOLD:
                         // start flashing red after 5 seconds and reboot 2 seconds later
@@ -167,92 +179,128 @@ void ClockPlugin::buttonCallback(ButtonType button, EventType eventType, uint16_
                     default:
                         break;
                 }
-            #endif
-        }
-        break;
-        case ButtonType::TOUCH: {
-            switch (eventType) {
-                case EventType::PRESSED:
-                case EventType::SINGLE_CLICK:
-                    if (!_config.enabled) {
-                        _setState(true);
-                    }
-                    break;
-                default:
-                    break;
             }
-        }
-        break;
-        case ButtonType::TOGGLE_ON_OFF: {
-            switch (eventType) {
-                case EventType::PRESSED:
-                case EventType::SINGLE_CLICK:
-                    if (!_config.enabled) {
-                        _setState(true);
-                    }
-                    else {
-                        _setState(false);
-                    }
-                    break;
-                #if IOT_LED_MATRIX_TOGGLE_PIN_LONG_PRESS_TYPE == 1
-                    case EventType::LONG_PRESSED:
+            break;
+        #endif
+
+        #if IOT_CLOCK_TOUCH_PIN != -1
+            case ButtonType::TOUCH: {
+                switch (eventType) {
+                    case EventType::PRESSED:
+                    case EventType::SINGLE_CLICK:
                         if (!_config.enabled) {
                             _setState(true);
                         }
-                        else {
-                            nextAnimation();
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        #endif
+
+        #if IOT_LED_MATRIX_TOGGLE_PIN != -1
+            case ButtonType::TOGGLE_ON_OFF: {
+                switch (eventType) {
+                    #if IOT_LED_MATRIX_TOGGLE_PIN_LONG_PRESS_TYPE == 0
+                        case EventType::LONG_PRESSED:
+                    #endif
+                    case EventType::PRESSED:
+                    case EventType::SINGLE_CLICK: {
+                        __LDBG_printf("toggle on off click turn %s", !_config.enabled ? PSTR("on") : PSTR("off"));
+                        _setState(!_config.enabled);
+                    }
+                    break;
+                    #if IOT_LED_MATRIX_TOGGLE_PIN_LONG_PRESS_TYPE == 1
+                        case EventType::HOLD:
+                            if (repeatCount != 1) { // if holding the button too long, LONG_PRESSED is omitted. simulate LONG_PRESSED for the first repeat
+                                break;
+                            }
+                            // fallthrough
+                        case EventType::LONG_PRESSED: {
+                            if (!_config.enabled) {
+                                __LDBG_printf("toggle long press turn on (was off)");
+                                _setState(true);
+                            }
+                            else {
+                                __LDBG_printf("toggle long press next animation");
+                                nextAnimation();
+                            }
                         }
                         break;
-                #endif
-                default:
-                    break;
+                    #endif
+                    default:
+                        break;
+                }
             }
-        }
-        break;
-        case ButtonType::NEXT_ANIMATION: {
-            switch (eventType) {
-                case EventType::PRESSED:
-                case EventType::SINGLE_CLICK:
-                    nextAnimation();
-                    break;
-                default:
-                    break;
+            break;
+        #endif
+
+        #if IOT_LED_MATRIX_NEXT_ANIMATION_PIN != -1
+            case ButtonType::NEXT_ANIMATION: {
+                switch (eventType) {
+                    case EventType::LONG_PRESSED:
+                        __LDBG_printf("first animation");
+                        setAnimation(AnimationType::SOLID);
+                        break;
+                    case EventType::PRESSED:
+                    case EventType::SINGLE_CLICK:
+                        __LDBG_printf("next animation");
+                        nextAnimation();
+                        break;
+                    default:
+                        break;
+                }
             }
-        }
-        break;
-        case ButtonType::INCREASE_BRIGHTNESS: {
-            switch (eventType) {
-                case EventType::PRESSED:
-                case EventType::SINGLE_CLICK:
-                    setBrightness(std::min(255, _targetBrightness + 8));
-                    break;
-                case EventType::HOLD:
-                    setBrightness(std::max(1, _targetBrightness + 1), 0);
-                    break;
-                default:
-                    break;
+            break;
+        #endif
+
+        #if IOT_LED_MATRIX_INCREASE_BRIGHTNESS_PIN != -1
+            case ButtonType::INCREASE_BRIGHTNESS: {
+                switch (eventType) {
+                    case EventType::PRESSED:
+                    case EventType::SINGLE_CLICK:
+                        setBrightness(std::min(255, _targetBrightness + kBrightnessChangeClick));
+                        break;
+                    case EventType::LONG_PRESSED:
+                        setBrightness(std::min(255, _targetBrightness + kBrightnessChangeLongPress));
+                        break;
+                    case EventType::HOLD:
+                        setBrightness(std::min(255, _targetBrightness + kBrightnessChangeHold));
+                        break;
+                    default:
+                        break;
+                }
             }
-        }
-        case ButtonType::DECREASE_BRIGHTNESS: {
-            switch (eventType) {
-                case EventType::PRESSED:
-                case EventType::SINGLE_CLICK:
-                    setBrightness(std::max(0, _targetBrightness - 8));
-                    break;
-                case EventType::HOLD:
-                    setBrightness(std::max(1, _targetBrightness - 1), 0);
-                    break;
-                default:
-                    break;
+            break;
+        #endif
+
+        #if IOT_LED_MATRIX_DECREASE_BRIGHTNESS_PIN != -1
+            case ButtonType::DECREASE_BRIGHTNESS: {
+                switch (eventType) {
+                    case EventType::PRESSED:
+                    case EventType::SINGLE_CLICK:
+                        setBrightness(std::max(1, _targetBrightness - kBrightnessChangeClick));
+                        break;
+                    case EventType::LONG_PRESSED:
+                        setBrightness(std::max(1, _targetBrightness - kBrightnessChangeLongPress));
+                        break;
+                    case EventType::HOLD:
+                        setBrightness(std::max(1, _targetBrightness - kBrightnessChangeHold));
+                        break;
+                    default:
+                        break;
+                }
             }
-        }
-        break;
-        case ButtonType::MAX:
+            break;
+        #endif
+
+        default:
             break;
     }
 }
 
-#if IOT_CLOCK_BUTTON_PIN!=-1
+#if IOT_CLOCK_BUTTON_PIN != -1
 
 // void ClockPlugin::onButtonHeld(Button& btn, uint16_t duration, uint16_t repeatCount)
 // {

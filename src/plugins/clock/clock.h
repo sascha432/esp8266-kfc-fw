@@ -237,7 +237,7 @@ public:
     using milliseconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1000>>;
     using NamedArray = PluginComponents::NamedArray;
-    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
         using VisualizerAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerAnimationType;
     #endif
     using FireAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::FireAnimationType;
@@ -383,9 +383,7 @@ public:
     void setAnimation(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
     void nextAnimation()
     {
-        auto tmp = int(_animation) + 1;
-        tmp %= int(AnimationType::MAX);
-        setAnimation(AnimationType(tmp), 1000);
+        setAnimation(AnimationType((_config.animation + 1) % int(AnimationType::MAX)), 1000);
     }
 
     uint16_t _blendTime{Clock::BlendAnimation::kDefaultTime};
@@ -465,20 +463,17 @@ public:
         void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
         void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
         void _calcPowerLevel();
-        float __getPowerLevel(float P_W, float min) const;
+        float __getPowerLevel(float P_Watt) const;
         uint32_t _getPowerLevelLimit(uint32_t P_Watt) const;
 
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
             float _getPowerLevel() const {
-                if (!_isEnabled || _tempBrightness == -1) {
-                    return NAN;
-                }
-                return __getPowerLevel(_powerLevelAvg / 1000.0, 1.039);
+                return __getPowerLevel(_powerLevelAvg / 1000.0);
             }
 
         private:
-            static constexpr uint32_t kPowerLevelUpdateRateMultiplier = 500000U;
+            static constexpr uint32_t kPowerLevelUpdateRateMultiplier = 500000;
 
             float _powerLevelAvg;
             uint32_t _powerLevelUpdateTimer{0};
@@ -559,6 +554,7 @@ private:
         using EventType = Clock::Button::EventType;
         using ButtonType = Clock::ButtonType;
         void buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount);
+        void _buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount);
 
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
             void rotaryCallback(bool decrease, uint32_t now);
@@ -684,7 +680,7 @@ public:
 private:
     friend Clock::LEDMatrixLoopOptions;
     friend Clock::ClockLoopOptions;
-    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
         friend Clock::VisualizerAnimation;
     #endif
 
@@ -814,9 +810,11 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
         }
     }
 
-    inline float ClockPlugin::__getPowerLevel(float P, float min) const
+    inline float ClockPlugin::__getPowerLevel(float P) const
     {
-        return std::max<float>(IOT_CLOCK_POWER_CORRECTION_OUTPUT);
+        #define PF(f) (P - (P * P * f / 1500.0))
+        return std::max<float>(0, IOT_CLOCK_POWER_CORRECTION_OUTPUT);
+        #undef PF
     }
 
     inline uint32_t ClockPlugin::_getPowerLevelLimit(uint32_t P_Watt) const
@@ -824,9 +822,7 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
         if (P_Watt == 0) {
             return ~0U; // unlimited
         }
-        // get the estimated power level and subtract it from the level set
-        // the correction can account for non linear power loss in thin cables due to high currents
-        auto diff = P_Watt - __getPowerLevel(P_Watt, 0);
+        auto diff = P_Watt - __getPowerLevel(P_Watt);
         return (P_Watt + diff) * 1000;
     }
 
@@ -1025,7 +1021,7 @@ inline void ClockPlugin::_setColor(uint32_t color, bool updateAnimation)
     if (_config.getAnimation() == AnimationType::SOLID) {
         _config.solid_color = __color;
     }
-    #if IOT_LED_MATRIX_ENABLE_UDP_VISUALIZER
+    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
         else if (_config.getAnimation() == AnimationType::VISUALIZER) {
             _config.visualizer.color = __color;
         }

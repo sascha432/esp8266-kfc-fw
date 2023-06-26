@@ -188,7 +188,7 @@ void RemoteControlPlugin::setup(SetupModeType mode, const PluginComponents::Depe
         auto pin = kButtonPins[buttonNum];
         auto time = DeepSleep::deepSleepPinState.getFirstPressed(pin);
         if (time) {
-            if ((GPIO::read() & _BV(pin)) == DeepSleep::PinState::activeLow()) {
+            if ((GPIO::read() & GPIO_PIN_TO_MASK(pin)) == DeepSleep::PinState::activeLow()) {
                 __LDBG_printf("queueEvent pin=%u button=%u", pin, buttonNum);
                 queueEvent(EventType::DOWN, buttonNum, 0, time / 1000U + 1, 0);
                 auto now = millis();

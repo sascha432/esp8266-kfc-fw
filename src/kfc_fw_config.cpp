@@ -723,10 +723,10 @@ const char __compile_date__[] PROGMEM = { __DATE__ " " __TIME__ };
 const String KFCFWConfiguration::getFirmwareVersion()
 {
     #if DEBUG
-        #if ARDUINO_ESP8266_DEV
-            return getShortFirmwareVersion() + F("." _STRINGIFY(ARDUINO_ESP8266_VERSION) "-dev " ) + FPSTR(__compile_date__);
+        #if ESP32
+            return getShortFirmwareVersion() + F("-" ARDUINO_ESP32_RELEASE " " ) + FPSTR(__compile_date__);
         #elif ESP8266
-            return getShortFirmwareVersion() + F("." ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
+            return getShortFirmwareVersion() + F("-" ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
         #else
             return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
         #endif

@@ -169,29 +169,21 @@ void ClockPlugin::_updatePowerLevelWebUI()
     }
 }
 
-// inline uint8_t _calculate_max_brightness_for_power_mW(uint8_t target_brightness, uint32_t max_power_mW, uint32_t)
-// {
-//     return calculate_max_brightness_for_power_mW(target_brightness, max_power_mW);
-// }
-
 uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
 {
     uint32_t requestedPower_mW;
-
     uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
-    if (targetBrightness && newBrightness == 0) { // brightness must not be 0
-        newBrightness = 1;
-    }
-    // static int counter=0;
-    // if (++counter%100==0)
-    //     __DBG_printf("brightness=%u target=%u max=%umW requested=%umW", newBrightness, targetBrightness, maxPower_mW, requestedPower_mW);
-
-    if (_config.enabled) {
-        _powerLevelCurrentmW = (targetBrightness == newBrightness) ? requestedPower_mW : maxPower_mW;
+    if (_isEnabled) {
+        _powerLevelCurrentmW = (targetBrightness <= newBrightness) ? requestedPower_mW : maxPower_mW;
         _calcPowerLevel();
     }
     else {
-        _powerLevelCurrentmW = 0;
+        #if IOT_LED_MATRIX_STANDBY_PIN
+            _powerLevelCurrentmW = 0;
+        #else
+            _powerLevelCurrentmW = calculate_idle_power_mW();
+        #endif
+        _powerLevelAvg = _powerLevelCurrentmW;
         _powerLevelUpdateTimer = 0;
     }
     return newBrightness;
@@ -205,7 +197,6 @@ void ClockPlugin::_webSocketCallback(WsClient::ClientCallbackType type, WsClient
     // adjust update rate if a client connects to the webui
     if (type == WsClient::ClientCallbackType::ON_START) {
         _powerLevelUpdateRate = (IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE * kPowerLevelUpdateRateMultiplier);
-        _calcPowerLevel();
     }
     else if (type == WsClient::ClientCallbackType::ON_END) {
         _powerLevelUpdateRate = (kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier);
@@ -222,7 +213,6 @@ void ClockPlugin::_calcPowerLevel()
         auto ms = micros();
         auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_diff(_powerLevelUpdateTimer, ms));
         _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
-        // __LDBG_printf("currentmW=%u diff=%f avgmW=%.3f", _powerLevelCurrentmW, diff, _powerLevelAvg);
         _powerLevelUpdateTimer = ms;
     }
 }

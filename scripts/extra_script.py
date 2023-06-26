@@ -53,6 +53,16 @@ sys.path.insert(0, path.abspath(path.join(env.subst("$PROJECT_DIR"), 'scripts', 
 
 verbose_flag = int(ARGUMENTS.get("PIOVERBOSE", 0))
 
+flags = " ".join(env["LINKFLAGS"])
+flags = flags.replace("-u _scanf_float", "")
+newflags = flags.split()
+
+env.Replace(LINKFLAGS=newflags)
+
+# import subprocess
+# result = subprocess.run(['git', 'describe'], stdout=subprocess.PIPE)
+# git_version = result.stdout.decode().strip(' \t\r\n')
+
 def verbose(msg, color=None):
     if not verbose_flag:
         return

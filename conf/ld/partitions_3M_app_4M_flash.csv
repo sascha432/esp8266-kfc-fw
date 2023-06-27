@@ -1,10 +1,13 @@
 # ESP-IDF Partition Table
 
-nvs, data, nvs, 0x9000, 24K, 
-phy_init, data, phy, 0xf000, 4K, 
-factory, app, factory, 0x10000, 3072K, 
+nvs, data, nvs, 0x9000, 20K, 
+phy_init, data, phy, 0xe000, 4K, 
+uf2, app, factory, 0x10000, 3072K, 
 eeprom, data, fat, 0x310000, 4K, 
-nvstest, data, nvs, 0x311000, 16K, 
-spiffs, data, spiffs, 0x315000, 640K, 
-kfcfw, data, nvs, 0x3b5000, 64K, 
-coredump, data, coredump, 0x3c5000, 232K, 
+kfcfw, data, nvs, 0x311000, 64K, 
+coredump, data, coredump, 0x321000, 192K, 
+savecrash, data, fat, 0x351000, 16K, 
+nvstest, data, nvs, 0x355000, 16K, 
+spiffs, data, spiffs, 0x359000, 640K, 
+
+# end_addr=0x3f8fff

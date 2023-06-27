@@ -11,9 +11,9 @@
 #include <Form.h>
 
 #if DEBUG_AT_MODE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 void AtModeArgs::ok() const

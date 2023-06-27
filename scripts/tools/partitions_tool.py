@@ -2,6 +2,7 @@
 import os
 import sys
 from os import path
+import copy
 
 # global config
 SECTOR_SIZE = None
@@ -15,6 +16,7 @@ OTA_1 = None
 OTA_SIZE = None
 NVS_SIZE = None
 SECTOR_SIZE = 4096
+KEEP_FREE_SIZE = SECTOR_SIZE * 8
 APP_OFS = 0x10000
 START_OFS = 0x9000
 OUTPUT_FILE = None
@@ -176,7 +178,7 @@ def get_total_size(start, end, partitions):
                 offset = app_ofs
 
             if auto_size == num:
-                size = free_bytes - SECTOR_SIZE
+                size = free_bytes - KEEP_FREE_SIZE
                 partitions[num][3] = size
 
             partitions[num][5] = offset
@@ -184,7 +186,7 @@ def get_total_size(start, end, partitions):
 
             # check of we still have space
             if offset>end:
-                raise Exception('size=0x%x exceeded by %d bytes' % (end, offset - end))
+                raise Exception('size=0x%x offset=0x%x' % (end, offset))
 
             num += 1
 
@@ -221,8 +223,10 @@ def create_partitions(filename, start, end, partitions):
             for value in flags:
                 if value.startswith('flags='):
                     (tmp, part_flags) = value.split('=', 2)
-            print('%s, %s, %s, 0x%x, %uK, %s' % (name, part_type, sub_type, offset, size / 1024, part_flags), file=file)
+            print('%s, %s, %s, 0x%x, %s, %s' % (name, part_type, sub_type, offset, size_to_K(size), part_flags), file=file)
             offset += size
+
+        print('\n# end_addr=0x%x' % (offset - 1), file=file);
 
     except Exception as e:
         raise e
@@ -258,7 +262,7 @@ for items in FILES:
     OTA_0 = get_size_in_bytes(OTA_0)
     OTA_1 = get_size_in_bytes(OTA_1)
     APP_SIZE = get_size_in_bytes(APP_SIZE)
-    NVS_SIZE = '6S'
+    NVS_SIZE = '5S'
 
     OTA_SIZE = (OTA_0!=None and OTA_0!=None) and '2S' or None
     if OTA_SIZE!=None:
@@ -275,35 +279,30 @@ for items in FILES:
         else:
             OUTPUT_FILE = 'partitions_' + size_to_M(APP_SIZE) +  '_app_' + spiffs + size_to_M(FLASH_SIZE) + '_flash.csv'
 
-    # print('# SECTOR_SIZE=%u' % (SECTOR_SIZE))
-    # print('# APP_OFS=0x%x' % (APP_OFS))
-    # print('# CORE_SIZE=0x%x' % (CORE_SIZE))
-    # print('# START_OFS=0x%x' % (start_addr))
-    # print('# END_OFS=0x%x' % (end_addr))
-
     # M for MByte   '1M'
     # K for KByte   '4K'
     # B for Byte   '4096B'
-    # P for pages/sectors   '1P'
+    # S for pages/sectors   '1S'
     # type int/float with Bytes
     # 0 too use all remaining space
     # use name = None or size = None to skip the entry
-    partitions1 = [
+    DEFAULT_PARTITIONS = [
         # Name,  Type,  SubType, Size, Flags
         [ 'nvs', 'data', 'nvs', NVS_SIZE ],
         [ 'phy_init', 'data', 'phy', '1S' ],
         [ 'otadata', 'data', 'ota', OTA_SIZE ],
-        [ 'factory', 'app', 'factory', APP_SIZE, ('app') ],
+        [ 'uf2', 'app', 'factory', APP_SIZE, ('app') ],
         [ 'app1', 'app', 'ota_0', OTA_0, ('app') ],
         [ 'app2', 'app', 'ota_1', OTA_1 ],
         [ 'eeprom', 'data', 'fat', '1S' ],
-        # [ 'savecrash', 'data', 'fat', '4S' ],
-        [ 'nvstest', 'data', 'nvs', '4S' ],
-        [ 'spiffs', 'data', 'spiffs',  SPIFF_SIZE ],
         [ 'kfcfw', 'data', 'nvs', '16S' ],
         [ 'coredump', 'data', 'coredump', CORE_SIZE ],
+        [ 'savecrash', 'data', 'fat', '4S' ],
+        [ 'nvstest', 'data', 'nvs', '4S' ],
+        [ 'spiffs', 'data', 'spiffs',  SPIFF_SIZE ],
     ]
 
-    create_partitions(OUTPUT_FILE, start_addr, end_addr, partitions1);
+
+    create_partitions(OUTPUT_FILE, start_addr, end_addr, copy.deepcopy(DEFAULT_PARTITIONS));
 
     OUTPUT_FILE = None

@@ -495,24 +495,8 @@ public:
     void lock()
     {
         Logger_warning("The LED subsystem has been locked cause of a crash or hard reset");
-        if (_isEnabled) {
-            _disable();
-        }
-        #if IOT_LED_MATRIX_STANDBY_PIN != -1
-            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
-            pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
-        #endif
-        _isLocked = true;
-        auto &cfg = Plugins::Clock::getWriteableConfig();
-        cfg.setInitialState(InitialStateType::OFF);
-        cfg.setAnimation(AnimationType::RAINBOW_FASTLED);
-        cfg.setBrightness(5);
-        config.write();
-        auto state = _getState();
-        state.setBrightness(5);
-        state.setEnabled(false);
-        state.setAnimation(Clock::AnimationType::RAINBOW_FASTLED);
-        _saveState();
+        _disable();
+        setBrightness(0);
     }
 
 private:

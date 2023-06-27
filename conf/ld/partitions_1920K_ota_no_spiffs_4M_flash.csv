@@ -6,6 +6,9 @@ otadata, data, ota, 0xe000, 8K,
 app1, app, ota_0, 0x10000, 1920K, 
 app2, app, ota_1, 0x1f0000, 1920K, 
 eeprom, data, fat, 0x3d0000, 4K, 
-nvstest, data, nvs, 0x3d1000, 16K, 
-kfcfw, data, nvs, 0x3d5000, 64K, 
-coredump, data, coredump, 0x3e5000, 64K, 
+kfcfw, data, nvs, 0x3d1000, 64K, 
+coredump, data, coredump, 0x3e1000, 64K, 
+savecrash, data, fat, 0x3f1000, 16K, 
+nvstest, data, nvs, 0x3f5000, 16K, 
+
+# end_addr=0x3f8fff

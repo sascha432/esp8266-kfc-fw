@@ -149,15 +149,6 @@ void delayedSetup(bool delayed)
 void setup()
 {
     #if ESP32
-        #if ESP32_SETUP_INPUT_PINS
-        {
-            // set these PINs to INPUT during boot
-            constexpr uint8_t pins[] = { ESP32_SETUP_INPUT_PINS };
-            for(const auto pin: pins) {
-                pinMode(pin, INPUT);
-            }
-        }
-        #endif
         resetDetector.armTimer();
     #endif
 

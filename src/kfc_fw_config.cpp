@@ -726,7 +726,11 @@ const String KFCFWConfiguration::getFirmwareVersion()
         #if ESP32
             return getShortFirmwareVersion() + F("-" ARDUINO_ESP32_RELEASE " " ) + FPSTR(__compile_date__);
         #elif ESP8266
+        #if ARDUINO_ESP8266_DEV
+        #else
             return getShortFirmwareVersion() + F("-" ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
+        #endif
+        return getShortFirmwareVersion() + F("-" ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
         #else
             return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
         #endif

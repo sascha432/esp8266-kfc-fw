@@ -1684,11 +1684,14 @@ void at_mode_serial_handle_event(String &commandString)
             #if 1
                 args.print(F("Device name: %s"), System::Device::getName());
                 #if ESP32
-                    args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
-                    args.print(F("ESP-IDF version %s"), esp_get_idf_version());
-                #else
-                    args.print(F(ARDUINO_ESP8266_RELEASE));
-                #endif
+                    #if ESP32
+                        args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
+                        args.print(F("ESP-IDF version %s-dev version"), esp_get_idf_version());
+                    #elif ESP8266
+                    #if ESPARDUINO_ESP8266_DEV
+                        args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE));
+                    #endif
+                    #endif
                 // args.print(F("Git describe: " KFCFW_GIT_DESCRIBE));
                 #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
                 {

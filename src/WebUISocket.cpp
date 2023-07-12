@@ -5,16 +5,16 @@
 #include <PrintString.h>
 #include <assert.h>
 #if ESP8266
-#include <interrupts.h>
+#    include <interrupts.h>
 #endif
+#include "WebUISocket.h"
 #include "plugins.h"
 #include "session.h"
-#include "WebUISocket.h"
 
 #if DEBUG_WEBUI
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using KFCConfigurationClasses::System;

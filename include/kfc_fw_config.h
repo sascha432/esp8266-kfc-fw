@@ -46,11 +46,23 @@
 #ifndef USE_WIFI_SET_EVENT_HANDLER_CB
 #    define USE_WIFI_SET_EVENT_HANDLER_CB 1
 #endif
-#if defined(ESP32)
+
+#if ESP32
 #    if USE_WIFI_SET_EVENT_HANDLER_CB == 0
 #        error ESP32 requires USE_WIFI_SET_EVENT_HANDLER_CB=1
 #    endif
 #endif
+
+#if ESP8266
+#    ifndef ARDUINO_ESP8266_RELEASE
+#        if ARDUINO_ESP8266_DEV
+#            define ARDUINO_ESP8266_RELEASE _STRINGIFY(ARDUINO_ESP8266_MAJOR) "." _STRINGIFY(ARDUINO_ESP8266_MINOR) "." _STRINGIFY(ARDUINO_ESP8266_REVISION) "-g%x-dev"
+#        else
+#            define ARDUINO_ESP8266_RELEASE _STRINGIFY(ARDUINO_ESP8266_MAJOR) "." _STRINGIFY(ARDUINO_ESP8266_MINOR) "." _STRINGIFY(ARDUINO_ESP8266_REVISION) "-g%x"
+#        endif
+#    endif
+#endif
+
 
 #include "kfc_fw_config_classes.h"
 

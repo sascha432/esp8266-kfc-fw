@@ -32,11 +32,3 @@ namespace KFCConfigurationClasses {
 
 static constexpr size_t ConfigFlagsSize = sizeof(KFCConfigurationClasses::System::Flags::ConfigFlags_t);
 static_assert(ConfigFlagsSize == sizeof(uint32_t), "size exceeded");
-
-#include <pop_pack.h>
-
-// #ifdef _H_DEFINED_KFCCONFIGURATIONCLASSES
-// #undef CONFIG_GET_HANDLE_STR
-// #undef _H
-// #undef _H_DEFINED_KFCCONFIGURATIONCLASSES
-// #endif

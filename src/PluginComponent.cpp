@@ -18,13 +18,12 @@
 #include "../src/plugins/plugins.h"
 
 #if DEBUG_PLUGINS
-#include "debug_helper_enable.h"
+#    include "debug_helper_enable.h"
 #else
-#include "debug_helper_disable.h"
+#    include "debug_helper_disable.h"
 #endif
 
 AUTO_STRING_DEF(__pure_virtual, "pure virtual call: %s\n")
-
 #define __DBG_panic_pure_virtual() \
     DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual), getName_P()); \
     __debugbreak_and_panic()

@@ -293,7 +293,7 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    #if defined(HAVE_IOEXPANDER)
+    #ifdef HAVE_IOEXPANDER
         auto &_PCF8574 = IOExpander::config._device;
         _PCF8574.DDR = 0b00111111;
         _PCF8574.PORT = 0xff;
@@ -557,7 +557,7 @@ void ClockPlugin::shutdown()
         }
     #endif
 
-    #if defined(HAVE_IOEXPANDER)
+    #ifdef HAVE_IOEXPANDER
         auto &_PCF8574 = IOExpander::config._device;
         _PCF8574.DDR = 0b00111111;
         _PCF8574.PORT = 0xff;

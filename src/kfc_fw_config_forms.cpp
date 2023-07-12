@@ -24,7 +24,6 @@ static FormUI::Container::List createWifiModes()
     );
 }
 
-
 void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     // auto scheduledTasks = File2String<const __FlashStringHelper *>(FSPGM(scheduler_config_file));

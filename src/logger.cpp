@@ -12,15 +12,15 @@
 #include "../src/plugins/plugins.h"
 
 #if DEBUG_LOGGER
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #if DEBUG
-#define ___DEBUG 1
+#    define ___DEBUG 1
 #else
-#define ___DEBUG 0
+#    define ___DEBUG 0
 #endif
 #undef DEBUG
 

@@ -45,7 +45,6 @@
                 "request": "launch",
                 "program": "${workspaceRoot}/scripts/tools/create_7segment_display.py",
                 "args": ["fonts"],
-                // "args": ["json", "--name", "clock_4"],
                 "console": "integratedTerminal"
             }
 		],
@@ -56,7 +55,7 @@
             "path": "."
         }
     ],
-	"settings": {
+    "settings": {
         "terminal.integrated.env.windows": {
             "PLATFORMIO_CALLER": "vscode",
         },
@@ -376,6 +375,7 @@
             "LIPO",
             "LITTLEFS",
             "MDNS",
+            "MEMNCPY",
             "MILLIS",
             "MILLIWATTS",
             "MIREDS",

@@ -2,8 +2,6 @@
   Author: sascha_lammers@gmx.de
 */
 
-#if AT_MODE_SUPPORTED
-
 #include <Arduino_compat.h>
 #include <../include/Syslog.h>
 #include <ReadADC.h>
@@ -31,14 +29,12 @@
 #include "blink_led_timer.h"
 #include "plugins.h"
 #include "PinMonitor.h"
+#include "../src/plugins/plugins.h"
+#include <stl_ext/memory.h>
+
 #if __LED_BUILTIN_WS2812_NUM_LEDS
 #    include <NeoPixelEx.h>
 #endif
-#if HAVE_IOEXPANDER
-#    include <IOExpander.h>
-#endif
-#include "../src/plugins/plugins.h"
-#include <stl_ext/memory.h>
 
 #if ESP8266
 #    include <umm_malloc/umm_malloc.h>
@@ -164,7 +160,7 @@ void at_mode_display_help_indent(Stream &output, PGM_P text)
     output.println();
 }
 
-// append progmem strings to output and replace any whitespace with a single space
+// append PROGMEM strings to output and replace any whitespace with a single space
 static void _appendHelpString(String &output, PGM_P str)
 {
     if (str && pgm_read_byte(str)) {
@@ -1345,11 +1341,11 @@ void at_mode_serial_handle_event(String &commandString)
 
     #if AT_MODE_HELP_SUPPORTED
 
-    // check if help is requested
-    if (commandString == '?' || commandString == 'h' || commandString == F("/?") || commandString == F("/help")) {
-        at_mode_generate_help(output);
-        return;
-    }
+        // check if help is requested
+        if (commandString == '?' || commandString == 'h' || commandString == F("/?") || commandString == F("/help")) {
+            at_mode_generate_help(output);
+            return;
+        }
 
     #endif
 
@@ -1684,14 +1680,11 @@ void at_mode_serial_handle_event(String &commandString)
             #if 1
                 args.print(F("Device name: %s"), System::Device::getName());
                 #if ESP32
-                    #if ESP32
-                        args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
-                        args.print(F("ESP-IDF version %s-dev version"), esp_get_idf_version());
-                    #elif ESP8266
-                    #if ESPARDUINO_ESP8266_DEV
-                        args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE));
-                    #endif
-                    #endif
+                    args.print(F("Framework Arduino ESP32 " ARDUINO_ESP32_RELEASE));
+                    args.print(F("ESP-IDF version %s-dev version"), esp_get_idf_version());
+                #elif ESP8266
+                    args.print(F("Framework Arduino ESP8266 " ARDUINO_ESP8266_RELEASE), ARDUINO_ESP8266_GIT_VER);
+                #endif
                 // args.print(F("Git describe: " KFCFW_GIT_DESCRIBE));
                 #if defined(HAVE_GDBSTUB) && HAVE_GDBSTUB
                 {
@@ -2941,5 +2934,3 @@ void at_mode_serial_input_handler(Stream &client)
         }
     }
 }
-
-#endif

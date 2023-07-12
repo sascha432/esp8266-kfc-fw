@@ -3,30 +3,28 @@
  */
 
 #include "../include/templates.h"
-#include <PrintString.h>
-#include <PrintHtmlEntitiesString.h>
-#include "PluginComponent.h"
-#include "kfc_fw_config.h"
-#include "build.h"
-#include "misc.h"
-#include "web_server.h"
-#include "status.h"
-#include "reset_detector.h"
-#include "plugins_menu.h"
 #include "../src/plugins/plugins.h"
-#include  "spgm_auto_def.h"
+#include "PluginComponent.h"
+#include "build.h"
+#include "kfc_fw_config.h"
+#include "plugins_menu.h"
 #include "save_crash.h"
+#include "spgm_auto_def.h"
+#include "status.h"
+#include "web_server.h"
+#include <PrintHtmlEntitiesString.h>
+#include <PrintString.h>
 #if ESP32
-#include <sdkconfig.h>
+#    include <sdkconfig.h>
 #endif
 #if IOT_WEATHER_STATION
-#include <../src/plugins/weather_station/weather_station.h>
+#    include <../src/plugins/weather_station/weather_station.h>
 #endif
 
 #if DEBUG_TEMPLATES
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using KFCConfigurationClasses::System;
@@ -282,14 +280,14 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     // ------------------------------------------------------------------------------------
     else if (key == F("HARDWARE")) {
         #if ESP8266
-            output.printf_P(PSTR("ESP8266 %s Flash %s, %d Mhz, Free RAM %s"),
+            output.printf_P(PSTR("ESP8266 %s Flash %s, %dMHz, Free RAM %s"),
                 formatBytes(ESP.getFlashChipRealSize()).c_str(),
                 ESPGetFlashChipSpeedAndModeStr().c_str(),
                 system_get_cpu_freq(),
                 formatBytes(ESP.getFreeHeap()).c_str()
             );
         #elif ESP32
-            output.printf_P(PSTR("ESP32 %s Flash %s, %ux%d Mhz, Free RAM %s, "),
+            output.printf_P(PSTR("ESP32 %s Flash %s, %ux%dMHz, Free RAM %s, "),
                 formatBytes(ESP.getFlashChipSize()).c_str(),
                 ESPGetFlashChipSpeedAndModeStr().c_str(),
                 ESP.getChipCores(),

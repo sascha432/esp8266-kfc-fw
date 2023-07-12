@@ -37,6 +37,7 @@
 #endif
 
 #if defined(ESP8266)
+#    include <core_esp8266_version.h>
 #    include <sntp.h>
 // #    include <sntp-lwip2.h>
 #elif defined(ESP32)
@@ -410,26 +411,26 @@ void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPM
     struct WiFiEventStationModeConnectedEx : WiFiEventStationModeConnected {
         WiFiEventStationModeConnectedEx(const uint8_t *_ssid, size_t ssidLen, const uint8_t *_bssid, size_t bssidLen, uint8_t channel) : WiFiEventStationModeConnected({String(), {}, channel}) {
             ssid.concat(reinterpret_cast<const char *>(_ssid), ssidLen);
-            memcpy_P(bssid, _bssid, std::min(sizeof(bssid), bssidLen));
+            memcpy_P(bssid, _bssid, std::min<size_t>(sizeof(bssid), bssidLen));
         }
     };
 
     struct WiFiEventStationModeDisconnectedEx : WiFiEventStationModeDisconnected {
         WiFiEventStationModeDisconnectedEx(const uint8_t *_ssid, size_t ssidLen, const uint8_t *_bssid, size_t bssidLen, uint8_t reason) : WiFiEventStationModeDisconnected({String(), {}, static_cast<WiFiDisconnectReason>(reason)}) {
             ssid.concat(reinterpret_cast<const char *>(_ssid), ssidLen);
-            memcpy_P(bssid, _bssid, std::min(sizeof(bssid), bssidLen));
+            memcpy_P(bssid, _bssid, std::min<size_t>(sizeof(bssid), bssidLen));
         }
     };
 
     struct WiFiEventSoftAPModeStationDisconnectedEx : WiFiEventSoftAPModeStationDisconnected {
         WiFiEventSoftAPModeStationDisconnectedEx(const uint8_t *_mac, size_t macLen, uint8_t aid) : WiFiEventSoftAPModeStationDisconnected({{}, aid}) {
-            memcpy_P(mac, _mac, std::min(sizeof(mac), macLen));
+            memcpy_P(mac, _mac, std::min<size_t>(sizeof(mac), macLen));
         }
     };
 
     struct WiFiEventSoftAPModeStationConnectedEx : WiFiEventSoftAPModeStationConnected {
         WiFiEventSoftAPModeStationConnectedEx(uint8_t rssi, const uint8_t *_mac, size_t macLen) : WiFiEventSoftAPModeStationConnected({static_cast<uint8_t>(rssi), {}}) {
-            memcpy_P(mac, _mac, std::min(sizeof(mac), macLen));
+            memcpy_P(mac, _mac, std::min<size_t>(sizeof(mac), macLen));
         }
     };
 
@@ -726,11 +727,7 @@ const String KFCFWConfiguration::getFirmwareVersion()
         #if ESP32
             return getShortFirmwareVersion() + F("-" ARDUINO_ESP32_RELEASE " " ) + FPSTR(__compile_date__);
         #elif ESP8266
-        #if ARDUINO_ESP8266_DEV
-        #else
-            return getShortFirmwareVersion() + F("-" ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
-        #endif
-        return getShortFirmwareVersion() + F("-" ARDUINO_ESP8266_RELEASE " " ) + FPSTR(__compile_date__);
+            return getShortFirmwareVersion() + PrintString(F("-" ARDUINO_ESP8266_RELEASE " "), ARDUINO_ESP8266_GIT_VER) + FPSTR(__compile_date__);
         #else
             return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
         #endif

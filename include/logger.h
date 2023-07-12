@@ -9,9 +9,7 @@
 #include <Arduino_compat.h>
 #include <PrintString.h>
 #include <EnumHelper.h>
-#if ESP32
-#    include <Mutex.h>
-#endif
+#include <Mutex.h>
 
 #ifndef DEBUG_LOGGER
 #    define DEBUG_LOGGER (0 || defined(DEBUG_ALL))
@@ -21,17 +19,17 @@
 #    define LOGGER_SERIAL_OUTPUT 1
 #endif
 
-#define Logger_error    _logger.error
-#define Logger_security _logger.security
-#define Logger_warning  _logger.warning
-#define Logger_notice   _logger.notice
-#define Logger_debug    _logger.debug
-
 #if DEBUG_LOGGER
 #    include <debug_helper_enable.h>
 #else
 #    include <debug_helper_disable.h>
 #endif
+
+#define Logger_error    _logger.error
+#define Logger_security _logger.security
+#define Logger_warning  _logger.warning
+#define Logger_notice   _logger.notice
+#define Logger_debug    _logger.debug
 
 class Logger;
 class SyslogStream;

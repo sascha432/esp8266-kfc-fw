@@ -11,11 +11,11 @@
 #include <kfc_fw_config.h>
 #include "failure_counter.h"
 
-#if DEBUG_LOGIN_FAILURES
-#include <debug_helper_enable.h>
-#else
-#include <debug_helper_disable.h>
-#endif
+#    if DEBUG_LOGIN_FAILURES
+#        include <debug_helper_enable.h>
+#    else
+#        include <debug_helper_disable.h>
+#    endif
 
 using KFCConfigurationClasses::System;
 

@@ -8,9 +8,9 @@
 #include "save_crash.h"
 
 #if DEBUG_CONFIG_CLASS
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameDeviceConfig_t, "MainConfig().system.device.cfg");

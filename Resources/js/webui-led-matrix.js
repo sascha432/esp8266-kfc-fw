@@ -81,7 +81,7 @@
 
                             $.formInitFunc(dlg);
                             $.initFormLedMatrixFunc();
-
+                            $.addFormHelp(true);
 
                         }).fail(modal_error);
                     }).on('hidden.bs.modal', function() {

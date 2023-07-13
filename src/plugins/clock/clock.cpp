@@ -82,7 +82,6 @@ ClockPlugin::ClockPlugin() :
     _isRunning(false),
     _isLocked(false),
     _display(),
-    __color(0, 0, 0xff),
     _lastUpdateTime(0),
     _tempOverride(0),
     _tempBrightness(1.0),
@@ -483,12 +482,13 @@ void ClockPlugin::reconfigure(const String &source)
         // do not reset just apply new config
         _config.enabled = false;
         _isEnabled = false;
+        readConfig(true);
     }
     else {
         // reset entire state and all pixels
         _disable();
+        readConfig(false);
     }
-    readConfig(false);
 
     endIRReceiver();
     beginIRReceiver();

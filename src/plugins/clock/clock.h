@@ -639,6 +639,8 @@ private:
     // while fading between different levels it returns the current level
     float _getFadingBrightness() const;
 
+    KFCConfigurationClasses::Plugins::ClockConfigNS::ColorType &_getColorVar();
+
     // set current color
     // store color in config as solid_color if no animation is active
     void _setColor(uint32_t color, bool updateAnimation = true);
@@ -681,7 +683,6 @@ private:
 
     Clock::DisplayType _display;
 
-    Color __color;
     uint32_t _lastUpdateTime;
     uint8_t _tempOverride;
     float _tempBrightness;
@@ -999,25 +1000,32 @@ inline void ClockPlugin::setColorAndRefresh(Color color)
     _schedulePublishState = true;
 }
 
+inline KFCConfigurationClasses::Plugins::ClockConfigNS::ColorType &ClockPlugin::_getColorVar()
+{
+    switch(_config.getAnimation()) {
+        case AnimationType::FLASHING:
+            return _config.flashing_color;
+        #if IOT_LED_MATRIX_ENABLE_VISUALIZER
+            case AnimationType::VISUALIZER:
+                return _config.visualizer.color;
+        #endif
+        default:
+            break;
+    }
+    return _config.solid_color;
+}
+
 inline void ClockPlugin::_setColor(uint32_t color, bool updateAnimation)
 {
-    __color = color;
-    if (_config.getAnimation() == AnimationType::SOLID) {
-        _config.solid_color = __color;
-    }
-    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-        else if (_config.getAnimation() == AnimationType::VISUALIZER) {
-            _config.visualizer.color = __color;
-        }
-    #endif
+    _getColorVar() = color;
     if (updateAnimation && _animation) {
-        _animation->setColor(__color);
+        _animation->setColor(color);
     }
 }
 
 inline uint32_t ClockPlugin::_getColor() const
 {
-    return __color;
+    return const_cast<ClockPlugin *>(this)->_getColorVar();
 }
 
 inline Clock::ClockConfigType &ClockPlugin::getWriteableConfig()

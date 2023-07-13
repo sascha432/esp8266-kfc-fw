@@ -1238,12 +1238,14 @@ static uintptr_t translateAddress(String str) {
         else if (str.startsWithIgnoreCase(F("nvs_e"))) {
             return (uintptr_t)&_NVS_end;
         }
-        else if (str.startsWithIgnoreCase(F("nvs2"))) {
-            return (uintptr_t)&_NVS2_start;
-        }
-        else if (str.startsWithIgnoreCase(F("nvs2_e"))) {
-            return (uintptr_t)&_NVS2_end;
-        }
+        #if ESP32
+            else if (str.startsWithIgnoreCase(F("nvs2"))) {
+                return (uintptr_t)&_NVS2_start;
+            }
+            else if (str.startsWithIgnoreCase(F("nvs2_e"))) {
+                return (uintptr_t)&_NVS2_end;
+            }
+        #endif
         else if (str.startsWithIgnoreCase(F("savecrash"))) {
             return (uintptr_t)&_SAVECRASH_start;
         }
@@ -1737,7 +1739,9 @@ void at_mode_serial_handle_event(String &commandString)
                 args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS + 4096);
                 args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS + 4096);
                 args.print(F("NVS: 0x%x/%u"), SECTION_NVS_START_ADDRESS, SECTION_NVS_END_ADDRESS - SECTION_NVS_START_ADDRESS + 4096);
-                args.print(F("NVS2: 0x%x/%u"), SECTION_NVS2_START_ADDRESS, SECTION_NVS2_END_ADDRESS - SECTION_NVS2_START_ADDRESS + 4096);
+                #if ESP32
+                    args.print(F("NVS2: 0x%x/%u"), SECTION_NVS2_START_ADDRESS, SECTION_NVS2_END_ADDRESS - SECTION_NVS2_START_ADDRESS + 4096);
+                #endif
                 #if ESP8266
                     args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
                     args.print(F("HEAP: 0x%08x-0x%08x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);

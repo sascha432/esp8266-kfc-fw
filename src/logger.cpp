@@ -174,7 +174,7 @@ String Logger::_getLogFilename(Level logLevel)
                 break;
         }
     }
-    return FSPGM(logger_filename_messags, "/.logs/messages");
+    return FSPGM(logger_filename_messages, "/.logs/messages");
 }
 
 void Logger::_closeLog(File file)

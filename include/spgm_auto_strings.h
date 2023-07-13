@@ -370,7 +370,7 @@ PROGMEM_STRING_DECL(lock_channels);
 PROGMEM_STRING_DECL(logger_filename_access);
 PROGMEM_STRING_DECL(logger_filename_debug);
 PROGMEM_STRING_DECL(logger_filename_error);
-PROGMEM_STRING_DECL(logger_filename_messags);
+PROGMEM_STRING_DECL(logger_filename_messages);
 PROGMEM_STRING_DECL(logger_filename_security);
 PROGMEM_STRING_DECL(logger_filename_warning);
 PROGMEM_STRING_DECL(login_html);

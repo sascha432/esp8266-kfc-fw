@@ -287,7 +287,7 @@ PROGMEM_STRING_DEF(lock_channels, "lock_channels");
 PROGMEM_STRING_DEF(logger_filename_access, "/.logs/access");
 PROGMEM_STRING_DEF(logger_filename_debug, "/.logs/debug");
 PROGMEM_STRING_DEF(logger_filename_error, "/.logs/error");
-PROGMEM_STRING_DEF(logger_filename_messags, "/.logs/messages");
+PROGMEM_STRING_DEF(logger_filename_messages, "/.logs/messages");
 PROGMEM_STRING_DEF(logger_filename_security, "/.logs/security");
 PROGMEM_STRING_DEF(logger_filename_warning, "/.logs/warning");
 PROGMEM_STRING_DEF(login_html, "/login.html");

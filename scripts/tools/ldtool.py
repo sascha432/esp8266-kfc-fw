@@ -45,8 +45,6 @@ def create_eagle_ld(file, split):
             '_FS_block': 0x02000,
             '_NVS_start': split['nvs'][0],
             '_NVS_end': split['nvs'][1] - 4095,
-            '_NVS2_start': split['nvs2'][0],
-            '_NVS2_end': split['nvs2'][1] - 4095,
             '_SAVECRASH_start': split['savecrash'][0],
             '_SAVECRASH_end': split['savecrash'][1] - 4095,
             '_EEPROM_start': split['eeprom'][0],
@@ -78,13 +76,15 @@ if not os.path.isdir(eagle_dir):
     print('cannot find: %s' % eagle_dir)
     sys.exit(-1)
 
+nvs_size = 32
+nvs_size = 1 # set to 1 to disable
+
 # 4/1
 split = {
     'sketch': 0x40200000,
     'empty': 0x402FEFF0,
     'fs': 0x40500000,
-    'nvs': 0x405FB000 - ((8 + 40 + 32) * 0x1000),        # 8 x 4096 byte = 32K
-    'nvs2': 0x405FB000 - ((40 + 32) * 0x1000),         # 40 x 4096 byte = 160K
+    'nvs': 0x405FB000 - ((nvs_size + 32) * 0x1000),
     'savecrash': 0x405FB000 - (32 * 0x1000),           # 32 x 4096 byte = 128K
     'eeprom': 0x405FB000,
     'rfcal': 0x405FC000,
@@ -98,8 +98,7 @@ split = {
     'sketch': 0x40200000,
     'empty': 0x402FEFF0,
     'fs': 0x40400000,
-    'nvs': 0x405FB000 - ((8 + 40 + 32) * 0x1000),        # 8 x 4096 byte = 32K
-    'nvs2': 0x405FB000 - ((40 + 32) * 0x1000),         # 40 x 4096 byte = 160K
+    'nvs': 0x405FB000 - ((nvs_size + 32) * 0x1000),
     'savecrash': 0x405FB000 - (32 * 0x1000),           # 32 x 4096 byte = 128K
     'eeprom': 0x405FB000,
     'rfcal': 0x405FC000,

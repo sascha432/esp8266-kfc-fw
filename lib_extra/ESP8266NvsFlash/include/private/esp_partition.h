@@ -104,6 +104,14 @@ typedef struct {
     bool encrypted;                     /*!< flag is set to true if partition is encrypted */
 } esp_partition_t;
 
+// internal iterator structure
+struct esp_partition_iterator_opaque_ {
+    const esp_partition_t *partition;
+    const esp_partition_t *next;
+    esp_partition_iterator_opaque_() : partition(nullptr), next(nullptr) {}
+};
+
+
 /**
  * @brief Find partition based on one or more parameters
  *

@@ -13,6 +13,8 @@
 // limitations under the License.
 #pragma once
 
+#include "nvs_common.h"
+
 #ifdef LINUX_TARGET
 
 namespace nvs {
@@ -31,41 +33,15 @@ namespace nvs {
 
     class Lock {
     public:
-        Lock()
-        {
-            if (mSemaphore) {
-                xSemaphoreTake(mSemaphore, portMAX_DELAY);
-            }
-        }
-
-        ~Lock()
-        {
-            if (mSemaphore) {
-                xSemaphoreGive(mSemaphore);
-            }
-        }
+        Lock();
+        ~Lock();
 
         static esp_err_t init()
         {
-            if (mSemaphore) {
-                return ESP_OK;
-            }
-            mSemaphore = xSemaphoreCreateMutex();
-            if (!mSemaphore) {
-                return ESP_ERR_NO_MEM;
-            }
             return ESP_OK;
         }
 
-        static void uninit()
-        {
-            if (mSemaphore) {
-                vSemaphoreDelete(mSemaphore);
-            }
-            mSemaphore = nullptr;
-        }
-
-        xSemaphoreHandle mSemaphore;
+        static void uninit() { }
     };
 
 } // namespace nvs

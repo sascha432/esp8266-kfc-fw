@@ -1,4 +1,3 @@
-#include "esp_partition.h"
 #include "nvs_partition_lookup.hpp"
 
 #ifdef CONFIG_NVS_ENCRYPTION

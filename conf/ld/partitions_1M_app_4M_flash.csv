@@ -4,10 +4,9 @@ nvs, data, nvs, 0x9000, 20K,
 phy_init, data, phy, 0xe000, 4K, 
 uf2, app, factory, 0x10000, 1024K, 
 eeprom, data, fat, 0x110000, 4K, 
-kfcfw, data, nvs, 0x111000, 64K, 
-coredump, data, coredump, 0x121000, 64K, 
-savecrash, data, fat, 0x131000, 16K, 
-nvstest, data, nvs, 0x135000, 16K, 
-spiffs, data, spiffs, 0x139000, 2816K, 
+nvs2, data, nvs, 0x111000, 160K, 
+coredump, data, coredump, 0x139000, 64K, 
+savecrash, data, fat, 0x149000, 16K, 
+spiffs, data, spiffs, 0x14d000, 2752K, 
 
-# end_addr=0x3f8fff
+# end_addr=0x3fcfff

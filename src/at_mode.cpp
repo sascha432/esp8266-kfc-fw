@@ -1232,11 +1232,17 @@ static uintptr_t translateAddress(String str) {
         else if (str.startsWithIgnoreCase(F("fs_e"))) {
             return (uintptr_t)&_FS_end;
         }
-        else if (str.startsWithIgnoreCase(F("kfc"))) {
-            return (uintptr_t)&_KFCFW_start;
+        else if (str.startsWithIgnoreCase(F("nvs"))) {
+            return (uintptr_t)&_NVS_start;
         }
-        else if (str.startsWithIgnoreCase(F("kfcfw_e")) || str.startsWithIgnoreCase(F("kfc_e"))) {
-            return (uintptr_t)&_KFCFW_end;
+        else if (str.startsWithIgnoreCase(F("nvs_e"))) {
+            return (uintptr_t)&_NVS_end;
+        }
+        else if (str.startsWithIgnoreCase(F("nvs2"))) {
+            return (uintptr_t)&_NVS2_start;
+        }
+        else if (str.startsWithIgnoreCase(F("nvs2_e"))) {
+            return (uintptr_t)&_NVS2_end;
         }
         else if (str.startsWithIgnoreCase(F("savecrash"))) {
             return (uintptr_t)&_SAVECRASH_start;
@@ -1730,13 +1736,14 @@ void at_mode_serial_handle_event(String &commandString)
                 #endif
                 args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS + 4096);
                 args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS + 4096);
-                args.print(F("KFCFW: 0x%x/%u"), SECTION_KFCFW_START_ADDRESS, SECTION_KFCFW_END_ADDRESS - SECTION_KFCFW_START_ADDRESS + 4096);
+                args.print(F("NVS: 0x%x/%u"), SECTION_NVS_START_ADDRESS, SECTION_NVS_END_ADDRESS - SECTION_NVS_START_ADDRESS + 4096);
+                args.print(F("NVS2: 0x%x/%u"), SECTION_NVS2_START_ADDRESS, SECTION_NVS2_END_ADDRESS - SECTION_NVS2_START_ADDRESS + 4096);
                 #if ESP8266
                     args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
                     args.print(F("HEAP: 0x%08x-0x%08x/%u"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, SECTION_HEAP_END_ADDRESS - SECTION_HEAP_START_ADDRESS);
                     {
-                        int stackAddresss = 0;
-                        args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&stackAddresss, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&stackAddresss);
+                        int stackAddress = 0;
+                        args.print(F("Stack: 0x%08x-0x%08x/%u"), (uint32_t)&stackAddress, SECTION_STACK_END_ADDRESS, SECTION_STACK_END_ADDRESS - (uint32_t)&stackAddress);
                     }
                 #endif
                 args.print(F("CPU frequency: %uMHz %u core(s)"), ESP.getCpuFreqMHz(), ESPGetChipCores());

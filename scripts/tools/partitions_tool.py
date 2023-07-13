@@ -16,7 +16,7 @@ OTA_1 = None
 OTA_SIZE = None
 NVS_SIZE = None
 SECTOR_SIZE = 4096
-KEEP_FREE_SIZE = SECTOR_SIZE * 8
+KEEP_FREE_SIZE = SECTOR_SIZE * 4
 APP_OFS = 0x10000
 START_OFS = 0x9000
 OUTPUT_FILE = None
@@ -30,10 +30,10 @@ FILES = (
     ('4M', '1M', False, 'Auto', '64K'),
     ('4M', '2M', False, 'Auto', '64K'),
     ('4M', '3M', False, '640K', 'Auto'),
-    ('4M', '1408K', True, 'Auto', '64K'),
+    # ('4M', '1408K', True, 'Auto', '64K'),
     ('4M', '2M', False, None, '64K'),
     ('4M', '3M', False, None, '64K'),
-    ('4M', '1920K', True, None, '64K'),
+    # ('4M', '1920K', True, None, '64K'),
 )
 
 #helpers
@@ -295,10 +295,9 @@ for items in FILES:
         [ 'app1', 'app', 'ota_0', OTA_0, ('app') ],
         [ 'app2', 'app', 'ota_1', OTA_1 ],
         [ 'eeprom', 'data', 'fat', '1S' ],
-        [ 'kfcfw', 'data', 'nvs', '16S' ],
+        [ 'nvs2', 'data', 'nvs', '40S' ],
         [ 'coredump', 'data', 'coredump', CORE_SIZE ],
         [ 'savecrash', 'data', 'fat', '4S' ],
-        [ 'nvstest', 'data', 'nvs', '4S' ],
         [ 'spiffs', 'data', 'spiffs',  SPIFF_SIZE ],
     ]
 

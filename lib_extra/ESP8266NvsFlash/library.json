@@ -1,6 +1,6 @@
 {
   "name": "ESP8266NvsFlash",
-  "description": "nvs_flash from ESP8266_RTOS_SDK port for Arduino",
+  "description": "nvs_flash from ESP8266_RTOS_SDK port for Arduino ESP8266",
   "version": "0.0.1",
   "authors": {
     "name": "sascha lammers",
@@ -17,10 +17,12 @@
     "atmelavr",
     "espressif8266"
   ],
+  "headers": [
+    "nvs.h",
+    "nvs_flash.h"
+  ],
   "build": {
-    "srcFilter": [
-      "-<*>"
-    ],
-    "libArchive": true
+    "libArchive": true,
+    "libCompatMode": "strict"
   }
 }

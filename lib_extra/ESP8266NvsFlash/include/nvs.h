@@ -35,7 +35,7 @@ typedef nvs_handle_t nvs_handle IDF_DEPRECATED("Replace with nvs_handle_t");
 
 #define ESP_ERR_NVS_BASE                    0x1100                     /*!< Starting number of error codes */
 
-#define ESP_ERR_FLASH_OP_FAIL     W          (ESP_ERR_FLASH_BASE + 1)
+#define ESP_ERR_FLASH_OP_FAIL               (ESP_ERR_FLASH_BASE + 1)
 #define ESP_ERR_FLASH_OP_TIMEOUT            (ESP_ERR_FLASH_BASE + 2)
 
 #define ESP_ERR_NVS_NOT_INITIALIZED         (ESP_ERR_NVS_BASE + 0x01)  /*!< The storage driver is not initialized */

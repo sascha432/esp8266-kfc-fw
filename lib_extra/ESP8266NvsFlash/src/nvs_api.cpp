@@ -43,10 +43,6 @@ uint32_t NVSHandleEntry::s_nvs_next_handle;
 
 extern "C" void nvs_dump(const char *partName);
 
-#ifndef LINUX_TARGET
-xSemaphoreHandle_t nvs::Lock::mSemaphore = nullptr;
-#endif // ! LINUX_TARGET
-
 using namespace std;
 using namespace nvs;
 

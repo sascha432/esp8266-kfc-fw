@@ -43,8 +43,10 @@ def create_eagle_ld(file, split):
             '_FS_end': split['fs'][1] - 4095,
             '_FS_page': 0x100,
             '_FS_block': 0x02000,
-            '_KFCFW_start': split['kfcfw'][0],
-            '_KFCFW_end': split['kfcfw'][1] - 4095,
+            '_NVS_start': split['nvs'][0],
+            '_NVS_end': split['nvs'][1] - 4095,
+            '_NVS2_start': split['nvs2'][0],
+            '_NVS2_end': split['nvs2'][1] - 4095,
             '_SAVECRASH_start': split['savecrash'][0],
             '_SAVECRASH_end': split['savecrash'][1] - 4095,
             '_EEPROM_start': split['eeprom'][0],
@@ -81,8 +83,9 @@ split = {
     'sketch': 0x40200000,
     'empty': 0x402FEFF0,
     'fs': 0x40500000,
-    'kfcfw': 0x405FB000 - ((16 + 64) * 0x1000),        # 16 x 4096 byte = 64K
-    'savecrash': 0x405FB000 - (64 * 0x1000),           # 64 x 4096 byte = 256K
+    'nvs': 0x405FB000 - ((8 + 40 + 32) * 0x1000),        # 8 x 4096 byte = 32K
+    'nvs2': 0x405FB000 - ((40 + 32) * 0x1000),         # 40 x 4096 byte = 160K
+    'savecrash': 0x405FB000 - (32 * 0x1000),           # 32 x 4096 byte = 128K
     'eeprom': 0x405FB000,
     'rfcal': 0x405FC000,
     'wifi': 0x405FD000,
@@ -95,12 +98,13 @@ split = {
     'sketch': 0x40200000,
     'empty': 0x402FEFF0,
     'fs': 0x40400000,
-    'kfcfw': 0x405FB000 - ((16 + 64) * 0x1000),        # 16 x 4096 byte = 64K
-    'savecrash': 0x405FB000 - (64 * 0x1000),           # 64 x 4096 byte = 256K
+    'nvs': 0x405FB000 - ((8 + 40 + 32) * 0x1000),        # 8 x 4096 byte = 32K
+    'nvs2': 0x405FB000 - ((40 + 32) * 0x1000),         # 40 x 4096 byte = 160K
+    'savecrash': 0x405FB000 - (32 * 0x1000),           # 32 x 4096 byte = 128K
     'eeprom': 0x405FB000,
     'rfcal': 0x405FC000,
     'wifi': 0x405FD000,
     'end': 0x40600000,
 };
 create_eagle_ld(path.join(eagle_dir, 'eagle.flash.4m2m.ld'), split);
-0x405FB000-0x405D2000
+

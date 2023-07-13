@@ -2,6 +2,7 @@
 
 ## Version 0.0.8 (master)
 
+ - Ported nvs_flash from ESP8266_RTOS_SDK to ESP8266_NONOS_SDK (**TODO** create separate git repo, code size about 20KB)
  - Improved visualizer and new plasma animation
  - Updated ESPAsyncWebServer to fix issues with ESP32, requires more RAM (old ESP8266 version that saves up to 2kb RAM is still available https://github.com/sascha432/ESPAsyncWebServer, changes will be merged soon)
  - Merged framework-arduinoespressif8266 3.0.0 into 3.1.2-mod

@@ -16,17 +16,34 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifndef __ESP_FILE__
-#ifdef __BASENAME_FILE__
+#if defined(__BASE_FILE__)
+#define __ESP_FILE__ __BASE_FILE__
+#elif defined(__BASENAME_FILE__)
 #define __ESP_FILE__ __BASENAME_FILE__
 #else
 #define __ESP_FILE__ __FILE__
 #endif
+#endif
+
+#if DEBUG_NVS_FLASH
+inline const char *____nvs_basename(const char *file)
+{
+    auto ptr = strrchr(file, '/');
+    if (!ptr) {
+        ptr = strrchr(file, '\\');
+    }
+    return ptr ? ptr + 1 : file;
+}
+#define ESP_LOGD(TAG, MSG, ...) ::printf_P(PSTR("%s:%u " MSG "\n"), ____nvs_basename(__ESP_FILE__), __LINE__, ##__VA_ARGS__);
+#else
+#define ESP_LOGD(TAG, MSG, ...)
 #endif
 
 typedef int32_t esp_err_t;
@@ -36,7 +53,7 @@ typedef int32_t esp_err_t;
 #define ESP_FAIL        -1      /*!< Generic esp_err_t code indicating failure */
 
 #define ESP_ERR_NO_MEM              0x101   /*!< Out of memory */
-#define ESP_ERR_INVALID_ARG         0x102   /*!< Invalid argument */ESP_ERR_FLASH_OP_FAIL
+#define ESP_ERR_INVALID_ARG         0x102   /*!< Invalid argument */
 
 #define ESP_ERR_INVALID_STATE       0x103   /*!< Invalid state */
 #define ESP_ERR_INVALID_SIZE        0x104   /*!< Invalid size */
@@ -50,6 +67,7 @@ typedef int32_t esp_err_t;
 
 #define ESP_ERR_WIFI_BASE           0x3000  /*!< Starting number of WiFi error codes */
 #define ESP_ERR_MESH_BASE           0x4000  /*!< Starting number of MESH error codes */
+#define ESP_ERR_FLASH_BASE          0x6000
 
 /**
   * @brief Returns string for esp_err_t error codes

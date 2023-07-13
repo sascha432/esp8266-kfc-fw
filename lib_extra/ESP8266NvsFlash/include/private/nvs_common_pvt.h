@@ -11,25 +11,23 @@
 #endif
 #endif
 
+#define ESP_PLATFORM 1
+#define DEBUG_NVS_FLASH 0
+
 #include "../private/esp_err.h"
 #include "../private/esp_partition.h"
 #include "../private/spi_flash_geometry.h"
 
-#if defined(LINUX_TARGET)
-#include <crc.h>
-#include "../private//crc.h"
-#else
-#include "../private/esp_crc.h"
-#endif
-
-#include "esp_partition.h"
-
-#undef LINUX_TARGET
+#include <coredecls.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+inline uint32_t crc32_le(uint32_t crc, uint8_t const *buf, uint32_t len)
+{
+    return crc32(buf, len, crc);
+}
 
 #ifdef __cplusplus
 }

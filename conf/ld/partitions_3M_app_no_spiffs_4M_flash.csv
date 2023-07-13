@@ -5,8 +5,7 @@ phy_init, data, phy, 0xe000, 4K,
 uf2, app, factory, 0x10000, 3072K, 
 eeprom, data, fat, 0x310000, 4K, 
 nvs2, data, nvs, 0x311000, 160K, 
-coredump, data, coredump, 0x339000, 128K, 
-savecrash, data, fat, 0x359000, 16K, 
-spiffs, data, spiffs, 0x35d000, 640K, 
+coredump, data, coredump, 0x339000, 64K, 
+savecrash, data, fat, 0x349000, 16K, 
 
-# end_addr=0x3fcfff
+# end_addr=0x34cfff

@@ -332,6 +332,7 @@
             "CHSV",
             "CLED",
             "CLOCKV2",
+            "COMPAT",
             "CPPDEFINES",
             "CRCS",
             "CRGB",

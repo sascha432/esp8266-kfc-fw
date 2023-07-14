@@ -146,10 +146,21 @@ void Sensor_BME280::publishState()
 Sensor_BME280::SensorDataType Sensor_BME280::_readSensor()
 {
     auto sensor = SensorDataType(
-        _bme280.readTemperature() + _cfg.temp_offset,
-        _bme280.readHumidity() + _cfg.humidity_offset,
-        (_bme280.readPressure() / 100.0) + _cfg.pressure_offset
+        _bme280.readTemperature(),
+        _bme280.readHumidity(),
+        _bme280.readPressure()
     );
+
+    if (isnormal(sensor.temperature)) {
+        sensor.temperature += _cfg.temp_offset;
+    }
+    if (isnormal(sensor.humidity)) {
+        sensor.humidity += _cfg.humidity_offset;
+    }
+    if (isnormal(sensor.pressure)) {
+        sensor.pressure /= 100.0;
+        sensor.pressure += _cfg.pressure_offset;
+    }
 
     __LDBG_printf("address 0x%02x: %.2f %s, %.2f%%, %.2f hPa", _address, sensor.temperature, SPGM(UTF8_degreeC), sensor.humidity, sensor.pressure);
 

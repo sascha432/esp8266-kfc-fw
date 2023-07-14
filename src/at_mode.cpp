@@ -47,7 +47,7 @@
 #    include <core_esp8266_waveform.h>
 #    include <core_version.h>
 #    if ARDUINO_ESP8266_MAJOR == 0
-#        error Invalid coe comnfig
+#        error Invalid core config
 #   endif
 #endif
 

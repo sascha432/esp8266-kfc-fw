@@ -60,6 +60,7 @@
             "PLATFORMIO_CALLER": "vscode",
         },
         "files.exclude": {
+            "**/cores/esp8266/core_version.h": true,
             "**/lib/KFCIOExpander/extra_include": true,
             "**/lib/KFCIOExpander/examples": true,
             "**/*.lst": true,
@@ -324,6 +325,7 @@
             "ATMODE",
             "AUTHMODE",
             "BCME",
+            "BLINDSCTRL",
             "BSSID",
             "BUILDFS",
             "CATMULL",
@@ -332,6 +334,7 @@
             "CHSV",
             "CLED",
             "CLOCKV2",
+            "CMDS",
             "COMPAT",
             "CPPDEFINES",
             "CRCS",

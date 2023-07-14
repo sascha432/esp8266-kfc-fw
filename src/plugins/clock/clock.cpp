@@ -292,7 +292,7 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    #ifdef HAVE_IOEXPANDER
+    #if defined(HAVE_IOEXPANDER)
         auto &_PCF8574 = IOExpander::config._device;
         _PCF8574.DDR = 0b00111111;
         _PCF8574.PORT = 0xff;
@@ -557,7 +557,7 @@ void ClockPlugin::shutdown()
         }
     #endif
 
-    #ifdef HAVE_IOEXPANDER
+    #if defined(HAVE_IOEXPANDER)
         auto &_PCF8574 = IOExpander::config._device;
         _PCF8574.DDR = 0b00111111;
         _PCF8574.PORT = 0xff;
@@ -914,7 +914,7 @@ void ClockPlugin::_enable()
         return;
     }
     if (_isEnabled) {
-        __LDBG_printf("enable LED pin=%u state=%u (cfg_enable=%u, is_enabled=%u, config=%u) SKIPPED", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true), _config.standby_led, _isEnabled, _config.enabled);
+        __LDBG_printf("enable LED pin=%d state=%u (cfg_enable=%u, is_enabled=%u, config=%u) SKIPPED", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true), _config.standby_led, _isEnabled, _config.enabled);
         return;
     }
     if (isTempProtectionActive()) {
@@ -935,6 +935,7 @@ void ClockPlugin::_enable()
     #if IOT_LED_MATRIX_FAN_CONTROL
         _setFanSpeed(_config.fan_speed);
     #endif
+
     enableLoopNoClear(true);
 
     _config.enabled = true;
@@ -944,7 +945,7 @@ void ClockPlugin::_enable()
 
 void ClockPlugin::_disable()
 {
-    __LDBG_printf("disable LED pin=%u state=%u (cfg_enabled=%u, is_enabled=%u, config=%u)", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false), _config.standby_led, _isEnabled, _config.enabled);
+    __LDBG_printf("disable LED pin=%d state=%u (cfg_enabled=%u, is_enabled=%u, config=%u)", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false), _config.standby_led, _isEnabled, _config.enabled);
 
     // turn all leds off and set brightness to 0
     _display.setBrightness(0);

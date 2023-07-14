@@ -14,7 +14,7 @@
 #include "mdns_plugin.h"
 #include "mdns_sd.h"
 #if MDNS_NETBIOS_SUPPORT
-#include <ESP8266NetBIOS.h>
+#    include <ESP8266NetBIOS.h>
 #endif
 
 // TODO
@@ -114,24 +114,24 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
 
 #if MDNS_NETBIOS_SUPPORT
 
-void MDNSPlugin::_setupNetBIOS()
-{
-    if (isNetBIOSEnabled()) {
-        #if DEBUG_MDNS_SD
-            auto result =
-        #endif
-        NBNS.begin(System::Device::getName());
-        __LDBG_printf("NetBIOS result=%u", result);
+    void MDNSPlugin::_setupNetBIOS()
+    {
+        if (isNetBIOSEnabled()) {
+            #if DEBUG_MDNS_SD
+                auto result =
+            #endif
+            NBNS.begin(System::Device::getName());
+            __LDBG_printf("NetBIOS result=%u", result);
+        }
     }
-}
 
 #endif
 
 void MDNSPlugin::_startQueries()
 {
+    __LDBG_printf("zeroconf queries=%u", _queries.size());
     MUTEX_LOCK_BLOCK(_lock) {
         // start all queries in the queue
-        __LDBG_printf("zerconf queries=%u", _queries.size());
         for(const auto &query: _queries) {
             if (query->getState() == MDNSResolver::Query::StateType::NONE) {
                 query->begin();
@@ -139,7 +139,6 @@ void MDNSPlugin::_startQueries()
         }
     }
 }
-
 bool MDNSPlugin::isNetBIOSEnabled()
 {
     auto flags = System::Flags::getConfig();
@@ -251,6 +250,7 @@ void MDNSPlugin::_loop()
         MDNS.update();
     #endif
     if (!_queries.empty()) {
+        __LDBG_printf("queries=%u", _queries.size());
         MUTEX_LOCK_BLOCK(_lock) {
             for(auto &query: _queries) {
                 query->check();

@@ -1865,13 +1865,7 @@ void at_mode_serial_handle_event(String &commandString)
     }
     #if defined(HAVE_NVS_FLASH)
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FNVS))) {
-            #ifdef SECTION_NVS2_START_ADDRESS
-                nvs_flash_deinit_partition("nvs2");
-                nvs_flash_erase_partition("nvs2");
-            #else
-                nvs_flash_deinit();
-                nvs_flash_erase();
-            #endif
+            config.formatNVS();
             config.restoreFactorySettings();
             config.write();
             args.ok();

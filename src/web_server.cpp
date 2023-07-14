@@ -70,7 +70,7 @@ using namespace KFCJson;
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     Plugin,
     "http",             // name
-    "Web server",       // friendly name
+    "Web Server",       // friendly name
     "",                 // web_templates
     "remote",           // config_forms
     "network,mdns",     // reconfigure_dependencies
@@ -1252,11 +1252,20 @@ bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServ
                 bool isFactoryHtml = !isRebootHtml && path.endsWith(FSPGM(factory_html, "factory.html"));
                 if (isRebootHtml || isFactoryHtml) {
                     if (request->hasArg(FSPGM(yes))) {
+                        #if defined(HAVE_NVS_FLASH)
+                            auto formatNVS = request->arg(F("format_nvs")).toInt();
+                        #endif
                         bool safeMode = false;
                         if (isRebootHtml) {
                             safeMode = request->arg(FSPGM(safe_mode)).toInt();
                         }
                         else if (isFactoryHtml) {
+                            #if defined(HAVE_NVS_FLASH)
+                                if (formatNVS) {
+                                    Logger_security(F("Formatting NVS partition"));
+                                    config.formatNVS();
+                                }
+                            #endif
                             config.restoreFactorySettings();
                             config.write();
                             #if IOT_BLINDS_CTRL && IOT_BLINDS_CTRL_SAVE_STATE

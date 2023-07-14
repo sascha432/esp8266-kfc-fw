@@ -441,6 +441,22 @@ jQuery.fn.extend({
 	}
 });
 
+//
+// display a centered check icon with a round circle around it for time in milliseconds
+// half of the time it will fade out
+// if the users clicks anywhere, it disappears immediately
+//
+$.checkbox_overlay = function(time) {
+    if (!time) {
+        time = 2000;
+    }
+    var ta = $('<div class="d-flex align-items-center justify-content-center" style="z-index:1000;position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden"><div style="border-radius:50%;border:solid 0.5rem #009900"><div class="oi oi-check" aria-hidden="true" style="padding:1rem;font-size:8rem;color:#009900"></div></div></div>');
+    $('body').append(ta);
+    ta.on('click', function() {
+        $(this).remove();
+    });
+    ta.delay(time / 2).fadeOut(time / 2, function() { ta.remove(); });
+}
 
 //
 // copy text to clipboard when the on click event is executed and
@@ -452,6 +468,7 @@ jQuery.fn.extend({
 // $.clipboard($('button'), function() {
 //     return 'lazy loading';
 // }, {color: 'red'} 300, 3});
+// $.clipboard(null, 'copy this to the clipboard'); // copy text directly
 //
 $.clipboard = function(element, text, flash_css_or_color, flash_speed, flash_repeat) {
     css = flash_css_or_color || {backgroundColor: '#28a745', color: 'white'};
@@ -460,29 +477,36 @@ $.clipboard = function(element, text, flash_css_or_color, flash_speed, flash_rep
     }
     flash_speed = flash_speed || 200;
     flash_repeat = flash_repeat || 3;
-    element.on('click', function(e) {
-        e.preventDefault();
+    var fn = function(e) {
+        if (e) {
+            e.preventDefault();
+        }
         if (typeof text === 'function') {
             text = text();
         }
         function success() {
-            element.flash(css, flash_repeat, flash_speed);
-            window.setTimeout(function() {
-                element.blur();
-            }, flash_speed * flash_repeat * 2.75 + 50);
+            if (element) {
+                element.flash(css, flash_repeat, flash_speed);
+                window.setTimeout(function() {
+                    element.blur();
+                }, flash_speed * flash_repeat * 2.75 + 50);
+            }
+            else {
+                $.checkbox_overlay(flash_speed * flash_repeat * 8);
+            }
         }
-        function fail() {
-            alert('Failed to copy text to clipboard');
+        function fail(n) {
+            alert('Failed to copy text to clipboard' + n);
         }
         try {
             navigator.clipboard.writeText(text).then(function() {
                 success();
             }, function() {
-                fail();
+                fail('');
             });
         } catch(e) {
             try {
-                var ta = $('<textarea style="width:1px;height:1px;position:absolute:right-100px;overeflow:hidden">');
+                var ta = $('<textarea style="width:1px;height:1px;position:absolute:right-100px;overflow:hidden">');
                 ta.text(text);
                 $('body').append(ta);
                 ta.select();
@@ -490,10 +514,16 @@ $.clipboard = function(element, text, flash_css_or_color, flash_speed, flash_rep
                 ta.remove();
                 success();
             } catch(e) {
-                fail();
+                fail(': ' + e);
             }
         }
-    });
+    };
+    if (element) {
+        element.on('click', fn);
+    }
+    else {
+        fn(null);
+    }
 };
 
 // filter_object(obj1[, obj2 [, ...]], predicate)

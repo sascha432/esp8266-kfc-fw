@@ -113,16 +113,16 @@
         var selEnd = this.output.prop('selectionEnd');
 
         // prefilter vt100 escape codes
-        if (message.indexOf('\033') != -1) {
+        if (message.indexOf('\x1b') != -1) {
             var pos;
-            if (pos = message.lastIndexOf('\033[2J') != -1) {
+            if (pos = message.lastIndexOf('\x1b[2J') != -1) {
                 message = message.substr(pos + 4);
                 consolePanel.value = '';
                 $.http2serialPlugin.console.debug("clear screen", message);
             }
             // discard other vt100 sequences
             // https://github.com/xtermjs/xterm.js
-            message = message.replace(/\033\[[\d;]*[mHJ]/g, '');
+            message = message.replace(/\x1b\[[\d;]*[mHJ]/g, '');
             $.http2serialPlugin.console.debug("replaced", message);
         }
 
@@ -165,7 +165,11 @@
     runFilter: function() {
         if (this.filter) {
             var filterRegEx = new RegExp('^' + this.filter + '\n', 'gm');
-            this.output[0].value = this.output[0].value.replace(filterRegEx, '');
+            var newText = this.output[0].value.replace(filterRegEx, '');
+            if (this.output[0].value != newText) {
+                // selection is lost if the filter modifies the data
+                this.output[0].value = newText;
+            }
         }
     },
 
@@ -285,16 +289,18 @@
             self.sendCommand();
         });
 
-        // open URLs on double click
+        // open URLs on double click or copy src filename and line number to clipboard
         this.output.on('dblclick', function(e) {
-            var pos = $(this)[0].selectionStart;
-            if (pos) { // find beginning
+            var pos = $(this).prop('selectionStart');
+            if (pos) { // find beginning of the text that has been clicked on
                 var start = -1;
                 var text = $(this).val();
                 for(var i = pos; i >= 0; i--) {
                     var ch = text[i];
                     switch(ch) {
                         case ' ':
+                        case '(':
+                        case '[':
                         case '\t':
                         case '\r':
                         case '\n':
@@ -303,14 +309,20 @@
                             break;
                     }
                 }
-                var url = text.substr(start + 1, 1024).replace(/(http(s)?:\/\/\S+)/, '$1'); // extract url
-                if (url.search(/^http(s)?:/) != -1) { // check if valid
-                    var url = url.split(/[ \t\r\n]/, 2); // split into URL and the rest
-                    if (url.length) {
-                        window.open(url[0], '_blank').focus(); // open in a new tab
-                        $(this).prop('selectionStart', -1); // remove selection from double click
-                        e.preventDefault();
+                try {
+                    var g = text.substr(start + 1).match(/((?<url>http(s)?:\/\/[^\s\)\]]+)|(?<src>\S+\.(c(pp)?):[0-9]+))/).groups; // catch url or src code with line number
+                    if (g['url'] !== undefined) {
+                        window.open(g['url'], '_blank').focus(); // open in a new tab
                     }
+                    else if (g['src'] !== undefined) {
+                        $.clipboard(null, g['src']);  // copy to clipboard
+                    }
+                    else {
+                        return;
+                    }
+                    $(this).prop('selectionStart', -1); // remove selection from double click
+                    e.preventDefault();
+                } catch(e) {
                 }
             }
         });

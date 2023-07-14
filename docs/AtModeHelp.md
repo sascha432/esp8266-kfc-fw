@@ -22,19 +22,23 @@ Reset device. If ``s`` is provided, it will reboot in SAFE MODE.
 
 ### ``+LOAD``
 
-Discard changes and load settings from EEPROM
+Discard changes and load settings from EEPROM/NVS
 
 ### ``+STORE``
 
-Store current settings in EEPROM
+Store current settings in EEPROM/NVS
 
 ### ``+FACTORY``
 
-Restore factory settings (but do not store in EEPROM)
+Restore factory settings (but do not store in EEPROM/NVS)
 
 ### ``+FSR``
 
-Restore factory settings, store in EEPROM and reboot device
+Restore factory settings, store in EEPROM/NVS and reboot device
+
+### ``+FNVS``
+
+Format NVS partition, restore factory settings and store it. Reboot the device to apply all new settings
 
 ### ``+ATMODE=<1|0>``
 
@@ -127,7 +131,7 @@ Configure I2C Bus
 
 ### ``+I2CTM=<address>,<data,...>``
 
-Transmsit data to slave
+Transmit data to slave
 
 ### ``+I2CRQ=<address>,<length>``
 
@@ -137,7 +141,7 @@ Request data from slave
 
 Scan I2C Bus. If ANY is passed as third argument, all available PINs are probed for I2C devices. Available only if compiled in
 
-### ``PWM=<pin>,<input|input_pullup|waveform|level=0-1024>[,<frequency=100-40000Hz>[,<duration/ms>]]
+### ``PWM=<pin>,<input|input_pullup|waveform|level=0-1024>[,<frequency=100-40000Hz>[,<duration/ms>]]``
 
 PWM output on PIN, min./max. level set it to LOW/HIGH" using digitalWrite
 
@@ -170,9 +174,9 @@ Run command
 - get[,<range>]
 - set,<range(=0-7)>,[#color]
 
-``+LMVIEW=<interval in ms|0=disable>,<client_id>``
+### ``+LMVIEW=<interval in ms|0=disable>,<client_id>``
 
-Display LEDs over http2serial
+Display LEDs over http2serial. Requires a proxy that listens to UDP and sends the data back over a web socket. An example can be found in ``scripts\udp2ws_proxy``
 
 ## Weather Station / Clock / LED Matrix
 
@@ -204,7 +208,7 @@ Configure MDNS
 
 ### ``+BCME=<open|close|stop|tone|imperial|init>[,<channel>][,<tone_frequency>,<tone_pwm_value>]``
 
-Open, close a channel, stop motor or run tone test, play imperial march, initial state
+Open, close a channel, stop motor or run tone test, play imperial march, set initial state
 
 ## Remote Control
 
@@ -299,17 +303,17 @@ Set level
 
 ### ``+DIMCF=reset|weeprom|info|print|write|factory|zc``
 
-Configure dimmer firmware
+## Configure dimmer firmware (ATMega MCU)
 
-#### ``+DIMCF=reset``
+### ``+DIMCF=reset``
 
 Hard reset MCU
 
-#### ``+DIMCF=weeprom``
+### ``+DIMCF=weeprom``
 
 Write EEPROM
 
-#### ``+DIMCF=info``
+### ``+DIMCF=info``
 
 Display dimmer info and config over serial port
 
@@ -320,19 +324,18 @@ Display dimmer info and config over serial port
 +REM=values=restore=1,f=60.342Hz,vref11=1.100,NTC=27.20/+0.00,int.temp=36/ofs=88/gain=156,max.temp=75,metrics=5,VCC=3.229,min.on-time=300,min.off=300,ZC=110,sw.on-time=0/0
 ```
 
-#### ``+DIMCF=write``
+### ``+DIMCF=write``
 
 Write EEPROM and configuration
 
-#### ``+DIMCF=factory``
+### ``+DIMCF=factory``
 
-Restore factory settings
+Restore ATMega factory settings
 
-#### ``+DIMCF=zc,<value>``
+### ``+DIMCF=zc,<value>``
 
 Set zero crossing offset (16bit) in CPU cycles (16MHz = 62.5ns). The EEPROM must be written to store the value permanently
 
-#### ``+DIMCF=zc,<+-value>``
+### ``+DIMCF=zc,<+-value>``
 
 Increase or decrease zero crossing offset
-

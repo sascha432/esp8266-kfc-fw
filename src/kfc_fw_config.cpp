@@ -1611,7 +1611,8 @@ void KFCFWConfiguration::getStatus(Print &output)
 {
     #if defined(HAVE_NVS_FLASH)
         auto stats = config.getNVSStats();
-        output.printf_P(PSTR("NVS Flash storage max. size %uKB, %.1f%% in use" HTML_S(br)), config.getNVSFlashSize() / 1024, (stats.free_entries * 100) / float(stats.total_entries));
+        output.printf_P(PSTR("NVS flash storage max. size %uKB, %.1f%% in use" HTML_S(br)), config.getNVSFlashSize() / 1024, (stats.free_entries * 100) / float(stats.total_entries));
+        output.printf_P(PSTR("NVS init partition memory usage %u byte " HTML_S(br)), config.getNVSInitMemoryUsage());
     #else
         output.printf_P(PSTR("EEPROM storage max. size %uKB" HTML_S(br)), SPI_FLASH_SEC_SIZE / 1024);
     #endif

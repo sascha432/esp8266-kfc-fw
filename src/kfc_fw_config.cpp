@@ -1592,6 +1592,17 @@ void KFCFWConfiguration::printInfo(Print &output)
     #endif
 }
 
+void KFCFWConfiguration::getStatus(Print &output)
+{
+    #if HAVE_NVS_FLASH
+        auto stats = config.getNVSStats();
+        output.printf_P(PSTR("NVS Flash storage max. size %uKB, %.1f%% in use" HTML_S(br)), config.getNVSFlashSize() / 1024, (stats.free_entries * 100) / float(stats.total_entries));
+    #else
+        output.printf_P(PSTR("EEPROM storage max. size %uKB" HTML_S(br)), SPI_FLASH_SEC_SIZE / 1024);
+    #endif
+    output.printf_P(PSTR("Stored items %u, size %.1fKB" HTML_S(br)), config.getConfigItemNum(), getConfigItemSize() / 1024.0);
+}
+
 uint32_t KFCFWConfiguration::getWiFiUp()
 {
     if (!WiFi.isConnected() || !config._wifiUp) {

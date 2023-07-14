@@ -1,8 +1,8 @@
 /* Flash Layout */
 /* sketch    @0x40200000 (1019KB, 1044464) */
 /* empty     @0x402FEFF0 (1028KB, 1052688) */
-/* fs        @0x40400000 (1896KB, 1941504) */
-/* nvs       @0x405DA000 (4KB, 4096) */
+/* fs        @0x40400000 (1868KB, 1912832) */
+/* nvs       @0x405D3000 (32KB, 32768) */
 /* savecrash @0x405DB000 (128KB, 131072) */
 /* eeprom    @0x405FB000 (4KB, 4096) */
 /* rfcal     @0x405FC000 (4KB, 4096) */
@@ -16,10 +16,10 @@ MEMORY
 }
 
 PROVIDE ( _FS_start = 0x40400000 );
-PROVIDE ( _FS_end = 0x405D9000 );
+PROVIDE ( _FS_end = 0x405D2000 );
 PROVIDE ( _FS_page = 0x100 );
 PROVIDE ( _FS_block = 0x2000 );
-PROVIDE ( _NVS_start = 0x405DA000 );
+PROVIDE ( _NVS_start = 0x405D3000 );
 PROVIDE ( _NVS_end = 0x405DA000 );
 PROVIDE ( _SAVECRASH_start = 0x405DB000 );
 PROVIDE ( _SAVECRASH_end = 0x405FA000 );
@@ -27,7 +27,7 @@ PROVIDE ( _EEPROM_start = 0x405FB000 );
 PROVIDE ( _EEPROM_end = 0x405FB000 );
 /* The following symbols are DEPRECATED and will be REMOVED in a future release */
 PROVIDE ( _SPIFFS_start = 0x40400000 );
-PROVIDE ( _SPIFFS_end = 0x405D9000 );
+PROVIDE ( _SPIFFS_end = 0x405D2000 );
 PROVIDE ( _SPIFFS_page = 0x100 );
 PROVIDE ( _SPIFFS_block = 0x2000 );
 

@@ -326,6 +326,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             }
         }
     }
+    else if (key == F("CONFIG_STORAGE")) {
+        config.getStatus(output);
+    }
     #if NTP_CLIENT || RTC_SUPPORT
         else if (key == F("TIME")) {
             auto now = time(nullptr);

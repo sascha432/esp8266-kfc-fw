@@ -76,8 +76,8 @@ if not os.path.isdir(eagle_dir):
     print('cannot find: %s' % eagle_dir)
     sys.exit(-1)
 
-nvs_size = 32
-nvs_size = 1 # set to 1 to disable
+nvs_size = 8 # 4K blocks, 8 blocks take about 16ms to initialize while 16 take 25ms.
+# nvs_size = 1 # set to 1 to disable, init with less than 12KB will fail
 
 # 4/1
 split = {

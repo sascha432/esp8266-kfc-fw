@@ -279,6 +279,9 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(IMPORT, "IMPORT", "<filename|set_dirty>[,<
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSR, "FSR", "FACTORY, STORE, RST in sequence");
+#if HAVE_NVS_FLASH
+    PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FNVS, "FNVS", "Format NVS partition and do factory reset");
+#endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
@@ -1238,7 +1241,7 @@ static uintptr_t translateAddress(String str) {
         else if (str.startsWithIgnoreCase(F("nvs_e"))) {
             return (uintptr_t)&_NVS_end;
         }
-        #if ESP32
+        #ifdef SECTION_NVS2_START_ADDRESS
             else if (str.startsWithIgnoreCase(F("nvs2"))) {
                 return (uintptr_t)&_NVS2_start;
             }
@@ -1739,7 +1742,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS + 4096);
                 args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS + 4096);
                 args.print(F("NVS: 0x%x/%u"), SECTION_NVS_START_ADDRESS, SECTION_NVS_END_ADDRESS - SECTION_NVS_START_ADDRESS + 4096);
-                #if ESP32
+                #ifdef SECTION_NVS2_START_ADDRESS
                     args.print(F("NVS2: 0x%x/%u"), SECTION_NVS2_START_ADDRESS, SECTION_NVS2_END_ADDRESS - SECTION_NVS2_START_ADDRESS + 4096);
                 #endif
                 #if ESP8266
@@ -1860,6 +1863,20 @@ void at_mode_serial_handle_event(String &commandString)
             config.restartDevice(false);
         });
     }
+    #if HAVE_NVS_FLASH
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FNVS))) {
+            #ifdef SECTION_NVS2_START_ADDRESS
+                nvs_flash_deinit_partition("nvs2");
+                nvs_flash_erase_partition("nvs2");
+            #else
+                nvs_flash_deinit();
+                nvs_flash_erase();
+            #endif
+            config.restoreFactorySettings();
+            config.write();
+            args.ok();
+        }
+    #endif
     #if DEBUG
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ATMODE))) {
             if (args.requireArgs(1, 1)) {

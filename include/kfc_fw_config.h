@@ -152,6 +152,7 @@ public:
     static const __FlashStringHelper *getChipModel();
     static void printVersion(Print &output);
     void printInfo(Print &output);
+    void getStatus(Print &output);
 
     static void loop();
     void gc();

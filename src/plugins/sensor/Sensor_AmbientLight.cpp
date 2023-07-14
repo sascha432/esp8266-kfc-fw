@@ -14,9 +14,9 @@
 // #define DEBUG_IOT_SENSOR 1
 
 #if DEBUG_IOT_SENSOR
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 Sensor_AmbientLight::Sensor_AmbientLight(const String &name, uint8_t id, TwoWire &wire) :
@@ -157,6 +157,7 @@ void Sensor_AmbientLight::begin(AmbientLightSensorHandler *handler, const Sensor
     uint32_t interval = 125;
     _handler = nullptr;
     _sensor = sensor;
+    __LDBG_printf("handler=%p type=%d", handler, _sensor.type);
     switch(_sensor.type) {
         case SensorType::BH1750FVI: {
                 // power up
@@ -225,6 +226,7 @@ void Sensor_AmbientLight::end()
 
 void Sensor_AmbientLight::_timerCallback()
 {
+    __LDBG_printf("handler=%p type=%d", _handler, _sensor.type);
     switch(_sensor.type) {
         case SensorType::BH1750FVI:
             _value = _readBH1750FVI();
@@ -257,13 +259,13 @@ void Sensor_AmbientLight::_timerCallback()
                 _handler->_autoBrightnessValue = ((_handler->_autoBrightnessValue * period) + value) / count; // integrate over 2.5 seconds to get a smooth transition and avoid flickering
             }
         }
-#if DEBUG_IOT_SENSOR
-        static uint32_t start;
-        if ((millis() - start) > 10000U) {
-            start = millis();
-            __LDBG_printf("value=%d auto_br=%d br=%.3f adj=%u", _value, _config.auto_brightness, _handler->_autoBrightnessValue, speed);
-        }
-#endif
+        #if DEBUG_IOT_SENSOR
+            static uint32_t start;
+            if ((millis() - start) > 10000U) {
+                start = millis();
+                __LDBG_printf("value=%d auto_br=%d br=%.3f adj=%u", _value, _config.auto_brightness, _handler->_autoBrightnessValue, speed);
+            }
+        #endif
     }
 
 }
@@ -300,6 +302,8 @@ void Sensor_AmbientLight::_updateLightSensorWebUI()
 
 int32_t Sensor_AmbientLight::_readTinyPwmADC()
 {
+    __LDBG_printf("i2c_addr=%x", _sensor.tinyPWM.i2cAddress);
+
     uint16_t level;
     _wire.beginTransmission(_sensor.tinyPWM.i2cAddress);
     _wire.write(_sensor.tinyPWM.adcPin);
@@ -328,6 +332,8 @@ int32_t Sensor_AmbientLight::_readTinyPwmADC()
 
 int32_t Sensor_AmbientLight::_readBH1750FVI()
 {
+    __LDBG_printf("i2c_addr=%x", _sensor.bh1750FVI.i2cAddress);
+
     uint16_t level;
     if (_wire.requestFrom(_sensor.bh1750FVI.i2cAddress, sizeof(level)) == sizeof(level)) {
         level = _wire.read() << 8;
@@ -351,13 +357,13 @@ int32_t Sensor_AmbientLight::_readBH1750FVI()
             _sensor.bh1750FVI.illuminance = level * (115 / (BH1750FVI_MTREG_DEFAULT * 4.0));  // mode2
         }
 
-#if DEBUG_IOT_SENSOR
-        static uint32_t start;
-        if ((millis() - start) > 10000U) {
-            start = millis();
-            __LDBG_printf("BH1750FVI light sensor level=%u illuminance=%.1f", level, _sensor.bh1750FVI.illuminance);
-        }
-#endif
+        #if DEBUG_IOT_SENSOR
+            static uint32_t start;
+            if ((millis() - start) > 10000U) {
+                start = millis();
+                __LDBG_printf("BH1750FVI light sensor level=%u illuminance=%.1f", level, _sensor.bh1750FVI.illuminance);
+            }
+        #endif
         return level;
     }
     else {

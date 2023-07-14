@@ -19,9 +19,9 @@
 #include "component_proxy.h"
 
 #if DEBUG_MQTT_CLIENT
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 namespace MQTT {

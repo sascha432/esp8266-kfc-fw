@@ -106,6 +106,9 @@ public:
     bool connectWiFi(uint8_t configNum = kKeepWiFiNetwork, bool ignoreSoftAP = false);
     void read(bool wakeup = false);
     void write();
+    #if defined(HAVE_NVS_FLASH)
+        void formatNVS();
+    #endif
 
     #if ESP8266
         static const __FlashStringHelper *getSleepTypeStr(sleep_type_t type);

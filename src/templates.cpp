@@ -749,11 +749,12 @@ private:
         while (_iterator != PluginComponents::RegisterEx::getPlugins().end()) {
             auto &plugin = **_iterator;
             if (plugin.hasStatus()) {
+                _buffer.reserve(_buffer.length() + 128);
                 _buffer += F("<div class=\"row\"><div class=\"col-lg-3 col-lg-auto\">");
                 _buffer += FPSTR(plugin.getFriendlyName());
-                _buffer += "</div><div class=\"col\">";
+                _buffer += F("</div><div class=\"col\">");
                 plugin.getStatus(_buffer);
-                _buffer += "</div></div>";
+                _buffer += F("</div></div>");
                 ++_iterator;
                 break;
             }

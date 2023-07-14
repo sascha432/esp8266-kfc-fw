@@ -879,6 +879,21 @@ void KFCFWConfiguration::write()
     }
 }
 
+#if defined(HAVE_NVS_FLASH)
+
+    void KFCFWConfiguration::formatNVS()
+    {
+        #ifdef SECTION_NVS2_START_ADDRESS
+            nvs_flash_deinit_partition("nvs2");
+            nvs_flash_erase_partition("nvs2");
+        #else
+            nvs_flash_deinit();
+            nvs_flash_erase();
+        #endif
+    }
+
+#endif
+
 #if ESP8266
 
     const __FlashStringHelper *KFCFWConfiguration::getSleepTypeStr(sleep_type_t type)
@@ -1600,7 +1615,7 @@ void KFCFWConfiguration::getStatus(Print &output)
     #else
         output.printf_P(PSTR("EEPROM storage max. size %uKB" HTML_S(br)), SPI_FLASH_SEC_SIZE / 1024);
     #endif
-    output.printf_P(PSTR("Stored items %u, size %.1fKB" HTML_S(br)), config.getConfigItemNum(), getConfigItemSize() / 1024.0);
+    output.printf_P(PSTR("Stored items %u, size %.2fKB" HTML_S(br)), config.getConfigItemNum(), getConfigItemSize() / 1024.0);
 }
 
 uint32_t KFCFWConfiguration::getWiFiUp()

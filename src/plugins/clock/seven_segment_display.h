@@ -13,9 +13,9 @@
 #include "pixel_display.h"
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #pragma GCC push_options
@@ -85,8 +85,6 @@ namespace SevenSegment {
         MAX_DIGIT = 15
     };
 
-    SegmentType getSegments(uint8_t digit);
-
     #if IOT_CLOCK_DISPLAY_INCLUDE == 1
         #include "display_clock.h"
     #elif IOT_CLOCK_DISPLAY_INCLUDE == 2
@@ -137,7 +135,7 @@ namespace SevenSegment {
         using BaseDisplayType::kNumPixels;
 
     public:
-        // high level methods
+        // high level methods to display digits or colons
         // -----------------------------------------------------------------
 
         /**
@@ -150,11 +148,13 @@ namespace SevenSegment {
          *
          * */
         inline __attribute__((__always_inline__))
-        void print(const String &text) {
+        void print(const String &text)
+        {
             print(text.c_str());
         }
 
-        void print(const char *text) {
+        void print(const char *text)
+        {
             if (!text || !*text) {
                 hideAll();
                 return;
@@ -193,106 +193,168 @@ namespace SevenSegment {
             }
         }
 
-        void setColon(uint8_t num, ColonType colon) {
-            PixelAddressType buf[kNumPixelsPerColon * 2];
-            memcpy_P(buf, getColonsArrayPtr(num), sizeof(buf));
-            uint8_t n = 0;
-            for(const auto address: buf) {
-                setPixelState(address, (colon == (n / kNumPixelsPerColon)));
-                n++;
-            }
+        // set to 1 to read the data directly from PROGMEM
+        // set to 0 to create a copy on the stack (old code, not recommended)
+        #define USE_PGM_READ_DATA 1
+
+        #if !USE_PGM_READ_DATA
+
+            #if ESP32
+            #    warning use USE_PGM_READ_DATA=1 to avoid the copy overhead
+            #endif
+
+            // macro to copy PROGMEM data into buffer on stack
+            #define COPY_PROGMEM_DATA_TO(buffer_name, elements, method) \
+                std::remove_const_t<std::remove_pointer_t<decltype(method)>> buffer_name[elements]; \
+                static_assert(sizeof(buffer_name) <= 128, "buffer too big for the stack"); \
+                memcpy_P(buffer_name, method, sizeof(buffer_name));
+
+        #endif
+
+        void setColon(uint8_t num, ColonType colon)
+        {
+            #if USE_PGM_READ_DATA
+                auto ptr = getColonsArrayPtr(num);
+                for(int n = 0; n < (kNumPixelsPerColon * 2); n++) {
+                    setPixelState(pgm_read_data(ptr++), (colon == (n / kNumPixelsPerColon)));
+                }
+            #else
+                COPY_PROGMEM_DATA_TO(buf, kNumPixelsPerColon * 2, getColonsArrayPtr(num));
+                uint8_t n = 0;
+                for(const auto address: buf) {
+                    setPixelState(address, (colon == (n / kNumPixelsPerColon)));
+                    n++;
+                }
+            #endif
+        }
+
+        void setColons(ColonType colon)
+        {
+            #if USE_PGM_READ_DATA
+                auto ptr = getColonsArrayPtr(0);
+                for(int n = 0; n < (kNumPixels - kNumPixelsDigits); n++) {
+                    setPixelState(pgm_read_data(ptr++), (colon == (n / kNumPixelsPerColon)));
+                }
+            #else
+                COPY_PROGMEM_DATA_TO(buf, kNumPixels - kNumPixelsDigits, getColonsArrayPtr(0));
+                uint8_t n = 0;
+                for(const auto address: buf) {
+                    setPixelState(address, (colon == (n / kNumPixelsPerColon)));
+                    n++;
+                }
+            #endif
+        }
+
+        void setDigit(uint8_t num, uint8_t digit)
+        {
+            #if USE_PGM_READ_DATA
+                auto ptr = getSegmentsArrayPtr(num);
+                auto digitSegments = getSegments(digit);
+                for(int n = 0; n < kNumPixelsPerDigit; n++) {
+                    setPixelState(pgm_read_data(ptr++), (digitSegments == (n / kNumPixelsPerSegment)));
+                }
+            #else
+                COPY_PROGMEM_DATA_TO(buf, kNumPixelsPerDigit, getSegmentsArrayPtr(num));
+                auto digitSegments = getSegments(digit);
+                uint8_t n = 0;
+                for(const auto address: buf) {
+                    setPixelState(address, (digitSegments == (n / kNumPixelsPerSegment)));
+                    n++;
+                }
+            #endif
+        }
+
+        void clearDigit(uint8_t num)
+        {
+            #if USE_PGM_READ_DATA
+                auto ptr = getSegmentsArrayPtr(num);
+                for(int n = 0; n < kNumPixelsPerDigit; n++) {
+                    setPixelState(pgm_read_data(ptr++), false);
+                }
+            #else
+                COPY_PROGMEM_DATA_TO(buf, kNumPixelsPerDigit, getSegmentsArrayPtr(num));
+                for(const auto address: buf) {
+                    setPixelState(address, false);
+                }
+            #endif
         }
 
         inline __attribute__((__always_inline__))
-        void clearColon(uint8_t num) {
+        void clearColon(uint8_t num)
+        {
             setColon(num, ColonType::NONE);
         }
 
-        void setColons(ColonType colon) {
-            PixelAddressType buf[kNumPixels - kNumPixelsDigits];
-            memcpy_P(buf, getColonsArrayPtr(0), sizeof(buf));
-            uint8_t n = 0;
-            for(const auto address: buf) {
-                setPixelState(address, (colon == (n / kNumPixelsPerColon)));
-                n++;
-            }
-        }
-
         inline __attribute__((__always_inline__))
-        void clearColons() {
+        void clearColons()
+        {
             setColons(ColonType::NONE);
         }
 
-        void setDigit(uint8_t num, uint8_t digit) {
-            #if DEBUG_IOT_CLOCK
-                if (digit > static_cast<uint8_t>(SegmentType::MAX_DIGIT)) {
-                    __DBG_panic("number %u out of range [0;%u]", digit, static_cast<uint8_t>(SegmentType::MAX_DIGIT));
-                }
-            #endif
-            PixelAddressType buf[kNumPixelsPerDigit];
-            memcpy_P(buf, getSegmentsArrayPtr(num), sizeof(buf));
-            auto digitSegments = getSegments(digit);
-            uint8_t n = 0;
-            for(const auto address: buf) {
-                setPixelState(address, (digitSegments == (n / kNumPixelsPerSegment)));
-                n++;
-            }
-        }
+        #undef COPY_PROGMEM_DATA_TO
+        #undef USE_PGM_READ_DATA
 
-        void clearDigit(uint8_t num) {
-            PixelAddressType buf[kNumPixelsPerDigit];
-            memcpy_P(buf, getSegmentsArrayPtr(num), sizeof(buf));
-            for(const auto address: buf) {
-                setPixelState(address, false);
-            }
-        }
-
-        // low level methods
+        // low level methods for direct display access
         // -----------------------------------------------------------------
 
         // make pixel visible
         inline __attribute__((__always_inline__))
-        void setPixelState(PixelAddressType address, bool state) {
+        void setPixelState(PixelAddressType address, bool state)
+        {
+            #if DEBUG_IOT_CLOCK
+                if (address >= _masked.size()) {
+                    __DBG_printf("addr=%u out of range=%u", address, _masked.size());
+                    return;
+                }
+            #endif
             _masked[address] = state;
         }
 
         inline __attribute__((__always_inline__))
-        bool getPixelState(PixelAddressType address) const {
+        bool getPixelState(PixelAddressType address) const
+        {
             return _masked[address];
         }
 
         inline __attribute__((__always_inline__))
-        void hideAll() {
+        void hideAll()
+        {
             _masked.reset();
         }
 
         inline __attribute__((__always_inline__))
-        void showAll() {
+        void showAll()
+        {
             _masked.set();
         }
 
-        void clear() {
+        void clear()
+        {
             DisplayType::clear();
             hideAll();
         }
 
-        void show() {
+        void show()
+        {
             _applyMask();
             BaseDisplayType::show(FastLED.getBrightness());
         }
 
-        void show(uint8_t brightness) {
+        void show(uint8_t brightness)
+        {
             _applyMask();
             BaseDisplayType::show(brightness);
         }
 
-        void dump(Print &output) {
+        void dump(Print &output)
+        {
             output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=clock brightness=%u\n"), __pixels.data(), _pixels, kPixelOffset, kNumPixels, FastLED.getBrightness());
         }
 
     private:
         inline __attribute__((__always_inline__))
-        void _applyMask() {
+        void _applyMask()
+        {
             for(PixelAddressType i = 0; i < kNumPixels; i++) {
                 if (!_masked[i]) {
                     setPixel(i, ColorType());
@@ -300,20 +362,60 @@ namespace SevenSegment {
             }
         }
 
+        // helper methods to get the PROGMEM table pointers
+
         inline __attribute__((__always_inline__))
-        PixelAddressPtr getColonsArrayPtr(uint8_t num) const {
+        static PixelAddressPtr getColonsArrayPtr(uint8_t num)
+        {
             return &colonTranslationTable[(num * kNumPixelsPerColon * 2)];
         }
 
         inline __attribute__((__always_inline__))
-        PixelAddressPtr getSegmentsArrayPtr(uint8_t num) const {
+        static PixelAddressPtr getSegmentsArrayPtr(uint8_t num)
+        {
             return &digitsTranslationTable[(num * kNumPixelsPerDigit)];
         }
 
         inline __attribute__((__always_inline__))
-        PixelAddressPtr getSegmentPixelAddressPtr(uint8_t num, uint8_t segment) const {
+        static PixelAddressPtr getSegmentPixelAddressPtr(uint8_t num, uint8_t segment)
+        {
             return &(getSegmentsArrayPtr(num)[(segment * kNumPixelsPerSegment)]);
         }
+
+        inline __attribute__((__always_inline__))
+        SegmentType getSegments(uint8_t digit)
+        {
+            #if DEBUG_IOT_CLOCK
+                if (digit > static_cast<uint8_t>(SegmentType::MAX_DIGIT)) {
+                    __DBG_panic("number %u out of range [0;%u]", digit, SegmentType::MAX_DIGIT);
+                }
+            #endif
+            return pgm_read_data(&segmentTypeTranslationTable[digit]);
+        }
+
+        // helper methods to read from PROGMEM without knowing the actual type
+
+        template<typename _Ta, typename std::enable_if<sizeof(_Ta) == sizeof(uint8_t), int>::type = 0>
+        __attribute__((__always_inline__))
+        static _Ta pgm_read_data(const _Ta *ptr)
+        {
+            return static_cast<_Ta>(pgm_read_byte(reinterpret_cast<const uint8_t *>(ptr)));
+        }
+
+        template<typename _Ta, typename std::enable_if<sizeof(_Ta) == sizeof(uint16_t), int>::type = 0>
+        __attribute__((__always_inline__))
+        static _Ta pgm_read_data(const _Ta *ptr)
+        {
+            return static_cast<_Ta>(pgm_read_word(reinterpret_cast<const uint16_t *>(ptr)));
+        }
+
+        template<typename _Ta, typename std::enable_if<sizeof(_Ta) == sizeof(uint32_t), int>::type = 0>
+        __attribute__((__always_inline__))
+        static _Ta pgm_read_data(const _Ta *ptr)
+        {
+            return static_cast<_Ta>(pgm_read_dword_aligned(reinterpret_cast<const uint32_t *>(ptr)));
+        }
+
 
     private:
         std::bitset<kNumPixels> _masked;
@@ -323,18 +425,12 @@ namespace SevenSegment {
 
     static constexpr auto kSevenSegmentTotalMemorySize = sizeof(Display);
 
-    inline __attribute__((__always_inline__))
-    SegmentType getSegments(uint8_t digit)
-    {
-        return static_cast<SegmentType>(pgm_read_byte(segmentTypeTranslationTable + digit));
-    }
-
 }
 
 #pragma GCC pop_options
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #endif

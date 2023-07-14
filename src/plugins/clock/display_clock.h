@@ -10,10 +10,6 @@
 using PixelAddressType = uint8_t;
 using PixelAddressPtr = const PixelAddressType *;
 
-inline static PixelAddressType readPixelAddress(PixelAddressPtr ptr) {
-    return pgm_read_byte(ptr);
-}
-
 static constexpr PixelAddressType kNumDigits = 6;
 static constexpr PixelAddressType kNumColons = 2;
 
@@ -67,7 +63,7 @@ static constexpr PixelAddressType kNumPixelsPerColon = 2;
     86, 87, \
     78, 79
 
-#define SEVEN_SEGMENT_COLONTRANSLATIONTABLE 28, \
+#define SEVEN_SEGMENT_COLON_TRANSLATION_TABLE 28, \
     29, \
     58, \
     59

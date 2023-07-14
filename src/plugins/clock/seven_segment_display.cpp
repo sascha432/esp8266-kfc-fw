@@ -19,7 +19,7 @@ namespace Clock {
 
         const PixelAddressType digitsTranslationTable[] PROGMEM = { SEVEN_SEGMENT_DIGITS_TRANSLATION_TABLE };
 
-        const PixelAddressType colonTranslationTable[] PROGMEM = { SEVEN_SEGMENT_COLONTRANSLATIONTABLE };
+        const PixelAddressType colonTranslationTable[] PROGMEM = { SEVEN_SEGMENT_COLON_TRANSLATION_TABLE };
 
         const PixelAddressType pixelAnimationOrder[] PROGMEM = { SEVEN_SEGMENT_PIXEL_ANIMATION_ORDER };
 

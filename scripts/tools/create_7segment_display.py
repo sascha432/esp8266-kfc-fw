@@ -417,10 +417,10 @@ elif args.action=='dumpcode':
         file.write('using PixelAddressType = %s;\n' % pixel_type)
         file.write('using PixelAddressPtr = const PixelAddressType *;\n')
         file.write('\n')
-        file.write('inline static PixelAddressType readPixelAddress(PixelAddressPtr ptr) {\n')
-        file.write('    return %s(ptr);\n' % pixel_read_func)
-        file.write('}\n')
-        file.write('\n')
+        # file.write('inline static PixelAddressType readPixelAddress(PixelAddressPtr ptr) {\n')
+        # file.write('    return %s(ptr);\n' % pixel_read_func)
+        # file.write('}\n')
+        # file.write('\n')
         file.write('static constexpr PixelAddressType kNumDigits = %u;\n' % display.num_digits)
         file.write('static constexpr PixelAddressType kNumColons = %u;\n' % display.num_colons)
         file.write('\n')
@@ -452,7 +452,7 @@ elif args.action=='dumpcode':
         file.write('\n')
         file.write('\n')
 
-        file.write('#define SEVEN_SEGMENT_COLONTRANSLATIONTABLE ')
+        file.write('#define SEVEN_SEGMENT_COLON_TRANSLATION_TABLE ')
         n = display.num_colons
         for i in range(0, n):
             m = display.colons_len

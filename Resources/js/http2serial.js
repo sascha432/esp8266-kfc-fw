@@ -108,6 +108,9 @@
     write: function(message) {
         var con = this.output[0];
         var scrollPos = con.scrollHeight - con.scrollTop - $(con).innerHeight();
+        // store selection
+        var selStart = this.output.prop('selectionStart');
+        var selEnd = this.output.prop('selectionEnd');
 
         // prefilter vt100 escape codes
         if (message.indexOf('\033') != -1) {
@@ -137,6 +140,13 @@
         if (scrollPos <= 50) {
             con.scrollTop = con.scrollHeight;
         }
+
+        // restore selection
+        if (selEnd - selStart > 0) {
+            this.output.prop('selectionStart', selStart);
+            this.output.prop('selectionEnd', selEnd);
+        }
+
     },
 
     dataHandler: function(event) {
@@ -273,6 +283,36 @@
         this.sendButton.on('click', function(event) {
             event.preventDefault();
             self.sendCommand();
+        });
+
+        // open URLs on double click
+        this.output.on('dblclick', function(e) {
+            var pos = $(this)[0].selectionStart;
+            if (pos) { // find beginning
+                var start = -1;
+                var text = $(this).val();
+                for(var i = pos; i >= 0; i--) {
+                    var ch = text[i];
+                    switch(ch) {
+                        case ' ':
+                        case '\t':
+                        case '\r':
+                        case '\n':
+                            start = i;
+                            i = 0;
+                            break;
+                    }
+                }
+                var url = text.substr(start + 1, 1024).replace(/(http(s)?:\/\/\S+)/, '$1'); // extract url
+                if (url.search(/^http(s)?:/) != -1) { // check if valid
+                    var url = url.split(/[ \t\r\n]/, 2); // split into URL and the rest
+                    if (url.length) {
+                        window.open(url[0], '_blank').focus(); // open in a new tab
+                        $(this).prop('selectionStart', -1); // remove selection from double click
+                        e.preventDefault();
+                    }
+                }
+            }
         });
 
         this.history = Cookies.getJSON('http2serial_history', this.history);

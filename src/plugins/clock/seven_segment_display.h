@@ -30,28 +30,6 @@
 //
 // high level functions to display the digits and colons or single dots are available
 // low level functions for animations are also supported by the base class
-//
-// the code is optimized for performance and can easily display 2000Hz depending on the type and number of pixels
-// for example WS2813 with 800kBit have a refresh rate of 33333Hz per LED, or 333Hz for 100
-//
-// with a single core MCU like the ESP8266 and many LEDs, disabling interrupts when calling display.show() might help with choppy animations
-// since those might interrupt the output and FastLED will retry a few times depending on the settings
-//
-// FastLED dithering is supported as well, which can also be executed with interrupts locked to a certain limit
-// more information about this issue can be found here
-// https://github.com/FastLED/FastLED/wiki/Interrupt-problems
-// https://github.com/FastLED/FastLED/wiki/FastLED-Temporal-Dithering
-//
-// an additional feature is the power limit to protect controller and LEDs. The FastLED library has been modified to configure the max.
-// power consumption and a callback function has been added to display the calculated power usage, which is pretty close to the real values
-//
-// to reduce power consumption and increase LED lifespan when brightness is set to 0, all LEDs can be turned off which requires additional hardware to disconnect
-// the LED strip from power (simple N-channel MOSFET disconnecting GND, for example AO3400, up to 5.8A) this can save a couple watts in standby mode
-//
-// The modified FastLED library can be found at https://github.com/sascha432/FastLED with a short documentation how to use the power limit and calculations
-//
-// the code has not been tested on 8bit MCUs, with AVR there might be some issues since the STL library which is not complete and would required a custom
-// implementation of std::bitset or it can be replaced by a simple array with the downside using 1 byte of memory instead of 1 bit
 
 namespace SevenSegment {
 
@@ -96,7 +74,6 @@ namespace SevenSegment {
     extern "C" const SegmentType segmentTypeTranslationTable[] PROGMEM;
     extern "C" const PixelAddressType digitsTranslationTable[] PROGMEM;
     extern "C" const PixelAddressType colonTranslationTable[] PROGMEM;
-    extern "C" const PixelAddressType pixelAnimationOrder[] PROGMEM;
 
     enum class ColonType : uint8_t {
         NONE = 0,
@@ -105,15 +82,6 @@ namespace SevenSegment {
         BOTH = TOP|BOTTOM,
         MAX
     };
-
-    // inline static PixelAddressType readPixelAddress(PixelAddressPtr ptr) {
-    //     if __CONSTEXPR17 (sizeof(PixelAddressType) == 2) {
-    //         return pgm_read_word(ptr);
-    //     }
-    //     else {
-    //         return pgm_read_byte(ptr);
-    //     }
-    // }
 
     inline __attribute__((__always_inline__))
     static bool operator==(SegmentType type, uint8_t segment) {

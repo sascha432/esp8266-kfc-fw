@@ -471,8 +471,8 @@ elif args.action=='dumpcode':
         file.write('\n')
         file.write('\n')
 
-        file.write('#define SEVEN_SEGMENT_PIXEL_ANIMATION_ORDER %s\n' % display.animation_order_array_str)
-        file.write('\n')
+        # file.write('#define SEVEN_SEGMENT_PIXEL_ANIMATION_ORDER %s\n' % display.animation_order_array_str)
+        # file.write('\n')
 
 
     filename = 'display.js'

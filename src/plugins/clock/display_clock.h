@@ -67,6 +67,3 @@ static constexpr PixelAddressType kNumPixelsPerColon = 2;
     29, \
     58, \
     59
-
-#define SEVEN_SEGMENT_PIXEL_ANIMATION_ORDER 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
-

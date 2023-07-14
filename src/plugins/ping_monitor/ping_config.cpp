@@ -22,7 +22,7 @@ namespace KFCConfigurationClasses {
         auto hosts = getHosts();
         hosts.clear();
         hosts.append(FSPGM(_var_gateway));
-        hosts.append(FSPGM(ip_8_8_8_8, "8.8.8.8"));
-        hosts.append(FSPGM(www_google_com, "www.google.com"));
+        hosts.append(F("8.8.8.8"));
+        hosts.append(F("www.google.com"));
     }
 }

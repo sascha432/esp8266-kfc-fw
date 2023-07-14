@@ -258,7 +258,6 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
         }
         return;
     }
-    else
     if (!isCreateFormCallbackType(type)) {
         return;
     }

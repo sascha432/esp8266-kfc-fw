@@ -377,7 +377,7 @@ namespace KFCConfigurationClasses {
             uint16_t count;
             uint16_t length;
 
-            SizeType() : count(0), length(0) {}
+            SizeType(uint16_t aCount = 0, uint16_t aLength = 0) : count(aCount), length(aLength) {}
         };
 
     public:
@@ -392,6 +392,10 @@ namespace KFCConfigurationClasses {
         }
 
         size_t size() const {
+            return _size(_load()).length;
+        }
+
+        size_t count() const {
             return _size(_load()).count;
         }
 
@@ -422,7 +426,7 @@ namespace KFCConfigurationClasses {
                 length = strlen_P(str);
             }
             length = std::min<int>(max_length(), length);
-            // __LDBG_printf("append str=%*.*s len=%u", length, length, str, length);
+            __LDBG_printf("append str=%*.*s len=%u", length, length, str, length);
             if (length == 0) {
                 // empty strings are not stored
                 return false;
@@ -433,7 +437,7 @@ namespace KFCConfigurationClasses {
                 // capacity reached
                 return false;
             }
-            // increase buffer
+            // increase buffer + 2 extra bytes for separator and NUL byte
             auto newData = loadWriteableStringConfig(kHandle, size.length + length + 2);
             // append new string
             memcpy_P(newData + size.length, str, length);
@@ -442,6 +446,9 @@ namespace KFCConfigurationClasses {
             *endPtr++ = kSeparator;
             *endPtr = 0;
             // __dump_binary(newData, endPtr - newData + 1, ~0U, PSTR("append"));
+
+            // update data
+            _store(newData);
             return true;
         }
 
@@ -449,12 +456,11 @@ namespace KFCConfigurationClasses {
         String _get(int index, const char *data, SizeType size) const {
             String tmp;
             if (index < size.count) {
-                auto iterator = data;
-                while(index > 0) {
-                    iterator += _strlen(iterator) + 1;
-                    index--;
+                auto ptr = data;
+                while(index-- > 0) {
+                    ptr += _strlen(ptr) + 1; // skip to the next string
                 }
-                tmp.concat(iterator, _strlen(iterator));
+                tmp.concat(ptr, _strlen(ptr)); // copy data to string
             }
             return tmp;
         }
@@ -468,16 +474,15 @@ namespace KFCConfigurationClasses {
         }
 
         SizeType _size(const char *data) const {
-            SizeType size;
+            uint16_t count = 0;
             auto ptr = data;
             while(*ptr) {
                 if (*ptr++ == kSeparator) {
-                    size.count++;
+                    count++;
                 }
             }
-            size.length = ptr - data;
-            // __LDBG_printf("count=%u len=%u", size.count, size.length);
-            return size;
+            __LDBG_printf("count=%u len=%u data='%s' strlen=%u", count, ptr - data, data, strlen(data));
+            return SizeType(count, ptr - data);
         }
 
         void _store(const char *str) {

@@ -1594,7 +1594,7 @@ void KFCFWConfiguration::printInfo(Print &output)
 
 void KFCFWConfiguration::getStatus(Print &output)
 {
-    #if HAVE_NVS_FLASH
+    #if defined(HAVE_NVS_FLASH)
         auto stats = config.getNVSStats();
         output.printf_P(PSTR("NVS Flash storage max. size %uKB, %.1f%% in use" HTML_S(br)), config.getNVSFlashSize() / 1024, (stats.free_entries * 100) / float(stats.total_entries));
     #else
@@ -1791,7 +1791,7 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
     data = getRTCStatus();
     PrintString nowStr;
     nowStr.strftime(FSPGM(strftime_date_time_zone), data.time);
-    PGM_P nl = plain ? PSTR("\n") : PSTR(", ");
+    PGM_P nl = plain ? PSTR(", ") : PSTR(HTML_S(br));
     output.print(F("Timestamp: "));
     output.print(nowStr);
     __DBG_RTC_printf("temp=%.3f lost_power=%u", data.temperature, data.lostPower);

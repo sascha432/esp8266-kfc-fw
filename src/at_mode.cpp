@@ -279,7 +279,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(IMPORT, "IMPORT", "<filename|set_dirty>[,<
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in EEPROM");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSR, "FSR", "FACTORY, STORE, RST in sequence");
-#if HAVE_NVS_FLASH
+#if defined(HAVE_NVS_FLASH)
     PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FNVS, "FNVS", "Format NVS partition and do factory reset");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
@@ -1863,7 +1863,7 @@ void at_mode_serial_handle_event(String &commandString)
             config.restartDevice(false);
         });
     }
-    #if HAVE_NVS_FLASH
+    #if defined(HAVE_NVS_FLASH)
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FNVS))) {
             #ifdef SECTION_NVS2_START_ADDRESS
                 nvs_flash_deinit_partition("nvs2");

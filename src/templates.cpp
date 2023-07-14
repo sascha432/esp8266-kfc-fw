@@ -408,9 +408,9 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     #endif
     else if (key == F("PIN_MONITOR_STATUS")) {
         #if PIN_MONITOR
-                PinMonitor::pinMonitor.printStatus(output);
+            PinMonitor::pinMonitor.printStatus(output);
         #else
-                output.print(F("Pin monitor disabled"));
+            output.print(F("Pin monitor disabled"));
         #endif
     }
     #if IOT_ALARM_PLUGIN_ENABLED

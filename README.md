@@ -2,7 +2,7 @@
 
 Firmware for ESP8266/ESP32 and IoT devices
 
-The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, GPIO expanders, EEPROM, improved and stable internal ADC, RTC memory access, a (more or less) precise RTC during deep sleep, a maximum of 30 days deep sleep, an event/task scheduler, direct access to flash storage (copy on write) without file system overhead, crash logs with stack traces, etc... via API functions. Support for deep sleep, quick boot (~37ms) and WiFi Quick Connect (<230ms) after wake up is also available
+The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, GPIO expanders, NVS flash, improved and stable internal ADC, RTC memory access, a (more or less) precise RTC during deep sleep, a maximum of 30 days deep sleep, an event/task scheduler, crash logs with stack traces, etc... via API functions. Support for deep sleep, quick boot (~37ms) and WiFi Quick Connect (<230ms) after wake up is also available
 
 ## Required flash size
 
@@ -110,16 +110,16 @@ Library to read streamed JSON documents and create JSON streams with small buffe
 
 ### KFCEventScheduler
 
-Platform indepentend timer, scheduler with prioritized queue, WiFi callbacks and loop functions with basic support for calculating load average
+Platform independent timer, scheduler with prioritized queue, WiFi callbacks and loop functions with basic support for calculating load average
 
 ### KFCResetDetector
 
 Detect crashes and offer safe mode by pressing reset button during boot, count number of resets for extended functionality (reset configuration, open public hotspot etc...)
-It also offers a RTC memory mananger to store data identified by an unqiue id and crc check
+It also offers a RTC memory manager to store data identified by an unique id and crc check
 
 ### KFCConfiguration
 
-Library to handle configurations stored in the EEPROM, read on demand to save memory, manage changes in structure automatically, export and import configuration as JSON
+Library to handle configurations stored in a NVS flash partition, read on demand to save memory, manage changes in structure automatically, export and import configuration as JSON
 
 ### KFCRestApi
 

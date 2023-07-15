@@ -20,8 +20,6 @@ Running on a modified framework-arduinoespressif32 v2.0.9
 
 ## ChangeLog
 
-**SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
-
 [Version 0.0.8 (master)](./CHANGELOG.md)
 
 [Version 0.0.7](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.7/CHANGELOG.md)
@@ -29,6 +27,8 @@ Running on a modified framework-arduinoespressif32 v2.0.9
 [Version 0.0.6](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.6/CHANGELOG.md)
 
 [Version 0.0.5](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.5/CHANGELOG.md)
+
+**SPIFFS** has been replaced with **LittleFS** starting with version 0.0.4.7604
 
 [Version 0.0.4](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.4/CHANGELOG.md)
 
@@ -46,7 +46,7 @@ Running on a modified framework-arduinoespressif32 v2.0.9
 ### ESP8266
 
 - GCC 10.x
-- Modified framework-arduinoespressif8266 v3.1.2
+- Modified framework-arduinoespressif8266 v3.1.2-mod
 
 Since this device has not enough memory and CPU power, a SSL webserver is not possible for most environments. To secure a connection, use haproxy with a certificate from https://letsencrypt.org/. Something like *.mydomain.com and redirect all traffic to the devices. Like https://bathroom.mydomain.com to 192.168.0.88, Like https://kitchen.mydomain.com to 192.168.0.77, etc...
 
@@ -63,9 +63,7 @@ The modified version of the core is available on github and used by default
 ### ESP32
 
 - GCC 8.4.x with gnu++17
-- Modified framework-arduinoespressif32 v2.0.9
-
-The modified version of the core is available on github and used by default. `framework-arduinoespressif32#feature/arduino-upstream` is used in order to get the GCC 8.x toolchain instead of 5.x
+- Modified framework-arduinoespressif32 v2.0.9-mod
 
 | System Info | |
 |---|---|
@@ -79,66 +77,6 @@ The libraries have found a new home
 
 [https://github.com/sascha432/KFCLibrary](https://github.com/sascha432/KFCLibrary)
 [https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK](https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK)
-
-The description below might not be up to date
-
-### KFCSyslog
-
-Send messages to a syslog server via UDP, TCP and TLS
-
-### KFCWebBuilder
-
-Framework to build WebUIs with bootstrap and store them mostly compressed in a virtual file system. Combined with server side includes, complex dynamic web pages/forms with a low memory footprint can be created
-
-#### Building the VFS
-
-Following software is required to build the virtual file system. Compatible versions might work as well, the listed ones have been tested...
-
- - Java JRE 8 / openjdk-18-jre-headless
- - NodeJS v12 or v16
- - Install uglify-js (3.15.3) using ``npm install uglify-js`` inside the project directory. For linux create a symlink ``sudo ln -s $(pwd)/node_modules/uglify-js/bin/uglifyjs /usr/bin/uglifyjs``
- - PHP 7.4.x (8.x is not supported yet)
- - mklittlefs - If it is not being installed automatically, run ``pio pkg install -t platformio/tool-mklittlefs``
-
-Executables must be in ``PATH``. If you have PHP 8.x, install PHP 7.x from source and ``export PHPEXE=/home/sascha/Desktop/php-7.4.30/sapi/cli/php``. For Windows, create an environment variable ``PHPEXE`` pointing to php.exe
-
-More details about binaries can be found/changed in [lib/KFCWebBuilder/KFCWebBuilder.json](lib/KFCWebBuilder/KFCWebBuilder.json)
-
-### KFCVirtualFileSystem
-
-~~Read only file system with long filename support, optimized for low memory environments~~
-Due to constantly changing file system implementations of the Arduno frameworks currently replaced with long filename support on top of LittleFS, but no transparent access for Dir()/File() anymore. Replacement classes ListDir and FSWrapper.
-
-Support for overriding read only files by uploading to a special directory.
-
-### KFCJson
-
-Library to read streamed JSON documents and create JSON streams with small buffer size
-
-### KFCEventScheduler
-
-Platform independent timer, scheduler with prioritized queue, WiFi callbacks and loop functions with basic support for calculating load average
-
-### KFCResetDetector
-
-Detect crashes and offer safe mode by pressing reset button during boot, count number of resets for extended functionality (reset configuration, open public hotspot etc...)
-It also offers a RTC memory manager to store data identified by an unique id and crc check
-
-### KFCConfiguration
-
-Library to handle configurations stored in a NVS flash partition, read on demand to save memory, manage changes in structure automatically, export and import configuration as JSON
-
-### KFCRestApi
-
-Library to handle RESTful APIs using asyncHTTPrequest/KFCJson
-
-### PinMonitor
-
-Support for push buttons with debouncing and rotary encoders using interrupts
-
-### Mpr121Touchpad
-
-Support for capacitive touchpads using the MPR121 sensor. With gestures detection
 
 ## Plugins
 
@@ -154,7 +92,7 @@ MQTT Client with API to easily add components that work with Home Assistant, as 
 
 Shows up as device and links to the WebUI
 
-## MDNS auto disovery with zeroconf support
+## MDNS auto discovery with zeroconf support
 
 MDNS discovery and zeroconf support for MQTT, Syslog and Home Assistant
 
@@ -169,10 +107,6 @@ Serial console redirection via TCP in client or server mode
 ### STK500v1
 
 Fully asynchronous STK500v1 programmer over WiFi, serial or web server upload...
-
-### RF24 Master
-
-Secure communication (no encryption though) with NRF24L01+ modules. Support for multiple channels/6 devices per channel.
 
 ### NTP Client
 
@@ -192,17 +126,21 @@ Scan GPIO pins for I2C devices
 
 ### Sensor
 
-Plugin for different sensors. Supply Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219, DHT11, DHT22, AM2301 and system metrics.
-Support for native WebUI and MQTT.
+Plugin for different sensors. Supply Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219, DHT11, DHT22, AM2301, BH1750FVI, Motion sensors and system metrics
+Support for native WebUI and MQTT
+
+### Mpr121Touchpad
+
+Support for capacitive touch pads using the MPR121 sensor. With gestures detection
 
 ### Switch
 
-Plugin for relays and other devices connected to GPIO pins, for example Sonoff basic.
+Plugin for relays and other devices connected to GPIO pins, for example Sonoff basic
 Support for native WebUI and MQTT.
 
 ### Alarm
 
-Plugin for up to 10 different alarms, single alarm or repeated on daily basis.
+Plugin for up to 10 different alarms, single alarm or repeated on daily basis
 
 ### Clock
 
@@ -238,7 +176,6 @@ Plugin to control my trailing edge WiFi dimmer with energy monitor
 
 [EasyEDA Control Module for 1-Channel Dimmer](https://easyeda.com/sascha23095123423/esp12e_iot_module_copy)
 
-
 ### Blinds Controller
 
 Plugin for my 2 channel blinds controller
@@ -269,10 +206,6 @@ Live remote view over WebUI and screenshots in .BMP format
 
 WebUI to explore and modify LittleFS and KFCVirtualFileSystem
 
-### SaveCrash
-
-Store crash logs with checksum of the firmware, version and other details directly on flash memory. Does not allocate any memory and uses copy on write to ensure no data is lost. WebUI to review crash reports and download stack traces. The OTA tool supports archiving .ELF files that were uploaded, including file system images and configuration files/git revision...
-
 ## Required third party libraries
 
 ### ESPAsyncWebServer
@@ -299,7 +232,7 @@ Store crash logs with checksum of the firmware, version and other details direct
 
 https://github.com/akaJes/AsyncPing
 
-### FastLED (Clock plugin)
+### FastLED (Clock/LED matrix plugin)
 
 [FastLED](https://github.com/FastLED/FastLED)
 

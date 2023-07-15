@@ -54,8 +54,8 @@ The modified version of the core is available on github and used by default
 
 | System Info | |
 |---|---|
-| Hardware | ESP8266 4.00MB Flash, 80 Mhz, Free RAM 22.56KB |
-| Framework | Arduino ESP8266 3.1.2 |
+| Hardware | ESP8266 4.00MB Flash 80MHz@DIO, 160MHz, Free RAM 19.41KB |
+| Framework | Arduino ESP8266 3.1.2-g1c34ef21-dev |
 | SDK | 2.2.2-dev(38a443e) |
 | Core | 3.0.2-17-g5266f22b=30002017 |
 | lwIP | lwIP:STABLE-2_1_3_RELEASE |
@@ -69,11 +69,18 @@ The modified version of the core is available on github and used by default. `fr
 
 | System Info | |
 |---|---|
-| Hardware | ESP32 4.00MB Flash, 240 Mhz, Free RAM 154.59KB, Temperature 36.7°C |
+| Hardware | ESP32 4.00MB Flash 80MHz@QIO, 2x240MHz, Free RAM 136.53KB, Temperature 35.6°C |
 | Framework | Arduino ESP32 2.0.9 |
 | SDK | ESP-IDF Version v4.4.4  |
 
 ## Libraries
+
+The libraries have found a new home
+
+[https://github.com/sascha432/KFCLibrary](https://github.com/sascha432/KFCLibrary)
+[https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK](https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK)
+
+The description below might not be up to date
 
 ### KFCSyslog
 
@@ -291,10 +298,6 @@ Store crash logs with checksum of the firmware, version and other details direct
 ### AsyncPing (Ping Monitor plugin)
 
 https://github.com/akaJes/AsyncPing
-
-~~### RF24 (RF24 Master)~~
-
-~~https://github.com/nRF24/RF24~~
 
 ### FastLED (Clock plugin)
 

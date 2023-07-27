@@ -212,6 +212,16 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addObjectGetterSetter(F("v_ait"), cfg.visualizer, cfg.visualizer.get_bits_input, cfg.visualizer.set_bits_input);
                     form.addFormUI(F("Audio Input Source"), FormUI::Type::SELECT, inputTypeItems);
 
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                        form.addObjectGetterSetter(F("v_mlg"), cfg.visualizer, cfg.visualizer.get_bits_mic_loudness_gain, cfg.visualizer.set_bits_mic_loudness_gain);
+                        form.addFormUI(F("Microphone Loudness Gain"));
+                        cfg.visualizer.addRangeValidatorFor_mic_loudness_gain(form);
+
+                        form.addObjectGetterSetter(F("v_mbg"), cfg.visualizer, cfg.visualizer.get_bits_mic_band_gain, cfg.visualizer.set_bits_mic_band_gain);
+                        form.addFormUI(F("Microphone Spectrum Gain"));
+                        cfg.visualizer.addRangeValidatorFor_mic_band_gain(form);
+                    #endif
+
                     auto &multicast = form.addObjectGetterSetter(F("v_muca"), cfg.visualizer, cfg.visualizer.get_bit_multicast, cfg.visualizer.set_bit_multicast);
                     form.addFormUI(FormUI::Type::HIDDEN);
 

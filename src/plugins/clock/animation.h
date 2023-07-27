@@ -5,6 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
+#include "clock_def.h"
 #include "color.h"
 #include "pixel_display.h"
 

@@ -7,7 +7,10 @@
 #include "clock.h"
 #include "animation.h"
 #include "stl_ext/algorithm.h"
-#include <InterpolationLib.h>
+#include "InterpolationLib.h"
+#if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+#    include "i2s_microphone.h"
+#endif
 
 #if 0
 #    include <debug_helper_enable.h>
@@ -40,7 +43,26 @@ static inline uint32_t convertRGB565ToRGB(uint32_t color)
 using namespace Clock;
 
 WiFiUDP Clock::VisualizerAnimation::_udp;
-int Clock::VisualizerAnimation::_udpUsageCounter = 0;
+#if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+    VisualizerMicrophone *Clock::VisualizerAnimation::_microphone = nullptr;
+#endif
+int Clock::VisualizerAnimation::_usageCounter = 0;
+
+
+VisualizerAnimation::~VisualizerAnimation()
+{
+    WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
+    if (--_usageCounter == 0) {
+        // since _udp is shared among all instances of this class, the last one turns it off
+        _udp.stop();
+        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+            if (_microphone) {
+                delete _microphone;
+                _microphone = nullptr;
+            }
+        #endif
+    }
+}
 
 bool VisualizerAnimation::VideoType::isValid(const VisualizerAnimation::VideoHeaderType &header)
 {
@@ -102,6 +124,12 @@ CRGB VisualizerAnimation::VideoType::getRGB()
 void VisualizerAnimation::begin()
 {
     _udp.stop();
+    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+        if (_microphone) {
+            delete _microphone;
+            _microphone = nullptr;
+        }
+    #endif
 
     if (_cfg.get_enum_orientation(_cfg) == OrientationType::HORIZONTAL) {
         _colsInterpolation = _parent._display.getCols() / static_cast<float>(kVisualizerPacketSize);
@@ -115,12 +143,44 @@ void VisualizerAnimation::begin()
 
     _clear();
 
-    // make sure the UDP socket is listening after a reconnect
-    WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
-        this->_listen();
-    }, this);
+    WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
 
-    _listen();
+    if (_cfg.get_enum_input(_cfg) == AudioInputType::UDP) {
+
+        __LDBG_printf("enable UDP input");
+
+        // make sure the UDP socket is listening after a reconnect
+        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTED, [this](WiFiCallbacks::EventType event, void *payload) {
+            this->_listen();
+        }, this);
+
+        _listen();
+    }
+    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+        else if (_cfg.get_enum_input(_cfg) == AudioInputType::MICROPHONE) {
+
+            if (!_microphone) {
+                _microphone = new VisualizerMicrophone(
+                    IOT_LED_MATRIX_I2S_PORT,
+                    IOT_LED_MATRIX_I2S_MICROPHONE_SD,
+                    IOT_LED_MATRIX_I2S_MICROPHONE_WS,
+                    IOT_LED_MATRIX_I2S_MICROPHONE_SCK,
+                    _storedData.data(), _storedData.size(),
+                    _storedLoudness._leftLevel, _storedLoudness._rightLevel,
+                    _cfg.mic_loudness_gain, _cfg.mic_band_gain / 10.0f
+                );
+                if (!_microphone->isRunning()) {
+                    delete _microphone;
+                    _microphone = nullptr;
+                }
+            }
+            __LDBG_printf("enable microphone=%p input", _microphone);
+
+        }
+    #endif
+    else {
+        __LDBG_printf("no input source");
+    }
 }
 
 void VisualizerAnimation::_clear()
@@ -615,8 +675,17 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
 
 void VisualizerAnimation::loop(uint32_t millisValue)
 {
-    // read udp in every loop
-    _parseUdp();
+    if (_cfg.get_enum_input(_cfg) == AudioInputType::UDP) {
+        // read udp in every loop
+        _parseUdp();
+    }
+    // #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+    //     else if (_cfg.get_enum_input(_cfg) == AudioInputType::MICROPHONE) {
+    //         if (_microphone) {
+    //             _microphone->read(_storedData.data(), _storedData.size());
+    //         }
+    //     }
+    // #endif
 }
 
 #endif

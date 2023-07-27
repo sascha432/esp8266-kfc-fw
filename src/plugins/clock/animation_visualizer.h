@@ -12,7 +12,17 @@
 // then use python udp_send_packet.py to broadcast this to one or more devices. 512LEDs 32x16 was not impressive.
 // a lot issues with gamma correction and that LEDs do not seem to work well with RGB conversion from videos.
 
+#if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+    class I2SMicrophone;
+#endif
+
 namespace Clock {
+
+    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+        using VisualizerMicrophone = I2SMicrophone;
+    #endif
+
+    class VisualizerAnimation;
 
     class VisualizerLoudnessLevel {
     public:
@@ -52,6 +62,8 @@ namespace Clock {
         }
 
     private:
+        friend VisualizerAnimation;
+
         uint8_t _leftLevel;
         uint8_t _rightLevel;
     };
@@ -62,6 +74,7 @@ namespace Clock {
         using VisualizerAnimationType = VisualizerAnimationConfig::VisualizerAnimationType;
         using VisualizerPeakType = VisualizerAnimationConfig::VisualizerPeakType;
         using OrientationType = VisualizerAnimationConfig::OrientationType;
+        using AudioInputType = VisualizerAnimationConfig::AudioInputType;
         using DisplayType = Clock::DisplayType;
 
     public:
@@ -75,18 +88,11 @@ namespace Clock {
             _lastPacketTime(0),
             _cfg(cfg)
         {
-            _udpUsageCounter++;
+            _usageCounter++;
             _disableBlinkColon = true;
         }
 
-        ~VisualizerAnimation()
-        {
-            WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
-            if (--_udpUsageCounter == 0) {
-                // since _udp is shared among all instances of this class, the last one turns it off
-                _udp.stop();
-            }
-        }
+        ~VisualizerAnimation();
 
         virtual void begin() override;
 
@@ -344,7 +350,10 @@ namespace Clock {
         static constexpr auto kUDPInfiniteTimeout = 255 * kUDPTimeoutMultiplier;
 
         static WiFiUDP _udp;
-        static int _udpUsageCounter;
+        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+            static VisualizerMicrophone *_microphone;
+        #endif
+        static int _usageCounter;
     };
 
 }

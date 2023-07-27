@@ -288,7 +288,9 @@ namespace KFCConfigurationClasses {
                     CREATE_ENUM_D_BITFIELD(peak_show, VisualizerPeakType, VisualizerPeakType::FALLING_DOWN);
                     CREATE_ENUM_D_BITFIELD(type, VisualizerAnimationType, VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D);
                     CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::HORIZONTAL);
-                    CREATE_ENUM_BITFIELD_SIZE_DEFAULT(input, 1, AudioInputType, std::underlying_type<AudioInputType>::type, uint8, AudioInputType(int(AudioInputType::MIN) + 1));
+                    CREATE_ENUM_BITFIELD_SIZE_DEFAULT(input, 2, AudioInputType, std::underlying_type<AudioInputType>::type, uint8, AudioInputType(int(AudioInputType::MIN) + 1));
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mic_loudness_gain, 10, 1, 1000, 275, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mic_band_gain, 10, 1, 1000, 300, 1);
 
                     VisualizerType() :
                         port(kDefaultValueFor_port),
@@ -302,7 +304,9 @@ namespace KFCConfigurationClasses {
                         peak_show(kDefaultValueFor_peak_show),
                         type(kDefaultValueFor_type),
                         orientation(kDefaultValueFor_orientation),
-                        input(kDefaultValueFor_input)
+                        input(kDefaultValueFor_input),
+                        mic_loudness_gain(kDefaultValueFor_mic_loudness_gain),
+                        mic_band_gain(kDefaultValueFor_mic_band_gain)
                     {
                     }
                 };

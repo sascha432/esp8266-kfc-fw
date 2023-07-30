@@ -15,10 +15,10 @@
 
 class I2SMicrophone {
 public:
-    static constexpr uint32_t kSampleRate = 44100;
+    static constexpr uint32_t kSampleRate = 48000;
     static constexpr uint32_t kMaxSamples = 256;
     static constexpr uint8_t kNumBands = 32;
-    static constexpr double kNoiseLevel = 2000;
+    static constexpr double kNoiseLevel = 2350;
 
 public:
     I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, uint8_t i2sSck, uint8_t *data, size_t dataSize, uint8_t &loudnessLeft, uint8_t &loudnessRight, float loudnessGain, float bandGain);

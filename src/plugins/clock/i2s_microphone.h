@@ -25,6 +25,7 @@ public:
     ~I2SMicrophone();
 
     void task();
+    void readI2S();
 
     bool isRunning() const
     {

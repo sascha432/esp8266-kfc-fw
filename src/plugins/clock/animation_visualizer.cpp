@@ -682,7 +682,7 @@ void VisualizerAnimation::loop(uint32_t millisValue)
     // #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
     //     else if (_cfg.get_enum_input(_cfg) == AudioInputType::MICROPHONE) {
     //         if (_microphone) {
-    //             _microphone->read(_storedData.data(), _storedData.size());
+    //             _microphone->readI2S();
     //         }
     //     }
     // #endif

@@ -35,13 +35,11 @@ ClockPlugin ClockPlugin_plugin;
 
 #    define PLUGIN_OPTIONS_NAME          "led_strip"
 #    define PLUGIN_OPTIONS_FRIENDLY_NAME "RGB LED Strip"
-#    define PLUGIN_OPTIONS_WEB_TEMPLATES ""
 
 #elif IOT_LED_MATRIX
 
 #    define PLUGIN_OPTIONS_NAME          "led_matrix"
 #    define PLUGIN_OPTIONS_FRIENDLY_NAME "LED Matrix"
-#    define PLUGIN_OPTIONS_WEB_TEMPLATES ""
 
 #else
 
@@ -725,7 +723,7 @@ void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
         if (diff < 0) {
             diff = -diff;
         }
-        __LDBG_printf("from=%u to=%u time=%d partial=%d", _startBrightness, _targetBrightness, ms, ms * diff / Clock::kMaxBrightness);
+        __LDBG_printf("from=%u to=%u partial=%d/%d", _startBrightness, _targetBrightness, std::min<uint32_t>(maxTime, ms * diff / Clock::kMaxBrightness), ms);
         // calculate time relative to the level change
         _fadeTimer.set(std::min<uint32_t>(maxTime, ms * diff / Clock::kMaxBrightness));
         _isFading = true;
@@ -1033,7 +1031,8 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 #endif
 
-void ClockPlugin::_loop()
+// keep this in IRAM to avoid cache misses in FastLED
+void IRAM_ATTR ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
@@ -1061,69 +1060,12 @@ void ClockPlugin::_loop()
     }
 
     if (options.doUpdate()) {
-
-        // start update process
-        _lastUpdateTime = millis();
-
-        if (options.doRedraw()) {
-
-            #if IOT_LED_MATRIX == 0
-                uint8_t displayColon = true;
-                // does the animation allow blinking and is it set?
-                if ((!_animation || (_animation && !_animation->isBlinkColonDisabled())) && (_config.blink_colon_speed >= kMinBlinkColonSpeed)) {
-                    // set on/off depending on the update rate
-                    displayColon = ((_lastUpdateTime / _config.blink_colon_speed) % 2 == 0);
-                }
-
-                auto &tm = options.getLocalTime();
-
-                _display.setDigit(0, tm.tm_hour_format() / 10);
-                _display.setDigit(1, tm.tm_hour_format() % 10);
-                _display.setDigit(2, tm.tm_min / 10);
-                _display.setDigit(3, tm.tm_min % 10);
-                #if IOT_CLOCK_NUM_DIGITS == 6
-                    _display.setDigit(4, tm.tm_sec / 10);
-                    _display.setDigit(5, tm.tm_sec % 10);
-                #endif
-
-                _display.setColons(displayColon ? Clock::SevenSegment::ColonType::BOTH : Clock::SevenSegment::ColonType::NONE);
-            #endif
-
-            if (_blendAnimation) {
-                _animation->nextFrame(options.getMillis());
-                _blendAnimation->nextFrame(options.getMillis());
-
-                if (!_blendAnimation->blend(_display, options.getMillis())) {
-                    __LDBG_printf("blending done");
-                    delete _blendAnimation;
-                    _blendAnimation = nullptr;
-                }
-            }
-            else if (_animation) {
-                #if DEBUG_MEASURE_ANIMATION
-                    auto start = __clock_cycles();
-                #endif
-                _animation->nextFrame(options.getMillis());
-                #if DEBUG_MEASURE_ANIMATION
-                    auto diff = __clock_cycles() - start;
-                    Clock::animationStats.nextFrame.add(diff);
-                #endif
-
-                #if DEBUG_MEASURE_ANIMATION
-                    start = __clock_cycles();
-                #endif
-                _animation->copyTo(_display, options.getMillis());
-                #if DEBUG_MEASURE_ANIMATION
-                    diff = __clock_cycles() - start;
-                    Clock::animationStats.copyTo.add(diff);
-                #endif
-            }
-        }
+        _loopDoUpdate(options); // keep this in the flash memory
     }
 
     _display.show();
 
-    #if ESP8266
+    #if ESP8266 && HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
         if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
             // give system time to process the requests
             // if the cpu is overloaded, the animation will get very choppy and the web server will be slow
@@ -1140,6 +1082,67 @@ void ClockPlugin::_loop()
             #endif
         }
     #endif
+}
+
+void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
+{
+    // start update process
+    _lastUpdateTime = millis();
+
+    if (options.doRedraw()) {
+
+        #if IOT_LED_MATRIX == 0
+            uint8_t displayColon = true;
+            // does the animation allow blinking and is it set?
+            if ((!_animation || (_animation && !_animation->isBlinkColonDisabled())) && (_config.blink_colon_speed >= kMinBlinkColonSpeed)) {
+                // set on/off depending on the update rate
+                displayColon = ((_lastUpdateTime / _config.blink_colon_speed) % 2 == 0);
+            }
+
+            auto &tm = options.getLocalTime();
+
+            _display.setDigit(0, tm.tm_hour_format() / 10);
+            _display.setDigit(1, tm.tm_hour_format() % 10);
+            _display.setDigit(2, tm.tm_min / 10);
+            _display.setDigit(3, tm.tm_min % 10);
+            #if IOT_CLOCK_NUM_DIGITS == 6
+                _display.setDigit(4, tm.tm_sec / 10);
+                _display.setDigit(5, tm.tm_sec % 10);
+            #endif
+
+            _display.setColons(displayColon ? Clock::SevenSegment::ColonType::BOTH : Clock::SevenSegment::ColonType::NONE);
+        #endif
+
+        if (_blendAnimation) {
+            _animation->nextFrame(options.getMillis());
+            _blendAnimation->nextFrame(options.getMillis());
+
+            if (!_blendAnimation->blend(_display, options.getMillis())) {
+                __LDBG_printf("blending done");
+                delete _blendAnimation;
+                _blendAnimation = nullptr;
+            }
+        }
+        else if (_animation) {
+            #if DEBUG_MEASURE_ANIMATION
+                auto start = __clock_cycles();
+            #endif
+            _animation->nextFrame(options.getMillis());
+            #if DEBUG_MEASURE_ANIMATION
+                auto diff = __clock_cycles() - start;
+                Clock::animationStats.nextFrame.add(diff);
+            #endif
+
+            #if DEBUG_MEASURE_ANIMATION
+                start = __clock_cycles();
+            #endif
+            _animation->copyTo(_display, options.getMillis());
+            #if DEBUG_MEASURE_ANIMATION
+                diff = __clock_cycles() - start;
+                Clock::animationStats.copyTo.add(diff);
+            #endif
+        }
+    }
 }
 
 void ClockPluginClearPixels()

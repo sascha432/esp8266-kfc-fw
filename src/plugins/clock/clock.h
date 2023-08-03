@@ -355,6 +355,7 @@ public:
 
 private:
     void _loop();
+    void  _loopDoUpdate(LoopOptionsType &options);
     void _setupTimer();
 
     // returns AnimationType::MAX if the name is invalid
@@ -940,8 +941,9 @@ inline void ClockPlugin::toggleShowMethod()
 
 inline float ClockPlugin::_getFadingBrightness() const
 {
-    return (_fadeTimer.isActive() && _fadeTimer.getDelay()) ?
-        (_targetBrightness - (((int16_t)_targetBrightness - (int16_t)_startBrightness) / (float)_fadeTimer.getDelay()  * _fadeTimer.getTimeLeft())) :
+    float dly;
+    return (_fadeTimer.isActive() && (dly = _fadeTimer.getDelay())) ?
+        (_targetBrightness - (((int16_t)_targetBrightness - (int16_t)_startBrightness) / dly * _fadeTimer.getTimeLeft())) :
         _targetBrightness;
 }
 

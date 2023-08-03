@@ -388,8 +388,6 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             }
             break;
         case AnimationType::PLASMA: {
-                SELECT_IRAM();
-
                 form.addObjectGetterSetter(F("plmsp"), FormGetterSetter(cfg.plasma, speed));
                 form.addFormUI(F("Speed"));
                 cfg.plasma.addRangeValidatorFor_speed(form);

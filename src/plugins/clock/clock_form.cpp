@@ -444,8 +444,8 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         // on save copy changes to local memory
         auto &cfg = Plugins::Clock::getWriteableConfig();
         _config = cfg;
-        // reset timer, in case the form validation fails the pending changes are still stored
-        _saveState();
+        // remove timer, everything has been written already
+        _Timer(_saveTimer).remove();
         return;
     }
 
@@ -459,10 +459,10 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         cfg = _config; // copy updates
     }
 
-    // sub forms for the WebUI
+    // sub forms for the WebUI or split forms
     if (formName.startsWith(F("ani-"))) {
         auto animation = _getAnimationType(FPSTR(formName.c_str() + 4)); // translate name to number or just return number
-        auto isInline = request->arg(F("inline")).toInt() != 0;
+        auto isInline = isdigit(formName.c_str()[0]);
         __LDBG_printf("form=%s animation=%u valid=%u inline=%u", formName.c_str() + 4, animation, animation != AnimationType::MAX, isInline);
         if (animation < AnimationType::MAX) {
             auto &ui = form.createWebUI();

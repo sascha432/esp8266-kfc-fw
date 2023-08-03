@@ -41,7 +41,7 @@
                 if (animation_config.find('.modal-dialog').length == 0) {
                     create_modal();
                     animation_config.modal({show: false, keyboard: false}).on('show.bs.modal', function() {
-                        var url = $('#webui').data('target') + 'ani-' + animation + '.html?inline=1';
+                        var url = $('#webui').data('target') + 'ani-' + animation + '.html'; //?inline=1';
 // console.log('show', animation, url);
                         $.get(url, function(data) {
 // console.log('get', animation, url);

@@ -8,6 +8,7 @@
 #include "../src/plugins/sensor/sensor.h"
 #include "Utility/ProgMemHelper.h"
 #include "animation.h"
+#include <HeapSelector.h>
 
 #if DEBUG_IOT_CLOCK
 #    include <debug_helper_enable.h>
@@ -160,6 +161,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             break;
         #if IOT_LED_MATRIX_ENABLE_VISUALIZER
             case AnimationType::VISUALIZER: {
+                    SELECT_IRAM();
+
                     using OrientationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::OrientationType;
                     using AudioInputType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::AudioInputType;
                     using VisualizerAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerAnimationType;
@@ -273,6 +276,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 break;
         #endif
         case AnimationType::RAINBOW: {
+                SELECT_IRAM();
+
                 form.addObjectGetterSetter(F("rb_mul"), FormGetterSetter(cfg.rainbow.multiplier, value));
                 form.addFormUI(FSPGM(Multiplier));
                 cfg.rainbow.multiplier.addRangeValidatorFor_value(form);
@@ -383,6 +388,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             }
             break;
         case AnimationType::PLASMA: {
+                SELECT_IRAM();
+
                 form.addObjectGetterSetter(F("plmsp"), FormGetterSetter(cfg.plasma, speed));
                 form.addFormUI(F("Speed"));
                 cfg.plasma.addRangeValidatorFor_speed(form);

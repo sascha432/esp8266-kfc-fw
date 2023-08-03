@@ -1,4 +1,4 @@
- /**
+/**
   Author: sascha_lammers@gmx.de
 */
 
@@ -31,6 +31,7 @@
 #include "PinMonitor.h"
 #include "../src/plugins/plugins.h"
 #include <stl_ext/memory.h>
+#include "HeapSelector.h"
 
 #if __LED_BUILTIN_WS2812_NUM_LEDS
 #    include <NeoPixelEx.h>
@@ -39,10 +40,7 @@
 #if ESP8266
 #    include <umm_malloc/umm_malloc.h>
      extern "C" {
-#    include <umm_malloc/umm_local.h>
-#    if ARDUINO_ESP8266_MAJOR == 3
-#        include <umm_malloc/umm_heap_select.h>
-#    endif
+#       include <umm_malloc/umm_local.h>
      }
 #    include <core_esp8266_waveform.h>
 #    include <core_version.h>
@@ -557,13 +555,16 @@ public:
         __DBG_assert_printf(displayTimer == nullptr, "displayTimer not null");
         stdex::reset(displayTimer, this);
     }
-    ~DisplayTimer() {
+
+    ~DisplayTimer()
+    {
         if (this == displayTimer) {
             displayTimer = nullptr;
         }
     }
 
-    void setType(DisplayType type, Event::milliseconds interval) {
+    void setType(DisplayType type, Event::milliseconds interval)
+    {
         _type = type;
         if (_type == DisplayType::HEAP) {
             LOOP_FUNCTION_ADD(loop);
@@ -572,17 +573,32 @@ public:
             LoopFunctions::remove(loop);
         }
         _Timer(_timer).add(interval, true, DisplayTimer::printTimerCallback);
-        _maxHeap = 0;
-        _minHeap = ESP.getFreeHeap();
+        #if ESP8266
+            _maxIram = 0;
+            _minIram = 0;
+        #endif
+        #if HAS_MULTI_HEAP
+            {
+                SELECT_IRAM();
+                _minIram = ESP.getFreeHeap();
+            }
+        #endif
+        {
+            SELECT_DRAM();
+            _maxHeap = 0;
+            _minHeap = ESP.getFreeHeap();
+        }
         _rssiMin = std::numeric_limits<decltype(_rssiMin)>::min();
         _rssiMax = 0;
     }
 
-    DisplayType getType() const {
+    DisplayType getType() const
+    {
         return _type;
     }
 
-    void printHeap() {
+    void printHeap()
+    {
         #if ESP32
             Serial.printf_P(PSTR("+HEAP: heap=%u(min=%u/max=%u) psram=%u(min=%u) cpu=%dMHz uptime=%us\n"),
                 ESP.getFreeHeap(),
@@ -594,21 +610,49 @@ public:
                 getSystemUptime()
             );
         #else
-            Serial.printf_P(PSTR("+HEAP: free=%u(min=%u/max=%u) cpu=%dMHz frag=%u uptime=%us\n"),
-                ESP.getFreeHeap(),
+            uint32_t freeIram = 0;
+            uint32_t freeDram;
+            #if HAS_MULTI_HEAP
+                {
+                    SELECT_IRAM();
+                    freeIram = ESP.getFreeHeap();
+                }
+                HeapSelectDram dRam;
+            #endif
+            {
+                SELECT_DRAM();
+                freeDram = ESP.getFreeHeap();
+            }
+
+            Serial.printf_P(PSTR("+HEAP: free=%u(min=%u/max=%u) iram=%u(min=%u/max=%u) cpu=%dMHz frag=%u uptime=%us\n"),
+                freeDram,
                 _minHeap,
                 _maxHeap,
+                freeIram,
+                _minIram,
+                _maxIram,
                 ESP.getCpuFreqMHz(),
                 ESP.getHeapFragmentation(),
                 getSystemUptime()
             );
             #if defined(UMM_STATS) || defined(UMM_STATS_FULL)
-                umm_print_stats(2);
+                {
+                    SELECT_DRAM();
+                    umm_print_stats(2);
+                }
+                #if HAS_MULTI_HEAP
+                    {
+                        SELECT_IRAM();
+                        umm_print_stats(2);
+                    }
+                #endif
+
             #endif
         #endif
     }
 
-    void printGPIO() {
+    void printGPIO()
+    {
         Serial.printf_P(PSTR("+GPIO: "));
         #if defined(ESP8266)
             for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
@@ -649,14 +693,16 @@ public:
         #endif
     }
 
-    void printRSSI() {
+    void printRSSI()
+    {
         int16_t rssi = WiFi.RSSI();
         _rssiMin = std::max(_rssiMin, rssi);
         _rssiMax = std::min(_rssiMax, rssi);
         Serial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, _rssiMin, _rssiMax);
     }
 
-    void print() {
+    void print()
+    {
         switch(_type) {
             case DisplayType::HEAP:
                 printHeap();
@@ -671,7 +717,8 @@ public:
         }
     }
 
-    static void printTimerCallback(Event::CallbackTimerPtr timer) {
+    static void printTimerCallback(Event::CallbackTimerPtr timer)
+    {
         if (displayTimer == nullptr) {
             timer->disarm();
             return;
@@ -679,22 +726,34 @@ public:
         displayTimer->print();
     }
 
-    bool removeTimer() {
+    bool removeTimer()
+    {
         return _Timer(_timer).remove();
     }
 
-    void remove() {
+    void remove()
+    {
         _Timer(_timer).remove();
         LoopFunctions::remove(loop);
         delete this;
     }
 
-    void _loop() {
+    void _loop()
+    {
+        #if HAS_MULTI_HEAP
+            {
+                SELECT_IRAM();
+                _minIram = std::min<uint32_t>(ESP.getFreeHeap(), _minIram);
+                _maxIram = std::max<uint32_t>(ESP.getFreeHeap(), _maxIram);
+            }
+        #endif
+        SELECT_DRAM();
         _minHeap = std::min<uint32_t>(ESP.getFreeHeap(), _minHeap);
         _maxHeap = std::max<uint32_t>(ESP.getFreeHeap(), _maxHeap);
     }
 
-    static void loop() {
+    static void loop()
+    {
         if (displayTimer) {
             displayTimer->_loop();
         }
@@ -707,6 +766,10 @@ private:
     int16_t _rssiMax;
     uint32_t _maxHeap;
     uint32_t _minHeap;
+    #if ESP8266
+        uint32_t _maxIram;
+        uint32_t _minIram;
+    #endif
 };
 
 DisplayTimer *displayTimer;

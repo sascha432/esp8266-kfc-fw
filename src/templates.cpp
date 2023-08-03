@@ -14,6 +14,7 @@
 #include "web_server.h"
 #include <PrintHtmlEntitiesString.h>
 #include <PrintString.h>
+#include <HeapSelector.h>
 #if ESP32
 #    include <sdkconfig.h>
 #endif
@@ -284,7 +285,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 formatBytes(ESP.getFlashChipRealSize()).c_str(),
                 ESPGetFlashChipSpeedAndModeStr().c_str(),
                 system_get_cpu_freq(),
-                formatBytes(ESP.getFreeHeap()).c_str()
+                formatBytes(getTotalFreeHeap()).c_str()
             );
         #elif ESP32
             output.printf_P(PSTR("ESP32 %s Flash %s, %ux%dMHz, Free RAM %s, "),

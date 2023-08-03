@@ -15,6 +15,7 @@
 #include "../src/plugins/ping_monitor/ping_monitor.h"
 #endif
 
+#include <HeapSelector.h>
 #include <save_crash.h>
 
 #if DEBUG_IOT_SENSOR
@@ -219,13 +220,13 @@ void Sensor_SystemMetrics::getValues(WebUINS::Events &array, bool timer)
     array.append(
         WebUINS::Values(_getId(MetricsType::UPTIME), _getUptime(), true)
         #if ESP32
-            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB"), ESP.getFreeHeap() / 1024.0), true)
+            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB"), getTotalFreeHeap() / 1024.0), true)
             #if CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM
-                , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.2f KB"), ESP.getFreePsram() / 1024.0), true)
+                , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.2f KB"), getTotalFreeHeap() / 1024.0), true)
             #endif
         #endif
         #if ESP8266
-            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB<br>%u%%"), ESP.getFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
+            , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB<br>%u%%"), getTotalFreeHeap() / 1024.0, ESP.getHeapFragmentation()), true)
         #endif
     );
 }
@@ -298,7 +299,7 @@ String Sensor_SystemMetrics::_getMetricsJson() const
     UnnamedObject jsonObj(
         NamedUint32(FSPGM(uptime), getSystemUptime()),
         NamedStoredString(F("uptime_hr"), _getUptime(F("\n"))),
-            NamedUint32(FSPGM(heap), ESP.getFreeHeap()),
+            NamedUint32(FSPGM(heap), getTotalFreeHeap()),
             NamedInt32(F("rssi"), WiFi.RSSI()),
         #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
             NamedUint32(F("psram"), ESP.getFreePsram()),

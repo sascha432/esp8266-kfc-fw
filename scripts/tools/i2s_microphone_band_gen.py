@@ -4,8 +4,25 @@ import random
 
 samples = 256.0 # number of FFT samples
 bands = 32 # number of bands
-px = 1.028 # logarithmic scale
-fMax = 16800 # max frequency / fFreqCorr
+
+# NOTE: currently it requires 32 bands, the implementation for less is missing in animation_visualizer.cpp
+# this code should be integrated into the C code and adjust the bands to the number of available columns up to 32 bands
+# the UDP code would not work correctly by just reducing the bands
+
+ # logarithmic scale
+if bands==32:
+    px = 1.028
+    fMax = 16800
+elif bands==16:
+    px = 1.085
+    fMax = 16800
+elif bands==8:
+    px = 1.35
+    fMax = 22500
+else:
+    print('number of bands not supported')
+    exit(1)
+
 fIncr = fMax / bands
 fFreqCorr = 1 / 0.7
 maxFrequency = fIncr
@@ -31,7 +48,7 @@ for x in range(0, bands + 1):
 
     fl.append(int(frequencyB))
 
-    if x<32:
+    if x<bands:
         print('// band %d = %.0f-%.0f Hz' % (x + 1, frequencyB / fFreqCorr, (frequency - 1) / fFreqCorr), file=file)
 
     frequencyB = frequency
@@ -71,6 +88,7 @@ for b in range(0, bands):
 
     # print('%f-%f (%f) %d-%d (%d)' % (fstart, fend, frange, bstart, bend, brange))
 
+print('static constexpr int kMaxBands = %d;' % bands, file=file)
 s = str(band_index).replace('[', '{').replace(']', '}').replace("'", '')
 print('static constexpr uint16_t bands[] = %s;' % s, file=file)
 s = str(factors1).replace('[', '{').replace(']', '}')

@@ -18,13 +18,6 @@
 #endif
 
 
-static constexpr uint16_t BW(const uint8_t lo, const uint8_t hi)
-{
-    return lo | (hi << 8);
-}
-
-#include "i2s_microphone_bands.h"
-
 inline static uint8_t getBandStart(uint8_t band)
 {
     return bands[band] & 0xff;

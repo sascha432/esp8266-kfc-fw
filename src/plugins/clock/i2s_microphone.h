@@ -13,11 +13,18 @@
 #include <array>
 #include <memory>
 
+static constexpr uint16_t BW(const uint8_t lo, const uint8_t hi)
+{
+    return lo | (hi << 8);
+}
+
+#include "i2s_microphone_bands.h"
+
 class I2SMicrophone {
 public:
     static constexpr uint32_t kSampleRate = 48000;
     static constexpr uint32_t kMaxSamples = 256;
-    static constexpr uint8_t kNumBands = 32;
+    static constexpr uint8_t kNumBands = kMaxBands;
     static constexpr double kNoiseLevel = 2350;
 
 public:

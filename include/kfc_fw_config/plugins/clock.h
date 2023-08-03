@@ -290,7 +290,7 @@ namespace KFCConfigurationClasses {
                     CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::HORIZONTAL);
                     CREATE_ENUM_BITFIELD_SIZE_DEFAULT(input, 2, AudioInputType, std::underlying_type<AudioInputType>::type, uint8, AudioInputType(int(AudioInputType::MIN) + 1));
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_loudness_gain, 10, 1, 1000, 275, 1);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(mic_band_gain, 10, 1, 1000, 300, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mic_band_gain, 10, 1, 1000, 175, 1);
 
                     VisualizerType() :
                         port(kDefaultValueFor_port),

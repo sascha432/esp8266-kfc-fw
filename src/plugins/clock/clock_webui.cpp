@@ -131,6 +131,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             auto request = WebServer::AsyncWebServerRequestParser(value);
             request.setUrl(PrintString(F("/" LED_MATRIX_MENU_URI_PREFIX "%s.html"), id.c_str()));
             request._tempObject = (void *)strdup_P(WebUISocket::hasAuthenticatedClients() ? WebUISocket::getSender()->getClient()->remoteIP().toString().c_str() : PSTR("[WebSocket]"));
+
             WebServer::Plugin::getInstance().handleFormData(id, &request, *this);
         }
         else if (id == F("color")) {
@@ -146,76 +147,76 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
 #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
-String ClockPlugin::_getPowerLevelStr()
-{
-    PrintString powerLevelStr;
-    auto level = _getPowerLevel();
-    if (!std::isnormal(level)) {
-        powerLevelStr = '0';
+    String ClockPlugin::_getPowerLevelStr()
+    {
+        PrintString powerLevelStr;
+        auto level = _getPowerLevel();
+        if (!std::isnormal(level)) {
+            powerLevelStr = '0';
+        }
+        else {
+            MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);
+        }
+        if (_config.power_limit) {
+            powerLevelStr.printf_P(PSTR(" / %u"), _config.power_limit);
+        }
+        return powerLevelStr;
     }
-    else {
-        MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);
-    }
-    if (_config.power_limit) {
-        powerLevelStr.printf_P(PSTR(" / %u"), _config.power_limit);
-    }
-    return powerLevelStr;
-}
 
-void ClockPlugin::_updatePowerLevelWebUI()
-{
-    if (WebUISocket::hasAuthenticatedClients()) {
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()))));
+    void ClockPlugin::_updatePowerLevelWebUI()
+    {
+        if (WebUISocket::hasAuthenticatedClients()) {
+            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()))));
+        }
     }
-}
 
-uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
-{
-    uint32_t requestedPower_mW;
-    uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
-    if (_isEnabled) {
-        _powerLevelCurrentmW = (targetBrightness <= newBrightness) ? requestedPower_mW : maxPower_mW;
-        _calcPowerLevel();
+    uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
+    {
+        uint32_t requestedPower_mW;
+        uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
+        if (_isEnabled) {
+            _powerLevelCurrentmW = (targetBrightness <= newBrightness) ? requestedPower_mW : maxPower_mW;
+            _calcPowerLevel();
+        }
+        else {
+            #if IOT_LED_MATRIX_STANDBY_PIN
+                _powerLevelCurrentmW = 0;
+            #else
+                _powerLevelCurrentmW = calculate_idle_power_mW();
+            #endif
+            _powerLevelAvg = _powerLevelCurrentmW;
+            _powerLevelUpdateTimer = 0;
+        }
+        return newBrightness;
     }
-    else {
-        #if IOT_LED_MATRIX_STANDBY_PIN
-            _powerLevelCurrentmW = 0;
-        #else
-            _powerLevelCurrentmW = calculate_idle_power_mW();
-        #endif
-        _powerLevelAvg = _powerLevelCurrentmW;
-        _powerLevelUpdateTimer = 0;
-    }
-    return newBrightness;
-}
 
-void ClockPlugin::_webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
-{
-    if (server != WebUISocket::getServerSocket()) {
-        return;
+    void ClockPlugin::_webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
+    {
+        if (server != WebUISocket::getServerSocket()) {
+            return;
+        }
+        // adjust update rate if a client connects to the webui
+        if (type == WsClient::ClientCallbackType::ON_START) {
+            _powerLevelUpdateRate = (IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE * kPowerLevelUpdateRateMultiplier);
+        }
+        else if (type == WsClient::ClientCallbackType::ON_END) {
+            _powerLevelUpdateRate = (kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier);
+        }
     }
-    // adjust update rate if a client connects to the webui
-    if (type == WsClient::ClientCallbackType::ON_START) {
-        _powerLevelUpdateRate = (IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE * kPowerLevelUpdateRateMultiplier);
-    }
-    else if (type == WsClient::ClientCallbackType::ON_END) {
-        _powerLevelUpdateRate = (kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier);
-    }
-}
 
-void ClockPlugin::_calcPowerLevel()
-{
-    if (_powerLevelUpdateTimer == 0) {
-        _powerLevelUpdateTimer = micros();
-        _powerLevelAvg = _powerLevelCurrentmW;
+    void ClockPlugin::_calcPowerLevel()
+    {
+        if (_powerLevelUpdateTimer == 0) {
+            _powerLevelUpdateTimer = micros();
+            _powerLevelAvg = _powerLevelCurrentmW;
+        }
+        else {
+            auto ms = micros();
+            auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_diff(_powerLevelUpdateTimer, ms));
+            _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
+            _powerLevelUpdateTimer = ms;
+        }
     }
-    else {
-        auto ms = micros();
-        auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_diff(_powerLevelUpdateTimer, ms));
-        _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
-        _powerLevelUpdateTimer = ms;
-    }
-}
 
 #endif
 

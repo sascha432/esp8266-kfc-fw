@@ -80,11 +80,11 @@
                 "./Resources/html/clock.html",
                 "./Resources/css/clock-led-matrix.css"
             ],
+            "#if !IOT_LED_MATRIX": [
+                "./Resources/html/led-matrix.html"
+            ],
             "#if !IOT_LED_MATRIX_HEXAGON_PANEL": [
                 "./Resources/css/hexagon-panel.css"
-            ],
-            "#if IOT_CLOCK || !IOT_LED_MATRIX": [
-                "./Resources/html/led_matrix.html"
             ],
             "#if !IOT_ALARM_PLUGIN_ENABLED": [
                 "./Resources/html/alarm.html",

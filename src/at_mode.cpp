@@ -2630,11 +2630,12 @@ void at_mode_serial_handle_event(String &commandString)
         auto versionStr = SaveCrash::Data::FirmwareVersion(version).toString();
         args.print(F("stored config version 0x%08x, %s, dirty=%u"), version, versionStr.c_str(), config.isDirty());
 
-        if (args.equalsIgnoreCase(0, F("json"))) {
+        if (args.equalsIgnoreCase(0, F("dirty"))) {
+            config.dump(output, true);
+        }
+        else if (args.equalsIgnoreCase(0, F("json"))) {
             config.exportAsJson(output, versionStr);
         }
-        else if (args.equalsIgnoreCase(0, F("dirty"))) {
-            config.dump(output, true);
         }
         else if (args.size() == 1) {
             config.dump(output, false, args.toString(0));

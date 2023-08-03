@@ -1558,14 +1558,9 @@ namespace SaveCrash {
         auto fs = SaveCrash::createFlashStorage();
 
         auto &cmd = request->arg(F("cmd"));
-        if (request->hasArg(cmd.c_str())) {
-            if (cmd == F("clear")) {
-                fs.clear(SPIFlash::ClearStorageType::ERASE);
-                response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
-            }
-            else {
-                return request->beginResponse(400);
-            }
+        if (cmd == F("clear")) {
+            fs.clear(SPIFlash::ClearStorageType::ERASE);
+            response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
         }
         else {
             uint32_t id = strtoul(request->arg(F("id")).c_str(), nullptr, 16);

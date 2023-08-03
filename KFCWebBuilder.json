@@ -22,6 +22,9 @@
                 "./Resources/html/__prototypes.html",
                 "./Resources/html/__prototypes_webui.html"
             ],
+            "#if !ESP8266": [
+                "./Resources/html/savecrash.html"
+            ],
             "#if !IOT_DIMMER_MODULE && !IOT_ATOMIC_SUN_V2": [
                 "./Resources/html/dimmer.html",
                 "./Resources/html/dimmer-ci.html",

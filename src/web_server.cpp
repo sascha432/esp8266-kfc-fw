@@ -385,16 +385,18 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         }
     #endif
     // --------------------------------------------------------------------
-    else if (url == F("/savecrash.json")) {
-        if (!getInstance().isAuthenticated(request)) {
-            auto response = request->beginResponse(403);
-            _logRequest(request, response);
-            request->send(response);
-            return;
+    #if ESP8266
+        else if (url == F("/savecrash.json")) {
+            if (!getInstance().isAuthenticated(request)) {
+                auto response = request->beginResponse(403);
+                _logRequest(request, response);
+                request->send(response);
+                return;
+            }
+            headers.addNoCache(true);
+            response = SaveCrash::webHandler::json(request, headers);
         }
-        headers.addNoCache(true);
-        response = SaveCrash::webHandler::json(request, headers);
-    }
+    #endif
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
         // --------------------------------------------------------------------
         else if (url == F("/ambient_light_sensor")) {
@@ -1627,7 +1629,9 @@ namespace SaveCrash {
 
 void ResetDetectorPlugin::createMenu()
 {
-    bootstrapMenu.addMenuItem(F("SaveCrash Log"), F("savecrash.html"), navMenu.util);
+    #if ESP8266
+        bootstrapMenu.addMenuItem(F("SaveCrash Log"), F("savecrash.html"), navMenu.util);
+    #endif
 }
 
 #include "web_server_action.h"

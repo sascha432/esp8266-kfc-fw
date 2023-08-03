@@ -1037,8 +1037,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 #endif
 
-// keep this in IRAM to avoid cache misses in FastLED
-void IRAM_ATTR ClockPlugin::_loop()
+void ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
@@ -1066,7 +1065,7 @@ void IRAM_ATTR ClockPlugin::_loop()
     }
 
     if (options.doUpdate()) {
-        _loopDoUpdate(options); // keep this in the flash memory
+        _loopDoUpdate(options);
     }
 
     _display.show();
@@ -1090,7 +1089,7 @@ void IRAM_ATTR ClockPlugin::_loop()
     #endif
 }
 
-void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
+void ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
 {
     // start update process
     _lastUpdateTime = millis();

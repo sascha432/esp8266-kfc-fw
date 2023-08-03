@@ -39,6 +39,25 @@ Restore factory settings, store in EEPROM/NVS and reboot device
 ### ``+FNVS``
 
 Format NVS partition, restore factory settings and store it. Reboot the device to apply all new settings
+Formatting a NVS partition that has been used for quite some time can free up some heap. The status page shows the amount of heap being used for it and should not exceed 1.5-2KB
+
+``` test
+NVS flash storage max. size 32KB, 86.6% in use
+NVS init partition memory usage 1312 byte
+Stored items 34, size 0.60KB
+```
+
+For the ESP8266 and its custom NVS implementation, esptool.py can be used to clear a full or corrupted NVS partition that prevents the device to boot. Usually this is  detected automatically, and the entire ```nvs``` partition is formatted. The current custom implementation of NVS for NONOS_SDK has not been tested very well
+
+**Note:** The region in the example can be different depending on the flash layout being used (```eagle...ld```, name ```nvs```)
+
+***TODO:*** Implement a command for PIO for format NVS
+
+``` bash
+python .platformio/packages/tool-esptoolpy/esptool.py erase_region 4009984 32768
+```
+
+For the ESP32, check the documentation for NVS
 
 ### ``+ATMODE=<1|0>``
 
@@ -145,6 +164,67 @@ Scan I2C Bus. If ANY is passed as third argument, all available PINs are probed 
 
 PWM output on PIN, min./max. level set it to LOW/HIGH" using digitalWrite
 
+### ``+RD?``
+
+Show reset detector status
+
+### ``+RD``
+
+Clear reset detector status
+
+### ``+SAVECRASH=<info|list|print|clear|format>``
+
+Run command
+
+ - ``info`` show statistics
+ - ``list`` list crash logs
+ - ``print`` show stack trace for a crash log
+ - ``clear`` clear all data (marks used sectors as invalid, they will be re-used and formated once no free sectors are available)
+ - ``format`` format all savecrash data sectors
+
+``` text
++savecrash=info
++SAVECRASH: entries=1 size=1068 capacity=124620
++SAVECRASH: free space=123492 largest block=4020
+```
+
+``` text
++savecrash=list
+<001> 2023-07-25T04:51:45 PDT reason=LoadStoreErrorCause epc1=0x00000003 epc2=0x40101675 epc3=0x00000000 excvaddr=0x402b9437 depc=0x400287c1 version=0.0.8.b13160
+ md5=eddacbc1184a156d22844c6a9e387742 stack-size=1008
+ ```
+
+ ``` text
++savecrash=print,1
+
+--------------- CUT HERE FOR EXCEPTION DECODER ---------------
+
+Firmware 0.0.8.b13160
+MD5 eddacbc1184a156d22844c6a9e387742
+Timestamp 2023-07-25T04:51:45 PDT
+
+Exception (3):
+epc1=0x40101675 epc2=0x00000000 epc3=0x402b9437 excvaddr=0x400287c1 depc=0x00000000
+
+>>>stack>>>
+sp: 3ffff970 end: 3fffffd0 offset: 0270
+3ffffbe0:  00000000 3ffffcb0 3fff1b0c 3fff0550
+3ffffbf0:  3ffffc90 40264a60 00000020 401018fc
+...
+3fffffc0:  feefeffe feefeffe 3fffdab0 4010078d
+<<<stack<<<
+
+--------------- CUT HERE FOR EXCEPTION DECODER ---------------
+
+```
+
+``` text
++savecrash=clear
++SAVECRASH: SaveCrash logs erased
++savecrash=info
++SAVECRASH: entries=0 size=0 capacity=124620
++SAVECRASH: free space=124560 largest block=4020
+```
 
 ## 7 Segment Clock
 

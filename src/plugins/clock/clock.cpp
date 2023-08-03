@@ -503,6 +503,12 @@ void ClockPlugin::reconfigure(const String &source)
 
 void ClockPlugin::shutdown()
 {
+    // store pending changed on shutdown
+    if (_saveTimer) {
+        _saveTimer->_callback(nullptr);
+        _Timer(_saveTimer).remove();
+    }
+
     _isRunning = false;
 
     #if PIN_MONITOR

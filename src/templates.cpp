@@ -18,6 +18,9 @@
 #if ESP32
 #    include <sdkconfig.h>
 #endif
+#if IOT_CLOCK
+#    include <../src/plugins/clock/clock_base.h>
+#endif
 #if IOT_WEATHER_STATION
 #    include <../src/plugins/weather_station/weather_station.h>
 #endif
@@ -388,6 +391,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(hidden));
         }
     }
+    #if IOT_CLOCK
+        else if (key == F("LED_MATRIX_FORM_PREFIX")) {
+            output.print(F("/" LED_MATRIX_MENU_URI_PREFIX));
+        }
+    #endif
     #if defined(TFT_WIDTH) && defined(TFT_HEIGHT)
         else if (key == F("TFT_WIDTH")) {
             output.print(TFT_WIDTH);

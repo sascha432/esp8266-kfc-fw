@@ -41,7 +41,7 @@
                 if (animation_config.find('.modal-dialog').length == 0) {
                     create_modal();
                     animation_config.modal({show: false, keyboard: false}).on('show.bs.modal', function() {
-                        var url = '/led-matrix/ani-' + animation + '.html';
+                        var url = $('#webui').data('target') + 'ani-' + animation + '.html?inline=1';
 // console.log('show', animation, url);
                         $.get(url, function(data) {
 // console.log('get', animation, url);
@@ -99,20 +99,6 @@
                 }
             }
 
-            // var handler = null;
-            // $.webUIComponent.event_handlers.push(function(events) {
-            //     if (handler && events.i == 'animation-1') {
-            //         try {
-            //             // console.log(events, handler, events.i);
-            //             var json = JSON.parse(events.v);
-            //             // console.log(json);
-            //             handler(json);
-            //             return true;
-            //         } catch(e) {
-            //         }
-            //     }
-            //     return false;
-            // });
             $.webUIComponent.init_functions.push(function() {
 
                 // update link

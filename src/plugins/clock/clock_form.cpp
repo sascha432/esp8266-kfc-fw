@@ -462,12 +462,20 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     // sub forms for the WebUI
     if (formName.startsWith(F("ani-"))) {
         auto animation = _getAnimationType(FPSTR(formName.c_str() + 4)); // translate name to number or just return number
-        __LDBG_printf("form=%s animation=%u valid=%u", formName.c_str() + 4, animation, animation != AnimationType::MAX);
-        if (animation != AnimationType::MAX) {
+        auto isInline = request->arg(F("inline")).toInt() != 0;
+        __LDBG_printf("form=%s animation=%u valid=%u inline=%u", formName.c_str() + 4, animation, animation != AnimationType::MAX, isInline);
+        if (animation < AnimationType::MAX) {
             auto &ui = form.createWebUI();
             ui.setContainerId(F("led-matrix-settings"));
-            ui.setStyle(FormUI::WebUI::StyleType::WEBUI);
-            _createConfigureFormAnimation(animation, form, cfg, TitleType::SET_TITLE);
+            if (isInline) {
+                ui.setStyle(FormUI::WebUI::StyleType::WEBUI);
+                _createConfigureFormAnimation(animation, form, cfg, TitleType::SET_TITLE);
+            }
+            else {
+                ui.setTitle(_getAnimationTitle(animation));
+                ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
+                _createConfigureFormAnimation(animation, form, cfg, TitleType::ADD_GROUP);
+            }
             form.finalize();
         }
         return;
@@ -478,73 +486,76 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     ui.setContainerId(F("led-matrix-settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    if (formName == F("animations")) {
+    #if ESP32
+        if (formName == F("animations")) {
 
-        // --------------------------------------------------------------------
-        auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
+            // --------------------------------------------------------------------
+            auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
 
-        FormUI::Container::List animationTypeItems;
-        for(int i = 0; i < static_cast<int>(AnimationType::MAX); i++) {
-            animationTypeItems.emplace_back(static_cast<AnimationType>(i), _getAnimationName(static_cast<AnimationType>(i)));
+            FormUI::Container::List animationTypeItems;
+            for(int i = 0; i < static_cast<int>(AnimationType::MAX); i++) {
+                animationTypeItems.emplace_back(static_cast<AnimationType>(i), _getAnimationName(static_cast<AnimationType>(i)));
+            }
+
+            form.addObjectGetterSetter(F("ani"), FormGetterSetter(cfg, animation));
+            form.addFormUI(FSPGM(Type), animationTypeItems);
+
+            _createConfigureFormAnimation(AnimationType::SOLID, form, cfg, TitleType::NONE);
+            _createConfigureFormAnimation(AnimationType::FLASHING, form, cfg, TitleType::NONE);
+
+            animationGroup.end();
+
+            // --------------------------------------------------------------------
+            _createConfigureFormAnimation(AnimationType::RAINBOW, form, cfg, TitleType::ADD_GROUP);
+
+            // --------------------------------------------------------------------
+            _createConfigureFormAnimation(AnimationType::RAINBOW_FASTLED, form, cfg, TitleType::ADD_GROUP);
+
+            // --------------------------------------------------------------------
+            #if IOT_LED_MATRIX_ENABLE_VISUALIZER
+                _createConfigureFormAnimation(AnimationType::VISUALIZER, form, cfg, TitleType::ADD_GROUP);
+            #endif
+
+            // --------------------------------------------------------------------
+            _createConfigureFormAnimation(AnimationType::FIRE, form, cfg, TitleType::ADD_GROUP);
+
+            // --------------------------------------------------------------------
+            _createConfigureFormAnimation(AnimationType::PLASMA, form, cfg, TitleType::ADD_GROUP);
+
+            // --------------------------------------------------------------------
+            _createConfigureFormAnimation(AnimationType::INTERLEAVED, form, cfg, TitleType::ADD_GROUP);
+
+            // --------------------------------------------------------------------
+            _createConfigureFormAnimation(AnimationType::FADING, form, cfg, TitleType::ADD_GROUP);
+
+            // --------------------------------------------------------------------
+            _createConfigureFormAnimation(AnimationType::GRADIENT, form, cfg, TitleType::ADD_GROUP);
+
+            // --------------------------------------------------------------------
+            #if IOT_ALARM_PLUGIN_ENABLED
+
+                auto &alarmGroup = form.addCardGroup(FSPGM(alarm), FSPGM(Alarm), true);
+
+                form.add(F("acl"), Color(cfg.alarm.color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                    if (store) {
+                        cfg.alarm.color.value = Color::fromString(value);
+                    }
+                    return false;
+                });
+                form.addFormUI(FSPGM(Color));
+
+                form.addObjectGetterSetter(F("asp"), FormGetterSetter(cfg.alarm, speed));
+                form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
+                form.addValidator(FormUI::Validator::Range(50, 0xffff));
+
+                alarmGroup.end();
+
+            #endif
+
         }
-
-        form.addObjectGetterSetter(F("ani"), FormGetterSetter(cfg, animation));
-        form.addFormUI(FSPGM(Type), animationTypeItems);
-
-        _createConfigureFormAnimation(AnimationType::SOLID, form, cfg, TitleType::NONE);
-        _createConfigureFormAnimation(AnimationType::FLASHING, form, cfg, TitleType::NONE);
-
-        animationGroup.end();
-
-        // --------------------------------------------------------------------
-        _createConfigureFormAnimation(AnimationType::RAINBOW, form, cfg, TitleType::ADD_GROUP);
-
-        // --------------------------------------------------------------------
-        _createConfigureFormAnimation(AnimationType::RAINBOW_FASTLED, form, cfg, TitleType::ADD_GROUP);
-
-        // --------------------------------------------------------------------
-        #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-            _createConfigureFormAnimation(AnimationType::VISUALIZER, form, cfg, TitleType::ADD_GROUP);
-        #endif
-
-        // --------------------------------------------------------------------
-        _createConfigureFormAnimation(AnimationType::FIRE, form, cfg, TitleType::ADD_GROUP);
-
-        // --------------------------------------------------------------------
-        _createConfigureFormAnimation(AnimationType::PLASMA, form, cfg, TitleType::ADD_GROUP);
-
-        // --------------------------------------------------------------------
-        _createConfigureFormAnimation(AnimationType::INTERLEAVED, form, cfg, TitleType::ADD_GROUP);
-
-        // --------------------------------------------------------------------
-        _createConfigureFormAnimation(AnimationType::FADING, form, cfg, TitleType::ADD_GROUP);
-
-        // --------------------------------------------------------------------
-        _createConfigureFormAnimation(AnimationType::GRADIENT, form, cfg, TitleType::ADD_GROUP);
-
-        // --------------------------------------------------------------------
-        #if IOT_ALARM_PLUGIN_ENABLED
-
-            auto &alarmGroup = form.addCardGroup(FSPGM(alarm), FSPGM(Alarm), true);
-
-            form.add(F("acl"), Color(cfg.alarm.color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-                if (store) {
-                    cfg.alarm.color.value = Color::fromString(value);
-                }
-                return false;
-            });
-            form.addFormUI(FSPGM(Color));
-
-            form.addObjectGetterSetter(F("asp"), FormGetterSetter(cfg.alarm, speed));
-            form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
-            form.addValidator(FormUI::Validator::Range(50, 0xffff));
-
-            alarmGroup.end();
-
-        #endif
-
-    }
-    else if (formName == F("protection")) {
+        else
+    #endif
+    if (formName == F("protection")) {
 
         // --------------------------------------------------------------------
         #if IOT_CLOCK_TEMPERATURE_PROTECTION

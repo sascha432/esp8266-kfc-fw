@@ -1147,7 +1147,7 @@ inline Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
     _forceUpdate(plugin._forceUpdate),
     _brightness(plugin._getBrightness()),
     _millis(millis()),
-    _millisSinceLastUpdate(get_time_diff(plugin._lastUpdateTime, _millis))
+    _millisSinceLastUpdate(_millis - plugin._lastUpdateTime)
 {
     if (plugin._isFading && plugin._fadeTimer.reached()) {
         __LDBG_printf("fading=done brightness=%u target_brightness=%u", plugin._getBrightness(), plugin._targetBrightness);

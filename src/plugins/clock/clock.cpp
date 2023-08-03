@@ -138,11 +138,9 @@ MQTT::Json::UnnamedObject ClockPlugin::getWLEDJson()
         )
     );
 
-    using KFCConfigurationClasses::Plugins::ClockConfigNS::Clock;
-    using KFCConfigurationClasses::Plugins::ClockConfigNS::AnimationType;
     auto effects = NamedArray(F("effects"));
     for(auto i = AnimationType::MIN; i < AnimationType::MAX; i = AnimationType(int(i) + 1)) {
-        auto name = Clock::getAnimationName(i);
+        auto name = _getAnimationName(i);
         if (name) {
             effects.append(UnnamedString(name));
         }
@@ -157,7 +155,16 @@ void ClockPlugin::createMenu()
     auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
     auto subMenu = configMenu.addSubMenu(getFriendlyName());
     subMenu.addMenuItem(F("Settings"), F(LED_MATRIX_MENU_URI_PREFIX "settings.html"));
-    subMenu.addMenuItem(F("Animations"), F(LED_MATRIX_MENU_URI_PREFIX "animations.html"));
+    #if ESP32
+        subMenu.addMenuItem(F("Animations"), F(LED_MATRIX_MENU_URI_PREFIX "animations.html"));
+    #else
+        for(auto i = AnimationType::MIN; i < AnimationType::MAX; i = AnimationType(int(i) + 1)) {
+            auto name = _getAnimationName(i);
+            if (name) {
+                subMenu.addMenuItem(PrintString(F("Animation - %s"), name), PrintString(F(LED_MATRIX_MENU_URI_PREFIX "ani-%s.html"), _getAnimationNameSlug(i)));
+            }
+        }
+    #endif
     #if IOT_LED_MATRIX_CONFIGURABLE
         subMenu.addMenuItem(F("Matrix"), F(LED_MATRIX_MENU_URI_PREFIX "matrix.html"));
     #endif
@@ -538,7 +545,6 @@ void ClockPlugin::shutdown()
             }
         }
     #endif
-
 
     #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
         if (_displayLedTimer) {

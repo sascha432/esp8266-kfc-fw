@@ -312,20 +312,7 @@ void ClockPlugin::webUIHook(WebUINS::Root &webUI, SensorPlugin::SensorType type)
     // add control to the top of the UI
     if (type == SensorPlugin::SensorType::MIN) {
         ClockPlugin::getInstance()._createWebUI(webUI);
-        return;
     }
-    // //     // // calculated power and power limit
-    // #ifdef IOT_SENSOR_HAVE_INA219
-    //     if (type == SensorPlugin::SensorType::INA219) {
-    // //         webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated Power / Limit") : F("Calculated Power"), 'W')));
-    // #else
-    //     if (type == SensorPlugin::SensorType::SYSTEM_METRICS) {
-    // //         webUI.appendToLastRow(addRow::Row(WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Power / Limit") : F("Power"), 'W')));
-    // #endif
-    //         IF_IOT_CLOCK_HAVE_MOTION_SENSOR(
-    //             webUI.appendToLastRow(WebUINS::Row(WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""))));
-    //         )
-    //     }
 }
 
 void ClockPlugin::_broadcastWebUI()

@@ -157,14 +157,17 @@ public:
 
     static SensorPlugin &getInstance();
 
-    // the callback is invoked before a sensor is added
-    // before the title row, the first Sensor is SensorType::MIN
-    // the last type is SensorType::MAX for appending a new sensor at the end
+    // for adding UI elements before all sensors, use type == SensorType::MIN
+    // for adding UI elements after all sensors, use type == SensorType::MAX
+    // for adding UI elements before a particular sensor type, use type == SensorType::BEFORE_TYPE
     void setAddCustomSensorsCallback(AddCustomSensorCallback callback);
 
     // to use multiple callbacks, get the previous callback and call it from the new callback function
     // a copy, std:swap() or std::move() must be used
     AddCustomSensorCallback &getAddCustomSensorsCallback();
+
+    // to add a group in setAddCustomSensorsCallback()
+    static void addGroup(WebUINS::Root &webUI, const __FlashStringHelper *title);
 
     #if AT_MODE_SUPPORTED
         #if AT_MODE_HELP_SUPPORTED
@@ -181,6 +184,10 @@ protected:
 
 public:
     void addSensor(MQTT::SensorPtr sensor, const SensorConfig &config = SensorConfig());
+    size_t countSensors() const
+    {
+        return _count();
+    }
 
 private:
     bool _hasConfigureForm() const;

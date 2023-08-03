@@ -1,4 +1,6 @@
-run
+I am using this directory to work on libraries directly without github.
+
+To clone them from github, run
 
 git clone https://github.com/sascha432/KFCLibrary.git
 git clone https://github.com/sascha432/ESPAsyncWebServer.git
@@ -13,3 +15,6 @@ https://github.com/sascha432/ESPAsyncWebServer.git
 https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK.git
 
 in common.ini (lib_deps =)
+
+Unfortunately lib_deps is preferred over this directory. If somebody knows how to solve that, LMK
+Maybe a pre_script checking, but I could not find a way to add something to lib_deps

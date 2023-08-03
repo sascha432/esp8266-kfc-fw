@@ -233,26 +233,35 @@ void SensorPlugin::createMenu()
     }
 }
 
+void SensorPlugin::addGroup(WebUINS::Root &webUI, const __FlashStringHelper *title)
+{
+    webUI.addRow(WebUINS::Row(WebUINS::Group(title, false)));
+}
+
 void SensorPlugin::createWebUI(WebUINS::Root &webUI)
 {
+    // add custom ui before sensors
     if (_addCustomSensors) {
         _addCustomSensors(webUI, SensorType::MIN);
     }
+
+    // add group if we have any sensors
     if (_count()) {
-        webUI.addRow(WebUINS::Row(WebUINS::Group(F("Sensors"), false)));
+        addGroup(webUI, F("Sensors"));
     }
 
     for(const auto sensor: _sensors) {
         __LDBG_printf("createWebUI type=%u", sensor->getType());
+        // add custom ui before a sensor type
         if (_addCustomSensors) {
             _addCustomSensors(webUI, sensor->getType());
         }
         sensor->createWebUI(webUI);
     }
+
     if (_addCustomSensors) {
-        if (!_count()) {
-            webUI.addRow(WebUINS::Row(WebUINS::Group(F("Sensors"), false)));
-        }
+        // add custom ui after all sensors
+        // addGroup(webUI, F("TITLE")) can be called to add an extra group
         _addCustomSensors(webUI, SensorType::MAX);
     }
 }

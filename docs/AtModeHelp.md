@@ -4,39 +4,46 @@ After the command help takes a lot of FLASH memory, it has been moved to this do
 
 ## Common Commands
 
-### ``+AT?``
+### `+AT?`
 
-Print ``OK``
+Print `OK`
 
-### ``+REM=...``
+### `+REM=...`
 
 Ignore comment
 
-### ``+DSLP=[<milliseconds>[,<mode>]]``
+### `+DSLP=[<milliseconds>[,<mode>]]`
 
 Enter deep sleep
 
-### ``+RST=[<s>]``
+### `+RST=[<s>]`
 
-Reset device. If ``s`` is provided, it will reboot in SAFE MODE.
+Reset device. If `s` is provided, it will reboot in SAFE MODE.
 
-### ``+LOAD``
+### `+LOAD`
 
 Discard changes and load settings from EEPROM/NVS
 
-### ``+STORE``
+### `+STORE`
 
 Store current settings in EEPROM/NVS
 
-### ``+FACTORY``
+### `+DUMP=[<dirty|json>]`
+
+Dump config information and data
+
+  - `dirty` show modified entries only
+  - `json` use JSON as output format
+
+### `+FACTORY`
 
 Restore factory settings (but do not store in EEPROM/NVS)
 
-### ``+FSR``
+### `+FSR`
 
 Restore factory settings, store in EEPROM/NVS and reboot device
 
-### ``+FNVS``
+### `+FNVS`
 
 Format NVS partition, restore factory settings and store it. Reboot the device to apply all new settings
 Formatting a NVS partition that has been used for quite some time can free up some heap. The status page shows the amount of heap being used for it and should not exceed 1.5-2KB
@@ -47,9 +54,9 @@ NVS init partition memory usage 1312 byte
 Stored items 34, size 0.60KB
 ```
 
-For the ESP8266 and its custom NVS implementation, esptool.py can be used to clear a full or corrupted NVS partition that prevents the device to boot. Usually this is  detected automatically, and the entire ```nvs``` partition is formatted. The current custom implementation of NVS for NONOS_SDK has not been tested very well
+For the ESP8266 and its custom NVS implementation, esptool.py can be used to clear a full or corrupted NVS partition that prevents the device to boot. Usually this is  detected automatically, and the entire `nvs` partition is formatted. The current custom implementation of NVS for NONOS_SDK has not been tested very well
 
-**Note:** The region in the example can be different depending on the flash layout being used (```eagle...ld```, name ```nvs```)
+**Note:** The region in the example can be different depending on the flash layout being used (`eagle...ld`, name `nvs`)
 
 ***TODO:*** Implement a command for PIO for format NVS
 
@@ -59,59 +66,59 @@ python .platformio/packages/tool-esptoolpy/esptool.py erase_region 4009984 32768
 
 For the ESP32, check the documentation for NVS
 
-### ``+ATMODE=<1|0>``
+### `+ATMODE=<1|0>`
 
 Enable/disable AT Mode if compiled in
 
-### ``+HEAP=<interval>``
+### `+HEAP=<interval>`
 
 Display heap usage every interval (can be 1s or 1000ms, 0 shows it once)
 
-### ``+GPIO=<interval>``
+### `+GPIO=<interval>`
 
 Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)
 
-### ``+PWM=<pin>,<input|input_pullup|high|low|waveform|level=0-1023[,<frequency=100-40000Hz>[,<duration/ms>]]``
+### `+PWM=<pin>,<input|input_pullup|high|low|waveform|level=0-1023[,<frequency=100-40000Hz>[,<duration/ms>]]`
 
 Control PIN input, output and PWM state. Setting a PIN high or low implicitly sets it to output.
 
-### ``+DLY=<milliseconds>``
+### `+DLY=<milliseconds>`
 
 Call delay(milliseconds)
 
-### ``+CAT=<filename>``
+### `+CAT=<filename>`
 
 Display file contents
 
-### ``+RM=<filename>``
+### `+RM=<filename>`
 
 Remove file from FS
 
-### ``+RN=<filename>,<new filename>``
+### `+RN=<filename>,<new filename>`
 
 Rename file or directory
 
-### ``+LS=[<directory>[,<hidden=true|false>,<subdirs=true|false>]]``
+### `+LS=[<directory>[,<hidden=true|false>,<subdirs=true|false>]]`
 
 List files and directories
 
-### ``+LSR=[<directory>]``
+### `+LSR=[<directory>]`
 
 List files and directories using FS.openDir(). This will not display read only virtual files.
 
-### ``+AOTA=<start|stop>``
+### `+AOTA=<start|stop>`
 
 Start/stop Arduino OTA (required about 1K RAM to run)
 
-### ``+PLG=<list|start|stop|add-blacklist|add|remove>[,<name>]``
+### `+PLG=<list|start|stop|add-blacklist|add|remove>[,<name>]`
 
 Plugin management. If a plugin malfunctions, it can be blacklisted in SAFE MODE.
 
-### ``+RTC=[set]``
+### `+RTC=[set]`
 
 Display RTC status or set RTC time from current time. Only available with a real time clock (i.e. DS3231)
 
-### ``+WIFI=<command>,[args]``
+### `+WIFI=<command>,[args]`
 
 Run WiFi command
 
@@ -128,59 +135,59 @@ Run WiFi command
  - next                                        Switch to next WiFi station
  - stop_ping                                   Stop pinging the gateway (Only if compiled in)
 
-### ``+LED=<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]``
+### `+LED=<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]`
 
 Set internal LED mode or an LED on a certain PIN.
 
-### ``+NEOPX=<pin>,<num>,<r>,<g>,<b>``
+### `+NEOPX=<pin>,<num>,<r>,<g>,<b>`
 
 Set NeoPixel colors for a given PIN if available
 
-### ``+METRICS``
+### `+METRICS`
 
 Displays versions of the SDK, framework, libraries, memory addresses and a lot more. Available in DEBUG mode only
 
-### ``+PING=<target[,count=4[,timeout=5000]]>``
+### `+PING=<target[,count=4[,timeout=5000]]>`
 
 Ping host or IP address if compiled in
 
-### ``+I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]``
+### `+I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]`
 
 Configure I2C Bus
 
-### ``+I2CTM=<address>,<data,...>``
+### `+I2CTM=<address>,<data,...>`
 
 Transmit data to slave
 
-### ``+I2CRQ=<address>,<length>``
+### `+I2CRQ=<address>,<length>`
 
 Request data from slave
 
-### ``+I2CSCAN=[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]``
+### `+I2CSCAN=[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]`
 
 Scan I2C Bus. If ANY is passed as third argument, all available PINs are probed for I2C devices. Available only if compiled in
 
-### ``PWM=<pin>,<input|input_pullup|waveform|level=0-1024>[,<frequency=100-40000Hz>[,<duration/ms>]]``
+### `PWM=<pin>,<input|input_pullup|waveform|level=0-1024>[,<frequency=100-40000Hz>[,<duration/ms>]]`
 
 PWM output on PIN, min./max. level set it to LOW/HIGH" using digitalWrite
 
-### ``+RD?``
+### `+RD?`
 
 Show reset detector status
 
-### ``+RD``
+### `+RD`
 
 Clear reset detector status
 
-### ``+SAVECRASH=<info|list|print|clear|format>``
+### `+SAVECRASH=<info|list|print|clear|format>`
 
 Run command
 
- - ``info`` show statistics
- - ``list`` list crash logs
- - ``print`` show stack trace for a crash log
- - ``clear`` clear all data (marks used sectors as invalid, they will be re-used and formated once no free sectors are available)
- - ``format`` format all savecrash data sectors
+ - `info` show statistics
+ - `list` list crash logs
+ - `print` show stack trace for a crash log
+ - `clear` clear all data (marks used sectors as invalid, they will be re-used and formated once no free sectors are available)
+ - `format` format all savecrash data sectors
 
 ``` text
 +savecrash=info
@@ -226,13 +233,13 @@ sp: 3ffff970 end: 3fffffd0 offset: 0270
 +SAVECRASH: free space=124560 largest block=4020
 ```
 
-## 7 Segment Clock
+## 7 Segment Clock / LED Matrix / LED Strip
 
-### ``+LMTESTP=<#color>[,<time=500ms>]``
+### `+LMTESTP=<#color>[,<time=500ms>]`
 
 Test peak values. WARNING! This command will bypass all protections and limits
 
-### ``+LMC=<command>[,<options>]``
+### `+LMC=<command>[,<options>]`
 
 Run command
 
@@ -254,63 +261,63 @@ Run command
 - get[,<range>]
 - set,<range(=0-7)>,[#color]
 
-### ``+LMVIEW=<interval in ms|0=disable>,<client_id>``
+### `+LMVIEW=<interval in ms|0=disable>,<client_id>`
 
-Display LEDs over http2serial. Requires a proxy that listens to UDP and sends the data back over a web socket. An example can be found in ``scripts\udp2ws_proxy``
+Display LEDs over http2serial. Requires a proxy that listens to UDP and sends the data back over a web socket. An example can be found in `scripts\udp2ws_proxy`
 
 ## Weather Station / Clock / LED Matrix
 
-### ``+WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
+### `+WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>`
 
 Enable/disable function
 
-### ``+WSBL=<level=0-1023>``
+### `+WSBL=<level=0-1023>`
 
 Set backlight level
 
-### ``+WSU=<i|f>``
+### `+WSU=<i|f>`
 
 Update weather info/forecast
 
-### ``+WSM=<date YYYY-MM-DD>[,<days>]``
+### `+WSM=<date YYYY-MM-DD>[,<days>]`
 
 Show Moon Phase for given date. Only available in DEBUG MODE
 
-### ``+MDNSR`=<service>,<proto>,[<wait=3000ms>]``
+### `+MDNSR`=<service>,<proto>,[<wait=3000ms>]`
 
 Query MDNS
 
-### ``+MDNSR=<stop|start|enable|disable|zeroconf>``
+### `+MDNSR=<stop|start|enable|disable|zeroconf>`
 
 Configure MDNS
 
 ## Blinds Controller
 
-### ``+BCME=<open|close|stop|tone|imperial|init>[,<channel>][,<tone_frequency>,<tone_pwm_value>]``
+### `+BCME=<open|close|stop|tone|imperial|init>[,<channel>][,<tone_frequency>,<tone_pwm_value>]`
 
 Open, close a channel, stop motor or run tone test, play imperial march, set initial state
 
 ## Remote Control
 
-### ``+RCDSLP=<time in seconds|0>``
+### `+RCDSLP=<time in seconds|0>`
 
 Disable auto sleep or set timeout in seconds
 
-### ``+RCBAT=<interval in seconds|0>``
+### `+RCBAT=<interval in seconds|0>`
 
 Send battery status every n seconds to MQTT and to UDP server, 10 times in a row. If the time is 0, it is sent once.
 
-### ``+BCAP=<voltage>``
+### `+BCAP=<voltage>`
 
 Calculate battery capacity for given voltage
 
-### ``+BCTAB=<from>,<to-voltage>[,<true=charging|false>]``
+### `+BCTAB=<from>,<to-voltage>[,<true=charging|false>]`
 
 Create a table for the given voltage range
 
 ## MQTT
 
-### ``+MQTT=con|dis|set|top|auto|list``
+### `+MQTT=con|dis|set|top|auto|list`
 
 Manage MQTT
 
@@ -323,25 +330,25 @@ Manage MQTT
 
 ## Weather Station
 
-### ``+WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>``
+### `+WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>`
 
-### ``+WSBL=<level=0-1023>``
+### `+WSBL=<level=0-1023>`
 
 Set backlight level
 
-### ``+WSU=<i|f>``
+### `+WSU=<i|f>`
 
 Update weather info/forecast
 
 ## STK500v1 Programmer
 
-### ``+STK500V1F=<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]``
+### `+STK500V1F=<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]`
 
 Flash .HEX file to AVR MCU over Serial Port (requires bootloader)
 
 __NOTE__: If the process fails, check if the voltage does not drop too much during the process
 
-For example: ``+STK500V1F=/stk500v1/atomicsun-firmware-2.2.3-328pb.hex``
+For example: `+STK500V1F=/stk500v1/atomicsun-firmware-2.2.3-328pb.hex`
 
 ``` text
 +STK500V1F: Flashing /stk500v1/atomicsun-firmware-2.2.3-328pb.hex on Serial
@@ -359,41 +366,41 @@ Programming successful (22 seconds)
 Done
 ```
 
-### ``+STK500V1S=<atmega328p/0x1e1234/...>``
+### `+STK500V1S=<atmega328p/0x1e1234/...>`
 
 Set signature (available names in `/stk500v1/atmega.csv`)
 
-### ``+STK500V1S?``
+### `+STK500V1S?`
 
 Display signature
 
-### ``Debug log file``
+### `Debug log file`
 
-Debug log file is stored in ``/stk500v1/debug.log``
+Debug log file is stored in `/stk500v1/debug.log`
 
 ## Dimmer
 
-### ``+DIMG``
+### `+DIMG`
 
 Get level(s)
 
-### ``+DIMS=<channel>,<level>[,<time>]``
+### `+DIMS=<channel>,<level>[,<time>]`
 
 Set level
 
-### ``+DIMCF=reset|weeprom|info|print|write|factory|zc``
+### `+DIMCF=reset|weeprom|info|print|write|factory|zc`
 
 ## Configure dimmer firmware (ATMega MCU)
 
-### ``+DIMCF=reset``
+### `+DIMCF=reset`
 
 Hard reset MCU
 
-### ``+DIMCF=weeprom``
+### `+DIMCF=weeprom`
 
 Write EEPROM
 
-### ``+DIMCF=info``
+### `+DIMCF=info`
 
 Display dimmer info and config over serial port
 
@@ -404,18 +411,18 @@ Display dimmer info and config over serial port
 +REM=values=restore=1,f=60.342Hz,vref11=1.100,NTC=27.20/+0.00,int.temp=36/ofs=88/gain=156,max.temp=75,metrics=5,VCC=3.229,min.on-time=300,min.off=300,ZC=110,sw.on-time=0/0
 ```
 
-### ``+DIMCF=write``
+### `+DIMCF=write`
 
 Write EEPROM and configuration
 
-### ``+DIMCF=factory``
+### `+DIMCF=factory`
 
 Restore ATMega factory settings
 
-### ``+DIMCF=zc,<value>``
+### `+DIMCF=zc,<value>`
 
 Set zero crossing offset (16bit) in CPU cycles (16MHz = 62.5ns). The EEPROM must be written to store the value permanently
 
-### ``+DIMCF=zc,<+-value>``
+### `+DIMCF=zc,<+-value>`
 
 Increase or decrease zero crossing offset

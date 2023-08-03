@@ -2636,7 +2636,6 @@ void at_mode_serial_handle_event(String &commandString)
         else if (args.equalsIgnoreCase(0, F("json"))) {
             config.exportAsJson(output, versionStr);
         }
-        }
         else if (args.size() == 1) {
             config.dump(output, false, args.toString(0));
         }

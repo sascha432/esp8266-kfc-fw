@@ -545,8 +545,9 @@ class DisplayTimer {
 public:
     enum class DisplayType {
         HEAP = 1,
-        RSSI = 2,
-        GPIO = 3,
+        HEAP_UMM,
+        RSSI,
+        GPIO,
     };
 
     DisplayTimer() :
@@ -566,7 +567,7 @@ public:
     void setType(DisplayType type, Event::milliseconds interval)
     {
         _type = type;
-        if (_type == DisplayType::HEAP) {
+        if (_type == DisplayType::HEAP || _type == DisplayType::HEAP_UMM) {
             LOOP_FUNCTION_ADD(loop);
         }
         else {
@@ -636,17 +637,14 @@ public:
                 getSystemUptime()
             );
             #if defined(UMM_STATS) || defined(UMM_STATS_FULL)
-                {
+                if (_type == DisplayType::HEAP_UMM) {
                     SELECT_DRAM();
                     umm_print_stats(2);
-                }
-                #if HAS_MULTI_HEAP
-                    {
+                    #if HAS_MULTI_HEAP
                         SELECT_IRAM();
                         umm_print_stats(2);
-                    }
-                #endif
-
+                    #endif
+                }
             #endif
         #endif
     }
@@ -705,6 +703,7 @@ public:
     {
         switch(_type) {
             case DisplayType::HEAP:
+            case DisplayType::HEAP_UMM:
                 printHeap();
                 break;
             case DisplayType::GPIO:
@@ -2444,8 +2443,9 @@ void at_mode_serial_handle_event(String &commandString)
         // Mappings::getInstance().dump(output);
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
-        if (args.requireArgs(0, 1)) {
+        if (args.requireArgs(0, 2)) {
             auto interval = args.toMillis(0, 0, 3600 * 1000, 0, String('s'));
+            auto umm = args.equalsIgnoreCase(1, F("umm"));
             if (interval < 250) {
                 if (displayTimer) {
                     displayTimer->remove();
@@ -2465,7 +2465,7 @@ void at_mode_serial_handle_event(String &commandString)
                     displayTimer->setType(DisplayTimer::DisplayType::GPIO, Event::milliseconds(interval));
                 }
                 else {
-                    displayTimer->setType(DisplayTimer::DisplayType::HEAP, Event::milliseconds(interval));
+                    displayTimer->setType(umm ? DisplayTimer::DisplayType::HEAP_UMM : DisplayTimer::DisplayType::HEAP, Event::milliseconds(interval));
                 }
                 args.print(F("Interval set to %ums"), interval);
             }

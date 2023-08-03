@@ -70,9 +70,9 @@ For the ESP32, check the documentation for NVS
 
 Enable/disable AT Mode if compiled in
 
-### `+HEAP=<interval>`
+### `+HEAP=<interval[,umm]>`
 
-Display heap usage every interval (can be 1s or 1000ms, 0 shows it once)
+Display heap usage every interval (can be 1s or 1000ms, 0 shows it once). If `umm` is added, the umm heap statistics are displayed (ESP8266 only)
 
 ### `+GPIO=<interval>`
 

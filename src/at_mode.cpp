@@ -641,8 +641,10 @@ public:
                     SELECT_DRAM();
                     umm_print_stats(2);
                     #if HAS_MULTI_HEAP
-                        SELECT_IRAM();
-                        umm_print_stats(2);
+                        {
+                            SELECT_IRAM();
+                            umm_print_stats(2);
+                        }
                     #endif
                 }
             #endif

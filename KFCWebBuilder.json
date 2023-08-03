@@ -1,5 +1,8 @@
 {
+    // name of the project
     "name": "KFC Firmware WebUI Builder",
+
+    // files and folders
     "platformio_ini": "./platformio.ini",
     "global_defines_header": "./include/global.h",
     "spiffs": {
@@ -7,6 +10,8 @@
         "web_target_dir": "./data/webui",
         "listings_file": "${spiffs.web_target_dir}/.listings"
     },
+
+    // environment
     "configuration": {
         "set_env": [
             { "name": "PYTHONIOENCODING", "value": "UTF-8" }
@@ -16,7 +21,10 @@
         "log_file": "./logs/builder.log",
         "log_level": "debug"
     },
+
+    // web builder config
     "web_builder": {
+        // if a condition is true, the listed files will be excluded
         "conditional_excludes": {
             "#if 100": [
                 "./Resources/html/__prototypes.html",
@@ -129,7 +137,10 @@
                 "./Resources/js/forms/serial2tcp.js"
             ]
         },
+
+        // groups
         "groups": {
+            // javascript main files
             "js_main": {
                 "target_dirs": {
                     "/data/webui/js": [
@@ -159,6 +170,7 @@
                     ]
                 },
                 "processors":  {
+                    // compress javascript files without use_closure_compiler
                     "uglify_js": {
                         "branch": [ "!use_closure_compiler" ],
                         // excludes files that cannot be compressed
@@ -166,18 +178,22 @@
                         "condition": "#if MINIFY_WEBUI",
                         "command": "${commands.uglify_js}"
                     },
+                    // copy all files into one
                     "combine": {
                         "command": "@copy-combined"
                     },
+                    // compress javascript files with use_closure_compiler
                     "minify_js": {
                         "branch": [ "use_closure_compiler" ],
                         "condition": "#if MINIFY_WEBUI",
                         "command": "${commands.minify_js}"
                     },
+                    // compress javascript for delivering it directly to the browser
                     "compress": {
                         "branch": [ "!test_www" ],
                         "command": "${commands.compress_gzip}"
                     },
+                    // assign random filename that changes with the contents to avoid the browser cache
                     "assign_name": {
                         "command": {
                             "type": "php_eval",
@@ -186,6 +202,8 @@
                     }
                 }
             },
+
+            // css main files
             "css_main": {
                 "target_dirs": {
                     "./data/webui/css": [
@@ -209,17 +227,21 @@
                     ]
                 },
                 "processors":  {
+                    // compress css
                     "minify": {
                         "condition": "#if MINIFY_WEBUI",
                         "command": "${commands.minify_css}"
                     },
+                    // copy all files into one
                     "combine": {
                         "command": "@copy-combined"
                     },
+                    // compress css for delivering it directly to the browser
                     "compress": {
                         "branch": [ "!test_www" ],
                         "command": "${commands.compress_gzip}"
                     },
+                    // assign random filename that changes with the contents to avoid the browser cache
                     "assign_name": {
                         "command": {
                             "type": "php_eval",
@@ -229,23 +251,28 @@
                 }
             },
             "html" : {
+                // html and xml files
                 "target_dirs": {
                     "./data/webui": {
                             "./Resources/html": "/\\.(html|xml)$/"
                         }
                     },
                     "processors": {
+                        // remove hidden files starting with a . expect "/.message.html"
                         "remove_dot_files": {
                             "filename_pattern": "/^\\.[^.]+(?<!(message))\\.html$/",
                             "command": "@remove-file"
                         },
+                        // process if statements and macros
                         "template2html": {
                             "command": "@create-html-template"
                         },
+                        // minify html
                         "minify": {
                             "condition": "#if MINIFY_WEBUI",
                             "command": "${commands.minify_html}"
                         },
+                        // compress
                         "compress": {
                             "branch": [ "!test_www" ],
                             "command": "${commands.compress_gzip}",
@@ -253,18 +280,31 @@
                         }
                     }
             },
+
+            // static content from different locations
             "static_content": {
                 "target_dirs": {
-                    "./data/webui/images": [ "./lib/KFCLibrary/KFCWebBuilder/Resources/images/spinner.gif", "./Resources/images/light.svg" ],
-                    "./data/webui/fonts": { "./lib/KFCLibrary/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/" }
+                    // a list of files
+                    "./data/webui/images": [
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/images/spinner.gif",
+                        "./Resources/images/light.svg"
+                    ],
+                    // a directory and a regular expression to match files in it
+                    "./data/webui/fonts": {
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/fonts": "/^open-iconic\\..*/"
+                    }
                 },
+                // compress files
                 "processors":  {
                     "compress": {
+                        // skip for local test
                         "branch": [ "!test_www" ],
                         "command": "${commands.compress_gzip}"
                     }
                 }
             },
+
+            // list of files that must not be gzipped
             "uncompressed": {
                 "target_dirs": {
                     "./data/stk500v1": {
@@ -276,7 +316,10 @@
                     ]
                 }
             },
+
+            // post processing
             "after": {
+                // groups to process
                 "append": [ "js_main", "css_main", "html", "static_content", "uncompressed" ],
                 "processors":  {
                     "test": {
@@ -291,6 +334,7 @@
                         "command": "@copy",
                         "publish": true
                     },
+                    // mapper that creates an index of all files
                     "map": {
                         "branch": [ "spiffs", "littlefs" ],
                         "command": {
@@ -303,6 +347,8 @@
             }
         }
     },
+
+    // include defaults file
     "includes": [
         "./lib/KFCLibrary/KFCWebBuilder/KFCWebBuilder.json"
     ]

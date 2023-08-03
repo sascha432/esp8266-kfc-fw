@@ -2,6 +2,6 @@
  * Author: sascha_lammers@gmx.de
  */
 #pragma once
-#define __BUILD_NUMBER "13254"
-#define __BUILD_NUMBER_INT 13254
+#define __BUILD_NUMBER "13363"
+#define __BUILD_NUMBER_INT 13363
 

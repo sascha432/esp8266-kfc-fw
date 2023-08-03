@@ -14,7 +14,6 @@
 #include "clock_button.h"
 #include "kfc_fw_config.h"
 #include "plugins.h"
-#include "stored_state.h"
 #include "../src/plugins/plugins.h"
 #if IOT_LED_MATRIX_HAVE_SSD1306
 #    include <Adafruit_SSD1306.h>
@@ -232,7 +231,6 @@ public:
     using Color = Clock::Color;
     using AnimationType = Clock::AnimationType;
     using InitialStateType = Clock::InitialStateType;
-    using StoredState = Clock::StoredState;
     using LoopOptionsType = Clock::LoopOptionsType;
     using milliseconds = std::chrono::duration<uint32_t, std::ratio<1>>;
     using seconds = std::chrono::duration<uint32_t, std::ratio<1000>>;
@@ -510,24 +508,13 @@ private:
     // ------------------------------------------------------------------------
     // Save state
     // ------------------------------------------------------------------------
-    #if IOT_CLOCK_SAVE_STATE
 
-    public:
-        void _saveStateDelayed();
-        void _saveState();
-        StoredState _getState();
+    // this method needs to be called if any changes in _config are supposed to be stored permanently
+    // it delays the write operation to avoid to many writes and also checks if any changes have been made
+    void _saveState();
+    Event::Timer _saveTimer;
 
-        Event::Timer _saveTimer;
-        uint32_t _saveTimestamp{0};
-    #else
-
-    public:
-        void _saveStateDelayed() {}
-        void _saveState() {}
-
-    #endif
-
-    void _setState(bool state, bool autoOff = false);
+    void _setState(bool state, bool autoOff = false); // set a state and call _saveState()
 
     // ------------------------------------------------------------------------
     // Button
@@ -1030,21 +1017,7 @@ inline uint32_t ClockPlugin::_getColor() const
 
 inline Clock::ClockConfigType &ClockPlugin::getWriteableConfig()
 {
-    // get a writeable copy and update with it with the current config
-    auto &cfg = Plugins::Clock::getWriteableConfig();
-    #if IOT_CLOCK_SAVE_STATE
-        if (_saveTimer) {
-            // save pending state
-            _saveState();
-        }
-        // check if a config state is stored
-        auto state = _getState();
-        if (state.hasValidData()) {
-            _config = state.getConfig();
-        }
-    #endif
-    cfg = _config;
-    return cfg;
+    return _config;
 }
 
 inline void ClockPlugin::_setAnimation(Clock::Animation *animation)

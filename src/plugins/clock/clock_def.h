@@ -167,24 +167,6 @@
 #    define IOT_LED_MATRIX_NEXT_ANIMATION_PIN -1
 #endif
 
-// save animation and brightness state
-// if disabled, the configuration defaults are loaded if the device is restarted
-#ifndef IOT_CLOCK_SAVE_STATE
-#    define IOT_CLOCK_SAVE_STATE 1
-#endif
-
-#if IOT_CLOCK_SAVE_STATE
-#    define IF_IOT_CLOCK_SAVE_STATE(...) __VA_ARGS__
-#else
-#    define IF_IOT_CLOCK_SAVE_STATE(...)
-#endif
-
-// delay in seconds before any changes get stored except for power on/off
-// prevents from wearing out the EEPROM
-#ifndef IOT_CLOCK_SAVE_STATE_DELAY
-#    define IOT_CLOCK_SAVE_STATE_DELAY 30
-#endif
-
 // enable support for a rotary encoder
 #ifndef IOT_CLOCK_HAVE_ROTARY_ENCODER
 #    define IOT_CLOCK_HAVE_ROTARY_ENCODER 0

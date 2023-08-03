@@ -233,7 +233,8 @@ namespace WebServer {
             _parseState = PARSE_REQ_END;
         }
 
-        LinkedList<AsyncWebParameter *> &_getParams() {
+        LinkedList<AsyncWebParameter *> &_getParams()
+        {
             return _params;
         }
     };

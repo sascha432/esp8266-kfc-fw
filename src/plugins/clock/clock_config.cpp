@@ -320,7 +320,6 @@ namespace KFCConfigurationClasses {
             void Clock::defaults()
             {
                 setConfig(ClockConfigType());
-                KFCFS.remove(FSPGM(iot_clock_save_state_file));
             }
 
         }

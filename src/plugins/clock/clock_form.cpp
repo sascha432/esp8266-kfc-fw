@@ -10,16 +10,57 @@
 #include "animation.h"
 
 #if DEBUG_IOT_CLOCK
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #if IOT_LED_MATRIX
-#   define FORM_TITLE "LED Matrix Configuration"
+#    define FORM_TITLE "LED Matrix Configuration"
 #else
-#   define FORM_TITLE "Clock Configuration"
+#    define FORM_TITLE "Clock Configuration"
 #endif
+
+void ClockPlugin::_saveState()
+{
+    #if ESP8266
+        constexpr uint32_t kSaveDelay = 10000;
+    #else
+        constexpr uint32_t kSaveDelay = 5000;
+    #endif
+    // delay writing config
+    _Timer(_saveTimer).add(Event::milliseconds(kSaveDelay), false, [this](Event::CallbackTimerPtr) {
+        Plugins::Clock::setConfig(_config);
+        __LDBG_printf("delay save dirty=%u", config.isDirty());
+        if (config.isDirty()) {
+            config.write();
+        }
+    });
+}
+
+void ClockPlugin::_setState(bool state, bool autoOff)
+{
+    #if IOT_SENSOR_HAVE_MOTION_SENSOR
+        _motionAutoOff = autoOff;
+    #endif
+    if (state) {
+        if (_targetBrightness == 0) {
+            if (_savedBrightness) {
+                setBrightness(_savedBrightness);
+            }
+            else {
+                setBrightness(_config.getBrightness());
+            }
+        }
+    }
+    else {
+        if (_targetBrightness != 0) {
+            _savedBrightness = _targetBrightness;
+        }
+        setBrightness(0);
+    }
+    _saveState();
+}
 
 void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType)
 {
@@ -393,15 +434,29 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 {
     __LDBG_printf("callback_type=%u name=%s", type, formName.c_str());
 
+    // handle delayed saves
+    if (type == FormCallbackType::SAVE) {
+        // on save copy changes to local memory
+        auto &cfg = Plugins::Clock::getWriteableConfig();
+        _config = cfg;
+        // reset timer, in case the form validation fails the pending changes are still stored
+        _saveState();
+        return;
+    }
+
     if (!isCreateFormCallbackType(type)) {
         return;
     }
 
-    auto &cfg = getWriteableConfig();
+    auto &cfg = Plugins::Clock::getWriteableConfig();
+    // handle delayed saves
+    if (_saveTimer && memcmp(&cfg, &_config, sizeof(cfg)) != 0) {
+        cfg = _config; // copy updates
+    }
 
     // sub forms for the WebUI
     if (formName.startsWith(F("ani-"))) {
-        auto animation = _getAnimationType(FPSTR(formName.c_str() + 4));
+        auto animation = _getAnimationType(FPSTR(formName.c_str() + 4)); // translate name to number or just return number
         __LDBG_printf("form=%s animation=%u valid=%u", formName.c_str() + 4, animation, animation != AnimationType::MAX);
         if (animation != AnimationType::MAX) {
             auto &ui = form.createWebUI();
@@ -670,16 +725,14 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         auto &mainGroup = form.addCardGroup(FSPGM(config));
 
         // --------------------------------------------------------------------
-        #if IOT_CLOCK_SAVE_STATE
-            auto initialStateItems = FormUI::Container::List(
-                Clock::InitialStateType::OFF, F("Turn Off"),
-                Clock::InitialStateType::ON, F("Turn On"),
-                Clock::InitialStateType::RESTORE, F("Restore Last State")
-            );
+        auto initialStateItems = FormUI::Container::List(
+            Clock::InitialStateType::OFF, F("Turn Off"),
+            Clock::InitialStateType::ON, F("Turn On"),
+            Clock::InitialStateType::RESTORE, F("Restore Last State")
+        );
 
-            form.addObjectGetterSetter(F("is"), cfg, cfg.get_int_initial_state, cfg.set_int_initial_state);
-            form.addFormUI(F("After Reset"), initialStateItems);
-        #endif
+        form.addObjectGetterSetter(F("is"), cfg, cfg.get_int_initial_state, cfg.set_int_initial_state);
+        form.addFormUI(F("After Reset"), initialStateItems);
 
         form.addObjectGetterSetter(F("br"), cfg, cfg.get_bits_brightness, cfg.set_bits_brightness);
         form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(cfg.kMinValueFor_brightness, cfg.kMaxValueFor_brightness));

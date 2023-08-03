@@ -37,9 +37,7 @@ void ClockPlugin::getValues(WebUINS::Events &array)
         }
     }
 
-    #if IOT_CLOCK_SAVE_STATE
-        array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), true));
-    #endif
+    array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), true));
 
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         array.append(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()));
@@ -101,21 +99,18 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         #if IOT_LED_MATRIX == 0
             if (id == F("colon")) {
                 setBlinkColon(val);
-                _saveStateDelayed();
+                _saveState();
             }
             else
         #endif
-        #if IOT_CLOCK_SAVE_STATE
-                if (id == F("power")) {
-                _setState(val);
-            }
-            else
-        #endif
+            if (id == F("power")) {
+            _setState(val);
+        }
         #if IOT_LED_MATRIX_FAN_CONTROL
                 if (id == F("fanspeed")) {
                 _setFanSpeed(val);
                 _config.fan_speed = _fanSpeed;
-                _saveStateDelayed();
+                _saveState();
                 // if (val != _fanSpeed) {
                 //     _webUIUpdateFanSpeed();
                 // }
@@ -124,7 +119,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         #endif
         if (id == F("ani")) {
             setAnimation(static_cast<AnimationType>(val));
-            _saveStateDelayed();
+            _saveState();
         }
         else if (id.startsWith(F("ani-"))) {
             // create AsyncWebServerRequest from web socket post data and submit form
@@ -136,11 +131,11 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
         else if (id == F("color")) {
             setColorAndRefresh(val);
-            _saveStateDelayed();
+            _saveState();
         }
         else if (id == FSPGM(brightness)) {
             setBrightness(std::clamp<uint8_t>(val, 0, kMaxBrightness));
-            _saveStateDelayed();
+            _saveState();
         }
     }
 }
@@ -240,10 +235,8 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
     {
         constexpr uint8_t colspan = IOT_LED_MATRIX_WEBUI_COLSPAN_ANIMATION;
 
-        #if IOT_CLOCK_SAVE_STATE
-            auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, colspan);
-            row.append(power.append(WebUINS::NamedString(J(height), height)));
-        #endif
+        auto power = WebUINS::Switch(F("power"), F("Power<div class=\"p-1\"></div><span class=\"oi oi-power-standby\">"), true, WebUINS::NamePositionType::TOP, colspan);
+        row.append(power.append(WebUINS::NamedString(J(height), height)));
 
         #if IOT_LED_MATRIX == 0
             auto colon = WebUINS::ButtonGroup(F("colon"), F("Colon"), F("{\"0\":\"Solid\",\"1000\":\"Blink slowly\",\"500\":\"Blink fast\"}"), 0, colspan);

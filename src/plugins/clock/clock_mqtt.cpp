@@ -146,21 +146,21 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
         auto animation = _getAnimationType(FPSTR(payload));
         if (animation != AnimationType::MAX) {
             setAnimation(static_cast<AnimationType>(animation));
-            _saveStateDelayed();
+            _saveState();
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
         if (len) {
             auto value = strtoul(payload, nullptr, 0);
             setBrightness(std::clamp<uint8_t>(value, 0, kMaxBrightness));
-            _saveStateDelayed();
+            _saveState();
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
         if (*payload == '#') {
             // rgb color code #FFEECC
             setColorAndRefresh(Color::fromString(payload));
-            _saveStateDelayed();
+            _saveState();
         }
         else {
             // red,green,blue
@@ -171,7 +171,7 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
                 if (endptr && *endptr++ == ',') {
                     auto blue = static_cast<uint8_t>(strtoul(endptr, nullptr, 10));
                     setColorAndRefresh(Color(red, green, blue));
-                    _saveStateDelayed();
+                    _saveState();
                 }
             }
         }

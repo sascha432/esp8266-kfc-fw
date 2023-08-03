@@ -404,35 +404,33 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         AlarmPlugin::setCallback(alarmCallback);
     #endif
 
-    #if IOT_CLOCK_SAVE_STATE
-        // set initial state after reset
-        switch(_config.getInitialState()) {
-            case InitialStateType::OFF:
-                // keep device off after reset
-                _savedBrightness = _config.getBrightness();
-                _config.enabled = false;
-                _setBrightness(0);
-                break;
-            case InitialStateType::ON:
-                // turn device on after reset
-                _savedBrightness = std::max<uint8_t>(15, _config.getBrightness()); // restore last brightness but at least ~6%
-                _config.enabled = true;
+    // set initial state after reset
+    switch(_config.getInitialState()) {
+        case InitialStateType::OFF:
+            // keep device off after reset
+            _savedBrightness = _config.getBrightness();
+            _config.enabled = false;
+            _setBrightness(0);
+            break;
+        case InitialStateType::ON:
+            // turn device on after reset
+            _savedBrightness = std::max<uint8_t>(15, _config.getBrightness()); // restore last brightness but at least ~6%
+            _config.enabled = true;
+            setBrightness(_savedBrightness);
+            break;
+        case InitialStateType::RESTORE:
+            // restore last settings
+            _savedBrightness = _config.getBrightness();
+            if (_config.enabled) {
                 setBrightness(_savedBrightness);
-                break;
-            case InitialStateType::RESTORE:
-                // restore last settings
-                _savedBrightness = _config.getBrightness();
-                if (_config.enabled) {
-                    setBrightness(_savedBrightness);
-                }
-                else {
-                    _setBrightness(0);
-                }
-                break;
-            default:
-                break;
-        }
-    #endif
+            }
+            else {
+                _setBrightness(0);
+            }
+            break;
+        default:
+            break;
+    }
 
     _setupTimer();
     _isRunning = true;
@@ -501,9 +499,6 @@ void ClockPlugin::reconfigure(const String &source)
         _enable();
     }
     _isRunning = true;
-    #if IOT_CLOCK_SAVE_STATE
-        _saveState();
-    #endif
 }
 
 void ClockPlugin::shutdown()
@@ -540,13 +535,6 @@ void ClockPlugin::shutdown()
         }
     #endif
 
-
-    #if IOT_CLOCK_SAVE_STATE
-        if (_saveTimer) {
-            _Timer(_saveTimer).remove();
-            _saveState();
-        }
-    #endif
 
     #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
         if (_displayLedTimer) {
@@ -810,15 +798,6 @@ void ClockPlugin::readConfig(bool setup)
 {
     // read config
     _config = Plugins::Clock::getConfig();
-    #if IOT_CLOCK_SAVE_STATE
-        if (setup) {
-            // check if a config state is stored
-            auto state = _getState();
-            if (state.hasValidData()) {
-                _config = state.getConfig();
-            }
-        }
-    #endif
     _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
 
     _setShowMethod(static_cast<Clock::ShowMethodType>(_config.method));

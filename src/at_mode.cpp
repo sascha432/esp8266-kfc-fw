@@ -2628,7 +2628,7 @@ void at_mode_serial_handle_event(String &commandString)
 
         auto version = System::Device::getConfig().config_version;
         auto versionStr = SaveCrash::Data::FirmwareVersion(version).toString();
-        args.print(F("stored config version 0x%08x, %s"), version, versionStr.c_str());
+        args.print(F("stored config version 0x%08x, %s, dirty=%u"), version, versionStr.c_str(), config.isDirty());
 
         if (args.equalsIgnoreCase(0, F("json"))) {
             config.exportAsJson(output, versionStr);

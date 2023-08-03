@@ -544,15 +544,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("state: _isEnabled=%u _isRunning=%u _targetBrightness=%u _autoOff=%u temp. protection=%u"), _isEnabled, _isRunning, _targetBrightness, _motionAutoOff, isTempProtectionActive());
             args.print(F("current config: enabled=%u brightness=%u animation=%s"), _config.enabled, _config.brightness, _config.getAnimationName(_config._get_enum_animation()));
             args.print(F("stored config: enabled=%u brightness=%u animation=%s"), config.enabled, config.brightness, config.getAnimationName(config._get_enum_animation()));
-            auto cState = _getState();
-            if (cState.hasValidData()) {
-                config = cState.getConfig();
-                args.print(F("state config: enabled=%u brightness=%u animation=%s"), config.enabled, config.brightness, _config.getAnimationName(_config._get_enum_animation()));
-            }
-            else {
-                args.print(F("state config: invalid"));
-            }
-
         }
         // temp,<value>
         else if (args.startsWithIgnoreCase(0, F("tem"))) {

@@ -55,18 +55,14 @@ void ClockPlugin::rotaryCallback(bool decrease, uint32_t now)
             else {
                 _setBrightness(std::min<int16_t>(255, brightness + (_rotaryAcceleration / kRotaryAccelerationDivider)));
             }
-            IF_IOT_CLOCK_SAVE_STATE(
-                _saveStateDelayed();
-            )
+            _saveState();
         }
     }
     else if (_rotaryAction == 1) {
         if (diff > 1000) { // limit input frequency to once per second
             uint8_t animation = (_config.animation + (decrease ? 1 : 4)) % 5; // limit values to 0-5
             setAnimation(static_cast<AnimationType>(animation), 750);
-            IF_IOT_CLOCK_SAVE_STATE(
-                _saveStateDelayed();
-            )
+            _saveState();
         }
         setRotaryAction(_rotaryAction); // reset timer
     }

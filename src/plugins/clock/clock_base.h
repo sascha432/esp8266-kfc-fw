@@ -28,9 +28,9 @@
 #endif
 
 #if IOT_LED_MATRIX
-#    define LED_MATRIX_MENU_URI_PREFIX "led-matrix/"
+#    define LED_MATRIX_MENU_URI_PREFIX "led-matrix/"        // uses led-matrix.html
 #else
-#    define LED_MATRIX_MENU_URI_PREFIX "clock/"
+#    define LED_MATRIX_MENU_URI_PREFIX "clock/"             // uses clock.html
 #endif
 
 class ClockPlugin;

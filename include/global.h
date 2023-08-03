@@ -127,7 +127,7 @@
 #endif
 
 #ifndef WEBSERVER_SPEED_TEST
-#    define WEBSERVER_SPEED_TEST 1
+#    define WEBSERVER_SPEED_TEST 0
 #endif
 
 // check http2serial.h for a description

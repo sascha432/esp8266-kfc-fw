@@ -1,7 +1,7 @@
 run
 
 git clone https://github.com/sascha432/KFCLibrary.git
-git clone https://github.com/KFCLabs/ESPAsyncWebServer.git
+git clone https://github.com/sascha432/ESPAsyncWebServer.git
 git clone https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK.git
 
 in here. This requires manual updates
@@ -9,7 +9,7 @@ in here. This requires manual updates
 or add
 
 https://github.com/sascha432/KFCLibrary.git
-https://github.com/KFCLabs/ESPAsyncWebServer.git
+https://github.com/sascha432/ESPAsyncWebServer.git
 https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK.git
 
 in common.ini (lib_deps =)

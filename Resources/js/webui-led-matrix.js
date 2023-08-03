@@ -5,6 +5,8 @@
 
  $(function() {
     if ($('#webui').length) {
+        var webui_target = $('#webui').data('target');
+// console.log('webui_target', webui_target);
         var animation_config = null;
         if (!animation_config) {
             // initialize
@@ -26,13 +28,13 @@
             var modal_error = function(jqXHR, textStatus, error) {
                 var dlg = animation_config.find('.modal-dialog');
                 if (dlg.length) {
-                    dlg.find('.modal-title').html('An error occured!');
+                    dlg.find('.modal-title').html('An error occurred!');
                     dlg.find('.modal-body').html(error);
                     dlg.find('.modal-footer').html('<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>').show();
                 }
-                else {
+                // else {
 // console.log('modal_error cannot find modal-dialog');
-                }
+                // }
             };
 
             var open_modal = function(animation) {
@@ -41,13 +43,13 @@
                 if (animation_config.find('.modal-dialog').length == 0) {
                     create_modal();
                     animation_config.modal({show: false, keyboard: false}).on('show.bs.modal', function() {
-                        var url = $('#webui').data('target') + 'ani-' + animation + '.html'; //?inline=1';
+                        var url = webui_target + 'ani-' + animation + '.html';
 // console.log('show', animation, url);
                         $.get(url, function(data) {
 // console.log('get', animation, url);
                             var dlg = animation_config.find('.modal-dialog');
                             if (dlg.length == 0 || dlg.find('.modal-loading').length == 0) {
-// console.log('.modal-dialog or .modal-loading not avaiable');
+// console.log('.modal-dialog or .modal-loading not available');
                                 return;
                             }
                             // find form

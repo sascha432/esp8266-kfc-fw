@@ -280,8 +280,9 @@ public:
 
     enum class TitleType {
         NONE,
-        ADD_GROUP,          // surrounds the form with a group/animation title
-        SET_TITLE           // set FormUI title to the animation title
+        ADD_GROUP,                  // surrounds the form with a group/animation title
+        SET_TITLE,                  // set FormUI title to the animation title
+        SET_TITLE_AND_ADD_GROUP     // set title of the form to the animation title
     };
 
     void _createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType);

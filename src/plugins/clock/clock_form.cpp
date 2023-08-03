@@ -67,6 +67,9 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
 {
     FormUI::Group *group;
     switch(titleType) {
+        case TitleType::SET_TITLE_AND_ADD_GROUP:
+            form.getWebUIConfig().setTitle(F(FORM_TITLE));
+            // fall through
         case TitleType::ADD_GROUP:
             group = &form.addCardGroup(_getAnimationNameSlug(animation), _getAnimationTitle(animation), true);
             break;
@@ -461,21 +464,15 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     // sub forms for the WebUI or split forms
     if (formName.startsWith(F("ani-"))) {
-        auto animation = _getAnimationType(FPSTR(formName.c_str() + 4)); // translate name to number or just return number
-        auto isInline = isdigit(formName.c_str()[0]);
-        __LDBG_printf("form=%s animation=%u valid=%u inline=%u", formName.c_str() + 4, animation, animation != AnimationType::MAX, isInline);
+        auto subForm = formName.c_str() + 4;
+        const auto animation = _getAnimationType(FPSTR(subForm)); // translate name to number or just return number
+        const auto isInline = isdigit(subForm[0]); // inline form for webui requested
+        __LDBG_printf("form=%s animation=%u valid=%u inline=%u", subForm, animation, animation != AnimationType::MAX, isInline);
         if (animation < AnimationType::MAX) {
             auto &ui = form.createWebUI();
             ui.setContainerId(F("led-matrix-settings"));
-            if (isInline) {
-                ui.setStyle(FormUI::WebUI::StyleType::WEBUI);
-                _createConfigureFormAnimation(animation, form, cfg, TitleType::SET_TITLE);
-            }
-            else {
-                ui.setTitle(_getAnimationTitle(animation));
-                ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
-                _createConfigureFormAnimation(animation, form, cfg, TitleType::ADD_GROUP);
-            }
+            ui.setStyle(isInline ? FormUI::WebUI::StyleType::WEBUI : FormUI::WebUI::StyleType::ACCORDION);
+            _createConfigureFormAnimation(animation, form, cfg, isInline ? TitleType::SET_TITLE : TitleType::SET_TITLE_AND_ADD_GROUP);
             form.finalize();
         }
         return;

@@ -1627,11 +1627,11 @@ namespace SaveCrash {
     }
 }
 
-void ResetDetectorPlugin::createMenu()
-{
-    #if ESP8266
+#if ESP8266
+    void ResetDetectorPlugin::createMenu()
+    {
         bootstrapMenu.addMenuItem(F("SaveCrash Log"), F("savecrash.html"), navMenu.util);
-    #endif
-}
+    }
+#endif
 
 #include "web_server_action.h"

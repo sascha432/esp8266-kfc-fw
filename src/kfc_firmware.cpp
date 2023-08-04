@@ -156,12 +156,9 @@ void setup()
         DeepSleep::deepSleepPinState.merge();
     #endif
 
-    #if ESP32
-        KFC_SAFE_MODE_SERIAL_PORT.end();
-    #endif
-
     resetDetector.begin(&KFC_SAFE_MODE_SERIAL_PORT, KFC_SERIAL_RATE); // release uart and call Serial.begin()
     #if KFC_DEBUG_USE_SERIAL1
+        Serial1.end();
         Serial1.begin(KFC_DEBUG_USE_SERIAL1);
         static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
     #endif
@@ -447,28 +444,6 @@ void setup()
 
         KFCFS_begin();
 
-        #if 0
-        // dump file system and wait 5 seconds
-        {
-            KFC_SAFE_MODE_SERIAL_PORT.println(F("File system contents:"));
-            auto dir = ListDir(F("/"), false, true);
-            while(dir.next()) {
-                if (dir.isFile()) {
-                    KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
-                }
-                else {
-                    KFC_SAFE_MODE_SERIAL_PORT.print(F("[...]    "));
-                }
-                KFC_SAFE_MODE_SERIAL_PORT.println(dir.fileName());
-            }
-            for(uint8_t i = 0; i < 50; i++) {
-                delay(100);
-                KFC_SAFE_MODE_SERIAL_PORT.print('.');
-            }
-            KFC_SAFE_MODE_SERIAL_PORT.println();
-        }
-        #endif
-
         #if KFC_AUTO_SAFE_MODE_CRASH_COUNT != 0 && KFC_DISABLE_CRASH_COUNTER == 0
             if (resetDetector.hasCrashDetected() || increaseCrashCounter) {
                 uint8_t counter = SaveCrash::getCrashCounter();
@@ -485,7 +460,6 @@ void setup()
     }
 
     config.read();
-    SaveCrash::Data::setMD5(KFCConfigurationClasses::System::Firmware::getFirmwareMD5());
 
     #if ENABLE_DEEP_SLEEP
         DeepSleep::deepSleepPinState.merge();
@@ -555,8 +529,8 @@ void setup()
             at_mode_setup();
         #endif
 
-        #if IOT_CLOCK || IOT_LED_MATRIX || IOT_LED_STRIP
-            // disable the LEDs tif it was caused by a power surge when turning on
+        #if IOT_CLOCK
+            // disable the LEDs if it was caused by a power surge when turning on
             if (resetDetector.hasCrashDetected() || resetDetector.hasBrownoutDetected()) {
                 ClockPlugin::getInstance().lock();
            }

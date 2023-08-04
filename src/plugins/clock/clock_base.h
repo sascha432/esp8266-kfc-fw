@@ -38,12 +38,7 @@ class ClockPlugin;
 namespace Clock {
 
     using namespace KFCConfigurationClasses::Plugins::ClockConfigNS;
-
-    // using ConfigType = Plugins::Clock::ClockConfig_t;
     using ColorType = uint32_t;
-    // using ClockColor_t = Plugins::Clock::ClockColor_t;
-    // using AnimationType = ConfigType::AnimationType;
-    // using InitialStateType = ConfigType::InitialStateType;
 
     // static constexpr auto kMaxPixelAddress = SevenSegmentDisplay::kMaxPixelAddress;
     static constexpr uint8_t kMaxBrightness = 0xff;

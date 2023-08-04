@@ -1831,7 +1831,6 @@ void at_mode_serial_handle_event(String &commandString)
                 args.print(F("Version (uint32): %s (0x%08x)"), SaveCrash::Data::FirmwareVersion().toString().c_str(), SaveCrash::Data::FirmwareVersion().__version);
                 auto version = System::Device::getConfig().config_version;
                 args.print(F("Config version 0x%08x, %s"), version, SaveCrash::Data::FirmwareVersion(version).toString().c_str());
-                args.print(F("MD5 hash: %s"), SaveCrash::Data().getMD5().c_str());
                 args.print(F("WiFiCallbacks: size=%u count=%u"), sizeof(WiFiCallbacks::Entry), WiFiCallbacks::getVector().size());
                 args.print(F("LoopFunctions: size=%u count=%u"), sizeof(LoopFunctions::Entry), LoopFunctions::getVector().size());
 
@@ -1843,7 +1842,6 @@ void at_mode_serial_handle_event(String &commandString)
                     args.print(tmp);
                 #endif
 
-                args.print(F("Firmware MD5: %s"), System::Firmware::getFirmwareMD5());
             #endif
         }
         else

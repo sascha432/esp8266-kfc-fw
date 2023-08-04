@@ -672,6 +672,7 @@ void ClockPlugin::getStatus(Print &output)
     }
 
     #if IOT_LED_MATRIX_NO_BUTTON
+        // nothing to see here move along
     #elif IOT_CLOCK_BUTTON_PIN != -1
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
             #if IOT_CLOCK_TOUCH_PIN
@@ -688,13 +689,19 @@ void ClockPlugin::getStatus(Print &output)
         if (numPins > 0) {
             output.printf_P(PSTR(HTML_S(br) "Total buttons: %u"), numPins);
         }
-
     #endif
 
     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-        if (static_cast<Clock::AnimationType>(_config.animation) == Clock::AnimationType::VISUALIZER) {
-            // auto &ani = *reinterpret_cast<Clock::VisualizerAnimation *>(_animation);
-            output.printf_P(PSTR(HTML_S(br) "UDP%s Active Port %u"), _config.visualizer.multicast ? PSTR(" Multicast") : PSTR(""), _config.visualizer.port);
+        if (_config.animation == uint8_t(Clock::AnimationType::VISUALIZER)) {
+            #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                if (_config.visualizer.input == uint8_t(Clock::VisualizerType::AudioInputType::MICROPHONE)) {
+                    output.printf_P(PSTR(HTML_S(br) "I2S Microphone, Loudness Gain %u, Band Gain %u"), _config.visualizer.mic_loudness_gain, _config.visualizer.mic_band_gain);
+                }
+                else
+            #endif
+            {
+                output.printf_P(PSTR(HTML_S(br) "UDP%s Active Port %u"), _config.visualizer.multicast ? PSTR(" Multicast") : PSTR(""), _config.visualizer.port);
+            }
         }
     #endif
 

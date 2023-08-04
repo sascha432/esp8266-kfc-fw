@@ -315,6 +315,14 @@
 #    define IOT_CLOCK 0
 #endif
 
+#ifndef IOT_LED_MATRIX
+#    define IOT_LED_MATRIX 0
+#endif
+
+#if IOT_LED_MATRIX && !IOT_CLOCK
+#    error IOT_LED_MATRIX requires IOT_CLOCK
+#endif
+
 #ifndef IOT_ALARM_PLUGIN_ENABLED
 #    define IOT_ALARM_PLUGIN_ENABLED 0
 #endif

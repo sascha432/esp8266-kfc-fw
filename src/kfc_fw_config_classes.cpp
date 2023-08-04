@@ -193,12 +193,11 @@ namespace KFCConfigurationClasses {
     }
 
     // --------------------------------------------------------------------
-    // Firmare
+    // Firmware
 
     void System::Firmware::defaults()
     {
         setPluginBlacklist(emptyString);
-        setMD5(ESP.getSketchMD5());
     }
 
     // --------------------------------------------------------------------

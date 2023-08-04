@@ -169,17 +169,6 @@ namespace KFCConfigurationClasses {
             static void defaults();
 
             CREATE_STRING_GETTER_SETTER(MainConfig().system.firmware, PluginBlacklist, 255);
-            CREATE_STRING_GETTER_SETTER(MainConfig().system.firmware, MD5, 32);
-
-            // return cached MD5 value
-            static const char *getFirmwareMD5() {
-                auto md5Str = getMD5();
-                if (!md5Str || !*md5Str) {
-                    setMD5(ESP.getSketchMD5().c_str());
-                    md5Str = getMD5();
-                }
-                return md5Str;
-            }
         };
 
         class WebServerConfig {

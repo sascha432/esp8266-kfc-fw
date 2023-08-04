@@ -863,7 +863,6 @@ void KFCFWConfiguration::read(bool wakeup)
             Logger_warning(F("Upgrading EEPROM settings from %s to " FIRMWARE_VERSION_STR "." __BUILD_NUMBER), SaveCrash::Data::FirmwareVersion(version).toString(F(".")).c_str());
             System::Device::getWriteableConfig().config_version = currentVersion;
             config.recoveryMode(false);
-            System::Firmware::setMD5(ESP.getSketchMD5());
             Configuration::write();
             // SaveCrash::clearStorage(SaveCrash::ClearStorageType::REMOVE_MAGIC);
         }

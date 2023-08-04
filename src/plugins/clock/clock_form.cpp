@@ -265,7 +265,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         cfg.visualizer.addRangeValidatorFor_mic_loudness_gain(form);
 
                         form.addObjectGetterSetter(F("v_mbg"), cfg.visualizer, cfg.visualizer.get_bits_mic_band_gain, cfg.visualizer.set_bits_mic_band_gain);
-                        form.addFormUI(F("Microphone Spectrum Gain"));
+                        form.addFormUI(F("Microphone Band Gain"));
                         cfg.visualizer.addRangeValidatorFor_mic_band_gain(form);
                     #endif
 

@@ -108,7 +108,7 @@ List files and directories using FS.openDir(). This will not display read only v
 
 ### `+AOTA=<start|stop>`
 
-Start/stop Arduino OTA (required about 1K RAM to run)
+Start/stop Arduino OTA (requires about 1K RAM to run)
 
 ### `+PLG=<list|start|stop|add-blacklist|add|remove>[,<name>]`
 
@@ -150,22 +150,6 @@ Displays versions of the SDK, framework, libraries, memory addresses and a lot m
 ### `+PING=<target[,count=4[,timeout=5000]]>`
 
 Ping host or IP address if compiled in
-
-### `+I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]`
-
-Configure I2C Bus
-
-### `+I2CTM=<address>,<data,...>`
-
-Transmit data to slave
-
-### `+I2CRQ=<address>,<length>`
-
-Request data from slave
-
-### `+I2CSCAN=[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]`
-
-Scan I2C Bus. If ANY is passed as third argument, all available PINs are probed for I2C devices. Available only if compiled in
 
 ### `PWM=<pin>,<input|input_pullup|waveform|level=0-1024>[,<frequency=100-40000Hz>[,<duration/ms>]]`
 
@@ -232,6 +216,30 @@ sp: 3ffff970 end: 3fffffd0 offset: 0270
 +SAVECRASH: entries=0 size=0 capacity=124620
 +SAVECRASH: free space=124560 largest block=4020
 ```
+
+## I2C Bus
+
+### `+I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]`
+
+Configure I2C Bus
+
+### `+I2CTM=<address>,<data,...>`
+
+Transmit data to slave
+
+### `+I2CRQ=<address>,<length>`
+
+Request data from slave
+
+### `+I2CSCAN=[<start-address=1>][,<end-address=127>][,<sda=4|list|any|no-init>,<scl=5>]`
+
+Scan I2C Bus for devices.
+
+- `list` display all PIN pairs that will be scanned
+- `any` probes all available PINs for I2C devices. The UART used for debug output and the Flash SPI GPIOs are excluded
+- `no-init` skips re-initializing the I2C Bus
+
+**NOTE:** Available only if compiled in
 
 ## 7 Segment Clock / LED Matrix / LED Strip
 

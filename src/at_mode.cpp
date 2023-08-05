@@ -375,10 +375,10 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PANIC, "PANIC", "[<address|wdt|hwdt|alloc>
 #endif
 
 #if HAVE_I2CSCANNER
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]", "Scan I2C bus. If ANY is passed as third argument, all available PINs are probed for I2C devices");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]", "Scan I2C Bus. If 'any' is passed as third argument, all available PINs are probed for I2C devices");
 #endif
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]", "Configure I2C");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CTM, "I2CTM", "<address>,<data,...>", "Transmsit data to slave");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]", "Configure I2C Bus");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CTM, "I2CTM", "<address>,<data,...>", "Transmit data to slave");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CRQ, "I2CRQ", "<address>,<length>", "Request data from slave");
 #if ENABLE_ARDUINO_OTA
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(AOTA, "AOTA", "<start|stop>", "Start/stop Arduino OTA");
@@ -2044,13 +2044,17 @@ void at_mode_serial_handle_event(String &commandString)
             auto endAddress = args.toIntMinMax<uint8_t>(1, startAddress, 255, 127);
             auto sda = args.toIntMinMax<uint8_t>(2, 0, 16, KFC_TWOWIRE_SDA);
             auto scl = args.toIntMinMax<uint8_t>(3, 0, 16, KFC_TWOWIRE_SCL);
-            if (args.has(F("noinit")) || args.has(F("no-init"))) {
-                sda = scl = 0xff;
+            if (args.has(F("list"))) {
+                scanPorts(args.getStream(), I2C_SCANNER_LIST_PIN_PAIRS, 0);
+
             }
-            if (args.has(F("any"))) {
+            else  if (args.has(F("any"))) {
                 scanPorts(args.getStream(), startAddress, endAddress);
             }
             else {
+                if (args.has(F("noinit")) || args.has(F("no-init"))) {
+                    sda = scl = 0xff;
+                }
                 scanI2C(args.getStream(), sda, scl, startAddress, endAddress);
             }
         }

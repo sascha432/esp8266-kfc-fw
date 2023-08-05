@@ -158,12 +158,14 @@ void setup()
 
     resetDetector.begin(&KFC_SAFE_MODE_SERIAL_PORT, KFC_SERIAL_RATE); // release uart and call Serial.begin()
     #if KFC_DEBUG_USE_SERIAL1
-        Serial1.end();
         Serial1.begin(KFC_DEBUG_USE_SERIAL1);
         static_assert(KFC_DEBUG_USE_SERIAL1 >= 300, "must be set to the baud rate");
     #endif
 
     #if BUILTIN_LED_NEOPIXEL
+        #if ESP8266 && __LED_BUILTIN_WS2812_PIN == 10
+            #warning make sure `board_build.flash_mode = dio` is set
+        #endif
         WS2812LEDTimer::init();
     #endif
 

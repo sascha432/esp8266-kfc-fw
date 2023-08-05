@@ -148,7 +148,7 @@ void BlinkLEDTimer::setBlink(uint8_t pin, uint16_t delay, int32_t color)
         ledTimer = new BlinkLEDTimer(pin);
         Bitset pattern;
         if (delay == static_cast<uint16_t>(BlinkLEDTimer::BlinkType::SOS)) {
-            pattern.set<uint64_t>(0b000000010101000011110000111100001111010101ULL, 42);
+            pattern.set<uint64_t>(0b0000000010101000011110000111100001111000010101ULL, 46);
             delay = 200;
         }
         else {

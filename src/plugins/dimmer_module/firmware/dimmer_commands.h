@@ -2,16 +2,21 @@
  * Author: sascha_lammers@gmx.de
  */
 
+//
+// communication with the dimmer MCU
+//
+
 #pragma once
 
 #include <Arduino_compat.h>
 #include <SerialTwoWire.h>
 #include <EventScheduler.h>
+#include "../firmware_protocol.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 namespace Dimmer {
@@ -321,4 +326,6 @@ namespace Dimmer {
 
 };
 
-#include <debug_helper_disable.h>
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_disable.h>
+#endif

@@ -10,7 +10,8 @@
 
 // number of channels
 #ifndef IOT_DIMMER_MODULE_CHANNELS
-#    define IOT_DIMMER_MODULE_CHANNELS 1
+// #    define IOT_DIMMER_MODULE_CHANNELS 1
+#    error IOT_DIMMER_MODULE_CHANNELS not defined
 #endif
 
 #ifndef DIMMER_CHANNEL_COUNT
@@ -29,7 +30,8 @@
 
 // max. brightness level
 #ifndef IOT_DIMMER_MODULE_MAX_BRIGHTNESS
-#    define IOT_DIMMER_MODULE_MAX_BRIGHTNESS 8192
+// #    define IOT_DIMMER_MODULE_MAX_BRIGHTNESS 8192
+#    error IOT_DIMMER_MODULE_MAX_BRIGHTNESS not defined
 #endif
 
 #ifndef DIMMER_MAX_LEVEL

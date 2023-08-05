@@ -7,7 +7,7 @@
 #if IOT_DIMMER_HAS_COLOR_TEMP
 
 #include <EventScheduler.h>
-#include "dimmer_def.h"
+#include "dimmer_plugin_def.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 

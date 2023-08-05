@@ -2,8 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
-#include "../firmware_protocol.h"
 #include <Arduino_compat.h>
+#include "dimmer_commands.h"
 
 #if DEBUG_IOT_DIMMER_MODULE
 #    include <debug_helper_enable.h>

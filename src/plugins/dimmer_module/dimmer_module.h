@@ -116,7 +116,8 @@ namespace Dimmer {
         #if IOT_ATOMIC_SUN_V2
             return _color.setChannel(channel, level, transition);
         #else
-            return _channels[channel].setLevel(level, transition);
+            _channels[channel].setLevel(level, transition);
+            return true;
         #endif
     }
 

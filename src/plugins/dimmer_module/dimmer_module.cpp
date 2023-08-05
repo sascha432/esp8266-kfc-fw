@@ -137,7 +137,7 @@ void Module::publishChannelState(uint8_t channel)
         // N/A
     #else
         // publish single channel
-        getChannel(channel).publishState();
+        _channels[channel].publishState();
     #endif
 }
 

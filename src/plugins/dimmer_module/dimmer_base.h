@@ -6,7 +6,7 @@
 
 #include "../src/plugins/sensor/sensor.h"
 #include "dimmer_colortemp.h"
-#include "dimmer_def.h"
+#include "dimmer_plugin_def.h"
 #include <Arduino_compat.h>
 #include <PrintHtmlEntitiesString.h>
 #include <WebUIComponent.h>

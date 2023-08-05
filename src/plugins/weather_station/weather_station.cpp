@@ -87,11 +87,6 @@ WeatherStationPlugin::WeatherStationPlugin() :
     #endif
 {
     REGISTER_PLUGIN(this, "WeatherStationPlugin");
-    #if defined(E8266) && __LED_BUILTIN_WS2812_PIN != 16
-        // the WS2812 were connected to port 16, but since framework 3.0.0 GPIO16 cannot be used anymore
-        digitalWrite(16, LOW);
-        pinMode(16, INPUT);
-    #endif
 }
 
 #if WEATHER_STATION_HAVE_BMP_SCREENSHOT
@@ -187,7 +182,7 @@ public:
 void WeatherStationPlugin::__sendScreenCaptureBMP(AsyncWebServerRequest *request)
 {
     if (_updateProgress >= 0) {
-        auto response = new AsyncWebServerResponse(503);
+        auto response = request->beginResponse(503);
         response->addHeader(F("X-Screen-Name"), PrintString(F("Update in progress %d%%..."), _updateProgress));
         response->addHeader(F("X-Progress"), String(_updateProgress));
         request->send(response);

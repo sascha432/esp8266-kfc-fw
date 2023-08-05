@@ -86,7 +86,7 @@ namespace PluginComponents {
 
 // register plug in
 #if DEBUG_PLUGINS
-#define REGISTER_PLUGIN(plugin, name)                   PluginComponents::Register::add(plugin, name)
+#    define REGISTER_PLUGIN(plugin, name) PluginComponents::Register::add(plugin, name)
 #else
-#define REGISTER_PLUGIN(plugin, name)                   PluginComponents::Register::add(plugin)
+#    define REGISTER_PLUGIN(plugin, name) PluginComponents::Register::add(plugin)
 #endif

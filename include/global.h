@@ -478,6 +478,16 @@
 // #    define WEATHER_STATION_HAVE_BMP_SCREENSHOT 0
 #endif
 
+// check if pin 3 is used as output
+// all possible PINs can be added here
+#if ESP8266
+#    if IOT_LED_MATRIX_STANDBY_PIN == 3 || IOT_LED_MATRIX_OUTPUT_PIN == 3
+#        if !ESP8266_USE_UART_RX_AS_OUTPUT
+#            error ESP8266_USE_UART_RX_AS_OUTPUT must be set to 1
+#        endif
+#    endif
+#endif
+
 class Stream;
 class HardwareSerial;
 

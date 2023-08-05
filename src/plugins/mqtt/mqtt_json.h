@@ -11,12 +11,12 @@
 #include <PrintString.h>
 #include <JsonTools.h>
 
-#define DEBUG_MQTT_JSON                     0
+#define DEBUG_MQTT_JSON 0
 
 #if DEBUG_MQTT_JSON
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #undef RGB
@@ -66,7 +66,7 @@ namespace MQTT {
             }
         };
 
-        class Reader : KFCJson::JsonBaseReader {
+        class Reader : public KFCJson::JsonBaseReader {
         public:
             Reader();
             Reader(Stream* stream);
@@ -112,4 +112,6 @@ namespace MQTT {
 
 #include "mqtt_json_writer.hpp"
 
-#include <debug_helper_disable.h>
+#if DEBUG_MQTT_JSON
+#    include <debug_helper_disable.h>
+#endif

@@ -92,7 +92,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
     // }
 //     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKA))) {
 //         if (args.isQueryMode()) {
-//             for(uint8_t i = 0; i < static_cast<int>(AnimationType::MAX); i++) {
+//             for(int i = 0; i < static_cast<int>(AnimationType::LAST); i++) {
 //                 auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
 //                 name.toLowerCase();
 //                 args.printf_P(PSTR("%s - %s animation (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=%s[,<options>])"), name.c_str(), _config.getAnimationName(static_cast<AnimationType>(i)), _config.getAnimationName(static_cast<AnimationType>(i)));
@@ -100,7 +100,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //             args.printf_P(PSTR("%u - rainbow animation (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=%u,<speed>,<multiplier>,<r>,<g>,<b-factor>)"), AnimationType::RAINBOW, AnimationType::RAINBOW);
 //             args.printf_P(PSTR("%u - fade to color (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=%u,<r>,<g>,<b>)"), AnimationType::FADING, AnimationType::FADING);
 //             IF_IOT_CLOCK_MODE(
-//                 args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::MAX);
+//                 args.printf_P(PSTR("%u - blink colon speed"), (int)AnimationType::COLON_SOLID);
 //                 args.print(F("100 = disable clock"));
 //                 args.print(F("101 = enable clock"));
 //                 args.print(F("200 = display ambient light sensor value (+" PROGMEM_AT_MODE_HELP_COMMAND_PREFIX "A=200,<0|1>)"));
@@ -110,12 +110,12 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //         else if (args.size() >= 1) {
 //             auto animation = _getAnimationType(args.toString(0));
 //             int value = static_cast<int>(animation);
-//             if (animation == AnimationType::MAX) {
+//             if (animation <= AnimationType::COLON_SOLID) {
 //                 value = args.toInt(0);
 //             }
 
 //             IF_IOT_CLOCK_MODE(
-//                 if (value == (int)AnimationType::MAX) {
+//                 if (value == (int)AnimationType::COLON_SOLID) {
 //                     setBlinkColon(args.toIntMinMax(1, 50U, 0xffffU, 1000U));
 //                 }
 //                 else
@@ -151,7 +151,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
 //                 });
 //             }
 
-//             else if (value >= 0 && value < (int)AnimationType::MAX) {
+//             else if (value < (int)AnimationType::LAST) {
 //                 switch(static_cast<AnimationType>(value)) {
 //                     case AnimationType::RAINBOW:
 //                         _config.rainbow.speed = args.toIntMinMax(1, ClockPlugin::kMinRainbowSpeed, (uint16_t)0xfffe, _config.rainbow.speed);
@@ -250,8 +250,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 auto newTypeStr = String(newTypeCStr);
                 _config.normalizeSlug(newTypeStr);
                 if (newTypeStr.trim().length()) {
-                    for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::MAX); i++) {
-                        auto name = String(_config.getAnimationNameSlug(static_cast<AnimationType>(i)));
+                    for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::LAST); i++) {
+                        auto name = String(_getAnimationNameSlug(static_cast<AnimationType>(i)));
                         if (_config.normalizeSlug(name) == newTypeStr) {
                             visTxtType = i;
                             break;
@@ -260,7 +260,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 }
             }
             if (visTxtType == -1) {
-                newType = static_cast<Clock::AnimationType>(args.toIntMinMax(1, static_cast<int>(Clock::AnimationType::MIN), static_cast<int>(Clock::AnimationType::MAX) - 1, static_cast<int>(Clock::AnimationType::RAINBOW_FASTLED)));
+                newType = static_cast<Clock::AnimationType>(args.toIntMinMax(1, static_cast<int>(Clock::AnimationType::MIN), static_cast<int>(Clock::AnimationType::LAST) - 1, static_cast<int>(Clock::AnimationType::RAINBOW_FASTLED)));
             }
             else {
                 newType = static_cast<Clock::AnimationType>(visTxtType);
@@ -310,7 +310,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         // ani[mation][,<animation>][,blend_time=4000ms]
         else if (args.startsWithIgnoreCase(0, F("ani"))) {
             if (args.size() <= 1) {
-                for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::MAX); i++) {
+                for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::LAST); i++) {
                     auto slug = String(_config.getAnimationNameSlug(static_cast<AnimationType>(i)));
                     args.print(F("%s animation (+LMC=vis,%s)"), _config.getAnimationName(static_cast<AnimationType>(i)), _config.normalizeSlug(slug).c_str());
                 }
@@ -319,7 +319,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 auto animation = args.toString(1);
                 animation.replace(' ', '_');
                 auto blendTime = args.toMillis(2, 0, 30000, 4000);
-                for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::MAX); i++) {
+                for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::LAST); i++) {
                     auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
                     name.replace(' ', '_');
                     if (animation.equalsIgnoreCase(name)) {
@@ -703,7 +703,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                         });
                     }
                     else {
-                        args.printf_P(PSTR("arguments: <interval>,udp:<host>:<udp-port>:<web-socket port>"));
+                        args.print(F("arguments: <interval>,udp:<host>:<udp-port>:<web-socket port>"));
                     }
                 }
             }
@@ -712,7 +712,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 if (clientId && interval) {
                     if (_displayLedTimer) {
                         _displayLedTimer->timer->setInterval(Event::milliseconds(interval));
-                        args.printf_P(PSTR("changed interval to %ums"), interval);
+                        args.print(PSTR("changed interval to %ums"), interval);
                     }
                     else {
                         auto client = Http2Serial::getClientById(clientId);
@@ -773,20 +773,20 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                                     return;
                                 }
                             });
-                            args.printf_P(PSTR("sending LED colors every %ums to %p"), interval, clientId);
+                            args.print(PSTR("sending LED colors every %ums to %p"), interval, clientId);
                         }
                         else {
-                            args.printf_P(PSTR("client_id %p not found"), clientId);
+                            args.print(PSTR("client_id %p not found"), clientId);
                         }
                     }
                 }
                 else {
                     if (_displayLedTimer) {
-                        args.printf_P(PSTR("stopped sending LED colors to %p"), _displayLedTimer->clientId);
+                        args.print(PSTR("stopped sending LED colors to %p"), _displayLedTimer->clientId);
                         _removeDisplayLedTimer();
                     }
                     else {
-                        args.printf_P(PSTR("not sending LED colors"));
+                        args.print(F("not sending LED colors"));
                     }
                 }
             }

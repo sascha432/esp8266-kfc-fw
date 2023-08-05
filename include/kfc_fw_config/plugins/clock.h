@@ -44,7 +44,7 @@ namespace KFCConfigurationClasses {
 
             enum class AnimationType : uint8_t {
                 MIN = 0,
-                SOLID = 0,
+                SOLID = MIN,
                 GRADIENT,
                 RAINBOW,
                 RAINBOW_FASTLED,
@@ -56,12 +56,15 @@ namespace KFCConfigurationClasses {
                     VISUALIZER,
                 #endif
                 INTERLEAVED,
+                LAST,   // this can be used to loop through all animations: for(int i = 0; i <static_cast<int>(AnimationType::LAST); i++) {}
                 #if !IOT_LED_MATRIX
-                    COLON_SOLID,
+                    COLON_SOLID = LAST,
                     COLON_BLINK_FAST,
                     COLON_BLINK_SLOWLY,
+                    MAX,
+                #else
+                    MAX = LAST
                 #endif
-                MAX,
             };
 
             enum class InitialStateType : uint8_t  {

@@ -383,7 +383,7 @@ public:
     void setAnimation(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
     void nextAnimation()
     {
-        setAnimation(AnimationType((_config.animation + 1) % int(AnimationType::MAX)), 1000);
+        setAnimation(AnimationType((_config.animation + 1) % int(AnimationType::LAST)), 1000);
     }
 
     uint16_t _blendTime{Clock::BlendAnimation::kDefaultTime};

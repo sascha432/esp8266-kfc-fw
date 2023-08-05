@@ -467,8 +467,8 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         auto subForm = formName.c_str() + 4;
         const auto animation = _getAnimationType(FPSTR(subForm)); // translate name to number or just return number
         const auto isInline = isdigit(subForm[0]); // inline form for webui requested
-        __LDBG_printf("form=%s animation=%u valid=%u inline=%u", subForm, animation, animation != AnimationType::MAX, isInline);
-        if (animation < AnimationType::MAX) {
+        __LDBG_printf("form=%s animation=%u valid=%u inline=%u", subForm, animation, animation < AnimationType::LAST, isInline);
+        if (animation < AnimationType::LAST) {
             auto &ui = form.createWebUI();
             ui.setContainerId(F("led-matrix-settings"));
             ui.setStyle(isInline ? FormUI::WebUI::StyleType::WEBUI : FormUI::WebUI::StyleType::ACCORDION);

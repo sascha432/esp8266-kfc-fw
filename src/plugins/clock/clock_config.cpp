@@ -169,19 +169,19 @@ namespace KFCConfigurationClasses {
                 auto typeNum = strtoul(name.c_str(), &endPtr, 10);
                 // __LDBG_printf("name=%s type=%u name=%p endPtr=%p *endPtr=%d valid=%u", _name, typeNum, name.c_str(), endPtr, endPtr ? *endPtr : -1, (typeNum < static_cast<decltype(typeNum)>(AnimationType::MAX)));
                 // check that endPtr points to the end of the string and that it contains a valid integer
-                if (endPtr && (name.c_str() != endPtr) && !*endPtr && (typeNum < static_cast<decltype(typeNum)>(AnimationType::MAX))) {
+                if (endPtr && (name.c_str() != endPtr) && !*endPtr && (typeNum < static_cast<decltype(typeNum)>(AnimationType::LAST))) {
                     return static_cast<AnimationType>(typeNum);
                 }
                 name.replace(' ', '-');
                 name.replace('_', '-');
                 // search slugs first since it just is a stricmp
-                for(int i = 0; i < static_cast<int>(AnimationType::MAX); i++) {
+                for(int i = 0; i < static_cast<int>(AnimationType::LAST); i++) {
                     // __LDBG_printf("cmp %s==%s", name.c_str(), getAnimationNameSlug(static_cast<AnimationType>(i)));
                     if (name.equalsIgnoreCase(getAnimationNameSlug(static_cast<AnimationType>(i)))) {
                         return static_cast<AnimationType>(i);
                     }
                 }
-                for(int i = 0; i <static_cast<int>(AnimationType::MAX); i++) {
+                for(int i = 0; i <static_cast<int>(AnimationType::LAST); i++) {
                     String str = getAnimationName(static_cast<AnimationType>(i));
                     str.replace(' ', '-');
                     str.replace('_', '-');

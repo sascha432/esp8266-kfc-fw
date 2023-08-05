@@ -144,7 +144,7 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
     #endif
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
         auto animation = _getAnimationType(FPSTR(payload));
-        if (animation != AnimationType::MAX) {
+        if (animation < AnimationType::LAST) {
             setAnimation(static_cast<AnimationType>(animation));
             _saveState();
         }

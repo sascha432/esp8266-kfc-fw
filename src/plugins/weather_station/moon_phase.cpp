@@ -55,7 +55,7 @@ MoonPhasesType calcMoonPhases(time_t unixtime)
     phaseHunt(cur_julian_time, results);
 
     MoonPhasesType result;
-    for(uint8_t i = 0; i < 5; i++) {
+    for(int i = 0; i < 5; i++) {
         result._timestamps[i] = jToUnixtime(results[i]);
     }
 

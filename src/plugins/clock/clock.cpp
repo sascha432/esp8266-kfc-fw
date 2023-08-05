@@ -158,7 +158,7 @@ void ClockPlugin::createMenu()
     #if ESP32
         subMenu.addMenuItem(F("Animations"), F(LED_MATRIX_MENU_URI_PREFIX "animations.html"));
     #else
-        for(auto i = AnimationType::MIN; i < AnimationType::MAX; i = AnimationType(int(i) + 1)) {
+        for(auto i = AnimationType::MIN; i < AnimationType::LAST; i = AnimationType(int(i) + 1)) {
             auto name = _getAnimationName(i);
             if (name) {
                 subMenu.addMenuItem(PrintString(F("Animation - %s"), name), PrintString(F(LED_MATRIX_MENU_URI_PREFIX "ani-%s.html"), _getAnimationNameSlug(i)));

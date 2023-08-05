@@ -391,11 +391,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(hidden));
         }
     }
-    #if IOT_CLOCK
-        else if (key == F("LED_MATRIX_FORM_PREFIX")) {
+    else if (key == F("LED_MATRIX_FORM_PREFIX")) {
+        #if IOT_CLOCK
             output.print(F("/" LED_MATRIX_MENU_URI_PREFIX));
-        }
-    #endif
+        #endif
+    }
     #if defined(TFT_WIDTH) && defined(TFT_HEIGHT)
         else if (key == F("TFT_WIDTH")) {
             output.print(TFT_WIDTH);

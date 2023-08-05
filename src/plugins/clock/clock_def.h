@@ -40,19 +40,13 @@
 #   define DEBUG_MEASURE_ANIMATION DEBUG_IOT_CLOCK
 #endif
 
-// allows to diplay the RGB leds in the browser
+// allows to display the RGB leds in the browser
 #ifndef IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-#    define IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL 1
+#    define IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL 0
 #endif
 
 #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL == 1 && HTTP2SERIAL_SUPPORT != 1
 #   error HTTP2SERIAL_SUPPORT=1 required
-#endif
-
-#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-#    define IF_IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL(...) __VA_ARGS__
-#else
-#    define IF_IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL(...)
 #endif
 
 // the number of pixels and order can be changed if set to 1

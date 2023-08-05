@@ -463,6 +463,8 @@
             "activityBar.background": "#043615",
             "titleBar.activeBackground": "#064B1E",
             "titleBar.activeForeground": "#EFFEF4"
-        }
+        },
+        "cmake.automaticReconfigure": false,
+        "cmake.configureOnOpen": false
     }
 }

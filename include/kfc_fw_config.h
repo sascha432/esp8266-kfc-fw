@@ -311,7 +311,7 @@ inline const String &KFCFWConfiguration::getLastErrorStr() const
 
 inline bool KFCFWConfiguration::registerWiFiError()
 {
-    __DBG_printf("_wifiErrorCount=%u _wifiNumActive=%u", _wifiErrorCount, _wifiNumActive);
+    __LDBG_printf("_wifiErrorCount=%u _wifiNumActive=%u", _wifiErrorCount, _wifiNumActive);
     // change wifi network after WIFI_MAX_ERRORS errors
     if (++_wifiErrorCount > WIFI_MAX_ERRORS) {
         // reset errors
@@ -330,7 +330,7 @@ inline bool KFCFWConfiguration::registerWiFiError()
         }
 
         // the WiFi needs to be reconnected
-        __DBG_printf("new _wifiNumActive=%u", _wifiNumActive);
+        __LDBG_printf("new _wifiNumActive=%u", _wifiNumActive);
         return true;
     }
     return false;

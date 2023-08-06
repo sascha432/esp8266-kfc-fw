@@ -70,11 +70,11 @@ namespace KFCConfigurationClasses {
         // WiFi
 
         #ifndef WIFI_STATION_MAX_NUM
-        #define WIFI_STATION_MAX_NUM 5
+            #define WIFI_STATION_MAX_NUM 5
         #endif
 
         #if WIFI_STATION_MAX_NUM < 1 || WIFI_STATION_MAX_NUM > 8
-        #error WIFI_STATION_MAX_NUM: supported WiFi stations are 1 to 8
+            #error WIFI_STATION_MAX_NUM: supported WiFi stations are 1 to 8
         #endif
 
         class SettingsConfig {
@@ -119,7 +119,7 @@ namespace KFCConfigurationClasses {
                 bool isEnabled() const {
                     return enabled;
                 }
-                bool isEnabled(int8_t num) const {
+                bool isEnabled(int num) const {
                     return enabled && *Network::WiFi::getSSID(num);
                 }
                 bool isDHCPEnabled() const {
@@ -131,7 +131,7 @@ namespace KFCConfigurationClasses {
             struct __attribute__packed__ StationsConfig {
                 using Type = StationsConfig;
 
-                static constexpr uint8_t kNumStations = WIFI_STATION_MAX_NUM;
+                static constexpr int kNumStations = WIFI_STATION_MAX_NUM;
 
                 CREATE_IPV4_ADDRESS(global_dns1, kCreateIPv4Address(8, 8, 8, 8));
                 CREATE_IPV4_ADDRESS(global_dns2, kCreateIPv4Address(8, 8, 4, 4));
@@ -145,7 +145,7 @@ namespace KFCConfigurationClasses {
                     activeNetwork(0)
                 {
                     stations[0].enabled = true;
-                    for(uint8_t i = 0; i < kNumStations; i++) {
+                    for(int i = 0; i < kNumStations; i++) {
                         stations[i].local_ip = createIPv4Address(192, 168, 4, (i * 10) + 10);
                         stations[i].priority = (i * 7) + 1;
                     }
@@ -201,7 +201,7 @@ namespace KFCConfigurationClasses {
             };
 
             static constexpr auto kNumStationsMax = StationConfigType::MAX;
-            static constexpr auto kNumStations = static_cast<uint8_t>(kNumStationsMax);
+            static constexpr auto kNumStations = static_cast<int>(kNumStationsMax);
             static_assert(kNumStations == WIFI_STATION_MAX_NUM, "kNumStations does not match WIFI_STATION_MAX_NUM");
 
         public:
@@ -269,7 +269,7 @@ namespace KFCConfigurationClasses {
                 StationVector list;
                 bool scan = false;
                 auto cfg = Network::Settings::getConfig();
-                for(uint8_t i = 0; i < kNumStations; i++) {
+                for(int i = 0; i < kNumStations; i++) {
                     auto &config = cfg.stations[i];
                     if (config.isEnabled()) {
                         list.emplace_back(static_cast<StationConfigType>(i), getFPStrSSID(i), config._get_priority());
@@ -288,7 +288,7 @@ namespace KFCConfigurationClasses {
                     }
                     return a._priority < b._priority;
                 });
-                #if 0
+                #if DEBUG_CONFIG_CLASS
                     int n = 0;
                     for(const auto &station: list) {
                         __DBG_printf("num=%u id=%u ssid=%s prio=%u bssid=%s", n++, station._id, station._SSID.c_str(), station._priority, mac2String(station._bssid).c_str());
@@ -300,22 +300,22 @@ namespace KFCConfigurationClasses {
             static StationModeSettings getNetworkConfigOrdered(StationConfigType num)
             {
                 auto list = getStations(nullptr); // TODO implement scanning for strongest signal
-                auto count = static_cast<uint8_t>(num);
+                auto count = static_cast<int>(num);
                 for(const auto &station: list) {
                     if (count-- == 0) {
-                        #if DEBUG
-                            if (static_cast<uint8_t>(station._id) != (static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations)) {
-                                __DBG_printf("invalid station num=%u id=%u ssid=%s new_id=%u", static_cast<uint8_t>(num), station._id, __S(station._SSID), static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations);
-                                for(uint8_t i = 0; i < Network::Settings::StationsConfig::kNumStations; i++) {
+                        #if DEBUG_CONFIG_CLASS
+                            if (static_cast<int>(station._id) != (static_cast<int>(station._id) % Network::Settings::StationsConfig::kNumStations)) {
+                                __DBG_printf("invalid station num=%u id=%u ssid=%s new_id=%u", static_cast<int>(num), station._id, __S(station._SSID), static_cast<int>(station._id) % Network::Settings::StationsConfig::kNumStations);
+                                for(int i = 0; i < Network::Settings::StationsConfig::kNumStations; i++) {
                                     const auto &station = Network::Settings::getConfig().stations[i];
                                     __DBG_printf("n=%u ip=%s", i, IPAddress(station.local_ip).toString().c_str());
                                 }
                             }
                         #endif
-                        return Network::Settings::getConfig().stations[static_cast<uint8_t>(station._id) % Network::Settings::StationsConfig::kNumStations];
+                        return Network::Settings::getConfig().stations[static_cast<int>(station._id) % Network::Settings::StationsConfig::kNumStations];
                     }
                 }
-                __DBG_printf("network out of range=%u", num);
+                __LDBG_printf("network out of range=%u", num);
                 return Network::Settings::getConfig().stations[0];
             }
 
@@ -382,7 +382,6 @@ namespace KFCConfigurationClasses {
                     default:
                         break;
                 }
-                __DBG_panic("invalid SSID=%u", num);
                 return nullptr;
             }
 

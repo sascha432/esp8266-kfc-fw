@@ -3,7 +3,7 @@ import os
 import sys
 from os import path
 
-def create_eagle_ld(file, split):
+def create_eagle_ld(file, split, layout):
     klen = 0
     prev_key = None
     for key in split:
@@ -25,9 +25,9 @@ def create_eagle_ld(file, split):
     try:
         file = openw(file)
 
-        file.write('/* Flash Layout */\n');
+        file.write('/* Flash Layout %s */\n' % layout);
         for key, values in split.items():
-            file.write('/* %-*.*s @0x%08X (%dKB, %d) */\n' % (klen, klen, key, values[0], values[2] / 1024, values[2]));
+            file.write('/* %-*.*s @0x%08X (%dKB, %d, 0x%x) */\n' % (klen, klen, key, values[0], values[2] / 1024, values[2], values[2]));
 
 
         file.write('\nMEMORY\n'
@@ -79,31 +79,37 @@ if not os.path.isdir(eagle_dir):
 nvs_size = 8 # 4K blocks, 8 blocks take about 16ms to initialize while 16 take 25ms.
 # nvs_size = 1 # set to 1 to disable, init with less than 12KB will fail
 
-# 4/1
-split = {
-    'sketch': 0x40200000,
-    'empty': 0x402FEFF0,
-    'fs': 0x40500000,
-    'nvs': 0x405FB000 - ((nvs_size + 32) * 0x1000),
-    'savecrash': 0x405FB000 - (32 * 0x1000),           # 32 x 4096 byte = 128K
-    'eeprom': 0x405FB000,
-    'rfcal': 0x405FC000,
-    'wifi': 0x405FD000,
-    'end': 0x40600000,
-};
-create_eagle_ld(path.join(eagle_dir, 'eagle.flash.4m1m.ld'), split);
+savecrash_size = 8
 
-# 4/2
-split = {
-    'sketch': 0x40200000,
-    'empty': 0x402FEFF0,
-    'fs': 0x40400000,
-    'nvs': 0x405FB000 - ((nvs_size + 32) * 0x1000),
-    'savecrash': 0x405FB000 - (32 * 0x1000),           # 32 x 4096 byte = 128K
-    'eeprom': 0x405FB000,
-    'rfcal': 0x405FC000,
-    'wifi': 0x405FD000,
-    'end': 0x40600000,
-};
-create_eagle_ld(path.join(eagle_dir, 'eagle.flash.4m2m.ld'), split);
+sketch_addr = 0x40200000
+empty_addr = 0x402FEFF0
+end_addr = 0x40200000 + 0x400000 # 4MB
+eeprom_addr = end_addr - 0x1000 - 0x1000 - 0x3000 # eeprom=4KB rfcal=4KB wifi=12KB
 
+layout = 'flash=4M fs=1M (256 sectors)'
+split = {
+    'sketch': sketch_addr,
+    'empty': empty_addr,
+    'fs': eeprom_addr - ((nvs_size + savecrash_size + 256) * 0x1000),
+    'nvs': eeprom_addr - ((nvs_size + savecrash_size) * 0x1000),
+    'savecrash': eeprom_addr - (savecrash_size * 0x1000),
+    'eeprom': eeprom_addr,
+    'rfcal': eeprom_addr + 0x1000,
+    'wifi': eeprom_addr + 0x2000,
+    'end': end_addr,
+};
+create_eagle_ld(path.join(eagle_dir, 'eagle.flash.4m1m.ld'), split, layout);
+
+layout = 'flash=4M fs=2M (480 sectors to keep "empty" bigger as the sketch for OTA)'
+split = {
+    'sketch': sketch_addr,
+    'empty': empty_addr,
+    'fs': eeprom_addr - ((nvs_size + savecrash_size + 480) * 0x1000),
+    'nvs': eeprom_addr - ((nvs_size + savecrash_size) * 0x1000),
+    'savecrash': eeprom_addr - (savecrash_size * 0x1000),
+    'eeprom': eeprom_addr,
+    'rfcal': eeprom_addr + 0x1000,
+    'wifi': eeprom_addr + 0x2000,
+    'end': end_addr,
+};
+create_eagle_ld(path.join(eagle_dir, 'eagle.flash.4m2m.ld'), split, layout);

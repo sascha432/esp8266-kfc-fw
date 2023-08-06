@@ -43,10 +43,11 @@ Restore factory settings (but do not store in EEPROM/NVS)
 
 Restore factory settings, store in EEPROM/NVS and reboot device
 
-### `+FNVS`
+### `+NVS=<format|stats|dump>`
 
-Format NVS partition, restore factory settings and store it. Reboot the device to apply all new settings
-Formatting a NVS partition that has been used for quite some time can free up some heap. The status page shows the amount of heap being used for it and should not exceed 1.5-2KB
+- `dump` dumps the NVS partition debug info. Only available if compiled in
+- `stats` display NVS statistics
+- `format` formats the NVS partition, restores factory settings and stores it. Reboot the device to apply all new settings. Formatting a NVS partition that has been used for quite some time can free up some heap. The status page shows the amount of heap being used for it and should not exceed 1.5-2KB for a 32KB partition
 
 ``` test
 NVS flash storage max. size 32KB, 86.6% in use

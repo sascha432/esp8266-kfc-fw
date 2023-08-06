@@ -1,12 +1,12 @@
-/* Flash Layout */
-/* sketch    @0x40200000 (1019KB, 1044464) */
-/* empty     @0x402FEFF0 (2052KB, 2101264) */
-/* fs        @0x40500000 (844KB, 864256) */
-/* nvs       @0x405D3000 (32KB, 32768) */
-/* savecrash @0x405DB000 (128KB, 131072) */
-/* eeprom    @0x405FB000 (4KB, 4096) */
-/* rfcal     @0x405FC000 (4KB, 4096) */
-/* wifi      @0x405FD000 (12KB, 12288) */
+/* Flash Layout flash=4M fs=1M (256 sectors) */
+/* sketch    @0x40200000 (1019KB, 1044464, 0xfeff0) */
+/* empty     @0x402FEFF0 (1968KB, 2015248, 0x1ec010) */
+/* fs        @0x404EB000 (1024KB, 1048576, 0x100000) */
+/* nvs       @0x405EB000 (32KB, 32768, 0x8000) */
+/* savecrash @0x405F3000 (32KB, 32768, 0x8000) */
+/* eeprom    @0x405FB000 (4KB, 4096, 0x1000) */
+/* rfcal     @0x405FC000 (4KB, 4096, 0x1000) */
+/* wifi      @0x405FD000 (12KB, 12288, 0x3000) */
 
 MEMORY
 {
@@ -15,19 +15,19 @@ MEMORY
   irom0_0_seg :                         org = 0x40201010, len = 0xfeff0
 }
 
-PROVIDE ( _FS_start = 0x40500000 );
-PROVIDE ( _FS_end = 0x405D2000 );
+PROVIDE ( _FS_start = 0x404EB000 );
+PROVIDE ( _FS_end = 0x405EA000 );
 PROVIDE ( _FS_page = 0x100 );
 PROVIDE ( _FS_block = 0x2000 );
-PROVIDE ( _NVS_start = 0x405D3000 );
-PROVIDE ( _NVS_end = 0x405DA000 );
-PROVIDE ( _SAVECRASH_start = 0x405DB000 );
+PROVIDE ( _NVS_start = 0x405EB000 );
+PROVIDE ( _NVS_end = 0x405F2000 );
+PROVIDE ( _SAVECRASH_start = 0x405F3000 );
 PROVIDE ( _SAVECRASH_end = 0x405FA000 );
 PROVIDE ( _EEPROM_start = 0x405FB000 );
 PROVIDE ( _EEPROM_end = 0x405FB000 );
 /* The following symbols are DEPRECATED and will be REMOVED in a future release */
-PROVIDE ( _SPIFFS_start = 0x40500000 );
-PROVIDE ( _SPIFFS_end = 0x405D2000 );
+PROVIDE ( _SPIFFS_start = 0x404EB000 );
+PROVIDE ( _SPIFFS_end = 0x405EA000 );
 PROVIDE ( _SPIFFS_page = 0x100 );
 PROVIDE ( _SPIFFS_block = 0x2000 );
 

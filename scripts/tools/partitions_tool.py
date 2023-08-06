@@ -1,3 +1,6 @@
+#
+# Author: sascha_lammers@gmx.de
+#
 
 import os
 import sys
@@ -16,7 +19,6 @@ OTA_1 = None
 OTA_SIZE = None
 NVS_SIZE = None
 SECTOR_SIZE = 4096
-KEEP_FREE_SIZE = SECTOR_SIZE * 4
 APP_OFS = 0x10000
 START_OFS = 0x9000
 OUTPUT_FILE = None
@@ -37,6 +39,7 @@ FILES = (
 )
 
 #helpers
+FLASH_OFS = 0x40200000
 
 def openw(file):
     if not file or file is None or file=='-' or file=='stdout':
@@ -178,21 +181,20 @@ def get_total_size(start, end, partitions):
                 offset = app_ofs
 
             if auto_size == num:
-                size = free_bytes - KEEP_FREE_SIZE
+                size = free_bytes - SECTOR_SIZE * 2
                 partitions[num][3] = size
 
             partitions[num][5] = offset
             offset += size
 
             # check of we still have space
-            if offset>end:
+            if offset>=end:
                 raise Exception('size=0x%x offset=0x%x' % (end, offset))
 
             num += 1
 
         # final check
-        free_bytes = end - offset
-        if free_bytes<0:
+        if end - offset<0:
             raise Exception('size=0x%x>0x%x' % (offset, end))
 
     except Exception as e:
@@ -226,15 +228,14 @@ def create_partitions(filename, start, end, partitions):
             print('%s, %s, %s, 0x%x, %s, %s' % (name, part_type, sub_type, offset, size_to_K(size), part_flags), file=file)
             offset += size
 
-        print('\n# end_addr=0x%x' % (offset - 1), file=file);
+        print('\n# end_addr=0x%x' % (offset + FLASH_OFS), file=file);
 
     except Exception as e:
         raise e
 
     finally:
         print('')
-        print('# start=0x%x end=0x%x offset=0x%x size=%s' % (start, end - 1, offset, size_to_M(end)))
-        print('# end=0x%x size=%s free=0x%x' % (offset - 1, size_to_K(offset), free_bytes))
+        print('# start=0x%x end=0x%x offset=0x%x size=%s free=0x%x' % (start + FLASH_OFS, end + FLASH_OFS, offset, size_to_M(end), free_bytes))
         if file!=sys.stdout and file!=None:
             print("# created %s" % file.name)
             file.close()

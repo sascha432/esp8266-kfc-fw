@@ -7,6 +7,6 @@ eeprom, data, fat, 0x110000, 4K,
 nvs2, data, nvs, 0x111000, 160K, 
 coredump, data, coredump, 0x139000, 64K, 
 savecrash, data, fat, 0x149000, 16K, 
-spiffs, data, spiffs, 0x14d000, 2752K, 
+spiffs, data, spiffs, 0x14d000, 2760K, 
 
-# end_addr=0x3fcfff
+# end_addr=0x405ff000

@@ -8,4 +8,4 @@ nvs2, data, nvs, 0x211000, 160K,
 coredump, data, coredump, 0x239000, 64K, 
 savecrash, data, fat, 0x249000, 16K, 
 
-# end_addr=0x24cfff
+# end_addr=0x4044d000

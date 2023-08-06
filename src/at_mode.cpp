@@ -278,7 +278,7 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSR, "FSR", "FACTORY, STORE, RST in sequence");
 #if defined(HAVE_NVS_FLASH)
-    PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FNVS, "FNVS", "Format NVS partition and do factory reset");
+    PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NVS, "NVS", "<format|dump>", "Format NVS partition and do factory reset or dump debug info");
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
@@ -1375,6 +1375,16 @@ void at_mode_print_WiFi_info(AtModeArgs &args, uint8_t num, const Network::WiFi:
     }
 }
 
+class NVSDebugAccess {
+public:
+    static esp_err_t open() {
+        return config._nvs_open(false);
+    }
+    static void close() {
+        return config._nvs_close();
+    }
+};
+
 void at_mode_serial_handle_event(String &commandString)
 {
     auto &output = Serial;
@@ -1803,11 +1813,11 @@ void at_mode_serial_handle_event(String &commandString)
                 #if ESP8266
                     args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
                 #endif
-                args.print(F("EEPROM: 0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS - SECTION_EEPROM_START_ADDRESS + 4096);
-                args.print(F("SaveCrash: 0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS - SECTION_SAVECRASH_START_ADDRESS + 4096);
-                args.print(F("NVS: 0x%x/%u"), SECTION_NVS_START_ADDRESS, SECTION_NVS_END_ADDRESS - SECTION_NVS_START_ADDRESS + 4096);
+                args.print(F("EEPROM: 0x%x-0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS, SECTION_CALC_SIZE(EEPROM));
+                args.print(F("SaveCrash: 0x%x-0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS, SECTION_CALC_SIZE(SAVECRASH));
+                args.print(F("NVS: 0x%x-0x%x/%u"), SECTION_NVS_START_ADDRESS, SECTION_NVS_END_ADDRESS, SECTION_CALC_SIZE(NVS));
                 #ifdef SECTION_NVS2_START_ADDRESS
-                    args.print(F("NVS2: 0x%x/%u"), SECTION_NVS2_START_ADDRESS, SECTION_NVS2_END_ADDRESS - SECTION_NVS2_START_ADDRESS + 4096);
+                    args.print(F("NVS2: 0x%x-0x%x/%u"), SECTION_NVS2_START_ADDRESS, SECTION_NVS2_END_ADDRESS, SECTION_CALC_SIZE(NVS2));
                 #endif
                 #if ESP8266
                     args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
@@ -1926,11 +1936,71 @@ void at_mode_serial_handle_event(String &commandString)
         });
     }
     #if defined(HAVE_NVS_FLASH)
-        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(FNVS))) {
-            config.formatNVS();
-            config.restoreFactorySettings();
-            config.write();
-            args.ok();
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(NVS))) {
+            auto cmd = args.toString(0);
+            if (cmd == F("format")) {
+                config.formatNVS();
+                config.restoreFactorySettings();
+                config.write();
+                args.ok();
+            }
+            else if (cmd == F("stats")) {
+                auto stream = &args.getStream();
+                LoopFunctions::callOnce([stream]() {
+                    stream->println(F("+NVS: Stats"));
+                        esp_err_t err;
+                        if ((err = NVSDebugAccess::open()) == ESP_OK) {
+                            nvs_stats_t stats;
+                            #ifdef KFC_CFG_NVS_PARTITION_NAME
+                                err = nvs_dump(KFC_CFG_NVS_PARTITION_NAME, &stats);
+                            #else
+                                err = nvs_get_stats(NVS_DEFAULT_PART_NAME, &stats);
+                            #endif
+                            NVSDebugAccess::close();
+                            if (err == ESP_OK) {
+                                #if ESP8266
+                                    stream->printf_P(PSTR("+NVS: used_entries=%d free_entries=%d total_entries=%d namespace_count=%d max_seq_number=%d sectors=%d config_version=%u\n"), (int)stats.used_entries, (int)stats.free_entries, (int)stats.total_entries, (int)stats.namespace_count, (int)stats.max_seq_number, (int)stats.sectors, config.getVersion());
+                                #else
+                                    stream->printf_P(PSTR("+NVS: used_entries=%d free_entries=%d total_entries=%d namespace_count=%d config_version=%u\n"), (int)stats.used_entries, (int)stats.free_entries, (int)stats.total_entries, (int)stats.namespace_count, config.getVersion());
+                                #endif
+                            }
+                            else {
+                                stream->printf_P(PSTR("+NVS: nvs_get_stats failed err=%x\n"), err);
+                            }
+                        }
+                        else {
+                            stream->printf_P(PSTR("+NVS: Failed to open err=%x\n"), err);
+                        }
+                });
+            }
+            #if 1
+                else if (cmd == F("dump")) {
+                    auto stream = &args.getStream();
+                    LoopFunctions::callOnce([stream]() {
+                        stream->println(F("+NVS: Dumping partition"));
+                        esp_err_t err;
+                        if ((err = NVSDebugAccess::open()) == ESP_OK) {
+                            #ifdef KFC_CFG_NVS_PARTITION_NAME
+                                nvs_dump(KFC_CFG_NVS_PARTITION_NAME);
+                            #else
+                                nvs_dump(NVS_DEFAULT_PART_NAME);
+                            #endif
+                            NVSDebugAccess::close();
+                            stream->println(F("+NVS: OK"));
+                        }
+                        else {
+                            stream->printf_P(PSTR("+NVS: Failed to open err=%x\n"), err);
+                        }
+                    });
+                }
+                else {
+                    args.invalidArgument(0, F("format|stats|dump"));
+                }
+            #else
+                else {
+                    args.invalidArgument(0, F("format|stats"));
+                }
+            #endif
         }
     #endif
     #if DEBUG

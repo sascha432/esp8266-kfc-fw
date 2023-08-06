@@ -69,8 +69,8 @@ void Serial2TcpPlugin::getStatus(Print &output)
 {
     using KFCConfigurationClasses::System;
 
-    auto cfg = Serial2TCP::getConfig();
     if (Serial2TCP::isEnabled()) {
+        auto cfg = Serial2TCP::getConfig();
         if (cfg.mode == Serial2TCP::ModeType::SERVER) {
             output.printf_P(PSTR("Server listening on port %u"), cfg.port);
         }

@@ -122,7 +122,7 @@ void SSDPPlugin::shutdown()
 void SSDPPlugin::getStatus(Print &output)
 {
     __LDBG_printf("enabled=%u running=%", System::Flags::getConfig().is_ssdp_enabled, _running);
-    if (System::Flags::getConfig().is_ssdp_enabled && _running) {
+    if (_running && System::Flags::getConfig().is_ssdp_enabled) {
         WebTemplate::printWebInterfaceUrl(output);
         output.print(FSPGM(description_xml, "description.xml"));
         output.print(HTML_S(br));

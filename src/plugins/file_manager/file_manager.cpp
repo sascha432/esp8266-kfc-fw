@@ -369,7 +369,7 @@ uint16_t FileManager::remove()
         message += requestFilename;
     }
     else {
-        String filename = file.name();
+        String filename = file.fullName();
         file.close();
 
         if (!FSWrapper::remove(filename)) {
@@ -406,7 +406,7 @@ uint16_t FileManager::rename()
     else {
         FSInfo info;
         KFCFS.info(info);
-        String renameFrom = file.name();
+        String renameFrom = file.fullName();
         file.close();
 
         if (renameTo.charAt(0) != '/') {

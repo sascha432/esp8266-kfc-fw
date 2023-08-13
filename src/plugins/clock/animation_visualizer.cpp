@@ -627,7 +627,7 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                         // make sure the peak is above the current level at all times
                         CoordinateType peakLoudnessRow = std::min<int>(((std::max<int16_t>(_storedData[index] + 1, peakLoudness) * (lastRow + 1)) >> 8), lastRow - 1);
                         if (peakLoudnessRow >= endRow - 1) {
-                            display.setPixel(peakLoudnessRow, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? _cfg.peak_color : rgb, millisValue));
+                            display.setPixel(peakLoudnessRow, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? uint32_t(_cfg.peak_color) : uint32_t(rgb), millisValue));
                         }
                     }
                 }

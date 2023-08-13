@@ -70,12 +70,8 @@ extern "C" bool btInUse()
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 
-void delayedSetup(bool delayed)
+void delayedSetup()
 {
-    if (delayed) {
-        KFCFS_begin();
-    }
-
     // check if wifi is up
     constexpr uint32_t kCheckWiFiConnectionIntervalSeconds = 60;
     constexpr uint32_t kWiFiErrorIntervalIncrease = 15;
@@ -177,7 +173,6 @@ void setup()
         // custom code remote control plugin
         // ---------------------------------------------------------------------------------
         #if IOT_REMOTE_CONTROL
-            // read the button states once more
             // setting the awake pin high will clear the button hardware buffer
             // this code is executed ~60ms after the reset has been invoked and even fast
             // double clicks can be detected
@@ -337,6 +332,7 @@ void setup()
                     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
                     KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("%ux reset detected. Restoring factory defaults in 5 seconds...\n"), KFC_RESTORE_FACTORY_SETTINGS_RESET_COUNT);
                     delay(5000);
+                    KFCFS_begin();
                     config.restoreFactorySettings();
                     config.write();
                     safe_mode = true;
@@ -459,7 +455,7 @@ void setup()
 
         config.setSafeMode(safe_mode);
 
-    }
+    } // !wakeup
 
     config.read();
 
@@ -476,6 +472,8 @@ void setup()
     if (safe_mode) {
 
         serialHandler.replaceFirst(&KFC_SAFE_MODE_SERIAL_PORT);
+
+        KFCFS_begin();
 
         #if AT_MODE_SUPPORTED
             at_mode_setup();
@@ -527,6 +525,10 @@ void setup()
         // setup internal or external RTC
         KFCFWConfiguration::setupRTC();
 
+        if (!wakeup) {
+            KFCFS_begin();
+        }
+
         #if AT_MODE_SUPPORTED
             at_mode_setup();
         #endif
@@ -546,13 +548,12 @@ void setup()
 
         if (wakeup) {
             // delay file system initialization and other functionality to improve deep sleep wake up performance
-            // TODO accessing the FS might cause a crash
             _Scheduler.add(500, false, [](Event::CallbackTimerPtr) {
-                delayedSetup(true);
+                delayedSetup();
             });
         }
         else {
-            delayedSetup(false);
+            delayedSetup();
         }
 
         #if DEBUG_DEEP_SLEEP

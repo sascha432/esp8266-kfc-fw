@@ -348,7 +348,6 @@ if esp32 and env.GetProjectOption('board_build.filesystem') == 'littlefs':
     environ['PATH'] = path
     env.Replace(MKSPIFFSTOOL='mklittlefs', ENV=environ, ESP32_SPIFFS_IMAGE_NAME='littlefs')
 
-
 env.AddPreAction('upload', modify_upload_command)
 env.AddPreAction('uploadota', modify_upload_command)
 env.AddPreAction('uploadfs', modify_upload_command_fs)

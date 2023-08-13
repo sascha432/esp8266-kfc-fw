@@ -890,7 +890,7 @@ inline Clock::ShowMethodType ClockPlugin::getShowMethod()
 inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
 {
     _method = method;
-    #if ESP32
+    #if ESP32 && FASTLED_VERSION == 3004000
         if (_method != Clock::ShowMethodType::FASTLED) {
             ESP32RMTController::deinit();
         }
@@ -1083,7 +1083,7 @@ inline void ClockPlugin::_reset()
         digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
         pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
     #endif
-    #if ESP32
+    #if ESP32 && FASTLED_VERSION == 3004000
         ESP32RMTController::deinit();
     #endif
     NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));

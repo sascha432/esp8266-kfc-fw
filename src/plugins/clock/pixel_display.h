@@ -534,7 +534,6 @@ namespace Clock {
             else {
                 return col;
             }
-
         }
 
         inline __attribute__((__always_inline__))

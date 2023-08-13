@@ -837,7 +837,7 @@ void ClockPlugin::readConfig(bool setup)
 
         #if FASTLED_VERSION >= 3005000
             if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
-                FastLED.m_pPowerFunc = nullptr;
+                FastLED.m_pPowerFunc = nullptr; // if this does not compile, make m_pPowerFunc public in FastLED.h
             }
             else {
                 FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit));
@@ -863,6 +863,13 @@ void ClockPlugin::readConfig(bool setup)
         if (!_config.standby_led) {
             pinMode(IOT_LED_MATRIX_STANDBY_PIN, INPUT);
         }
+    #endif
+
+    #if defined(IOT_LED_MATRIX_STANDBY_LED_PIN) && IOT_LED_MATRIX_STANDBY_LED_PIN != -1
+        // enable/disable extra LED that is powered by the 5V from the relay/mosfet
+        // 1 pulls the LED to GND, 0 leaves it floating
+        pinMode(IOT_LED_MATRIX_STANDBY_LED_PIN, OUTPUT);
+        digitalWrite(IOT_LED_MATRIX_STANDBY_LED_PIN, IOT_LED_MATRIX_STANDBY_LED_PIN_LEVEL);
     #endif
 
     beginIRReceiver();
@@ -1044,7 +1051,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 #endif
 
-void ClockPlugin::_loop()
+void IRAM_ATTR ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
@@ -1096,7 +1103,7 @@ void ClockPlugin::_loop()
     #endif
 }
 
-void ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
+void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
 {
     // start update process
     _lastUpdateTime = millis();

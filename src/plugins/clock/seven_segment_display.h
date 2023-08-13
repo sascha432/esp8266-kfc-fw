@@ -160,91 +160,37 @@ namespace SevenSegment {
                 text++;
             }
         }
-
-        // set to 1 to read the data directly from PROGMEM
-        // set to 0 to create a copy on the stack (old code, not recommended)
-        #define USE_PGM_READ_DATA 1
-
-        #if !USE_PGM_READ_DATA
-
-            #if ESP32
-            #    warning use USE_PGM_READ_DATA=1 to avoid the copy overhead
-            #endif
-
-            // macro to copy PROGMEM data into buffer on stack
-            #define COPY_PROGMEM_DATA_TO(buffer_name, elements, method) \
-                std::remove_const_t<std::remove_pointer_t<decltype(method)>> buffer_name[elements]; \
-                static_assert(sizeof(buffer_name) <= 128, "buffer too big for the stack"); \
-                memcpy_P(buffer_name, method, sizeof(buffer_name));
-
-        #endif
-
         void setColon(uint8_t num, ColonType colon)
         {
-            #if USE_PGM_READ_DATA
-                auto ptr = getColonsArrayPtr(num);
-                for(int n = 0; n < (kNumPixelsPerColon * 2); n++) {
-                    setPixelState(pgm_read_data(ptr++), (colon == (n / kNumPixelsPerColon)));
-                }
-            #else
-                COPY_PROGMEM_DATA_TO(buf, kNumPixelsPerColon * 2, getColonsArrayPtr(num));
-                uint8_t n = 0;
-                for(const auto address: buf) {
-                    setPixelState(address, (colon == (n / kNumPixelsPerColon)));
-                    n++;
-                }
-            #endif
+            auto ptr = getColonsArrayPtr(num);
+            for(int n = 0; n < (kNumPixelsPerColon * 2); n++) {
+                setPixelState(pgm_read_data(ptr++), (colon == (n / kNumPixelsPerColon)));
+            }
         }
 
         void setColons(ColonType colon)
         {
-            #if USE_PGM_READ_DATA
-                auto ptr = getColonsArrayPtr(0);
-                for(int n = 0; n < (kNumPixels - kNumPixelsDigits); n++) {
-                    setPixelState(pgm_read_data(ptr++), (colon == (n / kNumPixelsPerColon)));
-                }
-            #else
-                COPY_PROGMEM_DATA_TO(buf, kNumPixels - kNumPixelsDigits, getColonsArrayPtr(0));
-                uint8_t n = 0;
-                for(const auto address: buf) {
-                    setPixelState(address, (colon == (n / kNumPixelsPerColon)));
-                    n++;
-                }
-            #endif
+            auto ptr = getColonsArrayPtr(0);
+            for(int n = 0; n < (kNumPixels - kNumPixelsDigits); n++) {
+                setPixelState(pgm_read_data(ptr++), (colon == (n / kNumPixelsPerColon)));
+            }
         }
 
         void setDigit(uint8_t num, uint8_t digit)
         {
-            #if USE_PGM_READ_DATA
-                auto ptr = getSegmentsArrayPtr(num);
-                auto digitSegments = getSegments(digit);
-                for(int n = 0; n < kNumPixelsPerDigit; n++) {
-                    setPixelState(pgm_read_data(ptr++), (digitSegments == (n / kNumPixelsPerSegment)));
-                }
-            #else
-                COPY_PROGMEM_DATA_TO(buf, kNumPixelsPerDigit, getSegmentsArrayPtr(num));
-                auto digitSegments = getSegments(digit);
-                uint8_t n = 0;
-                for(const auto address: buf) {
-                    setPixelState(address, (digitSegments == (n / kNumPixelsPerSegment)));
-                    n++;
-                }
-            #endif
+            auto ptr = getSegmentsArrayPtr(num);
+            auto digitSegments = getSegments(digit);
+            for(int n = 0; n < kNumPixelsPerDigit; n++) {
+                setPixelState(pgm_read_data(ptr++), (digitSegments == (n / kNumPixelsPerSegment)));
+            }
         }
 
         void clearDigit(uint8_t num)
         {
-            #if USE_PGM_READ_DATA
-                auto ptr = getSegmentsArrayPtr(num);
-                for(int n = 0; n < kNumPixelsPerDigit; n++) {
-                    setPixelState(pgm_read_data(ptr++), false);
-                }
-            #else
-                COPY_PROGMEM_DATA_TO(buf, kNumPixelsPerDigit, getSegmentsArrayPtr(num));
-                for(const auto address: buf) {
-                    setPixelState(address, false);
-                }
-            #endif
+            auto ptr = getSegmentsArrayPtr(num);
+            for(int n = 0; n < kNumPixelsPerDigit; n++) {
+                setPixelState(pgm_read_data(ptr++), false);
+            }
         }
 
         inline __attribute__((__always_inline__))
@@ -258,9 +204,6 @@ namespace SevenSegment {
         {
             setColons(ColonType::NONE);
         }
-
-        #undef COPY_PROGMEM_DATA_TO
-        #undef USE_PGM_READ_DATA
 
         // low level methods for direct display access
         // -----------------------------------------------------------------
@@ -383,7 +326,6 @@ namespace SevenSegment {
         {
             return static_cast<_Ta>(pgm_read_dword_aligned(reinterpret_cast<const uint32_t *>(ptr)));
         }
-
 
     private:
         std::bitset<kNumPixels> _masked;

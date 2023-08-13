@@ -319,6 +319,28 @@
 #    define IOT_LED_MATRIX 0
 #endif
 
+#if defined(IOT_LED_MATRIX_OUTPUT_PIN4)
+#    error more than 4 channels not supported
+#elseif defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+#    define IOT_LED_MATRIX_CHANNELS 4
+#elif defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+#    define IOT_LED_MATRIX_CHANNELS 3
+#elif defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+#    define IOT_LED_MATRIX_CHANNELS 2
+#else
+#    define IOT_LED_MATRIX_CHANNELS 1
+#endif
+
+#if CONFIG_HEAP_POISONING_COMPREHENSIVE
+#    ifndef FASTLED_RMT_MAX_CHANNELS
+#        define FASTLED_RMT_MAX_CHANNELS 1
+#    endif
+#    if IOT_LED_MATRIX_CHANNELS > 1
+#        warning this might lead to 'Interrupt wdt timeout on CPUx'. set FASTLED_RMT_MAX_CHANNELS to 1 during debugging
+#    endif
+#endif
+
+
 #if IOT_LED_MATRIX && !IOT_CLOCK
 #    error IOT_LED_MATRIX requires IOT_CLOCK
 #endif

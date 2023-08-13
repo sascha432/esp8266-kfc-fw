@@ -1811,13 +1811,14 @@ void at_mode_serial_handle_event(String &commandString)
                 #endif
 
                 #if ESP8266
-                    args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_IROM0_TEXT_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS);
+                    args.print(F("irom0.text: 0x%08x-0x%08x"), SECTION_FLASH_START_ADDR(irom0_text), SECTION_FLASH_END_ADDR(irom0_text));
                 #endif
-                args.print(F("EEPROM: 0x%x-0x%x/%u"), SECTION_EEPROM_START_ADDRESS, SECTION_EEPROM_END_ADDRESS, SECTION_CALC_SIZE(EEPROM));
-                args.print(F("SaveCrash: 0x%x-0x%x/%u"), SECTION_SAVECRASH_START_ADDRESS, SECTION_SAVECRASH_END_ADDRESS, SECTION_CALC_SIZE(SAVECRASH));
-                args.print(F("NVS: 0x%x-0x%x/%u"), SECTION_NVS_START_ADDRESS, SECTION_NVS_END_ADDRESS, SECTION_CALC_SIZE(NVS));
+                args.print(F("FS: 0x%x-0x%x/%u"), SECTION_FLASH_START_ADDR(FS), SECTION_FLASH_END_ADDR(FS), SECTION_CALC_SIZE(FS));
+                args.print(F("EEPROM: 0x%x-0x%x/%u"), SECTION_FLASH_START_ADDR(EEPROM), SECTION_FLASH_END_ADDR(EEPROM), SECTION_CALC_SIZE(EEPROM));
+                args.print(F("SaveCrash: 0x%x-0x%x/%u"), SECTION_FLASH_START_ADDR(SAVECRASH), SECTION_FLASH_END_ADDR(SAVECRASH), SECTION_CALC_SIZE(SAVECRASH));
+                args.print(F("NVS: 0x%x-0x%x/%u"), SECTION_FLASH_START_ADDR(NVS), SECTION_FLASH_END_ADDR(NVS), SECTION_CALC_SIZE(NVS));
                 #ifdef SECTION_NVS2_START_ADDRESS
-                    args.print(F("NVS2: 0x%x-0x%x/%u"), SECTION_NVS2_START_ADDRESS, SECTION_NVS2_END_ADDRESS, SECTION_CALC_SIZE(NVS2));
+                    args.print(F("NVS2: 0x%x-0x%x/%u"), SECTION_FLASH_START_ADDR(NVS2), SECTION_FLASH_END_ADDR(NVS2), SECTION_CALC_SIZE(NVS2));
                 #endif
                 #if ESP8266
                     args.print(F("DRAM: 0x%08x-0x%08x/%u"), SECTION_DRAM_START_ADDRESS, SECTION_DRAM_END_ADDRESS, SECTION_DRAM_END_ADDRESS - SECTION_DRAM_START_ADDRESS);
@@ -1952,7 +1953,7 @@ void at_mode_serial_handle_event(String &commandString)
                         if ((err = NVSDebugAccess::open()) == ESP_OK) {
                             nvs_stats_t stats;
                             #ifdef KFC_CFG_NVS_PARTITION_NAME
-                                err = nvs_dump(KFC_CFG_NVS_PARTITION_NAME, &stats);
+                                err = nvs_get_stats(KFC_CFG_NVS_PARTITION_NAME, &stats);
                             #else
                                 err = nvs_get_stats(NVS_DEFAULT_PART_NAME, &stats);
                             #endif
@@ -1973,7 +1974,7 @@ void at_mode_serial_handle_event(String &commandString)
                         }
                 });
             }
-            #if 1
+            #if 0
                 else if (cmd == F("dump")) {
                     auto stream = &args.getStream();
                     LoopFunctions::callOnce([stream]() {

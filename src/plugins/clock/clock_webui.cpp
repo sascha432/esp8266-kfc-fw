@@ -165,6 +165,8 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
     }
 
+    extern uint8_t _calculate_max_brightness_for_power_mW(uint8_t target_brightness, uint32_t max_power_mW, uint32_t &requested_power_mW);
+
     uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
     {
         uint32_t requestedPower_mW;

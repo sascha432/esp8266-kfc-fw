@@ -483,6 +483,8 @@ void WeatherStationPlugin::shutdown()
 {
     MQTT::Client::unregisterComponent(this);
 
+    WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, wifiCallback);
+
     _setBacklightLevel(PWMRANGE);
     _setScreen(ScreenType::TEXT);
     LoopFunctions::remove(loop);

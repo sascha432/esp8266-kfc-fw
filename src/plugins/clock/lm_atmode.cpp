@@ -293,12 +293,16 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             if (args.startsWithIgnoreCase(1, F("fast"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::FASTLED);
             }
-            else if (args.startsWithIgnoreCase(1, F("neoex"))) {
-                ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL_EX);
-            }
-            else if (args.startsWithIgnoreCase(1, F("neo"))) {
-                ClockPlugin::setShowMethod(Clock::ShowMethodType::AF_NEOPIXEL);
-            }
+            #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+                else if (args.startsWithIgnoreCase(1, F("neoex"))) {
+                    ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL_EX);
+                }
+            #endif
+            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+                else if (args.startsWithIgnoreCase(1, F("neo"))) {
+                    ClockPlugin::setShowMethod(Clock::ShowMethodType::AF_NEOPIXEL);
+                }
+            #endif
             else if (args.startsWithIgnoreCase(1, F("none"))) {
                 ClockPlugin::setShowMethod(Clock::ShowMethodType::NONE);
             }

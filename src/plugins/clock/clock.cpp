@@ -653,20 +653,24 @@ void ClockPlugin::getStatus(Print &output)
                 }
             #endif
             break;
-        case Clock::ShowMethodType::NEOPIXEL_EX: {
-            #if NEOPIXEL_HAVE_STATS
-                    auto &stats = NeoPixelEx::Context::validate(nullptr).getStats();
-                    output.printf_P(PSTR(", NeoPixelEx %dfps, aborted frames %u/%u (%.2f%%)"), stats.getFps(), stats.getAbortedFrames(), stats.getFrames(), stats.getFrames() ? (stats.getAbortedFrames() * 100.0 / stats.getFrames()) : NAN);
-                    if (stats.getTime() > 10000) {
-                        stats.clear();
-                    }
-                #else
-                    output.printf_P(PSTR(", NeoPixel"));
-                #endif
-            } break;
-        case Clock::ShowMethodType::AF_NEOPIXEL: {
-                output.printf_P(PSTR(", Adafruit NeoPixel"));
-            } break;
+        #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+            case Clock::ShowMethodType::NEOPIXEL_EX: {
+                #if NEOPIXEL_HAVE_STATS
+                        auto &stats = NeoPixelEx::Context::validate(nullptr).getStats();
+                        output.printf_P(PSTR(", NeoPixelEx %dfps, aborted frames %u/%u (%.2f%%)"), stats.getFps(), stats.getAbortedFrames(), stats.getFrames(), stats.getFrames() ? (stats.getAbortedFrames() * 100.0 / stats.getFrames()) : NAN);
+                        if (stats.getTime() > 10000) {
+                            stats.clear();
+                        }
+                    #else
+                        output.printf_P(PSTR(", NeoPixel"));
+                    #endif
+                } break;
+        #endif
+        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+            case Clock::ShowMethodType::AF_NEOPIXEL: {
+                    output.printf_P(PSTR(", Adafruit NeoPixel"));
+                } break;
+        #endif
         default:
             break;
     }
@@ -925,8 +929,10 @@ void ClockPlugin::_enable()
         return;
     }
 
-    // reset stats when turning LEDs on
-    NeoPixelEx::Context::validate(nullptr).getStats().clear();
+    #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+        // reset stats when turning LEDs on
+        NeoPixelEx::Context::validate(nullptr).getStats().clear();
+    #endif
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
@@ -978,7 +984,9 @@ void ClockPlugin::_disable()
     _removeLoop();
     LOOP_FUNCTION_ADD(standbyLoop);
 
-    NeoPixelEx::Context::validate(nullptr).getStats().clear();
+    #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+        NeoPixelEx::Context::validate(nullptr).getStats().clear();
+    #endif
 }
 
 #if IOT_ALARM_PLUGIN_ENABLED
@@ -1056,7 +1064,10 @@ void IRAM_ATTR ClockPlugin::_loop()
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
 
-    if (_method == Clock::ShowMethodType::FASTLED) {
+    #if IOT_LED_MATRIX_FASTLED_ONLY == 0
+        if (_method == Clock::ShowMethodType::FASTLED)
+    #endif
+    {
         auto frames = std::clamp<uint32_t>(_fps * 10, 100, 0xffffff);
         auto fps = FastLED.getFPS();
         if (fps) {

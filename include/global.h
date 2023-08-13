@@ -331,16 +331,6 @@
 #    define IOT_LED_MATRIX_CHANNELS 1
 #endif
 
-#if CONFIG_HEAP_POISONING_COMPREHENSIVE
-#    ifndef FASTLED_RMT_MAX_CHANNELS
-#        define FASTLED_RMT_MAX_CHANNELS 1
-#    endif
-#    if IOT_LED_MATRIX_CHANNELS > 1
-#        warning this might lead to 'Interrupt wdt timeout on CPUx'. set FASTLED_RMT_MAX_CHANNELS to 1 during debugging
-#    endif
-#endif
-
-
 #if IOT_LED_MATRIX && !IOT_CLOCK
 #    error IOT_LED_MATRIX requires IOT_CLOCK
 #endif

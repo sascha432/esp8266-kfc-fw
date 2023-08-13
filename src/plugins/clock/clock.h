@@ -1078,11 +1078,6 @@ inline void ClockPlugin::_updateBrightnessSettings()
 inline void ClockPlugin::_reset()
 {
     // turn off all LEDs during restart or a crash
-    #if IOT_LED_MATRIX_STANDBY_PIN != -1
-        auto state = digitalRead(IOT_LED_MATRIX_STANDBY_PIN);
-        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
-        pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
-    #endif
     #if ESP32 && FASTLED_VERSION == 3004000
         ESP32RMTController::deinit();
     #endif
@@ -1095,9 +1090,6 @@ inline void ClockPlugin::_reset()
     #endif
     #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
         NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
-    #endif
-    #if IOT_LED_MATRIX_STANDBY_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, state);
     #endif
 }
 
@@ -1123,10 +1115,14 @@ inline const __FlashStringHelper *ClockPlugin::getShowMethodStr()
             return F("None");
         case Clock::ShowMethodType::FASTLED:
             return F("FastLED");
-        case Clock::ShowMethodType::NEOPIXEL_EX:
+        #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+            case Clock::ShowMethodType::NEOPIXEL_EX:
             return F("NeoPixelEx");
-        case Clock::ShowMethodType::AF_NEOPIXEL:
-            return F("Adafruit NeoPixel");
+        #endif
+        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+            case Clock::ShowMethodType::AF_NEOPIXEL:
+                return F("Adafruit NeoPixel");
+        #endif
         default:
             break;
     }

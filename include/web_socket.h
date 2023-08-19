@@ -9,6 +9,7 @@
 #endif
 
 #include <Arduino_compat.h>
+#include <Mutex.h>
 #include <algorithm>
 #include <vector>
 #include "web_server.h"

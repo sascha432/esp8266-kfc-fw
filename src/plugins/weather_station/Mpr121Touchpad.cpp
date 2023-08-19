@@ -259,7 +259,7 @@ void Mpr121Touchpad::Event::touched()
         }
     }
     _type = EventType::TOUCH;
-    if (get_time_diff(_releasedTime, _curEvent.time) > 500) {
+    if (get_time_since(_releasedTime, _curEvent.time) > 500) {
         __LDBG_printf("removing predicted position");
         _predict = Coordinates(-1, -1);
     }
@@ -355,7 +355,7 @@ void Mpr121Touchpad::Event::gestures()
 
 void Mpr121Touchpad::Event::timer()
 {
-    if (_touchedTime != 0 && get_time_diff(_heldTime, _curEvent.time) > 250) {
+    if (_touchedTime != 0 && get_time_since(_heldTime, _curEvent.time) > 250) {
         gestures();
         _pad._fireEvent();
         _heldTime = _curEvent.time;

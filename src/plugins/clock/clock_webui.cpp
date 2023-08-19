@@ -209,7 +209,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
         else {
             auto ms = micros();
-            auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_diff(_powerLevelUpdateTimer, ms));
+            auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_since(_powerLevelUpdateTimer, ms));
             _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
             _powerLevelUpdateTimer = ms;
         }

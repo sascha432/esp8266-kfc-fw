@@ -46,7 +46,7 @@ namespace Clock {
 
         virtual void loop(uint32_t millisValue)
         {
-            if (_waiting && get_time_diff(_waitTimer, millis()) >= _holdTime) {
+            if (_waiting && get_time_since(_waitTimer, millis()) >= _holdTime) {
                 // __LDBG_printf("waiting period is over");
                 _color = _getColor();
                 srand(millisValue);
@@ -61,7 +61,7 @@ namespace Clock {
                 return;
             }
 
-            auto duration = get_time_diff(_loopTimer, millis());
+            auto duration = get_time_since(_loopTimer, millis());
             if (duration >= _duration) {
                 _color = _to;
                 if (_holdTime == kNoColorChange) {

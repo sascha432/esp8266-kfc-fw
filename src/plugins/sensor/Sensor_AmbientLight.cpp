@@ -321,7 +321,7 @@ int32_t Sensor_AmbientLight::_readTinyPwmADC()
             _sensor.tinyPWM.level = level;
         }
         else {
-            auto mul = 2000 / static_cast<float>(get_time_diff(_sensor.tinyPWM.lastUpdate, millis()));
+            auto mul = 2000 / static_cast<float>(get_time_since(_sensor.tinyPWM.lastUpdate, millis()));
             _sensor.tinyPWM.level = ((_sensor.tinyPWM.level * mul) + level) / (mul + 1.0);
         }
         _sensor.tinyPWM.lastUpdate = millis();

@@ -204,7 +204,7 @@ public:
         void read(ReadBuffer::iterator &iterator);
 
         bool within(uint32_t time, uint16_t min, uint16_t max, uint32_t now) const {
-            auto diff = get_time_diff(time, now);
+            auto diff = get_time_since(time, now);
             return diff >= min && diff <= max;
         }
 

@@ -148,7 +148,7 @@ void BlindsControl::_loopMethod()
 {
     // soft start is running, update PWM
     if (_motorStartTime) {
-        uint32_t diff = get_time_diff(_motorStartTime, micros());
+        uint32_t diff = get_time_since(_motorStartTime, micros());
         uint32_t stime = _config.pwm_softstart_time * 1000U;
         if (diff >= stime) { // finished, set final pwm value
             analogWrite(_motorPin, _motorPWMValue);

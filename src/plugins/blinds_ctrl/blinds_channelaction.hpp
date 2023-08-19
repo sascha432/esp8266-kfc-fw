@@ -63,8 +63,8 @@ inline bool BlindsControl::ChannelAction::getOpen() const
 
 inline void BlindsControl::ChannelAction::monitorDelay()
 {
-    if (_state == ActionStateType::DELAY && get_time_diff(_startTime, millis()) >= getDelay()) {
-        __LDBG_printf("start=%u end=%u delay=%u diff=%u relative=%u finished", _startTime, getTimeout(), getDelay(), get_time_diff(_startTime, millis()), isRelativeDelay());
+    if (_state == ActionStateType::DELAY && get_time_since(_startTime, millis()) >= getDelay()) {
+        __LDBG_printf("start=%u end=%u delay=%u diff=%u relative=%u finished", _startTime, getTimeout(), getDelay(), get_time_since(_startTime, millis()), isRelativeDelay());
         next();
     }
 }

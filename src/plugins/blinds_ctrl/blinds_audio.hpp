@@ -9,7 +9,7 @@
 inline BlindsControl::ToneSettings::ToneSettings(uint16_t _frequency, uint16_t _pwmValue, uint8_t _pins[2], uint32_t _timeout)  :
     counter(0),
     loop(0),
-    runtime(_timeout ? get_time_diff(millis(), _timeout) : 0),
+    runtime(_timeout ? get_time_since(millis(), _timeout) : 0),
     frequency(_frequency),
     pwmValue(_pwmValue),
     interval(kToneInterval),

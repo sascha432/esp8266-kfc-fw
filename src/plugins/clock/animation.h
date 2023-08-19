@@ -323,7 +323,7 @@ namespace Clock {
 
         bool blend(DisplayType &display, uint32_t millisValue)
         {
-            auto timeLeft = get_time_diff(_timer, millisValue);
+            auto timeLeft = get_time_since(_timer, millisValue);
             if (timeLeft >= _duration) {
                 _target->copyTo(_display, millisValue);
                 return false;

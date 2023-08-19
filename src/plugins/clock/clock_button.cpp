@@ -35,7 +35,7 @@ void Clock::RotaryEncoder::event(EventType eventType, uint32_t now)
 
 void ClockPlugin::rotaryCallback(bool decrease, uint32_t now)
 {
-    auto diff = get_time_diff(_lastRotaryUpdate, now) / 1000;
+    auto diff = get_time_since(_lastRotaryUpdate, now) / 1000;
     if (_rotaryAction == 0) {
         _lastRotaryUpdate = now;
         if (diff > 500) {

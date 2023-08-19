@@ -167,7 +167,7 @@ namespace Clock {
 
         virtual void loop(uint32_t millisValue) override
         {
-            if (get_time_diff(_loopTimer, millisValue) >= _updateRate) {
+            if (get_time_since(_loopTimer, millisValue) >= _updateRate) {
                 _loopTimer = millisValue;
                 // update all lines
                 srand(millisValue);

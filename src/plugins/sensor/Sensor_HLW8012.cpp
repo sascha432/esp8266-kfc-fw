@@ -207,7 +207,7 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                 auto value = *iterator;
                 lock.~InterruptLock();
 
-                auto diff = __inline_get_time_diff(lastValue, value);
+                auto diff = get_time_since(lastValue, value);
                 lastValue = value;
 
                 #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION

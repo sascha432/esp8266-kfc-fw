@@ -41,7 +41,7 @@ namespace Clock {
                 _lastUpdate = millisValue;
                 return;
             }
-            if (get_time_diff(_lastUpdate, millisValue) < 25) {
+            if (get_time_since(_lastUpdate, millisValue) < 25) {
                 return;
             }
             _lastUpdate = millisValue;

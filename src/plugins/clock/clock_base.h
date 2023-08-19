@@ -21,11 +21,16 @@
 #    include <rotary_encoder.h>
 #endif
 
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
 #define FASTLED_INTERNAL
 #include <FastLED.h>
 #if ESP32
-#    include <platforms/esp/32/clockless_rmt_esp32.h>
+#    ifndef FASTLED_ESP32_I2S
+#        include <platforms/esp/32/clockless_rmt_esp32.h>
+#    endif
 #endif
+#pragma GCC pop_options
 
 #if IOT_LED_MATRIX
 #    define LED_MATRIX_MENU_URI_PREFIX "led-matrix/"        // uses led-matrix.html

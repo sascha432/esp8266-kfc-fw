@@ -171,7 +171,7 @@ inline void Sensor_INA219::SensorData::add(float U, float I, uint32_t micros)
         _U = U;
         _I = I;
     } else {
-        float multiplier = _period / (get_time_diff(_micros, micros) / 1000.0);
+        float multiplier = _period / (get_time_since(_micros, micros) / 1000.0);
         float divider = multiplier + 1.0;
         _U = ((_U * multiplier) + U) / divider;
         _I = ((_I * multiplier) + I) / divider;

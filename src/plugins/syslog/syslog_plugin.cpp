@@ -123,7 +123,9 @@ void SyslogPlugin::_begin()
             auto queue = new SyslogMemoryQueue(*this, SYSLOG_PLUGIN_QUEUE_SIZE);
             auto syslog = SyslogFactory::create(System::Device::getName(), queue, cfg._get_enum_protocol(), zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
             _stream = new SyslogStream(syslog, _timer);
-            _logger.setSyslog(_stream);
+            #if LOGGER
+                _logger.setSyslog(_stream);
+            #endif
 
             __LDBG_printf("zeroconf=%u port=%u", zeroconf, port);
             if (zeroconf) {
@@ -152,7 +154,9 @@ void SyslogPlugin::_end()
 {
     if (_stream) {
         _Timer(_timer).remove();
-        _logger.setSyslog(nullptr);
+        #if LOGGER
+            _logger.setSyslog(nullptr);
+        #endif
         delete _stream;
         _stream = nullptr;
     }

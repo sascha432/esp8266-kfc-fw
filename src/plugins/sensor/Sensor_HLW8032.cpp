@@ -74,7 +74,7 @@ String Sensor_HLW8032::_getId(const __FlashStringHelper *type)
 void Sensor_HLW8032::_onReceive(int available)
 {
     if (_buffer.length()) {
-        auto last = get_time_diff(_lastData, millis());
+        auto last = get_time_since(_lastData, millis());
         if (last > IOT_SENSOR_HLW8032_SERIAL_INTERVAL / 2) { // discard old data
             _buffer.clear();
         }

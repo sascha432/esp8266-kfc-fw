@@ -696,7 +696,7 @@ void AsyncResolveZeroconfResponse::_doStuff(bool *async, const String &value)
                 if (result != resolved) {
                     str.printf_P(PSTR(HTML_S(br) "Resolved: %s"), resolved.c_str());
                 }
-                str.printf_P(PSTR(HTML_S(br) "Timeout: %u / %ums"), get_time_diff(start, millis()), KFCConfigurationClasses::System::Device::getConfig().zeroconf_timeout);
+                str.printf_P(PSTR(HTML_S(br) "Timeout: %u / %ums"), get_time_since(start, millis()), KFCConfigurationClasses::System::Device::getConfig().zeroconf_timeout);
 
                 _buffer = std::move(str);
             }

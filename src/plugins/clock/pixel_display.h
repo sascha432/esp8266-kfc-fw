@@ -1031,7 +1031,7 @@ namespace Clock {
                 auto ptr = &_controller;
                 uint8_t i = 0;
                 while(ptr) {
-                    if (ptr->leds() != _emptyPixel) {
+                    if (ptr->leds() != &_emptyPixel) {
                         // we need a switch since the output pin is hardcoded for performance reasons
                         using PixelType = NeoPixelEx::CRGB;
                         using DefaultTimings = NeoPixelEx::DefaultTimings;

@@ -237,7 +237,7 @@ namespace MQTT {
 
     inline bool ClientQueue::isExpired() const
     {
-        return get_time_diff(_time, millis()) > _timeout;
+        return get_time_since(_time, millis()) > _timeout;
     }
 
     inline uint16_t ClientQueue::getTimeout() const
@@ -378,7 +378,7 @@ namespace MQTT {
 
     inline bool PacketQueue::isTimeout() const
     {
-        return !isDelivered() && get_time_diff(_time, millis()) >= _timeout;
+        return !isDelivered() && get_time_since(_time, millis()) >= _timeout;
     }
 
     inline __attribute__((__always_inline__))
@@ -402,7 +402,7 @@ namespace MQTT {
 
     inline bool PacketQueue::canDelete() const
     {
-        auto diff = get_time_diff(_time, millis());
+        auto diff = get_time_since(_time, millis());
         return isDelivered() && (diff >= _timeout) && (diff >= kDefaultCanDeleteTimeout);
     }
 

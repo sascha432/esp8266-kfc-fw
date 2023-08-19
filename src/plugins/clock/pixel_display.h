@@ -21,9 +21,6 @@ extern "C" const __FlashStringHelper *getNeopixelShowMethodStr();
 #    include <debug_helper_disable.h>
 #endif
 
-#pragma GCC push_options
-#pragma GCC optimize ("O3")
-
 // class to address LED matrix displays by x and y coordinates mapping it to its real coordinates
 // the mapping is done during compilation and fixed for best performance
 //
@@ -1140,8 +1137,6 @@ namespace Clock {
     };
 
 }
-
-#pragma GCC pop_options
 
 #if DEBUG_IOT_CLOCK
 #    include <debug_helper_disable.h>

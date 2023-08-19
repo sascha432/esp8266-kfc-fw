@@ -18,9 +18,6 @@
 #    include <debug_helper_disable.h>
 #endif
 
-#pragma GCC push_options
-#pragma GCC optimize ("O3")
-
 // class for 7 segment display with various shapes that can be created with
 // the ./scripts/tools/create_7segment_display.py tool
 //
@@ -336,8 +333,6 @@ namespace SevenSegment {
     static constexpr auto kSevenSegmentTotalMemorySize = sizeof(Display);
 
 }
-
-#pragma GCC pop_options
 
 #if DEBUG_IOT_CLOCK
 #    include <debug_helper_disable.h>

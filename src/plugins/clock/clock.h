@@ -369,6 +369,7 @@ private:
     void _loop();
     void  _loopDoUpdate(LoopOptionsType &options);
     void _setupTimer();
+    void _display_show();
 
     // returns AnimationType::MAX if the name is invalid
     // searched for name, name slug or AnimationType as integer
@@ -760,7 +761,7 @@ inline void ClockPlugin::enableLoop(bool enable)
         setAutoBrightness(enable ? (Plugins::Sensor::getConfig().ambient.auto_brightness != -1) : false);
     #endif
     _display.clear();
-    _display.show();
+    _display_show();
     enableLoopNoClear(enable);
 }
 

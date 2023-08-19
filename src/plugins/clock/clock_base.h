@@ -23,6 +23,8 @@
 
 #pragma GCC push_options
 #pragma GCC optimize ("O3")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
 #define FASTLED_INTERNAL
 #include <FastLED.h>
 #if ESP32
@@ -30,6 +32,7 @@
 #        include <platforms/esp/32/clockless_rmt_esp32.h>
 #    endif
 #endif
+#pragma GCC diagnostic pop
 #pragma GCC pop_options
 
 #if IOT_LED_MATRIX

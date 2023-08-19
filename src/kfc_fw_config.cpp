@@ -943,11 +943,13 @@ void KFCFWConfiguration::printDiag(Print &output, const String &prefix)
     #if 1
         output.printf_P(PSTR("WiFi uptime %u\n"), uint32_t(config.getWiFiUp() / 1000));
         WiFi.printDiag(output);
-        output.print(F("IP/IPv6 "));
-        WiFi.localIP().printTo(output);
-        output.print('/');
-        WiFi.localIPv6().printTo(output);
-        output.println();
+        #if ESP32
+            output.print(F("IP/IPv6 "));
+            WiFi.localIP().printTo(output);
+            output.print('/');
+            WiFi.localIPv6().printTo(output);
+            output.println();
+        #endif
     #elif ESP8266
         station_config wifiConfig;
         wifi_station_get_config_default(&wifiConfig);
@@ -1817,7 +1819,7 @@ void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 
     #if RTC_SUPPORT
         if (data.time == 0) {
-            output.print(F("Failed to initialize RTC"));
+            output.printf_P(PSTR("%sFailed to initialize RTC"), nl);
         }
     #endif
 }

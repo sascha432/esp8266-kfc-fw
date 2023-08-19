@@ -959,7 +959,7 @@ void ClockPlugin::_disable()
     // turn all leds off and set brightness to 0
     _display.setBrightness(0);
     _display.clear();
-    _display.show();
+    _display_show();
 
     _config.enabled = false;
     _isEnabled = false;
@@ -1093,7 +1093,7 @@ void IRAM_ATTR ClockPlugin::_loop()
         _loopDoUpdate(options);
     }
 
-    _display.show();
+    _display_show();
 
     #if ESP8266 && HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
         if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
@@ -1113,6 +1113,16 @@ void IRAM_ATTR ClockPlugin::_loop()
         }
     #endif
 }
+
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
+
+void IRAM_ATTR ClockPlugin::_display_show()
+{
+    _display.show();
+}
+
+#pragma GCC pop_options
 
 void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
 {

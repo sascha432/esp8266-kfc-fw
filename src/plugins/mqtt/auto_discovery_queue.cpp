@@ -12,9 +12,9 @@
 #include "auto_discovery_list.h"
 
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
@@ -251,7 +251,7 @@ void Queue::runPublish(uint32_t delayMillis)
             _callback(StatusType::DEFERRED);
         }
 
-        // cleanup before deleteing
+        // cleanup before deleting
         _mutexLock.lock();
         clear();
         _client._autoDiscoveryQueue.reset(); // deletes itself and the timer
@@ -386,7 +386,7 @@ void Queue::_publishDone(StatusType result, uint16_t onErrorDelay)
 
     Logger_notice(message);
 
-    // cleanup before deleteing
+    // cleanup before deleting
     if (!_mutexLock._locked) {
         _mutexLock.lock();
     }

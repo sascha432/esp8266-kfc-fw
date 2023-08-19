@@ -756,7 +756,7 @@ public:
     private:
         static ComponentVector _components;
         static Client *_mqttClient;
-        SemaphoreMutex _lock;
+        SemaphoreMutexRecursive _lock;
     };
 
 

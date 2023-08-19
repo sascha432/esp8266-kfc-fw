@@ -122,7 +122,7 @@ namespace MQTT {
     Client::~Client()
     {
         __LDBG_printf("conn=%s", _connection());
-        WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTION, MQTT::Client::handleWiFiEvents);
+        WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, MQTT::Client::handleWiFiEvents);
         _resetClient();
         _Timer(_timer).remove();
 
@@ -144,10 +144,12 @@ namespace MQTT {
     void Client::_resetClient()
     {
         __LDBG_printf("queue=%p rebroadcast_timer=%u queue_timer=%u queue_size=%u conn=%s", _autoDiscoveryQueue.get(), (bool)_autoDiscoveryRebroadcast, (bool)_queue.getTimer(), _queue.size(), _connection());
-        _autoDiscoveryQueue.reset();
-        _autoDiscoveryRebroadcast.remove();
-        _queue.clear();
-        _packetQueue.clear();
+        MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
+            _autoDiscoveryQueue.reset();
+            _autoDiscoveryRebroadcast.remove();
+            _queue.clear();
+            _packetQueue.clear();
+        }
     }
 
     void Client::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
@@ -272,12 +274,12 @@ namespace MQTT {
             return;
         }
         __LDBG_printf("component=%p type=%s", component, component->getName());
+        MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
         if (isComponentRegistered(component)) {
-            __DBG_assert_printf(false, "component=%p type=%s already registered", component, component->getName());
-            return;
-        }
-        // turn off interrupts to avoid issues with running auto discovery
-        MUTEX_LOCK_BLOCK(_lock) {
+                __DBG_assert_printf(false, "component=%p type=%s already registered", component, component->getName());
+                return;
+            }
+            // turn off interrupts to avoid issues with running auto discovery
             _components.push_back(component);
         }
         __LDBG_printf("components=%u entities=%u", _components.size(), AutoDiscovery::List::size(_components));
@@ -289,15 +291,16 @@ namespace MQTT {
             __DBG_assert_printf(false, "unregisterComponent(nullptr)");
             return false;
         }
-        auto size = _components.size();
-        if (size) {
-            MUTEX_LOCK_BLOCK(_lock) {
+        MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
+            auto size = _components.size();
+            if (size) {
                 remove(component);
                 _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
             }
+            __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), AutoDiscovery::List::size(_components), _components.size() != size);
+            return _components.size() != size;
         }
-        __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), AutoDiscovery::List::size(_components), _components.size() != size);
-        return _components.size() != size;
+        __builtin_unreachable();
     }
 
 
@@ -397,13 +400,13 @@ namespace MQTT {
     String MQTT::Client::_getBaseTopic()
     {
         String topic = Plugins::MqttClient::getBaseTopic();
-        __LDBG_printf("base_topic=%s ${device_name}=%d ${object_id}=%d ${device_title}=%d ${device_title_no_space}=%d",
-            __S(topic),
-            topic.indexOf(F("${device_name}")),
-            topic.indexOf(F("${object_id}")),
-            topic.indexOf(F("${device_title}")),
-            topic.indexOf(F("${device_title_no_space}"))
-        );
+        // __LDBG_printf("base_topic=%s ${device_name}=%d ${object_id}=%d ${device_title}=%d ${device_title_no_space}=%d",
+        //     __S(topic),
+        //     topic.indexOf(F("${device_name}")),
+        //     topic.indexOf(F("${object_id}")),
+        //     topic.indexOf(F("${device_title}")),
+        //     topic.indexOf(F("${device_title_no_space}"))
+        // );
         if (topic.indexOf(F("${device_name}")) != -1) {
             topic.replace(F("${device_name}"), _filterString(System::Device::getName()));
         }
@@ -416,7 +419,7 @@ namespace MQTT {
         if (topic.indexOf(F("${device_title_no_space}")) != -1) {
             topic.replace(F("${device_title_no_space}"), _filterString(System::Device::getTitle(), true));
         }
-        #if DEBUG_MQTT_CLIENT
+        #if DEBUG_MQTT_CLIENT && 0
             topic.rtrim('/');
             __DBG_printf("base_topic=%s replaced", __S(topic));
             return topic;
@@ -460,7 +463,7 @@ namespace MQTT {
             topic.vprintf_P(RFPSTR(format), arg);
         }
         __LDBG_assert_printf(topic.indexOf(F("//")) == -1, "topic '%s' contains //", topic.c_str());
-        __LDBG_printf("topic=%s", topic.c_str());
+        // __LDBG_printf("topic=%s", topic.c_str());
         return topic;
     }
 

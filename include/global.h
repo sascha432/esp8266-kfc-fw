@@ -291,6 +291,12 @@
 #    define RTC_SUPPORT 0
 #endif
 
+// 0 to disable timer that writes the current time to the RTC memory once per second
+// only available if RTC_SUPPORT == 0
+#ifndef RTC_SUPPORT_NO_TIMER
+#    define RTC_SUPPORT_NO_TIMER 0
+#endif
+
 #ifndef RTC_DEVICE_DS3231
 #    define RTC_DEVICE_DS3231 0
 #endif

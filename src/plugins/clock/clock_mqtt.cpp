@@ -115,6 +115,7 @@ uint8_t ClockPlugin::getAutoDiscoveryCount() const
 
 void ClockPlugin::onConnect()
 {
+    _publishedValues = Clock::PublishedStateType();
     subscribe(MQTT::Client::formatTopic(FSPGM(_set)));
     subscribe(MQTT::Client::formatTopic(FSPGM(_color_set)));
     subscribe(MQTT::Client::formatTopic(FSPGM(_brightness_set)));
@@ -187,19 +188,39 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
 void ClockPlugin::_publishState()
 {
     if (isConnected()) {
-        publish(MQTT::Client::formatTopic(FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_getEnabledState()));
-        publish(MQTT::Client::formatTopic(FSPGM(_brightness_state)), true, String(_targetBrightness == 0 ? _savedBrightness : _targetBrightness));
-        publish(MQTT::Client::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
-        publish(MQTT::Client::formatTopic(FSPGM(_effect_state)), true, KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationName(_config.getAnimation()));
+        if (_publishedValues.enabled != _getEnabledState()) {
+            _publishedValues.enabled = _getEnabledState();
+            publish(MQTT::Client::formatTopic(FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_publishedValues.enabled));
+        }
+        int brightness = _targetBrightness == 0 ? _savedBrightness : _targetBrightness;
+        if (_publishedValues.brightness != brightness) {
+            _publishedValues.brightness = brightness;
+            publish(MQTT::Client::formatTopic(FSPGM(_brightness_state)), true, String(brightness));
+        }
+        if (_publishedValues.color != int(getColor())) {
+            _publishedValues.color = int(getColor());
+            publish(MQTT::Client::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
+        }
+        if (_publishedValues.animation != int(_config.getAnimation())) {
+            _publishedValues.animation = int(_config.getAnimation());
+            publish(MQTT::Client::formatTopic(FSPGM(_effect_state)), true, KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationName(_config.getAnimation()));
+        }
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
             auto level = _getPowerLevel();
             if (!isnormal(level)) {
                 level = 0;
             }
-            publish(MQTT::Client::formatTopic(F("power")), true, String(level, 2));
+            if (_publishedValues.powerLevel != level) {
+                _publishedValues.powerLevel = level;
+                publish(MQTT::Client::formatTopic(F("power")), true, String(level, 2));
+            }
         #endif
         #if IOT_LED_MATRIX_FAN_CONTROL
-            publish(MQTT::Client::formatTopic(F("/fan/state")), true, MQTT::Client::toBoolOnOff(_fanSpeed >= _config.min_fan_speed));
+            int fanOn = _fanSpeed >= _config.min_fan_speed;
+            if (_publishedValues.fanOn != fanOn) {
+                _publishedValues.fanOn = fanOn;
+                publish(MQTT::Client::formatTopic(F("/fan/state")), true, MQTT::Client::toBoolOnOff(fanOn));
+            }
         #endif
     }
     _broadcastWebUI();

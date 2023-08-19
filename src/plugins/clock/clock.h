@@ -212,6 +212,17 @@ namespace Clock {
     using LoopOptionsType = ClockLoopOptions;
 #endif
 
+    struct PublishedStateType {
+        int32_t enabled;
+        int32_t brightness;
+        int32_t color;
+        int32_t animation;
+        float powerLevel;
+        int32_t fanOn;
+
+        PublishedStateType() : enabled(-1), brightness(-1), color(-1), animation(-1), powerLevel(NAN), fanOn(-1) {}
+    };
+
 }
 
 class ClockPlugin : public PluginComponent, public MQTTComponent
@@ -660,6 +671,7 @@ private:
     #endif
 
     // SevenSegmentDisplay _display;
+    Clock::PublishedStateType _publishedValues;
     bool _schedulePublishState;
     bool _isFading;
     bool _isEnabled;
@@ -1150,8 +1162,6 @@ inline Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
         __LDBG_printf("fading=done brightness=%u target_brightness=%u", plugin._getBrightness(), plugin._targetBrightness);
         plugin._setBrightness(plugin._targetBrightness);
         plugin._isFading = false;
-        // update mqtt and webui
-        plugin._publishState();
     }
 }
 

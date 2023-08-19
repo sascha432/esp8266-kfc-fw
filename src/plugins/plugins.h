@@ -59,7 +59,7 @@
 
 #if SYSLOG_SUPPORT
 #    include <Syslog.h>
-#    include <SyslogStream.h>
+#    include "../src/plugins/syslog/syslog_plugin.h"
 #endif
 
 #if NTP_CLIENT

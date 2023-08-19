@@ -2,6 +2,7 @@
 
 ## Version 0.0.8 (master)
 
+ - Support for ESP32-S3
  - Support for INMP441 microphone for the audio visualizer
  - Changed flash frequency and mode to 80MHz/QIO for ESP8266
  - Changed nvs_flash to default config storage for ESP8266

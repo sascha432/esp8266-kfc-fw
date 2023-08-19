@@ -91,11 +91,19 @@ Call delay(milliseconds)
 
 Display file contents
 
-### `+RM=<filename>`
+### `+MD=<directory>`
 
-Remove file from FS
+Create directory
 
-### `+RN=<filename>,<new filename>`
+### `+RM=<path>`
+
+Remove file or directory
+
+### `+TOUCH=<filename>`
+
+Open file in append write mode. This will change the last modification time if the file system supports mtime or create the file if it does not exist. All directories will be created if they do not exist
+
+### `+RN=<path>,<new path>`
 
 Rename file or directory
 

@@ -71,24 +71,25 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
         return;
     }
 
-    PrintString msg;
     #if ESP32
-    // log messages are sent from multiple cores and can overlap
+    // log messages are sent from multiple cores
     MUTEX_LOCK_BLOCK(_lock)
     #endif
     {
-        PrintString header;
-        auto now = time(nullptr);
         auto file = __openLog(logLevel, true);
         if (!file) {
             file = __openLog(Level::MAX, true); // try to log in "messages" if custom log files cannot be opened
         }
+
+        PrintString header;
+        auto now = time(nullptr);
 
         header.strftime_P(PSTR("%FT%TZ"), now);
         header.print(F(" ["));
         header.print(getLevelAsString(logLevel));
         header.print(F("] "));
 
+        PrintString msg;
         msg.vprintf_P(message, arg);
         msg.rtrim();
 
@@ -149,9 +150,8 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
                         _syslog->setFacility(SYSLOG_FACILITY_KERN);
                         break;
                 }
-                _syslog->write(reinterpret_cast<const uint8_t *>(msg.c_str()), msg.length());
-                msg = String();
-                _syslog->flush();
+                _syslog->addMessage(std::move(msg));
+                SyslogPlugin::rearmTimer();
             }
         #endif
     }
@@ -179,6 +179,7 @@ String Logger::_getLogFilename(Level logLevel)
 
 void Logger::_closeLog(File file)
 {
+    __LDBG_printf("_closeLog file=%u", !!file);
     String filename = file.fullName();
     #if LOGGER_MAX_FILESIZE
         if (file.size() >= LOGGER_MAX_FILESIZE) {

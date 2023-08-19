@@ -283,8 +283,10 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSR, "FSR", "FACTORY, STORE, RST in sequen
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<filename>", "Delete file");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<filename>,<new filename>", "Rename file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(TOUCH, "TOUCH", "<filename>", "Touch file");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MD, "MD", "<directory>", "Create directory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<path>", "Delete file or directory");
+PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<path>,<new path>", "Rename file or directory");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|false>,<subdirs=true|false>]]", "List files and directories");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using FS.openDir()");
 
@@ -1085,7 +1087,7 @@ private:
     {
         Data_t data;
         uint32_t ms = micros / 1000U;
-        auto time = get_time_diff(_webSocket.start, ms);
+        auto time = get_time_since(_webSocket.start, ms);
 
         if (_buffer.length() + sizeof(data) >= _webSocket.packetSize) {
 
@@ -1185,7 +1187,7 @@ public:
 
     virtual ~CommandQueue() {
         LoopFunctions::remove(this);
-        _output.printf_P(PSTR("+QUEUE: finished, duration=%.2fs, commands=%u\n"), get_time_diff(_start, millis()) / 1000.0, _commands);
+        _output.printf_P(PSTR("+QUEUE: finished, duration=%.2fs, commands=%u\n"), get_time_since(_start, millis()) / 1000.0, _commands);
     }
 
     void loop() {
@@ -2394,10 +2396,30 @@ void at_mode_serial_handle_event(String &commandString)
         //     commandQueue->setDelay(delayTime);
         // }
     }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(TOUCH))) {
+        if (args.requireArgs(1, 1)) {
+            auto filename = args.get(0);
+            __LDBG_printf("md=%s exists=%u", filename, KFCFS.exists(filename));
+            auto result = createFileRecursive(filename, fs::FileOpenMode::append);
+            args.print(F("%s: %s"), filename, result ? PSTR("success") : PSTR("failure"));
+        }
+    }
+    else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MD))) {
+        if (args.requireArgs(1, 1)) {
+            auto filename = args.get(0);
+            __LDBG_printf("md=%s exists=%u", filename, KFCFS.exists(filename));
+            auto result = KFCFS.mkdir(filename); // first try to remove directory
+            args.print(F("%s: %s"), filename, result ? PSTR("success") : PSTR("failure"));
+        }
+    }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RM))) {
         if (args.requireArgs(1, 1)) {
             auto filename = args.get(0);
-            auto result = KFCFS.remove(filename);
+            __LDBG_printf("rm=%s exists=%u", filename, KFCFS.exists(filename));
+            auto result = KFCFS.rmdir(filename); // first try to remove directory
+            if (!result) {
+                result = KFCFS.remove(filename);
+            }
             args.print(F("%s: %s"), filename, result ? PSTR("success") : PSTR("failure"));
         }
     }
@@ -2518,6 +2540,24 @@ void at_mode_serial_handle_event(String &commandString)
         // Mappings::getInstance().dump(output);
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RSSI)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HEAP)) || args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(GPIO))) {
+
+        // {//TODO remove test code
+        //     #include <Adafruit_LIS3DH.h>
+        //     https://github.com/adafruit/Adafruit_LIS3DH.git
+
+        //     static Adafruit_LIS3DH lis;
+        //     lis.begin(0x19);
+        //     lis.setRange(LIS3DH_RANGE_2_G);
+
+        //     __Scheduler.add(Event::milliseconds(500), true, [](Event::CallbackTimerPtr) {
+        //         sensors_event_t event;
+        //         lis.getEvent(&event);
+        //         Serial.printf("%.3f %.3f %.3f\n", event.acceleration.x, event.acceleration.y, event.acceleration.z);
+        //     });
+
+
+        // }
+
         if (args.requireArgs(0, 2)) {
             auto interval = args.toMillis(0, 0, 3600 * 1000, 0, String('s'));
             auto umm = args.equalsIgnoreCase(1, F("umm"));
@@ -2809,8 +2849,8 @@ void at_mode_serial_handle_event(String &commandString)
                 auto len = args.toNumber(1, 32U);
                 bool insecure = args.isTrue(2, false);
                 bool flashRead = args.isTrue(3, true);
-                if (!insecure && ((start < UMM_MALLOC_CFG_HEAP_ADDR || start >= 0x3FFFFFFFUL) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_IROM0_TEXT_END_ADDRESS))) {
-                    args.print(F("address=0x%08x not HEAP (%08x-%08x) or FLASH (%08x-%08x), use unsecure mode"), start, UMM_MALLOC_CFG_HEAP_ADDR, 0x3FFFFFFFUL, SECTION_FLASH_START_ADDRESS, SECTION_IROM0_TEXT_END_ADDRESS - 1);
+                if (!insecure && ((start < UMM_MALLOC_CFG_HEAP_ADDR || start >= 0x3FFFFFFFUL) && (start < SECTION_FLASH_START_ADDRESS || start >= SECTION_FLASH_END_ADDR(irom0_text)))) {
+                    args.print(F("address=0x%08x not HEAP (%08x-%08x) or FLASH (%08x-%08x), use unsecure mode"), start, UMM_MALLOC_CFG_HEAP_ADDR, 0x3FFFFFFFUL, SECTION_FLASH_START_ADDRESS, SECTION_FLASH_END_ADDR(irom0_text) - 1);
                 }
                 else if (start & 0x3) {
                     args.print(F("address=%0x08x not aligned"), start);

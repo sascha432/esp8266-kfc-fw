@@ -184,10 +184,7 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
     __LDBG_printf("ssid=%s channel=%u bssid=%s wifi_connected=%u is_connected=%u ip=%u/%s", event.ssid.c_str(), event.channel, mac2String(event.bssid).c_str(), _wifiConnected, WiFi.isConnected(), IPAddress_isValid(WiFi.localIP()), WiFi.localIP().toString().c_str());
     if (!_wifiConnected) {
 
-        _wifiConnected = millis();
-        if (_wifiConnected == 0) {
-            _wifiConnected++;
-        }
+        _wifiConnected = millis_not_zero();
         String append;
         if (_wifiFirstConnectionTime == 0) {
             _wifiFirstConnectionTime = _wifiConnected;
@@ -260,10 +257,7 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     // auto gw = event.gw.toString();
     // auto dns1 = WiFi.dnsIP().toString();
     // auto dns2 = WiFi.dnsIP(1).toString();
-    _wifiUp = millis();
-    if (_wifiUp == 0) {
-        _wifiUp++;
-    }
+    _wifiUp = millis_not_zero();
     // __LDBG_printf("%s", ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str(), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
 
     auto networkCfg = Network::Settings::getConfig().stations[getWiFiConfigurationNum()];
@@ -351,6 +345,7 @@ void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPM
 
     void KFCFWConfiguration::_onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
     {
+        __LDBG_printf("event=%u info=%p", event, &info);
         switch(event) {
             case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED: {
                     WiFiEventStationModeConnected dst;
@@ -366,11 +361,6 @@ void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPM
                     dst.reason = (WiFiDisconnectReason)info.wifi_sta_disconnected.reason;
                     config._onWiFiDisconnectCb(dst);
                 } break;
-            #if DEBUG
-                case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP6: {
-                        __DBG_printf("ARDUINO_EVENT_WIFI_STA_GOT_IP6 addr=%04X:%04X:%04X:%04X", info.got_ip6.ip6_info.ip.addr[0], info.got_ip6.ip6_info.ip.addr[1], info.got_ip6.ip6_info.ip.addr[2], info.got_ip6.ip6_info.ip.addr[3]);
-                    } break;
-            #endif
             case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP: {
                     WiFiEventStationModeGotIP dst;
                     dst.ip = info.got_ip.ip_info.ip.addr;
@@ -393,6 +383,11 @@ void KFCFWConfiguration::_softAPModeStationDisconnectedCb(const WiFiEventSoftAPM
                     MEMNCPY_S(dst.mac, info.wifi_ap_stadisconnected.mac);
                     config._softAPModeStationDisconnectedCb(dst);
                 } break;
+            // #if DEBUG
+            //     case WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP6: {
+            //             __DBG_printf("got IPv6 addr=%04X:%04X:%04X:%04X", info.got_ip6.ip6_info.ip.addr[0], info.got_ip6.ip6_info.ip.addr[1], info.got_ip6.ip6_info.ip.addr[2], info.got_ip6.ip6_info.ip.addr[3]);
+            //         } break;
+            // #endif
             default:
                 break;
         }
@@ -946,7 +941,13 @@ void KFCFWConfiguration::write()
 void KFCFWConfiguration::printDiag(Print &output, const String &prefix)
 {
     #if 1
+        output.printf_P(PSTR("WiFi uptime %u\n"), uint32_t(config.getWiFiUp() / 1000));
         WiFi.printDiag(output);
+        output.print(F("IP/IPv6 "));
+        WiFi.localIP().printTo(output);
+        output.print('/');
+        WiFi.localIPv6().printTo(output);
+        output.println();
     #elif ESP8266
         station_config wifiConfig;
         wifi_station_get_config_default(&wifiConfig);
@@ -1622,7 +1623,7 @@ uint32_t KFCFWConfiguration::getWiFiUp()
     if (!WiFi.isConnected() || !config._wifiUp) {
         return 0;
     }
-    return std::max(1U, get_time_diff(config._wifiUp, millis()));
+    return std::max<decltype(config._wifiUp)>(1, get_time_since(config._wifiUp, millis()));
 }
 
 #if 0

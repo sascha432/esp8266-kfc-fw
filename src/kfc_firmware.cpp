@@ -512,6 +512,7 @@ void setup()
         }
 
         #if ENABLE_ARDUINO_OTA
+            __LDBG_printf("starting OTA");
             // start ArduinoOTA in safe mode
             WebServer::Plugin::getInstance().ArduinoOTAbegin();
         #endif
@@ -568,6 +569,7 @@ void setup()
         __DBG_printf("DEBUG_ASSETS=1: " DEBUG_ASSETS_URL1 " " DEBUG_ASSETS_URL2);
     #endif
 
+    __LDBG_printf("setup() done");
 }
 
 void loop()
@@ -604,6 +606,9 @@ void loop()
         loopFunctions.shrink_to_fit();
     }
     __Scheduler.run(); // check all events
+    #if ESP32 && defined(CONFIG_HEAP_POISONING_COMPREHENSIVE)
+        heap_caps_check_integrity_all(true);
+    #endif
 
     #if _MSC_VER || ESP32
         run_scheduled_functions();

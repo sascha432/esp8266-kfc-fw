@@ -32,7 +32,7 @@
 #define Logger_debug    _logger.debug
 
 class Logger;
-class SyslogStream;
+class Syslog;
 
 extern Logger _logger;
 
@@ -74,7 +74,7 @@ public:
     void setLevel(Level logLevel);
 
     #if SYSLOG_SUPPORT
-        void setSyslog(SyslogStream *syslog);
+        void setSyslog(Syslog *syslog);
     #endif
 
     bool isExtraFileEnabled(Level level) const;
@@ -98,7 +98,7 @@ private:
     Level _logLevel;
     Level _enabled;
     #if SYSLOG_SUPPORT
-        SyslogStream *_syslog;
+        Syslog *_syslog;
     #endif
     #if ESP32
         SemaphoreMutex _lock;
@@ -225,7 +225,7 @@ inline void Logger::setLevel(Level logLevel)
 
 #if SYSLOG_SUPPORT
 
-inline void Logger::setSyslog(SyslogStream *syslog)
+inline void Logger::setSyslog(Syslog *syslog)
 {
     _syslog = syslog;
 }
@@ -244,9 +244,11 @@ inline void Logger::setExtraFileEnabled(Level level, bool state)
 
 inline File Logger::__openLog(Level logLevel, bool write)
 {
+    __LDBG_printf("__openLog level=%u", logLevel);
     auto fileName = _getLogFilename(logLevel);
     if (write) {
         __LDBG_printf("logLevel=%u append=%s", logLevel, fileName.c_str());
+        // return KFCFS.open(fileName, fs::FileOpenMode::append);
         return createFileRecursive(fileName, fs::FileOpenMode::append);
     }
     __LDBG_printf("logLevel=%u read=%s", logLevel, fileName.c_str());
@@ -272,7 +274,7 @@ inline String Logger::_getBackupFilename(const String &filename, int num)
 #pragma pop_macro("DEBUG")
 
 #if DEBUG_LOGGER
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 #else

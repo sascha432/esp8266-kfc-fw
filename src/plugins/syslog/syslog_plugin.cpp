@@ -3,8 +3,6 @@
  */
 
 #include "syslog_plugin.h"
-#include <SyslogMemoryQueue.h>
-#include <SyslogStream.h>
 #include <SyslogFactory.h>
 
 #if DEBUG_SYSLOG
@@ -41,7 +39,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
 
 SyslogPlugin::SyslogPlugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(SyslogPlugin)),
-    _stream(nullptr)
+    _syslog(nullptr)
 {
     REGISTER_PLUGIN(this, "SyslogPlugin");
 }
@@ -54,34 +52,12 @@ void SyslogPlugin::setup(SetupModeType mode, const DependenciesPtr &dependencies
 
 void SyslogPlugin::reconfigure(const String &source)
 {
-    _end();
     _begin();
 }
 
 void SyslogPlugin::shutdown()
 {
     _kill(500);
-}
-
-void SyslogPlugin::timerCallback(Event::CallbackTimerPtr timer)
-{
-    getInstance()._timerCallback(timer);
-}
-
-void SyslogPlugin::queueSize(uint32_t size, bool isAvailable)
-{
-    __LDBG_printf("size=%u available=%u timer=%u stream=%p", size, isAvailable, (bool)_timer, _stream);
-    if (!_stream) {
-        return;
-    }
-    if (size == 0) {
-        __LDBG_print("remove timer");
-        _Timer(_timer).remove();
-    }
-    else if (isAvailable && !_timer) {
-        __LDBG_print("add timer");
-        _Timer(_timer).add(Event::milliseconds(125), true, timerCallback);
-    }
 }
 
 SyslogPlugin::NameType SyslogPlugin::protocolToString(SyslogProtocol proto)
@@ -103,15 +79,15 @@ SyslogPlugin::NameType SyslogPlugin::protocolToString(SyslogProtocol proto)
 
 void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 {
-    __LDBG_assert(_stream != nullptr);
-    if (_stream->hasQueuedMessages()) {
-        _stream->deliverQueue();
+    if (_syslog->deliverQueue() == 0) {
+        timer->disarm();
     }
 }
 
 void SyslogPlugin::_begin()
 {
-    __LDBG_assert(_stream == nullptr);
+    _end();
+
     if (SyslogClient::isEnabled()) {
 
         auto cfg = SyslogClient::getConfig();
@@ -120,20 +96,19 @@ void SyslogPlugin::_begin()
         if (hostname.trim().length() && port) {
             bool zeroconf = config.hasZeroConf(hostname);
 
-            auto queue = new SyslogMemoryQueue(*this, SYSLOG_PLUGIN_QUEUE_SIZE);
-            auto syslog = SyslogFactory::create(System::Device::getName(), queue, cfg._get_enum_protocol(), zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
-            _stream = new SyslogStream(syslog, _timer);
+            _syslog = SyslogFactory::create(_lock, System::Device::getName(), cfg._get_enum_protocol(), zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
             #if LOGGER
-                _logger.setSyslog(_stream);
+                _logger.setSyslog(_syslog);
             #endif
 
             __LDBG_printf("zeroconf=%u port=%u", zeroconf, port);
             if (zeroconf) {
-                auto stream = _stream;
-                config.resolveZeroConf(getFriendlyName(), hostname, port, [stream](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-                    getInstance()._zeroConfCallback(stream, hostname, address, port, type);
+                auto syslog = _syslog; // pass a copy of the pointer in case _syslog gets destroyed before the callback
+                config.resolveZeroConf(getFriendlyName(), hostname, port, [syslog](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
+                    getInstance()._zeroConfCallback(syslog, hostname, address, port, type);
                 });
             }
+
         }
         else {
             __LDBG_printf("hostname=%s port=%u", hostname.c_str(), port);
@@ -141,64 +116,56 @@ void SyslogPlugin::_begin()
     }
 }
 
-void SyslogPlugin::_zeroConfCallback(const SyslogStream *stream, const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
+void SyslogPlugin::_zeroConfCallback(const Syslog *syslog, const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
 {
-    __LDBG_printf("zeroconf callback host=%s address=%s port=%u type=%u _stream=%p stream=%p", hostname.c_str(), address.toString().c_str(), port, type, _stream, stream);
-    // make sure that the callback belongs to the same stream
-    if (_stream == stream) {
-        _stream->_syslog.setupZeroConf(hostname, address, port);
+    __LDBG_printf("zeroconf callback host=%s address=%s port=%u type=%u _syslog=%p syslog=%p", hostname.c_str(), address.toString().c_str(), port, type, _syslog, syslog);
+    // make sure that the callback belongs to the same syslog
+    MUTEX_LOCK_BLOCK(_lock) {
+        if (_syslog == syslog) {
+            _syslog->setupZeroConf(hostname, address, port);
+        }
     }
 }
 
 void SyslogPlugin::_end()
 {
-    if (_stream) {
-        _Timer(_timer).remove();
-        #if LOGGER
-            _logger.setSyslog(nullptr);
-        #endif
-        delete _stream;
-        _stream = nullptr;
+    MUTEX_LOCK_BLOCK(_lock) {
+        if (_syslog) {
+            _Timer(_timer).remove();
+            #if LOGGER
+                _logger.setSyslog(nullptr);
+            #endif
+            delete _syslog;
+            _syslog = nullptr;
+        }
     }
 }
 
-void SyslogPlugin::waitForQueue(uint32_t maxMillis)
+void SyslogPlugin::_waitForQueue(uint32_t timeout)
 {
-    getInstance()._waitForQueue(getInstance()._stream, maxMillis);
-}
-
-void SyslogPlugin::_waitForQueue(SyslogStream *stream, uint32_t timeout)
-{
-    if (stream) {
-        stream->setTimeout(timeout);
-        timeout += millis();
-        while(millis() < timeout && stream->hasQueuedMessages()) {
-            stream->deliverQueue();
-            delay(10); // let system process tcp buffers etc...
+    if (_syslog) {
+        uint32_t start = millis();
+        while(get_time_since(start, millis()) < timeout) {
+            if (!_syslog->deliverQueue()) {
+                break;
+            }
+            delay(100); // let system process tcp buffers etc...
         }
     }
 }
 
 void SyslogPlugin::_kill(uint32_t timeout)
 {
-    if (_stream) {
-        //stream->_syslog._queue.setManager(nullptr);
-        auto stream = _stream;
-        _stream = nullptr;
-        _Timer(_timer).remove();
-
-        _waitForQueue(stream, timeout);
-        stream->clearQueue();
-        // keep stream alive to avoid any calls to a dangling pointer
-        // _kill is usually called during restart and we do not care about the memory leak
-        // delete stream;
+    if (_syslog) {
+        _waitForQueue(timeout);
+        _end();
     }
 }
 
 void SyslogPlugin::getStatus(Print &output)
 {
     #if SYSLOG_SUPPORT
-        if (_stream) {
+        if (_syslog) {
             auto proto = protocolToString(Plugins::SyslogClient::getConfig()._get_enum_protocol());
             if (!proto) {
                 output.print(FSPGM(Disabled));
@@ -206,22 +173,21 @@ void SyslogPlugin::getStatus(Print &output)
             }
             output.print(proto);
 
-            auto &syslog = _stream->_syslog;
-            if (syslog.getPort() == SyslogFactory::kZeroconfPort) {
+            if (_syslog->getPort() == SyslogFactory::kZeroconfPort) {
                 output.print(F(" @ resolving zeroconf"));
             }
             else {
-                output.printf_P(PSTR(" @ %s:%u"), syslog.getHostname().c_str(), syslog.getPort());
+                output.printf_P(PSTR(" @ %s:%u"), _syslog->getHostname().c_str(), _syslog->getPort());
             }
-            auto &queue = _stream->_syslog._queue;
-            if (queue.empty()) {
+            auto size = _syslog->getQueueSize();
+            if (!size) {
                 output.print(F(" - queue empty"));
             }
             else {
-                output.printf_P(PSTR(" - %u message(s) queued, state %s"), queue.size(), syslog.isSending() ? PSTR("sending") : PSTR("waiting"));
+                output.printf_P(PSTR(" - %u message(s) queued, state %s"), size, _syslog->isSending() ? PSTR("sending") : PSTR("waiting"));
             }
-            if (queue.getDropped()) {
-                output.printf_P(PSTR(", %u dropped"), queue.getDropped());
+            if (_syslog->getDropped()) {
+                output.printf_P(PSTR(", %u dropped"), _syslog->getDropped());
             }
         }
         else {
@@ -270,7 +236,7 @@ ATModeCommandHelpArrayPtr SyslogPlugin::atModeCommandHelp(size_t &size) const
 
 bool SyslogPlugin::atModeHasStream(AtModeArgs &args) const
 {
-    if (!_stream) {
+    if (!_syslog) {
         args.print(F("Syslog is disabled"));
         return false;
     }
@@ -281,29 +247,13 @@ bool SyslogPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(SQ))) {
         if (atModeHasStream(args)) {
-            int cmd = args.size() >= 1 ? stringlist_find_P_P(PSTR("queue|info|clear|pause"), args.get(0), '|') : -1;
-            if (cmd == 3) {
-                // cmd == pause
-                SyslogMemoryQueue &queue = reinterpret_cast<SyslogMemoryQueue &>(_stream->_syslog._queue);
-                if (queue._timer == ~1U) {
-                    queue._timer = 0;
-                    queueSize(queue._items.size(), queue._isAvailable());
-                }
-                else {
-                    queue._timer = ~1U;
-                }
-                args.printf_P(PSTR("Queue paused=%u"), queue._timer == ~1U);
-            }
-            else if (cmd == 2) {
-                // cmd == clear
-                _stream->clearQueue();
+            if (args.equalsIgnoreCase(0, F("clear"))) {
+                _syslog->clear();
                 args.print(F("Queue cleared"));
             }
-            else { // cmd == queue|info|<none/invalid>
+            else {
                 auto cfg = SyslogClient::getConfig();
-                args.printf_P(PSTR("hostname=%s port=%u resolved=%s protocol=%s"), SyslogClient::getHostname(), cfg.getPort(), _stream->_syslog.getHostname().c_str(), protocolToString(cfg._get_enum_protocol()));
-                args.print();
-                _stream->dumpQueue(args.getStream(), cmd != 1);         // show queue if cmd != info
+                args.print(F("hostname=%s port=%u resolved=%s protocol=%s queue=%u dropped=%u"), SyslogClient::getHostname(), cfg.getPort(), _syslog->getHostname().c_str(), protocolToString(cfg._get_enum_protocol()), _syslog->getQueueSize(), _syslog->getDropped());
             }
         }
         return true;

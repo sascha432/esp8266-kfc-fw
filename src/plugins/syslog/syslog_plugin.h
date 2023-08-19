@@ -14,16 +14,7 @@
 #error requires SYSLOG_SUPPORT=1
 #endif
 
-#if defined(ESP32)
-#define SYSLOG_PLUGIN_QUEUE_SIZE            4096
-#elif defined(ESP8266)
-#define SYSLOG_PLUGIN_QUEUE_SIZE            1024
-#endif
-
-class SyslogPlugin : public PluginComponent, public SyslogQueueManager {
-public:
-    static constexpr size_t kMaxQueueSize = SYSLOG_PLUGIN_QUEUE_SIZE;
-
+class SyslogPlugin : public PluginComponent {
 public:
     SyslogPlugin();
 
@@ -48,15 +39,15 @@ public:
 
 public:
     static void timerCallback(Event::CallbackTimerPtr timer);
-    virtual void queueSize(uint32_t size, bool isAvailable);
     static NameType protocolToString(SyslogProtocol proto);
 
     static void waitForQueue(uint32_t maxMillis);
+    static void rearmTimer();
 
     static SyslogPlugin &getInstance();
 
 private:
-    void _zeroConfCallback(const SyslogStream *stream, const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
+    void _zeroConfCallback(const Syslog *stream, const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
 
 private:
     void _begin();
@@ -65,14 +56,30 @@ private:
     // does not free all memory
     void _kill(uint32_t timeout);
     void _timerCallback(Event::CallbackTimerPtr timer);
-    void _waitForQueue(SyslogStream *stream, uint32_t maxMillis);
+    void _waitForQueue(uint32_t maxMillis);
 
 private:
-    SyslogStream *_stream;
+    Syslog *_syslog;
     Event::Timer _timer;
+    SemaphoreMutex _lock;
 };
 
 extern "C" SyslogPlugin syslogPlugin;
+
+inline void SyslogPlugin::waitForQueue(uint32_t maxMillis)
+{
+    getInstance()._waitForQueue(maxMillis);
+}
+
+inline void SyslogPlugin::rearmTimer()
+{
+    _Timer(getInstance()._timer).add(Event::milliseconds(125), true, timerCallback);
+}
+
+inline void SyslogPlugin::timerCallback(Event::CallbackTimerPtr timer)
+{
+    getInstance()._timerCallback(timer);
+}
 
 inline SyslogPlugin &SyslogPlugin::getInstance()
 {

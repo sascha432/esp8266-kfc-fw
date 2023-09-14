@@ -4,10 +4,9 @@
 
 #pragma once
 
-#define FIRMWARE_IDENT            0x72a82168
 #define FIRMWARE_VERSION_MAJOR    0
 #define FIRMWARE_VERSION_MINOR    0
-#define FIRMWARE_VERSION_REVISION 8
+#define FIRMWARE_VERSION_REVISION 9
 #define ________STR(str)          #str
 #define _______STR(str)           ________STR(str)
 #define FIRMWARE_VERSION          (((FIRMWARE_VERSION_MAJOR & ((1U << 5) - 1)) << 11) | ((FIRMWARE_VERSION_MINOR & ((1U << 5) - 1)) << 6) | (FIRMWARE_VERSION_REVISION & ((1U << 6) - 1)))

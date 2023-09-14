@@ -20,7 +20,9 @@ Running on a modified framework-arduinoespressif32 v2.0.9
 
 ## ChangeLog
 
-[Version 0.0.8 (master)](./CHANGELOG.md)
+[Version 0.0.9 (master)](./CHANGELOG.md)
+
+[Version 0.0.8](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.8/CHANGELOG.md)
 
 [Version 0.0.7](https://github.com/sascha432/esp8266-kfc-fw/blob/v0.0.7/CHANGELOG.md)
 

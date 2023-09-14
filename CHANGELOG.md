@@ -1,6 +1,10 @@
 # Changelog
 
-## Version 0.0.8 (master)
+## Version 0.0.9 (master)
+
+ - New version
+
+## Version 0.0.8
 
  - Added real brightness to LED matrix WebUI brightness slider and calculated power badge (auto brightness, temperature protection and power limit might reduce the actual output)
  - Support for ESP32-S3

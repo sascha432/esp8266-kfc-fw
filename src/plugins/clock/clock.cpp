@@ -25,10 +25,6 @@
 #    include <debug_helper_disable.h>
 #endif
 
-#if DEBUG_MEASURE_ANIMATION
-Clock::AnimationStats Clock::animationStats;
-#endif
-
 ClockPlugin ClockPlugin_plugin;
 
 #if IOT_LED_STRIP
@@ -1081,14 +1077,7 @@ void IRAM_ATTR ClockPlugin::_loop()
     }
 
     if (_animation) {
-        #if DEBUG_MEASURE_ANIMATION
-            auto start = __clock_cycles();
-        #endif
         _animation->loop(options.getMillis());
-        #if DEBUG_MEASURE_ANIMATION
-            auto diff = __clock_cycles() - start;
-            Clock::animationStats.loop.add(diff);
-        #endif
     }
     if (_blendAnimation) {
         _blendAnimation->loop(options.getMillis());
@@ -1174,23 +1163,8 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
             }
         }
         else if (_animation) {
-            #if DEBUG_MEASURE_ANIMATION
-                auto start = __clock_cycles();
-            #endif
             _animation->nextFrame(options.getMillis());
-            #if DEBUG_MEASURE_ANIMATION
-                auto diff = __clock_cycles() - start;
-                Clock::animationStats.nextFrame.add(diff);
-            #endif
-
-            #if DEBUG_MEASURE_ANIMATION
-                start = __clock_cycles();
-            #endif
             _animation->copyTo(_display, options.getMillis());
-            #if DEBUG_MEASURE_ANIMATION
-                diff = __clock_cycles() - start;
-                Clock::animationStats.copyTo.add(diff);
-            #endif
         }
     }
 }

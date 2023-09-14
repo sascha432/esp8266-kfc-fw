@@ -157,6 +157,7 @@ namespace SevenSegment {
                 text++;
             }
         }
+
         void setColon(uint8_t num, ColonType colon)
         {
             auto ptr = getColonsArrayPtr(num);

@@ -1055,9 +1055,9 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 #endif
 
-#if ESP32
-#pragma GCC push_options
-#pragma GCC optimize ("O3")
+#if IOT_CLOCK_OPTIMIZE_LOOP
+#    pragma GCC push_options
+#    pragma GCC optimize ("Ofast")
 #endif
 
 void IRAM_ATTR ClockPlugin::_loop()
@@ -1108,10 +1108,10 @@ void IRAM_ATTR ClockPlugin::_loop()
     #endif
 }
 
-// use Ofast for the show function on ESP8266 and keep all code in IRAM
+// use Ofast for the show function on ESP8266 and keep all code in IRAM since it is called very frequently
 #if ESP8266
-#pragma GCC push_options
-#pragma GCC optimize ("Ofast")
+#    pragma GCC push_options
+#    pragma GCC optimize ("Ofast")
 #endif
 
 void IRAM_ATTR ClockPlugin::_display_show()
@@ -1120,9 +1120,10 @@ void IRAM_ATTR ClockPlugin::_display_show()
 }
 
 #if ESP8266
-#pragma GCC pop_options
+#   pragma GCC pop_options
 #endif
 
+// keep all the animation code in flash memory
 void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
 {
     // start update process
@@ -1131,7 +1132,9 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
     if (options.doRedraw()) {
 
         #if IOT_LED_MATRIX == 0
-            uint8_t displayColon = true;
+            // we can use a boolean here, the compiler seems to optimize the code and removes the if else in the setColons() call
+            bool displayColon = true;
+
             // does the animation allow blinking and is it set?
             if ((!_animation || (_animation && !_animation->isBlinkColonDisabled())) && (_config.blink_colon_speed >= kMinBlinkColonSpeed)) {
                 // set on/off depending on the update rate
@@ -1139,9 +1142,10 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
             }
 
             auto &tm = options.getLocalTime();
+            auto tm_hour = tm.tm_hour_format(); // get hour in 12/24h format
 
-            _display.setDigit(0, tm.tm_hour_format() / 10);
-            _display.setDigit(1, tm.tm_hour_format() % 10);
+            _display.setDigit(0, tm_hour / 10);
+            _display.setDigit(1, tm_hour % 10);
             _display.setDigit(2, tm.tm_min / 10);
             _display.setDigit(3, tm.tm_min % 10);
             #if IOT_CLOCK_NUM_DIGITS == 6
@@ -1169,8 +1173,8 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
     }
 }
 
-#if ESP32
-#pragma GCC pop_options
+#if IOT_CLOCK_OPTIMIZE_LOOP
+#    pragma GCC pop_options
 #endif
 
 void ClockPluginClearPixels()

@@ -572,11 +572,15 @@ void setup()
     __LDBG_printf("setup() done");
 }
 
+// optimize loop() as much as possible
+#pragma GCC push_options
+#pragma GCC optimize ("Ofast")
+
 void loop()
 {
     auto &loopFunctions = LoopFunctions::getVector();
     bool cleanUp = false;
-    for(uint8_t i = 0; i < loopFunctions.size(); i++) { // do not use iterators since the vector can be modifed inside the callback
+    for(uint32_t i = 0; i < static_cast<uint32_t>(loopFunctions.size()); i++) { // do not use iterators since the vector can be modified inside the callback
         if (loopFunctions[i].deleteCallback) {
             cleanUp = true;
         }
@@ -614,3 +618,5 @@ void loop()
         run_scheduled_functions();
     #endif
 }
+
+#pragma GCC pop_options

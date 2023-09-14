@@ -1059,6 +1059,11 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 #endif
 
+#if ESP32
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
+#endif
+
 void IRAM_ATTR ClockPlugin::_loop()
 {
     LoopOptionsType options(*this);
@@ -1114,15 +1119,20 @@ void IRAM_ATTR ClockPlugin::_loop()
     #endif
 }
 
+// use Ofast for the show function on ESP8266 and keep all code in IRAM
+#if ESP8266
 #pragma GCC push_options
-#pragma GCC optimize ("O3")
+#pragma GCC optimize ("Ofast")
+#endif
 
 void IRAM_ATTR ClockPlugin::_display_show()
 {
     _display.show();
 }
 
+#if ESP8266
 #pragma GCC pop_options
+#endif
 
 void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
 {
@@ -1184,6 +1194,10 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
         }
     }
 }
+
+#if ESP32
+#pragma GCC pop_options
+#endif
 
 void ClockPluginClearPixels()
 {

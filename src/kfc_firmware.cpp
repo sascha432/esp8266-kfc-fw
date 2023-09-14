@@ -574,7 +574,7 @@ void setup()
 
 // optimize loop() as much as possible
 #pragma GCC push_options
-#pragma GCC optimize ("Ofast")
+#pragma GCC optimize ("O3")
 
 void loop()
 {

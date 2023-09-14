@@ -1057,7 +1057,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 #if IOT_CLOCK_OPTIMIZE_LOOP
 #    pragma GCC push_options
-#    pragma GCC optimize ("Ofast")
+#    pragma GCC optimize ("O3")
 #endif
 
 void IRAM_ATTR ClockPlugin::_loop()
@@ -1108,10 +1108,10 @@ void IRAM_ATTR ClockPlugin::_loop()
     #endif
 }
 
-// use Ofast for the show function on ESP8266 and keep all code in IRAM since it is called very frequently
+// use O3 for the show function on ESP8266 and keep all code in IRAM since it is called very frequently
 #if ESP8266
 #    pragma GCC push_options
-#    pragma GCC optimize ("Ofast")
+#    pragma GCC optimize ("O3")
 #endif
 
 void IRAM_ATTR ClockPlugin::_display_show()

@@ -578,7 +578,7 @@ private:
     // returns display brightness using current brightness and auto brightness value
     uint8_t _getBrightness(bool temperatureProtection = true) const;
 
-    // returns display brightness target with auto brightness/temperature protection adjustments
+    // returns display brightness target with auto brightness/temperature protection adjustments (and if supported, the power limit of FastLED)
     uint8_t _getRealBrightnessTarget() const;
 
     // returns current brightness without auto brightness value
@@ -900,7 +900,17 @@ inline void ClockPlugin::toggleShowMethod()
 
 inline uint8_t ClockPlugin::_getRealBrightnessTarget() const
 {
-    return getAutoBrightness() * getTempProtectionFactor() * _targetBrightness;
+    return
+        #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
+            FastLED.getPowerLimitScale() *
+        #endif
+        #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
+            getAutoBrightness() *
+        #endif
+        #if IOT_CLOCK_TEMPERATURE_PROTECTION
+            getTempProtectionFactor() *
+        #endif
+        _targetBrightness;
 }
 
 inline float ClockPlugin::_getFadingBrightness() const

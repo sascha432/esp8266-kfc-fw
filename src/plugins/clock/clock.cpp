@@ -641,6 +641,15 @@ void ClockPlugin::getStatus(Print &output)
     switch(Clock::getNeopixelShowMethodType()) {
         case Clock::ShowMethodType::FASTLED:
             output.printf_P(PSTR(", FastLED %u.%u.%u, %.1ffps, dithering %s"), FASTLED_VERSION / 1000000, (FASTLED_VERSION / 1000) % 1000, FASTLED_VERSION % 1000, _fps, _display.getDither() ? PSTR("on") : PSTR("off"));
+            #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
+                {
+                    auto limit = FastLED.getPowerLimitScale();
+                    if (limit != 1.0f) {
+                        output.printf_P(PSTR(HTML_S(br) "Power limit %.1f%%"), limit * 100.0f);
+                    }
+                }
+            #endif
+
             #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
                 extern uint32_t _frame_cnt;
                 extern uint32_t _retry_cnt;

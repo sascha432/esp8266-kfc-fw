@@ -2,6 +2,7 @@
 
 ## Version 0.0.8 (master)
 
+ - Added real brightness to LED matrix WebUI brightness slider and calculated power badge (auto brightness, temperature protection and power limit might reduce the actual output)
  - Support for ESP32-S3
  - Support for INMP441 microphone for the audio visualizer
  - Changed flash frequency and mode to 80MHz/QIO for ESP8266

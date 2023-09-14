@@ -86,11 +86,11 @@ $.webUIComponent = {
     create_slider_gradient: function(min, max, rmin, rmax) {
         min = parseFloat(min);
         max = parseFloat(max);
-        rmin = (rmin === false) ? rmin = min : parseFloat(rmin);
-        rmax = (rmax === false) ? rmax = max : parseFloat(rmax);
-        range = max - min;
-        start = Math.round(rmin * 10000  / range) / 100;
-        end = Math.round(rmax * 10000  / range) / 100;
+        rmin = (rmin === false || rmin === 'false') ? rmin = min : parseFloat(rmin);
+        rmax = (rmax === false || rmax === 'false') ? rmax = max : parseFloat(rmax);
+        var range = max - min;
+        var start = Math.round(rmin * 10000 / range) / 100;
+        var end = Math.round(rmax * 10000 / range) / 100;
         var grad = 'linear-gradient(to right';
         if (start > 1) {
             grad += ', rgba(0,0,0,0.2) 0% ' + start + '%,'
@@ -542,7 +542,6 @@ $.webUIComponent = {
             else {
                 handle.attr('title', ((value - min) * 100 / slider_range).toFixed(1) + '%');
             }
-
         }
     },
     //
@@ -1012,6 +1011,28 @@ $.webUIComponent = {
                     //     self.slider_update_css(group_component.range_slider);
                     // }
                 }
+                // update rmin/rmax values for sliders
+                if (self.components[this.id].type === 'slider') {
+                    var update_css = false;
+                    if (this.hasOwnProperty('rmin')) {
+                        var rmin = element.attr('rmin');
+                        if (this.rmin != rmin) {
+                            element.attr('rmin', this.rmin);
+                            update_css = true;
+                        }
+                    }
+                    if (this.hasOwnProperty('rmax')) {
+                        var rmax = element.attr('rmax');
+                        if (this.rmax != rmax) {
+                            element.attr('rmax', this.rmax);
+                            update_css = true;
+                        }
+                    }
+                    if (update_css) {
+                        element.next().css('background-image', self.create_slider_gradient(element.attr('min'), element.attr('max'), element.attr('rmin'), element.attr('rmax')));
+                    }
+                }
+                // queue update value and state
                 self.queue_update_state(this.id, element, this.value, this.state, !init)
             }
         });

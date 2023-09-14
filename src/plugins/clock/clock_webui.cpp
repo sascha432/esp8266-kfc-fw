@@ -22,11 +22,22 @@ void ClockPlugin::getValues(WebUINS::Events &array)
         array.append(WebUINS::Values(F("colon"), enabled && (_config.blink_colon_speed < kMinBlinkColonSpeed) ? 0 : (_config.blink_colon_speed < 750 ? 500 : 1000), enabled));
     #endif
 
+    auto brightness = WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(enabled ? _targetBrightness : _savedBrightness), true /* changing brightness can be used to turn the LEDs on */);
+    #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR || IOT_CLOCK_TEMPERATURE_PROTECTION
+        auto realBrightness = _getRealBrightnessTarget();
+        if (enabled && realBrightness != _targetBrightness) {
+            brightness.append(WebUINS::NamedUint32(F("rmin"), realBrightness));
+        }
+        else {
+            brightness.append(WebUINS::NamedBool(F("rmin"), false));
+        }
+    #endif
+
     array.append(
         WebUINS::Values(F("ani"), static_cast<int>(_config.animation), enabled),
         WebUINS::Values(F("color"), Color(_getColor()).toString(), enabled && _config.hasColorSupport()),
-        WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(enabled ? _targetBrightness : _savedBrightness), true /* changing brightness can be used to turn the LEDs on */));
-
+        brightness
+    );
     if (_tempBrightness == -1) {
         array.append(WebUINS::Values(F("tempp"), _overheatedInfo));
     } else {
@@ -147,7 +158,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         PrintString powerLevelStr;
         auto level = _getPowerLevel();
         if (!std::isnormal(level)) {
-            powerLevelStr = '0';
+            powerLevelStr = F("N/A");
         }
         else {
             MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);

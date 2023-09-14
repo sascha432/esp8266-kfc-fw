@@ -572,11 +572,14 @@ private:
     // store new level in config
     void _setBrightness(uint8_t brightness, bool useEnable = true);
 
-    // update brightness settings savedBrightmess, config.brightness and config.enabled
+    // update brightness settings savedBrightness, config.brightness and config.enabled
     void _updateBrightnessSettings();
 
     // returns display brightness using current brightness and auto brightness value
     uint8_t _getBrightness(bool temperatureProtection = true) const;
+
+    // returns display brightness target with auto brightness/temperature protection adjustments
+    uint8_t _getRealBrightnessTarget() const;
 
     // returns current brightness without auto brightness value
     // while fading between different levels it returns the current level
@@ -894,6 +897,11 @@ inline void ClockPlugin::toggleShowMethod()
     }
 
 #endif
+
+inline uint8_t ClockPlugin::_getRealBrightnessTarget() const
+{
+    return getAutoBrightness() * getTempProtectionFactor() * _targetBrightness;
+}
 
 inline float ClockPlugin::_getFadingBrightness() const
 {

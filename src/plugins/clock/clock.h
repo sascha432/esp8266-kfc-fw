@@ -36,64 +36,6 @@ class ClockPlugin;
 
 namespace Clock {
 
-    #if DEBUG_MEASURE_ANIMATION
-    struct StatsValue {
-        uint32_t min;
-        uint32_t max;
-        float avg;
-
-        StatsValue() : min(~0U), max(0), avg(NAN) {}
-
-        void add(uint32_t value) {
-            if (isnan(avg)) {
-                avg = value;
-            }
-            else {
-                avg = (avg + value) * 0.5;
-            }
-            min = std::min<uint32_t>(min, value);
-            max = std::max<uint32_t>(max, value);
-        }
-
-        void clear() {
-            *this = StatsValue();
-        }
-
-        void dump(Print &print, const __FlashStringHelper *name) {
-            print.printf_P(PSTR("%s: min=%u(%.1f) max=%u(%.1f) avg=%.1f(%.1f)\n"),
-                name,
-                min, clockCyclesToMicroseconds(static_cast<float>(min)),
-                max, clockCyclesToMicroseconds(static_cast<float>(max)),
-                avg, clockCyclesToMicroseconds(avg)
-            );
-        }
-    };
-
-    struct AnimationStats {
-
-        StatsValue loop;
-        StatsValue nextFrame;
-        StatsValue copyTo;
-
-        AnimationStats() {}
-
-        void dump(Print &print) {
-            loop.dump(print, F("loop"));
-            nextFrame.dump(print, F("nextFrame"));
-            copyTo.dump(print, F("copyTo"));
-        }
-
-        void clear() {
-            loop.clear();
-            nextFrame.clear();
-            copyTo.clear();
-        }
-    };
-
-    extern AnimationStats animationStats;
-
-    #endif
-
     class LoopOptionsBase
     {
     public:

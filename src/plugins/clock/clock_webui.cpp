@@ -158,7 +158,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         PrintString powerLevelStr;
         auto level = _getPowerLevel();
         if (!std::isnormal(level)) {
-            powerLevelStr = F("N/A");
+            powerLevelStr = '0';
         }
         else {
             MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);
@@ -167,7 +167,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
                 auto limit = FastLED.getPowerLimitScale();
                 if (limit != 1.0f) {
-                    powerLevelStr.printf_P(PSTR("<span style=\"font-size:0.75rem\">(%.1f%%)<span>"), limit * 100.0f);
+                    powerLevelStr.printf_P(PSTR("<span style=\"font-size:0.75rem\">(%.1f%%)</span>"), limit * 100.0f);
                 }
             #endif
             powerLevelStr.printf_P(PSTR(" / %u"), _config.power_limit);
@@ -298,13 +298,7 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
             // calculated power and power limit
-            auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("Calculated LED Power / Limit") : F("Calculated Power"), 'W');
-            // #if IOT_SENSOR_HAVE_INA219
-            //     F("Power / Limit") : F("Power"), 'W'
-            // #else
-            //     F("Calculated Power / Limit") : F("Calculated Power"), 'W'
-            // #endif
-            // );
+            auto power = WebUINS::Sensor(F("pwrlvl"), getInstance()._config.power_limit ? F("LED Power / Limit") : F("LED Power"), 'W');
             power.append(
                 WebUINS::NamedString(J(height), height),
                 WebUINS::NamedUint32(J(columns), colspan));

@@ -900,7 +900,7 @@ inline void ClockPlugin::toggleShowMethod()
 
 inline uint8_t ClockPlugin::_getRealBrightnessTarget() const
 {
-    return
+    return std::min(255.0f, roundf(
         #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
             FastLED.getPowerLimitScale() *
         #endif
@@ -910,7 +910,7 @@ inline uint8_t ClockPlugin::_getRealBrightnessTarget() const
         #if IOT_CLOCK_TEMPERATURE_PROTECTION
             getTempProtectionFactor() *
         #endif
-        _targetBrightness;
+        _targetBrightness) + 1);
 }
 
 inline float ClockPlugin::_getFadingBrightness() const

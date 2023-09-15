@@ -25,7 +25,7 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     auto brightness = WebUINS::Values(FSPGM(brightness), static_cast<uint8_t>(enabled ? _targetBrightness : _savedBrightness), true /* changing brightness can be used to turn the LEDs on */);
     #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR || IOT_CLOCK_TEMPERATURE_PROTECTION
         auto realBrightness = _getRealBrightnessTarget();
-        if (enabled && realBrightness != _targetBrightness) {
+        if (enabled && realBrightness < _targetBrightness) {
             brightness.append(WebUINS::NamedUint32(F("rmin"), realBrightness));
         }
         else {
@@ -178,7 +178,27 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     void ClockPlugin::_updatePowerLevelWebUI()
     {
         if (WebUISocket::hasAuthenticatedClients()) {
-            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()))));
+            #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR || IOT_CLOCK_TEMPERATURE_PROTECTION
+                auto realBrightness = _getRealBrightnessTarget();
+                auto brightness = WebUINS::UnnamedObject(WebUINS::NamedString(J(i), FSPGM(brightness)));
+                if (_getEnabledState() && realBrightness < _targetBrightness) {
+                    brightness.append(WebUINS::NamedUint32(F("rmin"), realBrightness));
+                }
+                else {
+                    brightness.append(WebUINS::NamedBool(F("rmin"), false));
+                }
+
+            #endif
+            WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
+                WebUINS::Values(F("pwrlvl"), _getPowerLevelStr())
+                #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR || IOT_CLOCK_TEMPERATURE_PROTECTION
+                    , brightness
+                    // , WebUINS::UnnamedObject(
+                    //     WebUINS::NamedString(J(i), FSPGM(brightness)),
+                    //     WebUINS::NamedStoredString(F("rmin"), ((_getEnabledState() && (realBrightness < _targetBrightness)) ? String(realBrightness) : String(F("false"))))
+                    // )
+                #endif
+            )));
         }
     }
 

@@ -91,19 +91,21 @@ $.webUIComponent = {
         var range = max - min;
         var start = Math.round(rmin * 10000 / range) / 100;
         var end = Math.round(rmax * 10000 / range) / 100;
+		if (start <= 0 && end >= 100) {
+			return ''; // remove gradient
+		}
         var grad = 'linear-gradient(to right';
-        if (start > 1) {
-            grad += ', rgba(0,0,0,0.2) 0% ' + start + '%,'
+        if (start > 0) {
+            grad += ',rgba(0,0,0,0.2) 0% ' + start + '%,'
         }
         else {
             start = 0
         }
-        grad += ' rgba(0,0,0,0) ' + start + '%';
+        grad += 'rgba(0,0,0,0) ' + start + '%';
         if (end < 100) {
-            grad += ' ' + end + '%, rgba(0,0,0,0.2) ' + end + '%';
+            grad += ' ' + end + '%,rgba(0,0,0,0.2) ' + end + '%';
         }
-        grad += ' 100%';
-        return grad + ')';
+        return grad + ' 100%)';
     },
     //
     // get prototype and replace variables

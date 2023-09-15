@@ -22,6 +22,9 @@
 #define FONTS_CITY                      &Dialog_6pt8b
 #define FONTS_WEATHER_DESCR             &Dialog_6pt8b
 
+#define FONTS_FORECAST_DAY              &DejaVuSans_Bold_7pt8b
+#define FONTS_FORECAST_DESCR            &Dialog_6pt8b
+
 #define FONTS_SUN_AND_MOON              &DejaVuSans_5pt8b
 #define FONTS_MOON_PHASE                &moon_phases14pt7b
 #define FONTS_MOON_PHASE_UPPERCASE      true
@@ -107,8 +110,13 @@
 #define Y_END_POSITION_INDOOR           (70 + Y_START_POSITION_WEATHER)
 
 // weather forecast
-#define Y_START_POSITION_FORECAST       (Y_END_POSITION_TIME + 2)
+#define Y_START_POSITION_FORECAST       (Y_END_POSITION_TIME + 5)
+#define Y_POSITION_FORECAST_DAY         (3 + _offsetY)
+#define Y_POSITION_FORECAST_ICON        (11 + _offsetY)
+#define Y_POSITION_FORECAST_TEMP        (35 + 27 + _offsetY)
+#define Y_POSITION_FORECAST_RAIN        (35 + 27 + 2 + _offsetY)
 #define Y_END_POSITION_FORECAST         (TFT_HEIGHT - 1)
+#define MAX_FORECAST_DAYS               3 // limit is 5
 
 // multi timezone display
 #define Y_START_POSITION_WORLD_CLOCK    (Y_END_POSITION_TIME + 2)

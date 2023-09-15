@@ -182,9 +182,10 @@ namespace WSDraw {
         auto &info = _weatherApi.getWeatherInfo();
         if (info.hasData()) {
 
-            // --- location
+            // --- weather icon
             _canvas->drawBitmap(X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniIconFromProgmem(info.weather[0].icon), palette);
 
+            // --- location
             // create kind of shadow effect in case the text is drawn over the icon
             _canvas->setFont(FONTS_CITY);
             _canvas->setTextColor(COLORS_BACKGROUND);
@@ -224,18 +225,22 @@ namespace WSDraw {
             }
         }
         else {
-            auto error = _weatherApi.getWeatherInfo().getError();
-            if (error.length()) {
-                _canvas->setFont(FONTS_DEFAULT_SMALL);
-                _canvas->setTextColor(COLORS_RED);
-                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Loading Weather Failed"), AdafruitGFXExtension::CENTER);
-                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 30, error, AdafruitGFXExtension::CENTER);
-            }
-            else {
-                _canvas->setFont(FONTS_DEFAULT_MEDIUM);
-                _canvas->setTextColor(COLORS_ORANGE);
-                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Weather\nLoading..."), AdafruitGFXExtension::CENTER);
-            }
+            _displayWeatherApiError(_weatherApi.getWeatherInfo().getError());
+        }
+    }
+
+    void Base::_displayWeatherApiError(const String &error)
+    {
+        if (error.length()) {
+            _canvas->setFont(FONTS_DEFAULT_SMALL);
+            _canvas->setTextColor(COLORS_RED);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Loading Weather Failed"), AdafruitGFXExtension::CENTER);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 30, error, AdafruitGFXExtension::CENTER);
+        }
+        else {
+            _canvas->setFont(FONTS_DEFAULT_MEDIUM);
+            _canvas->setTextColor(COLORS_ORANGE);
+            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Weather\nLoading..."), AdafruitGFXExtension::CENTER);
         }
     }
 
@@ -283,9 +288,53 @@ namespace WSDraw {
 
     void Base::_drawForecast()
     {
-        _canvas->setFont(FONTS_DEFAULT_BIG);
-        _canvas->setTextColor(COLORS_RED);
-        _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 5, F("FORECAST\nN/A"), AdafruitGFXExtension::CENTER);
+        constexpr int16_t _offsetY = Y_START_POSITION_FORECAST;
+        auto &info = _weatherApi.getWeatherForecast();
+        if (info.hasData()) {
+
+            info.dump(DEBUG_OUTPUT);
+
+            int xStart = 0;
+            constexpr int width = (TFT_WIDTH / MAX_FORECAST_DAYS) + 1;
+            int num = 0;
+
+            for(auto const &item: info.forecast) {
+                if (num++ >= MAX_FORECAST_DAYS) {
+                    break;
+                }
+
+                auto &values = item.second.val;
+                auto &info = item.second.weather[0];
+
+                // icon
+                _canvas->drawBitmap(xStart, Y_POSITION_FORECAST_ICON, getMiniIconFromProgmem(info.icon), palette);
+
+                // day
+                _canvas->setFont(FONTS_FORECAST_DAY);
+                _canvas->setTextColor(COLORS_FORECAST_DAY);
+                PrintString day;
+                auto tm = gmtime(&values.time);
+                day.strftime_P(PSTR("%a"), tm);
+                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_DAY, day, AdafruitGFXExtension::CENTER);
+
+                // max/min temperature
+                _canvas->setFont(FONTS_FORECAST_DESCR);
+                _canvas->setTextColor(COLORS_FORECAST_TEMP);
+                AdafruitGFXExtension::Position_t pos;
+                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_TEMP, _getTemperature(values.temperature_max, true), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP, &pos);
+                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_TEMP + pos.h + 2, _getTemperature(values.temperature_min, true), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP);
+
+                // rain %
+                _canvas->setTextColor(COLORS_FORECAST_RAIN);
+                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_RAIN + ((pos.h + 2) * 2), String(values.rain * 100.0f, 0) + '%', AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP);
+
+                xStart += width;
+
+            }
+        }
+        else {
+            _displayWeatherApiError(_weatherApi.getWeatherForecast().getError());
+        }
     }
 
     using WeatherStation = KFCConfigurationClasses::Plugins::WeatherStationConfigNS::WeatherStation;

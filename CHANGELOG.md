@@ -2,7 +2,7 @@
 
 ## Version 0.0.9 (master)
 
- - New version
+ - Forecast screen for weather station
 
 ## Version 0.0.8
 
@@ -13,7 +13,7 @@
  - Changed nvs_flash to default config storage for ESP8266
  - Ported nvs_flash from ESP8266_RTOS_SDK to ESP8266_NONOS_SDK ([https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK](https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK))
  - Improved visualizer and new plasma animation
- - Updated ESPAsyncWebServer to fix issues with ESP32, requires more RAM (old ESP8266 version that saves up to 2kb RAM is still available https://github.com/sascha432/ESPAsyncWebServer, changes will be merged soon)
+ - Updated ESPAsyncWebServer to fix issues with ESP32
  - Merged framework-arduinoespressif8266 3.0.0 into 3.1.2-mod
  - Merged framework-arduinoespressif32 2.0.0 into 2.0.9-mod
  - Split KFCLibrary and added support for github or local copy in ./lib

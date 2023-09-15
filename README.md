@@ -1,6 +1,4 @@
-# esp8266-kfc-fw
-
-Firmware for ESP8266/ESP32 and IoT devices
+# Firmware for ESP8266/ESP32 and IoT devices
 
 The firmware offers a plugin interface to easily extend its functionality. The plugins can be configured via web interface and have access to the network, file system, logging, serial console, I2C bus, GPIO, GPIO expanders, NVS flash, improved and stable internal ADC, RTC memory access, a (more or less) precise RTC during deep sleep, a maximum of 30 days deep sleep, an event/task scheduler, crash logs with stack traces, etc... via API functions. Support for deep sleep, quick boot (~37ms) and WiFi Quick Connect (<230ms) after wake up is also available
 
@@ -12,7 +10,7 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 Running on a modified framework-arduinoespressif8266 v3.1.2
 
-### ESP32
+### ESP32 / ESP32-S3
 
 4M and 8M with OTA
 
@@ -78,6 +76,7 @@ The modified version of the core is available on github and used by default
 The libraries have found a new home
 
 [https://github.com/sascha432/KFCLibrary](https://github.com/sascha432/KFCLibrary)
+
 [https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK](https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK)
 
 ## Plugins

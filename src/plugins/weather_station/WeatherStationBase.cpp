@@ -37,23 +37,36 @@ void WeatherStationBase::_pollDataTimerCallback(Event::CallbackTimerPtr timer)
     __LDBG_printf("new request");
     ws_plugin._getWeatherInfo([](int16_t code, KFCRestAPI::HttpRequest &request) {
         __LDBG_printf("response=%u", code);
-        ws_plugin._openWeatherAPICallback(code, request);
+        ws_plugin._openWeatherAPICallback(code, request, false);
+    });
+    ws_plugin._getWeatherForecast([](int16_t code, KFCRestAPI::HttpRequest &request) {
+        __LDBG_printf("response=%u", code);
+        ws_plugin._openWeatherAPICallback(code, request, true);
     });
 }
 
-void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request)
+void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request, bool forecast)
 {
     __LDBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
     if (code != 200) {
         PrintString message(F("OpenWeatherAPI http status=%d error=%s wifi=%u url=%s"), code, request.getMessage().c_str(), WiFi.isConnected(), request.getUrl());
         Logger_error(message);
-        _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
+        if (forecast) {
+            _weatherApi.getWeatherForecast().setError(F("OpenWeatherAPI\nHTTP Error"));
+        } else {
+            _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
+        }
         _pollDataUpdateLastTime(false);
     }
-    else if (!_weatherApi.getWeatherInfo().hasData()) {
+    else if ((forecast && !_weatherApi.getWeatherForecast().hasData()) || (!forecast && !_weatherApi.getWeatherInfo().hasData())) {
         PrintString message(F("OpenWeatherAPI data=invalid message=%s url=%s"), request.getMessage().c_str(), request.getUrl());
         Logger_error(message);
-        _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nInvalid Data"));
+        if (forecast) {
+            _weatherApi.getWeatherForecast().setError(F("OpenWeatherAPI\nInvalid Data"));
+        }
+        else {
+            _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nInvalid Data"));
+        }
         _pollDataUpdateLastTime(false);
     }
     else {

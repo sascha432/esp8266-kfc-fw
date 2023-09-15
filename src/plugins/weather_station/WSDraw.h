@@ -210,6 +210,9 @@ namespace WSDraw {
         // draw weather forecast
         void _drawForecast();
 
+        // display weather api errors
+        void _displayWeatherApiError(const String &error);
+
         // draw multiply timezones
         void _drawWorldClocks(int16_t offsetY);
         void _drawWorldClock();

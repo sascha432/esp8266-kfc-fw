@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Updated OpenWeatherMap API to OneCall API 3.0
  - Forecast screen for weather station
 
 ## Version 0.0.8

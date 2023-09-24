@@ -23,13 +23,6 @@ WeatherStationBase::WeatherStationBase() :
     _toggleScreenTimeout(0),
     _lockCanvasUpdateEvents(0)
 {
-    #if _MSC_VER || REAL_DEVICE == 0
-        String stream = F("{\"coord\":{\"lon\":-123.07,\"lat\":49.32},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"},{\"id\":701,\"main\":\"Mist\",\"description\":\"mist\",\"icon\":\"50n\"}],\"base\":\"stations\",\"main\":{\"temp\":277.55,\"pressure\":1021,\"humidity\":100,\"temp_min\":275.37,\"temp_max\":279.26},\"visibility\":8047,\"wind\":{\"speed\":1.19,\"deg\":165},\"rain\":{\"1h\":0.93},\"clouds\":{\"all\":90},\"dt\":1575357173,\"sys\":{\"type\":1,\"id\":5232,\"country\":\"CA\",\"sunrise\":1575301656,\"sunset\":1575332168},\"timezone\":-28800,\"id\":6090785,\"name\":\"North Vancouver\",\"cod\":200}");
-        _weatherApi.clear();
-        if (!_weatherApi.parseWeatherData(stream)) {
-            _weatherApi.getWeatherInfo().setError(F("Invalid data"));
-        }
-    #endif
 }
 
 void WeatherStationBase::_pollDataTimerCallback(Event::CallbackTimerPtr timer)
@@ -37,40 +30,27 @@ void WeatherStationBase::_pollDataTimerCallback(Event::CallbackTimerPtr timer)
     __LDBG_printf("new request");
     ws_plugin._getWeatherInfo([](int16_t code, KFCRestAPI::HttpRequest &request) {
         __LDBG_printf("response=%u", code);
-        ws_plugin._openWeatherAPICallback(code, request, false);
-    });
-    ws_plugin._getWeatherForecast([](int16_t code, KFCRestAPI::HttpRequest &request) {
-        __LDBG_printf("response=%u", code);
-        ws_plugin._openWeatherAPICallback(code, request, true);
+        ws_plugin._openWeatherAPICallback(code, request);
     });
 }
 
-void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request, bool forecast)
+void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request)
 {
     __LDBG_printf("code=%d message=%s url=%s", code, __S(request.getMessage()), __S(request.getUrl()));
     if (code != 200) {
         PrintString message(F("OpenWeatherAPI http status=%d error=%s wifi=%u url=%s"), code, request.getMessage().c_str(), WiFi.isConnected(), request.getUrl());
         Logger_error(message);
-        if (forecast) {
-            _weatherApi.getWeatherForecast().setError(F("OpenWeatherAPI\nHTTP Error"));
-        } else {
-            _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
-        }
+        _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
         _pollDataUpdateLastTime(false);
     }
-    else if ((forecast && !_weatherApi.getWeatherForecast().hasData()) || (!forecast && !_weatherApi.getWeatherInfo().hasData())) {
+    else if (!_weatherApi.getWeatherInfo().hasData()) {
         PrintString message(F("OpenWeatherAPI data=invalid message=%s url=%s"), request.getMessage().c_str(), request.getUrl());
         Logger_error(message);
-        if (forecast) {
-            _weatherApi.getWeatherForecast().setError(F("OpenWeatherAPI\nInvalid Data"));
-        }
-        else {
-            _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nInvalid Data"));
-        }
+        _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nInvalid Data"));
         _pollDataUpdateLastTime(false);
     }
     else {
-        // Logger_notice(F("OpenWeatherAPI successfully polled"));
+        // _weatherApi.getWeatherInfo().dump(DEBUG_OUTPUT);
         _pollDataUpdateLastTime(true);
     }
     redraw();
@@ -139,12 +119,7 @@ void WeatherStationBase::_httpRequest(const String &url, int timeout, JsonBaseRe
 
 void WeatherStationBase::_getWeatherInfo(HttpRequestCallback callback)
 {
-    _httpRequest(_weatherApi.getWeatherApiUrl(), _config.api_timeout, _weatherApi.getWeatherInfoParser(), callback);
-}
-
-void WeatherStationBase::_getWeatherForecast(HttpRequestCallback callback)
-{
-    _httpRequest(_weatherApi.getForecastApiUrl(), _config.api_timeout, _weatherApi.getWeatherForecastParser(), callback);
+    _httpRequest(_weatherApi.getApiUrl(), _config.api_timeout, _weatherApi.getParser(), callback);
 }
 
 void WeatherStationBase::_draw()

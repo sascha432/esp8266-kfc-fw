@@ -193,10 +193,6 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
                 WebUINS::Values(F("pwrlvl"), _getPowerLevelStr())
                 #if IOT_CLOCK_AMBIENT_LIGHT_SENSOR || IOT_CLOCK_TEMPERATURE_PROTECTION
                     , brightness
-                    // , WebUINS::UnnamedObject(
-                    //     WebUINS::NamedString(J(i), FSPGM(brightness)),
-                    //     WebUINS::NamedStoredString(F("rmin"), ((_getEnabledState() && (realBrightness < _targetBrightness)) ? String(realBrightness) : String(F("false"))))
-                    // )
                 #endif
             )));
         }

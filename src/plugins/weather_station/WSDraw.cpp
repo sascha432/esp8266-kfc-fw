@@ -95,6 +95,7 @@ namespace WSDraw {
         _tftOutputMaxHeight(_tft.height()),
         _tftOverlayCanvas(nullptr),
         _scrollCanvas(nullptr),
+        _location(F("Unknown")),
         _textFont(nullptr),
         _lastTime(0),
         _scrollPosition(0),
@@ -183,7 +184,7 @@ namespace WSDraw {
         if (info.hasData()) {
 
             // --- weather icon
-            _canvas->drawBitmap(X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniIconFromProgmem(info.weather[0].icon), palette);
+            _canvas->drawBitmap(X_POSITION_WEATHER_ICON, Y_POSITION_WEATHER_ICON, getMiniIconFromProgmem(info.current.icon), palette);
 
             // --- location
             // create kind of shadow effect in case the text is drawn over the icon
@@ -192,18 +193,18 @@ namespace WSDraw {
             for(int8_t x = -2; x <= 2; x++) {
                 for(int8_t y = 0; y < 2; y++) {
                     if (!(y == 0 && x == 0)) {
-                        _canvas->drawTextAligned(X_POSITION_CITY + x, Y_POSITION_CITY + y, info.location, H_POSITION_CITY);
+                        _canvas->drawTextAligned(X_POSITION_CITY + x, Y_POSITION_CITY + y, _location, H_POSITION_CITY);
                     }
                 }
             }
             _canvas->setTextColor(COLORS_CITY);
-            _canvas->drawTextAligned(X_POSITION_CITY, Y_POSITION_CITY, info.location, H_POSITION_CITY);
+            _canvas->drawTextAligned(X_POSITION_CITY, Y_POSITION_CITY, _location, H_POSITION_CITY);
 
             // --- temperature
 
             _canvas->setFont(FONTS_TEMPERATURE);
             _canvas->setTextColor(COLORS_TEMPERATURE);
-            _canvas->drawTextAligned(X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, _getTemperature(info.val.temperature, true), H_POSITION_TEMPERATURE);
+            _canvas->drawTextAligned(X_POSITION_TEMPERATURE, Y_POSITION_TEMPERATURE, _getTemperature(info.current.temperature), H_POSITION_TEMPERATURE);
 
             // --- weather description
 
@@ -211,7 +212,7 @@ namespace WSDraw {
             _canvas->setTextColor(COLORS_WEATHER_DESCR);
 
             AdafruitGFXExtension::Position_t pos;
-            String tmp = info.weather[0].descr;
+            String tmp = info.current.descr;
             if (tmp.length() > 10) {
                 auto idx = tmp.indexOf(' ', 7); // wrap after first word thats longer than 7 characters and align to the right
                 if (idx != -1) {
@@ -289,31 +290,26 @@ namespace WSDraw {
     void Base::_drawForecast()
     {
         constexpr int16_t _offsetY = Y_START_POSITION_FORECAST;
-        auto &info = _weatherApi.getWeatherForecast();
+        auto &info = _weatherApi.getWeatherInfo();
         if (info.hasData()) {
-
-            info.dump(DEBUG_OUTPUT);
 
             int xStart = 0;
             constexpr int width = (TFT_WIDTH / MAX_FORECAST_DAYS) + 1;
             int num = 0;
 
-            for(auto const &item: info.forecast) {
+            for(auto const &item: info.daily) {
                 if (num++ >= MAX_FORECAST_DAYS) {
                     break;
                 }
 
-                auto &values = item.second.val;
-                auto &info = item.second.weather[0];
-
                 // icon
-                _canvas->drawBitmap(xStart, Y_POSITION_FORECAST_ICON, getMiniIconFromProgmem(info.icon), palette);
+                _canvas->drawBitmap(xStart, Y_POSITION_FORECAST_ICON, getMiniIconFromProgmem(item.icon), palette);
 
                 // day
                 _canvas->setFont(FONTS_FORECAST_DAY);
                 _canvas->setTextColor(COLORS_FORECAST_DAY);
                 PrintString day;
-                auto tm = gmtime(&values.time);
+                auto tm = gmtime(&item.dt);
                 day.strftime_P(PSTR("%a"), tm);
                 _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_DAY, day, AdafruitGFXExtension::CENTER);
 
@@ -321,19 +317,19 @@ namespace WSDraw {
                 _canvas->setFont(FONTS_FORECAST_DESCR);
                 _canvas->setTextColor(COLORS_FORECAST_TEMP);
                 AdafruitGFXExtension::Position_t pos;
-                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_TEMP, _getTemperature(values.temperature_max, true), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP, &pos);
-                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_TEMP + pos.h + 2, _getTemperature(values.temperature_min, true), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP);
+                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_TEMP, _getTemperature(item.temperature_max), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP, &pos);
+                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_TEMP + pos.h + 2, _getTemperature(item.temperature_min), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP);
 
-                // rain %
+                // temperature
                 _canvas->setTextColor(COLORS_FORECAST_RAIN);
-                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_RAIN + ((pos.h + 2) * 2), String(values.rain * 100.0f, 0) + '%', AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP);
+                _canvas->drawTextAligned(xStart + (width / 2), Y_POSITION_FORECAST_RAIN + ((pos.h + 2) * 2), _getTemperature(item.temperature), AdafruitGFXExtension::CENTER, AdafruitGFXExtension::TOP);
 
                 xStart += width;
 
             }
         }
         else {
-            _displayWeatherApiError(_weatherApi.getWeatherForecast().getError());
+            _displayWeatherApiError(_weatherApi.getWeatherInfo().getError());
         }
     }
 
@@ -997,13 +993,13 @@ namespace WSDraw {
         #endif
     }
 
-    String Base::_getTemperature(float value, bool kelvin)
+    String Base::_getTemperature(float value)
     {
         if (_config.is_metric) {
-            return String(kelvin ? OpenWeatherMapAPI::kelvinToC(value) : value, 1) + '\xb0' + 'C';
+            return String(value, 1) + '\xb0' + 'C';
         }
         else {
-            return String(kelvin ? OpenWeatherMapAPI::kelvinToF(value) : (value * 1.8f + 32.0f), 1) + '\xb0' + 'F';
+            return String(OpenWeatherMapAPI::CtoF(value), 1) + '\xb0' + 'F';
         }
     }
 

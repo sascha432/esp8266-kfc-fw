@@ -400,8 +400,7 @@ namespace WSDraw {
         };
 
         // get temperature as string (°C or °F), depending on the user setting
-        // if kelvin is true, value be treated as K instead C
-        String _getTemperature(float value, bool kelvin = false);
+        String _getTemperature(float value);
 
         // read indoor values
         virtual IndoorValues _getIndoorValues() = 0;
@@ -422,6 +421,7 @@ namespace WSDraw {
         #endif
         ScrollCanvas *_scrollCanvas;
         OpenWeatherMapAPI _weatherApi;
+        String _location;
         ConfigType _config;
         Event::Timer _displayMessageTimer;
         String _text;

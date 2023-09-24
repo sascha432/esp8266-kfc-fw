@@ -118,8 +118,7 @@ public:
 
     void _httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, HttpRequestCallback callback);
     void _getWeatherInfo(HttpRequestCallback callback);
-    void _getWeatherForecast(HttpRequestCallback callback);
-    void _openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request, bool forecast);
+    void _openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request);
 
     virtual void _fadeStatusLED() = 0;
     virtual void _rainbowStatusLED(bool stop = false) = 0;

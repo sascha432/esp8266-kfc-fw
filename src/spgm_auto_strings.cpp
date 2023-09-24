@@ -339,7 +339,6 @@ PROGMEM_STRING_DEF(notice, "notice");
 PROGMEM_STRING_DEF(npwd, "npwd");
 PROGMEM_STRING_DEF(ntp, "ntp");
 PROGMEM_STRING_DEF(open, "open");
-PROGMEM_STRING_DEF(openweathermap_api_url, "http://api.openweathermap.org/data/2.5/{api_type}?q={query}&appid={api_key}");
 PROGMEM_STRING_DEF(password, "password");
 PROGMEM_STRING_DEF(password2, "password2");
 PROGMEM_STRING_DEF(password_html, "password.html");

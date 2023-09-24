@@ -65,6 +65,8 @@ namespace KFCConfigurationClasses {
 
                     static constexpr uint8_t kNumClocks = WEATHER_STATION_MAX_CLOCKS;
 
+                    CREATE_FLOAT_FIELD(latitude, -180, 180, 0)
+                    CREATE_FLOAT_FIELD(longitude, -180, 180, 0)
                     CREATE_UINT32_BITFIELD_MIN_MAX(weather_poll_interval, 8, 5, 240, 15); // minutes
                     CREATE_UINT32_BITFIELD_MIN_MAX(api_timeout, 9, 10, 300, 30); // seconds
                     CREATE_UINT32_BITFIELD_MIN_MAX(backlight_level, 7, 0, 100, 100); // level in %
@@ -82,6 +84,8 @@ namespace KFCConfigurationClasses {
                     }
 
                     Config_t() :
+                        latitude(kDefaultValueFor_latitude),
+                        longitude(kDefaultValueFor_longitude),
                         weather_poll_interval(kDefaultValueFor_weather_poll_interval),
                         api_timeout(kDefaultValueFor_api_timeout),
                         backlight_level(kDefaultValueFor_backlight_level),
@@ -122,7 +126,7 @@ namespace KFCConfigurationClasses {
                 static void defaults();
 
                 CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, ApiKey, 0, 64);
-                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, ApiQuery, 0, 64);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, Location, 0, 64);
 
                 #if WEATHER_STATION_MAX_CLOCKS
                     CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, TZ0, 0, 64);

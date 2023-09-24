@@ -331,8 +331,14 @@ void WeatherStationPlugin::_readConfig()
     __LDBG_printf("backlight level=%d pct=%d", _backlightLevel, _config.backlight_level);
 
     _weatherApi.setAPIKey(WSDraw::WSConfigType::getApiKey());
-    _weatherApi.setQuery(WSDraw::WSConfigType::getApiQuery());
+    _weatherApi.setLatitude(_config.latitude);
+    _weatherApi.setLongitude(_config.longitude);
     _weatherApi.clear();
+    _location = WSDraw::WSConfigType::getLocation();
+    auto pos = _location.indexOf(',');
+    if (pos > 0) {
+        _location.remove(pos);
+    }
 
     _setScreen(_getScreen(ScreenType::MAIN));
 }

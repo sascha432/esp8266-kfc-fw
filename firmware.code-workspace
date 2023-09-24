@@ -396,6 +396,8 @@
             "NILVALUE",
             "NOINIT",
             "NTPCLIENT",
+            "ONECALL",
+            "OPENWEATHERMAP",
             "OPMODE",
             "OSTIMER",
             "PERFMON",

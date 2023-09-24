@@ -81,9 +81,15 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
         Plugins::WeatherStation::addApiKeyLengthValidator(form);
         form.addFormUI(F("API Key"));
 
-        form.addStringGetterSetter(F("apq"), Plugins::WeatherStation::getApiQuery, Plugins::WeatherStation::setApiQuery);
-        Plugins::WeatherStation::addApiQueryLengthValidator(form);
-        form.addFormUI(F("API Query"), FormUI::Suffix(F("City, Country (ISO 3166)")));
+        form.addStringGetterSetter(F("apq"), Plugins::WeatherStation::getLocation, Plugins::WeatherStation::setLocation);
+        Plugins::WeatherStation::addLocationLengthValidator(form);
+        form.addFormUI(F("API Location"), FormUI::Suffix(F("City, Country (ISO 3166)")));
+
+        form.addObjectGetterSetter(F("aqla"), FormGetterSetter(cfg, latitude));
+        form.addFormUI(F("API Latitude"));
+
+        form.addObjectGetterSetter(F("aqlo"), FormGetterSetter(cfg, longitude));
+        form.addFormUI(F("API Longitude"));
 
         form.addObjectGetterSetter(F("ato"), FormGetterSetter(cfg, api_timeout));
         form.addFormUI(F("API Timeout"), FormUI::Suffix(FSPGM(seconds)));

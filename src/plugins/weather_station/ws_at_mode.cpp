@@ -162,26 +162,14 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSU))) {
         auto stream = &args.getStream();
-        if (args.equals(0, 'f')) {
-            args.print(F("Updating forecast..."));
-            _getWeatherForecast([this, stream](bool status, KFCRestAPI::HttpRequest &request) {
-                auto msg = request.getMessage();
-                LoopFunctions::callOnce([this, status, msg, stream]() {
-                    stream->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, msg.c_str());
-                    redraw();
-                });
+        args.print(F("Updating weather info..."));
+        _getWeatherInfo([this, stream](bool status, KFCRestAPI::HttpRequest &request) {
+            auto msg = request.getMessage();
+            LoopFunctions::callOnce([this, status, msg, stream]() {
+                stream->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, msg.c_str());
+                redraw();
             });
-        }
-        else {
-            args.print(F("Updating info..."));
-            _getWeatherInfo([this, stream](bool status, KFCRestAPI::HttpRequest &request) {
-                auto msg = request.getMessage();
-                LoopFunctions::callOnce([this, status, msg, stream]() {
-                    stream->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, msg.c_str());
-                    redraw();
-                });
-            });
-        }
+        });
         return true;
     }
     #if DEBUG_MOON_PHASE

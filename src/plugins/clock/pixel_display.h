@@ -515,14 +515,9 @@ namespace Clock {
         inline __attribute__((__always_inline__))
         PixelCoordinatesType getPoint(PixelAddressType address) const
         {
-            if (_rows == 1) {
-                return PixelCoordinatesType(_row(getRow(0, address), getCol(0, address)), _col(getRow(0, address), getCol(0, address)));
-            }
-            else {
-                CoordinateType col = address / _rows;
-                CoordinateType row = address % _rows;
-                return PixelCoordinatesType(_row(getRow(row, col), getCol(row, col)), _col(getRow(row, col), getCol(row, col)));
-            }
+            CoordinateType col = address / _rows;
+            CoordinateType row = address % _rows;
+            return PixelCoordinatesType(_row(getRow(row, col), getCol(row, col)), _col(getRow(row, col), getCol(row, col)));
         }
     };
 

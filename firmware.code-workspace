@@ -384,6 +384,7 @@
             "MDNS",
             "MEMNCPY",
             "MILLIS",
+            "MILLIWATT",
             "MILLIWATTS",
             "MIREDS",
             "MOSFET",

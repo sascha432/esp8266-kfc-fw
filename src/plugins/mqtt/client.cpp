@@ -579,10 +579,10 @@ namespace MQTT {
         _resetClient();
 
         // set last will topic
-        publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), getDefaultQos());
+        publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), QosType::ONLINE_STATUS);
 
         // monitor topic in case the status is set to "offline"
-        subscribe(nullptr, _lastWillTopic, QosType::AT_LEAST_ONCE);
+        subscribe(nullptr, _lastWillTopic, QosType::ONLINE_STATUS);
 
         #if MQTT_SET_LAST_WILL_MODE != 2 && IOT_REMOTE_CONTROL == 1
             #error remote control requires MQTT_SET_LAST_WILL_MODE == 2 for MQTT_AVAILABILITY_TOPIC
@@ -591,7 +591,7 @@ namespace MQTT {
         #if MQTT_AUTO_DISCOVERY
             _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();
             __LDBG_printf("subscribe=%s", __S(_autoDiscoveryStatusTopic));
-            subscribe(nullptr, _autoDiscoveryStatusTopic, QosType::AT_LEAST_ONCE);
+            subscribe(nullptr, _autoDiscoveryStatusTopic, QosType::AUTO_DISCOVERY);
         #endif
 
         // reset reconnect timer if connection was successful
@@ -757,7 +757,7 @@ namespace MQTT {
                 // this happens if another client (or last will / dead connection) sets the status to "offline"
                 if (onlineLen != len || strncmp_P(payload, onlineStr, len) != 0) {
                     __LDBG_printf("resending MQTT_LAST_WILL_TOPIC_ONLINE");
-                    publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), getDefaultQos());
+                    publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), QosType::ONLINE_STATUS);
                 }
             }
         }

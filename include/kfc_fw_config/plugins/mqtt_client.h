@@ -28,8 +28,8 @@ namespace KFCConfigurationClasses {
                 AT_LEAST_ONCE = 1,
                 EXACTLY_ONCE = 2,
                 MAX,
-                PERSISTENT_STORAGE = AT_LEAST_ONCE,
-                AUTO_DISCOVERY = AT_LEAST_ONCE,
+                AUTO_DISCOVERY = EXACTLY_ONCE,
+                ONLINE_STATUS = EXACTLY_ONCE,
                 DEFAULT = 0xff,
             };
 
@@ -67,7 +67,7 @@ namespace KFCConfigurationClasses {
                     auto_reconnect_incr(kDefaultValueFor_auto_reconnect_incr),
                     auto_discovery_delay(kDefaultValueFor_auto_discovery_delay),
                     mode(cast(ModeType::UNSECURE)),
-                    qos(cast(QosType::EXACTLY_ONCE)),
+                    qos(cast(QosType::AT_LEAST_ONCE)),
                     __port(kDefaultValueFor___port)
                 {}
 
@@ -87,7 +87,6 @@ namespace KFCConfigurationClasses {
                 CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, GroupTopic, 4, 64);
                 CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, AutoDiscoveryPrefix, 1, 32);
                 CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, AutoDiscoveryName, 0, 64);
-                // CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.mqtt, SharedTopic, 4, 128);
 
                 static const uint8_t *getFingerPrint(uint16_t &size);
                 static void setFingerPrint(const uint8_t *fingerprint, uint16_t size);

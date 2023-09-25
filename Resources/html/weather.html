@@ -50,6 +50,32 @@
 
     %FORM_VALIDATOR%
 
+    <script type="text/javascript">
+        $(function() {
+            var label = $('label[for=apq]');
+            label.html(label.html().replace(/:$/, '') + ' (<a href=\"#\" id=\"update_coords\">Update latitude/longitude</a>):');
+            $('#update_coords').on('click', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'https://api.openweathermap.org/geo/1.0/direct',
+                    data: {
+                        'q': $('#apq').val(),
+                        'limit': 1,
+                        'appid': $('#apk').val()
+                    },
+                    success: function(data) {
+                        if (data.length == 1) {
+                            data = data[0]
+                            $('#aqla').val(data['lat']);
+                            $('#aqlo').val(data['lon']);
+                        }
+                    },
+                    dataType: 'json'
+                });
+            });
+        });
+    </script>
+
 </body>
 
 </html>

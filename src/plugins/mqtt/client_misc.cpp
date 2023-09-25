@@ -21,6 +21,7 @@ StringVector MQTT::Client::_createAutoDiscoveryTopics() const
 String MQTT::Client::connectionDetailsString()
 {
     auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (IPAddress_isValid(_address) ? _address.toString().c_str() : _hostname.c_str()), _port);
+    message.printf_P(PSTR(", QoS %u"), _getDefaultQos());
     #if ASYNC_TCP_SSL_ENABLED
         if (_config._get_enum_mode() == ModeType::SECURE) {
             message += F(", Secure MQTT");

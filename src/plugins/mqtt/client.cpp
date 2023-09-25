@@ -581,7 +581,7 @@ namespace MQTT {
         // set last will topic
         publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), getDefaultQos());
 
-        // monitor topic in case any dead connection sets status to offline (via last will)
+        // monitor topic in case the status is set to "offline"
         subscribe(nullptr, _lastWillTopic, QosType::AT_LEAST_ONCE);
 
         #if MQTT_SET_LAST_WILL_MODE != 2 && IOT_REMOTE_CONTROL == 1

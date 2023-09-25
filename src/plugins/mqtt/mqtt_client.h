@@ -727,7 +727,7 @@ public:
         String _password;
         MqttConfigType _config;
         AsyncMqttClient *_client;
-        Event::Timer _timer;
+        Event::Timer _reconnectTimer;
         uint16_t _port;
         #if MQTT_SET_LAST_WILL_MODE != 0
             // the topic must stay in memory until the connection has been made
@@ -762,8 +762,8 @@ public:
 
     inline void Client::setAutoReconnect(AutoReconnectType timeout)
     {
-        __LDBG_printf("timeout=%d conn=%s", timeout, _connection());
-        _autoReconnectTimeout = timeout;
+        __LDBG_printf("timeout=%u clamped=%u conn=%s", timeout, std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max), _connection());
+        _autoReconnectTimeout = std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max);
     }
 
     inline __attribute__((__always_inline__))

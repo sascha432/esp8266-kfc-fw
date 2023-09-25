@@ -124,7 +124,7 @@ namespace MQTT {
         __LDBG_printf("conn=%s", _connection());
         WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, MQTT::Client::handleWiFiEvents);
         _resetClient();
-        _Timer(_timer).remove();
+        _Timer(_reconnectTimer).remove();
 
         _autoReconnectTimeout = kAutoReconnectDisabled;
         auto state = setConnState(ConnectionState::DISCONNECTED);
@@ -516,11 +516,11 @@ namespace MQTT {
 
         // remove reconnect timer if running and force disconnect
         auto timeout = _autoReconnectTimeout;
-        _Timer(_timer).remove();
+        _Timer(_reconnectTimer).remove();
 
         _autoReconnectTimeout = kAutoReconnectDisabled; // disable auto reconnect
         disconnect(true);
-        _autoReconnectTimeout = timeout;
+        _autoReconnectTimeout = timeout; // restore timeout
 
         _client->setCleanSession(true);
         _client->setKeepAlive(_config.keepalive);
@@ -559,34 +559,21 @@ namespace MQTT {
 
     void MQTT::Client::autoReconnect(AutoReconnectType timeout)
     {
-        __LDBG_printf("timeout=%u conn=%s", timeout, _connection());
+        __LDBG_printf("timeout=%u clamped=%u conn=%s", timeout, std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max), _connection());
         if (timeout) {
             _connState = ConnectionState::AUTO_RECONNECT_DELAY;
-            _Timer(_timer).add(timeout, false, [this](Event::CallbackTimerPtr timer) {
+            timeout = std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max);
+            _Timer(_reconnectTimer).add(Event::milliseconds(timeout), false, [this](Event::CallbackTimerPtr timer) {
                 __LDBG_printf("timer lambda: conn=%s", _connection());
                 if (!this->isConnected()) {
                     this->connect();
                 }
             });
             // increase timeout on each reconnect attempt
-            setAutoReconnect(std::min<AutoReconnectType>(timeout + (static_cast<uint32_t>(timeout) * _config.auto_reconnect_incr / 100U), _config.auto_reconnect_max));
-
-    // # python code to print the timeouts
-    // to=5000
-    // max_to=60000
-    // incr=10
-    // tosum=0
-    // for i in range(1, 1000):
-    //     print('retry=%u timeout=%u total_time=%u (%.2f min)' % (i, to, tosum, tosum / 60000))
-    //     tosum += to
-    //     if to==max_to:
-    //         break
-    //     to=to+(to / 10)
-    //     to=int(to)
-    //     if to>max_to:
-    //         to=max_to
+            setAutoReconnect(timeout + ((uint32_t(timeout) * _config.auto_reconnect_incr) / 100U));
         }
         else {
+            _Timer(_reconnectTimer).remove();
             _connState = ConnectionState::IDLE;
         }
     }
@@ -628,7 +615,7 @@ namespace MQTT {
             if (_startAutoDiscovery) {
                 publishAutoDiscovery();
             }
-    #endif
+        #endif
     }
 
     void MQTT::Client::onDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -668,24 +655,24 @@ namespace MQTT {
 
     bool MQTT::Client::publishAutoDiscovery(RunFlags flags, AutoDiscovery::StatusCallback callback)
     {
-    #if MQTT_AUTO_DISCOVERY
-        _startAutoDiscovery = false;
-        _autoDiscoveryRebroadcast.remove();
+        #if MQTT_AUTO_DISCOVERY
+            _startAutoDiscovery = false;
+            _autoDiscoveryRebroadcast.remove();
 
-        if (AutoDiscovery::Queue::isEnabled() && !_components.empty()) {
-            if (_autoDiscoveryQueue && (flags & RunFlags::ABORT_RUNNING)) { // abort running auto discovery if flag is set
-                _autoDiscoveryQueue.reset();
+            if (AutoDiscovery::Queue::isEnabled() && !_components.empty()) {
+                if (_autoDiscoveryQueue && (flags & RunFlags::ABORT_RUNNING)) { // abort running auto discovery if flag is set
+                    _autoDiscoveryQueue.reset();
+                }
+                if (!_autoDiscoveryQueue) {
+                    __LDBG_printf("starting auto discovery queue");
+                    _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
+                    _autoDiscoveryQueue->setStatusCallback(callback);
+                    _autoDiscoveryQueue->publish(flags);
+                    return true;
+                }
             }
-            if (!_autoDiscoveryQueue) {
-                __LDBG_printf("starting auto discovery queue");
-                _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
-                _autoDiscoveryQueue->setStatusCallback(callback);
-                _autoDiscoveryQueue->publish(flags);
-                return true;
-            }
-        }
-        __LDBG_printf("publishAutoDiscovery false: enabled=%u empty=%u queue=%p", AutoDiscovery::Queue::isEnabled(), _components.empty(), _autoDiscoveryQueue.get());
-    #endif
+            __LDBG_printf("publishAutoDiscovery false: enabled=%u empty=%u queue=%p", AutoDiscovery::Queue::isEnabled(), _components.empty(), _autoDiscoveryQueue.get());
+        #endif
         return false;
     }
 
@@ -781,16 +768,16 @@ namespace MQTT {
     {
         __LDBG_printf("event=%d payload=%p conn=%s", event, payload, _connection());
         if (event == WiFiCallbacks::EventType::CONNECTED) {
+            setAutoReconnect(_config.auto_reconnect_min);
             if (!isConnected()) {
-                setAutoReconnect(_config.auto_reconnect_min);
                 connect();
             }
         }
         else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
             // force a quick disconnect if WiFi is down and do not reconnect until it is back
+            setAutoReconnect(kAutoReconnectDisabled);
             if (isConnected()) {
                 _client->setKeepAlive(5);
-                setAutoReconnect(0);
             }
         }
     }

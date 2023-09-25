@@ -70,7 +70,7 @@ namespace MQTT {
             virtual uint8_t getAutoDiscoveryCount() const {
                 return 0;
             }
-            
+
         #endif
 
         virtual void onDisconnect(AsyncMqttClientDisconnectReason reason);
@@ -148,7 +148,7 @@ namespace MQTT {
 
         // timeout for the first message
         static constexpr uint32_t kInitialTimeout = CollectTopicsComponent::kInitialWaitTime + CollectTopicsComponent::kOnMessageWaitTime;   // milliseconds
-        // timeout per messaeg
+        // timeout per message
         static constexpr uint32_t kOnMessageTimeout = CollectTopicsComponent::kOnMessageWaitTime;   // milliseconds
 
         RemoveTopicsComponent(Client *client, StringVector &&wildcards, AutoDiscovery::CrcVector &&crcs, Callback callback = nullptr);

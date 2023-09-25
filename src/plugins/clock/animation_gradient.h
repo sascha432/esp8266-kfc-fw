@@ -125,10 +125,13 @@ namespace Clock {
         template<typename _Ta>
         void _copyTo(_Ta &display, uint32_t millisValue)
         {
-            uint16_t blending = 0;
+            fract8 blending = 0;
             if (_speed) {
-                blending = (((static_cast<uint16_t>(millis()) << 10) / (0x10000 - _speed)) >> 4) & 0x1ff;
-                blending = blending > 0xff ? 0x1ff - blending : blending;
+                auto tmp = (millisValue / _speed) % 512;
+                if (tmp > 255) {
+                    tmp = 511 - tmp;
+                }
+                blending = tmp;
             }
             auto prev = std::prev(_gradient.end());
             auto cur = _gradient.begin();
@@ -149,7 +152,6 @@ namespace Clock {
                 prev = cur;
                 ++cur;
             }
-            #undef DEBUG_GRADIENT
         }
 
         void update(const GradientAnimationConfig &config)

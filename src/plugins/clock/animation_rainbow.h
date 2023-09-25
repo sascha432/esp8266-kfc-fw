@@ -52,7 +52,6 @@ namespace Clock {
             _INCREMENT(_factor._blue, _color.min.blue, 256, _color.blue_incr);
         }
 
-
         virtual void copyTo(DisplayType &display, uint32_t millisValue) override
         {
             _copyTo(display, millisValue);
@@ -67,14 +66,12 @@ namespace Clock {
         void _copyTo(_Ta &display, uint32_t millisValue)
         {
             Color color;
-            CoordinateType row = 0;
-            CoordinateType col = 0;
-            for (PixelAddressType i = 0; i < display.size(); i++) {
+            for (uint16_t i = 0; i < display.getNumPixels(); i++) {
                 uint32_t ind = (i * _multiplier.value) + (millisValue / _speed);
                 uint8_t indMod = (ind % _mod);
                 uint8_t idx = (indMod / _divMul);
-                float factor1 = 1.0f - ((float)(indMod - (idx * _divMul)) / _divMul);
-                float factor2 = (float)((int)(ind - (idx * _divMul)) % _mod) / _divMul;
+                float factor1 = 1.0f - (float(indMod - (idx * _divMul)) / _divMul);
+                float factor2 = float(int(ind - (idx * _divMul)) % _mod) / _divMul;
                 switch(idx) {
                     case 0:
                         color = _normalizeColor(_factor.red() * factor1, _factor.green() * factor2, 0);
@@ -83,20 +80,13 @@ namespace Clock {
                         color = _normalizeColor(0, _factor.green() * factor1, _factor.blue() * factor2);
                         break;
                     case 2:
+                    default:
                         color = _normalizeColor(_factor.red() * factor2, 0, _factor.blue() * factor1);
                         break;
                 }
-                // CoordinateType row = i % kRows;
-                // CoordinateType col = i / kRows;
-                // if (i % 2 == 1) {
-                //     row = (kRows - 1) - row;
-                // }
+                CoordinateType col = i / display.getRows();
+                CoordinateType row = i % display.getRows();
                 display.setPixel(row, col, color);
-                row++;
-                if (row >= display.getRows()) {
-                    row = 0;
-                    col++;
-                }
             }
         }
 
@@ -118,13 +108,22 @@ namespace Clock {
             float _red;
             float _green;
             float _blue;
-            ColorFactor(uint32_t value) : _red(value & 0xff), _green((value >> 8) & 0xff), _blue((value >> 16) & 0xff) {}
+
+            ColorFactor(uint32_t value) :
+                _red(value & 0xff),
+                _green((value >> 8) & 0xff),
+                _blue((value >> 16) & 0xff)
+            {
+            }
+
             float red() const {
                 return _red;
             }
+
             float green() const {
                 return _green;
             }
+
             float blue() const {
                 return _blue;
             }

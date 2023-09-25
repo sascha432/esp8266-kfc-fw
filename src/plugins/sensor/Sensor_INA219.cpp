@@ -27,8 +27,8 @@ Sensor_INA219::Sensor_INA219(const String &name, uint8_t address, TwoWire &wire)
     _data(500),
     _avgData(_config.averaging_period * 1000),
     _mqttData(_mqttUpdateRate * 1000 / 2),
-    _Ipeak(NAN),
-    _Ppeak(NAN),
+    _peakCurrent(NAN),
+    _peakPower(NAN),
     _ina219(address)
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -111,8 +111,8 @@ void Sensor_INA219::getValues(WebUINS::Events &array, bool timer)
         array.append(WebUINS::Values(_getId(SensorInputType::AVG_POWER), WebUINS::TrimmedFloat(_convertPower(_avgData.P()), _config.webui_power_precision)));
     }
     if (_config.webui_peak) {
-        array.append(WebUINS::Values(_getId(SensorInputType::PEAK_CURRENT), WebUINS::TrimmedFloat(_convertCurrent(_Ipeak), _config.webui_current_precision)));
-        array.append(WebUINS::Values(_getId(SensorInputType::PEAK_POWER), WebUINS::TrimmedFloat(_convertPower(_Ppeak), _config.webui_power_precision)));
+        array.append(WebUINS::Values(_getId(SensorInputType::PEAK_CURRENT), WebUINS::TrimmedFloat(_convertCurrent(_peakCurrent), _config.webui_current_precision)));
+        array.append(WebUINS::Values(_getId(SensorInputType::PEAK_POWER), WebUINS::TrimmedFloat(_convertPower(_peakPower), _config.webui_power_precision)));
     }
     // __LDBG_printf("U=%f I=%f P=%f %s", _data.U(), _data.I(), _data.P(), array.toString().c_str());
 }
@@ -141,8 +141,8 @@ void Sensor_INA219::publishState()
         publish(MQTT::Client::formatTopic(_getId(SensorInputType::VOLTAGE)), true, String(_mqttData.U(), 3));
         publish(MQTT::Client::formatTopic(_getId(SensorInputType::CURRENT)), true, String(_convertCurrent(_mqttData.I()), _getCurrentPrecision()));
         publish(MQTT::Client::formatTopic(_getId(SensorInputType::POWER)), true, String(_convertPower(_mqttData.P()), _getPowerPrecision()));
-        publish(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_CURRENT)), true, String(_convertCurrent(_Ipeak), _getCurrentPrecision()));
-        publish(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_POWER)), true, String(_convertPower(_Ppeak), _getPowerPrecision()));
+        publish(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_CURRENT)), true, String(_convertCurrent(_peakCurrent), _getCurrentPrecision()));
+        publish(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_POWER)), true, String(_convertPower(_peakPower), _getPowerPrecision()));
     }
 }
 
@@ -158,21 +158,23 @@ String Sensor_INA219::_getId(SensorInputType type) const
 
 void Sensor_INA219::_loop()
 {
-    if (millis() > _updateTimer) {
-        _updateTimer = millis() + IOT_SENSOR_INA219_READ_INTERVAL;
-        auto microsTime = micros();
-        float U = _ina219.getBusVoltage_V();
-        float I = _ina219.getCurrent_mA();
-        float P = U * I;
-        if (I > _Ipeak || P > _Ppeak || millis() >= _holdPeakTimer) {
-            _Ipeak = I;
-            _Ppeak = P;
-            _holdPeakTimer = millis() + _config.getHoldPeakTimeMillis();
-        }
-        _data.add(U, I, microsTime);
-        _avgData.add(U, I, microsTime);
-        _mqttData.add(U, I, microsTime);
+    uint32_t now = millis();
+    if (get_time_since(_updateTimer, now) < IOT_SENSOR_INA219_READ_INTERVAL) {
+        return;
     }
+    _updateTimer = now;
+    auto microsTime = micros();
+    float U = _ina219.getBusVoltage_V();
+    float I = _ina219.getCurrent_mA();
+    float P = U * I;
+    if (I > _peakCurrent || P > _peakPower || get_time_since(_holdPeakTimer, now) >= _config.getHoldPeakTimeMillis()) {
+        _peakCurrent = I;
+        _peakPower = P;
+        _holdPeakTimer = now;
+    }
+    _data.add(U, I, microsTime);
+    _avgData.add(U, I, microsTime);
+    _mqttData.add(U, I, microsTime);
 }
 
 Sensor_INA219::ConfigType Sensor_INA219::_readConfig() const
@@ -272,8 +274,8 @@ void Sensor_INA219::reconfigure(PGM_P source)
     setUpdateRate(_config.webui_update_rate);
     _updateTimer = 0;
     _holdPeakTimer = 0;
-    _Ipeak = NAN;
-    _Ppeak = NAN;
+    _peakCurrent = NAN;
+    _peakPower = NAN;
     _data.clear();
     _avgData = SensorData(_config.averaging_period * 1000);
     _mqttData.clear();

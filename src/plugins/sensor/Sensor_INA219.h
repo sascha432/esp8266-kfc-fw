@@ -140,8 +140,8 @@ private:
     SensorData _data;
     SensorData _avgData;
     SensorData _mqttData;
-    float _Ipeak;
-    float _Ppeak;
+    float _peakCurrent;
+    float _peakPower;
 
     Adafruit_INA219 _ina219;
 };
@@ -216,18 +216,18 @@ inline float Sensor_INA219::getPower() const
 
 inline float Sensor_INA219::getPeakCurrent() const
 {
-    return _Ipeak;
+    return _peakCurrent;
 }
 
 inline float Sensor_INA219::getPeakPower() const
 {
-    return _Ppeak;
+    return _peakPower;
 }
 
 inline void Sensor_INA219::resetPeak()
 {
-    _Ipeak = NAN;
-    _Ppeak = NAN;
+    _peakCurrent = NAN;
+    _peakPower = NAN;
     _holdPeakTimer = 0;
 }
 

@@ -79,6 +79,7 @@ namespace MQTT {
         _config(Plugins::MqttClient::getConfig()),
         _client(new AsyncMqttClient()),
         _port(_config.getPort()),
+        _lastWillTopic(formatTopic(MQTT_LAST_WILL_TOPIC)),
         _connState(ConnectionState::NONE),
         #if MQTT_AUTO_DISCOVERY
             #if IOT_REMOTE_CONTROL
@@ -95,10 +96,6 @@ namespace MQTT {
         WebTemplate::printUniqueId(buffer, FSPGM(kfcfw));
         strncpy(clientIdBuffer, buffer.c_str(), maxLength - 1)[maxLength - 1] = 0;
         _client->setClientId(clientIdBuffer);
-
-        #if MQTT_SET_LAST_WILL_MODE != 0
-            _lastWillTopic = formatTopic(MQTT_LAST_WILL_TOPIC);
-        #endif
 
         // add client to all components and call onStartup
         for(auto component: _components) {
@@ -545,14 +542,8 @@ namespace MQTT {
             // clear client to send going offline status
             _resetClient();
 
-            #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
-                // set last will topic
-                _client->publish(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, MQTT_LAST_WILL_TOPIC_OFFLINE);
-            #endif
-            #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
-                // set status topic
-                _client->publish(formatTopic(MQTT_AVAILABILITY_TOPIC).c_str(), _translateQosType(getDefaultQos()), true, MQTT_AVAILABILITY_TOPIC_OFFLINE);
-            #endif
+            // set last will topic
+            _client->publish(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, MQTT_LAST_WILL_TOPIC_OFFLINE);
         }
         _client->disconnect(forceDisconnect);
     }
@@ -573,11 +564,11 @@ namespace MQTT {
             setAutoReconnect(timeout + ((uint32_t(timeout) * _config.auto_reconnect_incr) / 100U));
         }
         else {
-            _Timer(_reconnectTimer).remove();
             _connState = ConnectionState::IDLE;
+            _Timer(_reconnectTimer).remove();
+            setAutoReconnect(kAutoReconnectDisabled);
         }
     }
-
 
     void MQTT::Client::onConnect(bool sessionPresent)
     {
@@ -587,14 +578,12 @@ namespace MQTT {
 
         _resetClient();
 
-        #if MQTT_SET_LAST_WILL_MODE == 1 || MQTT_SET_LAST_WILL_MODE == 2
-            // set last will topic
-            publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), getDefaultQos());
-        #endif
-        #if MQTT_SET_LAST_WILL_MODE == 0 || MQTT_SET_LAST_WILL_MODE == 2
-            // set status topic
-            publish(formatTopic(MQTT_AVAILABILITY_TOPIC), true, FPSTR(MQTT_AVAILABILITY_TOPIC_ONLINE), getDefaultQos());
-        #endif
+        // set last will topic
+        publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), getDefaultQos());
+
+        // monitor topic in case any dead connection sets status to offline (via last will)
+        subscribe(nullptr, _lastWillTopic, QosType::AT_LEAST_ONCE);
+
         #if MQTT_SET_LAST_WILL_MODE != 2 && IOT_REMOTE_CONTROL == 1
             #error remote control requires MQTT_SET_LAST_WILL_MODE == 2 for MQTT_AVAILABILITY_TOPIC
         #endif
@@ -736,29 +725,47 @@ namespace MQTT {
     {
         __LDBG_printf("topic=%s payload=%s len=%d qos=%d dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), len, properties.qos, properties.dup, properties.retain);
         _messageProperties = &properties;
-        if ((_autoDiscoveryLastFailure == ~0U || _autoDiscoveryLastSuccess == ~0U) && _autoDiscoveryStatusTopic == topic) {
-            _resetAutoDiscoveryInitialState();
-            char *ptr;
-            ptr = strstr_P(payload, PSTR("failure\":"));
-            if (ptr) {
-                ptr += 9;
-                uint32_t time = atol(ptr);
-                if (time) {
-                    _autoDiscoveryLastFailure = time;
+        if (_autoDiscoveryStatusTopic == topic) {
+            if (_autoDiscoveryLastFailure == ~0U || _autoDiscoveryLastSuccess == ~0U) {
+                _resetAutoDiscoveryInitialState();
+                char *ptr;
+                ptr = strstr_P(payload, PSTR("failure\":"));
+                if (ptr) {
+                    ptr += 9;
+                    uint32_t time = atol(ptr);
+                    if (time) {
+                        _autoDiscoveryLastFailure = time;
+                    }
                 }
-            }
-            ptr = strstr_P(payload, PSTR("success\":"));
-            if (ptr) {
-                ptr += 9;
-                uint32_t time = atol(ptr);
-                if (time) {
-                    _autoDiscoveryLastSuccess = time;
+                ptr = strstr_P(payload, PSTR("success\":"));
+                if (ptr) {
+                    ptr += 9;
+                    uint32_t time = atol(ptr);
+                    if (time) {
+                        _autoDiscoveryLastSuccess = time;
+                    }
                 }
             }
         }
-        for(const auto &mqttTopic : _topics) {
-            if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
-                mqttTopic.getComponent()->onMessage(topic, payload, len);
+        else if (_lastWillTopic == topic) {
+            // ignore this topic if not connected
+            if (isConnected()) {
+                auto onlineStr = MQTT_LAST_WILL_TOPIC_ONLINE;
+                auto onlineLen = strlen_P(onlineStr);
+                __LDBG_printf("online=%u(%s) len=%u(%s) cmp=%d", onlineLen, onlineStr, len, payload, strncmp_P(payload, onlineStr, std::min(len, onlineLen)));
+                // if the length or contents do not match "online", publish "online" again
+                // this happens if another client (or last will / dead connection) sets the status to "offline"
+                if (onlineLen != len || strncmp_P(payload, onlineStr, len) != 0) {
+                    __LDBG_printf("resending MQTT_LAST_WILL_TOPIC_ONLINE");
+                    publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), getDefaultQos());
+                }
+            }
+        }
+        else {
+            for(const auto &mqttTopic : _topics) {
+                if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
+                    mqttTopic.getComponent()->onMessage(topic, payload, len);
+                }
             }
         }
         _messageProperties = nullptr;

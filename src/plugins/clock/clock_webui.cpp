@@ -200,7 +200,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
     extern uint8_t _calculate_max_brightness_for_power_mW(uint8_t target_brightness, uint32_t max_power_mW, uint32_t &requested_power_mW);
 
-    uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
+    uint8_t IRAM_ATTR ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
     {
         uint32_t requestedPower_mW;
         uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
@@ -234,7 +234,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
     }
 
-    void ClockPlugin::_calcPowerLevel()
+    void IRAM_ATTR ClockPlugin::_calcPowerLevel()
     {
         if (_powerLevelUpdateTimer == 0) {
             _powerLevelUpdateTimer = micros();

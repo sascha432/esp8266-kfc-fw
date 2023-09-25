@@ -51,6 +51,17 @@ void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpR
     }
     else {
         // _weatherApi.getWeatherInfo().dump(DEBUG_OUTPUT);
+
+        // keep only what we use
+        auto &info = _weatherApi.getWeatherInfo();
+        if (info.daily.size() > MAX_FORECAST_DAYS) {
+            info.daily.resize(MAX_FORECAST_DAYS);
+            info.daily.shrink_to_fit();
+        }
+        for(auto &item: info.daily) {
+            item.descr = String();
+        }
+
         _pollDataUpdateLastTime(true);
     }
     redraw();

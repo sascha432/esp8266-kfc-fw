@@ -10,9 +10,9 @@
 #include "auto_discovery_list.h"
 
 #if DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 namespace MQTT {
@@ -107,7 +107,7 @@ namespace MQTT {
     public:
         // timeout for the first message
         static constexpr uint32_t kInitialWaitTime = 20000;   // milliseconds
-        // timeout after receiving the last message
+        // timeout after receiving the first message
         static constexpr uint32_t kOnMessageWaitTime = 5000;   // milliseconds
 
         using Callback = std::function<void(ErrorType error, AutoDiscovery::CrcVector &crcs)>;

@@ -140,7 +140,7 @@ void Queue::runPublish(uint32_t delayMillis)
         initialDelay = stdex::randint((delayMillis * 90) / 100, (delayMillis * 110) / 100);
 
         clear();
-        _diff = {};
+        _diff.clear();
         _entities = List(_client._components, FormatType::JSON);
         _mutexLock.unlock();
 
@@ -200,7 +200,6 @@ void Queue::runPublish(uint32_t delayMillis)
                         currentCrcs = {};
                         crcs.clear();
                     }
-                    //if (currentCrcs == crcs) {
                     if (_diff.equal) {
                         __LDBG_printf("auto discovery matches current version");
                         _publishDone(StatusType::SUCCESS);

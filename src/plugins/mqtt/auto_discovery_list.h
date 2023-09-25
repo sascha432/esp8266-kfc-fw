@@ -26,6 +26,20 @@ namespace MQTT {
                 uint16_t modify;
                 uint16_t unchanged;
                 bool equal;
+
+                Diff() :
+                    add(0),
+                    remove(0),
+                    modify(0),
+                    unchanged(0),
+                    equal(false)
+                {
+                }
+
+                void clear()
+                {
+                    *this = Diff();
+                }
             };
 
             struct Data {
@@ -117,8 +131,9 @@ namespace MQTT {
                 return !operator==(list);
             }
 
-            Diff difference(const CrcVector &list) const {
-                Diff diff = {};
+            inline Diff difference(const CrcVector &list) const
+            {
+                Diff diff;
                 if (*this == list) {
                     diff.unchanged = size();
                     diff.equal = true;
@@ -159,19 +174,34 @@ namespace MQTT {
             using iterator = ComponentIterator;
 
             // NOTE: std:distance(end(), begin()) / std:distance(begin(), <invalid iterator>) crashes
-            List() : _components(nullptr), _payloadSize(0) {}
-            List(ComponentVector &components, FormatType format) : _components(&components), _format(format), _payloadSize(0) {}
+            List() :
+                _components(nullptr),
+                _payloadSize(0)
+            {
+            }
+
+            List(ComponentVector &components, FormatType format) :
+                _components(&components),
+                _format(format),
+                _payloadSize(0)
+            {
+            }
 
             ComponentIterator begin();
             ComponentIterator end();
-            ComponentIterator begin() const {
+
+            ComponentIterator begin() const
+            {
                 return const_cast<List *>(this)->begin();
             }
-            ComponentIterator end() const {
+
+            ComponentIterator end() const
+            {
                 return const_cast<List *>(this)->end();
             }
 
-            CrcVector crc() {
+            CrcVector crc()
+            {
                 CrcVector list;
                 _payloadSize = 0;
                 for(const auto &entity: *this) {
@@ -187,19 +217,23 @@ namespace MQTT {
                 return list;
             }
 
-            inline bool empty() const {
+            inline bool empty() const
+            {
                 return _components ? _components->empty() : true;
             }
 
-            inline size_t size() const {
+            inline size_t size() const
+            {
                 return _components ? size(*_components) : 0;
             }
 
-            inline size_t payloadSize() const {
+            inline size_t payloadSize() const
+            {
                 return _payloadSize;
             }
 
-            static size_t size(ComponentVector &components) {
+            static size_t size(ComponentVector &components)
+            {
                 size_t count = 0;
                 for(auto &component: components) {
                     count += component->size();

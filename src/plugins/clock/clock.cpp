@@ -832,7 +832,7 @@ void ClockPlugin::readConfig(bool setup)
     _display.updateSegments(_config.matrix.pixels0, _config.matrix.offset0, _config.matrix.pixels1, _config.matrix.offset1, _config.matrix.pixels2, _config.matrix.offset2, _config.matrix.pixels3, _config.matrix.offset3);
 
     // update matrix configuration
-    if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved)) {
+    if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved, _config.matrix.rowOfs, _config.matrix.colOfs)) {
         __DBG_printf("_display.setParams() failed");
     }
 

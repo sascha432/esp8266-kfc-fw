@@ -178,29 +178,10 @@ namespace Clock {
             return true;
         }
 
-        // bool hasDisplay() const
-        // {
-        //     return _display != nullptr;
-        // }
-
         bool hasBuffer() const
         {
             return _buffer != nullptr;
         }
-
-        // void setDisplay(DisplayType *display) {
-        //     _freeBuffer();
-        //     _display = display;
-        // }
-
-        // void setBuffer(DisplayBufferType *buffer) {
-        //     _freeBuffer(buffer);
-        //     _display = nullptr;
-        // }
-
-        // DisplayBufferType *getBuffer() {
-        //     return _buffer;
-        // }
 
         // return the buffer or create a new one
         // to avoid allocating another one, at least one frame must be created before calling the method
@@ -212,6 +193,18 @@ namespace Clock {
             }
             auto buf = new DisplayBufferType();
             buf->setSize(display.getRows(), display.getCols());
+            return buf;
+        }
+
+        // return the buffer or create a new one keeping the parameters from display
+        template<typename _Ta>
+        DisplayBufferType *getClonedBlendBuffer(_Ta &display)
+        {
+            if (_buffer) {
+                return _buffer;
+            }
+            auto buf = new DisplayBufferType();
+            buf->setParams(display);
             return buf;
         }
 
@@ -233,11 +226,6 @@ namespace Clock {
             _color = color;
         }
 
-        // void setMode(ModeType mode)
-        // {
-        //     _mode = mode;
-        // }
-
     protected:
         Color _getColor() const;
         void _setColor(Color color);
@@ -256,7 +244,6 @@ namespace Clock {
 
     protected:
         bool _disableBlinkColon;
-        // ModeType _mode;
         Color _color;
     };
 
@@ -292,10 +279,9 @@ namespace Clock {
 
         void begin()
         {
-            _timer = millis();
+            uint32_t ms = _timer = millis();
             // create first frame to get the buffer
             _target->begin();
-            uint32_t ms = millis();
             _target->loop(ms);
             _target->nextFrame(ms);
             _targetBuffer = _target->getBlendBuffer(_display);
@@ -333,7 +319,17 @@ namespace Clock {
             _target->copyTo(*_targetBuffer, millisValue);
 
             fract8 amount = ((timeLeft * 255) / _duration);
-            ::blend(_sourceBuffer->begin(), _targetBuffer->begin(), display.begin(), display.size(), amount);
+            // requires getClonedBlendBuffer(), if the translation is done in blend the 2 buffers can be plain
+            // ::blend(_sourceBuffer->begin(), _targetBuffer->begin(), display.begin(), display.size(), amount);
+
+            auto src = _sourceBuffer->begin();
+            auto dst = _targetBuffer->begin();
+            for(uint16_t i = 0; i < display.getNumPixels(); ++i) {
+                CoordinateType col = i / display.getRows();
+                CoordinateType row = i % display.getRows();
+                display.pixels(display.getAddress(row, col)) = ::blend(*src++, *dst++, amount);
+            }
+
             return true;
         }
 

@@ -328,6 +328,8 @@ namespace KFCConfigurationClasses {
                 using Type = MatrixConfigType;
                 CREATE_UINT32_BITFIELD_MIN_MAX(rows, 16, 1, 0xffff, IOT_LED_MATRIX_ROWS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(cols, 16, 1, 0xffff, IOT_LED_MATRIX_COLS, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(rowOfs, 16, 0, 0xffff, IOT_LED_MATRIX_ROW_OFS, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(colOfs, 16, 0, 0xffff, IOT_LED_MATRIX_COL_OFS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(pixels, 16, 1, 0xffff, IOT_CLOCK_NUM_PIXELS, 1); // all pixels
                 CREATE_UINT32_BITFIELD_MIN_MAX(pixels0, 13, 0, 4096, std::min(1024, IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS), 1); // segment 1
                 CREATE_UINT32_BITFIELD_MIN_MAX(offset0, 13, 0, 4096, IOT_LED_MATRIX_PIXEL_OFFSET, 1);
@@ -344,6 +346,8 @@ namespace KFCConfigurationClasses {
                 MatrixConfigType(
                     uint16_t _rows = kDefaultValueFor_rows,
                     uint16_t _cols = kDefaultValueFor_cols,
+                    uint16_t _rowOfs = kDefaultValueFor_rowOfs,
+                    uint16_t _colOfs = kDefaultValueFor_colOfs,
                     uint16_t _pixels = kDefaultValueFor_pixels,
                     uint16_t _pixels0 = kDefaultValueFor_pixels0,
                     uint16_t _offset0 = kDefaultValueFor_offset0,
@@ -360,6 +364,8 @@ namespace KFCConfigurationClasses {
                 ) :
                     rows(_rows),
                     cols(_cols),
+                    rowOfs(_rowOfs),
+                    colOfs(_colOfs),
                     pixels(_pixels),
                     pixels0(_pixels0),
                     offset0(_offset0),

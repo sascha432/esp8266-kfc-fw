@@ -659,6 +659,14 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
                 return false;
             }));
 
+            form.addObjectGetterSetter(F("mx_rf"), FormGetterSetter(cfg.matrix, rowOfs));
+            form.addFormUI(F("Row Offset"));
+            cfg.matrix.addRangeValidatorFor_rowOfs(form);
+
+            form.addObjectGetterSetter(F("mx_cf"), FormGetterSetter(cfg.matrix, colOfs));
+            form.addFormUI(F("Column Offset"));
+            cfg.matrix.addRangeValidatorFor_colOfs(form);
+
             form.addObjectGetterSetter(F("mx_rt"), FormGetterSetter(cfg.matrix, rotate));
             form.addFormUI(F("90\xc2\xb0 Rotation"), FormUI::BoolItems());
 

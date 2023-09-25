@@ -12,6 +12,10 @@
 #    include <Adafruit_NeoPixelEx.h>
 #endif
 
+#if __GNUG__ < 8
+#    error not supported
+#endif
+
 extern "C" uint8_t getNeopixelShowMethodInt();
 extern "C" const __FlashStringHelper *getNeopixelShowMethodStr();
 
@@ -152,7 +156,13 @@ namespace Clock {
             return kPixelOffset;
         }
 
-        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved)
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType rowOfs = 0, PixelAddressType colOfs = 0)
+        {
+            return false;
+        }
+
+        template<typename _Ta>
+        bool setParams(const _Ta &display)
         {
             return false;
         }
@@ -200,94 +210,6 @@ namespace Clock {
             static constexpr bool kReverseColumns = _ReverseColumns;
             static constexpr int kInterleaved = _Interleaved ? 1 : 0;
         };
-
-#if __GNUG__ < 8
-
-        #warning this code might not be up to date
-
-        // rotated
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kRotate, int>::type = 0>
-        inline __attribute__((__always_inline__))
-        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const
-        {
-            return col;
-        }
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kRotate, int>::type = 0>
-        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const
-        {
-            return row;
-        }
-
-        // non-rotated
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kRotate, int>::type = 0>
-        inline __attribute__((__always_inline__))
-        typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const
-        {
-            return row;
-        }
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kRotate, int>::type = 0>
-        inline __attribute__((__always_inline__))
-        typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const
-        {
-            return col;
-        }
-
-        // normalize rows
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseRows && !_Ta::kInterleaved, int>::type = 0>
-        inline __attribute__((__always_inline__))
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
-        {
-            return row;
-        }
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kReverseRows && !_Ta::kInterleaved, int>::type = 0>
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
-        {
-            return (kRows - 1) - row;
-        }
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseRows && _Ta::kInterleaved, int>::type = 0>
-        inline __attribute__((__always_inline__))
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
-        {
-            if ((col & 1) == _Ta::kInterleaved) {
-                return row;
-            }
-            return (kRows - 1) - row;
-        }
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kReverseRows && _Ta::kInterleaved, int>::type = 0>
-        inline __attribute__((__always_inline__))
-        typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
-        {
-            if ((col & 1) == _Ta::kInterleaved) {
-                return (kRows - 1) - row;
-            }
-            return row;
-        }
-
-        // normalize columns
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<!_Ta::kReverseColumns, int>::type = 0>
-        inline __attribute__((__always_inline__))
-        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const
-        {
-            return col;
-        }
-
-        template<typename _Ta = CoordinateHelperType, typename std::enable_if<_Ta::kReverseColumns, int>::type = 0>
-        inline __attribute__((__always_inline__))
-        typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const
-        {
-            return (kCols - 1) - col;
-        }
-
-#else
 
         // rotation
 
@@ -360,8 +282,6 @@ namespace Clock {
 
         }
 
-#endif
-
         inline __attribute__((__always_inline__))
         PixelAddressType getAddress(CoordinateType row, CoordinateType col) const
         {
@@ -411,6 +331,8 @@ namespace Clock {
         bool _reverseColumns{_ReverseColumns};
         bool _rotate{_Rotate};
         bool _interleaved{_Interleaved};
+        PixelAddressType _rowOfs{0};
+        PixelAddressType _colOfs{0};
         CoordinateType _rows{kRows};
         CoordinateType _cols{kCols};
         PixelAddressType _offset{_PixelOffset};
@@ -418,7 +340,7 @@ namespace Clock {
     public:
         uint8_t getMappingTypeId() const
         {
-            return (_reverseRows ? 0x01 : 0x00) | (_reverseColumns ? 0x02 : 0x00) | (_rotate ? 0x04 : 0) | (_interleaved ? 0x08 : 0);
+            return (_reverseRows ? 0x01 : 0x00) | (_reverseColumns ? 0x02 : 0x00) | (_rotate ? 0x04 : 0) | (_interleaved ? 0x08 : 0) | (_rowOfs ? 0x10 : 0) | (_colOfs ? 0x20 : 0);
         }
 
         PixelAddressType getOffset() const
@@ -426,7 +348,7 @@ namespace Clock {
             return _offset;
         }
 
-        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved)
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType rowOfs = 0, PixelAddressType colOfs = 0)
         {
             if (static_cast<size_t>((rows * cols) + _PixelOffset) > kMaxPixelAddress) {
                 return false;
@@ -437,7 +359,23 @@ namespace Clock {
             _reverseColumns = colsReversed;
             _rotate = rotated;
             _interleaved = interleaved;
+            _rowOfs = rowOfs % _rows;
+            _colOfs = colOfs % _cols;
             __LDBG_printf("size=%u ofs=%u max=%u method=%s", size(), _PixelOffset, kMaxPixelAddress, (PGM_P)getNeopixelShowMethodStr());
+            return true;
+        }
+
+        template<typename _Ta>
+        bool setParams(const _Ta &display)
+        {
+            _rows = display._rows;
+            _cols = display._cols;
+            _reverseRows = display._reverseRows;
+            _reverseColumns = display._reverseColumns;
+            _rotate = display._rotate;
+            _interleaved = display._interleaved;
+            _rowOfs = display._rowOfs;
+            _colOfs = display._colOfs;
             return true;
         }
 
@@ -477,6 +415,24 @@ namespace Clock {
             return _interleaved;
         }
 
+        // row offset
+        inline __attribute__((__always_inline__))
+        void _applyRowOffset(CoordinateType &row) const
+        {
+            if (_rowOfs) {
+                row = (row + _rowOfs) % _rows;
+            }
+        }
+
+        // col offset
+        inline __attribute__((__always_inline__))
+        void _applyColOffset(CoordinateType &col) const
+        {
+            if (_colOfs) {
+                col = (col + _colOfs) % _cols;
+            }
+        }
+
         // rotation
         inline __attribute__((__always_inline__))
         CoordinateType getRow(CoordinateType row, CoordinateType col) const
@@ -505,6 +461,8 @@ namespace Clock {
         CoordinateType _row(CoordinateType row, CoordinateType col) const
         {
             if (_interleaved) {
+                _applyRowOffset(row);
+                _applyColOffset(col);
                 if (_reverseRows) {
                     if ((col & 1) == _interleaved) {
                         return (_rows - 1) - row;
@@ -519,6 +477,7 @@ namespace Clock {
                 }
             }
             else {
+                _applyRowOffset(row);
                 if (_reverseRows) {
                     return (_rows - 1) - row;
                 }
@@ -530,7 +489,9 @@ namespace Clock {
 
         // reversed columns
         inline __attribute__((__always_inline__))
-        CoordinateType _col(CoordinateType row, CoordinateType col) const {
+        CoordinateType _col(CoordinateType row, CoordinateType col) const
+        {
+            _applyColOffset(col);
             if (_reverseColumns) {
                 return (_cols - 1) - col;
             }
@@ -540,24 +501,26 @@ namespace Clock {
         }
 
         inline __attribute__((__always_inline__))
-        PixelAddressType getAddress(CoordinateType row, CoordinateType col) const {
-            // return row + col * _rows;
+        PixelAddressType getAddress(CoordinateType row, CoordinateType col) const
+        {
             return _row(getRow(row, col), getCol(row, col)) + (_col(getRow(row, col), getCol(row, col)) * _rows);
         }
 
         inline __attribute__((__always_inline__))
-        PixelAddressType getAddress(PixelCoordinatesType coords) const {
+        PixelAddressType getAddress(PixelCoordinatesType coords) const
+        {
             return getAddress(coords.row(), coords.col());
         }
 
         inline __attribute__((__always_inline__))
-        PixelCoordinatesType getPoint(PixelAddressType address) const {
+        PixelCoordinatesType getPoint(PixelAddressType address) const
+        {
             if (_rows == 1) {
                 return PixelCoordinatesType(_row(getRow(0, address), getCol(0, address)), _col(getRow(0, address), getCol(0, address)));
             }
             else {
-                CoordinateType row = address % _rows;
                 CoordinateType col = address / _rows;
+                CoordinateType row = address % _rows;
                 return PixelCoordinatesType(_row(getRow(row, col), getCol(row, col)), _col(getRow(row, col), getCol(row, col)));
             }
         }
@@ -598,9 +561,20 @@ namespace Clock {
         {
         }
 
-        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved) {
-            if (!PixelMappingType::setParams(rows, cols, rowsReversed, colsReversed, rotated, interleaved)) {
-                return true;
+        bool setParams(CoordinateType rows, CoordinateType cols, bool rowsReversed, bool colsReversed, bool rotated, bool interleaved, PixelAddressType rowOfs = 0, PixelAddressType colOfs = 0)
+        {
+            if (!PixelMappingType::setParams(rows, cols, rowsReversed, colsReversed, rotated, interleaved, rowOfs, colOfs)) {
+                return false;
+            }
+            _pixels = __pixels.data() + getOffset();
+            return true;
+        }
+
+        template<typename _Ta>
+        bool setParams(const _Ta &display)
+        {
+            if (!PixelMappingType::setParams(display)) {
+                return false;
             }
             _pixels = __pixels.data() + getOffset();
             return true;
@@ -612,171 +586,179 @@ namespace Clock {
             PixelMappingType::_cols = cols;
         }
 
-        size_t getMaxNumPixels() const {
+        size_t getMaxNumPixels() const
+        {
             return PixelMappingType::_rows * PixelMappingType::_cols;
         }
 
-        void reset() {
+        void reset()
+        {
             __pixels.fill(ColorType());
         }
 
-        void clear() {
+        void clear()
+        {
             fill(ColorType());
         }
 
-        void fill(ColorType color) {
+        void fill(ColorType color)
+        {
             std::fill(begin(), end(), color);
         }
 
-        constexpr size_t getNumPixels() const {
+        constexpr size_t getNumPixels() const
+        {
             return size();
         }
 
         inline __attribute__((__always_inline__))
-        void setPixel(CoordinateType row, CoordinateType col, ColorType color) {
+        void setPixel(CoordinateType row, CoordinateType col, ColorType color)
+        {
             _set(getAddress(row, col), color);
         }
 
         // sequential pixel address 0 to kNumPixels - 1, addressing __pixels[kPixelOffset] to __pixels[kTotalPixels - 1]
         inline __attribute__((__always_inline__))
-        void setPixel(PixelAddressType numPixel, ColorType color) {
+        void setPixel(PixelAddressType numPixel, ColorType color)
+        {
             _set(getAddress(getPoint(numPixel)), color);
         }
 
         inline __attribute__((__always_inline__))
-        void setPixel(PixelCoordinatesType point, ColorType color) {
+        void setPixel(PixelCoordinatesType point, ColorType color)
+        {
             _set(getAddress(point), color);
         }
 
         inline __attribute__((__always_inline__))
-        const ColorType &getPixel(CoordinateType row, CoordinateType col) const {
+        const ColorType &getPixel(CoordinateType row, CoordinateType col) const
+        {
             return _get(getAddress(row, col));
         }
 
         // sequential pixel address 0 to kNumPixels - 1, addressing __pixels[kPixelOffset] to __pixels[kTotalPixels - 1]
         inline __attribute__((__always_inline__))
-        const ColorType &getPixel(PixelAddressType numPixel) const {
+        const ColorType &getPixel(PixelAddressType numPixel) const
+        {
             return _get(getAddress(getPoint(numPixel)));
         }
 
         inline __attribute__((__always_inline__))
-        const ColorType &getPixel(PixelCoordinatesType point) const {
+        const ColorType &getPixel(PixelCoordinatesType point) const
+        {
             return _get(point);
         }
 
-#if __GNUG__ < 8
-
-        #warning this code might not be up to date
-
-        template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId == _Tb::kMappingTypeId, int>::type = 0>
-        static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {
-            std::copy(src.begin(), src.begin() + numPixel, dst.begin());
-        }
-
-        template<typename _Ta, typename _Tb, typename std::enable_if<_Ta::kMappingTypeId != _Tb::kMappingTypeId, int>::type = 0>
-        static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {
-            for (typename _Ta::PixelAddressType i = 0; i < numPixel; i++) {
-                // translate the address of each pixel if the mapping is different
-                dst[dst.getAddress(src.getPoint(i))] = src[i];
-            }
-        }
-
-#else
-
         template<typename _Ta, typename _Tb>
-        static void copy(_Ta src, _Tb dst, PixelAddressType numPixel) {
-            if __CONSTEXPR17 (_Ta::kMappingTypeId == _Tb::kMappingTypeId) {
+        static void copy(_Ta src, _Tb dst, PixelAddressType numPixel)
+        {
+            if (src.getMappingTypeId() == dst.getMappingTypeId()) {
                 std::copy(src.begin(), src.begin() + numPixel, dst.begin());
             }
             else {
+                // if the mapping is different translate the address of each pixel
                 for (typename _Ta::PixelAddressType i = 0; i < numPixel; i++) {
-                    // translate the address of each pixel if the mapping is different
-                    dst[dst.getAddress(src.getPoint(i))] = src[i];
+                    dst.pixels(dst.getAddress(src.getPoint(i))) = src.pixels(i);
                 }
             }
         }
 
-#endif
-
         // access to all pixels, starting with first LED
         inline __attribute__((__always_inline__))
-        ColorType &pixels(PixelAddressType address) {
+        ColorType &pixels(PixelAddressType address)
+        {
             // __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
             return __pixels[address];
         }
 
         inline __attribute__((__always_inline__))
-        ColorType pixels(PixelAddressType address) const {
+        ColorType pixels(PixelAddressType address) const
+        {
             // __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
             return __pixels[address];
         }
 
         // access to LEDs without the pixel offset
         inline __attribute__((__always_inline__))
-        ColorType &operator [](PixelAddressType idx) {
+        ColorType &operator [](PixelAddressType idx)
+        {
             return _get(idx);
         }
 
         inline __attribute__((__always_inline__))
-        const ColorType &operator [](PixelAddressType idx) const {
+        const ColorType &operator [](PixelAddressType idx) const
+        {
             return _get(idx);
         }
 
         inline __attribute__((__always_inline__))
-        PixelBufferPtr begin() {
+        PixelBufferPtr begin()
+        {
             return &_pixels[0];
         }
 
         inline __attribute__((__always_inline__))
-        const PixelBufferPtr begin() const {
+        const PixelBufferPtr begin() const
+        {
             return &_pixels[0];
         }
 
         inline __attribute__((__always_inline__))
-        PixelBufferPtr end() {
+        PixelBufferPtr end()
+        {
             return &_pixels[size()];
         }
 
-        constexpr const PixelBufferPtr end() const {
+        constexpr const PixelBufferPtr end() const
+        {
             return &_pixels[size()];
         }
 
         // debug and dummy methods
         //
 
-        void print(const String &text) {
+        void print(const String &text)
+        {
         }
 
-        void print(const char *text) {
+        void print(const char *text)
+        {
         }
 
-        void setPixelState(PixelAddressType, bool)  {
+        void setPixelState(PixelAddressType, bool)
+        {
         }
 
-        bool getPixelState(PixelAddressType) const {
+        bool getPixelState(PixelAddressType) const
+        {
             return true;
         }
 
-        void showAll()  {
+        void showAll()
+        {
         }
 
-        void hideAll() {
+        void hideAll()
+        {
         }
 
-        void dump(Print &output) {
+        void dump(Print &output)
+        {
             output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix brightness=%u\n"), __pixels.data(), _pixels, getOffset(), size(), FastLED.getBrightness());
         }
 
     protected:
         inline __attribute__((__always_inline__))
-        void _set(PixelAddressType idx, ColorType color) {
+        void _set(PixelAddressType idx, ColorType color)
+        {
             if (idx < size()) {
                 _pixels[idx] = color;
             }
         }
 
         inline __attribute__((__always_inline__))
-        ColorType &_get(PixelAddressType idx) {
+        ColorType &_get(PixelAddressType idx)
+        {
             if (idx < size()) {
                 return _pixels[idx];
             }
@@ -785,7 +767,8 @@ namespace Clock {
         }
 
         inline __attribute__((__always_inline__))
-        const ColorType &_get(PixelAddressType idx) const {
+        const ColorType &_get(PixelAddressType idx) const
+        {
             if (idx < size()) {
                 return _pixels[idx];
             }

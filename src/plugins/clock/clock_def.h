@@ -98,6 +98,14 @@
 #    define IOT_LED_MATRIX_PIXEL_OFFSET 0
 #endif
 
+#ifndef IOT_LED_MATRIX_ROW_OFS
+#    define IOT_LED_MATRIX_ROW_OFS 0
+#endif
+
+#ifndef IOT_LED_MATRIX_COL_OFS
+#    define IOT_LED_MATRIX_COL_OFS 0
+#endif
+
 // enable LED matrix mode instead of clock mode
 #if IOT_LED_MATRIX
 #   define IF_IOT_LED_MATRIX(...) __VA_ARGS__

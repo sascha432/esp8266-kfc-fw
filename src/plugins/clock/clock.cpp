@@ -934,11 +934,6 @@ void ClockPlugin::_enable()
         return;
     }
 
-    #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
-        // reset stats when turning LEDs on
-        NeoPixelEx::Context::validate(nullptr).getStats().clear();
-    #endif
-
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         if (_config.standby_led) {
             digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
@@ -955,6 +950,16 @@ void ClockPlugin::_enable()
     _config.enabled = true;
     _isEnabled = true;
     _fps = 0;
+
+    #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+        NeoPixelEx::Context::validate(nullptr).getStats().clear();
+    #endif
+    #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
+        extern uint32_t _frame_cnt;
+        extern uint32_t _retry_cnt;
+        _frame_cnt = 0;
+        _retry_cnt = 0;
+    #endif
 }
 
 void ClockPlugin::_disable()
@@ -968,12 +973,9 @@ void ClockPlugin::_disable()
 
     _config.enabled = false;
     _isEnabled = false;
-    _fps = NAN;
 
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-        _powerLevelCurrentmW = 0;
-        _powerLevelUpdateTimer = 0;
-        _powerLevelAvg = 0;
+        _calcPowerFunction(0, 0);
     #endif
 
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
@@ -988,10 +990,6 @@ void ClockPlugin::_disable()
 
     _removeLoop();
     LOOP_FUNCTION_ADD(standbyLoop);
-
-    #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
-        NeoPixelEx::Context::validate(nullptr).getStats().clear();
-    #endif
 }
 
 #if IOT_ALARM_PLUGIN_ENABLED

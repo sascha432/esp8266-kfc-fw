@@ -277,7 +277,7 @@ void Sensor_INA219::reconfigure(PGM_P source)
     _peakCurrent = NAN;
     _peakPower = NAN;
     _data.clear();
-    _avgData = SensorData(_config.averaging_period * 1000);
+    _avgData = SensorData(_config.averaging_period * 500);
     _mqttData.clear();
 }
 

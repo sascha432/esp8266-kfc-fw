@@ -198,9 +198,9 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
     }
 
-    extern uint8_t _calculate_max_brightness_for_power_mW(uint8_t target_brightness, uint32_t max_power_mW, uint32_t &requested_power_mW);
+    #include <power_mgt.h>
 
-    uint8_t IRAM_ATTR ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
+    uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
     {
         uint32_t requestedPower_mW;
         uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
@@ -209,9 +209,11 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             _calcPowerLevel();
         }
         else {
-            #if IOT_LED_MATRIX_STANDBY_PIN
+            #if IOT_LED_MATRIX_STANDBY_PIN != -1
+                // LEDs can be turned off
                 _powerLevelCurrentmW = 0;
             #else
+                // LEDs are always powered
                 _powerLevelCurrentmW = calculate_idle_power_mW();
             #endif
             _powerLevelAvg = _powerLevelCurrentmW;
@@ -231,20 +233,6 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
         else if (type == WsClient::ClientCallbackType::ON_END) {
             _powerLevelUpdateRate = (kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier);
-        }
-    }
-
-    void IRAM_ATTR ClockPlugin::_calcPowerLevel()
-    {
-        if (_powerLevelUpdateTimer == 0) {
-            _powerLevelUpdateTimer = micros();
-            _powerLevelAvg = _powerLevelCurrentmW;
-        }
-        else {
-            auto ms = micros();
-            auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_since(_powerLevelUpdateTimer, ms));
-            _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
-            _powerLevelUpdateTimer = ms;
         }
     }
 

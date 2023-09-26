@@ -758,6 +758,20 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
         return (P_Watt + diff) * 1000;
     }
 
+    inline void ClockPlugin::_calcPowerLevel()
+    {
+        if (_powerLevelUpdateTimer == 0) {
+            _powerLevelUpdateTimer = micros();
+            _powerLevelAvg = _powerLevelCurrentmW;
+        }
+        else {
+            auto ms = micros();
+            auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_since(_powerLevelUpdateTimer, ms));
+            _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
+            _powerLevelUpdateTimer = ms;
+        }
+    }
+
 #endif
 
 extern ClockPlugin ClockPlugin_plugin;

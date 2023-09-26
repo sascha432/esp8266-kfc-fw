@@ -174,8 +174,7 @@ void ClockPlugin::_setupTimer()
         _timerCounter++;
 
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-            _calcPowerLevel();
-            // __LDBG_printf("current power %.3fW", _powerLevelAvg / 1000.0);
+            // __LDBG_printf("current power %.3fW", _powerLevel.average / 1000.0);
             // update power level sensor of the webui
             if (_timerCounter % IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE == 0) {
                 _updatePowerLevelWebUI();
@@ -840,9 +839,9 @@ void ClockPlugin::readConfig(bool setup)
 
     #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         __LDBG_printf("limit=%u/%u r/g/b/idle=%u/%u/%u/%u", _config.power_limit, _getPowerLevelLimit(_config.power_limit), _config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
-        _powerLevelAvg = NAN;
-        _powerLevelCurrentmW = 0;
-        _powerLevelUpdateTimer = 0;
+        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+            _powerLevel.clear();
+        #endif
 
         #if FASTLED_VERSION >= 3005000
             if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
@@ -850,14 +849,15 @@ void ClockPlugin::readConfig(bool setup)
             }
             else {
                 FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit));
+                FastLED.m_pPowerFunc = calcPowerFunction;
             }
         #else
             if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
                 FastLED.setMaxPowerInMilliWatts(0);
             }
             else {
-                FastLED.setPowerConsumptionInMilliwattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
-                FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit) IF_IOT_CLOCK_DISPLAY_POWER_CONSUMPTION(, &calcPowerFunction));
+                FastLED.setPowerConsumptionInMilliWattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+                FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit), &calcPowerFunction);
             }
         #endif
     #endif
@@ -949,7 +949,10 @@ void ClockPlugin::_enable()
 
     _config.enabled = true;
     _isEnabled = true;
-    _fps = 0;
+
+    #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+        _powerLevel.clear();
+    #endif
 
     #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
         NeoPixelEx::Context::validate(nullptr).getStats().clear();

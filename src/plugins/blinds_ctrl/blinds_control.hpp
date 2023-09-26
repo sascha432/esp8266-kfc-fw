@@ -64,7 +64,6 @@ inline void BlindsControl::_publishState()
         publish(_getTopic(ChannelType::NONE, TopicType::CHANNELS), true, channels.toString());
     }
 
-
     if (WebUISocket::hasAuthenticatedClients()) {
         WebUINS::Events events;
         getValues(events);

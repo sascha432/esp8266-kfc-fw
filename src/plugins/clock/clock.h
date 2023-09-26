@@ -403,9 +403,6 @@ public:
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION || IOT_CLOCK_HAVE_POWER_LIMIT
 
     public:
-        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-            static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
-        #endif
         static void webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
 
     private:
@@ -413,25 +410,33 @@ public:
         void _updatePowerLevelWebUI();
         void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
         void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
-        void _calcPowerLevel();
+        static uint8_t calcPowerFunction(uint8_t scale, uint32_t data);
+        uint8_t _calcPowerLevel(uint8_t brightness);
         float __getPowerLevel(float P_Watt) const;
         uint32_t _getPowerLevelLimit(uint32_t P_Watt) const;
 
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
             uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
-
-            float _getPowerLevel() const {
-                return __getPowerLevel(_powerLevelAvg / 1000.0);
-            }
+            float _getPowerLevel() const;
 
         private:
             static constexpr uint32_t kPowerLevelUpdateRateMultiplier = 500000;
 
-            float _powerLevelAvg{NAN};
-            uint32_t _powerLevelUpdateTimer{0};
-            uint32_t _powerLevelCurrentmW{0};
-            uint32_t _powerLevelUpdateRate{kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier};
+            struct PowerLevelType {
+                float average_mW{0}; // mW
+                uint32_t current_mW{0}; // mW
+                uint32_t timer{0};
+                uint32_t updateRate{kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier};
+
+                void clear() {
+                    average_mW = 0;
+                    current_mW = 0;
+                    timer = 0;
+                }
+            };
+
+            PowerLevelType _powerLevel;
         #endif
 
     #endif
@@ -732,6 +737,18 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
             return getInstance()._calcPowerFunction(scale, data);
         }
 
+        inline float ClockPlugin::_getPowerLevel() const
+        {
+            return __getPowerLevel(_powerLevel.average_mW / 1000.0);
+        }
+
+    #else
+
+        inline uint8_t ClockPlugin::calcPowerFunction(uint8_t scale, uint32_t data)
+        {
+            return calculate_max_brightness_for_power_mW(scale, data);
+        }
+
     #endif
 
     inline void ClockPlugin::webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)
@@ -743,7 +760,7 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
 
     inline float ClockPlugin::__getPowerLevel(float P) const
     {
-        #define PF(f) (P - (P * P * f / 1500.0))
+        #define PF(f) (P - (P * P * (f / 1500.0)))
         return std::max<float>(0, IOT_CLOCK_POWER_CORRECTION_OUTPUT);
         #undef PF
     }
@@ -757,18 +774,13 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
         return (P_Watt + diff) * 1000;
     }
 
-    inline void ClockPlugin::_calcPowerLevel()
+    inline uint8_t ClockPlugin::_calcPowerLevel(uint8_t brightness)
     {
-        if (_powerLevelUpdateTimer == 0) {
-            _powerLevelUpdateTimer = micros();
-            _powerLevelAvg = _powerLevelCurrentmW;
-        }
-        else {
-            auto ms = micros();
-            auto diff = _powerLevelUpdateRate / static_cast<float>(get_time_since(_powerLevelUpdateTimer, ms));
-            _powerLevelAvg = ((_powerLevelAvg * diff) + _powerLevelCurrentmW) / (diff + 1.0);
-            _powerLevelUpdateTimer = ms;
-        }
+        uint32_t timestamp = micros();
+        auto diff = _powerLevel.timer ? _powerLevel.updateRate / static_cast<float>(get_time_since(_powerLevel.timer, timestamp)) : 0.0f;
+        _powerLevel.average_mW = ((_powerLevel.average_mW * diff) + _powerLevel.current_mW) / (diff + 1.0);
+        _powerLevel.timer = timestamp;
+        return brightness;
     }
 
 #endif

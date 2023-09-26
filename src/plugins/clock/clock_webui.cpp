@@ -156,13 +156,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     String ClockPlugin::_getPowerLevelStr()
     {
         PrintString powerLevelStr;
-        auto level = _getPowerLevel();
-        if (!std::isnormal(level)) {
-            powerLevelStr = '0';
-        }
-        else {
-            MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);
-        }
+        MQTT::Json::UnnamedTrimmedFormattedDouble(_getPowerLevel(), F("%.2f")).printTo(powerLevelStr);
         if (_config.power_limit) {
             #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
                 auto limit = FastLED.getPowerLimitScale();
@@ -203,22 +197,15 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
     uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
     {
         if (_isEnabled) {
-            uint32_t requestedPower_mW;
-            uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
-            _powerLevelCurrentmW = (targetBrightness <= newBrightness) ? requestedPower_mW : maxPower_mW;
-            _calcPowerLevel();
-            return newBrightness;
+            return _calcPowerLevel(_calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, _powerLevel.current_mW));
         }
         else {
-            #if IOT_LED_MATRIX_STANDBY_PIN != -1
-                // LEDs can be turned off
-                _powerLevelCurrentmW = 0;
-            #else
+            _powerLevel.clear();
+            #if IOT_LED_MATRIX_STANDBY_PIN == -1
                 // LEDs are always powered
-                _powerLevelCurrentmW = calculate_idle_power_mW();
+                _powerLevel.current_mW = calculate_idle_power_mW();
+                _powerLevel.average_mW = _powerLevel.current_mW;
             #endif
-            _powerLevelAvg = _powerLevelCurrentmW;
-            _powerLevelUpdateTimer = 0;
             return 0;
         }
     }
@@ -230,10 +217,10 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
         // adjust update rate if a client connects to the webui
         if (type == WsClient::ClientCallbackType::ON_START) {
-            _powerLevelUpdateRate = (IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE * kPowerLevelUpdateRateMultiplier);
+            _powerLevel.updateRate = (IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE * kPowerLevelUpdateRateMultiplier);
         }
         else if (type == WsClient::ClientCallbackType::ON_END) {
-            _powerLevelUpdateRate = (kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier);
+            _powerLevel.updateRate = (kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier);
         }
     }
 

@@ -207,9 +207,6 @@ void ClockPlugin::_publishState()
         }
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
             auto level = _getPowerLevel();
-            if (!isnormal(level)) {
-                level = 0;
-            }
             if (_publishedValues.powerLevel != level) {
                 _publishedValues.powerLevel = level;
                 publish(MQTT::Client::formatTopic(F("power")), true, String(level, 2));

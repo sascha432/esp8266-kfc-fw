@@ -78,12 +78,17 @@ namespace KFCConfigurationClasses {
             struct __attribute__packed__ PowerConfigType {
                 using Type = PowerConfigType;
                 static constexpr uint16_t kPowerNumLeds = 256;
-                #define kMultiplyNumLeds(value) static_cast<uint16_t>(value * 256)
-                CREATE_UINT16_BITFIELD_MIN_MAX(red, 16, 0, 0xffff, kMultiplyNumLeds(79.7617), 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(green, 16, 0, 0xffff, kMultiplyNumLeds(79.9648), 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(blue, 16, 0, 0xffff, kMultiplyNumLeds(79.6055), 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(idle, 16, 0, 0xffff, kMultiplyNumLeds(4.0586), 1);
+                static constexpr float kLEDVoltage = 5.0;
+                static constexpr float kLEDCurrentIdle = 0.812;
+                #define kMultiplyNumLeds(value) static_cast<uint16_t>((value) * kPowerNumLeds)
+                #define kmA_perType(value) kMultiplyNumLeds((value) * kLEDVoltage)
+                CREATE_UINT16_BITFIELD_MIN_MAX(red, 16, 0, 0xffff, kmA_perType(16.3 - kLEDCurrentIdle), 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(green, 16, 0, 0xffff, kmA_perType(16.4 - kLEDCurrentIdle), 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(blue, 16, 0, 0xffff, kmA_perType(16.2 - kLEDCurrentIdle), 1);
+                CREATE_UINT16_BITFIELD_MIN_MAX(idle, 16, 0, 0xffff, kmA_perType(kLEDCurrentIdle), 1);
                 PowerConfigType() : red(kDefaultValueFor_red), green(kDefaultValueFor_green), blue(kDefaultValueFor_blue), idle(kDefaultValueFor_idle) {}
+                #undef kMultiplyNumLeds
+                #undef kmA_perType
             };
 
             struct __attribute__packed__ ProtectionConfigType {

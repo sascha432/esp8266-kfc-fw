@@ -432,6 +432,7 @@
             "SNTP",
             "SOFTAP",
             "SOFTAPMODE",
+            "SOFTSTART",
             "SPGM",
             "SSDP",
             "SSDPUUID",

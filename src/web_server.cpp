@@ -837,8 +837,6 @@ void Plugin::end()
             BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
             __LDBG_printf("ArduinoOTA start");
             _AOTAInfo.start();
-            #if IOT_WEATHER_STATION
-            #endif
         });
         ArduinoOTA.onEnd([this]() {
             __LDBG_printf("ArduinoOTA end");

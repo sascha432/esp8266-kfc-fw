@@ -202,11 +202,12 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
     uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
     {
-        uint32_t requestedPower_mW;
-        uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
         if (_isEnabled) {
+            uint32_t requestedPower_mW;
+            uint8_t newBrightness = _calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, requestedPower_mW);
             _powerLevelCurrentmW = (targetBrightness <= newBrightness) ? requestedPower_mW : maxPower_mW;
             _calcPowerLevel();
+            return newBrightness;
         }
         else {
             #if IOT_LED_MATRIX_STANDBY_PIN != -1
@@ -218,8 +219,8 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             #endif
             _powerLevelAvg = _powerLevelCurrentmW;
             _powerLevelUpdateTimer = 0;
+            return 0;
         }
-        return newBrightness;
     }
 
     void ClockPlugin::_webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id)

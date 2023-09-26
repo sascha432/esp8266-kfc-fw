@@ -411,9 +411,6 @@ public:
     private:
         String _getPowerLevelStr();
         void _updatePowerLevelWebUI();
-        #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-            uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
-        #endif
         void _powerLevelCallback(uint32_t total_mW, uint32_t requested_mW, uint32_t max_mW, uint8_t target_brightness, uint8_t recommended_brightness);
         void _webSocketCallback(WsClient::ClientCallbackType type, WsClient *client, AsyncWebSocket *server, WsClient::ClientCallbackId id);
         void _calcPowerLevel();
@@ -422,6 +419,8 @@ public:
 
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
+            uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
+
             float _getPowerLevel() const {
                 return __getPowerLevel(_powerLevelAvg / 1000.0);
             }
@@ -429,7 +428,7 @@ public:
         private:
             static constexpr uint32_t kPowerLevelUpdateRateMultiplier = 500000;
 
-            float _powerLevelAvg;
+            float _powerLevelAvg{NAN};
             uint32_t _powerLevelUpdateTimer{0};
             uint32_t _powerLevelCurrentmW{0};
             uint32_t _powerLevelUpdateRate{kUpdateMQTTInterval * kPowerLevelUpdateRateMultiplier};

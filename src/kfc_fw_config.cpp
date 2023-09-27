@@ -1665,9 +1665,10 @@ bool KFCFWConfiguration::setRTC(uint32_t unixtime)
             }
         }
         rtc.adjust(DateTime(unixtime));
-        return true;
+    #else
+        RTCMemoryManager::setTime(unixtime, RTCMemoryManager::SyncStatus::YES);
     #endif
-    return false;
+    return true;
 }
 
 void KFCFWConfiguration::setupRTC()
@@ -1755,6 +1756,15 @@ KFCFWConfiguration::RtcStatus KFCFWConfiguration::getRTCStatus()
         data.lostPower = RTCMemoryManager::getSyncStatus() != RTCMemoryManager::SyncStatus::NO;
     #endif
     return data;
+}
+
+const __FlashStringHelper *KFCFWConfiguration::getRTCStatusStr()
+{
+    #if RTC_SUPPORT
+        return RTCMemoryManager::RtcTime::getStatus(getRTCStatus().lostPower ? RTCMemoryManager::SyncStatus::NTP_UPDATE : RTCMemoryManager::SyncStatus::YES);
+    #else
+        return RTCMemoryManager::RtcTime::getStatus(RTCMemoryManager::getSyncStatus())
+    #endif
 }
 
 uint32_t KFCFWConfiguration::getRTC()

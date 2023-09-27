@@ -218,6 +218,7 @@ public:
     float getRTCTemperature();
     bool rtcLostPower();
     RtcStatus getRTCStatus();
+    const __FlashStringHelper *getRTCStatusStr();
     void printRTCStatus(Print &output, bool plain = true);
 
     // using StationConfig = KFCConfigurationClasses::Network::WiFi::StationConfig;

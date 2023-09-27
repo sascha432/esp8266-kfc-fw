@@ -190,7 +190,7 @@ void NTPPlugin::getStatus(Print &output)
             }
         }
 
-        output.printf_P(PSTR(HTML_S(br) "RTC status: %s" HTML_S(br) "NTP Status: %s"), RTCMemoryManager::RtcTime::getStatus(RTCMemoryManager::getSyncStatus()), getCallbackState());
+        output.printf_P(PSTR(HTML_S(br) "RTC status: %s" HTML_S(br) "NTP Status: %s"), (PGM_P)config.getRTCStatusStr(), getCallbackState());
         if (_lastUpdateSeconds) {
             output.print(F(", last update "));
             auto time = (millis64() / 1000) - _lastUpdateSeconds;
@@ -256,17 +256,12 @@ void NTPPlugin::_updateNtpCallback()
     PrintString timeStr;
     timeStr.strftime(FSPGM(strftime_date_time_zone, "%FT%T %Z"), now);
 
-    if (isTimeValid(now + 60)) { // allow to change time back up to 60 seconds
-        setLastKnownTimeOfDay(now);
-        RTCMemoryManager::setTime(time(nullptr), RTCMemoryManager::SyncStatus::YES);
-        #if NTP_LOG_TIME_UPDATE
-            Logger_notice(F("NTP time: %s"), timeStr.c_str());
-        #endif
-    }
-    else {
-        __LDBG_printf("invalid SNTP time=" TIME_T_FMT "+60 lk_time=" TIME_T_FMT, now, getLastKnownTimeOfDay());
-        Logger_error(F("NTP time is in the past: %s"), timeStr.c_str());
-    }
+    setLastKnownTimeOfDay(now);
+    config.setRTC(now);
+
+    #if NTP_LOG_TIME_UPDATE
+        Logger_notice(F("NTP time: %s"), timeStr.c_str());
+    #endif
 
     #if NTP_HAVE_CALLBACKS
         for(const auto &callback: _callbacks) {

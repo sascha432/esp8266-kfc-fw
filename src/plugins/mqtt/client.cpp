@@ -267,13 +267,13 @@ namespace MQTT {
     void Client::_registerComponent(ComponentPtr component)
     {
         if (!component) {
-            __DBG_assert_printf(false, "registerComponent(nullptr)");
+            __DBG_assertf(false, "registerComponent(nullptr)");
             return;
         }
         __LDBG_printf("component=%p type=%s", component, component->getName());
         MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
         if (isComponentRegistered(component)) {
-                __DBG_assert_printf(false, "component=%p type=%s already registered", component, component->getName());
+                __DBG_assertf(false, "component=%p type=%s already registered", component, component->getName());
                 return;
             }
             // turn off interrupts to avoid issues with running auto discovery
@@ -285,7 +285,7 @@ namespace MQTT {
     bool Client::_unregisterComponent(ComponentPtr component)
     {
         if (!component) {
-            __DBG_assert_printf(false, "unregisterComponent(nullptr)");
+            __DBG_assertf(false, "unregisterComponent(nullptr)");
             return false;
         }
         MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
@@ -459,7 +459,7 @@ namespace MQTT {
             }
             topic.vprintf_P(RFPSTR(format), arg);
         }
-        __LDBG_assert_printf(topic.indexOf(F("//")) == -1, "topic '%s' contains //", topic.c_str());
+        __LDBG_assertf(topic.indexOf(F("//")) == -1, "topic '%s' contains //", topic.c_str());
         // __LDBG_printf("topic=%s", topic.c_str());
         return topic;
     }

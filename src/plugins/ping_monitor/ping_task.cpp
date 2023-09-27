@@ -84,7 +84,7 @@ namespace PingMonitor {
 
     void Task::_begin()
     {
-        __LDBG_assert_printf(_currentServer < _pingHosts.size(), "server %u size %u", _currentServer, _pingHosts.size());
+        __LDBG_assertf(_currentServer < _pingHosts.size(), "server %u size %u", _currentServer, _pingHosts.size());
         String host = _pingHosts[_currentServer].getHostname();
 
         host.replace(FSPGM(_var_gateway), WiFi.isConnected() ? WiFi.gatewayIP().toString() : emptyString);

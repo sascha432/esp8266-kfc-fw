@@ -350,7 +350,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     #endif
     else if (key == F("RTC_STATUS")) {
-        config.printRTCStatus(output, false);
+        config.printRTCStatus(output, config.getRTCStatus(), false);
     }
     else if (key == F("SAFEMODE")) {
         if (config.isSafeMode()) {
@@ -458,7 +458,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
         else {
             __DBG_printf("return assert failed check key='%s'", key.c_str());
-            __DBG_assert_printf(F("key not found") == nullptr, "key not found '%s'", key.c_str());
+            __DBG_assertf(F("key not found") == nullptr, "key not found '%s'", key.c_str());
         }
     }
 }

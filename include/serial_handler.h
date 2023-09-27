@@ -249,12 +249,11 @@ namespace SerialHandler {
 
     inline Client &Wrapper::addClient(const Callback &cb, EventType events)
     {
-        Client *client;
         MUTEX_LOCK_BLOCK(_lock) {
             _clients.emplace_back(new Client(cb, events));
-            client = _clients.back().get();
+            return *_clients.back().get();
         }
-        return *client;
+        __builtin_unreachable();
     }
 
     inline int Wrapper::available()
@@ -285,34 +284,6 @@ namespace SerialHandler {
     inline Wrapper::Clients &Wrapper::getClients()
     {
         return _clients;
-    }
-
-    inline void Wrapper::_loop()
-    {
-        #if ESP32
-            bool deleteWdt = false;
-            esp_err_t err = esp_task_wdt_status(NULL);
-            if (err == ESP_ERR_NOT_FOUND) {
-                if ((err = esp_task_wdt_add(NULL)) != ESP_OK) {
-                    if (err != ESP_ERR_INVALID_ARG) {
-                        __DBG_printf_E("esp_task_wdt_add failed err=%x", err);
-                    }
-                }
-                else {
-                    deleteWdt = true;
-                }
-            }
-        #endif
-        MUTEX_LOCK_BLOCK(_lock) {
-            _pollSerial();
-            _transmitClientsRx();
-            _transmitClientsTx();
-        }
-        #if ESP32
-            if (deleteWdt) {
-                esp_task_wdt_delete(NULL);
-            }
-        #endif
     }
 
 };

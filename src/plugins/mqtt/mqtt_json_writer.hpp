@@ -867,7 +867,7 @@ namespace MQTT {
             void _setLast(char ch) {
                 if (_output.length() > 1) {
                     #if MQTT_JSON_WRITER_DEBUG
-                        __DBG_assert_printf(_output.endsWith(']') || _output.endsWith('}') || _output.endsWith(','), "expected }, ] or ',': ...'%s'", _output.c_str() + std::max<int>(0, _output.length() - 10));
+                        __DBG_assertf(_output.endsWith(']') || _output.endsWith('}') || _output.endsWith(','), "expected }, ] or ',': ...'%s'", _output.c_str() + std::max<int>(0, _output.length() - 10));
                     #endif
                     _output.setCharAt(_output.length() - 1, ch);
                 }
@@ -875,9 +875,9 @@ namespace MQTT {
                     // add closing brace
                     _output.print(ch);
                     #if MQTT_JSON_WRITER_DEBUG
-                        __DBG_assert_printf(ch != '[' || (ch == '[' && _output.charAt(0) == '['), "expected [: '%.10s'", _output.c_str());
-                        __DBG_assert_printf(ch != '{' || (ch == '{' && _output.charAt(0) == '{'), "expected {: '%.10s'", _output.c_str());
-                        __DBG_assert_printf(_output.startsWith('{') || _output.startsWith('['), "expected { or [: '%.10s'", _output.c_str());
+                        __DBG_assertf(ch != '[' || (ch == '[' && _output.charAt(0) == '['), "expected [: '%.10s'", _output.c_str());
+                        __DBG_assertf(ch != '{' || (ch == '{' && _output.charAt(0) == '{'), "expected {: '%.10s'", _output.c_str());
+                        __DBG_assertf(_output.startsWith('{') || _output.startsWith('['), "expected { or [: '%.10s'", _output.c_str());
                     #endif
                 }
             }

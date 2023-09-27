@@ -1691,6 +1691,9 @@ bool KFCFWConfiguration::setRTC(uint32_t unixtime)
         initTwoWire();
         if (!rtc.begin()) {
             __DBG_RTC_printf("rtc.begin() failed #1");
+            if (!can_yield()) {
+                return false;
+            }
             delay(5);
             if (!rtc.begin()) {
                 __DBG_RTC_printf("rtc.begin() failed #2");
@@ -1711,6 +1714,9 @@ KFCFWConfiguration::RtcStatus KFCFWConfiguration::getRTCStatus()
         initTwoWire();
         if (!rtc.begin()) {
             __DBG_RTC_printf("rtc.begin() failed #1");
+            if (!can_yield()) {
+                return status;
+            }
             delay(5);
             if (!rtc.begin()) {
                 __DBG_RTC_printf("rtc.begin() failed #2");
@@ -1733,15 +1739,14 @@ KFCFWConfiguration::RtcStatus KFCFWConfiguration::getRTCStatus()
     return status;
 }
 
-void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
+void KFCFWConfiguration::printRTCStatus(Print &output, const RtcStatus &status, bool plain)
 {
-    auto status = getRTCStatus();
     __DBG_RTC_printf("temp=%.3f lost_power=%u", status.temperature, status.lostPower);
     PGM_P nl = plain ? PSTR(", ") : PSTR(HTML_S(br));
+    output.print(F("Timestamp: "));
     {
         PrintString nowStr;
         nowStr.strftime(FSPGM(strftime_date_time_zone), status.time);
-        output.print(F("Timestamp: "));
         output.print(nowStr);
     }
     if (!isnan(status.temperature)) {

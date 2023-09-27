@@ -105,7 +105,7 @@ namespace RemoteControl {
                     (type == EventType::RELEASED || type == EventType::HOLD_RELEASE),
                     BitsToStr<kButtonPins.size(), true>(_pressed).c_str()
                 );
-                __LDBG_assert_printf(json.length() != 0, "json payload empty, type %u, eventNum %u", type, eventNum);
+                __LDBG_assertf(json.length() != 0, "json payload empty, type %u, eventNum %u", type, eventNum);
 
                 __LDBG_printf("ActionUDP json=%s", json.c_str());
                 auto action = new ActionUDP(0, std::move(json), Plugins::RemoteControl::getUdpHost(), IPAddress(), _getConfig().udp_port);

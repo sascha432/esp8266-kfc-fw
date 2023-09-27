@@ -147,7 +147,7 @@ bool MDNSPlugin::isNetBIOSEnabled()
 
 void MDNSPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    __DBG_assert_printf(mode != SetupModeType::AUTO_WAKE_UP, "not allowed SetupModeType::AUTO_WAKE_UP");;
+    __DBG_assertf(mode != SetupModeType::AUTO_WAKE_UP, "not allowed SetupModeType::AUTO_WAKE_UP");;
     if (isEnabled()) {
         begin();
     }

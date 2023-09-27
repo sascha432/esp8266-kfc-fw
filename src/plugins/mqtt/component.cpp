@@ -53,7 +53,7 @@ ComponentIterator::pointer ComponentIterator::get(FormatType format) const
 
 ComponentIterator &ComponentIterator::operator++()
 {
-    __DBG_assert_printf(_iterator.isValid(), "iterator invalid component=%p index=%u size=%u components=%p (%u)", _iterator._component, _index, _size, _iterator._components, _iterator._components ? _iterator._components->size() : 0);
+    __DBG_assertf(_iterator.isValid(), "iterator invalid component=%p index=%u size=%u components=%p (%u)", _iterator._component, _index, _size, _iterator._components, _iterator._components ? _iterator._components->size() : 0);
     if (_iterator.isValid()) {
         if (_iterator.isEnd()) {
             __DBG_panic("cannot increment beyond end()");
@@ -81,7 +81,7 @@ ComponentIterator &ComponentIterator::operator++()
 
 ComponentIterator &ComponentIterator::operator--()
 {
-    __DBG_assert_printf(_iterator.isValid(), "iterator invalid component=%p index=%u size=%u components=%p (%u)", _iterator._component, _index, _size, _iterator._components, _iterator._components ? _iterator._components->size() : 0);
+    __DBG_assertf(_iterator.isValid(), "iterator invalid component=%p index=%u size=%u components=%p (%u)", _iterator._component, _index, _size, _iterator._components, _iterator._components ? _iterator._components->size() : 0);
     if (_iterator.isValid()) {
         if (_index == 0) {
             if (_iterator.isBegin()) {

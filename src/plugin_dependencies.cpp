@@ -20,9 +20,9 @@ using namespace PluginComponents;
 void Dependency::invoke(const PluginComponent *plugin) const
 {
     __LDBG_printf("invoking callback name=%s plugin=%p source=%s", _name, plugin, _source->getName_P());
-    __LDBG_assert_printf(plugin, "plugin nullptr");
-    __LDBG_assert_printf(!!_callback, "invalid callback");
-    __LDBG_assert_printf(std::find(PluginComponents::RegisterEx::getPlugins().begin(), PluginComponents::RegisterEx::getPlugins().end(), plugin) != PluginComponents::RegisterEx::getPlugins().end(), "plugin %p does not exists", plugin->getName_P());
+    __LDBG_assertf(plugin, "plugin nullptr");
+    __LDBG_assertf(!!_callback, "invalid callback");
+    __LDBG_assertf(std::find(PluginComponents::RegisterEx::getPlugins().begin(), PluginComponents::RegisterEx::getPlugins().end(), plugin) != PluginComponents::RegisterEx::getPlugins().end(), "plugin %p does not exists", plugin->getName_P());
     _callback(plugin, DependencyResponseType::SUCCESS);
 }
 

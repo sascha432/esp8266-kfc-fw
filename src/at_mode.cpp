@@ -555,7 +555,7 @@ public:
     DisplayTimer() :
         _type(DisplayType::HEAP)
     {
-        __DBG_assert_printf(displayTimer == nullptr, "displayTimer not null");
+        __DBG_assertf(displayTimer == nullptr, "displayTimer not null");
         stdex::reset(displayTimer, this);
     }
 
@@ -1959,31 +1959,28 @@ void at_mode_serial_handle_event(String &commandString)
             // +neopx=16,3,25,0,0
             // +neopx=,,25,0,0
             if (args.requireArgs(3, 5)) {
-                auto pin = static_cast<uint8_t>(args.toInt(0, __LED_BUILTIN_WS2812_PIN));
-                auto num = static_cast<uint16_t>(args.toInt(1, __LED_BUILTIN_WS2812_NUM_LEDS));
-                auto red = static_cast<uint8_t>(args.toInt(2));
-                auto green = static_cast<uint8_t>(args.toInt(3, red));
-                auto blue = static_cast<uint8_t>(args.toInt(4, red));
-                if (num == 0) {
-                    args.print(F("pin=%u num=%u - invalid number"), pin, num);
+                auto pin = args.toUint8(0, __LED_BUILTIN_WS2812_PIN);
+                auto num = args.toIntMinMax<uint16_t>(1, 1, __LED_BUILTIN_WS2812_NUM_LEDS, __LED_BUILTIN_WS2812_NUM_LEDS);
+                auto red = args.toUint8(2);
+                auto green = args.toUint8(3, red);
+                auto blue = args.toUint8(4, red);
+                uint32_t color = (red << 16) | (green << 8) | blue;
+                args.print(F("pin=%u num=%u color=#%06x"), pin, num, color);
+                if (ledTimer) {
+                    delete ledTimer;
+                    ledTimer = nullptr;
                 }
-                else {
-                    uint32_t color = (red << 16) | (green << 8) | blue;
-                    args.print(F("pin=%u num=%u color=#%06x"), pin, num, color);
-                    if (ledTimer) {
-                        delete ledTimer;
-                        ledTimer = nullptr;
-                    }
-                    digitalWrite(pin, LOW);
-                    pinMode(pin, OUTPUT);
-                    #if HAVE_FASTLED
-                        fill_solid(WS2812LEDTimer::_pixels, sizeof(WS2812LEDTimer::_pixels) / 3, CRGB(color));
-                        FastLED.show();
-                    #else
-                        WS2812LEDTimer::_pixels.fill(color);
-                        WS2812LEDTimer::_pixels.show();
-                    #endif
-                }
+                digitalWrite(pin, LOW);
+                pinMode(pin, OUTPUT);
+                #if HAVE_FASTLED
+                    fill_solid(WS2812LEDTimer::_pixels, __LED_BUILTIN_WS2812_NUM_LEDS, CRGB(0));
+                    fill_solid(WS2812LEDTimer::_pixels, num, CRGB(color));
+                    FastLED.show();
+                #else
+                    WS2812LEDTimer::_pixels.fill(0);
+                    WS2812LEDTimer::_pixels.fill(num, color);
+                    WS2812LEDTimer::_pixels.show();
+                #endif
             }
         }
     #endif
@@ -1992,8 +1989,8 @@ void at_mode_serial_handle_event(String &commandString)
             if (args.requireArgs(1, 4)) {
                 BlinkLEDTimer::BlinkType type = BlinkLEDTimer::BlinkType::INVALID;
                 String mode = args.toString(0);
-                auto delay = static_cast<uint16_t>(args.toInt(2, 50));
-                auto pin = static_cast<uint8_t>(args.toInt(3, __LED_BUILTIN));
+                auto delay = args.toUint16(2, 50);
+                auto pin = args.toUint8(3, __LED_BUILTIN);
                 if (mode.startsWith(F("pat"))) {
                     #if BUILTIN_LED_NEOPIXEL
                         if (pin == BlinkLEDTimer::NEOPIXEL_PIN) {
@@ -2262,14 +2259,13 @@ void at_mode_serial_handle_event(String &commandString)
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
             if (args.empty()) {
                 auto status = config.getRTCStatus();
-                args.print(F("Time=" TIME_T_FMT ", rtc=%u, lostPower=%u, status=%s"), time(nullptr), status.lostPower, (PGM_P)status.toString());
-                output.print(F("+RTC: "));
-                config.printRTCStatus(output);
+                args.print(F("Time=" TIME_T_FMT ", rtc=" TIME_T_FMT ", lostPower=%u, status=%s"), time(nullptr), status.time, status.lostPower, status.toString());
+                config.printRTCStatus(output, status);
                 output.println();
             }
             else {
                 bool res = config.setRTC(time(nullptr));
-                args.print(F("Set=%u, rtc=%u"), res, config.getRTCStatus().time);
+                args.print(F("Set=%u, rtc=" TIME_T_FMT), res, config.getRTCStatus().time);
             }
         }
     #endif
@@ -2319,7 +2315,7 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LS))) {
         auto dir = ListDir(args.toString(0), !args.isTrue(2, true), args.isFalse(1, true));
         while(dir.next()) {
-            output.print(F("+LS: "));
+            args.print();
             if (dir.isFile()) {
                 output.printf_P(PSTR("%8.8s "), formatBytes(dir.fileSize()).c_str());
             }
@@ -2332,7 +2328,7 @@ void at_mode_serial_handle_event(String &commandString)
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(LSR))) {
         auto dir = KFCFS_openDir(args.toString(0));
         while(dir.next()) {
-            output.print(F("+LS: "));
+            args.print();
             if (dir.isDirectory()) {
                 output.print(F("[...]    "));
             }
@@ -2789,7 +2785,7 @@ void at_mode_serial_handle_event(String &commandString)
                 args.print(F("RTC time=%u status=%s"), rtc.getTime(), rtc.getStatus());
                 args.print(F("RTC memory ids:"));
                 for(uint8_t i = static_cast<uint8_t>(RTCMemoryManager::RTCMemoryId::NONE) + 1; i < static_cast<uint8_t>(RTCMemoryManager::RTCMemoryId::MAX); i++) {
-                    stream.printf_P(PSTR("0x%02x      %s\n"), i, PluginComponent::getMemoryIdName(i));
+                    stream.printf_P(PSTR("0x%02x      %s (%u)\n"), i, PluginComponent::getMemoryIdName(i), RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId(i), nullptr, 0xff));
                 }
             }
             else if (args.equalsIgnoreCase(0, F("remove")) || args.equalsIgnoreCase(0, F("del")) || args.equalsIgnoreCase(0, F("delete")) || args.equalsIgnoreCase(0, F("rem"))) {
@@ -2797,61 +2793,69 @@ void at_mode_serial_handle_event(String &commandString)
                     uint32_t tmp;
                     if (RTCMemoryManager::read(memoryId, &tmp, sizeof(tmp))) {
                         RTCMemoryManager::remove(memoryId);
-                        args.print(F("Data for id 0x%02x removed"), memoryId);
+                        args.print(F("0x%02x: removed"), memoryId);
                     }
                     else {
-                        args.print(F("No data for id 0x%02x available"), memoryId);
+                        args.print(F("0x%02x: no data"), memoryId);
                     }
                 }
             }
             else if (args.equalsIgnoreCase(0, F("clr")) || args.equalsIgnoreCase(0, F("clear"))) {
-                if (memoryId != RTCMemoryManager::RTCMemoryId::NONE) {
-                    RTCMemoryManager::remove(memoryId);
-                    args.print(F("Data for id 0x%02x removed"), memoryId);
-                }
-                else {
-                    RTCMemoryManager::clear();
-                    args.print(F("RTC Memory cleared"));
-                }
+                RTCMemoryManager::clear();
+                args.print(F("cleared"));
             }
             else if (args.equalsIgnoreCase(0, F("set")) || args.equalsIgnoreCase(0, F("write"))) {
                 uint32_t data[32];
-                int count = 0;
+                uint8_t lengthInBytes = 0;
                 for (uint8_t i = 2; i < 32 + 2 && i < args.size(); i++) {
-                    data[count++] = args.toNumber(i, ~0U);
+                    data[lengthInBytes++] = args.toNumber(i, ~0U);
                 }
-                auto lengthInBytes = sizeof(data[0]) * count;
-                RTCMemoryManager::write(memoryId, &data, lengthInBytes);
-                stream.printf_P(PSTR("id=0x%02x length=%u dwords=%u cmd="), memoryId, lengthInBytes, (lengthInBytes + 3) / 4);
-                if (count == 0) {
-                    stream.printf_P(PSTR("+RTCM=remove,0x%02x\n"), memoryId);
+                if (lengthInBytes == 0) {
+                    args.print(F("0x%02x: no data"), memoryId);
                 }
                 else {
-                    stream.printf_P(PSTR("+RTCM=set,0x%02x,"), memoryId);
-                    for (uint8_t i = 0; i < count; i++) {
-                        stream.printf_P(PSTR("0x%08x%c"), data[i], i == count - 1 ? '\n' : ',');
+                    if (RTCMemoryManager::write(memoryId, &data, lengthInBytes)) {
+                        args.print(F("0x%02x: written %u bytes"), memoryId, lengthInBytes);
+                    }
+                    else {
+                        args.print(F("0x%02x: write error"), memoryId);
                     }
                 }
             }
             else if (args.equalsIgnoreCase(0, F("get")) || args.equalsIgnoreCase(0, F("read"))) {
                 uint32_t data[32];
                 auto lengthInBytes = RTCMemoryManager::read(memoryId, &data, sizeof(data));
-                auto count = (lengthInBytes + 3) / 4;
-                stream.printf_P(PSTR("id=0x%02x length=%u dwords=%u cmd="), memoryId, lengthInBytes, (lengthInBytes + 3) / 4);
-                if (count == 0) {
+                stream.printf_P(PSTR("0x%02x: length=%u cmd="), memoryId, lengthInBytes);
+                if (lengthInBytes == 0) {
                     args.print(F("remove,0x%02x"), memoryId);
                 }
                 else {
                     stream.printf_P(PSTR("+RTCM=set,0x%02x,"), memoryId);
-                    for (uint8_t i = 0; i < count; i++) {
-                        stream.printf_P(PSTR("0x%08x%c"), data[i], i == count - 1 ? '\n' : ',');
+                    for (uint8_t i = 0; i < lengthInBytes; i++) {
+                        stream.printf_P(PSTR("0x%02x%c"), data[i], i == lengthInBytes - 1 ? '\n' : ',');
                     }
                 }
             }
+            else if (args.equalsIgnoreCase(0, F("dump"))) {
+                #if DEBUG
+                    auto result = RTCMemoryManager::dump(args.getStream(), memoryId);
+                    if (result == -1) {
+                        args.print(F("0x%02x: dump error"), memoryId);
+                    }
+                    else if (result == 0) {
+                        if (memoryId != RTCMemoryManager::RTCMemoryId::NONE) {
+                            args.print(F("0x%02x: no data"), memoryId);
+                        }
+                        else {
+                            args.print(F("no data"));
+                        }
+                    }
+                #else
+                    args.print(F("dump is not supported"))
+                #endif
+            }
             else {
-                if (!RTCMemoryManager::dump(args.getStream(), memoryId) && memoryId != RTCMemoryManager::RTCMemoryId::NONE) {
-                    args.print(F("No data for id 0x%02x available"), memoryId);
-                }
+                args.invalidArgument(0, F("list|set|remove|clear|dump|quickconnect"));
             }
         }
     }

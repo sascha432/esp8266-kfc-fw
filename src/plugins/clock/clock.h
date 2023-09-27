@@ -1064,11 +1064,11 @@ inline void ClockPlugin::_updateBrightnessSettings()
         __LDBG_printf("saved=%u set=%u", _savedBrightness, _targetBrightness);
         _savedBrightness = _targetBrightness;
         _config.setBrightness(_targetBrightness);
-        // __LDBG_assert_printf(_config.enabled, "_config.enabled not true");
+        // __LDBG_assertf(_config.enabled, "_config.enabled not true");
         // _config.enabled = true;
     }
     else {
-        // __LDBG_assert_printf(!_config.enabled, "_config.enabled not false");
+        // __LDBG_assertf(!_config.enabled, "_config.enabled not false");
         // _config.enabled = false;
     }
 }

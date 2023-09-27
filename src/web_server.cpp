@@ -942,7 +942,7 @@ void Plugin::begin(bool restart)
         return;
     }
 
-    __DBG_assert_printf(_server.get() == nullptr, "SERVER ALREADY RUNNING PTR=%p", _server.get());
+    __DBG_assertf(_server.get() == nullptr, "SERVER ALREADY RUNNING PTR=%p", _server.get());
 
     auto cfg = System::WebServer::getConfig();
     _server.reset(new AsyncWebServerEx(cfg.getPort()));
@@ -1488,7 +1488,7 @@ void Plugin::getStatus(Print &output)
 bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri)
 {
     __DBG_validatePointerCheck(handler, VP_HSU);
-    __LDBG_assert_printf(!!getInstance()._server, "_server is nullptr");
+    __LDBG_assertf(!!getInstance()._server, "_server is nullptr");
     if (!getInstance()._server) {
         return false;
     }
@@ -1500,7 +1500,7 @@ bool Plugin::addHandler(AsyncWebHandler *handler, const __FlashStringHelper *uri
 AsyncCallbackWebHandler *Plugin::addHandler(const String &uri, ArRequestHandlerFunction onRequest)
 {
     __DBG_validatePointerCheck(uri, VP_HS);
-    __LDBG_assert_printf(!!getInstance()._server, "_server is nullptr");
+    __LDBG_assertf(!!getInstance()._server, "_server is nullptr");
     if (!getInstance()._server) {
         return nullptr;
     }

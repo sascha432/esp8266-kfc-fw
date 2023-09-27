@@ -336,7 +336,7 @@ namespace MQTT {
 
         AutoDiscovery::EntityPtr _getAutoDiscovery(FormatType format, uint8_t num) {
             auto discovery = getAutoDiscovery(format, num);
-            __DBG_assert_printf(discovery != nullptr, "discovery=nullptr");
+            __DBG_assertf(discovery != nullptr, "discovery=nullptr");
             if (discovery) {
                 discovery->finalize();
             }

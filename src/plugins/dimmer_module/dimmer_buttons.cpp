@@ -33,7 +33,7 @@ void Buttons::begin()
 
     for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS * 2; i++) {
         auto pinNum = _config._base.pin(i);
-        __LDBG_assert_printf(pinNum != 0xff, "pinNum=0x%02x channel=%u", pinNum, i);
+        __LDBG_assertf(pinNum != 0xff, "pinNum=0x%02x channel=%u", pinNum, i);
         if (pinNum != 0xff) {
             if (i % 2 == 0) {
                 group.reset(_config._base.single_click_time); // create new group for each channel

@@ -67,7 +67,7 @@ MQTT::PacketQueue MQTT::Client::subscribeWithId(ComponentPtr component, const St
 {
     MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
         if (!isConnected() || !topic.length()) {
-            __DBG_assert_printf(topic.length() != 0, "topic length is 0");
+            __DBG_assertf(topic.length() != 0, "topic length is 0");
             return PacketQueue();
         }
         __LDBG_printf("component=%p topic=%s qos=%d conn=%s", component, topic.c_str(), qos, _connection());
@@ -84,7 +84,7 @@ MQTT::PacketQueue MQTT::Client::unsubscribeWithId(ComponentPtr component, const 
 {
     MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
         if (!isConnected() || !topic.length()) {
-            __DBG_assert_printf(topic.length() != 0, "topic length is 0");
+            __DBG_assertf(topic.length() != 0, "topic length is 0");
             return PacketQueue();
         }
         __LDBG_printf("component=%p topic=%s in_use=%d conn=%s", component, topic.c_str(), _topicInUse(component, topic), _connection());
@@ -106,7 +106,7 @@ MQTT::PacketQueue MQTT::Client::publishWithId(ComponentPtr component, const Stri
 {
     MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
         if (!isConnected() || !topic.length()) {
-            __DBG_assert_printf(topic.length() != 0, "topic length is 0 payload=%s", printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+            __DBG_assertf(topic.length() != 0, "topic length is 0 payload=%s", printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
             return PacketQueue();
         }
         __LDBG_printf("topic=%s qos=%d retain=%d payload=%s conn=%s", topic.c_str(), qos, retain, printable_string(payload.c_str(), payload.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), _connection());

@@ -662,14 +662,14 @@ namespace Clock {
         inline __attribute__((__always_inline__))
         ColorType &pixels(PixelAddressType address)
         {
-            // __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
+            // __DBG_assertf(address >= 0 && address < size(), "address out of bounds: %d", address);
             return __pixels[address];
         }
 
         inline __attribute__((__always_inline__))
         ColorType pixels(PixelAddressType address) const
         {
-            // __DBG_assert_printf(address >= 0 && address < size(), "address out of bounds: %d", address);
+            // __DBG_assertf(address >= 0 && address < size(), "address out of bounds: %d", address);
             return __pixels[address];
         }
 

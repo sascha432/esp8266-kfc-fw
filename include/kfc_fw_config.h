@@ -221,7 +221,7 @@ public:
     static void setupRTC();
     static bool setRTC(uint32_t unixtime);
     RtcStatus getRTCStatus();
-    void printRTCStatus(Print &output, bool plain = true);
+    void printRTCStatus(Print &output, const RtcStatus &status, bool plain = true);
 
     // using StationConfig = KFCConfigurationClasses::Network::WiFi::StationConfig;
     // using StationVector = KFCConfigurationClasses::Network::WiFi::StationVector;

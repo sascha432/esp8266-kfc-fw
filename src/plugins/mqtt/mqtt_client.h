@@ -918,7 +918,7 @@ public:
     uint16_t Component::subscribe(const String& topic, QosType qos)
     {
         if (!isConnected()) {
-            __DBG_assert_printf(isConnected() == true, "isConnected() == false: subscribe(%s) client=%p", __S(topic), getClient());
+            __DBG_assertf(isConnected() == true, "isConnected() == false: subscribe(%s) client=%p", __S(topic), getClient());
             return 0;
         }
         return client().subscribe(this, topic, qos);
@@ -928,7 +928,7 @@ public:
     uint16_t Component::unsubscribe(const String& topic)
     {
         if (!isConnected()) {
-            __DBG_assert_printf(isConnected() == true, "isConnected() == false: unsubscribe(%s) client=%p", __S(topic), getClient());
+            __DBG_assertf(isConnected() == true, "isConnected() == false: unsubscribe(%s) client=%p", __S(topic), getClient());
             return 0;
         }
         return client().unsubscribe(this, topic);
@@ -938,7 +938,7 @@ public:
     uint16_t Component::publish(const String& topic, bool retain, const String& payload, QosType qos)
     {
         if (!isConnected()) {
-            __DBG_assert_printf(isConnected() == true, "isConnected() == false: publish(%s) client=%p", __S(topic), getClient());
+            __DBG_assertf(isConnected() == true, "isConnected() == false: publish(%s) client=%p", __S(topic), getClient());
             return 0;
         }
         return client().publish(this, topic, retain, payload, qos);

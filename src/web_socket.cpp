@@ -276,7 +276,7 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
     WsClient::foreach(client->server(), nullptr, [&authenticatedClients](AsyncWebSocketClient *) {
         authenticatedClients++;
     });
-    __DBG_assert_printf(*reinterpret_cast<WsClientAsyncWebSocket *>(client->server())->_ptr == client->server(), "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
+    __DBG_assertf(*reinterpret_cast<WsClientAsyncWebSocket *>(client->server())->_ptr == client->server(), "WsClientAsyncWebSocket::_ptr does not match AsyncWebSocket");
 
     reinterpret_cast<WsClientAsyncWebSocket *>(client->server())->_authenticatedClients = authenticatedClients;
 

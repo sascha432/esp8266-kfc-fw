@@ -106,6 +106,9 @@ static inline const __FlashStringHelper *_getContentType(const String &path)
     else if (path.endsWith(F(".js"))) {
         return FSPGM(mime_application_javascript, "application/javascript");
     }
+    else if (path.endsWith(F(".ico"))) {
+        return F("image/x-icon");
+    }
     else if (path.endsWith(F(".png"))) {
         return FSPGM(mime_image_png, "image/png");
     }

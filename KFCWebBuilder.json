@@ -285,6 +285,9 @@
             "static_content": {
                 "target_dirs": {
                     // a list of files
+                    "./data/webui": [
+                        "./lib/KFCLibrary/KFCWebBuilder/Resources/images/favicon.ico"
+                    ],
                     "./data/webui/images": [
                         "./lib/KFCLibrary/KFCWebBuilder/Resources/images/spinner.gif",
                         "./Resources/images/light.svg"

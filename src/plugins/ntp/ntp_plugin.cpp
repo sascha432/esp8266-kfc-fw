@@ -190,7 +190,7 @@ void NTPPlugin::getStatus(Print &output)
             }
         }
 
-        output.printf_P(PSTR(HTML_S(br) "RTC status: %s" HTML_S(br) "NTP Status: %s"), (PGM_P)config.getRTCStatusStr(), getCallbackState());
+        output.printf_P(PSTR(HTML_S(br) "RTC status: %s" HTML_S(br) "NTP Status: %s"), (PGM_P)KFCFWConfiguration::RtcStatus::toString(), getCallbackState());
         if (_lastUpdateSeconds) {
             output.print(F(", last update "));
             auto time = (millis64() / 1000) - _lastUpdateSeconds;
@@ -207,7 +207,7 @@ void NTPPlugin::getStatus(Print &output)
 void NTPPlugin::_execConfigTime()
 {
     // set to out of sync while updating
-    RTCMemoryManager::setSyncStatus(false);
+    RTCMemoryManager::setSyncStatus(RTCMemoryManager::SyncStatus::NTP_UPDATE);
     settimeofday_cb(updateNtpCallback);
 
     sntp_stop();

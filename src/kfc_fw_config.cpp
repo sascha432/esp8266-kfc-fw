@@ -1651,6 +1651,39 @@ uint32_t KFCFWConfiguration::getWiFiUp()
     }
 #endif
 
+void KFCFWConfiguration::setupRTC()
+{
+    #if RTC_SUPPORT
+        // support for external RTCs
+        auto status = config.getRTCStatus();
+        __DBG_RTC_printf("unixtime=%u", status.time);
+        if (status.time != 0) {
+            struct timeval tv = { static_cast<time_t>(status.time), 0 };
+            settimeofday(&tv, nullptr);
+            RTCMemoryManager::setTime(status.time, status.lostPower ? RTCMemoryManager::SyncStatus::NO : RTCMemoryManager::SyncStatus::YES);
+        }
+        else {
+            RTCMemoryManager::setSyncStatus(RTCMemoryManager::SyncStatus::NO);
+        }
+    #else
+        // support for the internal RTC
+        // NTP should be used to synchronize the RTC after each restart, if possible after deep sleep as well
+        // issues:
+        // - inaccurate when using deep sleep
+        // - no battery backup
+        //
+        // after a reset, the time is marked as not synchronized (lostPower == true) until set by NTP or manually
+        // while it does not work if a device gets turned off, it is still ok when rebooting or recovering from a
+        // crash time() won't start at 1970...
+        RTCMemoryManager::setSyncStatus(RTCMemoryManager::SyncStatus::NO);
+        auto rtc = RTCMemoryManager::readTime();
+        __DBG_RTC_printf("unixtime=%u", rtc.time);
+        struct timeval tv = { static_cast<time_t>(rtc.time), 0 };
+        settimeofday(&tv, nullptr);
+        RTCMemoryManager::setupRTC();
+    #endif
+}
+
 bool KFCFWConfiguration::setRTC(uint32_t unixtime)
 {
     __DBG_RTC_printf("time=%u", unixtime);
@@ -1661,80 +1694,19 @@ bool KFCFWConfiguration::setRTC(uint32_t unixtime)
             delay(5);
             if (!rtc.begin()) {
                 __DBG_RTC_printf("rtc.begin() failed #2");
+                RTCMemoryManager::setSyncStatus(RTCMemoryManager::SyncStatus::NO);
                 return false;
             }
         }
         rtc.adjust(DateTime(unixtime));
-    #else
-        RTCMemoryManager::setTime(unixtime, RTCMemoryManager::SyncStatus::YES);
     #endif
+    RTCMemoryManager::setTime(unixtime, RTCMemoryManager::SyncStatus::YES);
     return true;
-}
-
-void KFCFWConfiguration::setupRTC()
-{
-    #if RTC_SUPPORT
-        // support for external RTCs
-        initTwoWire();
-        auto unixtime = config.getRTC();
-        __DBG_RTC_printf("unixtime=%u", unixtime);
-        if (unixtime != 0) {
-            struct timeval tv = { static_cast<time_t>(unixtime), 0 };
-            settimeofday(&tv, nullptr);
-            RTCMemoryManager::setTime(unixtime, RTCMemoryManager::SyncStatus::YES);
-        }
-        else {
-            RTCMemoryManager::setSyncStatus(false);
-        }
-    #else
-        // support for the internal RTC
-        // NTP should be used to synchronize the RTC after each restart, if possible after deep sleep as well
-        // issues:
-        // - inaccurate when using deep sleep
-        // - no battery backup
-        //
-        // after a reset, the time is marked as not synchronized (rtcLostPower() == false) until set by NTP or manually
-        // while it does not work if a device gets turned off, it is still ok when rebooting or recovering from a crash
-        // time won't start at 1970 and the timezone is also set...
-        RTCMemoryManager::setSyncStatus(false);
-        auto rtc = RTCMemoryManager::readTime();
-        __DBG_RTC_printf("unixtime=%u", rtc.time);
-        struct timeval tv = { static_cast<time_t>(rtc.time), 0 };
-        settimeofday(&tv, nullptr);
-        RTCMemoryManager::setupRTC();
-    #endif
-}
-
-bool KFCFWConfiguration::rtcLostPower()
-{
-    #if RTC_SUPPORT
-        auto status = RTCMemoryManager::getSyncStatus();
-        if (status == RTCMemoryManager::SyncStatus::NO) {
-            return false;
-        }
-        initTwoWire();
-        uint32_t unixtime = 0;
-        if (!rtc.begin()) {
-            __DBG_RTC_printf("rtc.begin() failed #1");
-            delay(5);
-            if (!rtc.begin()) {
-                __DBG_RTC_printf("rtc.begin() failed #2");
-                return false;
-            }
-        }
-        unixtime = rtc.now().unixtime();
-        if (unixtime == 0) {
-            RTCMemoryManager::setSyncStatus(false);
-        }
-        return unixtime != 0;
-    #else
-        return RTCMemoryManager::getSyncStatus() != RTCMemoryManager::SyncStatus::YES;
-    #endif
 }
 
 KFCFWConfiguration::RtcStatus KFCFWConfiguration::getRTCStatus()
 {
-    RtcStatus data;
+    RtcStatus status;
     #if RTC_SUPPORT
         initTwoWire();
         if (!rtc.begin()) {
@@ -1742,93 +1714,43 @@ KFCFWConfiguration::RtcStatus KFCFWConfiguration::getRTCStatus()
             delay(5);
             if (!rtc.begin()) {
                 __DBG_RTC_printf("rtc.begin() failed #2");
-                return data;
+                return status;
             }
         }
-        data.time = rtc.now().unixtime();
-        if (data.time == 0) {
-            RTCMemoryManager::setSyncStatus(false);
+        status.time = rtc.now().unixtime();
+        status.temperature = rtc.getTemperature();
+        status.lostPower = rtc.lostPower();
+        if (status.lostPower || !isTimeValid(status.time)) {
+            RTCMemoryManager::setSyncStatus(RTCMemoryManager::SyncStatus::NO);
         }
-        data.temperature = rtc.getTemperature();
-        data.lostPower = rtc.lostPower();
     #else
-        data.time = time(nullptr);
-        data.lostPower = RTCMemoryManager::getSyncStatus() != RTCMemoryManager::SyncStatus::NO;
-    #endif
-    return data;
-}
-
-const __FlashStringHelper *KFCFWConfiguration::getRTCStatusStr()
-{
-    #if RTC_SUPPORT
-        return RTCMemoryManager::RtcTime::getStatus(getRTCStatus().lostPower ? RTCMemoryManager::SyncStatus::NTP_UPDATE : RTCMemoryManager::SyncStatus::YES);
-    #else
-        return RTCMemoryManager::RtcTime::getStatus(RTCMemoryManager::getSyncStatus());
-    #endif
-}
-
-uint32_t KFCFWConfiguration::getRTC()
-{
-    #if RTC_SUPPORT
-        initTwoWire();
-        if (!rtc.begin()) {
-            __DBG_RTC_printf("rtc.begin() failed #1");
-            delay(5);
-            if (!rtc.begin()) {
-                __DBG_RTC_printf("rtc.begin() failed #2");
-                return 0;
-            }
+        status.time = time(nullptr);
+        if (!isTimeValid(status.time)) {
+            RTCMemoryManager::setSyncStatus(RTCMemoryManager::SyncStatus::NO);
         }
-        uint32_t unixtime = rtc.now().unixtime();
-        __DBG_RTC_printf("time=%u", unixtime);
-        if (rtc.lostPower()) {
-            __DBG_RTC_printf("time=0, lostPower=true");
-            return 0;
-        }
-        return unixtime;
+        status.lostPower = RTCMemoryManager::getSyncStatus() != RTCMemoryManager::SyncStatus::YES;
     #endif
-    __LDBG_printf("time=error");
-    return 0;
-}
-
-float KFCFWConfiguration::getRTCTemperature()
-{
-    #if RTC_SUPPORT
-        initTwoWire();
-        if (!rtc.begin()) {
-            __DBG_RTC_printf("rtc.begin() failed #1");
-            delay(5);
-            if (!rtc.begin()) {
-                __DBG_RTC_printf("rtc.begin() failed #2");
-                return NAN;
-            }
-        }
-        return rtc.getTemperature();
-    #endif
-    return NAN;
+    return status;
 }
 
 void KFCFWConfiguration::printRTCStatus(Print &output, bool plain)
 {
-    RtcStatus data;
-    #if RTC_SUPPORT
-        initTwoWire();
-    #endif
-
-    data = getRTCStatus();
-    PrintString nowStr;
-    nowStr.strftime(FSPGM(strftime_date_time_zone), data.time);
+    auto status = getRTCStatus();
+    __DBG_RTC_printf("temp=%.3f lost_power=%u", status.temperature, status.lostPower);
     PGM_P nl = plain ? PSTR(", ") : PSTR(HTML_S(br));
-    output.print(F("Timestamp: "));
-    output.print(nowStr);
-    __DBG_RTC_printf("temp=%.3f lost_power=%u", data.temperature, data.lostPower);
-    if (!isnan(data.temperature)) {
-        output.printf_P(PSTR("%sTemperature: %.2f%s"), nl, data.temperature, plain ? PSTR("C") : SPGM(UTF8_degreeC));
+    {
+        PrintString nowStr;
+        nowStr.strftime(FSPGM(strftime_date_time_zone), status.time);
+        output.print(F("Timestamp: "));
+        output.print(nowStr);
     }
-    output.printf_P(PSTR("%sLost Power: %s"), nl, data.lostPower ? SPGM(Yes) : SPGM(No));
+    if (!isnan(status.temperature)) {
+        output.printf_P(PSTR("%sTemperature: %.2f%s"), nl, status.temperature, plain ? PSTR("C") : SPGM(UTF8_degreeC));
+    }
+    output.printf_P(PSTR("%sLost Power: %s"), nl, status.lostPower ? SPGM(Yes) : SPGM(No));
 
     #if RTC_SUPPORT
-        if (data.time == 0) {
+        if (status.time == 0) {
             output.printf_P(PSTR("%sFailed to initialize RTC"), nl);
         }
     #endif

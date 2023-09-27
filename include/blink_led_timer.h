@@ -96,6 +96,10 @@ public:
 
     static bool isPinValid(uint8_t pin);
 
+    uint8_t getPin() const {
+        return _pin;
+    }
+
 protected:
     static constexpr bool high() {
         return BUILTIN_LED_STATE(true);

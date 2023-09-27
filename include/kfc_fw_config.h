@@ -209,16 +209,18 @@ public:
             time(0),
             temperature(NAN),
             lostPower(true)
-        {}
+        {
+        }
+
+        static const __FlashStringHelper *toString()
+        {
+            return RTCMemoryManager::RtcTime::getStatus(RTCMemoryManager::getSyncStatus());
+        }
     };
 
     static void setupRTC();
     static bool setRTC(uint32_t unixtime);
-    static uint32_t getRTC();
-    float getRTCTemperature();
-    bool rtcLostPower();
     RtcStatus getRTCStatus();
-    const __FlashStringHelper *getRTCStatusStr();
     void printRTCStatus(Print &output, bool plain = true);
 
     // using StationConfig = KFCConfigurationClasses::Network::WiFi::StationConfig;

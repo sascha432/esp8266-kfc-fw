@@ -6,9 +6,9 @@
 #include "at_mode.h"
 
 #if DEBUG_AT_MODE
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 inline AtModeArgs::ArgumentVector &AtModeArgs::getArgs()
@@ -181,17 +181,18 @@ inline bool AtModeArgs::isInvalidArg(uint16_t num) const
 inline AtModeArgs::ArgumentPtr AtModeArgs::get(uint16_t num) const
 {
     if (isInvalidArg(num)) {
-        return nullptr;
+        return emptyString.c_str();
     }
     return _args.at(num);
 }
 
 inline int AtModeArgs::toChar(uint16_t num, int defaultValue) const
 {
-    if (isInvalidArg(num)) {
+    auto arg = get(num);
+    if (!*arg) {
         return defaultValue;
     }
-    return *get(num);
+    return *arg;
 }
 
 inline int AtModeArgs::toLowerChar(uint16_t num, int defaultValue) const
@@ -201,47 +202,41 @@ inline int AtModeArgs::toLowerChar(uint16_t num, int defaultValue) const
 
 inline String AtModeArgs::toString(uint16_t num, const String &defaultStr) const
 {
-    if (isInvalidArg(num)) {
+    auto arg = get(num);
+    if (!*arg) {
         return defaultStr;
     }
-    return get(num);
+    return arg;
 }
 
 inline int32_t AtModeArgs::toInt(uint16_t num, int32_t defaultValue, uint8_t base) const
 {
-    if (isInvalidArg(num)) {
-        return defaultValue;
-    }
-    return strtol(get(num), nullptr, base);
+    return toInt(num, static_cast<int64_t>(defaultValue), base);
 }
 
 inline uint32_t AtModeArgs::toInt(uint16_t num, uint32_t defaultValue, uint8_t base) const
 {
-    if (isInvalidArg(num)) {
-        return defaultValue;
-    }
-    return strtoul(get(num), nullptr, base);
+    return toInt(num, static_cast<uint64_t>(defaultValue), base);
+}
+
+inline uint64_t AtModeArgs::toInt(uint16_t num, uint64_t defaultValue, uint8_t base) const
+{
+    return toInt(num, static_cast<int64_t>(defaultValue), base); // strtoll and strtoull both support negative values
 }
 
 inline int64_t AtModeArgs::toInt(uint16_t num, int64_t defaultValue, uint8_t base) const
 {
-    if (isInvalidArg(num)) {
+    auto arg = get(num);
+    if (!*arg) {
         return defaultValue;
     }
     return strtoll(get(num), nullptr, base);
 }
 
-inline uint64_t AtModeArgs::toInt(uint16_t num, uint64_t defaultValue, uint8_t base) const
-{
-    if (isInvalidArg(num)) {
-        return defaultValue;
-    }
-    return strtoull(get(num), nullptr, base);
-}
-
 inline double AtModeArgs::toDouble(uint16_t num, double defaultValue) const
 {
-    if (isInvalidArg(num)) {
+    auto arg = get(num);
+    if (!*arg) {
         return defaultValue;
     }
     return strtod(get(num), nullptr);
@@ -249,10 +244,7 @@ inline double AtModeArgs::toDouble(uint16_t num, double defaultValue) const
 
 inline float AtModeArgs::toFloat(uint16_t num, float defaultValue) const
 {
-    if (isInvalidArg(num)) {
-        return defaultValue;
-    }
-    return strtof(get(num), nullptr);
+    return toDouble(num, defaultValue);
 }
 
 inline bool AtModeArgs::equalsIgnoreCase(uint16_t num, const __FlashStringHelper *str) const
@@ -335,15 +327,18 @@ inline bool AtModeArgs::isAny(uint16_t num) const
 
 inline bool AtModeArgs::isTrue(uint16_t num, bool bDefault) const
 {
-    ArgumentPtr arg;
-    if (nullptr == (arg = get(num)) || *arg == 0) {
+    if (isInvalidArg(num)) {
         return bDefault;
     }
-    int result = 0;
-    if ((_isValidInt(arg, result) && result != 0) || (_isAnyMatchIgnoreCase(arg, F("start|yes|y|true|on|enable|en|open")))) {
+    auto arg = get(num);
+    if (_isAnyMatchIgnoreCase(arg, F("start|yes|y|true|on|enable|en|open"))) { // match string
         return true;
     }
-    return false;
+    int result;
+    if (_isValidInt(arg, result)) { // match integer
+        return result != 0;
+    }
+    return bDefault;
 }
 
 inline bool AtModeArgs::isFalse(uint16_t num, bool bDefault) const
@@ -351,12 +346,15 @@ inline bool AtModeArgs::isFalse(uint16_t num, bool bDefault) const
     if (isInvalidArg(num)) {
         return bDefault;
     }
-    int result;
     auto arg = get(num);
-    if ((_isValidInt(arg, result) && result == 0) || (_isAnyMatchIgnoreCase(arg, F("|stop|no|n|false|off|disable|dis|null|close|closed")))) {
+    if (_isAnyMatchIgnoreCase(arg, F("|stop|no|n|false|off|disable|dis|null|close|closed"))) { // match string
         return true;
     }
-    return false;
+    int result;
+    if (_isValidInt(get(num), result)) { // match integer
+        return result == 0;
+    }
+    return bDefault;
 }
 
 inline bool AtModeArgs::_isAnyMatchIgnoreCase(String str, const __FlashStringHelper *strings) const
@@ -369,9 +367,12 @@ inline AtModeArgs::Range AtModeArgs::toRange(uint16_t num, uint32_t min, uint32_
 {
     uint32_t from = 0;
     uint32_t to = ~0U;
-    auto arg = toString(num, defaultValue);
+    auto arg = get(num);
+    if (!*arg) {
+        arg = defaultValue.c_str();
+    }
     char *end = nullptr;
-    from = strtoul(arg.c_str(), &end, 0);
+    from = strtoul(arg, &end, 0);
     if (end) {
         while(isspace(*end)) {
             end++;
@@ -379,12 +380,15 @@ inline AtModeArgs::Range AtModeArgs::toRange(uint16_t num, uint32_t min, uint32_
         if (*end == ',' || *end == '-') {
             to = strtoul(end + 1, nullptr, 0);
             if (*end == ',') {
-                to += from;
+                to = from + std::max(1U, to) - 1;
             }
         }
     }
     from = std::clamp(from, min, max);
-    to = std::clamp(to, min + 1, max);
+    to = std::clamp(to, min, max);
+    if (from > to) {
+        std::swap(from, to);
+    }
     return Range(from, to);
 }
 
@@ -426,16 +430,10 @@ inline uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t ma
     if (defaultValue == kNoDefaultValue) {
         defaultValue = minTime;
     }
-
     auto arg = get(num);
-    if (!arg) {
-        __LDBG_printf("toMillis(): arg=%u does not exist", num);
-        if (defaultValue == kNoDefaultValue) {
-            return std::clamp<uint32_t>(0, minTime, maxTime);
-        }
+    if (!*arg) {
         return defaultValue;
     }
-
     char *endPtr = nullptr;
     auto value = strtod(arg, &endPtr);
     String suffix(endPtr);
@@ -463,19 +461,17 @@ inline uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t ma
     else {
         result = value;
     }
-    if (result < minTime) {
-        __LDBG_printf("toMillis(): arg=%s < minTime=%u", arg, minTime);
-        result = defaultValue;
+    if (result < minTime || result > maxTime) {
+        return defaultValue;
     }
-    __LDBG_printf("toMillis(): arg=%s converted to %u", arg, result);
-    return std::clamp(result, minTime, maxTime);
+    return result;
 }
 
 inline void AtModeArgs::invalidArgument(uint16_t num, const __FlashStringHelper *expected, char makeList) const
 {
     print();
-    auto arg = get(num++);
-    if (arg) {
+    auto arg = get(num);
+    if (isInvalidArg(num++)) {
         _output.printf_P(PSTR("Invalid argument %u: %s"), num, arg);
 
     } else {
@@ -495,5 +491,5 @@ inline void AtModeArgs::invalidArgument(uint16_t num, const __FlashStringHelper 
 }
 
 #if DEBUG_AT_MODE
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif

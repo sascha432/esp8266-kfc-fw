@@ -1175,70 +1175,6 @@ public:
     }
 };
 
-class CommandQueue;
-
-static CommandQueue *commandQueue = nullptr;
-class CommandQueue {
-public:
-    CommandQueue(Stream &stream) : _output(stream), _queue(), _start(millis()), _commands(0) {
-        _output.printf_P(PSTR("+QUEUE: started\n"));
-        LOOP_FUNCTION_ADD_ARG([this]() { loop(); }, this);
-    }
-
-    virtual ~CommandQueue() {
-        LoopFunctions::remove(this);
-        _output.printf_P(PSTR("+QUEUE: finished, duration=%.2fs, commands=%u\n"), get_time_since(_start, millis()) / 1000.0, _commands);
-    }
-
-    void loop() {
-        if (!_timer) {
-            if (_queue.empty()) {
-                if (commandQueue == this) {
-                    commandQueue = nullptr;
-                    LoopFunctions::callOnce([this]() {
-                        delete this;
-                    });
-                }
-            }
-            else {
-                // auto args = std::move(_queue.front());
-                // _queue.pop();
-                // _commands++;
-                // __DBG_printf("ARGS cmd=%s,argc=%d,args='%s'", args.getCommand().c_str(), args.size(), implode(F("','"), args.getArgs()).c_str());
-                // at_mode_serial_handle_event(const_cast<String &>(emptyString), &args);
-            }
-        }
-        else {
-            __DBG_printf("delay timer active");
-            delay(100);
-        }
-    }
-
-    void setDelay(uint32_t delay) {
-        __DBG_printf("delay %u", delay);
-        _Timer(_timer).add(delay, false, [](Event::CallbackTimerPtr timer) {});
-    }
-
-    bool hasQueue() const {
-        return (_timer == true || _queue.empty() == false);
-    }
-
-    void queueCommand(const AtModeArgs &args) {
-        __DBG_printf("ADD queue command");
-        __DBG_printf("ARGS cmd=%s,argc=%d,args='%s'", args.getCommand().c_str(), args.size(), implode(F("','"), args.getArgs()).c_str());
-        _queue.push(args);
-    }
-
-private:
-    using Queue = std::queue<AtModeArgs>;
-
-    Stream &_output;
-    Event::Timer _timer;
-    Queue _queue;
-    uint32_t _start;
-    uint16_t _commands;
-};
-
 static bool tokenizerCmpFuncCmdLineMode(char ch, int type)
 {
     if (type == 1) { // command separator
@@ -1655,7 +1591,7 @@ void at_mode_serial_handle_event(String &commandString)
 
     */
             auto cmdStr = args.get(0);
-            if (cmdStr) {
+            if (*cmdStr) {
                 int cmd = stringlist_ifind_P(F("erase,e,read,r,write,w"), cmdStr);
                 uintptr_t addr = translateAddress(args.toString(1));
                 if (addr == ~0U) {
@@ -2018,12 +1954,13 @@ void at_mode_serial_handle_event(String &commandString)
             }
         }
     #endif
-    #if __LED_BUILTIN_WS2812_NUM_LEDS && DEBUG
+    #if __LED_BUILTIN_WS2812_NUM_LEDS
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(NEOPX))) {
             // +neopx=16,3,25,0,0
+            // +neopx=,,25,0,0
             if (args.requireArgs(3, 5)) {
-                auto pin = static_cast<uint8_t>(args.toInt(0));
-                auto num = static_cast<uint16_t>(args.toInt(1));
+                auto pin = static_cast<uint8_t>(args.toInt(0, __LED_BUILTIN_WS2812_PIN));
+                auto num = static_cast<uint16_t>(args.toInt(1, __LED_BUILTIN_WS2812_NUM_LEDS));
                 auto red = static_cast<uint8_t>(args.toInt(2));
                 auto green = static_cast<uint8_t>(args.toInt(3, red));
                 auto blue = static_cast<uint8_t>(args.toInt(4, red));
@@ -2218,7 +2155,6 @@ void at_mode_serial_handle_event(String &commandString)
         }
     #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WIFI))) {
-
         if (args.requireArgs(1)) {
             auto cmd = static_cast<WiFiCommandsType>(stringlist_find_P_P(PSTR(WIFI_COMMANDS), args.get(0), '|'));
             switch(cmd) {
@@ -2321,59 +2257,19 @@ void at_mode_serial_handle_event(String &commandString)
                     break;
             }
         }
-
-
-            // // auto arg0 = args.toString(0);
-            // // if (arg0.endsWithIgnoreCase(F("wimo"))) {
-            // //     args.print(F("Setting WiFi mode and restarting device..."));
-            // //     System::Flags::getWriteableConfig().setWifiMode(args.toUint8(1));
-            // //     config.write();
-            // //     config.restartDevice();
-            // // }
-            // else if (arg0.startsWithIgnoreCase(F("clear"))) {
-            //     #if ESP8266
-            //         station_config wifiConfig;
-            //         auto result = wifi_station_set_config(&wifiConfig);
-            //         args.print(F("clearing default config from flash... %s"), result ? PSTR("success") : PSTR("failure"));
-            //     #endif
-            //     config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
-            //     config.printDiag(args.getStream(), F("+WIFI: "));
-            // }
-            // else if (arg0.startsWithIgnoreCase(F("diag"))) {
-
-            // }
-            // else if (arg0.equalsIgnoreCase(F("reset"))) {
-            //     config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
-            //     config.printDiag(args.getStream(), F("+WIFI: "));
-            // }
-        }
-
-        // auto flags = System::Flags::getConfig();
-        // args.print(F("station mode %s, DHCP %s, SSID %s, connected %s, IP %s"),
-        //     (WiFi.getMode() & WIFI_STA) ? SPGM(on) : SPGM(off),
-        //     flags.is_station_mode_dhcp_enabled ? SPGM(on) : SPGM(off),
-        //     WiFi.SSID().c_str(),
-        //     WiFi.isConnected() ? SPGM(yes) : SPGM(no),
-        //     WiFi.localIP().toString().c_str()
-        // );
-        // args.print(F("AP mode %s, DHCP %s, SSID %s, clients connected %u, IP %s"),
-        //     (flags.is_softap_enabled) ? ((flags.is_softap_standby_mode_enabled) ? ((WiFi.getMode() & WIFI_AP) ? SPGM(on) : PSTR("stand-by")) : SPGM(on)) : SPGM(off),
-        //     flags.is_softap_dhcpd_enabled ? SPGM(on) : SPGM(off),
-        //     Network::WiFi::getSoftApSSID(),
-        //     WiFi.softAPgetStationNum(),
-        //     Network::SoftAP::getConfig().getAddress().toString().c_str()
-        // );
-    // }
+    }
     #if RTC_SUPPORT
         else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RTC))) {
             if (args.empty()) {
-                args.print(F("Time=" TIME_T_FMT ", rtc=%u, lostPower=%u"), time(nullptr), config.getRTC(), config.rtcLostPower());
+                auto status = config.getRTCStatus();
+                args.print(F("Time=" TIME_T_FMT ", rtc=%u, lostPower=%u, status=%s"), time(nullptr), status.lostPower, (PGM_P)status.toString());
                 output.print(F("+RTC: "));
                 config.printRTCStatus(output);
                 output.println();
             }
             else {
-                args.print(F("Set=%u, rtc=%u"), config.setRTC(time(nullptr)), config.getRTC());
+                bool res = config.setRTC(time(nullptr));
+                args.print(F("Set=%u, rtc=%u"), res, config.getRTCStatus().time);
             }
         }
     #endif
@@ -2384,17 +2280,6 @@ void at_mode_serial_handle_event(String &commandString)
         auto delayTime = args.toMillis(0, 1, 3600 * 1000, 250, F("ms"));
         args.print(F("%ums"), delayTime);
         delay(delayTime);
-
-        // if (commandQueue == nullptr && delayTime < 5) { // queue not active and delay very short delays
-        //     args.print(F("%ums"), delayTime);
-        //     delay(delayTime);
-        // }
-        // else {
-        //     if (!commandQueue) { // create new queue and delay next command
-        //         commandQueue = new CommandQueue(output);
-        //     }
-        //     commandQueue->setDelay(delayTime);
-        // }
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(TOUCH))) {
         if (args.requireArgs(1, 1)) {

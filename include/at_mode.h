@@ -288,7 +288,7 @@ public:
         if (isInvalidArg(num)) {
             return defaultValue;
         }
-        return std::clamp<_Ta>(toInt(num, static_cast<_Ta>(0)), min, max);
+        return std::clamp<_Ta>(toInt(num, defaultValue), min, max);
     }
 
     template<class _Ta>
@@ -301,7 +301,6 @@ public:
         if (isInvalidArg(num)) {
             return defaultValue;
         }
-        // return std::max(min, std::min(max, static_cast<_Ta>(toDouble(num))));
         return std::clamp<_Ta>(toDouble(num, defaultValue), min, max);
     }
 
@@ -372,7 +371,7 @@ public:
     };
 
     // get range from min-max
-    // syntax: <min>[-<max|min+1>] or <offset>[,<length|1>]
+    // syntax: <min>[-<max|min>] or <offset>[,<length|1>]
     Range toRange(uint16_t num, uint32_t min, uint32_t max, const String &defaultValue);
 
 public:
@@ -419,12 +418,11 @@ private:
 
     template <class _Ta>
     bool _isValidInt(const char *str, _Ta &result) const {
-        char *endPtr = nullptr;
-        auto value = static_cast<_Ta>(strtoll(str, &endPtr, 10));
-        // no end pointer?
-        if (!endPtr) {
+        if (!str || !*str) {
             return false;
         }
+        char *endPtr = nullptr;
+        auto value = static_cast<_Ta>(strtoll(str, &endPtr, 10));
         // strip trailing spaces
         while(isspace(*endPtr)) {
             endPtr++;

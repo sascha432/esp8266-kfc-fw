@@ -92,10 +92,10 @@ bool Base::atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel)
                 break;
             case DimmerCommandType::ZERO_CROSSING: {
                     auto arg = args.get(1);
-                    if (arg && *arg == '+') {
+                    if (*arg == '+') {
                         _wire.changeZeroCrossing(std::clamp<int16_t>(atoi(arg + 1), 0, 255));
                     }
-                    else if (arg && *arg == '-') {
+                    else if (*arg == '-') {
                         _wire.changeZeroCrossing(std::clamp<int16_t>(atoi(arg), -255, 0));
                     }
                     else {

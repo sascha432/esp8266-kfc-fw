@@ -246,7 +246,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             int visTxtType = -1;
             auto newType = Clock::AnimationType::RAINBOW_FASTLED;
             auto newTypeCStr = args.get(1);
-            if (newTypeCStr && *newTypeCStr) {
+            if (*newTypeCStr) {
                 auto newTypeStr = String(newTypeCStr);
                 _config.normalizeSlug(newTypeStr);
                 if (newTypeStr.trim().length()) {

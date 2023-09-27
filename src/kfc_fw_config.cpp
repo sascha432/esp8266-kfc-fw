@@ -1763,7 +1763,7 @@ const __FlashStringHelper *KFCFWConfiguration::getRTCStatusStr()
     #if RTC_SUPPORT
         return RTCMemoryManager::RtcTime::getStatus(getRTCStatus().lostPower ? RTCMemoryManager::SyncStatus::NTP_UPDATE : RTCMemoryManager::SyncStatus::YES);
     #else
-        return RTCMemoryManager::RtcTime::getStatus(RTCMemoryManager::getSyncStatus())
+        return RTCMemoryManager::RtcTime::getStatus(RTCMemoryManager::getSyncStatus());
     #endif
 }
 

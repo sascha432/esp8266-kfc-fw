@@ -386,13 +386,18 @@ public:
     #endif
     bool isCommand(const __FlashStringHelper *command) const;
 
-    // deprecated
-    void printf_P(PGM_P format, ...) const;
+    // // deprecated
+    template<typename _Ta, typename ... _Args>
+    void printf_P(_Ta arg, _Args ...args) const {
+        print();
+        _output.printf_P((PGM_P)arg, args...);
+    }
 
-    // print(const __FlashStringHelper *fmt, ...) printf_P(fmt, ...) + "\n"
     template<typename _Ta, typename ... _Args>
     void print(_Ta arg, _Args ...args) const {
-        _printfLn((const __FlashStringHelper *)arg, args...);
+        print();
+        _output.printf_P((PGM_P)arg, args...);
+        _output.println();
     }
 
     // print(str) str + "\n"
@@ -411,7 +416,6 @@ public:
     void invalidArgument(uint16_t num, const __FlashStringHelper *expected = nullptr, char makeList = 0) const;
 
 private:
-    void _printfLn(const __FlashStringHelper *, ...) const;
     void _println(const __FlashStringHelper *str) const;
     void _println(const char *str) const;
     void _println(const String &str) const;

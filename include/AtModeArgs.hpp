@@ -124,24 +124,6 @@ inline bool AtModeArgs::isCommand(const __FlashStringHelper *command) const
     return _command.equalsIgnoreCase(command);
 }
 
-inline void AtModeArgs::printf_P(PGM_P format, ...) const
-{
-    va_list arg;
-    va_start(arg, format);
-    PrintString str(reinterpret_cast<const __FlashStringHelper *>(format), arg);
-    va_end(arg);
-    print(str.c_str());
-}
-
-inline void AtModeArgs::_printfLn(const __FlashStringHelper *format, ...) const
-{
-    va_list arg;
-    va_start(arg, format);
-    PrintString str(format, arg);
-    va_end(arg);
-    print(str.c_str());
-}
-
 inline void AtModeArgs::_println(const char *str) const
 {
     print();

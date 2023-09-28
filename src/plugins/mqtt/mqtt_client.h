@@ -581,7 +581,7 @@ public:
 
         static QosType getDefaultQos(QosType qos = QosType::DEFAULT);
 
-        String connectionDetailsString();
+        String connectionDetailsString(bool details = true);
         String connectionStatusString();
 
         void _handleWiFiEvents(WiFiCallbacks::EventType event, void *payload);

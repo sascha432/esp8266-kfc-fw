@@ -554,6 +554,7 @@ namespace MQTT {
         if (timeout) {
             _connState = ConnectionState::AUTO_RECONNECT_DELAY;
             timeout = std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max);
+            Logger_notice(F("Reconnecting to MQTT server %s in %.1f seconds"), connectionDetailsString(false).c_str(), timeout / 1000.0);
             _Timer(_reconnectTimer).add(Event::milliseconds(timeout), false, [this](Event::CallbackTimerPtr timer) {
                 __LDBG_printf("timer lambda: conn=%s", _connection());
                 if (!this->isConnected()) {
@@ -573,7 +574,7 @@ namespace MQTT {
     void MQTT::Client::onConnect(bool sessionPresent)
     {
         __LDBG_printf("session=%d conn=%s", sessionPresent, _connection());
-        Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString().c_str());
+        Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString(false).c_str());
         _connState = ConnectionState::CONNECTED;
 
         _resetClient();

@@ -759,12 +759,12 @@ public:
 
     inline void Client::setAutoReconnect(AutoReconnectType timeout)
     {
-        __LDBG_printf("timeout=%u clamped=%u conn=%s", timeout, std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max), _connection());
+        __LDBG_printf("timeout=%u clamped=%u conn=%s", timeout, std::min<AutoReconnectType>(_config.auto_reconnect_max, std::max<AutoReconnectType>(_config.auto_reconnect_min, timeout)), _connection());
         if (timeout == kAutoReconnectDisabled) {
             _autoReconnectTimeout = kAutoReconnectDisabled;
             return;
         }
-        _autoReconnectTimeout = std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max);
+        _autoReconnectTimeout = std::min<AutoReconnectType>(_config.auto_reconnect_max, std::max<AutoReconnectType>(_config.auto_reconnect_min, timeout));
     }
 
     inline __attribute__((__always_inline__))

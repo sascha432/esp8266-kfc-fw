@@ -339,6 +339,7 @@ namespace WebServer {
     private:
         void begin(bool restart);
         void end();
+        void ArduinoOTAdestroy();
         #if MDNS_PLUGIN
             void _addMDNS();
         #endif

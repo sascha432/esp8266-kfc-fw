@@ -89,17 +89,18 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
         return;
     }
 
+    #ifndef ATOMIC_FS_UPDATE
+        // restart FS in case it has been stopped during the update
+        KFCFS_begin();
+    #endif
+
     // auto &plugin = Plugin::getInstance();
     PrintString errorStr;
     // AsyncWebServerResponse *response = nullptr;
     if (Update.hasError()) {
-        // TODO check if we need to restart the file system
-        // KFCFS_begin();
-
         Update.printError(errorStr);
         BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
         Plugin::message(request, MessageType::DANGER, errorStr, F("Firmware Upgrade Failed"));
-
     }
     else {
         Logger_security(F("Firmware upgrade successful"));
@@ -260,7 +261,7 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                 #endif
                 command = U_FS;
                 #ifndef ATOMIC_FS_UPDATE
-                    KFCFS.end();
+                    KFCFS.end(); // end file system to avoid log files or other data being written during the update, which leads to FS corruption
                 #endif
             }
             else {

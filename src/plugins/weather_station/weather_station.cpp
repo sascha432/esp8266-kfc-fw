@@ -333,6 +333,8 @@ void WeatherStationPlugin::_readConfig()
     _weatherApi.setAPIKey(WSDraw::WSConfigType::getApiKey());
     _weatherApi.setLatitude(_config.latitude);
     _weatherApi.setLongitude(_config.longitude);
+    _weatherApi.setGetDailyDescr(false);
+    _weatherApi.setDailyLimit(MAX_FORECAST_DAYS);
     _weatherApi.clear();
     _location = WSDraw::WSConfigType::getLocation();
     auto pos = _location.indexOf(',');

@@ -130,7 +130,7 @@ namespace WSDraw {
         _canvas->drawTextAligned(X_POSITION_MOON_PHASE_DAYS, Y_POSITION_MOON_PHASE_PCT, PrintString(F("%.1f%%"), moon.moonPhaseIlluminationPct()), H_POSITION_MOON_PHASE_NAME);
 
 
-        auto &info = _weatherApi.getWeatherInfo();
+        auto &info = _weatherApi.getInfo();
         if (info.hasData()) {
             _canvas->setTextColor(COLORS_SUN_RISE_SET);
             _canvas->drawBitmap(X_POSITION_SUN_RISE_ICON, Y_POSITION_SUN_RISE_ICON, icon_sunrise, 7, 9, COLORS_BACKGROUND, COLORS_SUN_RISE_SET);
@@ -180,7 +180,7 @@ namespace WSDraw {
     void Base::_drawLocalWeather()
     {
         constexpr int16_t _offsetY = Y_START_POSITION_WEATHER;
-        auto &info = _weatherApi.getWeatherInfo();
+        auto &info = _weatherApi.getInfo();
         if (info.hasData()) {
 
             // --- weather icon
@@ -226,7 +226,7 @@ namespace WSDraw {
             }
         }
         else {
-            _displayWeatherApiError(_weatherApi.getWeatherInfo().getError());
+            _displayWeatherApiError(_weatherApi.getInfo().getError());
         }
     }
 
@@ -234,13 +234,13 @@ namespace WSDraw {
     {
         if (error.length()) {
             _canvas->setFont(FONTS_DEFAULT_SMALL);
-            _canvas->setTextColor(COLORS_RED);
-            int y;
-            if (_weatherApi._info.noData()) {
+            int16_t y;
+            if (_weatherApi.getInfo().hasNoData()) {
                 _canvas->setTextColor(COLORS_ORANGE);
-                y = 23;
+                y = 15;
             }
             else {
+                _canvas->setTextColor(COLORS_RED);
                 _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Loading Weather Failed"), AdafruitGFXExtension::CENTER);
                 y = 30;
             }
@@ -298,9 +298,8 @@ namespace WSDraw {
     void Base::_drawForecast()
     {
         constexpr int16_t _offsetY = Y_START_POSITION_FORECAST;
-        auto &info = _weatherApi.getWeatherInfo();
+        auto &info = _weatherApi.getInfo();
         if (info.hasData()) {
-
             int xStart = 0;
             constexpr int width = (TFT_WIDTH / MAX_FORECAST_DAYS) + 1;
             int num = 0;
@@ -337,7 +336,7 @@ namespace WSDraw {
             }
         }
         else {
-            _displayWeatherApiError(_weatherApi.getWeatherInfo().getError());
+            _displayWeatherApiError(_weatherApi.getInfo().getError());
         }
     }
 

@@ -40,28 +40,16 @@ void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpR
     if (code != 200) {
         PrintString message(F("OpenWeatherAPI http status=%d error=%s wifi=%u url=%s"), code, request.getMessage().c_str(), WiFi.isConnected(), request.getUrl());
         Logger_error(message);
-        _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
+        _weatherApi.getInfo().setError(F("OpenWeatherAPI\nHTTP Error"));
         _pollDataUpdateLastTime(false);
     }
-    else if (!_weatherApi.getWeatherInfo().hasData()) {
+    else if (!_weatherApi.getInfo().hasData()) {
         PrintString message(F("OpenWeatherAPI data=invalid message=%s url=%s"), request.getMessage().c_str(), request.getUrl());
         Logger_error(message);
-        _weatherApi.getWeatherInfo().setError(F("OpenWeatherAPI\nInvalid Data"));
+        _weatherApi.getInfo().setError(F("OpenWeatherAPI\nInvalid Data"));
         _pollDataUpdateLastTime(false);
     }
     else {
-        // _weatherApi.getWeatherInfo().dump(DEBUG_OUTPUT);
-
-        // keep only what we use
-        auto &info = _weatherApi.getWeatherInfo();
-        if (info.daily.size() > MAX_FORECAST_DAYS) {
-            info.daily.resize(MAX_FORECAST_DAYS);
-            info.daily.shrink_to_fit();
-        }
-        for(auto &item: info.daily) {
-            item.descr = String();
-        }
-
         _pollDataUpdateLastTime(true);
     }
     redraw();
@@ -86,9 +74,9 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
             _rainbowStatusLED();
         #endif
         if (!_pollDataTimer) { // poll weather data if the timer is not active
-            auto next = 1000;
+            constexpr auto next = 1000;
             __LDBG_printf("poll weather next=%u", next);
-            _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
+            _Timer(_pollDataTimer).add(Event::milliseconds(next), false, _pollDataTimerCallback);
         }
         // #if IOT_WEATHER_STATION_WS2812_NUM
         //     _fadeStatusLED();
@@ -119,7 +107,7 @@ void WeatherStationBase::_httpRequest(const String &url, int timeout, JsonBaseRe
     #if DEBUG_IOT_WEATHER_STATION
         auto prev = callback;
         callback = [this, prev](int16_t code, KFCRestAPI::HttpRequest &request) {
-            __LDBG_printf("code=%u msg=%s data:", request.getMessage().c_str());
+            __LDBG_printf("code=%u msg=%s data:", code, request.getMessage().c_str());
             _weatherApi.dump(DEBUG_OUTPUT);
             prev(code, request);
         };

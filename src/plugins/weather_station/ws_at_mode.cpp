@@ -161,15 +161,8 @@ bool WeatherStationPlugin::atModeHandler(AtModeArgs &args)
         return true;
     }
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(WSU))) {
-        auto stream = &args.getStream();
         args.print(F("Updating weather info..."));
-        _getWeatherInfo([this, stream](bool status, KFCRestAPI::HttpRequest &request) {
-            auto msg = request.getMessage();
-            LoopFunctions::callOnce([this, status, msg, stream]() {
-                stream->printf_P(PSTR("+WSU status=%u msg=%s\n"), status, msg.c_str());
-                redraw();
-            });
-        });
+        _Timer(_pollDataTimer).add(Event::milliseconds(100), false, _pollDataTimerCallback);
         return true;
     }
     #if DEBUG_MOON_PHASE

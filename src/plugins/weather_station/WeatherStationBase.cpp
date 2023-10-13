@@ -86,7 +86,7 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
             _rainbowStatusLED();
         #endif
         if (!_pollDataTimer) { // poll weather data if the timer is not active
-            auto next = 5000;
+            auto next = 1000;
             __LDBG_printf("poll weather next=%u", next);
             _Timer(_pollDataTimer).add(next, false, _pollDataTimerCallback);
         }
@@ -116,11 +116,12 @@ void WeatherStationBase::_pollDataUpdateLastTime(bool success)
 
 void WeatherStationBase::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, HttpRequestCallback callback)
 {
-    #if DEBUG_IOT_WEATHER_STATION && 0
+    #if DEBUG_IOT_WEATHER_STATION
         auto prev = callback;
-        callback = [this, prev](int16_t httpCode, const String &error) {
+        callback = [this, prev](int16_t code, KFCRestAPI::HttpRequest &request) {
+            __LDBG_printf("code=%u msg=%s data:", request.getMessage().c_str());
             _weatherApi.dump(DEBUG_OUTPUT);
-            prev(httpCode, error);
+            prev(code, request);
         };
     #endif
     __LDBG_printf("url=%s", url.c_str());
@@ -154,8 +155,8 @@ void WeatherStationBase::_loop()
         return;
     }
 
-    static unsigned long lastUpdate = 0;
-    if (millis() - lastUpdate < 50) {
+    static uint32_t lastUpdate = 0;
+    if (get_time_since(lastUpdate, millis()) < 50) {
         return;
     }
     // __DBG_printf("time=%d locked=%u canvas=%p screen=%d", (int32)(millis() - lastUpdate), isLocked(), _canvas, _currentScreen);
@@ -197,9 +198,8 @@ void WeatherStationBase::_loop()
     else {
 
         if (_toggleScreenTimeout) {
-            uint32_t dur = millis() - _toggleScreenTimer;
-            if (dur > _toggleScreenTimeout) {
-                __LDBG_printf("timeout=%u screen=%u next=%u", _toggleScreenTimeout, _getCurrentScreen(), _getNextScreen(_getCurrentScreen()));
+            if (get_time_since(_toggleScreenTimer, millis()) > _toggleScreenTimeout) {
+                // __LDBG_printf("timeout=%u screen=%u next=%u", _toggleScreenTimeout, _getCurrentScreen(), _getNextScreen(_getCurrentScreen()));
                 _setScreen(_getNextScreen(_getCurrentScreen()));
                 _draw();
                 return;
@@ -232,7 +232,7 @@ void WeatherStationBase::_loop()
                     _updateMoonPhase();
                     return;
                 }
-                #if DEBUG_IOT_WEATHER_STATION
+                #if DEBUG_IOT_WEATHER_STATION && 0
                     else if (_currentScreen == ScreenType::DEBUG_INFO) {
                         // update debug screen every second
                         _updateScreenDebug();
@@ -272,7 +272,7 @@ void WeatherStationBase::_loop()
                 _updateScreenTime();
             }
         }
-        #if DEBUG_IOT_WEATHER_STATION
+        #if DEBUG_IOT_WEATHER_STATION && 0
             else if (_currentScreen == ScreenType::DEBUG_INFO) {
                 // update debug screen as often as possible
                 _updateScreenDebug();
@@ -332,7 +332,7 @@ void WeatherStationBase::_setScreen(ScreenType screen, int16_t timeout)
         }
     }
 
-    __LDBG_printf("screen=%u new_screen=%u timeout=%u", screen, _currentScreen, _toggleScreenTimeout);
+    // __LDBG_printf("screen=%u new_screen=%u timeout=%u", screen, _currentScreen, _toggleScreenTimeout);
     redraw();
 }
 

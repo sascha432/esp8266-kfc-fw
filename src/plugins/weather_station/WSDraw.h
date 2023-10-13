@@ -268,7 +268,7 @@ namespace WSDraw {
 
         #endif
 
-        #if DEBUG_IOT_WEATHER_STATION
+        #if DEBUG_IOT_WEATHER_STATION && 0
             void _drawDebugInfo();
             void _drawScreenDebug();
             void _updateScreenDebug();

@@ -350,7 +350,7 @@ namespace WSDraw {
         String timeStr;
 
         for(uint8_t num = 0; num < WEATHER_STATION_MAX_CLOCKS; num++) {
-            __LDBG_printf("%02u(%u): %s, %s", num, cfg.additionalClocks[num].isEnabled() ? 1 : 0, WeatherStation::getTZ(num).c_str(), WeatherStation::getName(num).c_str());
+            // __LDBG_printf("%02u(%u): %s, %s", num, cfg.additionalClocks[num].isEnabled() ? 1 : 0, WeatherStation::getTZ(num).c_str(), WeatherStation::getName(num).c_str());
             if (cfg.additionalClocks[num].isEnabled()) {
 
                 // do not allow interrupts while changing the TZ
@@ -734,7 +734,7 @@ namespace WSDraw {
     #endif
 
 
-    #if DEBUG_IOT_WEATHER_STATION
+    #if DEBUG_IOT_WEATHER_STATION && 0
 
         void Base::printDebugInfo(Print &output)
         {
@@ -932,7 +932,7 @@ namespace WSDraw {
                 case ScreenType::MOON_PHASE:
                     _drawMoonPhase();
                     break;
-                #if DEBUG_IOT_WEATHER_STATION
+                #if DEBUG_IOT_WEATHER_STATION && 0
                     case ScreenType::DEBUG_INFO:
                         _drawScreenDebug();
                         break;
@@ -965,7 +965,7 @@ namespace WSDraw {
 
     void Base::_displayScreen(int16_t x, int16_t y, int16_t w, int16_t h)
     {
-        #if DEBUG_IOT_WEATHER_STATION
+        #if DEBUG_IOT_WEATHER_STATION && 0
             if (_debugLastUpdate) {
                 auto diff = micros() - _debugLastUpdate;
                 float multiplier = diff > 0 ? ((1000U * 1000U) / diff) : 0;
@@ -986,7 +986,7 @@ namespace WSDraw {
         _canvas->drawInto(_tft, x, y, w, h);
         _tft.endWrite();
 
-        #if DEBUG_IOT_WEATHER_STATION
+        #if DEBUG_IOT_WEATHER_STATION && 0
             uint32_t dur = micros() -  start;
             _debugDrawTime = (_debugDrawTime + dur) / 2.0;
             _debugLastUpdate = micros();
@@ -1140,7 +1140,7 @@ namespace WSDraw {
                 case ScreenType::CURATED_ART:
                     return F("Curated Art");
             #endif
-            #if DEBUG_IOT_WEATHER_STATION
+            #if DEBUG_IOT_WEATHER_STATION && 0
                 case ScreenType::DEBUG_INFO:
                     return F("Debug Info");
                 case ScreenType::NUM_SCREENS:

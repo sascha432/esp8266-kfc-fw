@@ -178,15 +178,23 @@ bool Channel::_set(int32_t level, float transition)
         updateDimmer = true;
     }
     else if (level != _brightness) {
-        auto &cfg = _dimmer->_getConfig()._base;
-        _brightness = std::clamp<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
+        #if IOT_DIMMER_MODULE_CHANNELS == 1
+            // apply min/max brightness
+            auto &cfg = _dimmer->_getConfig()._base;
+            __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, _brightness);
+            _brightness = std::clamp<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
+        #else
+            __LDBG_printf("lvl=%u brightness=%u", level, _brightness);
+            _brightness = level;
+        #endif
         updateDimmer = true;
-        __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, _brightness);
     }
-    if (updateDimmer && transition != -1) {
+    if (transition != -1) {
         _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
-        _dimmer->_wire.writeEEPROM();
-        _dimmer->publishChannelState(_channel);
+        if (updateDimmer) {
+            _dimmer->_wire.writeEEPROM();
+            _dimmer->publishChannelState(_channel);
+        }
         return true;
     }
     return false;

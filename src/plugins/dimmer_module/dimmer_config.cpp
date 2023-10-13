@@ -20,6 +20,9 @@ namespace KFCConfigurationClasses {
                             channel_mapping{ 0, 1, 2, 3 },
                         #endif
                     #endif
+                    #if IOT_DIMMER_MODULE_CHANNELS
+                        level{},
+                    #endif
                     #if IOT_DIMMER_MODULE_HAS_BUTTONS
                         pin_ch0_down(kDefaultValueFor_pin_ch0_down),
                         pin_ch0_down_inverted(kDefaultValueFor_pin_ch0_down_inverted),
@@ -43,7 +46,6 @@ namespace KFCConfigurationClasses {
             {
                 #if IOT_DIMMER_MODULE_CHANNELS
                     for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                        level.from[i] = 0;
                         level.to[i] = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
                     }
                 #endif

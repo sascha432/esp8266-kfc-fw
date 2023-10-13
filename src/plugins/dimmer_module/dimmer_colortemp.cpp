@@ -23,7 +23,6 @@ namespace Dimmer {
         MQTTComponent(ComponentType::LIGHT),
         _base(base),
         _color(kColorMin + (kColorRangeFloat / 2.0)),
-        _colorStored(_color),
         _channelLock(true)
     {
     }
@@ -67,7 +66,6 @@ namespace Dimmer {
                     discovery->addParameter(F("brightness"), true);
                     discovery->addParameter(FSPGM(mqtt_color_mode), true);
                     discovery->addSupportedColorModes(F("[\"color_temp\"]"));
-
 
                     discovery->addParameter(FSPGM(mqtt_min_mireds), static_cast<uint16_t>(kColorMin / kColorMultiplier));
                     discovery->addParameter(FSPGM(mqtt_max_mireds), static_cast<uint16_t>(kColorMax / kColorMultiplier));

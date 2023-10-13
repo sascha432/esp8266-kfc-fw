@@ -115,7 +115,7 @@ private:
     void _updateBacklight(uint16_t toLevel, uint8_t step = 8);
 
 private:
-    asyncHTTPrequest *_httpClient;
+    KFCRestAPI::HttpClient *_httpClient;
 
     #if IOT_WEATHER_STATION_WS2812_NUM
         Event::Timer _pixelTimer;

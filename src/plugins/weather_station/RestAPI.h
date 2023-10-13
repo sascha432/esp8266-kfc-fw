@@ -29,14 +29,6 @@ namespace WeatherStation {
             _timeout = timeout;
             __LDBG_printf("callback=%p timeout=%u", &callback, _timeout);
             _createRestApiCall(emptyString, emptyString, reader, callback);
-            //  [callback](int16_t code, KFCRestAPI::HttpRequest &request) {
-            //     if (code == 200) {
-            //         callback(true, emptyString);
-            //     }
-            //     else {
-            //         callback(false, request.getMessage());
-            //     }
-            // });
         }
 
     private:

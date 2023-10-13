@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Stop FS during non-atomic FS updates to prevent corruption
  - Fixed issue with OpenWeatherMap forecast not being updated
  - Updated OpenWeatherMap API to OneCall API 3.0
  - Forecast screen for weather station

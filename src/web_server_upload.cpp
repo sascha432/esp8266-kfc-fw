@@ -146,25 +146,6 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
     }
 }
 
-#if DEBUG
-
-static PGM_P _updateCommand2Str(int command)
-{
-    switch(command) {
-        case U_ATMEGA:
-            return PSTR("ATmega");
-        case U_FLASH:
-            return PSTR("Firmware");
-        case U_FS:
-            return PSTR("File System");
-        case U_AUTH:
-            return PSTR("Authentication");
-    }
-    return PSTR("Unknown");
-}
-
-#endif
-
 void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final)
 {
     auto status = _validateSession(request, index);
@@ -269,7 +250,7 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                 command = U_FLASH;
             }
             status->command = command;
-            __DBG_printf("Update starting: %s, image type %s (%d), size %d, command %s (%d)", filename.c_str(), imageTypeStr, imageType, (int)size, _updateCommand2Str(command), command);
+            __DBG_printf("Update starting: %s, image type %s (%d), size %d, command %d", filename.c_str(), imageTypeStr, imageType, (int)size, command);
 
             #if defined(ESP8266)
                 Update.runAsync(true);

@@ -56,10 +56,9 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
 
 void Plugin::createWebUI(WebUINS::Root &webUI)
 {
-    // auto row = &webUI.addRow();
-    // row->addGroup(F(IOT_DIMMER_TITLE), IOT_DIMMER_GROUP_SWITCH);
-
     webUI.addRow(WebUINS::Group(F(IOT_DIMMER_TITLE), IOT_DIMMER_GROUP_SWITCH));
+
+    // global sliders, metrics and switches
 
     #if IOT_DIMMER_HAS_RGB
         auto slider = WebUINS::Slider(F("d-br"), F(IOT_DIMMER_BRIGHTNESS_TITLE), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
@@ -67,66 +66,51 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
         slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100));
         webUI.addRow(slider);
 
-        // row = &webUI.addRow();
-        // auto obj = &row->addSlider(F("d-br"), F(IOT_DIMMER_BRIGHTNESS_TITLE), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-        // obj->add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100);
-        // obj->add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100);
-
         webUI.addRow(WebUINS::RGBSlider(F("d_rgb"), F("Color"));
-        // row = &webUI.addRow();
-        // row->addRGBSlider(F("d_rgb"), F("Color"));
 
         webUI.addRow(WebUINS::ColorTemperatureSlider(F("d-ct"), F("Color Temperature"));
-        // row = &webUI.addRow();
-        // row->addColorTemperatureSlider(F("d-ct"), F("Color Temperature"));
 
         #if IOT_DIMMER_HAS_RGBW
             auto slider = WebUINS::Slider(F("d_wbr"), F(IOT_DIMMER_WBRIGHTNESS_TITLE), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
             slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100));
             slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100));
             webUI.addRow(slider);
-
-            // row = &webUI.addRow();
-            // obh = &row->addSlider(F("d_wbr"), F(IOT_DIMMER_WBRIGHTNESS_TITLE), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-            // obj->add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100);
-            // obj->add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100);
         #endif
     #elif IOT_DIMMER_HAS_COLOR_TEMP
 
         auto slider = WebUINS::Slider(F("d-br"), F("Brightness"), 0, IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-        slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100));
+        slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100));
         slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100));
         webUI.addRow(slider);
-
-        // row = &webUI.addRow();
-        // auto obj = &row->addSlider(F("d-br"), F("Brightness"), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-        // obj->add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100);
-        // obj->add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100);
 
         auto colorSlider = WebUINS::ColorTemperatureSlider(F("d-ct"), F("Color Temperature"));
         colorSlider.append(WebUINS::NamedInt32(F("min"), ColorTemperature::kColorMin));
         colorSlider.append(WebUINS::NamedInt32(F("max"), ColorTemperature::kColorMax));
         webUI.addRow(colorSlider);
-
-        // row = &webUI.addRow();
-        // row->addColorTemperatureSlider(F("d-ct"), F("Color Temperature"));
     #else
+
+        // no global sliders
+
     #endif
+
+    // add sensors below global sliders
 
     auto sensor = getMetricsSensor();
     if (sensor) {
         sensor->_createWebUI(webUI);
     }
 
+    // add lock button
+
     #if IOT_DIMMER_GROUP_LOCK
         webUI.appendToLastRow(WebUINS::Switch(F("d-lck"), F("Lock Channels"), true, WebUINS::NamePositionType::TOP, 4));
     #endif
 
+    // single channels
 
     #if IOT_DIMMER_SINGLE_CHANNELS
         #if IOT_DIMMER_HAS_RGB || IOT_DIMMER_HAS_COLOR_TEMP
             // add group switch if not already in the first group title
-            // row->addGroup(F(IOT_DIMMER_CHANNELS_TITLE), !IOT_DIMMER_GROUP_SWITCH);
             webUI.addRow(WebUINS::Group(F(IOT_DIMMER_CHANNELS_TITLE), !IOT_DIMMER_GROUP_SWITCH));
         #endif
 
@@ -143,14 +127,15 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
             String id = PrintString(F("d-ch%u"), idx);
             String title = PrintString(F("Channel %u"), number);
             auto slider = WebUINS::Slider(id, title, 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-            slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100));
-            slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100));
-            webUI.addRow(slider);
 
-            // row = &webUI.addRow();
-            // auto &obj = row->addSlider(PrintString(F("d-ch%u"), idx), PrintString(F("Channel %u"), number), 0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
-            // obj.add(JJ(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100);
-            // obj.add(JJ(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100);
+            #if IOT_DIMMER_MODULE_CHANNELS == 1
+                // show min/max brightness range
+                slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.min_brightness / 100));
+                slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MODULE_MAX_BRIGHTNESS * _config._base.max_brightness / 100));
+            #else
+                // internally scaled
+            #endif
+            webUI.addRow(slider);
         }
     #endif
 }
@@ -170,9 +155,9 @@ void Plugin::createMenu()
 }
 
 #if IOT_DIMMER_MODULE_INTERFACE_UART
-    #define IOT_DIMMER_INTERFACE "Serial Port"
+#    define IOT_DIMMER_INTERFACE "Serial Port"
 #else
-    #define IOT_DIMMER_INTERFACE "I2C"
+#    define IOT_DIMMER_INTERFACE "I2C"
 #endif
 
 void Plugin::getStatus(Print &out)

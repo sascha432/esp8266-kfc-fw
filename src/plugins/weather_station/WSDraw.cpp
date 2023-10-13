@@ -235,8 +235,16 @@ namespace WSDraw {
         if (error.length()) {
             _canvas->setFont(FONTS_DEFAULT_SMALL);
             _canvas->setTextColor(COLORS_RED);
-            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Loading Weather Failed"), AdafruitGFXExtension::CENTER);
-            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 30, error, AdafruitGFXExtension::CENTER);
+            int y;
+            if (_weatherApi._info.noData()) {
+                _canvas->setTextColor(COLORS_ORANGE);
+                y = 23;
+            }
+            else {
+                _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + 15, F("Loading Weather Failed"), AdafruitGFXExtension::CENTER);
+                y = 30;
+            }
+            _canvas->drawTextAligned(TFT_WIDTH / 2, Y_START_POSITION_FORECAST + y, error, AdafruitGFXExtension::CENTER);
         }
         else {
             _canvas->setFont(FONTS_DEFAULT_MEDIUM);

@@ -6,6 +6,20 @@
 
 #if IOT_SENSOR_HAVE_HLW8032
 
+// Software serial for the ESP8266 that uses edge triggered interrupts to improve performance. ...
+// leading to signficant performance improvements when used on serial data ports running at speeds of 9600 baud or less.
+// Note that the slower the data rate, the more useful this driver becomes. For high speeds it doesn't confer as much of an advantage.
+// https://github.com/CrazyRobMiles/Esp8266EdgeSoftwareSerial
+
+// HLW8032 has a simple UART interface and adopts asynchronous serial communication
+// mode, which allows data communication via two one-way pins. The UART interface can realize
+// isolated communication by only a low-cost photoelectric coupler. The UART interface operates
+// at fixed frequency of 4800 bps and its interval for transmitting data is 50mS, which is suitable
+// for design of low velocity
+// https://datasheet.lcsc.com/lcsc/1811151523_Hiliwei-Tech-HLW8032_C128023.pdf
+
+// https://github.com/Khaalidi/HLW8032
+
 #error this sensor is not implemented
 
 #include <Arduino_compat.h>

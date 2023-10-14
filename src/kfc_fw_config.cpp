@@ -724,7 +724,7 @@ const __FlashStringHelper *KFCFWConfiguration::getFirmwareVersion()
 {
     #if ESP32
         // return getShortFirmwareVersion() + F("-" ARDUINO_ESP32_RELEASE " " ) + FPSTR(__compile_date__);
-        return F(FIRMWARE_SHORT_VERSION "-" ARDUINO_ESP32_RELEASE " " __DATE__ " " __TIME__));
+        return F(FIRMWARE_SHORT_VERSION "-" ARDUINO_ESP32_RELEASE " " __DATE__ " " __TIME__);
     #elif ESP8266
         // return getShortFirmwareVersion() + PrintString(F("-" ARDUINO_ESP8266_RELEASE " "), ARDUINO_ESP8266_GIT_VER) + FPSTR(__compile_date__);
         return ARRAY_F(stdex::array_concat(

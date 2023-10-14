@@ -109,10 +109,11 @@ void Module::_getChannels()
         _wire.write(IOT_DIMMER_MODULE_CHANNELS << 4); // read 0 - (IOT_DIMMER_MODULE_CHANNELS - 1)
         int16_t level;
         const int len = IOT_DIMMER_MODULE_CHANNELS * sizeof(level);
+        auto &channels = getChannels();
         if (_wire.endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
             for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
                 _wire.read(level);
-                setChannel(i, level);
+                channels[i]._set(_calcLevelReverse(level, i), NAN, false);
             }
             #if DEBUG_IOT_DIMMER_MODULE
                 String str;

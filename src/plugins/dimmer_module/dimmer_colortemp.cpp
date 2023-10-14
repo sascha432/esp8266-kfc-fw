@@ -256,9 +256,13 @@ namespace Dimmer {
                 __DBG_panic("color=%f _color=%f min=%d range=%f", color, _color, kColorMin, kColorRangeFloat);
             }
         #endif
-        // adjust brightness, color center is 0.5
-        auto ww = _brightness * color;
-        auto cw = _brightness * (1.0f - color);
+        // adjust brightness per color
+        // ww is 0.0, center is 0.5, cw = 1.0
+        auto rww = _ratio[0] + _ratio[1];
+        auto rcw = _ratio[2] + _ratio[3];
+        // scale brightness to match the ratio pairs for ww/cw
+        auto ww = rww ? (_brightness * (color / rww)) : 0.0f;
+        auto cw = rcw ? (_brightness * ((1 - color) / rcw)) : 0.0f;
         // set each channel
         _channels[_channel_ww1]._set(ww * _ratio[0], NAN, false);
         _channels[_channel_ww2]._set(ww * _ratio[1], NAN, false);

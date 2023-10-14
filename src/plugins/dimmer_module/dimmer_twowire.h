@@ -14,6 +14,14 @@
 #    endif
 #endif
 
+#include "dimmer_plugin_def.h"
+
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_enable.h>
+#else
+#    include <debug_helper_disable.h>
+#endif
+
 namespace Dimmer {
 
     #if IOT_DIMMER_MODULE_INTERFACE_UART
@@ -90,3 +98,7 @@ namespace Dimmer {
     };
 
 }
+
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_disable.h>
+#endif

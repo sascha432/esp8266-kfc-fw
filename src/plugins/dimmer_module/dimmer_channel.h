@@ -9,6 +9,12 @@
 #include "../src/plugins/mqtt/mqtt_json.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_enable.h>
+#else
+#    include <debug_helper_disable.h>
+#endif
+
 namespace Dimmer {
 
     class ChannelsArray;
@@ -143,3 +149,7 @@ namespace Dimmer {
     }
 
 }
+
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_disable.h>
+#endif

@@ -178,7 +178,7 @@ bool Base::writeConfig(ConfigType &config)
     if (&config != &_config) {
         _config = config;
     }
-    __DBG_printf("getConfigWriter");
+    __LDBG_printf("getConfigWriter");
     auto writer = _wire.getConfigWriter();
     writer.config().version = config._version;
     writer.config().info = config._info;
@@ -465,13 +465,13 @@ uint8_t Base::_getChannelFrom(AsyncWebServerRequest *request)
     // get and validate channel
     auto channelParam = request->getParam(F("channel"));
     if (!channelParam) {
-        __DBG_printf("channel missing");
+        __LDBG_printf("channel missing");
         WebServer::Plugin::send(400, request);
         return 0xff;
     }
     auto channel = static_cast<uint8_t>(channelParam->value().toInt());
     if (channel >= DIMMER_CHANNEL_COUNT) {
-        __DBG_printf("invalid channel=%u", channel);
+        __LDBG_printf("invalid channel=%u", channel);
         WebServer::Plugin::send(400, request);
         return 0xff;
     }
@@ -513,13 +513,13 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
             LoopFunctions::callOnce([read, data]() {
                 if (read) {
                     if (!dimmer_plugin.readConfig(dimmer_plugin._getConfig())) {
-                        __DBG_printf("failed to read configuration");
+                        __LDBG_printf("failed to read configuration");
                         return;
                     }
                 }
                 else {
                     if (!dimmer_plugin.writeConfig(dimmer_plugin._getConfig())) {
-                        __DBG_printf("failed to write configuration");
+                        __LDBG_printf("failed to write configuration");
                         return;
                     }
                 }
@@ -567,13 +567,13 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
             else {
                 auto param = request->getParam(F("data"));
                 if (!param) {
-                    __DBG_printf("data missing");
+                    __LDBG_printf("data missing");
                     WebServer::Plugin::send(406, request);
                     return;
                 }
                 auto &dataStr = param->value();
                 if ((dataStr.length() % 4) != 0 || dataStr.length() < 4 || dataStr.length() > CubicInterpolation::size() * 4) {
-                    __DBG_printf("invalid data length=%u", dataStr.length());
+                    __LDBG_printf("invalid data length=%u", dataStr.length());
                     WebServer::Plugin::send(406, request);
                     return;
                 }
@@ -593,7 +593,7 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
                 data->setChannel(channel);
                 LoopFunctions::callOnce([read, data]() {
                     if (!dimmer_plugin._wire.writeCubicInterpolation(*data)) {
-                        __DBG_printf("failed to store ci for channel=%u", data->_channel);
+                        __LDBG_printf("failed to store ci for channel=%u", data->_channel);
                     }
                     dimmer_plugin._wire.writeConfig();
                     // reset with locked interrupts

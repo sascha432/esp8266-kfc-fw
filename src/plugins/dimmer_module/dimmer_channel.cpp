@@ -32,7 +32,7 @@ Channel::Channel(Module *dimmer, uint8_t channel) :
 MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new MQTT::AutoDiscovery::Entity();
-    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
+    __LDBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(num) {
         case 0:
@@ -121,7 +121,7 @@ void Channel::onMessage(const char *topic, const char *payload, size_t len)
         onJsonMessage(reader);
     }
     else {
-        __DBG_printf("parsing json failed=%s payload=%s", reader.getLastErrorMessage().c_str(), payload);
+        __LDBG_printf("parsing json failed=%s payload=%s", reader.getLastErrorMessage().c_str(), payload);
     }
 }
 

@@ -7,6 +7,12 @@
 #include <plugins_menu.h>
 #include "../include/templates.h"
 
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_enable.h>
+#else
+#    include <debug_helper_disable.h>
+#endif
+
 using namespace Dimmer;
 
 Plugin Dimmer::dimmer_plugin;

@@ -15,6 +15,12 @@
 #    include "dimmer_colortemp.h"
 #endif
 
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_enable.h>
+#else
+#    include <debug_helper_disable.h>
+#endif
+
 namespace Dimmer {
 
     class ColorTemperature;
@@ -155,3 +161,7 @@ namespace Dimmer {
     }
 
 }
+
+#if DEBUG_IOT_DIMMER_MODULE
+#    include <debug_helper_disable.h>
+#endif

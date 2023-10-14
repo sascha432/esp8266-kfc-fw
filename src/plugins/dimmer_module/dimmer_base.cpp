@@ -217,11 +217,7 @@ void Base::_stopFading(uint8_t channel)
     void Base::_setDimmingLevels()
     {
         // this only works if all channels have about the same load
-        uint32_t levelSum = 0;
-        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-            levelSum += getChannel(i);
-        }
-        auto level = levelSum / static_cast<float>(IOT_DIMMER_MODULE_MAX_BRIGHTNESS * IOT_DIMMER_MODULE_CHANNELS);
+        auto level = getChannels().getSum() / (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * IOT_DIMMER_MODULE_CHANNELS * 1.0f);
         auto sensor = SensorPlugin::getSensor<Sensor_HLW80xx::kSensorType>();
         if (sensor) {
             sensor->setDimmingLevel(level);

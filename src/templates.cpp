@@ -134,14 +134,16 @@ void WebTemplate::printModel(Print &output)
     #if defined(MQTT_AUTO_DISCOVERY_MODEL)
         output.print(F(MQTT_AUTO_DISCOVERY_MODEL));
     #elif IOT_SWITCH
-        #if IOT_SWITCH_CHANNEL_NUM>1
-            output.print(F(_STRINGIFY(IOT_SWITCH_CHANNEL_NUM) " Channel Switch"));
+        #if IOT_SWITCH_CHANNEL_NUM > 1
+            // output.print(F(_STRINGIFY(IOT_SWITCH_CHANNEL_NUM) " Channel Switch"));
+            output.print(ARRAY_F(stdex::array_concat(stdex::int_to_array<int, IOT_SWITCH_CHANNEL_NUM>(), stdex::str_to_array(" Channel Switch"))));
         #else
             output.print(F("Switch"));
         #endif
     #elif IOT_DIMMER_MODULE
         #if IOT_DIMMER_MODULE_CHANNELS > 1
-            output.print(F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer"));
+            // output.print(F(_STRINGIFY(IOT_DIMMER_MODULE_CHANNELS) " Channel MOSFET Dimmer"));
+            output.print(ARRAY_F(stdex::array_concat(stdex::int_to_array<int, Dimmer::kNumChannels>(), stdex::str_to_array(" Channel MOSFET Dimmer"))));
         #else
             output.print(F("MOSFET Dimmer"));
         #endif

@@ -41,7 +41,7 @@ namespace Dimmer {
         uint8_t endTransmission(uint8_t sendStop)
         {
             auto res = TwoWireBase::endTransmission(sendStop);
-            delay(10);
+            delay(1);
             return res;
         }
 
@@ -57,7 +57,7 @@ namespace Dimmer {
         bool lock() {
             InterruptLock lock;
             if (_locked) {
-                __DBG_printf_E("wire locked");
+                __LDBG_printf_E("wire locked");
                 return false;
             }
             _locked = true;

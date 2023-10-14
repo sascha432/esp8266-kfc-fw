@@ -264,7 +264,6 @@ PROGMEM_STRING_DEF(info, "info");
 PROGMEM_STRING_DEF(int, "int");
 PROGMEM_STRING_DEF(interval, "interval");
 PROGMEM_STRING_DEF(iot_blinds_control_state_file, "/.pvt/blinds_ctrl.state");
-PROGMEM_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
 PROGMEM_STRING_DEF(ip_8_8_8_8, "8.8.8.8");
 PROGMEM_STRING_DEF(is_, "is_");
 PROGMEM_STRING_DEF(kWh, "kWh");

@@ -120,9 +120,12 @@ void Sensor_HLW8012::_loop()
         _inputCF.clear();
         _inputCF.setTarget(NAN);
     }
-    if (millis() > _saveEnergyCounterTimeout) {
-        _saveEnergyCounter();
-    }
+
+    #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+        if (get_time_since(_saveEnergyCounterTimer, millis()) > IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT) {
+            _saveEnergyCounter();
+        }
+    #endif
 
     // voltage and current
     if (_inputCF1->delayStart) {
@@ -153,19 +156,6 @@ void Sensor_HLW8012::_loop()
         }
         _toggleOutputMode();
     }
-}
-
-float calculateSD(float data[])
-{
-    float sum = 0.0, mean, standardDeviation = 0.0;
-    for(int i = 0; i < 10; i++) {
-        sum += data[i];
-    }
-    mean = sum / 10;
-    for(int i = 0; i < 10; i++) {
-        standardDeviation += pow(data[i] - mean, 2);
-    }
-    return sqrt(standardDeviation / 10);
 }
 
 bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInput &input)
@@ -385,7 +375,7 @@ void Sensor_HLW8012::_setOutputMode(OutputTypeEnum_t outputMode, int delay)
     }
     _toggleOutputMode(delay);
     if (outputMode != CYCLE) { // lock selected mode
-        _inputCF1->toggleTimer = ~0;
+        _inputCF1->toggleTimer = millis() + 0x7fffffff;
     }
 }
 

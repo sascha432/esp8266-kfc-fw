@@ -10,19 +10,18 @@
 #include "MicrosTimer.h"
 #include "Sensor_HLW8012.h"
 #include "Sensor_HLW8032.h"
-#if HTTP2SERIAL_SUPPORT
 #include "plugins/http2serial/http2serial.h"
-#endif
 
 #if DEBUG_IOT_SENSOR
-#include <debug_helper_enable.h>
+#    include <debug_helper_enable.h>
 #else
-#include <debug_helper_disable.h>
+#    include <debug_helper_disable.h>
 #endif
 
 using Plugins = KFCConfigurationClasses::PluginsType;
 
-AUTO_STRING_DEF(iot_sensor_hlw80xx_state_file, "/.pvt/hlw80xx.state");
+#define STATE_FILENAME "/.pvt/hlw80xx.state"
+#define STATE_NVS_KEY "hlw80xx_state"
 
 Sensor_HLW80xx::Sensor_HLW80xx(const String &name, MQTT::SensorType type) :
     MQTT::Sensor(type),
@@ -38,7 +37,7 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name, MQTT::SensorType type) :
         _dimmingLevel = -1;
     #endif
     reconfigure(nullptr); // read config
-    _loadEnergyCounter();
+    __loadEnergyCounter();
 
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
     setMqttUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT);
@@ -160,7 +159,9 @@ void Sensor_HLW80xx::reconfigure(PGM_P source)
 
 void Sensor_HLW80xx::shutdown()
 {
-    _saveEnergyCounter();
+    #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+        _saveEnergyCounter(true);
+    #endif
 
     // update energy counter in EEPROM
     auto &cfg = Plugins::Sensor::getWriteableConfig().hlw80xx;
@@ -199,6 +200,7 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, FormUI:
         if (value.length()) {
             // gets copied to getEnergyPrimaryCounter() in configurationSaved()
             cfg.energyCounter = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
+            _resetSaveEnergyTimer();
         }
         return true;
     }));
@@ -209,6 +211,7 @@ void Sensor_HLW80xx::createConfigureForm(AsyncWebServerRequest *request, FormUI:
     form.addValidator(FormUI::Validator::CallbackTemplate<String>([this](const String &value, FormField &field) {
         if (value.length()) {
             getEnergySecondaryCounter() = IOT_SENSOR_HLW80xx_KWH_TO_PULSE(value.toFloat());
+            _resetSaveEnergyTimer();
         }
         return true;
     }));
@@ -237,34 +240,135 @@ void Sensor_HLW80xx::publishState()
     }
 }
 
-void Sensor_HLW80xx::_saveEnergyCounter()
+void Sensor_HLW80xx::__saveEnergyCounterToFile()
+{
+    __LDBG_printf("file=%s", PSTR(STATE_FILENAME));
+    auto file = KFCFS.open(F(STATE_FILENAME), fs::FileOpenMode::write);
+    if (file) {
+        file.write(reinterpret_cast<const uint8_t *>(_energyCounter.data()), sizeof(_energyCounter));
+        file.close();
+    }
+}
+
+bool Sensor_HLW80xx::__loadEnergyCounterFromFile(EnergyCounterArray &energy)
+{
+    __LDBG_printf("file=%s", PSTR(STATE_FILENAME));
+    auto file = KFCFS.open(F(STATE_FILENAME), fs::FileOpenMode::read);
+    EnergyCounterArray tmp;
+    if (file && file.read(reinterpret_cast<uint8_t *>(tmp.data()), sizeof(tmp)) == sizeof(tmp)) {
+        energy = tmp;
+    } else {
+        __LDBG_printf("read error");
+        energy = EnergyCounterArray({Plugins::Sensor::getConfig().hlw80xx.energyCounter, 0}); // restore data from config in case FS was updated
+        return false;
+    }
+    return true;
+}
+
+void Sensor_HLW80xx::_saveEnergyCounter(bool shutdown)
 {
     #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
-        __LDBG_printf("file=%s", FSPGM(iot_sensor_hlw80xx_state_file));
-        auto file = KFCFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::write);
-        if (file) {
-            file.write(reinterpret_cast<const uint8_t *>(_energyCounter.data()), sizeof(_energyCounter));
-            file.close();
+        __LDBG_printf("counter1=%llu counter2=%llu shutdown=%d", _energyCounter[0], _energyCounter[1], shutdown);
+
+        uint32_t ms = millis();
+
+        // check for changes
+        if (!shutdown) {
+            EnergyCounterArray energy;
+            if (__loadEnergyCounter(energy)) {
+                if (energy == _energyCounter) {
+                    __LDBG_printf("no changes");
+                    _saveEnergyCounterTimer = ms;
+                    return;
+                }
+            }
         }
-        _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
-    #else
-        _saveEnergyCounterTimeout = ~0;
+
+        #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE == IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE_FS
+
+            __saveEnergyCounterToFile();
+            _saveEnergyCounterTimer = ms;
+
+        #elif IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE == IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE_NVS
+
+            #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS
+                __LDBG_printf("save fs_cnt=%d/%d", _saveEnergyCounterFSCounter + 1, IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS);
+            #else
+                __LDBG_printf("save");
+            #endif
+
+            auto err = config._nvs_open(true);
+            if (err == ESP_OK) {
+                err = config._nvs_set_blob(STATE_NVS_KEY, _energyCounter.data(), sizeof(_energyCounter));
+                config._nvs_close();
+            }
+            if (err != ESP_OK) {
+                __LDBG_printf("cannot write '%s' err=%x", PSTR(STATE_NVS_KEY), err);
+            }
+            _saveEnergyCounterTimer = ms;
+
+            #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS
+                // fallback
+                if (shutdown || ++_saveEnergyCounterFSCounter >= IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS) {
+                    __saveEnergyCounterToFile();
+                    _saveEnergyCounterFSCounter = 0;
+                }
+            #endif
+
+        #else
+
+            #error not supported
+
+        #endif
     #endif
 }
 
-void Sensor_HLW80xx::_loadEnergyCounter()
+bool Sensor_HLW80xx::__loadEnergyCounter(EnergyCounterArray &energy)
 {
     #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
-        __LDBG_printf("file=%s", FSPGM(iot_sensor_hlw80xx_state_file));
-        auto file = KFCFS.open(FSPGM(iot_sensor_hlw80xx_state_file), fs::FileOpenMode::read);
-        if (!file || file.read(reinterpret_cast<uint8_t *>(_energyCounter.data()), sizeof(_energyCounter)) != sizeof(_energyCounter)) {
-            resetEnergyCounter();
-            _energyCounter[0] = Plugins::Sensor::getConfig().hlw80xx.energyCounter; // restore data from EEPROM in case FS was updated
-        }
-        _saveEnergyCounterTimeout = millis() + IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
-    #else
-        resetEnergyCounter();
-        _saveEnergyCounterTimeout = ~0;
+        #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE == IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE_FS
+
+            return __loadEnergyCounterFromFile(energy);
+
+        #elif IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE == IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE_NVS
+
+            EnergyCounterArray tmp;
+            size_t length = sizeof(tmp);
+            auto err = config._nvs_get_blob_with_open(STATE_NVS_KEY, tmp.data(), &length);
+            if (err == ESP_OK && length == sizeof(tmp)) {
+                energy = tmp;
+                return true;
+            }
+            else {
+                __LDBG_printf("failed to get '%s' len=%u size=%u err=%x", PSTR(STATE_NVS_KEY), length, sizeof(tmp), err);
+            }
+            #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS
+                return __loadEnergyCounterFromFile(energy);
+            #endif
+        #endif
+        // __LDBG_printf("counter1=%.0f counter2=%.0f res=%d", float(_energyCounter[0]), float(_energyCounter[1]), result);
+    #endif
+    return false;
+}
+
+void Sensor_HLW80xx::__loadEnergyCounter()
+{
+    __loadEnergyCounter(_energyCounter);
+    #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+        _saveEnergyCounterTimer = millis();
+        #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS
+            _saveEnergyCounterFSCounter = 0;
+        #endif
+    #endif
+}
+
+void Sensor_HLW80xx::_resetSaveEnergyTimer()
+{
+    #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+        _saveEnergyCounterTimer = millis() - (IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT + 1);
+        #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS
+            _saveEnergyCounterFSCounter = IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS;
+        #endif
     #endif
 }
 

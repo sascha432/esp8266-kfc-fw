@@ -128,15 +128,54 @@
 #    define IOT_SENSOR_HLW80xx_F_OSC 3.579000
 #endif
 
-// interval to save energy counter to FS, 0 to disable
+// interval in milliseconds to save energy counter, 0 to disable
 #ifndef IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
 #    define IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT (5 * 60 * 1000)
 #endif
 
+#define IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE_FS      1 // save to file system
+#define IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE_NVS     2 // save to config nvs, fallback is the file system
+
+// select storage type
+#ifndef IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE
+#   define IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE_NVS
+#endif
+
+// save backup to file system every IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT writes (hourly unless the data does not change)
+#ifndef IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS
+#    define IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS ((60 * 60 * 1000) / IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT)
+#endif
+
+#if IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE != IOT_SENSOR_HLW80xx_SAVE_ENERGY_TYPE_NVS
+#    undef IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS
+#    define IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS 0
+#endif
+
+#if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT != 0 && IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT < 60000
+#    error IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT must be greater or equal 60000
+#endif
+
+#if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS != 0 && IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS < 1
+#    error IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS must be greater than 0
+#endif
+
 // number of energy counters, must be >= 2
 #ifndef IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS
-#    define IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS 5
+#    define IOT_SENSOR_HLW80xx_NUM_ENERGY_COUNTERS 2
 #endif
+
+namespace HLW80xx {
+
+    static constexpr uint32_t kSaveEnergyIntervalMillis = IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT;
+    static constexpr uint32_t kSaveEnergyFSCounter = IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS;
+
+    static constexpr float kMinCurrentAmps = IOT_SENSOR_HLW80xx_MIN_CURRENT;
+    static constexpr float kMaxCurrentAmps = IOT_SENSOR_HLW80xx_MAX_CURRENT;
+
+    static constexpr uint32_t kCurrentMinPulse = IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE;
+    static constexpr uint32_t kCurrentMaxPulse = IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE;
+
+}
 
 // https://datasheet.lcsc.com/szlcsc/1811151452_Hiliwei-Tech-HLW8012_C83804.pdf
 
@@ -213,7 +252,6 @@ public:
     virtual bool atModeHandler(AtModeArgs &args) override;
 #endif
 
-    void resetEnergyCounter();
     EnergyCounterArray &getEnergyCounters();
     uint64_t &getEnergyPrimaryCounter();
     uint64_t &getEnergySecondaryCounter();
@@ -221,8 +259,21 @@ public:
     virtual void dump(Print &output);
 
 protected:
-    void _saveEnergyCounter();
-    void _loadEnergyCounter();
+    // store energy counters in file
+    void __saveEnergyCounterToFile();
+    // load energy counters from FS into 'energy' and report result
+    bool __loadEnergyCounterFromFile(EnergyCounterArray &energy);
+    // load energy counters into 'energy' and report result
+    bool __loadEnergyCounter(EnergyCounterArray &energy);
+
+    // store energy counters
+    // use shutdown = true to ignore any timeouts and store even if contents are the same
+    void _saveEnergyCounter(bool shutdown = false);
+    // load energy counter
+    void __loadEnergyCounter();
+    // schedule to store energy counters
+    void _resetSaveEnergyTimer();
+    // increase all energy counters
     void _incrEnergyCounters(uint32_t count);
 
     WebUINS::TrimmedFloat _currentToNumber(float current) const;
@@ -245,7 +296,12 @@ protected:
     float _calibrationP;
     uint8_t _extraDigits;
 
-    uint32_t _saveEnergyCounterTimeout;
+    #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT
+        #if IOT_SENSOR_HLW80xx_SAVE_ENERGY_CNT_FS
+            uint16_t _saveEnergyCounterFSCounter;
+        #endif
+        uint32_t _saveEnergyCounterTimer;
+    #endif
 
 public:
     Event::Timer _dumpTimer;
@@ -298,12 +354,6 @@ inline Sensor_HLW80xx::EnergyCounterArray &Sensor_HLW80xx::getEnergyCounters()
     return _energyCounter;
 }
 
-inline void Sensor_HLW80xx::resetEnergyCounter()
-{
-    _energyCounter = {};
-    _saveEnergyCounter();
-}
-
 inline uint64_t &Sensor_HLW80xx::getEnergyPrimaryCounter()
 {
     return _energyCounter[0];
@@ -316,8 +366,8 @@ inline uint64_t &Sensor_HLW80xx::getEnergySecondaryCounter()
 
 inline void Sensor_HLW80xx::_incrEnergyCounters(uint32_t count)
 {
-    for(uint8_t i = 0; i < _energyCounter.size(); i++) {
-        _energyCounter[i] += count;
+    for(auto &value: _energyCounter) {
+        value += count;
     }
 }
 

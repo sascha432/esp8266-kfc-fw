@@ -350,6 +350,7 @@ void Base::_setOnOffState(bool val)
                 _channels[i]._set(_channels[i]._storedBrightness, NAN, false);
             }
             else {
+                _channels[i].setStoredBrightness(_channels[i]._brightness);
                 _channels[i]._set(0, NAN, false);
             }
         }

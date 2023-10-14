@@ -120,10 +120,7 @@ namespace Dimmer {
 
     inline void Channel::setStoredBrightness(int32_t store)
     {
-        // do not store 0
-        if (store > 1) {
-            _storedBrightness = store;
-        }
+        _storedBrightness = store;
     }
 
     inline uint16_t Channel::getStoredBrightness() const

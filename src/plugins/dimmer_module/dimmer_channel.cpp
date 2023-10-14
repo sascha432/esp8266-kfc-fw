@@ -148,14 +148,12 @@ void Channel::onJsonMessage(const MQTT::Json::Reader &json)
 
 bool Channel::on(float transition)
 {
-    // if (!_storedBrightness)  {
-    //     _storedBrightness = kDefaultLevel;
-    // }
     return _dimmer->setChannel(_channel, _storedBrightness, transition);
 }
 
 bool Channel::off(ConfigType *config, float transition)
 {
+    setStoredBrightness(_brightness);
     return _dimmer->setChannel(_channel, 0, transition);
 }
 
@@ -169,10 +167,6 @@ bool Channel::_set(int32_t level, float transition, bool updateSingle)
     __LDBG_printf("lvl=%d trans=%f ch=%u", level, transition, _channel);
     auto prevBrightness = _brightness;
     if (level == 0) {
-        // if channel is turned off, store previous brightness
-        if (_brightness != 0) {
-            setStoredBrightness(_brightness);
-        }
         _brightness = 0;
     }
     else if (level != _brightness) {
@@ -180,9 +174,8 @@ bool Channel::_set(int32_t level, float transition, bool updateSingle)
             // apply min/max brightness
             auto &cfg = _dimmer->_getConfig()._base;
             __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, _brightness);
-            _brightness = std::clamp<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
+            _brightness = std::min<int32_t>(std::max<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100), cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
         #else
-            __LDBG_printf("lvl=%u brightness=%u", level, _brightness);
             _brightness = level;
         #endif
     }

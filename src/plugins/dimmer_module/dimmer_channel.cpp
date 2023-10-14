@@ -164,7 +164,7 @@ void Channel::stopFading()
     _dimmer->_stopFading(_channel);
 }
 
-bool Channel::_set(int32_t level, float transition, bool updateAll)
+bool Channel::_set(int32_t level, float transition, bool updateSingle)
 {
     __LDBG_printf("lvl=%d trans=%f ch=%u", level, transition, _channel);
     auto prevBrightness = _brightness;
@@ -187,11 +187,11 @@ bool Channel::_set(int32_t level, float transition, bool updateAll)
         #endif
     }
     else {
-        updateAll = false;
+        updateSingle = false;
     }
     if (transition != -1) {
         _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
-        if (updateAll) {
+        if (updateSingle) {
             _dimmer->_wire.writeEEPROM();
             _dimmer->publishChannelState(_channel);
             return true;

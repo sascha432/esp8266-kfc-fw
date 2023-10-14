@@ -86,9 +86,10 @@ namespace Dimmer {
         friend ChannelsArray;
         friend ColorTemperature;
         friend Module;
+        friend Base;
 
         void _publish();
-        bool _set(int32_t level, float transition = NAN, bool updateAll = true);
+        bool _set(int32_t level, float transition = NAN, bool updateSingle = true);
         String _createTopics(TopicType type, bool full = true) const;
 
         Module *_dimmer;

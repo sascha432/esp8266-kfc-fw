@@ -343,21 +343,33 @@ void Base::getValues(WebUINS::Events &array)
 
 void Base::_setOnOffState(bool val)
 {
-    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-        if (val) {
-            on(i);
-        }
-        else {
-            off(i);
-        }
-    }
     #if IOT_DIMMER_HAS_COLOR_TEMP
+        auto &_channels = getChannels();
+        for(int i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            if (val) {
+                _channels[i]._set(_channels[i]._storedBrightness, NAN, false);
+            }
+            else {
+                _channels[i]._set(0, NAN, false);
+            }
+        }
+        _wire.writeEEPROM();
+
         auto color = _color._color;
         _color._channelsToBrightness();
         if (!val) {
             _color._color = color; // keep color when turning off
         }
         _color._publish();
+    #else
+        for(int i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            if (val) {
+                on(i);
+            }
+            else {
+                off(i);
+            }
+        }
     #endif
     #if IOT_DIMMER_HAS_RGB
         _rgb._publish();

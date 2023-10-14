@@ -84,8 +84,7 @@ public:
     static const uint32_t kPwmMaxFrequency = 40000;
     static constexpr float kAdcIntegralMultiplierDivider = 1000.0 * 10.0;
 
-protected:
-    friend WebServer::Plugin;
+public:
 
     class ChannelState {
     public:
@@ -115,7 +114,6 @@ protected:
     class ChannelStateArray : public std::array<ChannelState, N> {
     public:
         using Type = std::array<ChannelState, N>;
-        using Type::Type;
 
         #if DEBUG
             ChannelState &at(size_t channel) {
@@ -147,18 +145,26 @@ protected:
             return Type::at(static_cast<size_t>(channel));
         }
 
+        constexpr size_t getByteSize() const {
+            return N * sizeof(ChannelState);
+        }
+
         bool read(File &file) {
-            return static_cast<size_t>(file.read(reinterpret_cast<uint8_t *>(Type::data()), Type::size() * sizeof(ChannelState))) == (Type::size() * sizeof(ChannelState));
+            return static_cast<size_t>(file.read(reinterpret_cast<uint8_t *>(Type::data()), getByteSize())) == getByteSize();
         }
 
         bool write(File &file) const {
-            return file.write(reinterpret_cast<const uint8_t *>(Type::data()), Type::size() * sizeof(ChannelState)) == (Type::size() * sizeof(ChannelState));
+            return file.write(reinterpret_cast<const uint8_t *>(Type::data()), getByteSize()) == getByteSize();
         }
 
-        constexpr std::array<ChannelType, N> channels() {
+        constexpr auto channels() {
             return std::array<ChannelType, N>({ChannelType::CHANNEL0, ChannelType::CHANNEL1});
         }
     };
+
+    using ChannelStateArrayType = ChannelStateArray<kChannelCount>;
+
+protected:
 
     class ChannelAction {
     public:
@@ -351,7 +357,7 @@ protected:
 
     Plugins::Blinds::ConfigStructType _config;
 
-    ChannelStateArray<kChannelCount> _states;
+    ChannelStateArrayType _states;
     ChannelQueue _queue;
     ChannelType _activeChannel;
 
@@ -378,6 +384,16 @@ private:
 inline std::underlying_type<BlindsControl::ChannelType>::type operator *(const BlindsControl::ChannelType type)
 {
     return static_cast<std::underlying_type<BlindsControl::ChannelType>::type>(type);
+}
+
+inline bool operator==(const BlindsControl::ChannelState &__lhs, const BlindsControl::ChannelState &__rhs)
+{
+    return __lhs.getState() == __rhs.getState();
+}
+
+inline bool operator!=(const BlindsControl::ChannelState &__lhs, const BlindsControl::ChannelState &__rhs)
+{
+    return __lhs.getState() != __rhs.getState();
 }
 
 #include "blinds_control.hpp"

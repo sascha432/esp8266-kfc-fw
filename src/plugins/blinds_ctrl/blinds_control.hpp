@@ -225,8 +225,8 @@ inline void BlindsControl::_saveState()
     #if IOT_BLINDS_CTRL_SAVE_STATE
         auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
         if (file) {
-            decltype(_states) states;
-            if (states.read(file) && (memcmp(&states, &_states, sizeof(states)) == 0)) {
+            ChannelStateArrayType states;
+            if (states.read(file) && states == _states) {
                 __LDBG_printf("file=%u state=%u,%u skipping save, no changes", static_cast<bool>(file), static_cast<unsigned>(_states[0]), static_cast<unsigned>(_states[1]));
                 return;
             }
@@ -245,7 +245,7 @@ inline void BlindsControl::_loadState()
         auto file = KFCFS.open(FSPGM(iot_blinds_control_state_file), fs::FileOpenMode::read);
         if (file) {
             if (!_states.read(file)) {
-                _states = {};
+                _states = ChannelStateArrayType();
             }
         }
         __LDBG_printf("file=%u state=%u,%u", static_cast<bool>(file), static_cast<unsigned>(_states[0]), static_cast<unsigned>(_states[1]));

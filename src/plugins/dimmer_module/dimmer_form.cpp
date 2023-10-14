@@ -127,7 +127,7 @@ namespace Dimmer {
         }
         else if (formName == F("channels")) {
 
-            auto &channelGroup = form.addCardGroup(F("chcfg"), F("Channel Configuration"), false);
+            auto &channelGroup = form.addCardGroup(F("chcfg"), F("Channel Configuration"), true);
 
             #if !IOT_DIMMER_MODULE_HAS_BUTTONS
 
@@ -252,7 +252,7 @@ namespace Dimmer {
         #endif
         else if (formName == F("advanced")) {
 
-            auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), false);
+            auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), true);
 
             #if DIMMER_FIRMWARE_VERSION >= 0x020200
 

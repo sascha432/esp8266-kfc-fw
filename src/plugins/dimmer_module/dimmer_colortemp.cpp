@@ -229,7 +229,7 @@ namespace Dimmer {
             _color = kColorMin + (kColorRange / 2); // set to center
         }
         _calcRatios();
-        __LDBG_printf("ww=%d,%d cw=%d,%d = brightness=%d sum=%d color=%.0f ratio=%f,%f",
+        __LDBG_printf("ww=%d,%d cw=%d,%d = brightness=%d sum=%d color=%.0f ratio=%f,%f,%f,%f",
             _channels[_channel_ww1].getLevel(),
             _channels[_channel_ww2].getLevel(),
             _channels[_channel_cw1].getLevel(),
@@ -238,7 +238,9 @@ namespace Dimmer {
             sum,
             _color,
             _ratio[0],
-            _ratio[1]
+            _ratio[1],
+            _ratio[2],
+            _ratio[3]
         );
     }
 
@@ -249,27 +251,32 @@ namespace Dimmer {
         // calculate single channels from brightness and color
         auto color = (_color - kColorMin) / kColorRangeFloat;
         #if DEBUG_IOT_DIMMER_MODULE
-            if (color < 0 || color > 1.0f || !isnormal(color)) {
+            if (color < 0.0 || color > 1.0) {
                 __DBG_panic("color=%f _color=%f min=%d range=%f", color, _color, kColorMin, kColorRangeFloat);
             }
         #endif
+        // adjust brightness, color center is 0.5
         auto ww = _brightness * color;
         auto cw = _brightness * (1.0f - color);
-        _channels[_channel_ww2].setLevel(ww / _ratio[0]);
-        _channels[_channel_ww1].setLevel(ww - _channels[_channel_ww2].getLevel());
-        _channels[_channel_cw2].setLevel(cw / _ratio[1]);
-        _channels[_channel_cw1].setLevel(cw - _channels[_channel_cw2].getLevel());
-        __LDBG_printf("brightness=%d sum=%d color=%.0f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f",
+        // set each channel
+        _channels[_channel_ww1]._set(ww * _ratio[0], NAN, false);
+        _channels[_channel_ww2]._set(ww * _ratio[1], NAN, false);
+        _channels[_channel_cw1]._set(cw * _ratio[2], NAN, false);
+        _channels[_channel_cw2]._set(cw * _ratio[3], NAN, false);
+        _base->_wire.writeEEPROM();
+        __LDBG_printf("brightness=%d sum=%d color=%.0f(%f) = ww=%u,%u cw=%u,%u, ratio=%f,%f,%f,%f",
             _brightness,
             _channels.getSum(),
             _color,
-            color,
+            color ,
             _channels[_channel_ww1].getLevel(),
             _channels[_channel_ww2].getLevel(),
             _channels[_channel_cw1].getLevel(),
             _channels[_channel_cw2].getLevel(),
             _ratio[0],
-            _ratio[1]
+            _ratio[1],
+            _ratio[2],
+            _ratio[3]
         );
     }
 
@@ -292,8 +299,6 @@ namespace Dimmer {
         _channelLock = value;
         if (value) {
             // if channels are locked, the ratio is 1:1
-            _ratio[0] = 2;
-            _ratio[1] = 2;
             auto &_channels = _getBase().getChannels();
             uint16_t ww = (_channels[_channel_ww1].getLevel() + _channels[_channel_ww2].getLevel()) / 2;
             uint16_t cw = (_channels[_channel_cw1].getLevel() + _channels[_channel_cw2].getLevel()) / 2;
@@ -308,22 +313,31 @@ namespace Dimmer {
 
     void ColorTemperature::_calcRatios()
     {
-        if (_channelLock) {
-            _ratio[0] = 2;
-            _ratio[1] = 2;
-            __LDBG_printf("ratio=%f,%f", _ratio[0], _ratio[1]);
-            return;
-        }
         auto &_channels = _getBase().getChannels();
-        auto ww1 = _channels[_channel_ww1].getLevel();
-        auto ww2 = _channels[_channel_ww2].getLevel();
-        auto ww = ww1 + ww2;
-        auto cw1 = _channels[_channel_cw1].getLevel();
-        auto cw2 = _channels[_channel_cw2].getLevel();
-        auto cw = cw1 + cw2;
-        _ratio[0] = ((ww2 && (ww > ww2)) ? (ww / static_cast<float>(ww2)) : 2);
-        _ratio[1] = ((cw2 && (cw > cw2)) ? (cw / static_cast<float>(cw2)) : 2);
-        __LDBG_printf("ratio=%f,%f ww=%d/%d cw=%d/%d", _ratio[0], _ratio[1], ww1, ww2, cw1, cw2);
+        float ww1 = _channels[_channel_ww1].getLevel();
+        float ww2 = _channels[_channel_ww2].getLevel();
+        float cw1 = _channels[_channel_cw1].getLevel();
+        float cw2 = _channels[_channel_cw2].getLevel();
+        float sum = ww1 + ww2 + cw1 + cw2;
+        if (sum == 0) {
+            // all off
+            std::fill(std::begin(_ratio), std::end(_ratio), 0.0);
+        }
+        else {
+            if (_channelLock) {
+                // set ww and cw channels to the same value
+                ww1 = (ww1 + ww2) / 2.0;
+                ww2 = ww1;
+                cw1 = (cw1 + cw2) / 2.0;
+                cw2 = cw1;
+            }
+            // calculate the percentage per channel, the sum is 1.0
+            _ratio[0] = ww1 / sum;
+            _ratio[1] = ww2 / sum;
+            _ratio[2] = cw1 / sum;
+            _ratio[3] = cw2 / sum;
+        }
+        __LDBG_printf("ratio=%f,%f,%f,%f ww=%.0f/%.0f cw=%.0f/%.0f", _ratio[0], _ratio[1], _ratio[2], _ratio[3], ww1, ww2, cw1, cw2);
     }
 
     void ColorTemperature::begin()

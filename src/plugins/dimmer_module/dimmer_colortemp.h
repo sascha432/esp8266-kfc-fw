@@ -82,7 +82,7 @@ namespace Dimmer {
         Event::Timer _webuiTimer;
         float _color;
         float _colorPublished;
-        float _ratio[2];
+        float _ratio[4];
         int32_t _brightness;
         int32_t _brightnessPublished;
         #if IOT_ATOMIC_SUN_V2

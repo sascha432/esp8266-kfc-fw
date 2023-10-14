@@ -88,7 +88,7 @@ namespace Dimmer {
         friend Module;
 
         void _publish();
-        bool _set(int32_t level, float transition = NAN);
+        bool _set(int32_t level, float transition = NAN, bool updateAll = true);
         String _createTopics(TopicType type, bool full = true) const;
 
         Module *_dimmer;

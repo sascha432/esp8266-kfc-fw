@@ -164,10 +164,9 @@ void Channel::stopFading()
     _dimmer->_stopFading(_channel);
 }
 
-bool Channel::_set(int32_t level, float transition)
+bool Channel::_set(int32_t level, float transition, bool updateAll)
 {
     __LDBG_printf("lvl=%d trans=%f ch=%u", level, transition, _channel);
-    bool updateDimmer = false;
     auto prevBrightness = _brightness;
     if (level == 0) {
         // if channel is turned off, store previous brightness
@@ -175,7 +174,6 @@ bool Channel::_set(int32_t level, float transition)
             setStoredBrightness(_brightness);
         }
         _brightness = 0;
-        updateDimmer = true;
     }
     else if (level != _brightness) {
         #if IOT_DIMMER_MODULE_CHANNELS == 1
@@ -187,15 +185,17 @@ bool Channel::_set(int32_t level, float transition)
             __LDBG_printf("lvl=%u brightness=%u", level, _brightness);
             _brightness = level;
         #endif
-        updateDimmer = true;
+    }
+    else {
+        updateAll = false;
     }
     if (transition != -1) {
         _dimmer->_fade(_channel, _brightness, _dimmer->getTransitionTime(prevBrightness, _brightness, transition));
-        if (updateDimmer) {
+        if (updateAll) {
             _dimmer->_wire.writeEEPROM();
             _dimmer->publishChannelState(_channel);
+            return true;
         }
-        return true;
     }
     return false;
 }

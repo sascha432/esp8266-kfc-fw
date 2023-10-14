@@ -39,7 +39,7 @@ MQTT::AutoDiscovery::EntityPtr Channel::getAutoDiscovery(FormatType format, uint
             if (discovery->createJsonSchema(this, PrintString(FSPGM(channel__u), _channel), format)) {
                 discovery->addStateTopic(_createTopics(TopicType::COMMAND_STATE));
                 discovery->addCommandTopic(_createTopics(TopicType::COMMAND_SET));
-                discovery->addBrightnessScale(IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+                discovery->addBrightnessScale(kMaxLevelsChannel);
                 discovery->addParameter(F("brightness"), true);
                 #if IOT_ATOMIC_SUN_V2
                     discovery->addName(_dimmer->getChannelName(_channel));
@@ -173,8 +173,8 @@ bool Channel::_set(int32_t level, float transition, bool updateSingle)
         #if IOT_DIMMER_MODULE_CHANNELS == 1
             // apply min/max brightness
             auto &cfg = _dimmer->_getConfig()._base;
-            __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100, _brightness);
-            _brightness = std::min<int32_t>(std::max<int32_t>(level, cfg.min_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100), cfg.max_brightness * IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100);
+            __LDBG_printf("lvl=%u min=%u max=%u brightness=%u", level, cfg.min_brightness * kMaxLevelsChannel / 100, cfg.max_brightness * kMaxLevelsChannel / 100, _brightness);
+            _brightness = std::min<int32_t>(std::max<int32_t>(level, cfg.min_brightness * kMaxLevelsChannel / 100), cfg.max_brightness * kMaxLevelsChannel / 100);
         #else
             _brightness = level;
         #endif

@@ -155,7 +155,7 @@ namespace Dimmer {
 
     inline void Module::publishChannels()
     {
-        for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+        for(size_t i = 0; i < kNumChannels; i++) {
             _channels[i].publishState();
         }
     }

@@ -31,7 +31,7 @@ void Module::setup()
 
 void Module::shutdown()
 {
-    for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+    for (size_t i = 0; i < kNumChannels; i++) {
         _channels[i].end();
     }
     _endMqtt();
@@ -41,7 +41,7 @@ void Module::shutdown()
 
 void Module::_beginMqtt()
 {
-    for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+    for (size_t i = 0; i < kNumChannels; i++) {
         _channels[i].setup(this, i);
         MQTT::Client::registerComponent(&_channels[i]);
     }
@@ -57,7 +57,7 @@ void Module::_endMqtt()
     #if IOT_DIMMER_HAS_COLOR_TEMP
         MQTT::Client::unregisterComponent(&_color);
     #endif
-    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+    for(size_t i = 0; i < kNumChannels; i++) {
         MQTT::Client::unregisterComponent(&_channels[i]);
     }
 }
@@ -74,10 +74,10 @@ void Module::getStatus(Print &out)
     }
     out.print(F(HTML_S(br)));
 
-    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+    for(unsigned int i = 0; i < kNumChannels; i++) {
         out.printf_P(PSTR("Channel %u: "), i);
         if (_channels[i].getOnState()) {
-            out.printf_P(PSTR("on - %.1f%% "), (_channels[i].getLevel() * 100) / static_cast<float>(IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
+            out.printf_P(PSTR("on - %.1f%% "), (_channels[i].getLevel() * 100) / static_cast<float>(kMaxLevelsChannel));
         }
         else {
             out.print(F("off "));
@@ -90,7 +90,7 @@ void Module::getStatus(Print &out)
 
 bool Module::isAnyOn() const
 {
-    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+    for(size_t i = 0; i < kNumChannels; i++) {
         if (_channels[i].getOnState()) {
             return true;
         }
@@ -106,18 +106,18 @@ void Module::_getChannels()
         _wire.beginTransmission(DIMMER_I2C_ADDRESS);
         _wire.write(DIMMER_REGISTER_COMMAND);
         _wire.write(DIMMER_COMMAND_READ_CHANNELS);
-        _wire.write(IOT_DIMMER_MODULE_CHANNELS << 4); // read 0 - (IOT_DIMMER_MODULE_CHANNELS - 1)
+        _wire.write(kNumChannels << 4); // read 0 - (kNumChannels - 1)
         int16_t level;
-        const int len = IOT_DIMMER_MODULE_CHANNELS * sizeof(level);
+        constexpr auto len = kNumChannels * sizeof(level);
         auto &channels = getChannels();
         if (_wire.endTransmission() == 0 && _wire.requestFrom(DIMMER_I2C_ADDRESS, len) == len) {
-            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            for(size_t i = 0; i < kNumChannels; i++) {
                 _wire.read(level);
                 channels[i]._set(_calcLevelReverse(level, i), NAN, false);
             }
             #if DEBUG_IOT_DIMMER_MODULE
                 String str;
-                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                for(size_t i = 0; i < kNumChannels; i++) {
                     str += String(_channels[i].getLevel());
                     str += ' ';
                 }
@@ -152,7 +152,7 @@ void Module::_onReceive(size_t length)
         dimmer_fading_complete_event_t event;
         while(length >= sizeof(event)) {
             length -= _wire.read(event);
-            if (event.channel < IOT_DIMMER_MODULE_CHANNELS) {
+            if (event.channel < kNumChannels) {
                 auto level = _calcLevelReverse(event.level, event.channel);
                 auto curLevel = _channels[event.channel].getLevel();
                 if (curLevel != level) {  // update level if out of sync

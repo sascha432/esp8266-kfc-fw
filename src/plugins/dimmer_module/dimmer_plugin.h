@@ -77,7 +77,7 @@ namespace Dimmer {
 
         inline bool Plugin::atModeHandler(AtModeArgs &args)
         {
-            return Base::atModeHandler(args, *this, IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+            return Base::atModeHandler(args, *this, kMaxLevelsChannel);
         }
 
     #endif

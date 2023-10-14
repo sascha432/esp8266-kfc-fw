@@ -3,7 +3,9 @@
  */
 
 #include "dimmer_base.h"
+#include "dimmer_channel.h"
 #include "Utility/ProgMemHelper.h"
+#include <stl_ext/array.h>
 
 #if DEBUG_IOT_DIMMER_MODULE
 #    include <debug_helper_enable.h>
@@ -22,7 +24,7 @@ namespace Dimmer {
         if (type == PluginComponent::FormCallbackType::SAVE) {
             if (formName == F("channels")) {
                 auto &cfg = Plugins::Dimmer::getWriteableConfig();
-                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                for(size_t i = 0; i < kNumChannels; i++) {
                     if (cfg.level.from[i] > cfg.level.to[i]) {
                         cfg.level.from[i] = cfg.level.to[i];
                     }
@@ -43,7 +45,7 @@ namespace Dimmer {
         auto &cfg = Plugins::Dimmer::getWriteableConfig();
         if (type == PluginComponent::FormCallbackType::CREATE_GET) {
             if (formName == F("channels")) {
-                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                for(size_t i = 0; i < kNumChannels; i++) {
                     if (cfg.level.from[i] > cfg.level.to[i]) {
                         cfg.level.from[i] = cfg.level.to[i];
                     }
@@ -145,7 +147,7 @@ namespace Dimmer {
                 PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IOT_DIMMER_MODULE_CHANNELS, cn, cr, co);
             #endif
 
-            for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+            for(size_t i = 0; i < kNumChannels; i++) {
 
                 #if IOT_ATOMIC_SUN_V2
                     String nameStr = getChannelName(i);
@@ -169,11 +171,11 @@ namespace Dimmer {
 
                 form.addPointerTriviallyCopyable(F_VAR(cr, i), &cfg.level.from[i]);
                 form.addFormUI(FormUI::Label(PrintString(F("%s %u Minimum Level Limit"), name, i + 1)));
-                form.addValidator(FormUI::Validator::Range(0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS - ((IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100 + 3))));
+                form.addValidator(FormUI::Validator::Range(0, kMaxLevelsChannel - ((kMaxLevelsChannel / 100 + 3))));
 
                 form.addPointerTriviallyCopyable(F_VAR(co, i), &cfg.level.to[i]);
                 form.addFormUI(FormUI::Label(PrintString(F("%s %u Maximum Level Limit"), name, i + 1)));
-                form.addValidator(FormUI::Validator::Range((IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 100 + 3), IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
+                form.addValidator(FormUI::Validator::Range((kMaxLevelsChannel / 100 + 3), kMaxLevelsChannel));
 
                 // form.addValidator(FormUI::Validator::Callback([i, &vars](const String &to, FormUI::Field::BaseField &field) -> bool {
                 //     auto from = field.getForm().getField(vars[i][0])->getValue().toInt();
@@ -261,13 +263,13 @@ namespace Dimmer {
 
                 form.addPointerTriviallyCopyable(F("rbeg"), &firmwareConfig.range_begin);
                 form.addFormUI(F("Level Range Start"), configValidAttr, FormUI::Suffix(F("0 - Range End")));
-                form.addValidator(FormUI::Validator::Range(0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
+                form.addValidator(FormUI::Validator::Range(0, kMaxLevelsChannel));
 
                 form.addCallbackSetter(F("rend"), firmwareConfig.get_range_end(), [&firmwareConfig](uint16_t value, FormField &) {
                     firmwareConfig.set_range_end(value);
                 });
-                form.addFormUI(F("Level Range End"), configValidAttr, FormUI::Suffix(F("Range Start - " _STRINGIFY(IOT_DIMMER_MODULE_MAX_BRIGHTNESS))));
-                form.addValidator(FormUI::Validator::Range(0, IOT_DIMMER_MODULE_MAX_BRIGHTNESS));
+                form.addFormUI(F("Level Range End"), configValidAttr, FormUI::Suffix(ARRAY_F(stdex::array_concat(stdex::str_to_array("Range Start - "), stdex::int_to_array<int, kMaxLevelsChannel>()))));
+                form.addValidator(FormUI::Validator::Range(0, kMaxLevelsChannel));
 
             #endif
 

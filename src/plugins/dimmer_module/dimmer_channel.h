@@ -22,10 +22,8 @@ namespace Dimmer {
 
     class Channel : public MQTTComponent {
     public:
-        static constexpr int16_t kMaxLevel = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
-        static constexpr uint32_t kMaxLevelSum = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * IOT_DIMMER_MODULE_CHANNELS;
-        static constexpr int16_t kMinLevel = kMaxLevel / 100;           // 1%
-        static constexpr int16_t kDefaultLevel = kMaxLevel / 10;        // 10%
+        static constexpr int16_t kMinLevel = kMaxLevelsChannel / 100;           // 1%
+        static constexpr int16_t kDefaultLevel = kMaxLevelsChannel / 10;        // 10%
         static constexpr uint16_t kWebUIMaxUpdateRate = 150;
         static constexpr uint16_t kMQTTMaxUpdateRate = 600;
         static constexpr uint8_t kMQTTUpdateRateMultiplier = kMQTTMaxUpdateRate / kWebUIMaxUpdateRate;

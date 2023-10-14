@@ -62,7 +62,7 @@ namespace Dimmer {
                     discovery->addCommandTopic(_createTopics(TopicType::MAIN_SET));
                     discovery->addName(F("Dimmer Main"));
                     discovery->addObjectId(baseTopic + F("main"));
-                    discovery->addBrightnessScale(IOT_DIMMER_MODULE_CHANNELS * IOT_DIMMER_MODULE_MAX_BRIGHTNESS);
+                    discovery->addBrightnessScale(kMaxLevelsSum);
                     discovery->addParameter(F("brightness"), true);
                     discovery->addParameter(FSPGM(mqtt_color_mode), true);
                     discovery->addSupportedColorModes(F("[\"color_temp\"]"));
@@ -188,7 +188,7 @@ namespace Dimmer {
                 publish(_createTopics(TopicType::LOCK_STATE), true, MQTT::Client::toBoolOnOff(_channelLock));
 
                 auto &_channels = _getBase().getChannels();
-                for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+                for(size_t i = 0; i < kNumChannels; i++) {
                     _channels[i]._publishMQTT();
                 }
             });

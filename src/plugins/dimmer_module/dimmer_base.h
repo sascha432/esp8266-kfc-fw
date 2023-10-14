@@ -101,38 +101,24 @@ namespace Dimmer {
     using Buttons = NoButtonsImpl;
 #endif
 
-    // class MinMaxLevel {
-    // public:
-    //     MinMaxLevel(uint16_t minLevel, uint16_t maxLevel) : _minLevel(minLevel), _maxLevel(maxLevel) {
-    //     }
-    //     inline int16_t getMin() const {
-    //         return _minLevel;
-    //     }
-    //     inline int16_t getMax() const {
-    //         return _maxLevel;
-    //     }
-    //     inline int16_t getRange() {
-    //         return _maxLevel - _minLevel;
-    //     }
-
-    // private:
-    //     uint16_t _minLevel;
-    //     uint16_t _maxLevel;
-    // };
-
-    // using MinMaxLevelArray = std::array<MinMaxLevel, IOT_DIMMER_MODULE_CHANNELS>;
-
     // --------------------------------------------------------------------
     // Dimmer::Base
     // --------------------------------------------------------------------
+
+    // number of channels
+    static constexpr size_t kNumChannels = IOT_DIMMER_MODULE_CHANNELS;
+    // max. levels per channels
+    static constexpr int16_t kMaxLevelsChannel = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
+    // sum of max. level of all channels
+    static constexpr auto kMaxLevelsSum = kMaxLevelsChannel * kNumChannels;
 
     class Base {
     public:
         static const uint32_t kMetricsDefaultUpdateRate = 60000;
 
-        // stepSize = IOT_DIMMER_MODULE_MAX_BRIGHTNESS * ((repeatTime / 1000.0) / fadetime)
-        // fadetime = (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * repeatTime) / (1000.0 * stepSize)
-        // repeatTime = (1000 * fadetime * stepSize) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS
+        // stepSize = kMaxLevelsChannel * ((repeatTime / 1000.0) / fadetime)
+        // fadetime = (kMaxLevelsChannel * repeatTime) / (1000.0 * stepSize)
+        // repeatTime = (1000 * fadetime * stepSize) / kMaxLevelsChannel
 
     public:
         Base();
@@ -295,7 +281,8 @@ namespace Dimmer {
         }
         auto min = _config._base.level.from[channel];
         auto max = _config._base.level.to[channel];
-        return (level * (max - min) + (IOT_DIMMER_MODULE_MAX_BRIGHTNESS / 2)) / IOT_DIMMER_MODULE_MAX_BRIGHTNESS + min;
+
+        return (level * (max - min) + (kMaxLevelsChannel / 2)) / kMaxLevelsChannel + min;
     }
 
     inline int16_t Base::_calcLevelReverse(int16_t level, uint8_t channel) const
@@ -306,7 +293,7 @@ namespace Dimmer {
         auto min = _config._base.level.from[channel];
         auto max = _config._base.level.to[channel];
         auto range = max - min;
-        return ((level - min) * IOT_DIMMER_MODULE_MAX_BRIGHTNESS + (range / 2)) / range;
+        return ((level - min) * kMaxLevelsChannel + (range / 2)) / range;
     }
 
     inline bool Base::_isEnabled() const

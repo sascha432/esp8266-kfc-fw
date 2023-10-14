@@ -16,13 +16,13 @@ namespace KFCConfigurationClasses {
 
             class DimmerConfig {
             public:
-                struct __attribute__packed__ DimmerConfig_t {
+                struct DimmerConfig_t {
                     using Type = DimmerConfig_t;
                     #if IOT_ATOMIC_SUN_V2
                         int8_t channel_mapping[IOT_DIMMER_MODULE_CHANNELS];
                     #endif
                     #if IOT_DIMMER_MODULE_CHANNELS
-                        struct __attribute__packed__ {
+                        struct {
                             uint16_t from[IOT_DIMMER_MODULE_CHANNELS];
                             uint16_t to[IOT_DIMMER_MODULE_CHANNELS];
                         } level;
@@ -63,7 +63,7 @@ namespace KFCConfigurationClasses {
                             return 0xff;
                         }
                     #else
-                        CREATE_UINT16_BITFIELD_MIN_MAX(min_brightness, 7, 0, 95, 1);
+                        CREATE_UINT16_BITFIELD_MIN_MAX(min_brightness, 7, 0, 95, 5);
                         CREATE_UINT16_BITFIELD_MIN_MAX(max_brightness, 7, 5, 100, 100);
                     #endif
                     #if IOT_ATOMIC_SUN_V2

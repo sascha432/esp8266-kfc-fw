@@ -67,7 +67,7 @@ void Base::begin()
 void Base::end()
 {
     auto &_channels = getChannels();
-    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+    for(size_t i = 0; i < kNumChannels; i++) {
         _channels[i].end();
     }
 
@@ -217,7 +217,7 @@ void Base::_stopFading(uint8_t channel)
     void Base::_setDimmingLevels()
     {
         // this only works if all channels have about the same load
-        auto level = getChannels().getSum() / (IOT_DIMMER_MODULE_MAX_BRIGHTNESS * IOT_DIMMER_MODULE_CHANNELS * 1.0f);
+        auto level = getChannels().getSum() / (kMaxLevelsSum * 1.0f);
         auto sensor = SensorPlugin::getSensor<Sensor_HLW80xx::kSensorType>();
         if (sensor) {
             sensor->setDimmingLevel(level);
@@ -319,7 +319,7 @@ void Base::getValues(WebUINS::Events &array)
 {
     int on = 0;
     auto &_channels = getChannels();
-    for (uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+    for (size_t i = 0; i < kNumChannels; i++) {
         PrintString id(F("d-ch%u"), i);
         auto value = _channels[i].getLevel();
         array.append(WebUINS::Values(id, value, true));
@@ -341,7 +341,7 @@ void Base::_setOnOffState(bool val)
 {
     #if IOT_DIMMER_HAS_COLOR_TEMP
         auto &_channels = getChannels();
-        for(int i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+        for(size_t i = 0; i < kNumChannels; i++) {
             if (val) {
                 _channels[i]._set(_channels[i]._storedBrightness, NAN, false);
             }
@@ -359,7 +359,7 @@ void Base::_setOnOffState(bool val)
         }
         _color._publish();
     #else
-        for(int i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
+        for(size_t i = 0; i < kNumChannels; i++) {
             if (val) {
                 on(i);
             }
@@ -388,7 +388,7 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
         int val = value.toInt();
         __LDBG_printf("channel=%d has_value=%d value=%d has_state=%d state=%d", channel, hasValue, val, hasState, state);
 
-        if (channel < IOT_DIMMER_MODULE_CHANNELS) {
+        if (channel < kNumChannels) {
             if (hasValue) {
                 hasState = true;
                 state = val != 0;

@@ -5,6 +5,7 @@
 #include <Configuration.hpp>
 #include <kfc_fw_config.h>
 #include <PinMonitor.h>
+#include "../src/plugins/dimmer_module/dimmer_base.h"
 
 namespace KFCConfigurationClasses {
 
@@ -45,9 +46,7 @@ namespace KFCConfigurationClasses {
                     off_fadetime(kDefaultValueFor_off_fadetime)
             {
                 #if IOT_DIMMER_MODULE_CHANNELS
-                    for(uint8_t i = 0; i < IOT_DIMMER_MODULE_CHANNELS; i++) {
-                        level.to[i] = IOT_DIMMER_MODULE_MAX_BRIGHTNESS;
-                    }
+                    std::fill(std::begin(level.to), std::end(level.to), ::Dimmer::kMaxLevelsChannel);
                 #endif
             }
 

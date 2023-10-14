@@ -13,7 +13,7 @@
 
 namespace Dimmer {
 
-    class ChannelsArray : public std::array<Channel, IOT_DIMMER_MODULE_CHANNELS>
+    class ChannelsArray : public std::array<Channel, kNumChannels>
     {
     public:
         void setAll(int16_t value) {

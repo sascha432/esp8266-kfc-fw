@@ -17,6 +17,7 @@
 
 #include <HeapSelector.h>
 #include <save_crash.h>
+#include <stl_ext/array.h>
 
 #if DEBUG_IOT_SENSOR
 #include <debug_helper_enable.h>
@@ -265,7 +266,13 @@ String Sensor_SystemMetrics::_getUptime(const __FlashStringHelper *sep) const
 
 void Sensor_SystemMetrics::createWebUI(WebUINS::Root &webUI)
 {
-    webUI.addRow(WebUINS::Row(WebUINS::Group(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), config.getFirmwareVersion().c_str()), false)));
+    {
+        auto version = PrintString(F("System Metrics<div class=\"version d-md-inline\">"));
+        version.print(config.getFirmwareVersion());
+        version.print(F("</div>"));
+        webUI.addRow(WebUINS::Row(WebUINS::Group(version, false)));
+        // webUI.addRow(WebUINS::Row(WebUINS::Group(PrintString(F("System Metrics<div class=\"version d-md-inline\">%s</div>"), String(config.getFirmwareVersion()).c_str()), false)));
+    }
 
     WebUINS::Row row;
     row.append(WebUINS::Sensor(_getId(MetricsType::UPTIME), F("Uptime"), F("")).append(WebUINS::NamedString(J(heading_bottom), F("h2"))).setConfig(_renderConfig));
@@ -285,13 +292,14 @@ String Sensor_SystemMetrics::_getMetricsJson() const
 {
     using namespace MQTT::Json;
 
-    String version = config.getShortFirmwareVersion_P();
+    String version = config.getShortFirmwareVersion();
     #if ESP8266
         auto fs = SaveCrash::createFlashStorage();
         auto saveCrashInfo = fs.getInfo();
-        version += F(" / ESP8266@");
-        version += ESP.getCpuFreqMHz();
-        version += F("MHz");
+        version += ARRAY_F(stdex::array_concat(stdex::str_to_array(" / ESP8266@"), stdex::int_to_array<int, ESP.getCpuFreqMHz()>(), stdex::str_to_array("MHz"))); // F_CPU / 1000000L
+        // version += F(" / ESP8266@");
+        // version += ESP.getCpuFreqMHz();
+        // version += F("MHz");
     #elif ESP32
         version += F(" / ESP32");
     #endif

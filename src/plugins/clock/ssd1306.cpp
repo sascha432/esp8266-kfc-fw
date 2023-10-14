@@ -23,7 +23,7 @@ void ClockPlugin::ssd1306Begin()
     _ssd1306.setCursor(0, 5);
     _ssd1306.println(F("KFC Firmware"));
     _ssd1306.print('v');
-    _ssd1306.print(config.getShortFirmwareVersion_P());
+    _ssd1306.print(config.getShortFirmwareVersion());
     _ssd1306.display();
 
     // start updating after 15 seconds

@@ -243,7 +243,7 @@ void ssd1306_setup() {
     Display.clearDisplay();
     Display.println(F("KFC Firmware"));
     Display.print('v');
-    Display.print(config.getShortFirmwareVersion_P());
+    Display.print(config.getShortFirmwareVersion());
     Display.display();
 
 

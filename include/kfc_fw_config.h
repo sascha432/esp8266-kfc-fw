@@ -93,9 +93,8 @@ public:
     void recoveryMode(bool resetPasswords = true);
 
     void customSettings();
-    static const String getFirmwareVersion();
-    static const String getShortFirmwareVersion();
-    static const __FlashStringHelper *getShortFirmwareVersion_P();
+    static const __FlashStringHelper *getFirmwareVersion();
+    static const __FlashStringHelper *getShortFirmwareVersion();
 
     // flag to tell if the device has to be rebooted to apply all configuration changes
     void setConfigDirty(bool dirty);

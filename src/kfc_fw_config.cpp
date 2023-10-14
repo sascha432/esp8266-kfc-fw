@@ -713,31 +713,35 @@ bool KFCFWConfiguration::isConfigDirty() const
     return _dirty;
 }
 
-const char __compile_date__[] PROGMEM = { __DATE__ " " __TIME__ };
+#define FIRMWARE_SHORT_VERSION FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER
+#if ARDUINO_ESP8266_DEV
+#    define FIRMWARE_DEV_SUFFIX "-dev"
+#else
+#    define FIRMWARE_DEV_SUFFIX ""
+#endif
 
-const String KFCFWConfiguration::getFirmwareVersion()
+const __FlashStringHelper *KFCFWConfiguration::getFirmwareVersion()
 {
-    #if DEBUG
-        #if ESP32
-            return getShortFirmwareVersion() + F("-" ARDUINO_ESP32_RELEASE " " ) + FPSTR(__compile_date__);
-        #elif ESP8266
-            return getShortFirmwareVersion() + PrintString(F("-" ARDUINO_ESP8266_RELEASE " "), ARDUINO_ESP8266_GIT_VER) + FPSTR(__compile_date__);
-        #else
-            return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
-        #endif
+    #if ESP32
+        // return getShortFirmwareVersion() + F("-" ARDUINO_ESP32_RELEASE " " ) + FPSTR(__compile_date__);
+        return F(FIRMWARE_SHORT_VERSION "-" ARDUINO_ESP32_RELEASE " " __DATE__ " " __TIME__));
+    #elif ESP8266
+        // return getShortFirmwareVersion() + PrintString(F("-" ARDUINO_ESP8266_RELEASE " "), ARDUINO_ESP8266_GIT_VER) + FPSTR(__compile_date__);
+        return ARRAY_F(stdex::array_concat(
+                stdex::str_to_array(FIRMWARE_SHORT_VERSION "-"),
+                stdex::int_to_array<int, ARDUINO_ESP8266_MAJOR>(), stdex::char_to_array<'.'>(), stdex::int_to_array<int, ARDUINO_ESP8266_MINOR>(), stdex::char_to_array<'.'>(), stdex::int_to_array<int, ARDUINO_ESP8266_REVISION>(),
+                stdex::str_to_array("-g"), stdex::hex_to_array<ARDUINO_ESP8266_GIT_VER>(), stdex::str_to_array(FIRMWARE_DEV_SUFFIX),
+                stdex::str_to_array(" " __DATE__ " " __TIME__)
+        ));
     #else
-        return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
+        // return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
+        return F(FIRMWARE_SHORT_VERSION FIRMWARE_DEV_SUFFIX " " __DATE__ " " __TIME__);
     #endif
 }
 
-const __FlashStringHelper *KFCFWConfiguration::getShortFirmwareVersion_P()
+const __FlashStringHelper *KFCFWConfiguration::getShortFirmwareVersion()
 {
-    return F(FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER);
-}
-
-const String KFCFWConfiguration::getShortFirmwareVersion()
-{
-    return getShortFirmwareVersion_P();
+    return F(FIRMWARE_SHORT_VERSION);
 }
 
 #if ENABLE_DEEP_SLEEP
@@ -801,12 +805,11 @@ const String KFCFWConfiguration::getShortFirmwareVersion()
 
 void KFCFWConfiguration::setup()
 {
-    String version = KFCFWConfiguration::getFirmwareVersion();
     #if ENABLE_DEEP_SLEEP
         if (!resetDetector.hasWakeUpDetected())
     #endif
     {
-        Logger_notice(F("Starting KFCFW %s"), version.c_str());
+        Logger_notice(F("Starting KFCFW %s"), (PGM_P)KFCFWConfiguration::getFirmwareVersion());
         #if IOT_WEATHER_STATION_WS2812_NUM
             WeatherStationPlugin::_getInstance()._rainbowStatusLED();
         #else
@@ -1574,7 +1577,9 @@ const __FlashStringHelper *KFCFWConfiguration::getChipModel()
 
 void KFCFWConfiguration::printVersion(Print &output)
 {
-    output.printf_P(PSTR("KFC Firmware %s\nFlash size %s\n"), KFCFWConfiguration::getFirmwareVersion().c_str(), formatBytes(ESP.getFlashChipSize()).c_str());
+    output.print(F("KFC Firmware "));
+    output.print(KFCFWConfiguration::getFirmwareVersion());
+    output.printf_P(PSTR("\nFlash size %s\n"), formatBytes(ESP.getFlashChipSize()).c_str());
     if (config._safeMode) {
         Logger_notice(FSPGM(safe_mode_enabled, "Device started in SAFE MODE"));
         output.println(FSPGM(safe_mode_enabled));

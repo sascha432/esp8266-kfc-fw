@@ -203,7 +203,7 @@ void Serial2TcpBase::_processTcpData(Serial2TcpConnection *conn, const char *dat
                         __DBGS2T_NVT("NVT_AYT\n");
                         buffer.clear();
                         PrintString str;
-                        str.printf_P(PSTR("KFCFW %s\n"), KFCFWConfiguration::getShortFirmwareVersion_P());
+                        str.printf_P(PSTR("KFCFW %s\n"), (PGM_P)KFCFWConfiguration::getShortFirmwareVersion());
                         if (client) {
                             client->write(str.c_str(), str.length());
                         }

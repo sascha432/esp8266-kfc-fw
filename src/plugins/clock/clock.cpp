@@ -120,7 +120,7 @@ MQTT::Json::UnnamedObject ClockPlugin::getWLEDJson()
     mac.replace(F(":"), F(""));
     json.append(
         NamedObject(F("info"),
-            NamedString(F("ver"), config.getShortFirmwareVersion_P()),
+            NamedString(F("ver"), config.getShortFirmwareVersion()),
             NamedStoredString(F("name"), System::Device::getName()),
             #if ESP8266
                 NamedString(F("arch"), F("ESP8622")),

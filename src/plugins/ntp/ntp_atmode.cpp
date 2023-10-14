@@ -42,7 +42,7 @@ bool NTPPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("Waiting up to 5 seconds for a valid time..."));
             auto end = millis() + 5000;
             while(millis() < end && !isTimeValid()) {
-                delay(10);
+                delay(50);
             }
         }
         auto now = time(nullptr);

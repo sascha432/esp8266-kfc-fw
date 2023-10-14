@@ -96,7 +96,7 @@ namespace Dimmer {
 
     void ColorTemperature::onMessage(const char *topic, const char *payload, size_t len)
     {
-        __DBG_printf("topic=%s payload=%s", topic, payload);
+        __LDBG_printf("topic=%s payload=%s", topic, payload);
 
         if (strcmp_end_P(topic, PSTR("/lock/set")) == 0) {
             _setLockChannels(MQTT::Client::toBool(payload));
@@ -106,8 +106,9 @@ namespace Dimmer {
             auto stream = HeapStream(payload, len);
             auto reader = MQTT::Json::Reader(&stream);
             if (reader.parse()) {
-                #if DEBUG_IOT_DIMMER_MODULE || 1
+                #if DEBUG_IOT_DIMMER_MODULE
                     reader.dump(DEBUG_OUTPUT);
+                    DEBUG_OUTPUT.flush();
                 #endif
                 onJsonMessage(reader);
             }

@@ -430,6 +430,7 @@
             "SDATE",
             "SECHO",
             "SELECTIZE",
+            "SERIALTWOWIRE",
             "SETFN",
             "SNTP",
             "SOFTAP",

@@ -122,18 +122,16 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
         #endif
 
         #if IOT_DIMMER_HAVE_CHANNEL_ORDER
-            const auto channelOrder = std::array<int8_t, kMaxLevelsSum>({IOT_DIMMER_CHANNEL_ORDER});
+            const auto channelOrder = std::array_of<const int8_t>(IOT_DIMMER_CHANNEL_ORDER);
         #endif
-        for (uint8_t number = 1; number <= kNumChannels; number++) {
+        for (unsigned int number = 1; number <= kNumChannels; number++) {
             #if IOT_DIMMER_HAVE_CHANNEL_ORDER
-                auto idx = channelOrder[number - 1];
+                auto idx = channelOrder.at(number - 1);
             #else
                 auto idx = number - 1;
             #endif
 
-            String id = PrintString(F("d-ch%u"), idx);
-            String title = PrintString(F("Channel %u"), number);
-            auto slider = WebUINS::Slider(id, title, 0, kMaxLevelsChannel);
+            auto slider = WebUINS::Slider(PrintString(F("d-ch%u"), idx), PrintString(F("Channel %u"), number), 0, kMaxLevelsChannel);
 
             #if IOT_DIMMER_MODULE_CHANNELS == 1
                 // show min/max brightness range
@@ -142,6 +140,7 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
             #else
                 // internally scaled
             #endif
+
             webUI.addRow(slider);
         }
     #endif

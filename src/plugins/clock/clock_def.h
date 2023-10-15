@@ -133,6 +133,13 @@
 #    error IOT_CLOCK_NUM_PIXELS is less than (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET
 #endif
 
+// set maximum value for power limit in watt
+#ifndef IOT_LED_MATRIX_MAX_POWER
+#   define IOT_LED_MATRIX_MAX_POWER int(IOT_CLOCK_NUM_PIXELS * 0.35 + 0.5)
+#endif
+
+static_assert(IOT_LED_MATRIX_MAX_POWER >= (IOT_CLOCK_NUM_PIXELS * 0.05), "IOT_LED_MATRIX_MAX_POWER less than 0.05W per LED");
+
 #ifndef IOT_LED_MATRIX_OPTS_REVERSE_ROWS
 #    define IOT_LED_MATRIX_OPTS_REVERSE_ROWS true
 #endif

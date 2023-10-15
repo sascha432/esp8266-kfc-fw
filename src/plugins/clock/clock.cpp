@@ -404,6 +404,18 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         AlarmPlugin::setCallback(alarmCallback);
     #endif
 
+    #if 0
+    #warning DEBUG
+
+        // delayed start for debugging
+
+        _setBrightness(0);
+        _Scheduler.add(Event::seconds(15), false, [this](Event::CallbackTimerPtr) {
+            setBrightness(_config.getBrightness());
+        });
+
+    #else
+
     // set initial state after reset
     switch(_config.getInitialState()) {
         case InitialStateType::OFF:
@@ -431,6 +443,8 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         default:
             break;
     }
+
+    #endif
 
     _setupTimer();
     _isRunning = true;
@@ -1188,27 +1202,69 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
         // energy saving mode. blend two pixels into one to reduce power consumption
         // the color is blending from one to another pixel to use them evenly. only 2 LEDs will be on at a time
         if (_config.energy_saver > 1) {
+            #define HALF_TEST 0
             auto pixels = _display.begin();
             auto endPtr = _display.end();
             // number of LEDs to group
-            size_t num = _config.energy_saver;
+            const size_t num = _config.energy_saver;
+            // half num
+            #if HALF_TEST
+            const size_t halfNum = (num / 2);
+            #else
+            const size_t halfNum = 1;
+            #endif
             // interval for all pixels
-            constexpr uint32_t interval = 10000;
+            constexpr uint32_t interval = 5000;
             // interval in milliseconds. rounds to 256 to get smooth blending
-            const uint32_t iActive = (interval / 256U) * 256U;
+            const uint32_t iActive = ((interval / 256) * 256);
             // interval of each pixel
-            const uint32_t iBlend = (iActive / 256U);
+            const uint32_t iBlend = (interval / 256);
             // fraction per LED
-            const uint8_t blendValue = 255 / num;
+            const uint8_t blendValue = (255 / num);
+            // half offset
+            #if HALF_TEST
+            const uint32_t halfOfs = options.getMillis() / (iActive / 2);
+            // relative pixel position
+            const uint32_t pos = halfOfs / 2;
+            #else
+            // relative pixel position
+            const uint32_t pos = options.getMillis() / iActive;
+            #endif
             // active pixel
-            const uint8_t active = (options.getMillis() / iActive) % num;
-            // fraction of active pair
+            const uint8_t active1 = pos % num;
+            // next active pixel
+            const uint8_t active2 = (pos + halfNum) % num;
+            // level of fading to black
             const uint8_t blendPixel = options.getMillis() / iBlend;
+            #if HALF_TEST
+            // level of blending/fading to two pixels
+            uint8_t blendPixel1 = ~blendPixel;
+            uint8_t blendPixel2 = blendPixel;
+            if (halfOfs % 2 == 0) {
+                blendPixel1 = ~blendPixel1;
+            }
+            else {
+            }
+            // Serial.printf("%u %u\n", pos % 2, halfOfs % 2);
+            // // adjust half offset
+            // if (halfOfs % 2 == 1) {
+            //     blendPixel1 = (~blendPixel) * 2;
+            // } else {
+            //     blendPixel1 = blendPixel * 2;
+            // }
+            // blendPixel2 = 127 - blendPixel1 / 2;
+            // if (pos % 2 == 0) {
+            //     blendPixel2 *= 2;
+            // }
+            #else
+            const uint8_t blendPixel1 = ~blendPixel;
+            const uint8_t blendPixel2 = blendPixel;
+            #endif
 
             while(pixels < endPtr) {
                 // read pixel group and blend all into 2 pixels
-                auto dst = pixels + active;
-                auto next = pixels + ((active + 1) % num);
+                auto dst = pixels + active1;
+                auto next = pixels + active2;
                 // blend color
                 auto color = *pixels;
                 *pixels++ = 0;
@@ -1219,12 +1275,29 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
                 }
                 // pixels is the end pointer for this group
                 if (dst < pixels) {
-                    *dst = CRGB(color).nscale8(~blendPixel);
+                    #if HALF_TEST
+                    color=0xff0000;
+                    #endif
+                    *dst = CRGB(color).nscale8(blendPixel1);
                 }
                 if (next < pixels) {
-                    *next = color.nscale8(blendPixel);
+                    #if HALF_TEST
+                    color=0x0000ff;
+                    #endif
+                    *next = color.nscale8(blendPixel2);
                 }
             }
+
+            #if HALF_TEST
+            size_t j = 40
+            uint32_t c = 0x0
+            _display.at(j++) = 0x0044;
+            _display.at(j++) = 0x0044;
+            _display.at(j++) = pos % 2 ? 0x00ff00 : 0xff0000;
+            _display.at(j++) = halfOfs % 2 ? 0x00ff00 : 0xff0000;
+            _display.at(j++) = 0x0044;
+            _display.at(j++) = 0x0044;
+            #endif
         }
     }
 }

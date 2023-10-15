@@ -1223,6 +1223,10 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
     Logger_notice(msg);
     delay(500);
 
+    #if LOGGER
+        _logger.end();
+    #endif
+
     SaveCrash::removeCrashCounterAndSafeMode();
     resetDetector.setSafeMode(safeMode);
     #if ENABLE_DEEP_SLEEP
@@ -1254,6 +1258,9 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FLICKER);
 
     delay(500);
+    #if LOGGER
+        _logger.end();
+    #endif
 
     SaveCrash::removeCrashCounterAndSafeMode();
     resetDetector.setSafeMode(safeMode);

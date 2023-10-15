@@ -168,7 +168,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             powerLevelStr.printf_P(PSTR(" / %u"), _config.power_limit);
             return powerLevelStr;
         }
-        if (!std::isnormal(level) || level <= 0.0) {
+        if (!std::isfinite(level)) {
             return F("N/A");
         }
         PrintString powerLevelStr;

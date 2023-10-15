@@ -151,13 +151,13 @@ Sensor_BME280::SensorDataType Sensor_BME280::_readSensor()
         _bme280.readPressure()
     );
 
-    if (isnormal(sensor.temperature)) {
+    if (std::isfinite(sensor.temperature)) {
         sensor.temperature += _cfg.temp_offset;
     }
-    if (isnormal(sensor.humidity)) {
+    if (std::isnormal(sensor.humidity)) {
         sensor.humidity += _cfg.humidity_offset;
     }
-    if (isnormal(sensor.pressure)) {
+    if (std::isnormal(sensor.pressure)) {
         sensor.pressure /= 100.0;
         sensor.pressure += _cfg.pressure_offset;
     }

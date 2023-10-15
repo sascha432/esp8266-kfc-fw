@@ -582,8 +582,8 @@ namespace WebUINS {
             return _format;
         }
 
-        inline bool isNormal() const {
-            return std::isnormal(_value);
+        inline bool isFinite() const {
+            return std::isfinite(_value);
         }
 
     private:
@@ -604,8 +604,8 @@ namespace WebUINS {
             return _format;
         }
 
-        inline bool isNormal() const {
-            return std::isnormal(_value);
+        inline bool isFinite() const {
+            return std::isfinite(_value);
         }
 
     private:
@@ -661,7 +661,7 @@ namespace WebUINS {
         // uint32_t: 0 and 4294967295 are invalid
         // int32_t: -2147483646, 0 and 2147483647 are invalid
         // uint8_t: 0 is invalid
-        // double/float: !isnormal() is invalid (NAN, INF, -INF...)
+        // double/float: !std::isfinite() is invalid (NAN, INF, -INF...)
         static constexpr int8_t kStateAuto = -1;
         static constexpr int8_t kStateTrue = true;
         static constexpr int8_t kStateFalse = false;
@@ -727,22 +727,22 @@ namespace WebUINS {
         }
 
         NamedTrimmedFormattedFloat getValueObject(const TrimmedFloat &value) {
-            _validValue = value.isNormal();
+            _validValue = value.isFinite();
             return NamedTrimmedFormattedFloat(J(v), value.getValue(), value.getFormat());
         }
 
         NamedTrimmedFormattedDouble getValueObject(const TrimmedDouble &value) {
-            _validValue = value.isNormal();
+            _validValue = value.isFinite();
             return NamedTrimmedFormattedDouble(J(v), value.getValue(), value.getFormat());
         }
 
         NamedFormattedFloat getValueObject(const FormattedFloat &value) {
-            _validValue = value.isNormal();
+            _validValue = value.isFinite();
             return NamedFormattedFloat(J(v), value.getValue(), value.getFormat());
         }
 
         NamedFormattedDouble getValueObject(const FormattedDouble &value) {
-            _validValue = value.isNormal();
+            _validValue = value.isFinite();
             return NamedFormattedDouble(J(v), value.getValue(), value.getFormat());
         }
 

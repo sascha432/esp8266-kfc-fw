@@ -155,9 +155,10 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
     String ClockPlugin::_getPowerLevelStr()
     {
-        PrintString powerLevelStr;
-        MQTT::Json::UnnamedTrimmedFormattedDouble(_getPowerLevel(), F("%.2f")).printTo(powerLevelStr);
+        auto level = _getPowerLevel();
         if (_config.power_limit) {
+            PrintString powerLevelStr;
+            MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);
             #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
                 auto limit = FastLED.getPowerLimitScale();
                 if (limit != 1.0f) {
@@ -165,10 +166,13 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
                 }
             #endif
             powerLevelStr.printf_P(PSTR(" / %u"), _config.power_limit);
+            return powerLevelStr;
         }
-        else {
-            powerLevelStr.print(F("N/A"));
+        if (!std::isnormal(level) || level <= 0.0) {
+            return F("N/A");
         }
+        PrintString powerLevelStr;
+        MQTT::Json::UnnamedTrimmedFormattedDouble(level, F("%.2f")).printTo(powerLevelStr);
         return powerLevelStr;
     }
 

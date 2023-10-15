@@ -496,7 +496,7 @@ namespace MQTT {
             }
 
             void printTo(PrintStringInterface &output) const {
-                if (std::isnormal(_value)) {
+                if (std::isfinite(_value)) {
                     auto length = output.length();
                     output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                     // find the dot

@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Added memory queue for Logger to avoid file system operations outside the main loop
  - Stop FS during non-atomic FS updates to prevent corruption
  - Fixed issue with OpenWeatherMap forecast not being updated
  - Updated OpenWeatherMap API to OneCall API 3.0

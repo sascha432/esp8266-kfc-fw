@@ -10,6 +10,9 @@
 #include <PrintString.h>
 #include <EnumHelper.h>
 #include <Mutex.h>
+#include <vector>
+#include <list>
+#include <Scheduler.h>
 
 #ifndef DEBUG_LOGGER
 #    define DEBUG_LOGGER (0 || defined(DEBUG_ALL))
@@ -56,6 +59,10 @@ public:
 public:
     Logger();
 
+    // end logger and flush queue
+    void end();
+
+    // send error
     void error(const String &message, ...);
     void error(const __FlashStringHelper *message, ...);
     void security(const String &message, ...);
@@ -69,6 +76,7 @@ public:
     void log(Level level, const String &message, ...);
     void log(Level level, const char *message, ...);
 
+    // getters / setters
     static const __FlashStringHelper *getLevelAsString(Level logLevel);
     static Level getLevelFromString(PGM_P str);
     void setLevel(Level logLevel);
@@ -89,14 +97,78 @@ protected:
     void writeLog(Level logLevel, const __FlashStringHelper *message, va_list arg);
 
 private:
-    String _getLogFilename(Level logLevel);
+    const __FlashStringHelper *_getLogFilename(Level logLevel);
     String _getLogDevice(Level logLevel);
     String _getBackupFilename(const String &filename, int num);
     void _closeLog(File file);
+    void _flushQueue();
 
 private:
+    struct MemoryQueueType {
+        uint32_t millis;
+        Level logLevel;
+        uint8_t headerLength;
+        std::vector<char> buffer;
+
+        MemoryQueueType(uint32_t ms, Level level) :
+            millis(ms),
+            logLevel(level),
+            headerLength(0)
+        {
+        }
+
+        uint32_t writeDelay() const
+        {
+            // return at least 2
+            switch(logLevel) {
+                case Level::ERROR:
+                    return 2;
+                case Level::WARNING:
+                case Level::SECURITY:
+                    return 1000;
+                default:
+                    break;
+            }
+            return 5000;
+        }
+
+        MemoryQueueType(const MemoryQueueType &) = delete;
+        void operator=(const MemoryQueueType &) = delete;
+
+        MemoryQueueType(MemoryQueueType &&move) :
+            millis(move.millis),
+            logLevel(move.logLevel)  ,
+            headerLength(std::exchange(move.headerLength, 0)),
+            buffer(std::move(move.buffer))
+        {
+        }
+
+        char *header()
+        {
+            return& buffer.data()[0];
+        }
+
+        size_t headerSize() const
+        {
+            return headerLength;
+        }
+
+        char *message()
+        {
+            return &buffer.data()[headerLength];
+        }
+
+        size_t messageSize() const
+        {
+            return buffer.size() - headerLength;
+        }
+    };
+
     Level _logLevel;
     Level _enabled;
+    std::list<MemoryQueueType> _queue;
+    uint32_t _lastFlushTimer;
+    Event::Timer _writeTimer;
     #if SYSLOG_SUPPORT
         Syslog *_syslog;
     #endif
@@ -225,10 +297,10 @@ inline void Logger::setLevel(Level logLevel)
 
 #if SYSLOG_SUPPORT
 
-inline void Logger::setSyslog(Syslog *syslog)
-{
-    _syslog = syslog;
-}
+    inline void Logger::setSyslog(Syslog *syslog)
+    {
+        _syslog = syslog;
+    }
 
 #endif
 
@@ -245,7 +317,7 @@ inline void Logger::setExtraFileEnabled(Level level, bool state)
 inline File Logger::__openLog(Level logLevel, bool write)
 {
     __LDBG_printf("__openLog level=%u", logLevel);
-    auto fileName = _getLogFilename(logLevel);
+    auto fileName = String(_getLogFilename(logLevel));
     if (write) {
         __LDBG_printf("logLevel=%u append=%s", logLevel, fileName.c_str());
         // return KFCFS.open(fileName, fs::FileOpenMode::append);

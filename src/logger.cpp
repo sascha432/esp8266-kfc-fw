@@ -6,7 +6,7 @@
 
 #include "logger.h"
 #include <time.h>
-#include <vector>
+#include <algorithm>
 #include <misc.h>
 #include "kfc_fw_config.h"
 #include "../src/plugins/plugins.h"
@@ -18,7 +18,7 @@
 #endif
 
 #if DEBUG
-#    define ___DEBUG 1
+#    define ___DEBUG 0
 #else
 #    define ___DEBUG 0
 #endif
@@ -41,6 +41,14 @@ Logger::Logger() :
 {
 }
 
+void Logger::end()
+{
+    _Timer(_writeTimer).remove();
+    if (_logLevel != Level::NONE) {
+        _logLevel = Level::NONE;
+        _flushQueue();
+    }
+}
 
 const __FlashStringHelper *Logger::getLevelAsString(Level logLevel)
 {
@@ -67,97 +75,184 @@ const __FlashStringHelper *Logger::getLevelAsString(Level logLevel)
 
 void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 {
+    // check if logging is active
     if (logLevel > _logLevel) {
         return;
     }
 
     #if ESP32
-    // log messages are sent from multiple cores
-    MUTEX_LOCK_BLOCK(_lock)
+        // log messages are sent from multiple cores
+        MUTEX_LOCK_BLOCK(_lock)
     #endif
     {
-        auto file = __openLog(logLevel, true);
-        if (!file) {
-            file = __openLog(Level::MAX, true); // try to log in "messages" if custom log files cannot be opened
+        // create item with relative time
+        auto item = MemoryQueueType(millis() - _lastFlushTimer, logLevel);
+
+        // message header
+        {
+            PrintString header;
+            auto now = time(nullptr);
+
+            header.strftime_P(PSTR("%FT%TZ"), now);
+            header.print(F(" ["));
+            header.print(getLevelAsString(logLevel));
+            header.print(F("] "));
+
+            item.buffer.resize(item.headerLength = header.length());
+            memmove(item.header(), header.c_str(), header.length());
         }
 
-        PrintString header;
-        auto now = time(nullptr);
+        // message body
+        {
+            PrintString msg;
 
-        header.strftime_P(PSTR("%FT%TZ"), now);
-        header.print(F(" ["));
-        header.print(getLevelAsString(logLevel));
-        header.print(F("] "));
+            msg.vprintf_P(message, arg);
+            msg.rtrim();
+            item.buffer.resize(item.headerSize() + msg.length());
+            memmove(item.message(), msg.c_str(), msg.length());
 
-        PrintString msg;
-        msg.vprintf_P(message, arg);
-        msg.rtrim();
+            #if SYSLOG_SUPPORT
+                // send message to syslog plugin
+                if (_syslog) {
+                    __LDBG_printf("sending message to syslog level=%u", logLevel);
+                    switch(logLevel) {
+                        case Level::SECURITY:
+                            _syslog->setSeverity(SYSLOG_WARN);
+                            _syslog->setFacility(SYSLOG_FACILITY_SECURE);
+                            break;
+                        case Level::WARNING:
+                            _syslog->setSeverity(SYSLOG_WARN);
+                            _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                            break;
+                        case Level::NOTICE:
+                            _syslog->setSeverity(SYSLOG_NOTICE);
+                            _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                            break;
+                        case Level::DEBUG:
+                            _syslog->setSeverity(SYSLOG_DEBUG);
+                            _syslog->setFacility(SYSLOG_FACILITY_LOCAL0);
+                            break;
+                        case Level::ERROR:
+                        default:
+                            _syslog->setSeverity(SYSLOG_ERR);
+                            _syslog->setFacility(SYSLOG_FACILITY_KERN);
+                            break;
+                    }
+                    _syslog->addMessage(std::move(msg));
+                    SyslogPlugin::rearmTimer();
+                }
+            #endif
 
-        if (file) {
-            file.print(header);
-            file.println(msg);
-            if (logLevel <= Level::WARNING) {
-                file.flush();
-            }
         }
-        #if DEBUG_LOGGER
-            else {
-                auto filename = _getLogFilename(logLevel);
-                __LDBG_printf("Cannot append to log file %s", filename.c_str());
-            }
-        #endif
-
-        _closeLog(file);
 
         #if LOGGER_SERIAL_OUTPUT
+            // send to serial output
             if (at_mode_enabled()) {
                 Serial.print(F("+LOGGER="));
-                Serial.print(header);
-                Serial.println(msg);
+                Serial.write(item.header(), item.headerSize());
+                Serial.write(item.message(), item.messageSize());
+                Serial.println();
             }
             #if ___DEBUG
                 else {
-                    DebugContext_prefix(DEBUG_OUTPUT.println(msg));
+                    DebugContext_prefix(DEBUG_OUTPUT.write(item.message(), item.messageSize()) && DEBUG_OUTPUT.println());
                 }
             #endif
         #else
-            DebugContext_prefix(DEBUG_OUTPUT.println(msg));
+            // send to debug log
+            DebugContext_prefix(DEBUG_OUTPUT.println(DEBUG_OUTPUT.write(item.message(), item.messageSize()) && DEBUG_OUTPUT.println()));
         #endif
 
-        #if SYSLOG_SUPPORT
-            if (_syslog) {
-                __LDBG_printf("sending message to syslog level=%u", logLevel);
-                switch(logLevel) {
-                    case Level::SECURITY:
-                        _syslog->setSeverity(SYSLOG_WARN);
-                        _syslog->setFacility(SYSLOG_FACILITY_SECURE);
-                        break;
-                    case Level::WARNING:
-                        _syslog->setSeverity(SYSLOG_WARN);
-                        _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                        break;
-                    case Level::NOTICE:
-                        _syslog->setSeverity(SYSLOG_NOTICE);
-                        _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                        break;
-                    case Level::DEBUG:
-                        _syslog->setSeverity(SYSLOG_DEBUG);
-                        _syslog->setFacility(SYSLOG_FACILITY_LOCAL0);
-                        break;
-                    case Level::ERROR:
-                    default:
-                        _syslog->setSeverity(SYSLOG_ERR);
-                        _syslog->setFacility(SYSLOG_FACILITY_KERN);
-                        break;
+        // place item in queue
+        __LDBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
+        {
+            InterruptLock lock;
+            _queue.emplace_back(std::move(item));
+        }
+
+        // execute writes in main loop
+        for(;;) {
+            if (_writeTimer) {
+                // do not delay any pending writes
+                if (item.writeDelay() >= _writeTimer->getShortInterval()) {
+                    break;
                 }
-                _syslog->addMessage(std::move(msg));
-                SyslogPlugin::rearmTimer();
             }
-        #endif
+            _Timer(_writeTimer).add(Event::milliseconds(item.writeDelay() - 1), false, [this](Event::CallbackTimerPtr) {
+                this->_flushQueue();
+            });
+            break;
+        }
     }
 }
 
-String Logger::_getLogFilename(Level logLevel)
+void Logger::_flushQueue()
+{
+    #if ESP32
+        // log messages are sent from multiple cores
+        MUTEX_LOCK_BLOCK(_lock)
+    #endif
+    {
+        std::list<MemoryQueueType> tmp;
+        {
+            // sort and create temporary copy
+            // after that the queue can be used again
+            InterruptLock lock;
+
+            // sort by loglevel and time
+            _queue.sort([](const MemoryQueueType &a, const MemoryQueueType &b) {
+                if (a.logLevel == b.logLevel) {
+                    return a.millis < b.millis;
+                }
+                return a.logLevel < b.logLevel;
+            });
+
+            tmp = std::move(_queue);
+        }
+
+        Level last = Level::NONE;
+        File file;
+        for(auto &item: tmp) {
+            __LDBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
+            if (last != item.logLevel || !file) {
+                // store as last
+                last = item.logLevel;
+
+                // check if the filenames match if the file is open
+                for(;;) {
+                    if (file) {
+                        if (strcmp_P(file.fullName(), (PGM_P)_getLogFilename(last)) == 0) {
+                            break; // already open
+                        }
+                    }
+                    _closeLog(file);
+
+                    // open new log file
+                    file = __openLog(item.logLevel, true);
+                    if (!file) {
+                        file = __openLog(Level::MAX, true);
+                    }
+                    break;
+                }
+            }
+
+            // write item
+            file.write(item.buffer.data(), item.buffer.size());
+            file.println();
+
+            // clear buffer
+            item.buffer.clear();
+
+            optimistic_yield(10000);
+        }
+        tmp.clear();
+
+        _closeLog(file);
+        _lastFlushTimer = millis();
+    }
+}
+
+const __FlashStringHelper *Logger::_getLogFilename(Level logLevel)
 {
     if (isExtraFileEnabled(logLevel)) {
         switch(logLevel) {
@@ -180,6 +275,9 @@ String Logger::_getLogFilename(Level logLevel)
 void Logger::_closeLog(File file)
 {
     __LDBG_printf("_closeLog file=%u", !!file);
+    if (!file) {
+        return;
+    }
     String filename = file.fullName();
     #if LOGGER_MAX_FILESIZE
         if (file.size() >= LOGGER_MAX_FILESIZE) {

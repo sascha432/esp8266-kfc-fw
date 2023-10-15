@@ -404,18 +404,6 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         AlarmPlugin::setCallback(alarmCallback);
     #endif
 
-    #if 0
-    #warning DEBUG
-
-        // delayed start for debugging
-
-        _setBrightness(0);
-        _Scheduler.add(Event::seconds(15), false, [this](Event::CallbackTimerPtr) {
-            setBrightness(_config.getBrightness());
-        });
-
-    #else
-
     // set initial state after reset
     switch(_config.getInitialState()) {
         case InitialStateType::OFF:
@@ -443,8 +431,6 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         default:
             break;
     }
-
-    #endif
 
     _setupTimer();
     _isRunning = true;

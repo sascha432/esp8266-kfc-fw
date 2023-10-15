@@ -133,12 +133,19 @@
 #    error IOT_CLOCK_NUM_PIXELS is less than (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET
 #endif
 
+// option to set a power limit
+#ifndef IOT_CLOCK_HAVE_POWER_LIMIT
+#   define IOT_CLOCK_HAVE_POWER_LIMIT 0
+#endif
+
 // set maximum value for power limit in watt
 #ifndef IOT_LED_MATRIX_MAX_POWER
 #   define IOT_LED_MATRIX_MAX_POWER int(IOT_CLOCK_NUM_PIXELS * 0.35 + 0.5)
 #endif
 
-static_assert(IOT_LED_MATRIX_MAX_POWER >= (IOT_CLOCK_NUM_PIXELS * 0.05), "IOT_LED_MATRIX_MAX_POWER less than 0.05W per LED");
+#if IOT_CLOCK_HAVE_POWER_LIMIT
+    static_assert(IOT_LED_MATRIX_MAX_POWER >= (IOT_CLOCK_NUM_PIXELS * 0.05), "IOT_LED_MATRIX_MAX_POWER less than 0.05W per LED");
+#endif
 
 #ifndef IOT_LED_MATRIX_OPTS_REVERSE_ROWS
 #    define IOT_LED_MATRIX_OPTS_REVERSE_ROWS true
@@ -275,11 +282,6 @@ static_assert(IOT_LED_MATRIX_MAX_POWER >= (IOT_CLOCK_NUM_PIXELS * 0.05), "IOT_LE
 // update rate for webui
 #ifndef IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE
 #   define IOT_CLOCK_CALC_POWER_CONSUMPTION_UPDATE_RATE 2
-#endif
-
-// option to set a power limit
-#ifndef IOT_CLOCK_HAVE_POWER_LIMIT
-#   define IOT_CLOCK_HAVE_POWER_LIMIT 0
 #endif
 
 // since the power level is not linear, a correction formula can be applied

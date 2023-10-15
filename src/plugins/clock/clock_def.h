@@ -4,12 +4,20 @@
 
 #pragma once
 
-#ifndef IOT_CLOCK
-#   error IOT_CLOCK missing
+// IOT_CLOCK must be defined as 1. for clocks IOT_LED_MATRIX must be 0
+// IOT_LED_MATRIX must be set to 1 for any other type of display
+// IOT_LED_STRIP can be set to 1 to use a strip, IOT_LED_MATRIX must be 1
+
+#if !IOT_CLOCK
+#   error IOT_CLOCK not set to 1
 #endif
 
 #ifndef IOT_LED_MATRIX
 #   define IOT_LED_MATRIX 0
+#endif
+
+#if IOT_LED_STRIP && !IOT_LED_MATRIX
+#    error IOT_LED_MATRIX must be defined if IOT_LED_STRIP is set to 1
 #endif
 
 #if IOT_CLOCK && IOT_LED_MATRIX

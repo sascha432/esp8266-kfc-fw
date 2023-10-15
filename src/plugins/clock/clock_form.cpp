@@ -16,7 +16,9 @@
 #    include <debug_helper_disable.h>
 #endif
 
-#if IOT_LED_MATRIX
+#if IOT_LED_STRIP
+#    define FORM_TITLE "LED Strip Configuration"
+#elif IOT_LED_MATRIX
 #    define FORM_TITLE "LED Matrix Configuration"
 #else
 #    define FORM_TITLE "Clock Configuration"

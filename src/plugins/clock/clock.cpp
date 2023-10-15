@@ -609,12 +609,12 @@ void ClockPlugin::shutdown()
 
 void ClockPlugin::getStatus(Print &output)
 {
-    #if IOT_LED_MATRIX
+    #if IOT_LED_STRIP
+        output.print(F("LED Strip Plugin" HTML_S(br)));
+    #elif IOT_LED_MATRIX
         output.print(F("LED Matrix Plugin" HTML_S(br)));
     #elif IOT_CLOCK
         output.print(F("Clock Plugin" HTML_S(br)));
-    #else
-        output.print(F("LED Strip Plugin" HTML_S(br)));
     #endif
 
     #if IOT_LED_MATRIX_FAN_CONTROL
@@ -1139,6 +1139,7 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
     // start update process
     _lastUpdateTime = millis();
 
+    // check if we need to update the animation
     if (options.doRedraw()) {
 
         #if IOT_LED_MATRIX == 0
@@ -1167,9 +1168,11 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
         #endif
 
         if (_blendAnimation) {
+            // generate new frames for both animations
             _animation->nextFrame(options.getMillis());
             _blendAnimation->nextFrame(options.getMillis());
 
+            // blend frames together into _display
             if (!_blendAnimation->blend(_display, options.getMillis())) {
                 __LDBG_printf("blending done");
                 delete _blendAnimation;
@@ -1177,6 +1180,7 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
             }
         }
         else if (_animation) {
+            // create next frame and copy it to display
             _animation->nextFrame(options.getMillis());
             _animation->copyTo(_display, options.getMillis());
         }
@@ -1205,7 +1209,7 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
                 // read pixel group and blend all into 2 pixels
                 auto dst = pixels + active;
                 auto next = pixels + ((active + 1) % num);
-                // final color
+                // blend color
                 auto color = *pixels;
                 *pixels++ = 0;
                 for (size_t j = 1; j < num && pixels < endPtr; j++) {
@@ -1215,8 +1219,7 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
                 }
                 // pixels is the end pointer for this group
                 if (dst < pixels) {
-                    auto c = color;
-                    *dst = c.nscale8(~blendPixel);
+                    *dst = CRGB(color).nscale8(~blendPixel);
                 }
                 if (next < pixels) {
                     *next = color.nscale8(blendPixel);

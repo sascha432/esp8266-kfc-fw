@@ -167,7 +167,7 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             powerLevelStr.printf_P(PSTR(" / %u"), _config.power_limit);
         }
         else {
-            powerLevelStr = F("N/A");
+            powerLevelStr.print(F("N/A"));
         }
         return powerLevelStr;
     }

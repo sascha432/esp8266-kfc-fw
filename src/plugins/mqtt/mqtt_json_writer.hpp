@@ -259,7 +259,7 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
                 void printTo(PrintStringInterface &output) const {
-                if (std::isnormal(_value)) {
+                if (std::isfinite(_value)) {
                     output.printf_P(PSTR("%.*f"), _precision, _value);
                 }
                 else {
@@ -281,7 +281,7 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
                 void printTo(PrintStringInterface &output) const {
-                if (std::isnormal(_value)) {
+                if (std::isfinite(_value)) {
                     output.printf_P(PSTR("%.*f"), _precision, _value);
                 }
                 else {
@@ -327,7 +327,7 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
                 void printTo(PrintStringInterface &output) const {
-                if (std::isnormal(_value)) {
+                if (std::isfinite(_value)) {
                     __DBG_validatePointerCheck(_format, VP_HP);
                     output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                 }
@@ -384,7 +384,7 @@ namespace MQTT {
 
             inline __attribute__((__always_inline__))
                 void printTo(PrintStringInterface &output) const {
-                if (std::isnormal(_value)) {
+                if (std::isfinite(_value)) {
                     __DBG_validatePointerCheck(_format, VP_HP);
                     output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                 }
@@ -463,7 +463,7 @@ namespace MQTT {
             }
 
             void printTo(PrintStringInterface &output) const {
-                if (std::isnormal(_value)) {
+                if (std::isfinite(_value)) {
                     auto length = output.length();
                     output.printf_P(reinterpret_cast<PGM_P>(_format), _value);
                     // find the dot

@@ -552,7 +552,8 @@ namespace Clock {
 
     public:
 
-        PixelDisplayBuffer() : _pixels(__pixels.data() + getOffset())
+        PixelDisplayBuffer() :
+            _pixels(__pixels.data() + getOffset())
         {
         }
 

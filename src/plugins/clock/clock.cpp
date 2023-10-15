@@ -1180,6 +1180,48 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
             _animation->nextFrame(options.getMillis());
             _animation->copyTo(_display, options.getMillis());
         }
+
+        // energy saving mode. blend two pixels into one to reduce power consumption
+        // the color is blending from one to another pixel to use them evenly. only 2 LEDs will be on at a time
+        if (_config.energy_saver > 1) {
+            auto pixels = _display.begin();
+            auto endPtr = _display.end();
+            // number of LEDs to group
+            size_t num = _config.energy_saver;
+            // interval for all pixels
+            constexpr uint32_t interval = 10000;
+            // interval in milliseconds. rounds to 256 to get smooth blending
+            const uint32_t iActive = (interval / 256U) * 256U;
+            // interval of each pixel
+            const uint32_t iBlend = (iActive / 256U);
+            // fraction per LED
+            const uint8_t blendValue = 255 / num;
+            // active pixel
+            const uint8_t active = (options.getMillis() / iActive) % num;
+            // fraction of active pair
+            const uint8_t blendPixel = options.getMillis() / iBlend;
+
+            while(pixels < endPtr) {
+                // read pixel group and blend all into 2 pixels
+                auto dst = pixels + active;
+                auto next = pixels + ((active + 1) % num);
+                // final color
+                auto color = *pixels;
+                *pixels++ = 0;
+                for (size_t j = 1; j < num && pixels < endPtr; j++) {
+                    nblend(color, *pixels, blendValue);
+                    // clear all
+                    *pixels++ = 0;
+                }
+                // pixels is the end pointer for this group
+                if (dst < pixels) {
+                    *dst = blend(color, 0, blendPixel);
+                }
+                if (next < pixels) {
+                    *next = blend(color, 0, ~blendPixel);
+                }
+            }
+        }
     }
 }
 

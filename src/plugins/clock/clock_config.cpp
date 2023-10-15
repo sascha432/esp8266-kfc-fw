@@ -102,6 +102,7 @@ namespace KFCConfigurationClasses {
                     power_limit(kDefaultValueFor_power_limit),
                 #endif
                     brightness(kDefaultValueFor_brightness),
+                    energy_saver(kDefaultValueFor_energy_saver),
                 #if !IOT_LED_MATRIX
                     blink_colon_speed(kDefaultValueFor_blink_colon_speed),
                 #endif

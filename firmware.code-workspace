@@ -395,6 +395,7 @@
             "MQTT",
             "MTREG",
             "MULTITIMEZONE",
+            "NBLEND",
             "NEOPIXEL",
             "NHPS",
             "NILVALUE",

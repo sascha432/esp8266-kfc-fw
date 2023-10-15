@@ -609,6 +609,10 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             cfg.addRangeValidatorFor_power_limit(form, true);
         #endif
 
+        form.addObjectGetterSetter(F("pes"), FormGetterSetter(cfg, energy_saver));
+        form.addFormUI(F("Group 2 or more LEDs as single pixel"), FormUI::Suffix(F("LEDs")), FormUI::IntAttribute(F("disabled-value"), 1));
+        cfg.addRangeValidatorFor_energy_saver(form, true);
+
         form.addObjectGetterSetter(F("plr"), FormGetterSetter(cfg.power, red));
         form.addFormUI(F("Power Consumption For 256 LEDs at 100% Red"), FormUI::Suffix(F("mW")));
         cfg.power.addRangeValidatorFor_red(form);

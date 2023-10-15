@@ -26,12 +26,6 @@
 #    define IF_IOT_CLOCK_MODE(...)
 #endif
 
-#if IOT_MATRIX_MODE
-#    define IF_IOT_MATRIX_MODE(...) __VA_ARGS__
-#else
-#    define IF_IOT_MATRIX_MODE(...)
-#endif
-
 #ifndef DEBUG_IOT_CLOCK
 #    define DEBUG_IOT_CLOCK (0 || defined(DEBUG_ALL))
 #endif
@@ -93,7 +87,7 @@
 #    define IOT_LED_MATRIX_IR_REMOTE_PIN -1
 #endif
 
-// first pixel to use, others can be controlled separately and are reset during reboot only
+// first pixel to use, others can be controlled separately and all are reset during reboot only
 #ifndef IOT_LED_MATRIX_PIXEL_OFFSET
 #    define IOT_LED_MATRIX_PIXEL_OFFSET 0
 #endif
@@ -102,27 +96,32 @@
 #    define IOT_LED_MATRIX_ROW_OFS 0
 #endif
 
+// move the first pixel from 0 to another pixel. all animations will be shifted by this offset.
 #ifndef IOT_LED_MATRIX_COL_OFS
 #    define IOT_LED_MATRIX_COL_OFS 0
 #endif
 
-// enable LED matrix mode instead of clock mode
-#if IOT_LED_MATRIX
-#   define IF_IOT_LED_MATRIX(...) __VA_ARGS__
-#   define IF_IOT_CLOCK(...)
-#   ifndef IOT_CLOCK_NUM_PIXELS
-#       define IOT_CLOCK_NUM_PIXELS ((IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS) + IOT_LED_MATRIX_PIXEL_OFFSET)
-#   endif
-#else
-#    define IF_IOT_LED_MATRIX(...)
-#    define IF_IOT_CLOCK(...) __VA_ARGS__
-#    ifndef IOT_LED_MATRIX_COLS
-#        define IOT_LED_MATRIX_COLS IOT_CLOCK_NUM_PIXELS
-#        define IOT_LED_MATRIX_ROWS 1
-#    endif
+// define IOT_LED_MATRIX_PIXEL_OFFSET to set the number of unused pixels at the beginning of the strip
+// define IOT_LED_MATRIX_COLS and IOT_LED_MATRIX_ROWS to set the display size. Cols * rows must be less or equal than IOT_CLOCK_NUM_PIXELS. Cols is set to 32 and rows to 1 by default
+// define IOT_CLOCK_NUM_PIXELS to specify the total number of pixels that are supported. If cols are defined, IOT_CLOCK_NUM_PIXELS defaults to (cols * rows) + pixel offset
+
+#if !defined(IOT_LED_MATRIX_COLS) && !defined(IOT_CLOCK_NUM_PIXELS)
+#    error IOT_LED_MATRIX_COLS or IOT_CLOCK_NUM_PIXELS
 #endif
 
-#if defined(IOT_LED_MATRIX_ROWS) && ((IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS) + IOT_LED_MATRIX_PIXEL_OFFSET) > IOT_CLOCK_NUM_PIXELS
+#ifndef IOT_LED_MATRIX_ROWS
+#    define IOT_LED_MATRIX_ROWS 1
+#endif
+
+#if defined(IOT_CLOCK_NUM_PIXELS)
+#    ifndef IOT_LED_MATRIX_COLS
+#        define IOT_LED_MATRIX_COLS 32
+#    endif
+#else
+#    define IOT_CLOCK_NUM_PIXELS (IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS) + IOT_LED_MATRIX_PIXEL_OFFSET
+#endif
+
+#if ((IOT_LED_MATRIX_COLS * IOT_LED_MATRIX_ROWS) + IOT_LED_MATRIX_PIXEL_OFFSET) > IOT_CLOCK_NUM_PIXELS
 #    error IOT_CLOCK_NUM_PIXELS is less than (IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS) + IOT_LED_MATRIX_PIXEL_OFFSET
 #endif
 
@@ -383,12 +382,6 @@
 
 #ifndef IOT_LED_MATRIX_I2S_PORT
 #    define IOT_LED_MATRIX_I2S_PORT I2S_NUM_0
-#endif
-
-#if IOT_LED_MATRIX_ENABLE_VISUALIZER
-#   define IF_IOT_LED_MATRIX_ENABLE_VISUALIZER(...) __VA_ARGS__
-#else
-#   define IF_IOT_LED_MATRIX_ENABLE_VISUALIZER(...)
 #endif
 
 #ifndef IOT_SENSOR_HAVE_INA219

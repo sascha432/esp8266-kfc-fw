@@ -1215,10 +1215,11 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
                 }
                 // pixels is the end pointer for this group
                 if (dst < pixels) {
-                    *dst = blend(color, 0, blendPixel);
+                    auto c = color;
+                    *dst = c.nscale8(~blendPixel);
                 }
                 if (next < pixels) {
-                    *next = blend(color, 0, ~blendPixel);
+                    *next = color.nscale8(blendPixel);
                 }
             }
         }

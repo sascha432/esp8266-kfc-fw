@@ -400,6 +400,7 @@
             "NHPS",
             "NILVALUE",
             "NOINIT",
+            "NSCALE8",
             "NTPCLIENT",
             "ONECALL",
             "OPENWEATHERMAP",

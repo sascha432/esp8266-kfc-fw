@@ -679,9 +679,8 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addObjectGetterSetter(F("mx_il"), FormGetterSetter(cfg.matrix, interleaved));
             form.addFormUI(F("Interleaved"), FormUI::BoolItems());
 
-            form.addObjectGetterSetter(F("mx_px"), FormGetterSetter(cfg.matrix, pixels));
+            form.add(F("mx_px"), String(IOT_CLOCK_NUM_PIXELS));
             form.addFormUI(F("Maximum Number Of Pixels"), FormUI::ReadOnlyAttribute());
-            // cfg.matrix.addRangeValidatorFor_pixels(form);
 
             form.addObjectGetterSetter(F("mx_px0"), FormGetterSetter(cfg.matrix, pixels0));
             form.addFormUI(F("Segment 1 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN)));

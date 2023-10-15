@@ -335,7 +335,6 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT32_BITFIELD_MIN_MAX(cols, 16, 1, 0xffff, IOT_LED_MATRIX_COLS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(rowOfs, 16, 0, 0xffff, IOT_LED_MATRIX_ROW_OFS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(colOfs, 16, 0, 0xffff, IOT_LED_MATRIX_COL_OFS, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(pixels, 16, 1, 0xffff, IOT_CLOCK_NUM_PIXELS, 1); // all pixels
                 CREATE_UINT32_BITFIELD_MIN_MAX(pixels0, 13, 0, 4096, std::min(1024, IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS), 1); // segment 1
                 CREATE_UINT32_BITFIELD_MIN_MAX(offset0, 13, 0, 4096, IOT_LED_MATRIX_PIXEL_OFFSET, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(pixels1, 13, 0, 4096, 0, 1); // segment 2
@@ -353,7 +352,6 @@ namespace KFCConfigurationClasses {
                     uint16_t _cols = kDefaultValueFor_cols,
                     uint16_t _rowOfs = kDefaultValueFor_rowOfs,
                     uint16_t _colOfs = kDefaultValueFor_colOfs,
-                    uint16_t _pixels = kDefaultValueFor_pixels,
                     uint16_t _pixels0 = kDefaultValueFor_pixels0,
                     uint16_t _offset0 = kDefaultValueFor_offset0,
                     uint16_t _pixels1 = kDefaultValueFor_pixels1,
@@ -371,7 +369,6 @@ namespace KFCConfigurationClasses {
                     cols(_cols),
                     rowOfs(_rowOfs),
                     colOfs(_colOfs),
-                    pixels(_pixels),
                     pixels0(_pixels0),
                     offset0(_offset0),
                     pixels1(_pixels1),
@@ -402,10 +399,10 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT8_BITFIELD_MIN_MAX(method, 3, 1/*MIN + 1*/, 3/*MAX - 1*/, 1/*FASTLED*/, 1); // Clock::ShowMethodType
                 CREATE_UINT32_BITFIELD_MIN_MAX(fading_time, 6, 0, 60, 10, 1);
                 #if IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-                    CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 12, 0, 2047, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 12, 0, IOT_LED_MATRIX_MAX_POWER, 0, 1);
                 #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(brightness, 8, 0, 255, 255 / 4, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(energy_saver, 5, 1, 16, 1, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(energy_saver, 5, 0, 16, 0, 1);
                 #if !IOT_LED_MATRIX
                     CREATE_UINT32_BITFIELD_MIN_MAX(blink_colon_speed, 13, 50, 8000, 1000, 100);
                 #endif

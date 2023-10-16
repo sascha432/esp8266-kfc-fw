@@ -135,9 +135,13 @@ public:
         {
         }
 
+        bool empty() const {
+            return buffer.size() == 0;
+        }
+
         char *header()
         {
-            return& buffer.data()[0];
+            return &buffer.data()[0];
         }
 
         size_t headerSize() const
@@ -175,11 +179,9 @@ private:
         QueueSizeType() : _size(0), _num(0) {
         }
         void add(const MemoryQueueType &item) {
-            add(sizeof(item) + item.buffer.capacity() + MemoryQueueTypeListEx::getNodeSize());
-        }
-        void add(size_t size) {
-            _size += size;
-            _num++;
+            if (!item.empty()) {
+                _add(sizeof(item) + item.buffer.capacity() + MemoryQueueTypeListEx::getNodeSize());
+            }
         }
         static QueueSizeType get(const MemoryQueueTypeList &queue) {
             QueueSizeType size;
@@ -187,6 +189,11 @@ private:
                 size.add(item);
             }
             return size;
+        }
+    private:
+        void _add(size_t size) {
+            _size += size;
+            _num++;
         }
     private:
         size_t _size;
@@ -198,8 +205,9 @@ private:
     String _getBackupFilename(const String &filename, int num);
     void _closeLog(File file);
 
-    static constexpr size_t kQueueMaxSize = 1536;
-    static constexpr size_t kQueueMaxTimeout = 1000;
+    static constexpr size_t kQueueMaxSize = 1536; // do not use more than this amount of RAM
+    static constexpr size_t kQueueFlushSize = kQueueMaxSize / 2; // schedule queueFlush if the queue size gets bigger than that
+    static constexpr size_t kQueueMaxTimeout = 1000; // queue flush timeout
     void _flushQueue();
 
 private:

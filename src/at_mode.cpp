@@ -2865,7 +2865,7 @@ void at_mode_serial_handle_event(String &commandString)
                 bool enable = args.isTrue(0);
                 static File debugLog;
                 if (enable) {
-#pragma push_macro("DEBUG");
+#pragma push_macro("DEBUG")
 #undef DEBUG
                     if (!debugLog) {
                         _logger.setExtraFileEnabled(Logger::Level::DEBUG, true);
@@ -2885,7 +2885,7 @@ void at_mode_serial_handle_event(String &commandString)
                         _logger.setExtraFileEnabled(Logger::Level::DEBUG, false);
                     }
                 }
-#pragma pop_macro("DEBUG");
+#pragma pop_macro("DEBUG")
                 if (!debugLog) {
                     args.print(FSPGM(disabled));
                 }

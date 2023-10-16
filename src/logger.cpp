@@ -162,8 +162,10 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
         // place item in queue
         __LDBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
+        QueueSizeType size;
         MUTEX_LOCK_BLOCK(_queueLock) {
-            auto size = QueueSizeType::get(_queue);
+            size = QueueSizeType::get(_queue);
+            size.add(item); // add new item to see if it fits
             if (size.size() > kQueueMaxSize) {
                 __DBG_printf_E("dropped item=%u size=%u num=%u", item.buffer.size() + sizeof(item), size.size(), size.num());
             }
@@ -174,13 +176,17 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
         // execute writes in main loop
         for(;;) {
+            auto delay = item.writeDelay();
+            if (size.size() > kQueueFlushSize) {
+                delay = 2; // flush queue immediately
+            }
             if (_writeTimer) {
                 // do not delay any pending writes
-                if (item.writeDelay() >= _writeTimer->getShortInterval()) {
+                if (delay >= _writeTimer->getShortInterval()) {
                     break;
                 }
             }
-            _Timer(_writeTimer).add(Event::milliseconds(item.writeDelay() - 1), false, [this](Event::CallbackTimerPtr) {
+            _Timer(_writeTimer).add(Event::milliseconds(delay - 1), false, [this](Event::CallbackTimerPtr) {
                 this->_flushQueue();
             });
             break;
@@ -207,7 +213,7 @@ void Logger::_flushQueue()
             return a.logLevel < b.logLevel;
         });
 
-        #if 1 // DEBUG_LOGGER
+        #if DEBUG_LOGGER
             auto size = QueueSizeType::get(tmp);
             __DBG_printf("queue size=%u num=%u", size.size(), size.num());
         #endif
@@ -218,7 +224,7 @@ void Logger::_flushQueue()
         for(auto iterator = tmp.begin(); iterator != tmp.end(); iterator = tmp.begin()) {
             auto &item = *iterator;
 
-            __DBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
+            __LDBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
             if (last != item.logLevel || !file) {
                 // store as last
                 last = item.logLevel;
@@ -255,7 +261,7 @@ void Logger::_flushQueue()
             if (dur > kQueueMaxTimeout) {
                 _closeLog(file);
 
-                __DBG_printf_E("timeout=%u re-adding=%u", dur, tmp.size());
+                __LDBG_printf_E("timeout=%u re-adding=%u", dur, tmp.size());
 
                 // re-add all items that are left
                 MUTEX_LOCK_BLOCK(_queueLock) {
@@ -263,15 +269,12 @@ void Logger::_flushQueue()
                     for(auto &item: tmp) {
                         size.add(item);
                         if (size.size() > kQueueMaxSize) {
-                            __DBG_printf_E("dropped item=%u size=%u num=%u", item.buffer.size() + sizeof(item), size.size(), size.num());
-                            continue;
+                            size = QueueSizeType::get(tmp);
+                            __DBG_printf_E("dropped num=%u messages size=%u", size.num(), size.size());
+                            break;
                         }
                         _queue.emplace_back(std::move(item));
                     }
-                    #if 1 // DEBUG_LOGGER
-                        size = QueueSizeType::get(_queue);
-                        __DBG_printf("queue size=%u num=%u", size.size(), size.num());
-                    #endif
                 }
                 break;
             }
@@ -280,7 +283,7 @@ void Logger::_flushQueue()
         _closeLog(file);
         _lastFlushTimer = millis();
 
-        __DBG_printf("flush time=%u", get_time_since(start, millis()));
+        __LDBG_printf("flush time=%u", get_time_since(start, millis()));
     }
 }
 

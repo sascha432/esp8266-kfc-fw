@@ -208,7 +208,7 @@ namespace Clock {
             static constexpr bool kRotate = _Rotate;
             static constexpr bool kReverseRows = _ReverseRows;
             static constexpr bool kReverseColumns = _ReverseColumns;
-            static constexpr int kInterleaved = _Interleaved ? 1 : 0;
+            static constexpr int kInterleaved = _Interleaved;
         };
 
         // rotation

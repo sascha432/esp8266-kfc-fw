@@ -178,7 +178,7 @@ void Sensor_Battery::createWebUI(WebUINS::Root &webUI)
 
 void Sensor_Battery::publishState()
 {
-    __LDBG_printf("client=%p connected=%u voltage=%.3f", client, client && client->isConnected() ? 1 : 0, _status.getVoltage());
+    __LDBG_printf("client=%p connected=%u voltage=%.3f", client, client && client->isConnected(), _status.getVoltage());
     if (isConnected() && _status.getVoltage()) {
         publish(_getTopic(TopicType::VOLTAGE), true, String(_status.getVoltage(), _config.precision));
         #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL

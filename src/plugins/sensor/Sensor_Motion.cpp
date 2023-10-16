@@ -69,7 +69,7 @@ void Sensor_Motion::createWebUI(WebUINS::Root &webUI)
 
 void Sensor_Motion::publishState()
 {
-    // __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
+    // __LDBG_printf("client=%p connected=%u", client, client && client->isConnected());
     if (isConnected()) {
         publish(_getTopic(), true, MQTT::Client::toBoolOnOff(_motionState));
     }

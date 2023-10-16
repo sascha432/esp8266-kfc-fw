@@ -89,7 +89,7 @@ void Sensor_AmbientLight::createWebUI(WebUINS::Root &webUI)
 
 void Sensor_AmbientLight::publishState()
 {
-    // __LDBG_printf("client=%p connected=%u", client, client && client->isConnected() ? 1 : 0);
+    // __LDBG_printf("client=%p connected=%u", client, client && client->isConnected());
     if (isConnected()) {
         auto value = (_sensor.type == SensorType::BH1750FVI && _sensor.bh1750FVI.highRes) ? String(_sensor.bh1750FVI.illuminance, 1) : String(getAutoBrightness(), 0);
         publish(_getTopic(), true, value);

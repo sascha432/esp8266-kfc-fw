@@ -357,7 +357,7 @@ namespace WSDraw {
         String timeStr;
 
         for(uint8_t num = 0; num < WEATHER_STATION_MAX_CLOCKS; num++) {
-            // __LDBG_printf("%02u(%u): %s, %s", num, cfg.additionalClocks[num].isEnabled() ? 1 : 0, WeatherStation::getTZ(num).c_str(), WeatherStation::getName(num).c_str());
+            // __LDBG_printf("%02u(%u): %s, %s", num, cfg.additionalClocks[num].isEnabled(), WeatherStation::getTZ(num).c_str(), WeatherStation::getName(num).c_str());
             if (cfg.additionalClocks[num].isEnabled()) {
 
                 // do not allow interrupts while changing the TZ

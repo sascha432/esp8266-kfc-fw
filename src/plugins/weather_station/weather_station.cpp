@@ -832,7 +832,7 @@ void WeatherStationPlugin::_rainbowStatusLED(bool stop)
 
     bool WeatherStationPlugin::_resetAlarm()
     {
-        __LDBG_printf("reset=%u state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
+        __LDBG_printf("reset=%u state=%u", bool()_resetAlarmFunc, AlarmPlugin::getAlarmState());
 
         AlarmPlugin::getInstance().setBuzzer(false);
         if (_resetAlarmFunc) {

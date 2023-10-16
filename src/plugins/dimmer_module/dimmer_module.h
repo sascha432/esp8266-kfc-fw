@@ -88,8 +88,8 @@ namespace Dimmer {
 
     inline uint8_t Module::isAnyOnInt() const
     {
-        __LDBG_printf("anyon=%u", isAnyOn() ? 1 : 0);
-        return isAnyOn() ? 1 : 0;
+        __LDBG_printf("anyon=%u", isAnyOn());
+        return isAnyOn();
     }
 
     inline bool Module::on(uint8_t channel, float transition)

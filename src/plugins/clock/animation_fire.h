@@ -192,7 +192,7 @@ namespace Clock {
         template<typename _Ta>
         void _copyTo(_Ta &output, uint32_t millisValue)
         {
-            uint8_t mapping = ((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction ? 1 : 0));
+            uint8_t mapping = ((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction));
             for(uint16_t i = 0; i < _lineCount; i++) {
                 auto &line = _lines[i];
                 for(uint16_t j = 0; j < line.getNum(); j++) {

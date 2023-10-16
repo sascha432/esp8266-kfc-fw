@@ -176,8 +176,8 @@ inline void BlindsControl::_startToneTimer(uint32_t timeout)
         }
         uint8_t channel = (_config.play_tone_channel - 1) % kChannelCount;
         uint8_t channel2 = (channel + 1) % kChannelCount;
-        uint8_t index = (channel * kChannelCount) + (_states[channel].isClosed() ? 1 : 0);
-        uint8_t index2 = (channel2 * kChannelCount) + (_states[channel2].isClosed() ? 1 : 0);
+        uint8_t index = (channel * kChannelCount) + (_states[channel].isClosed());
+        uint8_t index2 = (channel2 * kChannelCount) + (_states[channel2].isClosed());
         struct {
             uint16_t pwmValue;
             uint16_t counter;

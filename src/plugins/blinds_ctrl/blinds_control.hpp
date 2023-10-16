@@ -169,7 +169,7 @@ inline BlindsControl::NameType BlindsControl::_getStateStr(ChannelType channel) 
 
 inline void BlindsControl::getValues(WebUINS::Events &array)
 {
-    array.append(WebUINS::Values(FSPGM(set_all, "set_all"), (_states[0].isOpen() || _states[1].isOpen()) ? 1 : 0, true));
+    array.append(WebUINS::Values(FSPGM(set_all, "set_all"), (_states[0].isOpen() || _states[1].isOpen()), true));
     for(const auto channel: _states.channels()) {
         String prefix = PrintString(FSPGM(channel__u), channel);
         array.append(

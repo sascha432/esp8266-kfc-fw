@@ -39,7 +39,7 @@ inline bool BlindsControl::ChannelState::isOpen() const
 
 inline uint8_t BlindsControl::ChannelState::isOpenInt() const
 {
-    return _state == StateType::OPEN ? 1 : 0;
+    return _state == StateType::OPEN;
 }
 
 inline bool BlindsControl::ChannelState::isClosed() const

@@ -47,13 +47,12 @@ public:
     enum class Level : uint8_t {
         NONE = 0,
         ERROR = _BV(0),
+        MIN = ERROR,
         SECURITY = _BV(1),
         WARNING = _BV(2),
         NOTICE = _BV(3),
         DEBUG = _BV(4),
-        MAX,
-        _DEBUG = DEBUG,
-        ANY = std::numeric_limits<std::underlying_type<Level>::type>::max()
+        MAX
     };
 
 public:
@@ -327,9 +326,14 @@ inline void Logger::log(Level level, const char *message, ...)
 
 inline Logger::Level Logger::getLevelFromString(PGM_P str)
 {
-    auto level = static_cast<Level>(1 << static_cast<uint8_t>(stringlist_find_P_P(reinterpret_cast<PGM_P>(getLevelAsString(Level::ANY)), str, '|')));
-    __LDBG_assert(level < Level::MAX); // as long as Level::ANY is defined correctly, we cannot get any invalid level. defaults to 0
-    return level;
+    auto len = strlen_P(str);
+    for(auto i = Level::MIN; i < Level::MAX; i = Level(int(i) + 1)) {
+        auto level = String(getLevelAsString(i));
+        if (level.equalsIgnoreCase(FPSTR(str)) || (len >= 2 && level.startsWithIgnoreCase(FPSTR(str)))) {
+            return i;
+        }
+    }
+    return Level::NONE;
 }
 
 inline void Logger::setLevel(Level logLevel)

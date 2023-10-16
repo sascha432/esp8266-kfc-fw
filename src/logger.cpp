@@ -64,13 +64,10 @@ const __FlashStringHelper *Logger::getLevelAsString(Level logLevel)
         case Level::DEBUG:
             return F("DEBUG");
         case Level::NONE:
-            return F("NONE");
-        case Level::ANY:
-            return F("error|security|warning|notice|debug");
         default:
             break;
     }
-    return F("");
+    return F("NONE");
 }
 
 void Logger::writeLog(Level logLevel, const char *message, va_list arg)

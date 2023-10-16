@@ -2865,10 +2865,12 @@ void at_mode_serial_handle_event(String &commandString)
                 bool enable = args.isTrue(0);
                 static File debugLog;
                 if (enable) {
+#pragma push_macro("DEBUG");
+#undef DEBUG
                     if (!debugLog) {
-                        _logger.setExtraFileEnabled(Logger::Level::_DEBUG, true);
-                        _logger.__rotate(Logger::Level::_DEBUG);
-                        debugLog = _logger.__openLog(Logger::Level::_DEBUG, true);
+                        _logger.setExtraFileEnabled(Logger::Level::DEBUG, true);
+                        _logger.__rotate(Logger::Level::DEBUG);
+                        debugLog = _logger.__openLog(Logger::Level::DEBUG, true);
                         if (debugLog) {
                             debugStreamWrapper.add(&debugLog);
                             args.print(F("enabled=%s"), debugLog.fullName());
@@ -2879,10 +2881,11 @@ void at_mode_serial_handle_event(String &commandString)
                     if (debugLog) {
                         debugStreamWrapper.remove(&debugLog);
                         debugLog.close();
-                        _logger.__rotate(Logger::Level::_DEBUG);
-                        _logger.setExtraFileEnabled(Logger::Level::_DEBUG, false);
+                        _logger.__rotate(Logger::Level::DEBUG);
+                        _logger.setExtraFileEnabled(Logger::Level::DEBUG, false);
                     }
                 }
+#pragma pop_macro("DEBUG");
                 if (!debugLog) {
                     args.print(FSPGM(disabled));
                 }

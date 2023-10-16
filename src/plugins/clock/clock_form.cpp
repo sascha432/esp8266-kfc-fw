@@ -611,9 +611,17 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             cfg.addRangeValidatorFor_power_limit(form, true);
         #endif
 
-        form.addObjectGetterSetter(F("pes"), FormGetterSetter(cfg, energy_saver));
-        form.addFormUI(F("Group 2 or more LEDs as single pixel"), FormUI::Suffix(F("LEDs")), FormUI::IntAttribute(F("disabled-value"), 0));
-        cfg.addRangeValidatorFor_energy_saver(form, true);
+        #if IOT_LED_MATRIX_GROUP_PIXELS
+
+            auto groupPixelsItems = FormUI::List(
+                0, F("None"),
+                1, F("Group 3 LEDs, 33.3% brightness"),
+                2, F("Group 9 LEDs, 11.1% brightness")
+            );
+            form.addObjectGetterSetter(F("pes"), FormGetterSetter(cfg, group_pixels));
+            form.addFormUI(F("Group Pixels"), FormUI::Type::SELECT, groupPixelsItems);
+
+        #endif
 
         form.addObjectGetterSetter(F("plr"), FormGetterSetter(cfg.power, red));
         form.addFormUI(F("Power Consumption For 256 LEDs at 100% Red"), FormUI::Suffix(F("mW")));

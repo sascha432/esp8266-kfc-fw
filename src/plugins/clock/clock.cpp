@@ -404,6 +404,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         AlarmPlugin::setCallback(alarmCallback);
     #endif
 
+
     // set initial state after reset
     switch(_config.getInitialState()) {
         case InitialStateType::OFF:
@@ -1185,106 +1186,71 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
             _animation->copyTo(_display, options.getMillis());
         }
 
-        // energy saving mode. blend two pixels into one to reduce power consumption
-        // the color is blending from one to another pixel to use them evenly. only 2 LEDs will be on at a time
-        if (_config.energy_saver > 1) {
-            #define HALF_TEST 0
-            auto pixels = _display.begin();
-            auto endPtr = _display.end();
-            // number of LEDs to group
-            const size_t num = _config.energy_saver;
-            // half num
-            #if HALF_TEST
-            const size_t halfNum = (num / 2);
-            #else
-            const size_t halfNum = 1;
-            #endif
-            // interval for all pixels
-            constexpr uint32_t interval = 5000;
-            // interval in milliseconds. rounds to 256 to get smooth blending
-            const uint32_t iActive = ((interval / 256) * 256);
-            // interval of each pixel
-            const uint32_t iBlend = (interval / 256);
-            // fraction per LED
-            const uint8_t blendValue = (255 / num);
-            // half offset
-            #if HALF_TEST
-            const uint32_t halfOfs = options.getMillis() / (iActive / 2);
-            // relative pixel position
-            const uint32_t pos = halfOfs / 2;
-            #else
-            // relative pixel position
-            const uint32_t pos = options.getMillis() / iActive;
-            #endif
-            // active pixel
-            const uint8_t active1 = pos % num;
-            // next active pixel
-            const uint8_t active2 = (pos + halfNum) % num;
-            // level of fading to black
-            const uint8_t blendPixel = options.getMillis() / iBlend;
-            #if HALF_TEST
-            // level of blending/fading to two pixels
-            uint8_t blendPixel1 = ~blendPixel;
-            uint8_t blendPixel2 = blendPixel;
-            if (halfOfs % 2 == 0) {
-                blendPixel1 = ~blendPixel1;
-            }
-            else {
-            }
-            // Serial.printf("%u %u\n", pos % 2, halfOfs % 2);
-            // // adjust half offset
-            // if (halfOfs % 2 == 1) {
-            //     blendPixel1 = (~blendPixel) * 2;
-            // } else {
-            //     blendPixel1 = blendPixel * 2;
-            // }
-            // blendPixel2 = 127 - blendPixel1 / 2;
-            // if (pos % 2 == 0) {
-            //     blendPixel2 *= 2;
-            // }
-            #else
-            const uint8_t blendPixel1 = ~blendPixel;
-            const uint8_t blendPixel2 = blendPixel;
-            #endif
+        #if IOT_LED_MATRIX_GROUP_PIXELS
 
-            while(pixels < endPtr) {
-                // read pixel group and blend all into 2 pixels
-                auto dst = pixels + active1;
-                auto next = pixels + active2;
-                // blend color
-                auto color = *pixels;
-                *pixels++ = 0;
-                for (size_t j = 1; j < num && pixels < endPtr; j++) {
-                    nblend(color, *pixels, blendValue);
-                    // clear all
+            if (_config.group_pixels > 0) {
+
+                // number of steps
+                const size_t step = _config.group_pixels;
+                // number of pixels
+                const size_t num = step * 3;
+                // fraction to blend of each pixel
+                const uint8_t blendFraction = 255 / num;
+
+                // interval in milliseconds to cycle through the 3 pixels
+                constexpr uint32_t kInterval = 5000;
+                // make sure it is dividable by 256 and more than 1
+                constexpr uint32_t kInterval256 = std::max(1, int((kInterval + 255) / 256.0));
+                // convert millis into our current relative position
+                const uint32_t n = options.getMillis() / kInterval256;
+
+                // scaling state
+                const size_t bp = n / 256;
+                // scaling value
+                const size_t bn = n % 256;
+
+                // scaling values for each pixel
+                std::array<uint8_t, 3> scale;
+                auto iterator = scale.begin() + (bp % 3);
+                *iterator = 0;
+                if (++iterator == scale.end()) {
+                    iterator = scale.begin();
+                }
+                *iterator = ~bn;
+                if (++iterator == scale.end()) {
+                    iterator = scale.begin();
+                }
+                *iterator = bn;
+
+                // pixels range
+                auto pixels = _display.begin();
+                const auto endPtr = _display.end();
+                while(pixels < endPtr) {
+                    // read pixel group and blend all into 3 pixels
+                    auto px = pixels;
+                    // blend colors
+                    auto color = *pixels;
                     *pixels++ = 0;
-                }
-                // pixels is the end pointer for this group
-                if (dst < pixels) {
-                    #if HALF_TEST
-                    color=0xff0000;
-                    #endif
-                    *dst = CRGB(color).nscale8(blendPixel1);
-                }
-                if (next < pixels) {
-                    #if HALF_TEST
-                    color=0x0000ff;
-                    #endif
-                    *next = color.nscale8(blendPixel2);
+                    for (size_t j = 1; j < num && pixels < endPtr; j++) {
+                        nblend(color, *pixels, blendFraction);
+                        *pixels++ = 0;
+                    }
+                    // pixels is the end pointer for this group
+                    if (px < pixels) {
+                        // color = 0xff0000;
+                        *px = CRGB(color).nscale8(scale[0]);
+                    }
+                    if ((px = px + step) < pixels) {
+                        // color = 0x00ff00;
+                        *px = CRGB(color).nscale8(scale[1]);
+                    }
+                    if ((px = px + step) < pixels) {
+                        // color = 0x0000ff;
+                        *px = color.nscale8(scale[2]);
+                    }
                 }
             }
-
-            #if HALF_TEST
-            size_t j = 40
-            uint32_t c = 0x0
-            _display.at(j++) = 0x0044;
-            _display.at(j++) = 0x0044;
-            _display.at(j++) = pos % 2 ? 0x00ff00 : 0xff0000;
-            _display.at(j++) = halfOfs % 2 ? 0x00ff00 : 0xff0000;
-            _display.at(j++) = 0x0044;
-            _display.at(j++) = 0x0044;
-            #endif
-        }
+        #endif
     }
 }
 

@@ -167,6 +167,15 @@
 #    error NTP_CLIENT=1 and NTP_HAVE_CALLBACKS=1 required
 #endif
 
+// group 3 or 9 LEDs, 2 are on at max. 50% at the same time
+// 3: 33.333% brightness = (2 * 50%) / (3 * 100%)
+// 9: 11.111% brightness = (2 * 50%) / (9 * 100%)
+// this simulates a strip with less LEDs, having more colors at low brightness but it requires more diffusion
+// requires only 60 fps compared to the dithering of FastLED, which can be applied on top
+#ifndef IOT_LED_MATRIX_GROUP_PIXELS
+#    define IOT_LED_MATRIX_GROUP_PIXELS 1
+#endif
+
 // pin for the multifunctional button
 #ifndef IOT_CLOCK_BUTTON_PIN
 #    define IOT_CLOCK_BUTTON_PIN -1

@@ -402,7 +402,7 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(power_limit, 12, 0, IOT_LED_MATRIX_MAX_POWER, 0, 1);
                 #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(brightness, 8, 0, 255, 255 / 4, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(energy_saver, 5, 0, 16, 0, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(group_pixels, 2, 0, 2, 0, 1);
                 #if !IOT_LED_MATRIX
                     CREATE_UINT32_BITFIELD_MIN_MAX(blink_colon_speed, 13, 50, 8000, 1000, 100);
                 #endif

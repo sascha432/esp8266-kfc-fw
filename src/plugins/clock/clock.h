@@ -801,7 +801,7 @@ inline ClockPlugin &ClockPlugin::getInstance()
 
     inline bool ClockPlugin::_resetAlarm()
     {
-        __LDBG_printf("alarm_func=%u alarm_state=%u", _resetAlarmFunc ? 1 : 0, AlarmPlugin::getAlarmState());
+        __LDBG_printf("alarm_func=%u alarm_state=%u", bool(_resetAlarmFunc), AlarmPlugin::getAlarmState());
         if (_resetAlarmFunc) {
             // reset prior clock settings
             _resetAlarmFunc(*_timer);

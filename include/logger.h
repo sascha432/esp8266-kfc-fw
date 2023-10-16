@@ -44,6 +44,12 @@ extern Logger _logger;
 
 class Logger {
 public:
+    // namespace
+
+    static constexpr size_t kQueueMaxSize = 1536; // do not use more than this amount of RAM
+    static constexpr size_t kQueueFlushSize = kQueueMaxSize / 2; // schedule queueFlush if the queue size gets bigger than that
+    static constexpr size_t kQueueMaxTimeout = 1000; // queue flush timeout
+
     enum class Level : uint8_t {
         NONE = 0,
         ERROR = _BV(0),
@@ -55,47 +61,6 @@ public:
         MAX
     };
 
-public:
-    Logger();
-
-    // end logger and flush queue
-    void end();
-
-    // send error
-    void error(const String &message, ...);
-    void error(const __FlashStringHelper *message, ...);
-    void security(const String &message, ...);
-    void security(const __FlashStringHelper *message, ...);
-    void warning(const String &message, ...);
-    void warning(const __FlashStringHelper *message, ...);
-    void notice(const String &message, ...);
-    void notice(const __FlashStringHelper *message, ...);
-    void debug(const String &message, ...);
-    void debug(const __FlashStringHelper *message, ...);
-    void log(Level level, const String &message, ...);
-    void log(Level level, const char *message, ...);
-
-    // getters / setters
-    static const __FlashStringHelper *getLevelAsString(Level logLevel);
-    static Level getLevelFromString(PGM_P str);
-    void setLevel(Level logLevel);
-
-    #if SYSLOG_SUPPORT
-        void setSyslog(Syslog *syslog);
-    #endif
-
-    bool isExtraFileEnabled(Level level) const;
-    void setExtraFileEnabled(Level level, bool state);
-
-    File __openLog(Level logLevel, bool write);
-    void __rotate(Level logLevel);
-
-protected:
-    void writeLog(Level logLevel, const char *message, va_list arg);
-    void writeLog(Level logLevel, const String &message, va_list arg);
-    void writeLog(Level logLevel, const __FlashStringHelper *message, va_list arg);
-
-public:
     struct MemoryQueueType {
         uint32_t millis;
         Level logLevel;
@@ -160,7 +125,6 @@ public:
         }
     };
 
-private:
     using MemoryQueueTypeList = std::list<Logger::MemoryQueueType>;
 
     struct MemoryQueueTypeListEx : MemoryQueueTypeList {
@@ -200,14 +164,54 @@ private:
         size_t _num;
     };
 
+
+    // class
+
+public:
+    Logger();
+
+    // end logger and flush queue
+    void end();
+
+    // send error
+    void error(const String &message, ...);
+    void error(const __FlashStringHelper *message, ...);
+    void security(const String &message, ...);
+    void security(const __FlashStringHelper *message, ...);
+    void warning(const String &message, ...);
+    void warning(const __FlashStringHelper *message, ...);
+    void notice(const String &message, ...);
+    void notice(const __FlashStringHelper *message, ...);
+    void debug(const String &message, ...);
+    void debug(const __FlashStringHelper *message, ...);
+    void log(Level level, const String &message, ...);
+    void log(Level level, const char *message, ...);
+
+    // getters / setters
+    static const __FlashStringHelper *getLevelAsString(Level logLevel);
+    static Level getLevelFromString(PGM_P str);
+    void setLevel(Level logLevel);
+
+    #if SYSLOG_SUPPORT
+        void setSyslog(Syslog *syslog);
+    #endif
+
+    bool isExtraFileEnabled(Level level) const;
+    void setExtraFileEnabled(Level level, bool state);
+
+    File __openLog(Level logLevel, bool write);
+    void __rotate(Level logLevel);
+
+protected:
+    void writeLog(Level logLevel, const char *message, va_list arg);
+    void writeLog(Level logLevel, const String &message, va_list arg);
+    void writeLog(Level logLevel, const __FlashStringHelper *message, va_list arg);
+
     const __FlashStringHelper *_getLogFilename(Level logLevel);
     String _getLogDevice(Level logLevel);
     String _getBackupFilename(const String &filename, int num);
     void _closeLog(File file);
 
-    static constexpr size_t kQueueMaxSize = 1536; // do not use more than this amount of RAM
-    static constexpr size_t kQueueFlushSize = kQueueMaxSize / 2; // schedule queueFlush if the queue size gets bigger than that
-    static constexpr size_t kQueueMaxTimeout = 1000; // queue flush timeout
     void _flushQueue();
 
 private:
@@ -220,10 +224,10 @@ private:
         Syslog *_syslog;
     #endif
     #if ESP32
-        SemaphoreMutex _lock;
-        SemaphoreMutex _flushLock;
+        SemaphoreMutex _lock; // lock for any method that writes logs
+        SemaphoreMutex _flushLock; // lock for method _flushQueue()
     #endif
-    SemaphoreMutex _queueLock;
+    SemaphoreMutex _queueLock; // lock for r/w '_queue'
 };
 
 inline void Logger::writeLog(Level logLevel, const String &message, va_list arg)

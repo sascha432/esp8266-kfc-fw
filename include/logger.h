@@ -96,14 +96,7 @@ protected:
     void writeLog(Level logLevel, const String &message, va_list arg);
     void writeLog(Level logLevel, const __FlashStringHelper *message, va_list arg);
 
-private:
-    const __FlashStringHelper *_getLogFilename(Level logLevel);
-    String _getLogDevice(Level logLevel);
-    String _getBackupFilename(const String &filename, int num);
-    void _closeLog(File file);
-    void _flushQueue();
-
-private:
+public:
     struct MemoryQueueType {
         uint32_t millis;
         Level logLevel;
@@ -164,9 +157,56 @@ private:
         }
     };
 
+private:
+    using MemoryQueueTypeList = std::list<Logger::MemoryQueueType>;
+
+    struct MemoryQueueTypeListEx : MemoryQueueTypeList {
+        static constexpr size_t getNodeSize() {
+            return sizeof(MemoryQueueTypeList::_Node);
+        }
+    };
+
+    struct QueueSizeType {
+        size_t size() const {
+            return _size;
+        }
+        size_t num() const {
+            return _num;
+        }
+        QueueSizeType() : _size(0), _num(0) {
+        }
+        void add(const MemoryQueueType &item) {
+            add(sizeof(item) + item.buffer.capacity() + MemoryQueueTypeListEx::getNodeSize());
+        }
+        void add(size_t size) {
+            _size += size;
+            _num++;
+        }
+        static QueueSizeType get(const MemoryQueueTypeList &queue) {
+            QueueSizeType size;
+            for(const auto &item: queue) {
+                size.add(item);
+            }
+            return size;
+        }
+    private:
+        size_t _size;
+        size_t _num;
+    };
+
+    const __FlashStringHelper *_getLogFilename(Level logLevel);
+    String _getLogDevice(Level logLevel);
+    String _getBackupFilename(const String &filename, int num);
+    void _closeLog(File file);
+
+    static constexpr size_t kQueueMaxSize = 1536;
+    static constexpr size_t kQueueMaxTimeout = 1000;
+    void _flushQueue();
+
+private:
     Level _logLevel;
     Level _enabled;
-    std::list<MemoryQueueType> _queue;
+    MemoryQueueTypeList _queue;
     uint32_t _lastFlushTimer;
     Event::Timer _writeTimer;
     #if SYSLOG_SUPPORT
@@ -174,7 +214,9 @@ private:
     #endif
     #if ESP32
         SemaphoreMutex _lock;
+        SemaphoreMutex _flushLock;
     #endif
+    SemaphoreMutex _queueLock;
 };
 
 inline void Logger::writeLog(Level logLevel, const String &message, va_list arg)

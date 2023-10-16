@@ -165,9 +165,14 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
         // place item in queue
         __LDBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
-        {
-            InterruptLock lock;
-            _queue.emplace_back(std::move(item));
+        MUTEX_LOCK_BLOCK(_queueLock) {
+            auto size = QueueSizeType::get(_queue);
+            if (size.size() > kQueueMaxSize) {
+                __DBG_printf_E("dropped item=%u size=%u num=%u", item.buffer.size() + sizeof(item), size.size(), size.num());
+            }
+            else {
+                _queue.emplace_back(std::move(item));
+            }
         }
 
         // execute writes in main loop
@@ -190,30 +195,33 @@ void Logger::_flushQueue()
 {
     #if ESP32
         // log messages are sent from multiple cores
-        MUTEX_LOCK_BLOCK(_lock)
+        MUTEX_LOCK_BLOCK(_flushLock)
     #endif
     {
-        std::list<MemoryQueueType> tmp;
-        {
-            // sort and create temporary copy
-            // after that the queue can be used again
-            InterruptLock lock;
-
-            // sort by loglevel and time
-            _queue.sort([](const MemoryQueueType &a, const MemoryQueueType &b) {
-                if (a.logLevel == b.logLevel) {
-                    return a.millis < b.millis;
-                }
-                return a.logLevel < b.logLevel;
-            });
-
+        MemoryQueueTypeList tmp;
+        MUTEX_LOCK_BLOCK(_queueLock) {
             tmp = std::move(_queue);
         }
+        // sort by loglevel and time
+        tmp.sort([](const MemoryQueueType &a, const MemoryQueueType &b) {
+            if (a.logLevel == b.logLevel) {
+                return a.millis < b.millis;
+            }
+            return a.logLevel < b.logLevel;
+        });
 
+        #if 1 // DEBUG_LOGGER
+            auto size = QueueSizeType::get(tmp);
+            __DBG_printf("queue size=%u num=%u", size.size(), size.num());
+        #endif
+
+        uint32_t start = millis();
         Level last = Level::NONE;
         File file;
-        for(auto &item: tmp) {
-            __LDBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
+        for(auto iterator = tmp.begin(); iterator != tmp.end(); iterator = tmp.begin()) {
+            auto &item = *iterator;
+
+            __DBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
             if (last != item.logLevel || !file) {
                 // store as last
                 last = item.logLevel;
@@ -240,15 +248,42 @@ void Logger::_flushQueue()
             file.write(item.buffer.data(), item.buffer.size());
             file.println();
 
-            // clear buffer
-            item.buffer.clear();
+            // remote item from list
+            tmp.erase(iterator);
 
             optimistic_yield(10000);
+
+            // check how much time we spend
+            auto dur = get_time_since(start, millis());
+            if (dur > kQueueMaxTimeout) {
+                _closeLog(file);
+
+                __DBG_printf_E("timeout=%u re-adding=%u", dur, tmp.size());
+
+                // re-add all items that are left
+                MUTEX_LOCK_BLOCK(_queueLock) {
+                    auto size = QueueSizeType::get(_queue);
+                    for(auto &item: tmp) {
+                        size.add(item);
+                        if (size.size() > kQueueMaxSize) {
+                            __DBG_printf_E("dropped item=%u size=%u num=%u", item.buffer.size() + sizeof(item), size.size(), size.num());
+                            continue;
+                        }
+                        _queue.emplace_back(std::move(item));
+                    }
+                    #if 1 // DEBUG_LOGGER
+                        size = QueueSizeType::get(_queue);
+                        __DBG_printf("queue size=%u num=%u", size.size(), size.num());
+                    #endif
+                }
+                break;
+            }
         }
-        tmp.clear();
 
         _closeLog(file);
         _lastFlushTimer = millis();
+
+        __DBG_printf("flush time=%u", get_time_since(start, millis()));
     }
 }
 

@@ -6,7 +6,6 @@
 
 #include "../src/plugins/mqtt/mqtt_json.h"
 #include <Arduino_compat.h>
-#include <EnumHelper.h>
 #include <array>
 #include <vector>
 

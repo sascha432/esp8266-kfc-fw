@@ -17,7 +17,6 @@
 #include <Buffer.h>
 #include <EventScheduler.h>
 #include <HardwareSerial.h>
-#include <EnumHelper.h>
 #include <cbuf.h>
 #if ESP32
 #include <esp_task_wdt.h>
@@ -35,6 +34,8 @@ namespace SerialHandler {
         READ =          0x02,
         RW =            READ|WRITE,
     };
+
+    using EventTypeEnum = stdex::enum_type<EventType>;
 
     class Client;
     class Wrapper;
@@ -194,7 +195,7 @@ namespace SerialHandler {
 
     inline bool Client::_hasAny(EventType event) const
     {
-        return EnumHelper::Bitset::hasAny(_events, event);
+        return EventTypeEnum(_events) & EventTypeEnum(event);
     }
 
     inline int Client::available()

@@ -15,7 +15,6 @@
 #include <KFCForms.h>
 #include "../mqtt/mqtt_client.h"
 #include "../mqtt/mqtt_json.h"
-#include "EnumBitset.h"
 
 #if 0
 #    define __DBG_discovery_printf __DBG_printf

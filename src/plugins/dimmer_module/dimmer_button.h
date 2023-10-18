@@ -7,7 +7,7 @@
 #if IOT_DIMMER_MODULE_HAS_BUTTONS
 
 #include "dimmer_buttons.h"
-#include <EnumHelper.h>
+#include <stl_ext/utility.h>
 #include <PinMonitor.h>
 
 namespace Dimmer {
@@ -21,7 +21,7 @@ namespace Dimmer {
     public:
         ButtonConfig(ConfigType &config) :
             PushButtonConfig(
-                EnumHelper::Bitset::all(EventType::UP, EventType::DOWN, EventType::LONG_PRESSED, EventType::HOLD/*, EventType::REPEATED_CLICK*/),
+                EventTypeEnum(EventTypeEnum::Enum::UP)|EventTypeEnum(EventTypeEnum::Enum::DOWN)|EventTypeEnum(EventTypeEnum::Enum::LONG_PRESSED)|EventTypeEnum(EventTypeEnum::Enum::HOLD),
                 config._base.shortpress_time,
                 config._base.longpress_time,
                 IOT_DIMMER_MODULE_HOLD_REPEAT_TIME,

@@ -8,7 +8,6 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
-#include <EnumHelper.h>
 #include <Mutex.h>
 #include <vector>
 #include <list>
@@ -230,6 +229,8 @@ private:
     SemaphoreMutex _queueLock; // lock for r/w '_queue'
 };
 
+using LoggerEnum = stdex::enum_type<Logger::Level>;
+
 inline void Logger::writeLog(Level logLevel, const String &message, va_list arg)
 {
     writeLog(logLevel, message.c_str(), arg);
@@ -339,7 +340,8 @@ inline void Logger::log(Level level, const char *message, ...)
 inline Logger::Level Logger::getLevelFromString(PGM_P str)
 {
     auto len = strlen_P(str);
-    for(auto i = Level::MIN; i < Level::MAX; i = Level(int(i) + 1)) {
+
+    for(auto i: LoggerEnum()) {
         auto level = String(getLevelAsString(i));
         if (level.equalsIgnoreCase(FPSTR(str)) || (len >= 2 && level.startsWithIgnoreCase(FPSTR(str)))) {
             return i;
@@ -364,12 +366,17 @@ inline void Logger::setLevel(Level logLevel)
 
 inline bool Logger::isExtraFileEnabled(Level level) const
 {
-    return EnumHelper::Bitset::hasAny(_enabled, level);
+    return LoggerEnum(_enabled) & LoggerEnum(level);
 }
 
 inline void Logger::setExtraFileEnabled(Level level, bool state)
 {
-    EnumHelper::Bitset::setBits(_enabled, state, level);
+    if (state) {
+        LoggerEnum(_enabled) |= LoggerEnum(level);
+    }
+    else {
+        LoggerEnum(_enabled) &= ~LoggerEnum(level);
+    }
 }
 
 inline File Logger::__openLog(Level logLevel, bool write)

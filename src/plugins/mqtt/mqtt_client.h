@@ -11,7 +11,6 @@
 #include <FixedString.h>
 #include <vector>
 #include "mqtt_base.h"
-#include "EnumBase.h"
 #include "kfc_fw_config.h"
 #include "component.h"
 #include "auto_discovery.h"

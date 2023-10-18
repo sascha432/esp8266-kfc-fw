@@ -7,6 +7,7 @@
 #include "logger.h"
 #include <time.h>
 #include <algorithm>
+#include <stl_ext/utility.h>
 #include <misc.h>
 #include "kfc_fw_config.h"
 #include "../src/plugins/plugins.h"
@@ -17,11 +18,6 @@
 #    include <debug_helper_disable.h>
 #endif
 
-#if DEBUG
-#    define ___DEBUG 0
-#else
-#    define ___DEBUG 0
-#endif
 #undef DEBUG
 
 using KFCConfigurationClasses::System;
@@ -30,11 +26,7 @@ Logger _logger;
 
 Logger::Logger() :
     _logLevel(Level::NOTICE),
-    #if ___DEBUG
-        _enabled(EnumHelper::Bitset::all(Level::ERROR, Level::WARNING, Level::SECURITY))
-    #else
-        _enabled(EnumHelper::Bitset::all(Level::ERROR, Level::SECURITY))
-    #endif
+    _enabled(LoggerEnum(LoggerEnum::Enum::ERROR)|LoggerEnum(LoggerEnum::Enum::SECURITY)),
     #if SYSLOG_SUPPORT
         , _syslog(nullptr)
     #endif
@@ -150,11 +142,6 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
                 Serial.write(item.message(), item.messageSize());
                 Serial.println();
             }
-            #if ___DEBUG
-                else {
-                    DebugContext_prefix(DEBUG_OUTPUT.write(item.message(), item.messageSize()) && DEBUG_OUTPUT.println());
-                }
-            #endif
         #else
             // send to debug log
             DebugContext_prefix(DEBUG_OUTPUT.println(DEBUG_OUTPUT.write(item.message(), item.messageSize()) && DEBUG_OUTPUT.println()));

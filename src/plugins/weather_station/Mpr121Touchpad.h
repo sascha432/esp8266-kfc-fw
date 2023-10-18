@@ -12,6 +12,7 @@
 #include <PrintString.h>
 #include <EventScheduler.h>
 #include <stl_ext/fixed_circular_buffer.h>
+#include <stl_ext/utility.h>
 
 #include "../src/plugins/http2serial/http2serial.h"
 
@@ -46,6 +47,8 @@ public:
         DRAG        = 0x80,
         ANY         = 0xff
     };
+
+    using EventTypeEnum = enum_type<EventType>;
 
     enum class GesturesType : GesturesBaseType {
         NONE =      0,

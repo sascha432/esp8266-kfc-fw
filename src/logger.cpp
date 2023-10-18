@@ -26,7 +26,7 @@ Logger _logger;
 
 Logger::Logger() :
     _logLevel(Level::NOTICE),
-    _enabled(LoggerEnum(LoggerEnum::Enum::ERROR)|LoggerEnum(LoggerEnum::Enum::SECURITY)),
+    _enabled(LoggerEnum(LoggerEnum::Enum::ERROR)|LoggerEnum(LoggerEnum::Enum::SECURITY))
     #if SYSLOG_SUPPORT
         , _syslog(nullptr)
     #endif

@@ -149,10 +149,10 @@ namespace KFCConfigurationClasses {
                         auto endPtr = ptr + length;
                         while(ptr + SwitchConfigType::size() <= endPtr && i < names.size()) {
                             memmove(&configs[i].data(), ptr, configs[i].size());
-                            // ::printf("ptr=%p endPtr=%p i=%u sz=%u namelen=%u\n", ptr, endPtr, i, names.size(), configs[i].getNameLength());
                             ptr += configs[i].size();
                             auto len = configs[i].getNameLength();
-                            if (ptr + len < endPtr) {
+                            // ::printf("n=%u ptr=%p endPtr=%p i=%u sz=%u namelen=%u err=%d\n", i, ptr, endPtr, i, names.size(), len, !(ptr + len <= endPtr));
+                            if (ptr + len <= endPtr) {
                                 names[i] = PrintString(ptr, len);
                             }
                             else {

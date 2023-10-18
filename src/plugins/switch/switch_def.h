@@ -27,7 +27,7 @@
 #endif
 
 // store states on file system
-// persistant storage for power failure
+// persistent storage for power failure
 #ifndef IOT_SWITCH_STORE_STATES_FS
 #   define IOT_SWITCH_STORE_STATES_FS 1
 #endif

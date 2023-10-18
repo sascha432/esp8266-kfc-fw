@@ -234,7 +234,7 @@ void SwitchPlugin::createWebUI(WebUINS::Root &webUI)
 void SwitchPlugin::getValues(WebUINS::Events &array)
 {
     for (uint8_t i = 0; i < _pins.size(); i++) {
-        array.append(WebUINS::Values(PrintString(FSPGM(channel__u), i), _getChannel(i), true));
+        array.append(WebUINS::Values(PrintString(FSPGM(channel__u), i), static_cast<uint32_t>(_getChannel(i)), true));
     }
 }
 
@@ -454,7 +454,7 @@ void SwitchPlugin::_publishState(int8_t channel)
             if (channel == -1 || static_cast<uint8_t>(channel) == i) {
                 PrintString channel(FSPGM(channel__u), i);
                 // __LDBG_printf("channel=%s", channel.c_str());
-                events.append(WebUINS::Values(channel, _getChannel(i), true));
+                events.append(WebUINS::Values(channel, static_cast<uint32_t>(_getChannel(i)), true));
             }
         }
         __LDBG_printf("events=%s", events.toString().c_str());

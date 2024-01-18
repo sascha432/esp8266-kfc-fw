@@ -70,34 +70,35 @@ extern "C" bool btInUse()
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 
-void delayedSetup()
+static void delayedSetup()
 {
-    // check if wifi is up
-    constexpr uint32_t kCheckWiFiConnectionIntervalSeconds = 60;
-    constexpr uint32_t kWiFiErrorIntervalIncrease = 15;
-    uint32_t resetTimer = kWiFiErrorIntervalIncrease;
+    // periodic wifi check to detect connection errors
 
-    _Scheduler.add(Event::seconds(kCheckWiFiConnectionIntervalSeconds), true, [&resetTimer](Event::CallbackTimerPtr timer) {
+    // check if wifi is up
+    static constexpr uint32_t kCheckWiFiConnectionIntervalSeconds = 60;
+    // increase interval by 15 seconds after each error
+    static constexpr uint32_t kWiFiErrorIntervalIncrease = 15;
+    // maximum reconnect interval is 5 minutes
+    static constexpr uint32_t kCheckWiFiConnectionMaxIntervalSeconds = 300;
+    // current timer interval in seconds
+    static uint32_t resetTimer = kCheckWiFiConnectionIntervalSeconds;
+
+    _Scheduler.add(Event::seconds(kCheckWiFiConnectionIntervalSeconds), true, [](Event::CallbackTimerPtr timer) {
         if (System::Flags::getConfig().is_station_mode_enabled) {
-            if (!WiFi.isConnected()) {
-                // register error
+            __LDBG_printf("wifi=%u timer=%u err=%u msg=%s", config.getWiFiUp(), resetTimer, config.getWiFiErrors(), __S(config.getLastError()));
+            if (!config.getWiFiUp()) {
+                // register wifi error
                 config.registerWiFiError();
-                if (timer->updateInterval(Event::seconds(resetTimer))) {
-                    // increase reset timer in case the connection will take a lot longer than 10 seconds
-                    resetTimer += kWiFiErrorIntervalIncrease;
-                    // restart entire wifi subsystem
-                    // starts AP if enabled
-                    config.reconfigureWiFi(F("reconfiguring WiFi adapter"));
-                }
-                else {
-                    // reconnect station mode only if reconfigure was executed before
-                    Logger_notice(F("reconnecting WiFi station mode"));
-                    config.connectWiFi(config.kKeepWiFiNetwork, true);
-                }
+                // reset AP mode the first time only
+                bool resetApMode = !timer->updateInterval(Event::seconds(resetTimer));
+                // increase reset timer in case connecting takes longer than kWiFiErrorIntervalIncrease seconds
+                resetTimer = std::min<uint32_t>(resetTimer + kWiFiErrorIntervalIncrease, kCheckWiFiConnectionMaxIntervalSeconds);
+                // restart entire wifi subsystem
+                config.reconfigureWiFi(F("Reconfiguring WiFi adapter"), resetApMode);
             }
             else {
-                resetTimer = kWiFiErrorIntervalIncrease;
-                // reset timer if wifi is connected
+                // reset timer interval once wifi is connected successfully
+                resetTimer = kCheckWiFiConnectionIntervalSeconds;
                 timer->updateInterval(Event::seconds(kCheckWiFiConnectionIntervalSeconds));
             }
         }
@@ -485,9 +486,9 @@ void setup()
         componentRegister.setup(PluginComponent::SetupModeType::SAFE_MODE);
 
         // check if wifi is up
-        _Scheduler.add(Event::seconds(10), true, [](Event::CallbackTimerPtr timer) {
+        _Scheduler.add(Event::seconds(30), true, [](Event::CallbackTimerPtr timer) {
             timer->updateInterval(Event::seconds(60));
-            if (!WiFi.isConnected()) {
+            if (!config.getWiFiUp()) {
                 config.reconfigureWiFi(F("WiFi not connected, reconfiguring WiFi adapter"));
             }
         });
@@ -538,7 +539,7 @@ void setup()
         #endif
 
         #if IOT_CLOCK
-            // disable the LEDs if it was caused by a power surge when turning on
+            // disable the LEDs in case it was caused by a power surge when turning on to avoid boot loops
             if (resetDetector.hasCrashDetected() || resetDetector.hasBrownoutDetected()) {
                 ClockPlugin::getInstance().lock();
            }

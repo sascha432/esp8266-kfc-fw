@@ -493,7 +493,7 @@ namespace MQTT {
         {
             DEBUG_HELPER_PUSH_STATE();
             DEBUG_HELPER_SILENT();
-            _connectionStr = PrintString(F("%s state=%s auto_reconnect=%u timer=%u"), _client->getAsyncClient().stateToString(), RFPSTR(_getConnStateStr()), _autoReconnectTimeout, (bool)_timer);
+            _connectionStr = PrintString(F("%s state=%s auto_reconnect=%u timer=%u"), _client->getAsyncClient().stateToString(), RFPSTR(_getConnStateStr()), _autoReconnectTimeout, (bool)_reconnectTimer);
             DEBUG_HELPER_POP_STATE();
             return _connectionStr.c_str();
         }

@@ -234,6 +234,7 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
         LoopFunctions::callOnce([event]() {
             WiFiCallbacks::callEvent(WiFiCallbacks::EventType::DISCONNECTED, (void *)&event);
         });
+
         if (event.reason == WIFI_DISCONNECT_REASON_AUTH_EXPIRE) {
             config.reconfigureWiFi(F("Authentication expired, reconfiguring WiFi adapter"));
         }
@@ -1378,7 +1379,7 @@ const __FlashStringHelper *KFCFWConfiguration::getWiFiEncryptionType(uint8_t typ
 
 bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg, uint8_t configNum)
 {
-    __DBG_printf("re-config=%u", configNum);
+    __LDBG_printf("re-config=%u", configNum);
     if (msg) {
         Logger_notice(msg);
         #if DEBUG_KFC_CONFIG

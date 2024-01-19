@@ -2250,7 +2250,9 @@ void at_mode_serial_handle_event(String &commandString)
                     config.setWiFiErrors(0xff - 2);
                     config.registerWiFiError();
                     args.print(F("switching WiFi network"));
-                    config.reconfigureWiFi(nullptr);
+                    LoopFunctions::callOnce([]() {
+                        config.reconfigureWiFi(nullptr);
+                    });
                     break;
             }
         }

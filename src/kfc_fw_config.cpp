@@ -1775,13 +1775,13 @@ void KFCFWConfiguration::printRTCStatus(Print &output, const RtcStatus &status, 
 
 KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(StationConfigType configNum)
 {
-    auto list = getStations();
+    auto stations = getStations();
 
     // check if there is any station with priority 0 / auto detect strength
-    auto iter = std::find_if(list.begin(), list.end(), [](const auto &station) {
+    auto iter = std::find_if(stations.begin(), stations.end(), [](const auto &station) {
         return station._SSID.length() && (station._priority == 0);
     });
-    if (iter == list.end()) {
+    if (iter == stations.end()) {
         __LDBG_printf("no stations in auto mode");
         return configNum;
     }
@@ -1814,20 +1814,37 @@ KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(Stati
             }
             __DBG_printf("---");
         #endif
-        for(auto &station: list) {
+        for(auto &station: stations) {
             for(uint8_t i = 0; i < num; i++) {
                 if (station._SSID.length()) {
                     auto ssid = WiFi.SSID(i);
-                    __LDBG_printf("%sssid=%s" _VT100(reset) " prio=%d bssid=%s rssi=%d", (ssid == station._SSID) ? PSTR(_VT100(bold_green)) : emptyString.c_str(), ssid.c_str(), station._priority, mac2String(WiFi.BSSID(i)).c_str(), WiFi.RSSI(i));
-                    if (ssid == station._SSID) {
-                        if (station._priority == 0) {
-                            station._priority = -WiFi.RSSI(i);
-                            if (WiFi.BSSID(i)) {
-                                // update BSSID for network
-                                memmove(station._bssid, WiFi.BSSID(i), sizeof(station._bssid));
+                    if (ssid.length()) {
+                        #if !defined(REAL_DEVICE)
+                            // display all scanned wifi networks and mark connected network (green) and configured networks (yellow)
+                            auto type = PSTR("");
+                            if (ssid == station._SSID) {
+                                type = PSTR(_VT100(bold_green));
+                            } else {
+                                for(const auto &station: stations) {
+                                    if (ssid == station._SSID) {
+                                        type = PSTR(_VT100(yellow));
+                                        break;
+                                    }
+                                }
                             }
+                            __DBG_printf("ssid=%s%s" _VT100(reset) " prio=%d bssid=%s rssi=%d", type, ssid.c_str(), station._priority, mac2String(WiFi.BSSID(i)).c_str(), WiFi.RSSI(i));
+                        #endif
+                        if (ssid == station._SSID) {
+                            if (station._priority == 0) {
+                                // use RSSI as priority to connect to the strongest network
+                                station._priority = -WiFi.RSSI(i);
+                                if (WiFi.BSSID(i)) {
+                                    // update BSSID for network
+                                    memmove(station._bssid, WiFi.BSSID(i), sizeof(station._bssid));
+                                }
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
             }

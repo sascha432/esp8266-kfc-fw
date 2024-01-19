@@ -48,7 +48,7 @@ public:
         ANY         = 0xff
     };
 
-    using EventTypeEnum = enum_type<EventType>;
+    using EventTypeEnum = stdex::enum_type<EventType>;
 
     enum class GesturesType : GesturesBaseType {
         NONE =      0,

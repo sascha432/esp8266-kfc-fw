@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Fixed issue that prevented reconnecting to WiFi networks after a beacon timeout
  - Added memory queue for Logger to avoid file system operations outside the main loop
  - Stop FS during non-atomic FS updates to prevent corruption
  - Fixed issue with OpenWeatherMap forecast not being updated

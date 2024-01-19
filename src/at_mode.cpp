@@ -2156,9 +2156,7 @@ void at_mode_serial_handle_event(String &commandString)
             auto cmd = static_cast<WiFiCommandsType>(stringlist_find_P_P(PSTR(WIFI_COMMANDS), args.get(0), '|'));
             switch(cmd) {
                 case WiFiCommandsType::RESET:
-                    LoopFunctions::callOnce([]() {
-                        config.reconfigureWiFi(F("Reconfiguring WiFi adapter"));
-                    });
+                    config.reconfigureWiFi(F("Reconfiguring WiFi adapter"));
                     break;
                 case WiFiCommandsType::ST_ON:
                     args.print(F("enabling station mode"));
@@ -2216,9 +2214,7 @@ void at_mode_serial_handle_event(String &commandString)
                                 config.write();
 
                                 at_mode_print_WiFi_info(args, num, network.stations[num]);
-                                LoopFunctions::callOnce([]() {
-                                    config.reconfigureWiFi(F("Reconfiguring WiFi adapter"), static_cast<Network::WiFi::StationConfigType>(network.activeNetwork));
-                                }
+                                config.reconfigureWiFi(F("Reconfiguring WiFi adapter"), static_cast<Network::WiFi::StationConfigType>(network.activeNetwork));
                             }
                         }
                     }
@@ -2254,9 +2250,7 @@ void at_mode_serial_handle_event(String &commandString)
                     config.setWiFiErrors(0xff - 2);
                     config.registerWiFiError();
                     args.print(F("switching WiFi network"));
-                    LoopFunctions::callOnce([]() {
-                        config.reconfigureWiFi(nullptr);
-                    });
+                    config.reconfigureWiFi(nullptr);
                     break;
             }
         }

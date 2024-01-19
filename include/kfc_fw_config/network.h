@@ -245,6 +245,10 @@ namespace KFCConfigurationClasses {
                 uint32_t _priority;
                 uint8_t _bssid[6];
 
+                StationConfig() : _id(), _SSID(F("N/A")), _priority(0), _bssid{}
+                {
+                }
+
                 StationConfig(StationConfigType id, const char *ssid, uint32_t priority) : StationConfig(id, FPSTR(ssid), priority)
                 {
                 }
@@ -264,25 +268,33 @@ namespace KFCConfigurationClasses {
             using StationVector = std::vector<StationConfig>;
             using ScanCallback = std::function<void (StationVector &list)>;
 
+            static size_t getStationCount()
+            {
+                const auto cfg = Network::Settings::getConfig();
+                return std::count_if(std::begin(cfg.stations), std::end(cfg.stations), [](const auto &station) {
+                    return station.isEnabled();
+                });
+            }
+
             static StationVector getStations(const ScanCallback &scanCallback)
             {
-                StationVector list;
+                StationVector stations;
                 bool scan = false;
                 auto cfg = Network::Settings::getConfig();
                 for(int i = 0; i < kNumStations; i++) {
                     auto &config = cfg.stations[i];
                     if (config.isEnabled()) {
-                        list.emplace_back(static_cast<StationConfigType>(i), getFPStrSSID(i), config._get_priority());
-                        if (config._get_priority() == 0) {
+                        stations.emplace_back(static_cast<StationConfigType>(i), getFPStrSSID(i), config._get_priority());
+                    if (config._get_priority() == 0) {
                             scan = true;
                         }
                     }
                 }
                 if (scan && scanCallback) {
-                    scanCallback(list);
+                    scanCallback(stations);
                 }
-                srand(micros());
-                std::sort(list.begin(), list.end(), [](const StationConfig &a, const StationConfig &b) -> bool {
+                srand(micros() / 300);
+                std::sort(stations.begin(), stations.end(), [](const StationConfig &a, const StationConfig &b) -> bool {
                     if (a._priority == b._priority) {
                         return rand() % 2;
                     }
@@ -290,18 +302,19 @@ namespace KFCConfigurationClasses {
                 });
                 #if DEBUG_CONFIG_CLASS
                     int n = 0;
-                    for(const auto &station: list) {
+                    for(const auto &station: stations) {
                         __DBG_printf("num=%u id=%u ssid=%s prio=%u bssid=%s", n++, station._id, station._SSID.c_str(), station._priority, mac2String(station._bssid).c_str());
                     }
                 #endif
-                return list;
+                return stations;
             }
 
-            static StationModeSettings getNetworkConfigOrdered(StationConfigType num)
+            static StationModeSettings getNetworkConfigOrdered(StationConfigType num, size_t &index)
             {
-                auto list = getStations(nullptr); // TODO implement scanning for strongest signal
+                const auto stations = getStations(nullptr);
                 auto count = static_cast<int>(num);
-                for(const auto &station: list) {
+                index = 0;
+                for(const auto &station: stations) {
                     if (count-- == 0) {
                         #if DEBUG_CONFIG_CLASS
                             if (static_cast<int>(station._id) != (static_cast<int>(station._id) % Network::Settings::StationsConfig::kNumStations)) {
@@ -312,11 +325,12 @@ namespace KFCConfigurationClasses {
                                 }
                             }
                         #endif
-                        return Network::Settings::getConfig().stations[static_cast<int>(station._id) % Network::Settings::StationsConfig::kNumStations];
+                        index = static_cast<int>(station._id) % Network::Settings::StationsConfig::kNumStations;
+                        break;
                     }
                 }
-                __LDBG_printf("network out of range=%u", num);
-                return Network::Settings::getConfig().stations[0];
+                __LDBG_printf("num=%u index=%u", num, index);
+                return Network::Settings::getConfig().stations[index];
             }
 
             static StationModeSettings getNetworkConfig(StationConfigType num)

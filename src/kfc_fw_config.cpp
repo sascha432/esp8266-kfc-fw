@@ -231,6 +231,8 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
         Logger_notice(F("WiFi disconnected, SSID %s, reason %s, had %sIP address"), event.ssid.c_str(), WiFi_disconnect_reason(event.reason), _wifiUp ? emptyString.c_str() : PSTR("no "));
         _wifiConnected = 0;
         _wifiUp = 0;
+
+        // call outside of the event handler
         LoopFunctions::callOnce([event]() {
             WiFiCallbacks::callEvent(WiFiCallbacks::EventType::DISCONNECTED, (void *)&event);
         });
@@ -253,17 +255,9 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
 
 void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 {
-    // auto ip = event.ip.toString();
-    // auto mask = event.mask.toString();
-    // auto gw = event.gw.toString();
-    // auto dns1 = WiFi.dnsIP().toString();
-    // auto dns2 = WiFi.dnsIP(1).toString();
     _wifiUp = millis_not_zero();
-    // __LDBG_printf("%s", ip.c_str(), mask.c_str(), gw.c_str(), dns1.c_str(), dns2.c_str(), _wifiConnected, _wifiUp, WiFi.isConnected(), WiFi.localIP().toString().c_str());
 
-    auto networkCfg = Network::Settings::getConfig().stations[getWiFiConfigurationNum()];
-
-    PrintString msg = networkCfg.isDHCPEnabled() ? F("DHCP") : F("Static configuration");
+    PrintString msg = Network::Settings::getConfig().stations[getWiFiConfigurationNum()].isDHCPEnabled() ? F("DHCP") : F("Static configuration");
     msg.print(F(": IP/Net "));
     if (IPAddress_isValid(event.ip)) {
         event.ip.printTo(msg);
@@ -292,7 +286,9 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
     #if ENABLE_DEEP_SLEEP
         config.storeStationConfig(event.ip, event.mask, event.gw);
     #endif
-    LoopFunctions::callOnce([event]() {
+
+    // call outside of the event handler
+    LoopFunctions::callOnce([msg, event]() {
         WiFiCallbacks::callEvent(WiFiCallbacks::EventType::CONNECTED, (void *)&event);
     });
 }
@@ -1401,7 +1397,8 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
     __LDBG_printf("config=%u ign_softap=%u", configNum, ignoreSoftAP);
     setLastError(String());
     if (configNum != kKeepWiFiNetwork) {
-        _wifiNumActive = configNum;
+        // set new wifi network
+        setWiFiConfigurationNum(configNum);
     }
 
     bool station_mode_success = false;
@@ -1420,11 +1417,13 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
         WiFi.setAutoReconnect(true);
         WiFi.enableSTA(true);
 
-        auto wifiId = getWiFiConfigurationNum();
-        wifiId = scanWifiStrength(wifiId);
-
-        auto network = Network::WiFi::getNetworkConfigOrdered(wifiId);
+        // wifi connection result
         bool result;
+        // scan for WiFi networks to get the signal strength
+        auto wifiId = scanWifiStrength(getWiFiConfigurationId());
+        // get wifi config for the selected network
+        size_t wifiIndex;
+        auto network = Network::WiFi::getNetworkConfigOrdered(wifiId, wifiIndex);
         if (network.isDHCPEnabled()) {
             result = WiFi.config(0U, 0U, 0U, 0U, 0U);
         }
@@ -1436,18 +1435,18 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
             Logger_error(F("%s"), getLastError());
         }
         else {
-            if (WiFi.begin(Network::WiFi::getSSID(wifiId), Network::WiFi::getPassword(wifiId)) == WL_CONNECT_FAILED) {
+            if (WiFi.begin(Network::WiFi::getSSID(wifiIndex), Network::WiFi::getPassword(wifiIndex)) == WL_CONNECT_FAILED) {
                 setLastError(F("Failed to start Station Mode"));
                 Logger_error(F("%s"), getLastError());
             }
             else {
-                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(wifiId));
+                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(wifiIndex));
                 station_mode_success = true;
             }
         }
     }
     else {
-        __DBG_printf("disabling station mode");
+        __LDBG_printf("disabling station mode");
         WiFi.disconnect(true);
         WiFi.enableSTA(false);
         station_mode_success = true;
@@ -1776,7 +1775,8 @@ void KFCFWConfiguration::printRTCStatus(Print &output, const RtcStatus &status, 
 
 KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(StationConfigType configNum)
 {
-    auto list = Network::WiFi::getStations(nullptr);
+    auto list = getStations();
+
     // check if there is any station with priority 0 / auto detect strength
     auto iter = std::find_if(list.begin(), list.end(), [](const auto &station) {
         return station._SSID.length() && (station._priority == 0);
@@ -1818,6 +1818,7 @@ KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(Stati
             for(uint8_t i = 0; i < num; i++) {
                 if (station._SSID.length()) {
                     auto ssid = WiFi.SSID(i);
+                    __LDBG_printf("%sssid=%s" _VT100(reset) " prio=%d bssid=%s rssi=%d", (ssid == station._SSID) ? PSTR(_VT100(bold_green)) : emptyString.c_str(), ssid.c_str(), station._priority, mac2String(WiFi.BSSID(i)).c_str(), WiFi.RSSI(i));
                     if (ssid == station._SSID) {
                         if (station._priority == 0) {
                             station._priority = -WiFi.RSSI(i);
@@ -1826,7 +1827,6 @@ KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(Stati
                                 memmove(station._bssid, WiFi.BSSID(i), sizeof(station._bssid));
                             }
                         }
-                        __LDBG_printf("ssid=%s prio=%d bssid=%s rssi=%d", ssid.c_str(), station._priority, mac2String(WiFi.BSSID(i)).c_str(), WiFi.RSSI(i));
                         break;
                     }
                 }

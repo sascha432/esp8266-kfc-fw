@@ -2,6 +2,9 @@
  * Author: sascha_lammers@gmx.de
  */
 
+// about 3.2kb code size
+#if WEBSERVER_KFC_OTA
+
 #include "blink_led_timer.h"
 #include "kfc_fw_config.h"
 #include "logger.h"
@@ -19,9 +22,7 @@
 #    include <debug_helper_disable.h>
 #endif
 
-#if WEBSERVER_KFC_OTA
-
-#    define U_ATMEGA 254
+#define U_ATMEGA 254
 
 using KFCConfigurationClasses::System;
 

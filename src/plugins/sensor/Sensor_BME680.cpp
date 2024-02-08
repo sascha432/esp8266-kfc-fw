@@ -155,10 +155,10 @@ void Sensor_BME680::publishState()
         using namespace MQTT::Json;
 
         publish(MQTT::Client::formatTopic(_getId()), true, UnnamedObject(
-            NamedFormattedDouble(FSPGM(temperature), sensor.temperature, F("%.2f")),
-            NamedFormattedDouble(FSPGM(humidity), sensor.humidity, F("%.2f")),
-            NamedFormattedDouble(FSPGM(pressure), sensor.pressure, F("%.2f")),
-            NamedFormattedDouble(F("gas"), sensor.gas, F("%.2f"))
+            NamedFormattedDouble(FSPGM(temperature), sensor.temperature, F("%.1f")),
+            NamedFormattedDouble(FSPGM(humidity), sensor.humidity, F("%.1f")),
+            NamedFormattedDouble(FSPGM(pressure), sensor.pressure, F("%.1f")),
+            NamedFormattedDouble(F("gas"), sensor.gas, F("%.1f"))
         ).toString());
     }
 }

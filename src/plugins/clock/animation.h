@@ -363,6 +363,8 @@ namespace Clock {
 
 #include "animation_plasma.h"
 
+#include "animation_xmas.h"
+
 #if IOT_LED_MATRIX_ENABLE_VISUALIZER
 #    include "animation_visualizer.h"
 #endif

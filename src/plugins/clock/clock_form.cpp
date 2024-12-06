@@ -258,7 +258,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                             AudioInputType::MICROPHONE, F("Microphone")
                         #endif
                     );
-                    form.addObjectGetterSetter(F("v_ait"), cfg.visualizer, cfg.visualizer.get_bits_input, cfg.visualizer.set_bits_input);
+                    form.addObjectGetterSetter(F("v_ait"), FormGetterSetter(cfg.visualizer, input));
                     form.addFormUI(F("Audio Input Source"), FormUI::Type::SELECT, inputTypeItems);
 
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
@@ -271,7 +271,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         cfg.visualizer.addRangeValidatorFor_mic_band_gain(form);
                     #endif
 
-                    auto &multicast = form.addObjectGetterSetter(F("v_muca"), cfg.visualizer, cfg.visualizer.get_bit_multicast, cfg.visualizer.set_bit_multicast);
+                    auto &multicast = form.addObjectGetterSetter(F("v_muca"), FormGetterSetter(cfg.visualizer, multicast));
                     form.addFormUI(FormUI::Type::HIDDEN);
 
                     form.addObjectGetterSetter(F("v_port"), FormGetterSetter(cfg.visualizer, port));
@@ -424,6 +424,42 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 form.addObjectGetterSetter(F("plmys"), FormGetterSetter(cfg.plasma, y_size));
                 form.addFormUI(F("Y Size"));
                 cfg.plasma.addRangeValidatorFor_y_size(form);
+            }
+            break;
+        case AnimationType::XMAS:
+            {
+                auto &invertHidden = form.addObjectGetterSetter(F("xdi"), FormGetterSetter(cfg.xmas, invert_direction));
+                form.addFormUI(FormUI::Type::HIDDEN);
+
+                form.addObjectGetterSetter(F("xsa"), FormGetterSetter(cfg.xmas, speed));
+                form.addFormUI(F("Animation Speed"), FormUI::CheckboxButtonSuffix(invertHidden, F("Invert Direction")));
+                cfg.xmas.addRangeValidatorFor_speed(form);
+
+                form.addObjectGetterSetter(F("xfs"), FormGetterSetter(cfg.xmas, fade));
+                form.addFormUI(F("Fading Speed"));
+                cfg.xmas.addRangeValidatorFor_fade(form);
+
+                form.addObjectGetterSetter(F("xsl"), FormGetterSetter(cfg.xmas, sparkling));
+                form.addFormUI(F("Sparkling Level"));
+                cfg.xmas.addRangeValidatorFor_sparkling(form);
+
+                form.addObjectGetterSetter(F("xpx"), FormGetterSetter(cfg.xmas, pixels));
+                form.addFormUI(F("Number of LEDs per Pixel"));
+                cfg.xmas.addRangeValidatorFor_pixels(form);
+
+                form.addObjectGetterSetter(F("xgp"), FormGetterSetter(cfg.xmas, gap));
+                form.addFormUI(F("Gap Between Pixels"));
+                cfg.xmas.addRangeValidatorFor_gap(form);
+
+                auto paletteItems = FormUI::List(
+                    0, F("Simple"),
+                    1, F("Christmas Noel"),
+                    2, F("Christmas Day Theme"),
+                    3, F("Christmas Decorations"),
+                    4, F("Christmas Snow")
+                );
+                form.addObjectGetterSetter(F("xcp"), FormGetterSetter(cfg.xmas, palette));
+                form.addFormUI(F("Color Palette"), FormUI::Type::SELECT, paletteItems);
             }
             break;
         case AnimationType::MAX:

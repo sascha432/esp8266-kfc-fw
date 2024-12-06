@@ -56,6 +56,7 @@ namespace KFCConfigurationClasses {
                     VISUALIZER,
                 #endif
                 INTERLEAVED,
+                XMAS,
                 LAST,   // this can be used to loop through all animations: for(int i = 0; i <static_cast<int>(AnimationType::LAST); i++) {}
                 #if !IOT_LED_MATRIX
                     COLON_SOLID = LAST,
@@ -239,6 +240,27 @@ namespace KFCConfigurationClasses {
                     speed(kDefaultValueFor_speed),
                     x_size(kDefaultValueFor_x_size),
                     y_size(kDefaultValueFor_y_size)
+                {
+                }
+            };
+
+            struct __attribute__packed__ XmasAnimationType {
+                using Type = XmasAnimationType;
+                CREATE_UINT32_BITFIELD_MIN_MAX(speed, 16, 0, 60000, 2500, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(fade, 13, 0, 5000, 750, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(palette, 3, 0, 4, 0, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(sparkling, 7, 0, 100, 0, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(pixels, 4, 1, 8, 3, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(gap, 4, 0, 8, 2, 1);
+                CREATE_BOOL_BITFIELD(invert_direction);
+                XmasAnimationType() :
+                    speed(kDefaultValueFor_speed),
+                    fade(kDefaultValueFor_fade),
+                    palette(kDefaultValueFor_palette),
+                    sparkling(kDefaultValueFor_sparkling),
+                    pixels(kDefaultValueFor_pixels),
+                    gap(kDefaultValueFor_gap),
+                    invert_direction(false)
                 {
                 }
             };
@@ -433,6 +455,7 @@ namespace KFCConfigurationClasses {
                 #if IOT_LED_MATRIX_CONFIGURABLE
                     MatrixConfigType matrix;
                 #endif
+                XmasAnimationType xmas;
 
                 uint16_t getBrightness() const
                 {

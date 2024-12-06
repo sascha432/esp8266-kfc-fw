@@ -27,11 +27,13 @@ WeatherStationBase::WeatherStationBase() :
 
 void WeatherStationBase::_pollDataTimerCallback(Event::CallbackTimerPtr timer)
 {
-    __LDBG_printf("new request");
-    ws_plugin._getWeatherInfo([](int16_t code, KFCRestAPI::HttpRequest &request) {
-        __LDBG_printf("response=%u", code);
-        ws_plugin._openWeatherAPICallback(code, request);
-    });
+    __LDBG_printf("api_key=%u", ws_plugin._weatherApi.hasApiKey());
+    if (ws_plugin._weatherApi.hasApiKey()) {
+        ws_plugin._getWeatherInfo([](int16_t code, KFCRestAPI::HttpRequest &request) {
+            __LDBG_printf("response=%u", code);
+            ws_plugin._openWeatherAPICallback(code, request);
+        });
+    }
 }
 
 void WeatherStationBase::_openWeatherAPICallback(int16_t code, KFCRestAPI::HttpRequest &request)
@@ -87,19 +89,24 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
 
 void WeatherStationBase::_pollDataUpdateLastTime(bool success)
 {
-    uint32_t next;
+    auto next = _config.getPollIntervalMillis(); // default reload time
+    // reset retries on success
     if (success) {
         _pollDataRetries = 0;
-        next = _config.getPollIntervalMillis(); // default reload time
     }
-    else if (_pollDataRetries > kPollDataRetries) {
-        next = 3600UL * 1000UL; // max retries reached, wait one hour...
-    }
-    else {
-        next = _config.getPollIntervalMillis() * (++_pollDataRetries / static_cast<float>(kPollDataRetries)); // increase retry time after each failure
+    // add timer for next request
+    if (next) {
+        if (_pollDataRetries > kPollDataRetries) {
+            // max retries reached, wait one hour...
+            next = 3600UL * 1000UL;
+        }
+        else {
+            // increase retry time after each failure
+            next *= (++_pollDataRetries / static_cast<float>(kPollDataRetries));
+        }
+        _Timer(_pollDataTimer).add(std::max(kMinPollDataInterval, next), false, _pollDataTimerCallback);
     }
     __LDBG_printf("success=%u retries=%u next=%u", success, _pollDataRetries, next);
-    _Timer(_pollDataTimer).add(std::max(kMinPollDataInterval, next), false, _pollDataTimerCallback);
 }
 
 void WeatherStationBase::_httpRequest(const String &url, int timeout, JsonBaseReader *jsonReader, HttpRequestCallback callback)

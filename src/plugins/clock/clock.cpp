@@ -802,6 +802,9 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
         case AnimationType::INTERLEAVED:
             _setAnimation(new Clock::InterleavedAnimation(*this, _getColor(), _config.interleaved.rows, _config.interleaved.cols, _config.interleaved.time));
             break;
+        case AnimationType::XMAS:
+            _setAnimation(new Clock::XmasAnimation(*this, _config.xmas));
+            break;
         case AnimationType::GRADIENT:
             _setAnimation(new Clock::GradientAnimation(*this, _config.gradient));
             break;

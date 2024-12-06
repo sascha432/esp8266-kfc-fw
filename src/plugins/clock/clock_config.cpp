@@ -134,7 +134,8 @@ namespace KFCConfigurationClasses {
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         "Visualizer,"
                     #endif
-                    "Interleaved"
+                    "Interleaved,"
+                    "Xmas"
                 );
             }
 
@@ -152,7 +153,8 @@ namespace KFCConfigurationClasses {
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         "\042Visualizer\042,"
                     #endif
-                    "\042Interleaved\042"
+                    "\042Interleaved\042,"
+                    "\042Xmas\042,"
                     #if !IOT_LED_MATRIX
                         ",\042Colon: Solid\042,"
                         "\042Colon: Blink Slowly\042,"
@@ -213,6 +215,8 @@ namespace KFCConfigurationClasses {
                         return F("Plasma");
                     case AnimationType::INTERLEAVED:
                         return F("Interleaved");
+                    case AnimationType::XMAS:
+                        return F("Xmas");
                     case AnimationType::SOLID:
                         return F("Solid");
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
@@ -262,6 +266,8 @@ namespace KFCConfigurationClasses {
                         return F("interleaved");
                     case AnimationType::SOLID:
                         return F("solid");
+                    case AnimationType::XMAS:
+                        return F("Xmas");
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         case AnimationType::VISUALIZER:
                             return F("visualizer");
@@ -299,6 +305,8 @@ namespace KFCConfigurationClasses {
                         return F("Plasma Animation");
                     case AnimationType::INTERLEAVED:
                         return F("Interleaved Animation");
+                    case AnimationType::XMAS:
+                        return F("Xmas Animation");
                     case AnimationType::SOLID:
                         return F("Solid Color");
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER

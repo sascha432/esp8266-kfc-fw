@@ -195,7 +195,6 @@
             "**/lib-mock/ignore-KFCGfx": true,
             "**/lib-mock/tmp": true,
             "**/lib/KFCGfx/mock*": true,
-            "**/tests": true,
             "**/frameworks": true
         },
         "files.associations": {
@@ -480,6 +479,7 @@
             "titleBar.activeForeground": "#EFFEF4"
         },
         "cmake.automaticReconfigure": false,
-        "cmake.configureOnOpen": false
+        "cmake.configureOnOpen": false,
+        "dotnet.defaultSolution": "disable"
     }
 }

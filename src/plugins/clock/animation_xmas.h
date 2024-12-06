@@ -84,11 +84,11 @@ namespace Clock {
             // start outside the view and move one pixel each time the color changes
             auto prevColor = Color();
             Color color;
-            int32_t i = -(((millisValue * (_cfg.pixels + _cfg.gap) / _cfg.speed) % (_cfg.pixels + _cfg.gap)) + _cfg.pixels);
+            int32_t i = -(((millisValue * (_cfg.pixels + _cfg.gap) / _cfg.speed) % (_cfg.pixels + _cfg.gap)) + (_cfg.pixels + 2));
             for (; i < static_cast<int32_t>(display.getNumPixels()); i++) {
-                // pick colors
+                // flag for blending/fading
                 bool fade = _cfg.fade;
-                // multiple LEDs per pixel and gaps between
+                // multiple LEDs per pixel and gap between
                 if (pixels < _cfg.pixels) {
                     pixels++;
                     color = _getColor(colorIdx);
@@ -111,18 +111,18 @@ namespace Clock {
                 if (_cfg.sparkling) {
                     prevColor = ((_cfg.sparkling << 16) / ((100 << 8) + 1)); // 0-255(.99)
                     uint32_t tmp = prevColor; // type cast basically
-                    prevColor = (tmp << 16) | (tmp << 8U) | (tmp);
+                    prevColor = (tmp << 16) | (tmp << 8) | (tmp);
                 }
                 // fading enabled and not a gap?
                 if (fade) {
                     uint32_t fadeOut;
                     if (pPos < _cfg.fade) { // fade in
                         fract8 span = (pPos << 8) / (_cfg.fade + 1);
-                        color = blend(color, prevColor, span);
+                        color = blend(prevColor, color, span);
                     }
                     else if (pPos >= (fadeOut = (pInterval - _cfg.fade))) { // fade out
                         fract8 span = ((pPos - fadeOut) << 8) / (_cfg.fade + 1);
-                        color = blend(prevColor, color, span);
+                        color = blend(color, prevColor, span);
                     }
                 }
                 if (i >= 0) {

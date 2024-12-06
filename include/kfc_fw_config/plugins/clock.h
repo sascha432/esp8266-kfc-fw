@@ -246,8 +246,8 @@ namespace KFCConfigurationClasses {
 
             struct __attribute__packed__ XmasAnimationType {
                 using Type = XmasAnimationType;
-                CREATE_UINT32_BITFIELD_MIN_MAX(speed, 16, 0, 60000, 2500, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(fade, 13, 0, 5000, 750, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(speed, 16, 0, 60000, 5000, 1);
+                CREATE_UINT32_BITFIELD_MIN_MAX(fade, 13, 0, 5000, 1000, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(palette, 3, 0, 4, 0, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(sparkling, 7, 0, 100, 0, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(pixels, 4, 1, 8, 3, 1);

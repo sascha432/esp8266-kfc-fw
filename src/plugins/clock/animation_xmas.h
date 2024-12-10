@@ -14,11 +14,11 @@ namespace Clock {
 
 
     static const uint32_t XmasAnimationColorPalettes[] = {
-        0xff0000, 0x00ff00, 0x00ffff, 0,                     // Simple  Color Palette
+        0xff0000, 0x00ff00, 0xffff00, 0x0000ff, 0,           // Simple Color Palette
         0xc25f5f, 0xbb051f, 0x3f8f29, 0x056517, 0x1b5300, 0, // Christmas Noel Color Palette
-        0xfb4242, 0xa11029, 0xffd97d, 0x63250e, 0x1f400a, 0, // Christmas Day Theme  Color Palette
-        0x668c6f, 0x7b0a0a, 0xbaa58c, 0xe5d5bb, 0x213c18, 0, // Christmas Decorations  Color Palette
-        0xdb0404, 0x169f48, 0x8cd4ff, 0xc6efff, 0xffffff, 0, // Christmas Snow  Color Palette
+        0xfb4242, 0xa11029, 0xffd97d, 0x63250e, 0x1f400a, 0, // Christmas Day Theme Color Palette
+        0x668c6f, 0x7b0a0a, 0xbaa58c, 0xe5d5bb, 0x213c18, 0, // Christmas Decorations Color Palette
+        0xdb0404, 0x169f48, 0x8cd4ff, 0xc6efff, 0xffffff, 0, // Christmas Snow Color Palette
         0
     };
 
@@ -78,7 +78,7 @@ namespace Clock {
             uint32_t colorIdx = tPos / pInterval; // get first color
 
             // LED pixel grouping
-            uint32_t pixels = 0;
+            uint32_t pixels = 1;
             uint32_t gap = 0;
 
             // start outside the view and move one pixel each time the color changes
@@ -100,7 +100,7 @@ namespace Clock {
                 }
                 else {
                     // new pixel
-                    pixels = 0;
+                    pixels = 1;
                     gap = 0;
                     // update colors
                     prevColor = _getColor(colorIdx);

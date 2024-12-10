@@ -235,7 +235,7 @@ void Logger::_flushQueue()
             }
 
             // write item
-            file.write(item.buffer.data(), item.buffer.size());
+            file.write((const uint8_t *)item.buffer.data(), item.buffer.size());
             file.println();
 
             // remote item from list

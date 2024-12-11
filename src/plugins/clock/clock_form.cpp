@@ -567,6 +567,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             _createConfigureFormAnimation(AnimationType::GRADIENT, form, cfg, TitleType::ADD_GROUP);
 
             // --------------------------------------------------------------------
+            _createConfigureFormAnimation(AnimationType::XMAS, form, cfg, TitleType::ADD_GROUP);
+
+            // --------------------------------------------------------------------
             #if IOT_ALARM_PLUGIN_ENABLED
 
                 auto &alarmGroup = form.addCardGroup(FSPGM(alarm), FSPGM(Alarm), true);

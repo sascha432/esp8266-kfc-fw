@@ -28,10 +28,19 @@
         <form method="POST" action="%SELF_URI%">
             %FORM_HTML%
             <div class="form-help-block">
-                <div data-target="#dt">Temporal dithering increases the number of possible colors with low brightness settings, but might lead to flickering with many LEDs.<br>If animations on low brightness are choppy, try to enable it. If any flickering occurs, disable it</div>
+                <div data-target="#dt">Temporal dithering enhances the number of available colors at low brightness settings but may cause flickering with multiple LEDs. If animations appear choppy at low brightness, consider enabling this feature. If flickering occurs, disable it</div>
+                <div data-target="#pl">Limit the maximum power output to prevent the controller and LEDs from overheating</div>
+                <div data-target="#tpm">When this temperature threshold is reached, the device will disable itself until reset, protecting the controller and LEDs</div>
+                <div data-target="#tpv">This setting allows for a higher temperature threshold for the voltage regulator before protection is activated</div>
+                <div data-target="#plr">The default values are optimized for WS2812/WS2813 LED strips</div>
+                <div data-target="#rb_mul">The multiplier adjusts the color transitions between pixels, affecting the overall gradient</div>
+                <div data-target="#rb_sp">The animation speed determines the movement rate of the rainbow effect across pixels. Higher values result in slower movement</div>
+                <div data-target="#mx_il">Rows begin at the bottom of the current column and proceed to the top of the subsequent column</div>
+                <div data-target="#pes">A maximum of two LEDs within the group will be dimmed to 50% brightness simultaneously. This allows for enhanced color variety at lower brightness levels, while requiring additional diffusion for smooth blending</div>
                 <div data-target="#plma1">The angles are causing the different disturbances in the horizontal, vertical, diagonal and circular direction</div>
                 <div data-target="#plmhs">The change of color without without movement</div>
                 <div data-target="#plmxs">The x and y size define the size of the circular motion</div>
+                <div data-target="#xsl">Use white to achieve a seamless blending effect between colors</div>
             </div>
         </form>
         <!--%%FOOT-->

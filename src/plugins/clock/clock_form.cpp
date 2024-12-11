@@ -436,19 +436,19 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 cfg.xmas.addRangeValidatorFor_speed(form);
 
                 form.addObjectGetterSetter(F("xfs"), FormGetterSetter(cfg.xmas, fade));
-                form.addFormUI(F("Fading Speed"));
+                form.addFormUI(F("Fade Speed"));
                 cfg.xmas.addRangeValidatorFor_fade(form);
 
                 form.addObjectGetterSetter(F("xsl"), FormGetterSetter(cfg.xmas, sparkling));
-                form.addFormUI(F("Sparkling Level"));
+                form.addFormUI(F("Sparkle Intensity"));
                 cfg.xmas.addRangeValidatorFor_sparkling(form);
 
                 form.addObjectGetterSetter(F("xpx"), FormGetterSetter(cfg.xmas, pixels));
-                form.addFormUI(F("Number of LEDs per Pixel"));
+                form.addFormUI(F("LEDs per Pixel"));
                 cfg.xmas.addRangeValidatorFor_pixels(form);
 
                 form.addObjectGetterSetter(F("xgp"), FormGetterSetter(cfg.xmas, gap));
-                form.addFormUI(F("Gap Between Pixels"));
+                form.addFormUI(F("Gap between Pixels"));
                 cfg.xmas.addRangeValidatorFor_gap(form);
 
                 auto paletteItems = FormUI::List(

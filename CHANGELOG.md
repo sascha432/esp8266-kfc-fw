@@ -2,14 +2,13 @@
 
 ## Version 0.0.9 (master)
 
- - Added Xmas Animation
- - Fixed issue that prevented reconnecting to WiFi networks after a beacon timeout
- - Added memory queue for Logger to avoid file system operations outside the main loop
- - Stop FS during non-atomic FS updates to prevent corruption
- - Fixed issue with OpenWeatherMap forecast not being updated
+ - Added Christmas animation
+ - Fixed an issue that prevented reconnecting to WiFi networks after a beacon timeout
+ - Added a memory queue for the logger to avoid file system operations outside the main loop
+ - Stopped file system (FS) during non-atomic FS updates to prevent corruption
+ - Fixed an issue where the OpenWeatherMap forecast was not being updated
  - Updated OpenWeatherMap API to OneCall API 3.0
- - Forecast screen for weather station
-
+ - Added a forecast screen for the weather station
 ## Version 0.0.8
 
  - Added real brightness to LED matrix WebUI brightness slider and calculated power badge (auto brightness, temperature protection and power limit might reduce the actual output)

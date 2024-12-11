@@ -227,3 +227,31 @@
 .xs-font {
     font-size: 0.65rem;
 }
+
+.xmas-color-palette {
+    width: 15em;
+}
+.xmas-color-palette .color-row {
+    display: flex;
+    margin-bottom: 5px;
+    position: relative;
+}
+.xmas-color-palette .color-box {
+    width: 2em;
+    height: 2em;
+    margin-right: 0.75em;
+}
+.xmas-color-palette .palette-name {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.25em;
+    color: rgba(0, 0, 0, 0.6);
+    font-weight: bold;
+    pointer-events: none;
+}

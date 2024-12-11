@@ -13,6 +13,7 @@ namespace Clock {
     // XmasAnimation
 
 
+    // NOTE: make sure the number of colors does not exceed "kMaxColors"
     static const uint32_t XmasAnimationColorPalettes[] PROGMEM = {
         0xff0000, 0x00ff00, 0xffff00, 0x0000ff, 0,           // Simple Color Palette
         0xc25f5f, 0xbb051f, 0x3f8f29, 0x056517, 0x1b5300, 0, // Christmas Noel Color Palette
@@ -54,6 +55,9 @@ namespace Clock {
                     break;
                 }
                 _colors[_numColors++] = color;
+                if (_numColors >= kMaxColors) {
+                    break;
+                }
             }
         }
 

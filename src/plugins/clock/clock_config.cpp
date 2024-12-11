@@ -154,7 +154,7 @@ namespace KFCConfigurationClasses {
                         "\042Visualizer\042,"
                     #endif
                     "\042Interleaved\042,"
-                    "\042Xmas\042,"
+                    "\042Xmas\042"
                     #if !IOT_LED_MATRIX
                         ",\042Colon: Solid\042,"
                         "\042Colon: Blink Slowly\042,"

@@ -9,6 +9,7 @@
  - Fixed an issue where the OpenWeatherMap forecast was not being updated
  - Updated OpenWeatherMap API to OneCall API 3.0
  - Added a forecast screen for the weather station
+
 ## Version 0.0.8
 
  - Added real brightness to LED matrix WebUI brightness slider and calculated power badge (auto brightness, temperature protection and power limit might reduce the actual output)

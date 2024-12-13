@@ -110,13 +110,23 @@ namespace Clock {
                 heatramp <<= 2; // scale up to 0..252
 
                 // figure out which third of the spectrum we're in:
+                uint32_t col;
                 if (t192 > 0x80) {                     // hottest
-                    return Color(255, 255, heatramp);
+                    col = Color(255, 255, heatramp);
                 }
                 else if (t192 > 0x40) {             // middle
-                    return Color(255, heatramp, 0);
+                    col = Color(255, heatramp, 0);
                 }
-                return Color(heatramp, 0, 0);
+                else {
+                    col = Color(heatramp, 0, 0);
+                }
+                if (factor) {
+                    col =
+                        (blend8(col >> 16, 0xff, factor >> 16) << 16) |
+                        (blend8(col >> 8, 0xff, factor >> 8) << 8) |
+                        (blend8(col, 0xff, factor));
+                }
+                return col;
             }
 
         private:

@@ -145,7 +145,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     }
                     return false;
                 });
-                form.addFormUI(F("Color Factor"));
+                form.addFormUI(F("Color Correction"));
             }
             break;
         case AnimationType::FLASHING: {

@@ -206,7 +206,8 @@ namespace KFCConfigurationClasses {
                 CREATE_UINT8_BITFIELD_MIN_MAX(speed, 8, 1, 100, 50, 1);
                 CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::VERTICAL);
                 CREATE_BOOL_BITFIELD(invert_direction);
-                CREATE_COLOR_FIELD(factor, 0xffff00);
+                CREATE_COLOR_FIELD(factor, 0x000000);
+
                 OrientationType getOrientation() const {
                     return get_enum_orientation(*this);
                 }

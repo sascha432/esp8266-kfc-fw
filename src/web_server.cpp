@@ -234,7 +234,18 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     #endif
     // --------------------------------------------------------------------
     if (url == F("/is-alive")) {
-        response = request->beginResponse(200, FSPGM(mime_text_plain), std::move(String(request->arg(String('p')).toInt())));
+        auto content = String(request->arg(String('p')).toInt());
+        #if DEBUG
+            switch(request->arg(F("reset-device")).toInt()) {
+                case 1:
+                    config.resetDevice(false);
+                    break;
+                case 2:
+                    config.resetDevice(true);
+                    break;
+            }
+        #endif
+        response = request->beginResponse(200, FSPGM(mime_text_plain), content);
         headers.addNoCache(true);
         headers.setResponseHeaders(response);
     }

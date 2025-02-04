@@ -137,9 +137,9 @@ namespace Clock {
     public:
         FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg) :
             Animation(clock),
-            _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? getCols() : getRows()),
-            _lines(new Line[_lineCount]),
-            _lineBuffer(new uint8_t[getNumPixels()]),
+            _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? getCols() : getRows()), // rows
+            _lines(new Line[_lineCount + 1]),
+            _lineBuffer(new uint8_t[getNumPixels() + 1]),
             _cfg(cfg)
         {
             _disableBlinkColon = false;
@@ -147,13 +147,9 @@ namespace Clock {
                 _lineCount = 0;
             }
             else {
+                auto cols = (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? getRows() : getCols(); // columns
                 for(uint16_t i = 0; i < _lineCount; i++) {
-                    if (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) {
-                        _lines[i].init(&_lineBuffer[i * getRows()], getRows());
-                    }
-                    else {
-                        _lines[i].init(&_lineBuffer[i * getCols()], getCols());
-                    }
+                    _lines[i].init(&_lineBuffer[i * cols], cols);
                 }
             }
         }
@@ -162,10 +158,13 @@ namespace Clock {
             __LDBG_printf("end lines=%u", _lineCount);
             if (_lines) {
                 delete[] _lines;
+                _lines = nullptr;
             }
             if (_lineBuffer) {
                 delete[] _lineBuffer;
+                _lineBuffer = nullptr;
             }
+            _lineCount = 0;
         }
 
         virtual void begin() override

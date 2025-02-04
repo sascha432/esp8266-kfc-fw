@@ -90,7 +90,10 @@ float Sensor_LM75A::_readSensor()
     _wire->beginTransmission(_address);
     _wire->write(0);
     if (_wire->endTransmission(false) == 0 && _wire->requestFrom(_address, 2U) == 2) {
-        return ((_wire->read() << 8) | _wire->read()) / 256.0f;
+        auto temp = ((_wire->read() << 8) | _wire->read()) / 256.0f;
+        if (temp > 125) { // max operating temperature is 125C
+            temp -= 256.0f;
+        }
     }
     return NAN;
 }

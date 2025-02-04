@@ -94,6 +94,7 @@ float Sensor_LM75A::_readSensor()
         if (temp > 125) { // max operating temperature is 125C
             temp -= 256.0f;
         }
+        return temp;
     }
     return NAN;
 }

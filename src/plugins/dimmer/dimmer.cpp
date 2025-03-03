@@ -72,8 +72,8 @@ MQTT::AutoDiscovery::EntityPtr Plugin::getAutoDiscovery(FormatType format, uint8
 
 void Plugin::onConnect()
 {
-    subscribe(MQTT::Client::formatTopic(F("/command")));
     _Timer(_publishTimer).remove();
+    subscribe(MQTT::Client::formatTopic(F("/command")));
     publishState();
 }
 
@@ -184,7 +184,7 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F(IOT_DIMMER_TITLE), false));
 
-    auto slider = WebUINS::Slider(F("d-br"), F(IOT_DIMMER_BRIGHTNESS_TITLE), 0, 1);
+    auto slider = WebUINS::Slider(F("d-br"), F(IOT_DIMMER_BRIGHTNESS_TITLE));
     slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MIN_BRIGHTNESS));
     slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MAX_BRIGHTNESS));
     webUI.addRow(slider);
@@ -208,3 +208,44 @@ void Plugin::getStatus(Print &out)
 {
     out.print(F("DC Dimmer"));
 }
+
+void Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
+{
+}
+
+void Plugin::getValues(WebUINS::Events &array)
+{
+    array.append(WebUINS::Values(F("d-br"), _brightness, true));
+}
+
+void Plugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
+{
+    if (id == F("d-br")) {
+        int val = value.toInt();
+        __LDBG_printf("has_value=%d value=%d has_state=%d state=%d", hasValue, val, hasState, state);
+
+        if (hasValue) {
+            hasState = true;
+            state = val != 0;
+        }
+        if (hasState) {
+            if (state && !_brightness) {
+                on();
+                publishState();
+            }
+            else if (!state && _brightness) {
+                off();
+                publishState();
+            }
+        }
+        if (hasValue) {
+            setLevel(val);
+            publishState();
+        }
+    }
+}
+
+void Plugin::reconfigure(const String &source)
+{
+}
+

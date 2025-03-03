@@ -59,22 +59,6 @@ namespace Dimmer {
         #endif
     };
 
-    inline void Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
-    {
-    }
-
-    inline void Plugin::getValues(WebUINS::Events &array)
-    {
-    }
-
-    inline void Plugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
-    {
-    }
-
-    inline void Plugin::reconfigure(const String &source)
-    {
-    }
-
     extern Plugin dimmer_plugin;
 
 }

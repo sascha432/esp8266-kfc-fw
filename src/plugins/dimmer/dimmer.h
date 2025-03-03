@@ -16,6 +16,46 @@
 namespace Dimmer {
 
     class Plugin : public PluginComponent, public MQTTComponent {
+    public:
+        class States {
+        public:
+            States() : _storedBrightness(0), _brightness(0)
+            {
+            }
+
+            States(uint32_t storedBrightness, uint32_t brightness) : _storedBrightness(storedBrightness), _brightness(brightness)
+            {
+            }
+
+            void setLevel(uint32_t level)
+            {
+                _brightness = level;
+            }
+
+            uint32_t getLevel() const
+            {
+                return _brightness;
+            }
+
+            void setStoredBrightness(uint32_t level)
+            {
+                _storedBrightness = level;
+            }
+
+            uint32_t getStoredBrightness() const
+            {
+                return _storedBrightness;
+            }
+
+            static constexpr size_t size()
+            {
+                return sizeof(States);
+            }
+
+        private:
+            uint32_t _storedBrightness;
+            uint32_t _brightness;
+        };
 
     // PluginComponent
     public:
@@ -49,6 +89,9 @@ namespace Dimmer {
         void off();
         void setLevel(uint32_t level);
         void _publish();
+        void _readConfig();
+        void _loadState();
+        void _saveState();
 
     private:
         uint32_t _storedBrightness;

@@ -31,7 +31,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "advanced",         // forms
     "mqtt",             // reconfigure_dependencies
     PluginComponent::PriorityType::DIMMER_MODULE,
-    PluginComponent::RTCMemoryId::NONE,
+    PluginComponent::RTCMemoryId::DIMMER,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
     false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
@@ -158,11 +158,13 @@ void Plugin::_publish()
             ).toString()
         );
     }
+    _saveState();
 }
 
 void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     MQTT::Client::registerComponent(this);
+    _readConfig();
     #if IOT_DIMMER_X9C_POTI
         _poti.begin();
         _poti.resetMax();
@@ -226,7 +228,7 @@ void Plugin::setValue(const String &id, const String &value, bool hasValue, bool
 
         if (hasValue) {
             hasState = true;
-            state = val != 0;
+            state = (val != 0);
         }
         if (hasState) {
             if (state && !_brightness) {
@@ -247,5 +249,37 @@ void Plugin::setValue(const String &id, const String &value, bool hasValue, bool
 
 void Plugin::reconfigure(const String &source)
 {
+    _readConfig();
+    setLevel(_brightness);
 }
 
+void Plugin::_readConfig()
+{
+    _loadState();
+}
+
+void Plugin::_loadState()
+{
+    States states;
+    if (RTCMemoryManager::read(RTCMemoryManager::RTCMemoryId::DIMMER, &states, states.size()) == states.size()) {
+        _storedBrightness = states.getStoredBrightness();
+        _brightness = states.getLevel();
+        __LDBG_printf("stored=%u level=%u", _storedBrightness, _brightness);
+    }
+    else {
+        __LDBG_printf("failed to load states from RTC memory");
+        _storedBrightness = 0;
+        _brightness = 0;
+    }
+}
+
+void Plugin::_saveState()
+{
+    States states(_brightness, _brightness);
+    if (!RTCMemoryManager::write(RTCMemoryManager::RTCMemoryId::DIMMER, &states, states.size())) {
+        __LDBG_printf("failed to store states in RTC memory");
+    }
+    else {
+        __LDBG_printf("stored=%u level=%u", _storedBrightness, _brightness);
+    }
+}

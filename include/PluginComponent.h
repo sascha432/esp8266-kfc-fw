@@ -76,6 +76,7 @@ namespace PluginComponents {
         SERIAL2TCP,
         SAFE_MODE,
         SWITCH,
+        DIMMER,
         MAX
     };
 
@@ -347,6 +348,8 @@ public:
             return F("SAFE_MODE");
         case RTCMemoryId::SWITCH:
             return F("SWITCH");
+        case RTCMemoryId::DIMMER:
+            return F("DIMMER");
         case RTCMemoryId::NONE:
         case RTCMemoryId::MAX:
             break;

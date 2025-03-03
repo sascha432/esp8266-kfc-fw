@@ -43,5 +43,5 @@
  * [...]
  * 255 = 45
  */
-#   define IOT_DIMMER_MAP_BRIGHTNESS(value)  (value ? (65 - (((value - IOT_DIMMER_MIN_BRIGHTNESS) * 20) / (IOT_DIMMER_MAX_BRIGHTNESS - IOT_DIMMER_MIN_BRIGHTNESS))) : 100)
+#   define IOT_DIMMER_MAP_BRIGHTNESS(value) std::clamp<uint32_t>((value ? (65 - (((value - IOT_DIMMER_MIN_BRIGHTNESS) * 20) / (IOT_DIMMER_MAX_BRIGHTNESS - IOT_DIMMER_MIN_BRIGHTNESS))) : 100), 45, 100)
 #endif

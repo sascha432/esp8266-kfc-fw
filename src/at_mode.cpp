@@ -1960,7 +1960,7 @@ void at_mode_serial_handle_event(String &commandString)
             }
             if (!x9c_poti) {
                 uint8_t csPin = args.toUint8(1, ATMODE_X9C_PIN_CS);
-                uint8_t incrPin = args.toUint8(2, ATMODE_X9C_PIN_INCR);
+                uint8_t incrPin = args.toUint8(2, ATMODE_X9C_PIN_INC);
                 uint8_t udPin = args.toUint8(3, ATMODE_X9C_PIN_UD);
                 args.print(F("initializing X9C poti CS=%u INCR=%u UD=%u"), csPin, incrPin, udPin);
                 x9c_poti = new X9C::Poti(csPin, incrPin, udPin);
@@ -1968,7 +1968,7 @@ void at_mode_serial_handle_event(String &commandString)
                 x9c_poti->resetMax();
             }
             if (x9c_poti) {
-                auto value = args.toUint8(0, 0);
+                auto value = args.toUint8(0, x9c_poti->getValue());
                 #ifdef ATMODE_X9C_RANGE_MIN
                     value = std::max<uint8_t>(ATMODE_X9C_RANGE_MIN, value);
                 #endif

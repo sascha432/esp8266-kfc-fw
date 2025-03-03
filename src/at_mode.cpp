@@ -37,6 +37,11 @@
 #    include <NeoPixelEx.h>
 #endif
 
+#if ATMODE_X9C_ENABLE == 1
+#    include <x9c_xxx.h>
+    using X9C::Poti;
+#endif
+
 #if ESP8266
 #    include <umm_malloc/umm_malloc.h>
      extern "C" {
@@ -279,6 +284,10 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory setti
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSR, "FSR", "FACTORY, STORE, RST in sequence");
 #if defined(HAVE_NVS_FLASH)
     PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NVS, "NVS", "<format|dump>", "Format NVS partition and do factory reset or dump debug info");
+#endif
+#if ATMODE_X9C_ENABLE == 1
+    PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(X9C, "X9C", "<value> [<cs pin>, <inc pin>, <ud pin>]", "Set poti value");
+    static X9C::Poti *x9c_poti = nullptr;
 #endif
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
@@ -1940,6 +1949,36 @@ void at_mode_serial_handle_event(String &commandString)
                     args.invalidArgument(0, F("format|stats"));
                 }
             #endif
+        }
+    #endif
+    #if ATMODE_X9C_ENABLE == 1
+        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(X9C))) {
+            // check if the pins are specified
+            if (args.size() > 1 && x9c_poti) {
+                delete x9c_poti;
+                x9c_poti = nullptr;
+            }
+            if (!x9c_poti) {
+                uint8_t csPin = args.toUint8(1, ATMODE_X9C_PIN_CS);
+                uint8_t incrPin = args.toUint8(2, ATMODE_X9C_PIN_INCR);
+                uint8_t udPin = args.toUint8(3, ATMODE_X9C_PIN_UD);
+                args.print(F("initializing X9C poti CS=%u INCR=%u UD=%u"), csPin, incrPin, udPin);
+                x9c_poti = new X9C::Poti(csPin, incrPin, udPin);
+                x9c_poti->begin();
+                x9c_poti->resetMax();
+            }
+            if (x9c_poti) {
+                auto value = args.toUint8(0, 0);
+                #ifdef ATMODE_X9C_RANGE_MIN
+                    value = std::max<uint8_t>(ATMODE_X9C_RANGE_MIN, value);
+                #endif
+                #ifdef ATMODE_X9C_RANGE_MAX
+                    value = std::min<uint8_t>(ATMODE_X9C_RANGE_MAX, value)
+                #endif
+                x9c_poti->setValue(value, true);
+
+                args.print(F("value set to %u"), x9c_poti->getValue());
+            }
         }
     #endif
     #if DEBUG

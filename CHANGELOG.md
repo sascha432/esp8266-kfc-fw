@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Support for X9C Digitally Controlled Potentiometers
  - Added Christmas animation
  - Fixed an issue that prevented reconnecting to WiFi networks after a beacon timeout
  - Added a memory queue for the logger to avoid file system operations outside the main loop

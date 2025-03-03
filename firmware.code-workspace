@@ -412,6 +412,7 @@
             "PIOENV",
             "PIOVERBOSE",
             "PLATFORMIO",
+            "poti",
             "PRECACHE",
             "PRECACHING",
             "PREINIT",

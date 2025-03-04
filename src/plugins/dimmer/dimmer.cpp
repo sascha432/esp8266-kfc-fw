@@ -189,23 +189,12 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
     webUI.addRow(slider);
 }
 
-// void Plugin::createMenu()
-// {
-//     auto root = bootstrapMenu.getMenuItem(navMenu.config);
-
-//     auto subMenu = root.addSubMenu(getFriendlyName());
-//     subMenu.addMenuItem(F("General"), F("dimmer-fw?type=read-config&redirect=dimmer/general.html"));
-//     subMenu.addMenuItem(F("Channel Configuration"), F("dimmer/channels.html"));
-//     #if IOT_DIMMER_MODULE_HAS_BUTTONS
-//         subMenu.addMenuItem(F("Button Configuration"), F("dimmer/buttons.html"));
-//     #endif
-//     subMenu.addMenuItem(F("Advanced Firmware Configuration"), F("dimmer-fw?type=read-config&redirect=dimmer/advanced.html"));
-//     subMenu.addMenuItem(F("Cubic Interpolation"), F("dimmer-ci.html"));
-// }
-
 void Plugin::getStatus(Print &out)
 {
     out.print(F("DC Dimmer"));
+    #if IOT_DIMMER_X9C_POTI
+        out.print(F(" X9C Support"));
+    #endif
 }
 
 void Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)

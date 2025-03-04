@@ -25,14 +25,11 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     IOT_DIMMER_PLUGIN_NAME,
     IOT_DIMMER_PLUGIN_FRIENDLY_NAME,
     "",                 // web_templates
-    "general," \
-    "channels," \
-    "buttons," \
-    "advanced",         // forms
-    "mqtt",             // reconfigure_dependencies
+    "dimmer",           // forms
+    "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::DIMMER_MODULE,
     PluginComponent::RTCMemoryId::DIMMER,
-    static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),
+    static_cast<uint8_t>(PluginComponent::MenuType::NONE),
     false,              // allow_safe_mode
     false,              // setup_after_deep_sleep
     true,               // has_get_status
@@ -192,8 +189,8 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
     webUI.addRow(slider);
 }
 
-void Plugin::createMenu()
-{
+// void Plugin::createMenu()
+// {
 //     auto root = bootstrapMenu.getMenuItem(navMenu.config);
 
 //     auto subMenu = root.addSubMenu(getFriendlyName());
@@ -204,7 +201,7 @@ void Plugin::createMenu()
 //     #endif
 //     subMenu.addMenuItem(F("Advanced Firmware Configuration"), F("dimmer-fw?type=read-config&redirect=dimmer/advanced.html"));
 //     subMenu.addMenuItem(F("Cubic Interpolation"), F("dimmer-ci.html"));
-}
+// }
 
 void Plugin::getStatus(Print &out)
 {
@@ -233,17 +230,15 @@ void Plugin::setValue(const String &id, const String &value, bool hasValue, bool
         if (hasState) {
             if (state && !_brightness) {
                 on();
-                publishState();
             }
             else if (!state && _brightness) {
                 off();
-                publishState();
             }
         }
         if (hasValue) {
             setLevel(val);
-            publishState();
         }
+        publishState();
     }
 }
 

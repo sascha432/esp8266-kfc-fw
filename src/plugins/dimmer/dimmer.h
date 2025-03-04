@@ -66,7 +66,7 @@ namespace Dimmer {
         virtual void shutdown() override;
         virtual void getStatus(Print &output) override;
         virtual void createWebUI(WebUINS::Root &webUI) override;
-        virtual void createMenu() override;
+        // virtual void createMenu() override;
 
         virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 

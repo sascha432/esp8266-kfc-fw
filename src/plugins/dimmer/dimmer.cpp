@@ -135,12 +135,24 @@ void Plugin::off()
     setLevel(0);
 }
 
+void Plugin::_setLevel(uint32_t level)
+{
+    #if IOT_DIMMER_X9C_POTI
+        _poti.setValue(IOT_DIMMER_MAP_BRIGHTNESS(level));
+    #endif
+    #if IOT_DIMMER_PWM_DAC
+        analogWrite(IOT_DIMMER_PWM_DAC_PIN, IOT_DIMMER_MAP_BRIGHTNESS(level));
+    #endif
+}
+
 void Plugin::setLevel(uint32_t level)
 {
-    _brightness = level;
-    #if IOT_DIMMER_X9C_POTI
-        __LDBG_printf("poti=%d level=%u", IOT_DIMMER_MAP_BRIGHTNESS(level), level);
-        _poti.setValue(IOT_DIMMER_MAP_BRIGHTNESS(level));
+    __LDBG_printf("mapped=%d level=%u", IOT_DIMMER_MAP_BRIGHTNESS(level), level);
+    #if IOT_DIMMER_TIMER_INTERVAL
+        _setBrightness = level;
+    #else
+        _brightness = level;
+        _setLevel(level);
     #endif
 }
 
@@ -150,7 +162,11 @@ void Plugin::_publish()
         using namespace MQTT::Json;
         publish(MQTT::Client::formatTopic(F("/state")), true, UnnamedObject(
                 State(_brightness != 0),
-                Brightness(_brightness),
+                #if IOT_DIMMER_TIMER_INTERVAL
+                    Brightness(_setBrightness),
+                #else
+                    Brightness(_brightness),
+                #endif
                 Transition(0)
             ).toString()
         );
@@ -162,11 +178,30 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
 {
     MQTT::Client::registerComponent(this);
     _readConfig();
+    _brightness = _storedBrightness;
     #if IOT_DIMMER_X9C_POTI
         _poti.begin();
         _poti.resetMax();
-        _brightness = _storedBrightness;
-        setLevel(_brightness);
+    #endif
+    #if IOT_DIMMER_PWM_DAC
+        analogWriteFreq(IOT_DIMMER_PWM_DAC_FREQ);
+        analogWriteRange(IOT_DIMMER_PWM_PWMRANGE);
+        pinMode(IOT_DIMMER_PWM_DAC_PIN, OUTPUT);
+        analogWrite(IOT_DIMMER_PWM_DAC_PIN, IOT_DIMMER_PWM_OFF);
+    #endif
+    setLevel(_brightness);
+    #if IOT_DIMMER_TIMER_INTERVAL
+        _setBrightness = 0;
+        _Timer(_intervalTimer).add(IOT_DIMMER_TIMER_INTERVAL, true, [this](Event::CallbackTimerPtr) {
+            if (_brightness < _setBrightness) {
+                _brightness++;
+                _setLevel(_brightness);
+            }
+            else if (_brightness > _setBrightness) {
+                _brightness--;
+                _setLevel(_brightness);
+            }
+        });
     #endif
 }
 
@@ -175,6 +210,10 @@ void Plugin::shutdown()
     #if IOT_DIMMER_X9C_POTI
         _poti.end();
     #endif
+    #if IOT_DIMMER_PWM_DAC
+        analogWrite(IOT_DIMMER_PWM_DAC_PIN, IOT_DIMMER_PWM_OFF);
+    #endif
+    _Timer(_intervalTimer).remove();
     _Timer(_publishTimer).remove();
     MQTT::Client::unregisterComponent(this);
 }
@@ -193,7 +232,10 @@ void Plugin::getStatus(Print &out)
 {
     out.print(F("DC Dimmer"));
     #if IOT_DIMMER_X9C_POTI
-        out.print(F(" X9C Support"));
+        out.print(F(" with X9C Support"));
+    #endif
+    #if IOT_DIMMER_PWM_DAC
+        out.print(F(" with PWM DAC"));
     #endif
 }
 

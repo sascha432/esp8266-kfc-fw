@@ -86,6 +86,7 @@ namespace Dimmer {
         void publishState();
         void on();
         void off();
+        void _setLevel(uint32_t level);
         void setLevel(uint32_t level);
         void _publish();
         void _readConfig();
@@ -98,6 +99,10 @@ namespace Dimmer {
         Event::Timer _publishTimer;
         #if IOT_DIMMER_X9C_POTI
             X9C::Poti _poti;
+        #endif
+        #if IOT_DIMMER_TIMER_INTERVAL
+            Event::Timer _intervalTimer;
+            uint32_t _setBrightness{0};
         #endif
     };
 

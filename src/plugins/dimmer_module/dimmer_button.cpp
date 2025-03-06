@@ -68,6 +68,11 @@ void Button::event(EventType eventType, uint32_t now)
                 }
             }
             else if (_button == 0) {
+                // set to 1 or min brightness if less
+                const auto minLevel = std::max(1, (kMaxLevelsChannel * config._base.min_brightness) / 100);
+                if (_dimmer.getChannels()[_channel].getStoredBrightness() <= minLevel) {
+                    _dimmer.getChannels()[_channel].setStoredBrightness(minLevel);
+                }
                 _dimmer.on(_channel);
             }
             break;
@@ -75,6 +80,12 @@ void Button::event(EventType eventType, uint32_t now)
             if (_repeat & _BV(_button)) {
                 _repeat &= ~_BV(_button);
                 _freezeLevel();
+            }
+            else {
+                if (_button == 1 && _repeatCount == 0 && _dimmer.getChannel(_channel) <= ((kMaxLevelsChannel * config._base.min_brightness) / 100)) {
+                    // below min. brightness turn off on single click
+                    _dimmer.setChannel(_channel, 0, config._base.lp_fadetime);
+                }
             }
             break;
         case EventType::HOLD_REPEAT:

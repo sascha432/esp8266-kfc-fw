@@ -26,7 +26,7 @@
 #endif
 
 #ifndef IOT_DIMMER_MAX_BRIGHTNESS
-#    define IOT_DIMMER_MAX_BRIGHTNESS 255
+#    define IOT_DIMMER_MAX_BRIGHTNESS 1024
 #endif
 
 // use a timer to gradually adjust brightness in milliseconds
@@ -63,7 +63,7 @@
 
 // pwm frequency
 #ifndef IOT_DIMMER_PWM_DAC_FREQ
-#   define IOT_DIMMER_PWM_DAC_FREQ 40000
+#   define IOT_DIMMER_PWM_DAC_FREQ 10000
 #endif
 
 // custom mapping

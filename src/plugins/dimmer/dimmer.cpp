@@ -222,7 +222,7 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
 {
     webUI.addRow(WebUINS::Group(F(IOT_DIMMER_TITLE), false));
 
-    auto slider = WebUINS::Slider(F("d-br"), F(IOT_DIMMER_BRIGHTNESS_TITLE));
+    auto slider = WebUINS::Slider(F("d-br"), F(IOT_DIMMER_BRIGHTNESS_TITLE), IOT_DIMMER_MIN_BRIGHTNESS, IOT_DIMMER_MAX_BRIGHTNESS);
     slider.append(WebUINS::NamedInt32(J(range_min), IOT_DIMMER_MIN_BRIGHTNESS));
     slider.append(WebUINS::NamedInt32(J(range_max), IOT_DIMMER_MAX_BRIGHTNESS));
     webUI.addRow(slider);

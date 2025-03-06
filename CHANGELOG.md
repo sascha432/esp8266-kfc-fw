@@ -3,8 +3,7 @@
 ## Version 0.0.9 (master)
 
  - Fixed issue with the dimmer plugin's off button
- - Plugin for a basic dimmer
- - Support for X9C digitally controlled potentiometers
+ - Plugin for a basic dimmer with support for X9C digitally controlled potentiometers and PWM dimming
  - Added Christmas animation
  - Fixed an issue that prevented reconnecting to WiFi networks after a beacon timeout
  - Added a memory queue for the logger to avoid file system operations outside the main loop

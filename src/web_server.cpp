@@ -620,6 +620,8 @@ static String _getUrlAndPostDataFromRequest(AsyncWebServerRequest *request)
     {
         __LDBG_printf("_logRequest(%s)", __S(request->url()));
         PrintString log;
+        //  error: 'class AsyncClient' has no member named 'getRemoteAddress'; did you mean 'getRemotePort'?
+        // delete "ESPAsyncTCP" and try to compile again. this occurs if the version does not match or different versions are in the libdeps directory
         IPAddress(request->client()->getRemoteAddress()).printTo(log);
         log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
         log.print(request->methodToString());

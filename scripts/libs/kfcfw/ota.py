@@ -3,9 +3,15 @@
 #
 
 import re
-from tkinter import E
+#from tkinter import E
 import requests
 import json
+# python.exe -m pip install websocket_client
+# Collecting websocket_client
+#   Downloading websocket_client-1.8.0-py3-none-any.whl.metadata (8.0 kB)
+# Downloading websocket_client-1.8.0-py3-none-any.whl (58 kB)
+# Installing collected packages: websocket_client
+# Successfully installed websocket_client-1.8.0
 import websocket
 import _thread as thread
 from . import Configuration

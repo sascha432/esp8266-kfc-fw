@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Fixed issue with the dimmer plugin's off button
  - Plugin for a basic dimmer
  - Support for X9C digitally controlled potentiometers
  - Added Christmas animation

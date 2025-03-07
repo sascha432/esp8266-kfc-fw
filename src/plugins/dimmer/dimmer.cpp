@@ -135,6 +135,11 @@ void Plugin::off()
     setLevel(0);
 }
 
+/**
+ * @brief apply dimming level to output
+ *
+ * @param level
+ */
 void Plugin::_setLevel(uint32_t level)
 {
     #if IOT_DIMMER_X9C_POTI
@@ -145,6 +150,11 @@ void Plugin::_setLevel(uint32_t level)
     #endif
 }
 
+/**
+ * @brief set dimming level
+ *
+ * @param level
+ */
 void Plugin::setLevel(uint32_t level)
 {
     __LDBG_printf("mapped=%d level=%u", IOT_DIMMER_MAP_BRIGHTNESS(level), level);
@@ -158,6 +168,7 @@ void Plugin::setLevel(uint32_t level)
 
 void Plugin::_publish()
 {
+    _saveState();
     if (isConnected()) {
         using namespace MQTT::Json;
         publish(MQTT::Client::formatTopic(F("/state")), true, UnnamedObject(
@@ -171,7 +182,11 @@ void Plugin::_publish()
             ).toString()
         );
     }
-    _saveState();
+    if (WebUISocket::hasAuthenticatedClients()) {
+        WebUINS::Events events;
+        getValues(events);
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(events));
+    }
 }
 
 void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)

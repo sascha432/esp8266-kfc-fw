@@ -94,26 +94,31 @@ void Plugin::onMessage(const char *topic, const char *payload, size_t len)
 
 void Plugin::onJsonMessage(const MQTT::Json::Reader &json)
 {
+    bool doPublish = false;
     __LDBG_printf("state=%d brightness=%d", json.state, json.brightness);
     if (json.state != -1) {
         if (json.state && !_brightness) {
             on();
-            publishState();
+            doPublish = true;
         }
         else if (!json.state && _brightness) {
             off();
-            publishState();
+            doPublish = true;
         }
     }
     if (json.brightness != -1) {
         if (json.brightness == 0 && _brightness) {
             off();
-            publishState();
+            doPublish = true;
         }
         else if (json.brightness) {
             setLevel(json.brightness);
-            publishState();
+            doPublish = true;
         }
+    }
+    if (doPublish) {
+        publishState();
+        _publishWebUI();
     }
 }
 
@@ -166,6 +171,20 @@ void Plugin::setLevel(uint32_t level)
     #endif
 }
 
+/**
+ * @brief return set dimming level
+ *
+ * @return uint32_t
+ */
+uint32_t Plugin::getLevel() const
+{
+    #if IOT_DIMMER_TIMER_INTERVAL
+        return _setBrightness;
+    #else
+        return _brightness;
+    #endif
+}
+
 void Plugin::_publish()
 {
     _saveState();
@@ -173,15 +192,15 @@ void Plugin::_publish()
         using namespace MQTT::Json;
         publish(MQTT::Client::formatTopic(F("/state")), true, UnnamedObject(
                 State(_brightness != 0),
-                #if IOT_DIMMER_TIMER_INTERVAL
-                    Brightness(_setBrightness),
-                #else
-                    Brightness(_brightness),
-                #endif
+                Brightness(getLevel()),
                 Transition(0)
             ).toString()
         );
     }
+}
+
+void Plugin::_publishWebUI()
+{
     if (WebUISocket::hasAuthenticatedClients()) {
         WebUINS::Events events;
         getValues(events);
@@ -260,12 +279,13 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
 
 void Plugin::getValues(WebUINS::Events &array)
 {
-    array.append(WebUINS::Values(F("d-br"), _brightness, true));
+    array.append(WebUINS::Values(F("d-br"), getLevel(), true));
 }
 
 void Plugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     if (id == F("d-br")) {
+        bool doPublish = false;
         int val = value.toInt();
         __LDBG_printf("has_value=%d value=%d has_state=%d state=%d", hasValue, val, hasState, state);
 
@@ -276,15 +296,20 @@ void Plugin::setValue(const String &id, const String &value, bool hasValue, bool
         if (hasState) {
             if (state && !_brightness) {
                 on();
+                doPublish = true;
             }
             else if (!state && _brightness) {
                 off();
+                doPublish = true;
             }
         }
         if (hasValue) {
             setLevel(val);
+            doPublish = true;
         }
-        publishState();
+        if (doPublish) {
+            publishState();
+        }
     }
 }
 

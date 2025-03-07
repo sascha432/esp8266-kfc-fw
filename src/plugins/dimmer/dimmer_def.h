@@ -4,6 +4,10 @@
 
 #pragma once
 
+#ifndef DEBUG_IOT_DIMMER
+#    define DEBUG_IOT_DIMMER (0 || defined(DEBUG_ALL))
+#endif
+
 #ifndef IOT_DIMMER_PLUGIN_NAME
 #    define IOT_DIMMER_PLUGIN_NAME "dimmer"
 #endif

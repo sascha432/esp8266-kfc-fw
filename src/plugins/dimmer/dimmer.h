@@ -88,7 +88,9 @@ namespace Dimmer {
         void off();
         void _setLevel(uint32_t level);
         void setLevel(uint32_t level);
+        uint32_t getLevel() const;
         void _publish();
+        void _publishWebUI();
         void _readConfig();
         void _loadState();
         void _saveState();

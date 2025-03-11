@@ -72,25 +72,15 @@
 
 // custom mapping
 #ifndef IOT_DIMMER_MAP_BRIGHTNESS
-#   if KFC_DEVICE_ID == 76
+#   if KFC_DEVICE_ID == 76 || KFC_DEVICE_ID == 75
 /**
- * @brief custom mapping device #76
+ * @brief custom mappings
  *
- * 0 = 1023
- * 1 = 150
+ * 0 = IOT_DIMMER_PWM_OFF
+ * 1 = IOT_DIMMER_PWM_RANGE_MAX
  * 255 = 0
  */
 #       define IOT_DIMMER_MAP_BRIGHTNESS(value) (value == 0 ? IOT_DIMMER_PWM_OFF : (std::clamp<uint32_t>(IOT_DIMMER_PWM_RANGE_MAX - (((value - IOT_DIMMER_MIN_BRIGHTNESS) * (IOT_DIMMER_PWM_RANGE_MAX - IOT_DIMMER_PWM_RANGE_MIN)) / (IOT_DIMMER_MAX_BRIGHTNESS - IOT_DIMMER_MIN_BRIGHTNESS)), IOT_DIMMER_PWM_RANGE_MIN, IOT_DIMMER_PWM_RANGE_MAX)))
-#   elif KFC_DEVICE_ID == 75
-/**
- * @brief custom mapping device #75
- *
- * 0 = 100
- * 1 = 65
- * [...]
- * 255 = 45
- */
-#       define IOT_DIMMER_MAP_BRIGHTNESS(value) std::clamp<uint32_t>((value ? (65 - (((value - IOT_DIMMER_MIN_BRIGHTNESS) * 20) / (IOT_DIMMER_MAX_BRIGHTNESS - IOT_DIMMER_MIN_BRIGHTNESS))) : 100), 45, 100)
 #       else
 #           error define mapping
 // #   elif IOT_DIMMER_X9C_POTI

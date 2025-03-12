@@ -35,7 +35,7 @@ public:
         float temperature;  // °C
         float humidity;     // %
         float pressure;     // hPa
-        float gas;       // VOC in ppm
+        float gas;          // CO2/VOC in ppm
         uint32_t lastSuccess;
 
         SensorDataType(float _temperature = NAN, float _humidity = NAN, float _pressure = NAN, float _gas = NAN) :
@@ -112,52 +112,6 @@ inline bool Sensor_BME680::hasForm() const
 {
     return true;
 }
-
-#if HAVE_ADAFRUIT_BME680_LIB
-
-inline void Sensor_BME680::setup()
-{
-    _readConfig();
-    if (!_bme680.begin(_address)) {
-        return;
-    }
-    _bme680.setTemperatureOversampling(BME680_OS_8X);
-    _bme680.setHumidityOversampling(BME680_OS_2X);
-    _bme680.setPressureOversampling(BME680_OS_4X);
-    _bme680.setIIRFilterSize(BME680_FILTER_SIZE_3);
-    _bme680.setGasHeater(320, 150); // 320*C for 150 ms
-}
-
-#endif
-
-#if HAVE_BOSCHSENSORTEC_LIB
-
-
-inline void Sensor_BME680::setup()
-{
-    _readConfig();
-    iaqSensor.begin(_address, config.initTwoWire());
-
-    bsec_virtual_sensor_t sensorList[10] = {
-        BSEC_OUTPUT_RAW_TEMPERATURE,
-        BSEC_OUTPUT_RAW_PRESSURE,
-        BSEC_OUTPUT_RAW_HUMIDITY,
-        BSEC_OUTPUT_RAW_GAS,
-        BSEC_OUTPUT_IAQ,
-        BSEC_OUTPUT_STATIC_IAQ,
-        BSEC_OUTPUT_CO2_EQUIVALENT,
-        BSEC_OUTPUT_BREATH_VOC_EQUIVALENT,
-        BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_TEMPERATURE,
-        BSEC_OUTPUT_SENSOR_HEAT_COMPENSATED_HUMIDITY,
-    };
-
-    iaqSensor.updateSubscription(sensorList, 10, BSEC_SAMPLE_RATE_LP);
-
-    _readSensor();
-}
-
-
-#endif
 
 inline void Sensor_BME680::reconfigure(PGM_P source)
 {

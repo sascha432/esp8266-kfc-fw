@@ -123,11 +123,13 @@ void Sensor_BME680::getStatus(Print &output)
 bool Sensor_BME680::getSensorData(String &name, StringVector &values)
 {
     name = F("BME680");
-    auto sensor = _readSensor();
-    values.emplace_back(PrintString(F("%.2f %s"), sensor.temperature, SPGM(UTF8_degreeC)));
-    values.emplace_back(PrintString(F("%.2f %%"), sensor.humidity));
-    values.emplace_back(PrintString(F("%.2f hPa"), sensor.pressure));
-    values.emplace_back(PrintString(F("%.6f ppm"), sensor.gas));
+    if (isnan(_sensor.gas)) { // only read the sensor data if not valid, otherwise the mqtt publish interval is used to keep the sensor data consistent
+        _readSensor();
+    }
+    values.emplace_back(PrintString(F("%.2f %s"), _sensor.temperature, SPGM(UTF8_degreeC)));
+    values.emplace_back(PrintString(F("%.2f %%"), _sensor.humidity));
+    values.emplace_back(PrintString(F("%.2f hPa"), _sensor.pressure));
+    values.emplace_back(PrintString(F("%.6f ppm"), _sensor.gas));
     return true;
 }
 
@@ -151,8 +153,8 @@ void Sensor_BME680::createConfigureForm(AsyncWebServerRequest *request, FormUI::
 
 void Sensor_BME680::publishState()
 {
+    auto sensor = _readSensor(); // always read state to get it for the webui
     if (isConnected()) {
-        auto sensor = _readSensor();
         using namespace MQTT::Json;
 
         publish(MQTT::Client::formatTopic(_getId()), true, UnnamedObject(
@@ -196,7 +198,6 @@ void Sensor_BME680::publishState()
         // Air Quality Approximation
         float baselineResistance = 50000;  // Initial baseline gas resistance (Ohms)
         float baselineCO2 = 400;           // Start assuming fresh air at 400 ppm
-        float baselineVOC = 50;            // Initial VOC Index baseline
         float alpha = 0.02;                // Smoothing factor for baseline adaptation
 
         float gasResistance = _bme680.gas_resistance;  // Read gas resistance (Ω)

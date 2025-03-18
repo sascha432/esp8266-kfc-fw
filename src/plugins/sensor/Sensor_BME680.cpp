@@ -23,6 +23,8 @@ Sensor_BME680::Sensor_BME680(const String &name, uint8_t address, TwoWire &wire)
     #endif
 {
     REGISTER_SENSOR_CLIENT(this);
+    setMqttUpdateRate(BME680_UPDATE_RATE);
+    setUpdateRate(BME680_UPDATE_RATE);
 }
 
 Sensor_BME680::~Sensor_BME680()

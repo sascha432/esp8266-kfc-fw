@@ -31,6 +31,9 @@ class Sensor_CCS811;
 
 class Sensor_BME680 : public MQTT::Sensor {
 public:
+    static constexpr uint32_t BME680_UPDATE_RATE = 30;
+
+public:
     struct SensorDataType {
         float temperature;  // °C
         float humidity;     // %
@@ -44,7 +47,8 @@ public:
             pressure(_pressure),
             gas(_gas),
             lastSuccess(0)
-        {}
+        {
+        }
 
         void setLastSuccess() {
             lastSuccess = millis();

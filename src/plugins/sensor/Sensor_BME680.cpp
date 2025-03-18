@@ -214,6 +214,10 @@ void Sensor_BME680::publishState()
         // Estimate CO2 (ppm) using an exponential relationship
         float estimatedCO2 = baselineCO2 * exp(vocIndex / 100.0); // Exponential scaling
 
+        if (estimatedCO2 >= 10000) { // limit value, 10000 ppm is deadly within minutes anyway
+            estimatedCO2 = NAN;
+        }
+
         _sensor = SensorDataType(
             _bme680.temperature + _cfg.temp_offset,
             _bme680.humidity + _cfg.humidity_offset,

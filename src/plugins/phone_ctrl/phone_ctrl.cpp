@@ -39,12 +39,18 @@ public:
 
     virtual void createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request) override;
 
-#if AT_MODE_SUPPORTED
-    #if AT_MODE_HELP_SUPPORTED
-        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-    #endif
-    virtual bool atModeHandler(AtModeArgs &args) override;
-#endif
+private:
+    void _loop();
+
+private:
+    Event::Timer _timer;
+    uint32_t _timerState;
+    bool _allowAnswering;
+
+    static constexpr uint8_t kPinRing = 4;
+    static constexpr uint8_t kPinAnswer = 12;
+    static constexpr uint8_t kPinDial6 = 13;
+    static constexpr uint8_t kPinHangup = 14;
 };
 
 static PhoneCtrlPlugin plugin;
@@ -65,17 +71,31 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     true,               // has_config_forms
     false,              // has_web_ui
     false,              // has_web_templates
-    true,               // has_at_mode
+    false,              // has_at_mode
     0                   // __reserved
 );
 
-PhoneCtrlPlugin::PhoneCtrlPlugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(PhoneCtrlPlugin))
+PhoneCtrlPlugin::PhoneCtrlPlugin() :
+    PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(PhoneCtrlPlugin)),
+    _allowAnswering(false)
 {
     REGISTER_PLUGIN(this, "PhoneCtrlPlugin");
 }
 
 void PhoneCtrlPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
+    pinMode(kPinRing, INPUT);
+    digitalWrite(kPinAnswer, LOW);
+    digitalWrite(kPinDial6, LOW);
+    digitalWrite(kPinHangup, LOW);
+    pinMode(kPinAnswer, OUTPUT);
+    pinMode(kPinDial6, OUTPUT);
+    pinMode(kPinHangup, OUTPUT);
+
+    LoopFunctions::add([this]() {
+        _loop();
+    }, this);
+    _allowAnswering = true;
 }
 
 void PhoneCtrlPlugin::reconfigure(const String &source)
@@ -84,44 +104,87 @@ void PhoneCtrlPlugin::reconfigure(const String &source)
 
 void PhoneCtrlPlugin::shutdown()
 {
+    _allowAnswering = false;
+    digitalWrite(kPinAnswer, LOW);
+    digitalWrite(kPinDial6, LOW);
+    digitalWrite(kPinHangup, LOW);
+    LoopFunctions::remove(this);
+    _Timer(_timer).remove();
 }
 
 void PhoneCtrlPlugin::getStatus(Print &output)
 {
-    // output.print(FSPGM(ping_monitor_service));
-    // output.print(' ');
-    // output.print(FSPGM(disabled));
+    output.print(F("Phone Controller - Answering "));
+    if (_allowAnswering) {
+        output.println(F("enabled"));
+    }  else {
+        output.println(F("disabled"));
+    }
 }
 
 void PhoneCtrlPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
 }
 
-#if AT_MODE_SUPPORTED
-
-#include "at_mode.h"
-
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ANSWER, "ANSWER", "<count=4>", "Answer doorbell");
-
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr PingMonitorPlugin::atModeCommandHelp(size_t &size) const
+void PhoneCtrlPlugin::_loop()
 {
-    static ATModeCommandHelpArray tmp PROGMEM = {
-        PROGMEM_AT_MODE_HELP_COMMAND(PING)
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
-
-bool PhoneCtrlPlugin::atModeHandler(AtModeArgs &args)
-{
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(ANSWER))) {
-        return true;
+    if (_allowAnswering && digitalRead(kPinRing)) {
+        if (!_timer) {
+            __LDBG_printf("ANSWER: running");
+            Logger_security(F("Answering Doorbell"));
+            // reset state
+            _timerState = 0;
+            // run timer every 100ms
+            _Timer(_timer).add(100, true, [this](Event::CallbackTimerPtr timer) {
+                // 20000ms
+                if (_timerState > 200)  {
+                    __LDBG_printf("ANSWER: done");
+                    timer->disarm();
+                    return;
+                }
+                switch(_timerState++) {
+                    // 1000ms
+                    case 10:
+                        __LDBG_printf("BUTTON: answer");
+                        digitalWrite(kPinAnswer, HIGH);
+                        break;
+                    case 11:
+                        digitalWrite(kPinAnswer, LOW);
+                        break;
+                    // 2000ms
+                    case 20:
+                        __LDBG_printf("BUTTON: 6");
+                        digitalWrite(kPinDial6, HIGH);
+                        break;
+                    case 21:
+                        digitalWrite(kPinDial6, LOW);
+                        break;
+                    // 3000ms
+                    case 30:
+                        __LDBG_printf("BUTTON: 6");
+                        digitalWrite(kPinDial6, HIGH);
+                        break;
+                    case 31:
+                        digitalWrite(kPinDial6, LOW);
+                        break;
+                    // 4000ms
+                    case 40:
+                        __LDBG_printf("BUTTON: hangup #1");
+                        digitalWrite(kPinHangup, HIGH);
+                        break;
+                    case 41:
+                        digitalWrite(kPinHangup, LOW);
+                        break;
+                    // 5000ms
+                    case 50:
+                        __LDBG_printf("BUTTON: hangup #2");
+                        digitalWrite(kPinHangup, HIGH);
+                        break;
+                    case 51:
+                        digitalWrite(kPinHangup, LOW);
+                        break;
+                }
+            });
+        }
     }
-    return false;
 }
-
-#endif

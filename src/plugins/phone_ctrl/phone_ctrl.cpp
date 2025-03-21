@@ -41,16 +41,19 @@ public:
 
 private:
     void _loop();
+    void _resetButtons();
 
 private:
     Event::Timer _timer;
     uint32_t _timerState;
     bool _allowAnswering;
 
-    static constexpr uint8_t kPinRing = 4;
+    static constexpr uint8_t kPinRing = 5;
     static constexpr uint8_t kPinAnswer = 12;
     static constexpr uint8_t kPinDial6 = 13;
     static constexpr uint8_t kPinHangup = 14;
+    static constexpr uint8_t kPinButton = 255;
+    static constexpr uint8_t kPinButtonActiveLevel = LOW;
 };
 
 static PhoneCtrlPlugin plugin;
@@ -85,9 +88,8 @@ PhoneCtrlPlugin::PhoneCtrlPlugin() :
 void PhoneCtrlPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
     pinMode(kPinRing, INPUT);
-    digitalWrite(kPinAnswer, LOW);
-    digitalWrite(kPinDial6, LOW);
-    digitalWrite(kPinHangup, LOW);
+    pinMode(kPinButton, INPUT);
+    _resetButtons();
     pinMode(kPinAnswer, OUTPUT);
     pinMode(kPinDial6, OUTPUT);
     pinMode(kPinHangup, OUTPUT);
@@ -105,9 +107,7 @@ void PhoneCtrlPlugin::reconfigure(const String &source)
 void PhoneCtrlPlugin::shutdown()
 {
     _allowAnswering = false;
-    digitalWrite(kPinAnswer, LOW);
-    digitalWrite(kPinDial6, LOW);
-    digitalWrite(kPinHangup, LOW);
+    _resetButtons();
     LoopFunctions::remove(this);
     _Timer(_timer).remove();
 }
@@ -117,7 +117,8 @@ void PhoneCtrlPlugin::getStatus(Print &output)
     output.print(F("Phone Controller - Answering "));
     if (_allowAnswering) {
         output.println(F("enabled"));
-    }  else {
+    }
+    else {
         output.println(F("disabled"));
     }
 }
@@ -126,9 +127,47 @@ void PhoneCtrlPlugin::createConfigureForm(FormCallbackType type, const String &f
 {
 }
 
+void PhoneCtrlPlugin::_resetButtons()
+{
+    digitalWrite(kPinAnswer, LOW);
+    digitalWrite(kPinDial6, LOW);
+    digitalWrite(kPinHangup, LOW);
+}
+
 void PhoneCtrlPlugin::_loop()
 {
-    if (_allowAnswering && digitalRead(kPinRing)) {
+    bool doAnswer = _allowAnswering && digitalRead(kPinRing);
+
+    if (kPinButton != 255 && digitalRead(kPinButton) == kPinButtonActiveLevel) {
+        static constexpr int kDelayMillis = 5;
+        static constexpr int kLongPressCount = 500 / kDelayMillis;
+        // debounce
+        int i = 0;
+        delay(50);
+        while(digitalRead(kPinButton) == kPinButtonActiveLevel) {
+            delay(kDelayMillis);
+            if (++i > kLongPressCount) {
+                break;
+            }
+        }
+        if (i > kLongPressCount) { // long press >500ms toggles answer mode
+            _allowAnswering = !_allowAnswering;
+            __LDBG_printf("answer=%u", _allowAnswering);
+        }
+        else  if (i <= kLongPressCount) { // short press forces answer
+            __LDBG_printf("ANSWER: forced by button (timer=%u)", !!_timer);
+            doAnswer = true;
+            _timer.remove();
+            _resetButtons();
+            delay(100);
+        }
+        // wait for release
+        while(digitalRead(kPinButton) != kPinButtonActiveLevel) {
+            delay(5);
+        }
+    }
+
+    if (doAnswer) {
         if (!_timer) {
             __LDBG_printf("ANSWER: running");
             Logger_security(F("Answering Doorbell"));

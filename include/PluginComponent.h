@@ -109,6 +109,7 @@ namespace PluginComponents {
         WEATHER_STATION,
         PING_MONITOR,
         DISPLAY_PLUGIN,
+        PHONE_CTRL,
         // lowest priority for plugins
         MIN = std::numeric_limits<int8_t>::max()
     };

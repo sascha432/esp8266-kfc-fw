@@ -179,7 +179,7 @@ bool Plugin::atModeHandler(AtModeArgs &args)
                     break;
                 case Command::TOPICS:
                     for(const auto &topic: client.getTopics()) {
-                        args.printf_P(PSTR("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getName());
+                        args.print(F("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getName());
                     }
                     break;
                 case Command::AUTO_DISCOVERY: {

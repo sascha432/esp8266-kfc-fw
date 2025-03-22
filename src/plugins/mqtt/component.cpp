@@ -131,6 +131,8 @@ NameType Component::getNameByType(ComponentType type)
             return FSPGM(mqtt_component_fan);
         case ComponentType::AUTO_DISCOVERY:
             return F("auto_discovery");
+        case ComponentType::BUTTON:
+            return F("button");
         case ComponentType::SWITCH:
         default:
             return FSPGM(mqtt_component_switch);

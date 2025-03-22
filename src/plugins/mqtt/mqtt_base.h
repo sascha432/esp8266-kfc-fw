@@ -17,7 +17,8 @@ namespace MQTT {
         BINARY_SENSOR,
         DEVICE_AUTOMATION,
         FAN,
-        AUTO_DISCOVERY
+        AUTO_DISCOVERY,
+        BUTTON
     };
 
     enum class FormatType : uint8_t {

@@ -147,7 +147,7 @@ void PhoneCtrlPlugin::shutdown()
 
 void PhoneCtrlPlugin::getStatus(Print &output)
 {
-    output.print(F("Phone Controller - Answering "));
+    output.print(F("Phone Controller - Answering automatically "));
     if (_allowAnswering) {
         output.println(F("enabled"));
     }
@@ -155,7 +155,7 @@ void PhoneCtrlPlugin::getStatus(Print &output)
         output.println(F("disabled"));
     }
     if (_timer) {
-        output.println(F(" (Answering doorbell is active...)"));
+        output.println(F(" (Intercom is active...)"));
     }
 }
 
@@ -170,16 +170,15 @@ MQTT::AutoDiscovery::EntityPtr PhoneCtrlPlugin::getAutoDiscovery(MQTT::FormatTyp
     switch(static_cast<int>(num)) {
         case 0:
             if (discovery->create(this, F("allow"), format)) {
-                discovery->addStateTopic(F("/allow/state"));
-                discovery->addCommandTopic(F("/allow/command"));
+                discovery->addStateTopic(MQTT::Client::formatTopic(F("/allow/state")));
+                discovery->addCommandTopic(MQTT::Client::formatTopic(F("/allow/set")));
                 discovery->addName(F("Automatically answer"));
                 discovery->addObjectId(baseTopic + F("allow"));
             }
             break;
         case 1:
-            if (discovery->create(this, F("answer"), format)) {
-                discovery->addStateTopic(F("/answer/state"));
-                discovery->addCommandTopic(F("/answer/command"));
+            if (discovery->create(ComponentType::BUTTON, F("answer"), format)) {
+                discovery->addCommandTopic(MQTT::Client::formatTopic(F("/answer")));
                 discovery->addName(F("Answer doorbell"));
                 discovery->addObjectId(baseTopic + F("answer"));
             }
@@ -197,21 +196,19 @@ uint8_t PhoneCtrlPlugin::getAutoDiscoveryCount() const
 
 void PhoneCtrlPlugin::onConnect()
 {
-    subscribe(F("/allow/command"));
-    subscribe(F("/answer/command"));
+    subscribe(MQTT::Client::formatTopic(F("/allow/set")));
+    subscribe(MQTT::Client::formatTopic(F("/answer")));
 }
 
 void PhoneCtrlPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("topic=%s payload=%s(%u)", topic, payload, MQTT::Client::toBool(payload, false));
-    if (!strcmp_P(topic, PSTR("/allow/command"))) {
+    if (!strcmp_end_P(topic, PSTR("/allow/set"))) {
         _allowAnswering = MQTT::Client::toBool(payload, false);
         _publishState();
     }
-    else if (!strcmp_P(topic, PSTR("/answer/command"))) {
-        if (MQTT::Client::toBool(payload, false)) {
-            _doAnswer();
-        }
+    else if (!strcmp_end_P(topic, PSTR("/answer")) && !strcasecmp_P(payload, PSTR("press"))) {
+        _doAnswer();
     }
 }
 
@@ -228,7 +225,7 @@ void PhoneCtrlPlugin::createWebUI(WebUINS::Root &webUI)
 void PhoneCtrlPlugin::getValues(WebUINS::Events &array)
 {
     array.append(WebUINS::Values(F("allow"), static_cast<uint32_t>(_allowAnswering), true));
-    array.append(WebUINS::Values(F("answer"), static_cast<uint32_t>(!!_timer), !_timer));
+    array.append(WebUINS::Values(F("answer"), static_cast<uint32_t>(!!_timer), true));
 }
 
 void PhoneCtrlPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -238,11 +235,9 @@ void PhoneCtrlPlugin::setValue(const String &id, const String &value, bool hasVa
         int val = value.toInt();
         if (id == F("allow")) {
             _allowAnswering = val;
-            // __LDBG_printf("webui allow: val=%u", val);
             _publishState();
         }
         else if (id == F("answer")) {
-            // __LDBG_printf("webui answer: val=%u", val);
             if (val) {
                 _doAnswer();
             }
@@ -255,7 +250,6 @@ void PhoneCtrlPlugin::_publishState()
     if (isConnected()) {
         using namespace MQTT::Json;
         publish(MQTT::Client::formatTopic(F("/allow/state")), true, MQTT::Client::toBoolOnOff(_allowAnswering));
-        publish(MQTT::Client::formatTopic(F("/answer/state")), true, MQTT::Client::toBoolOnOff(!!_timer));
     }
     if (WebUISocket::hasAuthenticatedClients()) {
         WebUINS::Events events;

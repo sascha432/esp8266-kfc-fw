@@ -19,6 +19,7 @@
 #include "Utility/ProgMemHelper.h"
 #include <stl_ext/algorithm.h>
 #include <WebUISocket.h>
+#include "pin_monitor.h"
 #include "../src/plugins/mqtt/component.h"
 #include "../src/plugins/mqtt/mqtt_client.h"
 
@@ -55,8 +56,61 @@ public:
     virtual void onConnect() override;
     virtual void onMessage(const char *topic, const char *payload, size_t len) override;
 
+public:
+    enum class ButtonType : uint8_t {
+        RING = 0,
+        ACTION,
+        MAX
+    };
+
+    class ButtonConfig : public PinMonitor::PushButtonConfig
+    {
+    public:
+        using PushButtonConfig::PushButtonConfig;
+
+        ButtonConfig(uint8_t button) : PushButtonConfig(EventType::ALL, 250, 600, 250) {}
+    };
+
+    class Button : public PinMonitor::PushButton {
+    public:
+        Button() :
+            PushButton(),
+            _button(0)
+        {
+        }
+        Button(uint8_t pin, ButtonType button, PhoneCtrlPlugin &clock) :
+            Button(pin, static_cast<uint8_t>(button), clock)
+        {
+        }
+        Button(uint8_t pin, uint8_t button, PhoneCtrlPlugin &clock) :
+            PushButton(pin, &clock, std::move(ButtonConfig(button))),
+            _button(button)
+        {
+        }
+
+        ButtonType getButtonType() const
+        {
+            return ButtonType(getButtonNum());
+        }
+
+        uint8_t getButtonNum() const
+        {
+            return _button;
+        }
+
+        virtual void event(EventType state, uint32_t now) override;
+
+        PhoneCtrlPlugin &getBase() const
+        {
+            return *reinterpret_cast<PhoneCtrlPlugin *>(const_cast<void *>(getArg()));
+        }
+
+    protected:
+        uint8_t _button;
+    };
+
+
 private:
-    void _loop();
     void _resetButtons();
     void _publishState();
     void _doAnswer();
@@ -67,11 +121,12 @@ private:
     bool _allowAnswering;
 
     static constexpr uint8_t kPinRing = 5;
+    static constexpr bool kPinRingActiveLow = false;
     static constexpr uint8_t kPinAnswer = 12;
     static constexpr uint8_t kPinDial6 = 13;
     static constexpr uint8_t kPinHangup = 14;
-    static constexpr uint8_t kPinButton = 255;
-    static constexpr uint8_t kPinButtonActiveLevel = LOW;
+    static constexpr uint8_t kPinButton = 0;
+    static constexpr bool kPinButtonActiveLow = true;
 };
 
 static PhoneCtrlPlugin plugin;
@@ -106,17 +161,24 @@ PhoneCtrlPlugin::PhoneCtrlPlugin() :
 
 void PhoneCtrlPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    pinMode(kPinRing, INPUT);
-    pinMode(kPinButton, INPUT);
+    // defaults
+    _allowAnswering = true;
+
+    // output
     _resetButtons();
     pinMode(kPinAnswer, OUTPUT);
     pinMode(kPinDial6, OUTPUT);
     pinMode(kPinHangup, OUTPUT);
 
-    LOOP_FUNCTION_ADD_ARG([this]() {
-        _loop();
-    }, this);
-    _allowAnswering = true;
+    // input
+    PinMonitor::pinMonitor.attachPinType<Button>(PinMonitor::HardwarePinType::SIMPLE, kPinRing, ButtonType::RING, *this).setInverted(kPinRingActiveLow);
+    PinMonitor::pinMonitor.attach<Button>(kPinButton, ButtonType::ACTION, *this).setInverted(kPinButtonActiveLow);
+    if (PinMonitor::pinMonitor.getPins().size()) {
+        __LDBG_printf("pins attached=%u", PinMonitor::pinMonitor.getPins().size());
+        PinMonitor::pinMonitor.begin();
+    }
+
+    // mqtt
     MQTT::Client::registerComponent(this);
 
     // update states when wifi has been connected
@@ -138,8 +200,8 @@ void PhoneCtrlPlugin::reconfigure(const String &source)
 void PhoneCtrlPlugin::shutdown()
 {
     _allowAnswering = false;
+    PinMonitor::pinMonitor.end();
     _resetButtons();
-    LoopFunctions::remove(this);
     _Timer(_timer).remove();
     WiFiCallbacks::remove(WiFiCallbacks::EventType::CONNECTED, this);
     MQTT::Client::unregisterComponent(this);
@@ -336,40 +398,32 @@ void PhoneCtrlPlugin::_resetButtons()
     digitalWrite(kPinHangup, LOW);
 }
 
-void PhoneCtrlPlugin::_loop()
+// virtual event handler callback for the buttons
+void PhoneCtrlPlugin::Button::event(EventType eventType, uint32_t now)
 {
-    bool doAnswer = _allowAnswering && digitalRead(kPinRing);
-
-    if (kPinButton != 255 && digitalRead(kPinButton) == kPinButtonActiveLevel) {
-        static constexpr int kDelayMillis = 5;
-        static constexpr int kLongPressCount = 500 / kDelayMillis;
-        // debounce
-        int i = 0;
-        delay(50);
-        while(digitalRead(kPinButton) == kPinButtonActiveLevel) {
-            delay(kDelayMillis);
-            if (++i > kLongPressCount) {
-                break;
+    switch(static_cast<ButtonType>(_button)) {
+        case ButtonType::RING:
+            if (eventType == EventType::DOWN && !getBase()._timer) {
+                getBase()._doAnswer();
             }
-        }
-        if (i > kLongPressCount) { // long press >500ms toggles answer mode
-            _allowAnswering = !_allowAnswering;
-            __LDBG_printf("answer=%u", _allowAnswering);
-        }
-        else  if (i <= kLongPressCount) { // short press forces answer
-            __LDBG_printf("ANSWER: forced by button (timer=%u)", !!_timer);
-            doAnswer = true;
-            _timer.remove();
-            _resetButtons();
-            delay(100);
-        }
-        // wait for release
-        while(digitalRead(kPinButton) != kPinButtonActiveLevel) {
-            delay(5);
-        }
-    }
-
-    if (doAnswer && !_timer) {
-        _doAnswer();
+            break;
+        case ButtonType::ACTION:
+            __LDBG_printf("event_type=%s (%02x) repeat=%u button#=%u now=%u", eventTypeToString(eventType), eventType, _repeatCount, _button, now);
+            switch(eventType) {
+                case EventType::PRESSED:
+                    if (!getBase()._timer) {
+                        getBase()._doAnswer();
+                    }
+                    break;
+                case EventType::HOLD_RELEASE:
+                    getBase()._allowAnswering = !getBase()._allowAnswering;
+                    getBase()._publishState();
+                    break;
+                default:
+                    break;
+            }
+            break;
+        default:
+            break;
     }
 }

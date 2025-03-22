@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Intercom plugin for managing a remote doorbell via phone
  - Improved consistency in BME680 CO2 readings using the Adafruit library
  - Fixed issue with the dimmer plugin's off button
  - Plugin for a basic dimmer with support for X9C digitally controlled potentiometers and PWM dimming

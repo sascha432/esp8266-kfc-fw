@@ -191,7 +191,7 @@ void Plugin::_publish()
     if (isConnected()) {
         using namespace MQTT::Json;
         publish(MQTT::Client::formatTopic(F("/state")), true, UnnamedObject(
-                State(_brightness != 0),
+                State(getLevel() != 0),
                 Brightness(getLevel()),
                 Transition(0)
             ).toString()

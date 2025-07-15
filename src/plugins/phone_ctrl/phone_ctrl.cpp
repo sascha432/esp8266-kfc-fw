@@ -322,7 +322,12 @@ void PhoneCtrlPlugin::_publishState()
 
 void PhoneCtrlPlugin::_doAnswer()
 {
-    __LDBG_printf("ANSWER: exec (timer=%u)", !!_timer);
+    __LDBG_printf("ANSWER: exec (timer=%u, allow=%u)", !!_timer, _allowAnswering);
+
+    if (!_allowAnswering) {
+        Logger_security(F("Answering Doorbell disabled"));
+        return;
+    }
 
     // stop timer and reset everything
     Logger_security(F("Answering Doorbell"));

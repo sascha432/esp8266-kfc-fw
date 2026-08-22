@@ -100,6 +100,9 @@ private:
     #endif
     SensorConfigType _cfg;
     SensorDataType _sensor;
+    #if HAVE_ADAFRUIT_BME680_LIB
+        float _gasBaseline = NAN;
+    #endif
 };
 
 inline uint8_t Sensor_BME680::getAutoDiscoveryCount() const

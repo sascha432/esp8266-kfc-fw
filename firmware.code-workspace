@@ -480,10 +480,20 @@
         "workbench.colorCustomizations": {
             "activityBar.background": "#043615",
             "titleBar.activeBackground": "#064B1E",
-            "titleBar.activeForeground": "#EFFEF4"
+            "titleBar.activeForeground": "#EFFEF4",
+            "titleBar.inactiveBackground": "#043515",
+            "titleBar.inactiveForeground": "#F0FEF5",
+            "statusBar.background": "#043515",
+            "statusBar.foreground": "#F0FEF5",
+            "statusBar.debuggingBackground": "#043515",
+            "statusBar.debuggingForeground": "#F0FEF5",
+            "statusBar.noFolderBackground": "#043515",
+            "statusBar.noFolderForeground": "#F0FEF5"
         },
         "cmake.automaticReconfigure": false,
         "cmake.configureOnOpen": false,
-        "dotnet.defaultSolution": "disable"
+        "dotnet.defaultSolution": "disable",
+        "stm32cube-ide-build-cmake.intellisense.enableAutomaticConfiguration": false,
+        "cmake.buildBeforeRun": false
     }
 }

@@ -14,6 +14,8 @@
 #        include <debug_helper_disable.h>
 #    endif
 
+#define BME680_STATE_NVS_KEY "bme680_gas_bl"
+
 Sensor_BME680::Sensor_BME680(const String &name, uint8_t address, TwoWire &wire) :
     MQTT::Sensor(MQTT::SensorType::BME680),
     _name(name),
@@ -69,7 +71,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME680::getAutoDiscovery(FormatType format
         if (discovery->create(this, _getId(F("gas")), format)) {
             discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
             discovery->addValueTemplate(F("gas"));
-            discovery->addDeviceClass(F("volatile_organic_compounds"), F("ppm"));
+            discovery->addDeviceClass(F("volatile_organic_compounds_parts"), F("ppm"));
             discovery->addName(F("VOC Gas"));
             discovery->addObjectId(baseTopic + F("bme680_gas"));
         }
@@ -173,6 +175,21 @@ void Sensor_BME680::publishState()
     void Sensor_BME680::setup()
     {
         _readConfig();
+        #if defined(BME680_STATE_NVS_KEY)
+            auto err = config._nvs_open(false);
+            if (err == ESP_OK) {
+                size_t size = sizeof(_gasBaseline);
+                err = config._nvs_get_blob(BME680_STATE_NVS_KEY, &_gasBaseline, &size);
+                config._nvs_close();
+            }
+            if (err != ESP_OK) {
+                _gasBaseline = NAN;
+                __LDBG_printf("cannot read '%s' err=%x", PSTR(BME680_STATE_NVS_KEY), err);
+            }
+        #else
+            _gasBaseline = NAN;
+        #endif
+
         if (!_bme680.begin(_address)) {
             return;
         }
@@ -197,27 +214,44 @@ void Sensor_BME680::publishState()
             return _sensor;
         }
 
-        // Air Quality Approximation
-        float baselineResistance = 50000;  // Initial baseline gas resistance (Ohms)
-        float baselineCO2 = 400;           // Start assuming fresh air at 400 ppm
-        float alpha = 0.02;                // Smoothing factor for baseline adaptation
+        __LDBG_printf("Temperature %.2fC, Humidity %.2f%%, Pressure %u, Gas %u (%.2f)",
+            _bme680.temperature,
+            _bme680.humidity,
+            _bme680.pressure,
+            _bme680.gas_resistance,
+            _gasBaseline
+        );
 
-        float gasResistance = _bme680.gas_resistance;  // Read gas resistance (Ω)
-
-        // Adapt baseline over time (slowly adjust to stable air conditions)
-        baselineResistance = baselineResistance * (1 - alpha) + gasResistance * alpha;
-
-        // Normalize gas resistance relative to baseline
-        float resistanceRatio = baselineResistance / gasResistance;
-
-        // Approximate VOC Index (0-500 scale)
-        float vocIndex = constrain(100 * (resistanceRatio - 1), 0, 500);
-
-        // Estimate CO2 (ppm) using an exponential relationship
-        float estimatedCO2 = baselineCO2 * exp(vocIndex / 100.0); // Exponential scaling
-
-        if (estimatedCO2 >= 10000) { // limit value, 10000 ppm is deadly within minutes anyway
+        float estimatedCO2;
+        const float gasResistance = _bme680.gas_resistance;
+        if (!isfinite(gasResistance) || gasResistance <= 0) {
             estimatedCO2 = NAN;
+            __LDBG_printf("invalid gas resistance: %.2f", gasResistance);
+        }
+        else {
+            constexpr float baselineAdaptation = 0.02f;
+            constexpr float initialGasBaseline = 50000.0f;
+            constexpr float maximumEstimatedCO2 = 10000.0f;
+            if (!isfinite(_gasBaseline) || _gasBaseline <= 0 || _gasBaseline == NAN) {
+                _gasBaseline = initialGasBaseline;
+            } else {
+                _gasBaseline = _gasBaseline * (1.0f - baselineAdaptation) + gasResistance * baselineAdaptation;
+                #if defined(BME680_STATE_NVS_KEY)
+                    auto err = config._nvs_open(true);
+                    if (err == ESP_OK) {
+                        err = config._nvs_set_blob(BME680_STATE_NVS_KEY, &_gasBaseline, sizeof(_gasBaseline));
+                        config._nvs_close();
+                    }
+                    if (err != ESP_OK) {
+                        __LDBG_printf("cannot write '%s' err=%x", PSTR(BME680_STATE_NVS_KEY), err);
+                    }
+                #endif
+            }
+            const float resistanceRatio = std::clamp<float>(_gasBaseline / gasResistance, 0.01f, 25.0f);
+            estimatedCO2 = std::clamp<float>(400.0f * pow(resistanceRatio, 0.7f), 250.0f, maximumEstimatedCO2);
+            if (estimatedCO2 <= 250) { // calibration in progress, that might take a couple minutes/hours initially
+                estimatedCO2 = NAN;
+            }
         }
 
         _sensor = SensorDataType(

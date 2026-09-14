@@ -81,6 +81,7 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
             discovery->addStateTopic(MQTT::Client::formatTopic(F("power")));
             discovery->addUnitOfMeasurement(String('W'));
             discovery->addDeviceClass(F("power"));
+            discovery->addStateClass(F("measurement"));
             discovery->addName(F("Estimated Power"));
             discovery->addObjectId(baseTopic + F("Estimated Power"));
         }

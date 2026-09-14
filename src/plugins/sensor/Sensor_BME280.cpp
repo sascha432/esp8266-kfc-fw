@@ -41,6 +41,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addValueTemplate(FSPGM(temperature));
                 discovery->addDeviceClass(F("temperature"), FSPGM(UTF8_degreeC));
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Temperature"));
                 discovery->addObjectId(baseTopic + F("bme280_temperature"));
             }
@@ -50,6 +51,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addValueTemplate(FSPGM(humidity));
                 discovery->addDeviceClass(F("humidity"), '%');
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Humidity"));
                 discovery->addObjectId(baseTopic + F("bme280_humidity"));
             }
@@ -59,6 +61,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_BME280::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addValueTemplate(FSPGM(pressure));
                 discovery->addDeviceClass(F("pressure"), FSPGM(hPa, "hPa"));
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Pressure"));
                 discovery->addObjectId(baseTopic + F("bme280_pressure"));
             }

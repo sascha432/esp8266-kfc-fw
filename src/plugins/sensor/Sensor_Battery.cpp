@@ -99,6 +99,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_Battery::getAutoDiscovery(FormatType forma
             if (discovery->create(this, _getId(TopicType::VOLTAGE), format)) {
                 discovery->addStateTopic(_getTopic(TopicType::VOLTAGE));
                 discovery->addDeviceClass(F("voltage"), 'V');
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(_name);
                 discovery->addObjectId(baseTopic + MQTT::Client::filterString(_name, true));
             }

@@ -52,6 +52,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addValueTemplate(F("eCO2"));
                 discovery->addDeviceClass(F("carbon_dioxide"), F("ppm"));
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("eCO2"));
                 discovery->addObjectId(baseTopic + F("eco2"));
             }
@@ -61,6 +62,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addValueTemplate(F("TVOC"));
                 discovery->addDeviceClass(F("volatile_organic_compounds"), F("ppb"));
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("TVOC"));
                 discovery->addObjectId(baseTopic + F("tvoc"));
             }

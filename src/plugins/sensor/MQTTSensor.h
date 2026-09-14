@@ -43,7 +43,6 @@ class Sensor_HLW8012;
 class Sensor_HLW8032;
 class Sensor_DS3231;
 class Sensor_INA219;
-class Sensor_DHTxx;
 class Sensor_DimmerMetrics;
 class Sensor_Motion;
 class Sensor_SystemMetrics;
@@ -62,7 +61,6 @@ namespace MQTT {
         BATTERY,
         DS3231,
         INA219,
-        DHTxx,
         DIMMER_METRICS,
         MOTION,
         AMBIENT_LIGHT,
@@ -82,12 +80,10 @@ namespace MQTT {
                                     (_SensorType == SensorType::BATTERY), Sensor_Battery, std::conditional_t<
                                         (_SensorType == SensorType::DS3231), Sensor_DS3231, std::conditional_t<
                                             (_SensorType == SensorType::INA219), Sensor_INA219, std::conditional_t<
-                                                (_SensorType == SensorType::DHTxx), Sensor_DHTxx, std::conditional_t<
-                                                    (_SensorType == SensorType::DIMMER_METRICS), Sensor_DimmerMetrics, std::conditional_t<
-                                                        (_SensorType == SensorType::MOTION), Sensor_Motion, std::conditional_t<
-                                                            (_SensorType == SensorType::AMBIENT_LIGHT), Sensor_AmbientLight, std::conditional_t<
-                                                                (_SensorType == SensorType::SYSTEM_METRICS), Sensor_SystemMetrics, nullptr_t
-                                                            >
+                                                (_SensorType == SensorType::DIMMER_METRICS), Sensor_DimmerMetrics, std::conditional_t<
+                                                    (_SensorType == SensorType::MOTION), Sensor_Motion, std::conditional_t<
+                                                        (_SensorType == SensorType::AMBIENT_LIGHT), Sensor_AmbientLight, std::conditional_t<
+                                                            (_SensorType == SensorType::SYSTEM_METRICS), Sensor_SystemMetrics, nullptr_t
                                                         >
                                                     >
                                                 >

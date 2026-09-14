@@ -279,6 +279,11 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_device_class), deviceClass);
             }
 
+            template<typename _Ta>
+            void addStateClass(_Ta stateClass) {
+                addParameter(FSPGM(mqtt_state_class), stateClass);
+            }
+
             void addSubType(const String &subType) {
                 addParameter(FSPGM(mqtt_subtype), subType);
             }

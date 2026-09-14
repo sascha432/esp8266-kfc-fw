@@ -59,6 +59,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
             if (discovery->create(this, _getId(SensorInputType::VOLTAGE), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::VOLTAGE)));
                 discovery->addDeviceClass(F("voltage"),'V');
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Voltage"));
                 discovery->addObjectId(baseTopic + F("voltage"));
             }
@@ -67,6 +68,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
             if (discovery->create(this, _getId(SensorInputType::CURRENT), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::CURRENT)));
                 discovery->addDeviceClass(F("current"), _getCurrentUnit());
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Current"));
                 discovery->addObjectId(baseTopic + F("current"));
             }
@@ -75,6 +77,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
             if (discovery->create(this, _getId(SensorInputType::POWER), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::POWER)));
                 discovery->addDeviceClass(F("power"), _getPowerUnit());
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Power"));
                 discovery->addObjectId(baseTopic + F("power"));
             }
@@ -83,6 +86,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
             if (discovery->create(this, _getId(SensorInputType::PEAK_CURRENT), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_CURRENT)));
                 discovery->addDeviceClass(F("current"), _getCurrentUnit());
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Peak Current"));
                 discovery->addObjectId(baseTopic + F("peak_current"));
             }
@@ -91,6 +95,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_INA219::getAutoDiscovery(FormatType format
             if (discovery->create(this, _getId(SensorInputType::PEAK_POWER), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId(SensorInputType::PEAK_POWER)));
                 discovery->addDeviceClass(F("power"), _getPowerUnit());
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Peak Power"));
                 discovery->addObjectId(baseTopic + F("peak_power"));
             }

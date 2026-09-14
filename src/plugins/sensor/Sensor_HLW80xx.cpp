@@ -61,6 +61,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addStateTopic(topic);
                 discovery->addValueTemplate(FSPGM(power));
                 discovery->addDeviceClass(F("power"), 'W');
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Power"));
                 discovery->addObjectId(baseTopic + F("power"));
             }
@@ -70,6 +71,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addStateTopic(topic);
                 discovery->addValueTemplate(FSPGM(energy_total));
                 discovery->addDeviceClass(F("energy"), FSPGM(kWh));
+                discovery->addStateClass(F("total"));
                 discovery->addName(F("Energy Total"));
                 discovery->addObjectId(baseTopic + F("energy_total"));
             }
@@ -79,6 +81,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addStateTopic(topic);
                 discovery->addValueTemplate(FSPGM(energy));
                 discovery->addDeviceClass(F("energy"), FSPGM(kWh));
+                discovery->addStateClass(F("total"));
                 discovery->addName(F("Energy"));
                 discovery->addObjectId(baseTopic + F("energy"));
             }
@@ -88,6 +91,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addStateTopic(topic);
                 discovery->addValueTemplate(FSPGM(voltage));
                 discovery->addDeviceClass(F("voltage"), 'V');
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Voltage"));
                 discovery->addObjectId(baseTopic + F("voltage"));
             }
@@ -97,6 +101,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addStateTopic(topic);
                 discovery->addValueTemplate(FSPGM(current));
                 discovery->addDeviceClass(F("current"), 'A');
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Current"));
                 discovery->addObjectId(baseTopic + F("current"));
             }
@@ -106,6 +111,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType
                 discovery->addStateTopic(topic);
                 discovery->addValueTemplate(FSPGM(pf));
                 discovery->addDeviceClass(F("power_factor"));
+                discovery->addStateClass(F("measurement"));
                 discovery->addName(F("Power Factor"));
                 discovery->addObjectId(baseTopic + F("power_factor"));
             }

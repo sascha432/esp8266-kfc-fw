@@ -155,9 +155,6 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
         #if IOT_SENSOR_HAVE_INA219
             addSensor<Sensor_INA219>(F(IOT_SENSOR_NAMES_INA219), IOT_SENSOR_HAVE_INA219);
         #endif
-        #if IOT_SENSOR_HAVE_DHTxx
-            addSensor<Sensor_DHTxx>(F(IOT_SENSOR_NAMES_DHTxx), IOT_SENSOR_HAVE_DHTxx_PIN);
-        #endif
         #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
             addSensor<Sensor_AmbientLight>(F(IOT_SENSOR_NAMES_AMBIENT_LIGHT_SENSOR), 0);
         #endif

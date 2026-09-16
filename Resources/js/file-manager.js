@@ -74,12 +74,12 @@
 
                 var html = '<li class="mr-4"><a href="#" id="refresh_files" class="dir"><span class="oi oi-reload" title="Reload" aria-hidden="true"></span></a></li>';
                 html += '<li class="mr-4"><a href="#" id="show_hidden_files"><span class="oi oi-eye" title="Show hidden files" aria-hidden="true"></span></a></li>';
-                $('#total_size').html(data.total);
-                $('#total_size').attr('title', data.total_b);
-                $('#used_space').html(data.used + " (" + data.usage + ")");
-                $('#used_space').attr('title', data.used_b);
-                currentDirectory = data.dir;
-                var parts = split_dir(data.dir);
+                $('#total_size').html(data.t);
+                $('#total_size').attr('title', data.T);
+                $('#used_space').html(data.u + " (" + data.p + ")");
+                $('#used_space').attr('title', data.U);
+                currentDirectory = data.d;
+                var parts = split_dir(data.d);
                 var dir = '';
                 for (var i = 0; i < parts.length; i++) {
                     if (i > 1) {
@@ -106,7 +106,7 @@
                     html += replace_vars(dirs_prototype, 0, encodeURI(dir), "", "..", "N/A");
                 }
 
-                data.files.sort(function(a, b) {
+                data.f.sort(function(a, b) {
                     if (a.f < b.f) {
                         return -1;
                     } else if (a.f > b.f) {
@@ -116,9 +116,9 @@
                 });
 
                 var files_html = '';
-                for (var i = 0; i < data.files.length; i++) {
-                    var t = data.files[i];
-                    if (data.files[i].d) {
+                for (var i = 0; i < data.f.length; i++) {
+                    var t = data.f[i];
+                    if (t.d) {
                         html += replace_vars(t.m ? dirs_ro_prototype : dirs_prototype, t.m, t.f, t.f, t.n, t.t ? t.t : "N/A")
                     } else {
                         files_html += replace_vars(t.m ? files_ro_prototype : files_prototype, t.m, t.f, t.f, t.n, t.t ? t.t : "N/A", t.s)

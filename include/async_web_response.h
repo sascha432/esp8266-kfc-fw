@@ -108,19 +108,6 @@ private:
     GFXCanvas::BitmapFileHeaderType _header;
 };
 
-// class AsyncBufferResponse : public AsyncBaseResponse {
-// public:
-//     AsyncBufferResponse(const String &contentType, Buffer *buffer, AwsTemplateProcessor templateCallback = nullptr);
-//     virtual ~AsyncBufferResponse();
-
-//     virtual bool _sourceValid() const override;
-//     virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) override;
-
-// private:
-//     Buffer *_content;
-//     size_t _position;
-// };
-
 class AsyncDirResponse : public AsyncBaseResponse {
 public:
     enum class StateType : uint8_t {
@@ -165,7 +152,7 @@ public:
     static void setLocked(bool locked = true);
 
 private:
-    uint16_t _strcpy_P_safe(char *&dst, PGM_P str, int16_t &space);
+    int32_t _strcpy_P_safe(char *&dst, PGM_P str, int32_t &space);
 
     uint8_t _position;
     bool _hidden;

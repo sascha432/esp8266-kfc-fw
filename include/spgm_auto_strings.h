@@ -554,6 +554,7 @@ PROGMEM_STRING_DECL(mth);
 PROGMEM_STRING_DECL(wk);
 PROGMEM_STRING_DECL(ms);
 PROGMEM_STRING_DECL(hr);
+PROGMEM_STRING_DECL(hex_chars);
 
 #ifdef __cplusplus
 } // extern "C"

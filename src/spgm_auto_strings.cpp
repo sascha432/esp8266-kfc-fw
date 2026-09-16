@@ -1,5 +1,6 @@
 // AUTO GENERATED FILE - DO NOT MODIFY
 #include "spgm_auto_strings.h"
+PROGMEM_STRING_DEF(hex_chars, "0123456789ABCDEF");
 PROGMEM_STRING_DEF(login_failure_file, "/.pvt/login_failures");
 PROGMEM_STRING_DEF(mime_application_json, "application/json");
 PROGMEM_STRING_DEF(mime_text_html, "text/html");

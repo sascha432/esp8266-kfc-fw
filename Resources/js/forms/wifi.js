@@ -51,7 +51,7 @@ $(function () {
             function check_scan() {
                 $.get('/scan-wifi?SID=' + SID + '&id=' + random_str(), function (data) {
                     // console.log(data);
-                    if (data.pending) {
+                    if (data.p) {
                         window.setTimeout(check_scan, 1000);
                     } else {
                         var header = '<table class=\"table table-striped\"><thead class=\"thead-light\"><tr><th>SSID</th><th>Channel</th><th>Signal</th><th>MAC</th><th>Encryption</th></tr></thead><tbody>';
@@ -68,29 +68,29 @@ $(function () {
                             auto_reload();
                         });
                         var html = header;
-                        if (data.msg) {
-                            html += '<tr scope="row"><td colspan="99" class="text-center">' + data.msg + '</td></tr>';
+                        if (data.m) {
+                            html += '<tr scope="row"><td colspan="99" class="text-center">' + data.m + '</td></tr>';
                         } else {
-                            data.result.sort(function (a, b) {
-                                return b.rssi - a.rssi;
+                            data.r.sort(function (a, b) {
+                                return b.r - a.r;
                             });
-                            for (var i = 0; i < data.result.length; i++) {
-                                var r = data.result[i];
-                                html += '<tr scope="row" class="' + r.tr_class + '">';
-                                if (r.td_class) {
-                                    html += '<td class="' + r.td_class + '">';
+                            for (var i = 0; i < data.r.length; i++) {
+                                var r = data.r[i];
+                                html += '<tr scope="row" class="' + r.t + '">';
+                                if (r.d) {
+                                    html += '<td class="' + r.d + '">';
                                 } else {
                                     html += '<td>';
                                 }
-                                html += r.ssid;
+                                html += r.s;
                                 html += "</td><td>";
-                                html += r.channel;
+                                html += r.c;
                                 html += "</td><td>";
-                                html += r.rssi;
+                                html += r.r;
                                 html += "</td><td>";
-                                html += r.bssid;
+                                html += r.b;
                                 html += "</td><td>";
-                                html += r.encryption;
+                                html += r.e;
                                 html += "</td></tr>";
                             }
                         }

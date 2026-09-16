@@ -5,6 +5,7 @@
 #include "async_web_response.h"
 #include <PrintHtmlEntitiesString.h>
 #include <MicrosTimer.h>
+#include <misc.h>
 #include "fs_mapping.h"
 #include "web_server.h"
 #include "stl_ext/algorithm.h"
@@ -122,14 +123,14 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
             if ((readLen = _fillBuffer(buf + headLen, outLen - 8)) == RESPONSE_TRY_AGAIN) {
                 return 0;
             }
-            auto header = PrintString(F("%x\r\n"), readLen);
-            buf -= header.length();
-            memcpy(buf + headLen, header.c_str(), header.length());
-
-            outLen = readLen + headLen + header.length();
+            char headBuf[16];
+            size_t headLength;
+            headLength = snprintf_P(headBuf, sizeof(headBuf), PSTR("%x\r\n"), readLen);
+            buf -= headLength;
+            memcpy(buf + headLen, headBuf, headLength);
+            outLen = readLen + headLen + headLength;
             buf[outLen++] = '\r';
             buf[outLen++] = '\n';
-
         } else {
             if ((readLen = _fillBuffer(buf + headLen, outLen)) == RESPONSE_TRY_AGAIN) {
                 return 0;
@@ -214,12 +215,7 @@ size_t AsyncDirResponse::_sendBufferPartially(uint8_t *data, uint8_t *dataPtr, s
     if (fill) {
         memcpy(dataPtr, _buffer.c_str(), fill);
         dataPtr += fill;
-        if (fill == _buffer.length()) {
-            _buffer = PrintString();
-        }
-        else {
-            _buffer.remove(0, fill);
-        }
+        _buffer.remove(0, fill); // does not change capacity
     }
 
     __LDBG_IF(
@@ -245,7 +241,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 
         // we have more space available in the data buffer
         memcpy(data, _buffer.c_str(), bufferLen);
-        _buffer = PrintString();
+        _buffer.remove(0, bufferLen); // does not change capacity
         dataPtr += bufferLen;
         space -= bufferLen;
         __LDBG_printf("state=%u capacity=%u space=%u", _state, len, space);
@@ -255,13 +251,18 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
         FSInfo info;
         KFCFS.info(info);
 
+        char bufTotalBytes[16];
+        char bufUsedBytes[16];
+        formatBytes(bufTotalBytes, sizeof(bufTotalBytes), info.totalBytes);
+        formatBytes(bufUsedBytes, sizeof(bufUsedBytes), info.usedBytes);
+
         // if (String_endsWith(_dirName, '/')) {
         //     _dirName.remove(_dirName.length() - 1, 1);
         // }
 
-        _buffer.printf_P(PSTR("{\"total\":\"%s\",\"total_b\":%d,\"used\":\"%s\",\"used_b\":%d,\"usage\":\"%.2f%%\",\"dir\":\"%s\",\"files\":["),
-            formatBytes(info.totalBytes).c_str(), info.totalBytes,
-            formatBytes(info.usedBytes).c_str(), info.usedBytes,
+        _buffer.printf_P(PSTR("{\"t\":\"%s\",\"T\":%d,\"u\":\"%s\",\"U\":%d,\"p\":\"%.2f%%\",\"d\":\"%s\",\"f\":["),
+            bufTotalBytes, info.totalBytes,
+            bufUsedBytes, info.usedBytes,
             (info.usedBytes * 100) / static_cast<float>(info.totalBytes),
             _dirName.c_str()
         );
@@ -282,30 +283,40 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
     }
 
     if (_state == StateType::READ_DIR) {
-        __LDBG_IF(auto maxDirs = 0xff);
         auto tmp_dir = sys_get_temp_dir();
         while (_next) {
-            String path = _dir.fileName();
-            String name = path.substring(_dirName.length());
-            String location = urlEncode(path);
-            __LDBG_printf("dir=%s dir=%u file=%u name=%s", path.c_str(), _dir.isDirectory(), _dir.isFile(), name.c_str());
+            const String &path = _dir.fileName();
+            const char *name = path.c_str() + _dirName.length();
+            __LDBG_printf("dir=%s dir=%u file=%u name=%s", path.c_str(), _dir.isDirectory(), _dir.isFile(), name);
+
+            size_t nameLength = path.length() - _dirName.length();
+            if (nameLength && name[nameLength - 1] == '/') {
+                nameLength--;
+            }
 
             if (_dir.isDirectory()) {
-                remove_trailing_slash(name);
-                remove_trailing_slash(location);
+                size_t pathLength = path.length();
+                if (pathLength && name[pathLength - 1] == '/') {
+                    pathLength--;
+                }
 
-                _buffer.printf_P(PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"m\":%d,\"d\":1"),
-                    location.c_str(),
-                    name.c_str(),
+                _buffer.print(F("{\"f\":\""));
+                appendUrlEncoded(_buffer, path.c_str(), pathLength);
+                _buffer.printf_P(PSTR("\",\"n\":\"%*.*s\",\"m\":%d,\"d\":1"),
+                    nameLength, nameLength, name,
                     path.startsWith(tmp_dir) ? PathType::TMP_DIR : (_dir.isMapping() ? PathType::MAPPED_DIR : PathType::DIR)
                 );
             }
             else if (_dir.isFile()) {
 
-                _buffer.printf_P(PSTR("{\"f\":\"%s\",\"n\":\"%s\",\"s\":\"%s\",\"sb\":%d,\"m\":%d,\"d\":0"),
-                    location.c_str(),
-                    name.c_str(),
-                    formatBytes(_dir.fileSize()).c_str(),
+                char buf[16];
+                formatBytes(buf, sizeof(buf), _dir.fileSize());
+
+                _buffer.print(F("{\"f\":\""));
+                appendUrlEncoded(_buffer, path.c_str(), path.length());
+                _buffer.printf_P(PSTR("\",\"n\":\"%*.*s\",\"s\":\"%s\",\"b\":%d,\"m\":%d,\"d\":0"),
+                    nameLength, nameLength, name,
+                    buf,
                     _dir.fileSize(),
                     _dir.isMapping() ? PathType::MAPPED_FILE : PathType::FILE
                 );
@@ -327,13 +338,6 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
                 __LDBG_printf("set state=%u", _state);
                 _buffer.print(F("}]}"));
             }
-
-            __LDBG_IF(
-                // limit to avoid wdt triggering
-                if (--maxDirs == 0) {
-                    break;
-                }
-            );
 
             size_t bufferLen = _buffer.length();
             if (bufferLen >= space) {
@@ -385,16 +389,17 @@ bool AsyncNetworkScanResponse::_sourceValid() const
     return true;
 }
 
-uint16_t AsyncNetworkScanResponse::_strcpy_P_safe(char *&dst, PGM_P str, int16_t &space)
+int32_t AsyncNetworkScanResponse::_strcpy_P_safe(char *&dst, PGM_P str, int32_t &space)
 {
-    if (space <= 1) {
+    const int32_t length = static_cast<int32_t>(strlen_P(str));
+    if (length >= space) {
         return 0;
     }
-    strncpy_P(dst, str, space - 1)[space - 1] = 0;
-    uint16_t copied = strlen(dst);
-    space -= copied;
-    dst += copied;
-    return copied;
+    memcpy_P(dst, str, length);
+    dst[length] = 0;
+    space -= length;
+    dst += length;
+    return length;
 }
 
 size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
@@ -410,82 +415,125 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             WiFi.scanNetworks(true, _hidden);
         }
         _position = -1;
+        setLocked(false);
         __LDBG_printf("Scan running");
-        int16_t space = (int16_t)len;
+        auto space = static_cast<int32_t>(len);
         auto dst = reinterpret_cast<char *>(data);
-        return _strcpy_P_safe(dst, PSTR("{\"pending\":true,\"msg\":\"Network scan still running\"}"), space);
+        return _strcpy_P_safe(dst, PSTR("{\"p\":true,\"m\":\"Network scan still running\"}"), space);
     }
     else if (n == 0) {
         _position = -1;
         __LDBG_printf("No networks in range");
-        int16_t space = (int16_t)len;
+        auto space = static_cast<int32_t>(len);
         auto dst = reinterpret_cast<char *>(data);
-        return _strcpy_P_safe(dst, PSTR("{\"msg\":\"No WiFi networks in range\"}"), space);
+        setLocked(false);
+        return _strcpy_P_safe(dst, PSTR("{\"m\":\"No WiFi networks in range\"}"), space);
     }
     else {
         if (_position >= n) {
             __LDBG_printf("AsyncNetworkScanResponse %d >= %d, EOF", (int)_position, (int)n);
             return 0;
         }
+        if (len < 2) {
+            return 0;
+        }
         auto ptr = reinterpret_cast<char *>(data);
         auto sptr = ptr;
-        int16_t space = len - 2; // reserve 2 bytes
-        if (_position == 0) {
-            _strcpy_P_safe(ptr, PSTR("{\"result\":["), space);
-        }
-        uint16_t l;
+        size_t space = len - 2; // reserve 2 bytes
+        bool writePrefix = _position == 0;
         while (_position < n && space > 0) {
-            _strcpy_P_safe(ptr, PSTR("{\"tr_class\":\""), space);
-            if (WiFi_isHidden(_position)) {
-                _strcpy_P_safe(ptr, PSTR("table-secondary"), space);
-            }
-            else {
-                _strcpy_P_safe(ptr, PSTR("has-network-name\",\"td_class\":\"network-name"), space);
-            }
-            _strcpy_P_safe(ptr, PSTR("\",\"ssid\":\""), space);
-            if (WiFi_isHidden(_position)) {
-                _strcpy_P_safe(ptr, PSTR("<i>HIDDEN</i>"), space);
-            }
-            else {
-                String tmp = WiFi.SSID(_position);
-                tmp.replace(String('"'), F("\\\""));
-                if (static_cast<int16_t>(tmp.length()) >= space) {
-                    break;
+            bool hidden = WiFi_isHidden(_position);
+            String ssid = hidden ? String() : WiFi.SSID(_position);
+            const char *ssidText = hidden ? "<i>HIDDEN</i>" : ssid.c_str();
+            size_t ssidLength = strlen(ssidText);
+            size_t escapedLength = ssidLength;
+            if (!hidden) {
+                for (size_t i = 0; i < ssidLength; ++i) {
+                    uint8_t ch = static_cast<uint8_t>(ssidText[i]);
+                    if (ch == '"' || ch == '\\' || ch < 0x20) {
+                        escapedLength += ch < 0x20 ? 5 : 1;
+                    }
                 }
-                strcpy(ptr, tmp.c_str());
-                ptr += tmp.length();
-                space -= tmp.length();
             }
-            if ((l = snprintf_P(ptr, space, PSTR("\",\"channel\":%d,\"rssi\":%d,\"bssid\":\"%s\",\"encryption\":\"%s\"},"),
-                    WiFi.channel(_position),
-                    WiFi.RSSI(_position),
-                    WiFi.BSSIDstr(_position).c_str(),
-                    KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position))
-                )) >= space)
-            {
-                space = 0;
+
+            char tail[96];
+            const uint8_t *bssid = WiFi.BSSID(_position);
+            if (!bssid) {
                 break;
             }
-            ptr += l;
-            space -= l;
-            sptr = ptr;
-            _position++;
-        }
-        if (_position >= n) {
-            if (sptr != reinterpret_cast<char *>(data)) { // any data copied?
-                sptr--;
-                if (*sptr != ',') { // trailing comma?
-                    sptr++;
+            int tailLength = snprintf_P(tail, sizeof(tail), PSTR("\",\"c\":%d,\"r\":%d,\"b\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"e\":\""),
+                WiFi.channel(_position),
+                WiFi.RSSI(_position),
+                bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]
+            );
+            PGM_P encryption = reinterpret_cast<PGM_P>(KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position)));
+            size_t prefixLength = hidden ? sizeof("{\"t\":\"table-secondary\",\"s\":\"") - 1 : sizeof("{\"t\":\"has-network-name\",\"d\":\"network-name\",\"s\":\"") - 1;
+            size_t encryptionLength = strlen_P(encryption);
+            if (tailLength < 0) {
+                break;
+            }
+            size_t itemLength = (writePrefix ? 7 : 0) + prefixLength + escapedLength + static_cast<size_t>(tailLength) + encryptionLength + 3;
+            if (static_cast<size_t>(tailLength) + 3 > sizeof(tail) || itemLength > space) {
+                break;
+            }
+
+            if (writePrefix) {
+                memcpy_P(ptr, PSTR("{\"r\":["), 7);
+                ptr += 7;
+            }
+            if (hidden) {
+                memcpy_P(ptr, PSTR("{\"t\":\"table-secondary\",\"s\":\""), prefixLength);
+            }
+            else {
+                memcpy_P(ptr, PSTR("{\"t\":\"has-network-name\",\"d\":\"network-name\",\"s\":\""), prefixLength);
+            }
+            ptr += prefixLength;
+            if (hidden) {
+                memcpy(ptr, ssidText, ssidLength);
+                ptr += ssidLength;
+            }
+            else {
+                for (size_t i = 0; i < ssidLength; ++i) {
+                    uint8_t ch = static_cast<uint8_t>(ssidText[i]);
+                    if (ch == '"' || ch == '\\') {
+                        *ptr++ = '\\';
+                    }
+                    if (ch < 0x20) {
+                        *ptr++ = '\\';
+                        *ptr++ = 'u';
+                        *ptr++ = '0';
+                        *ptr++ = '0';
+                        *ptr++ = pgm_read_byte(SPGM(hex_chars) + (ch >> 4));
+                        *ptr++ = pgm_read_byte(SPGM(hex_chars) + (ch & 0x0f));
+                    }
+                    else {
+                        *ptr++ = ch;
+                    }
                 }
             }
-             if (space >= 0) { // 2 byte have been reserved
-                *sptr++ = ']';
-                *sptr++ = '}';
-             }
+            memcpy(ptr, tail, tailLength);
+            ptr += tailLength;
+            memcpy_P(ptr, encryption, encryptionLength);
+            ptr += encryptionLength;
+            memcpy_P(ptr, PSTR("\"},"), 4);
+            ptr += 4;
+            space -= itemLength;
+            sptr = ptr;
+            _position++;
+            writePrefix = false;
+        }
+        if (_position >= n) {
+            if (sptr > reinterpret_cast<char *>(data) && sptr[-1] == ',') {
+                --sptr;
+            }
+            *sptr++ = ']';
+            *sptr++ = '}';
             _done = true;
             _position = -1;
         }
         else if (_position == 0) {  // not enough space in the buffer for the first entry, abort response
+            _done = true;
+            setLocked(false);
             _position = -1;
         }
         // int ll = (sptr - (char *)data);
@@ -503,38 +551,6 @@ void AsyncNetworkScanResponse::setLocked(bool locked)
 {
     _locked = locked;
 }
-
-// AsyncBufferResponse::AsyncBufferResponse(const String & contentType, Buffer * buffer, AwsTemplateProcessor templateCallback) : AsyncBaseResponse(false)
-// {
-//     _code = 200;
-//     _position = 0;
-//     _content = buffer;
-//     _contentLength = buffer->length();
-//     _sendContentLength = true;
-//     _chunked = false;
-// }
-
-// AsyncBufferResponse::~AsyncBufferResponse()
-// {
-//     delete _content;
-// }
-
-// bool AsyncBufferResponse::_sourceValid() const
-// {
-//     return (bool)_content->length();
-// }
-
-// size_t AsyncBufferResponse::_fillBuffer(uint8_t * buf, size_t maxLen)
-// {
-//     size_t send = _content->length() - _position;
-//     if (send > maxLen) {
-//         send = maxLen;
-//     }
-//     memcpy(buf, &_content->getConstChar()[_position], send);
-//     // debug_printf("%u %u %d\n", _position, send, maxLen);
-//     _position += send;
-//     return send;
-// }
 
 
 AsyncTemplateResponse::AsyncTemplateResponse(const String &contentType, const File &file, WebTemplate *webTemplate, TemplateDataProvider::ResolveCallback callback) :

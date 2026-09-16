@@ -123,3 +123,123 @@ Result keys:
 
 The key `r` means the result array at the envelope level and RSSI inside a
 result item. The response may split JSON objects across HTTP chunks.
+
+## Crash log
+
+`GET /savecrash.json` exposes the saved crash logs on ESP8266 builds. The
+endpoint requires authentication and returns JSON in three modes:
+
+- `GET /savecrash.json` lists all saved crash traces.
+- `GET /savecrash.json?id=<hex-id>` returns a single crash trace by id.
+- `GET /savecrash.json?cmd=clear` clears the saved crash log storage.
+
+List response:
+
+```json
+{
+	"items": [
+		{
+			"id": "00000001",
+			"ts": "2026-09-16 12:34",
+			"t": 1726479246,
+			"r": "Exception",
+			"st": "...."
+		}
+	],
+	"info": "87% free 512.00 KB/589.82 KB 🚀"
+}
+```
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `items` | array | Saved crash entries. |
+| `info` | string | Storage usage summary, including free/total capacity. |
+
+Entry keys:
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | Crash entry id formatted as hexadecimal string, e.g. `"00000001"`. |
+| `ts` | string | Timestamp string from the crash log header. |
+| `t` | number | Unix timestamp stored with the crash entry. |
+| `r` | string | Decoded crash reason string. |
+| `st` | string | Captured stack trace / stack information. |
+
+Single trace response:
+
+```json
+{
+	"trace": "...."
+}
+```
+
+The `trace` value contains the full crash log text for the selected id. If the
+requested `id` does not exist, the server responds with HTTP 410.
+
+Clear response:
+
+```json
+{"result":"OK"}
+```
+
+## Configuration import/export
+
+`GET /export-settings` exports the current device configuration as a JSON file.
+`POST /import-settings` imports a previously exported configuration JSON. Both
+endpoints require authentication.
+
+### Export settings
+
+`GET /export-settings` returns the full configuration as JSON content with a
+`Content-Disposition` header to suggest a filename like
+`kfcfw_config_<hostname>_YYYYMMDD_HHMMSS.json`.
+
+Example payload:
+
+```json
+{
+	"firmware_version": "...",
+	"device": {
+		"name": "kfcfw"
+	},
+	"web_server": {
+		"enabled": true
+	}
+}
+```
+
+The exact schema depends on the current firmware configuration. The endpoint
+always returns the current configuration serialized to JSON and sets the
+response type to `application/json`.
+
+### Import settings
+
+`POST /import-settings` accepts a form field named `config` containing the
+serialized JSON config to import.
+
+Request example (form-encoded):
+
+```text
+config={"device":{"name":"kfcfw"},...}
+```
+
+Successful response:
+
+```json
+{"status":200,"count":12,"message":"Success"}
+```
+
+Failure response:
+
+```json
+{"status":400,"count":-1,"message":"Failed to parse JSON data"}
+```
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `status` | number | HTTP-like status code for the import operation. |
+| `count` | number | Number of imported config handles on success; `-1` otherwise. |
+| `message` | string | Success or parse failure message. |
+
+If the request method is not `POST` or the `config` field is missing, the
+server responds with HTTP 405.

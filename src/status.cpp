@@ -17,7 +17,7 @@
 #include <esp_interface.h>
 #endif
 
-void WiFi_get_address(Print &out)
+void WiFiStatus::getAddress(Print &out)
 {
     uint8_t mode = WiFi.getMode();
     if (mode & WIFI_STA) {
@@ -40,7 +40,9 @@ void WiFi_get_address(Print &out)
 }
 
 #if defined(ESP32)
-String WiFi_get_tx_power() {
+
+const __FlashStringHelper *WiFiStatus::getTxPowerStr()
+{
     switch(WiFi.getTxPower()) {
         case WIFI_POWER_19_5dBm: return F("19.5dBm");
         case WIFI_POWER_19dBm: return F("19dBm");
@@ -57,9 +59,10 @@ String WiFi_get_tx_power() {
     }
     return F("Unknown");
 }
+
 #endif
 
-void WiFi_get_status(Print &out)
+void WiFiStatus::getStatus(Print &out)
 {
     uint8_t mode = WiFi.getMode();
     if (mode & WIFI_STA) {
@@ -71,7 +74,9 @@ void WiFi_get_status(Print &out)
                 out.printf_P(PSTR("Connected, signal strength %d dBm, channel %u, mode %s"), WiFi.RSSI(), WiFi.channel(), KFCFWConfiguration::getWiFiPhyModeStr(wifi_get_phy_mode()));
                 wifi_country_t country;
                 if (wifi_get_country(&country)) {
-                    out.printf_P(PSTR(", country %.2s"), country.cc);
+                    out.print(F(", country "));
+                    out.print(country.cc[0]);
+                    out.print(country.cc[1]);
                 }
                 break;
             case STATION_NO_AP_FOUND:
@@ -94,13 +99,13 @@ void WiFi_get_status(Print &out)
                 break;
             }
 
-            auto network = KFCConfigurationClasses::Network::Settings::getConfig().stations[config.getWiFiConfigurationNum()];
+            const auto &network = KFCConfigurationClasses::Network::Settings::getConfig().stations[config.getWiFiConfigurationNum()];
             if (network.isDHCPEnabled()) {
                 out.print(F(HTML_S(br) "DHCP client running"));
             }
     #elif defined(ESP32)
             if (WiFi.isConnected()) {
-                out.printf_P(PSTR("Connected, signal strength %d dBm, channel %u, TX power %s"), WiFi.RSSI(), WiFi.channel(), WiFi_get_tx_power().c_str());
+                out.printf_P(PSTR("Connected, signal strength %d dBm, channel %u, TX power %s"), WiFi.RSSI(), WiFi.channel(), getTxPowerStr());
 
                 wifi_country_t country;
                 if (esp_wifi_get_country(&country) == ESP_OK) {
@@ -130,14 +135,20 @@ void WiFi_get_status(Print &out)
         #error Platform not supported
     #endif
 
-            out.printf_P(PSTR(HTML_S(br) "IP Address/Network %s / %s " HTML_S(br) "Gateway %s DNS %s, %s" HTML_S(br) "MAC Address "),
-                WiFi.localIP().toString().c_str(),
-                WiFi.subnetMask().toString().c_str(),
-                WiFi.gatewayIP().toString().c_str(),
-                WiFi.dnsIP().toString().c_str(),
-                WiFi.dnsIP(1).toString().c_str()
-            );
-            out.print(WiFi.macAddress());
+            out.print(F(HTML_S(br) "IP Address/Network "));
+            WiFi.localIP().printTo(out);
+            out.print(F(" / "));
+            WiFi.subnetMask().printTo(out);
+            out.print(F(HTML_S(br) "Gateway "));
+            WiFi.gatewayIP().printTo(out);
+            out.print(F(" DNS "));
+            WiFi.dnsIP().printTo(out);
+            out.print(F(", "));
+            WiFi.dnsIP(1).printTo(out);
+            out.print(F(HTML_S(br) "MAC Address "));
+            uint8_t mac[6];
+            WiFi.macAddress(mac);
+            printMacAddress(mac, out);
     }
 
     if (mode & WIFI_AP_STA) {
@@ -156,11 +167,13 @@ void WiFi_get_status(Print &out)
             "Clients connected %u out of %u" HTML_S(br)), WiFi.softAPgetStationNum(), config.max_connection);
 
         if (wifi_get_ip_info(SOFTAP_IF, &if_cfg)) {
-            out.printf_P(PSTR("IP Address/Network %s / %s" HTML_S(br) "Gateway %s" HTML_S(br)),
-                IPAddress(if_cfg.ip.addr).toString().c_str(),
-                IPAddress(if_cfg.netmask.addr).toString().c_str(),
-                IPAddress(if_cfg.gw.addr).toString().c_str()
-            );
+            out.print(F("IP Address/Network "));
+            IPAddress(if_cfg.ip.addr).printTo(out);
+            out.print(F(" / "));
+            IPAddress(if_cfg.netmask.addr).printTo(out);
+            out.print(F(HTML_S(br) "Gateway "));
+            IPAddress(if_cfg.gw.addr).printTo(out);
+            out.print(F(HTML_S(br)));
         }
 #if 1
         if (wifi_softap_dhcps_status() == DHCP_STOPPED) {
@@ -172,7 +185,10 @@ void WiFi_get_status(Print &out)
         else {
             dhcps_lease please;
             if (wifi_softap_get_dhcps_lease(&please)) {
-                out.printf_P(PSTR("DHCP server lease range %s - %s"), IPAddress(please.start_ip.addr).toString().c_str(), IPAddress(please.end_ip.addr).toString().c_str());
+                out.print(F("DHCP server lease range "));
+                IPAddress(please.start_ip.addr).printTo(out);
+                out.print(F(" - "));
+                IPAddress(please.end_ip.addr).printTo(out);
             }
         }
 
@@ -255,7 +271,7 @@ void WiFi_get_status(Print &out)
                     out.print(F("N/A"));
                 }
                 out.print(F(HTML_E(span) HTML_S(span style\5\4width: 170px; float: left\4)));
-                out.print(mac2String(station.mac));
+                printMacAddress(station.mac, out);
                 out.print(F(HTML_E(span) HTML_S(span style\5\4width: 80px; float: left\4)));
                 out.printf_P(PSTR("%d dBm" HTML_E(span) HTML_S(br)), station.rssi);
 
@@ -275,7 +291,7 @@ void WiFi_get_status(Print &out)
 }
 
 
-void WiFi_Station_SSID(Print &out)
+void WiFiStatus::stationSSID(Print &out)
 {
     if (WiFi.isConnected()) {
         out.print(WiFi.SSID());
@@ -284,7 +300,7 @@ void WiFi_Station_SSID(Print &out)
     }
 }
 
-void WiFi_SoftAP_SSID(Print &out)
+void WiFiStatus::softAPSSID(Print &out)
 {
     #if defined(ESP32)
         wifi_config_t _config;

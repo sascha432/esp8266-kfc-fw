@@ -9,9 +9,15 @@
 #include <Buffer.h>
 #include "misc.h"
 
-void WiFi_Station_SSID(Print &out);
-void WiFi_SoftAP_SSID(Print &out);
-void WiFi_get_address(Print &out);
-void WiFi_get_status(Print &out);
+class WiFiStatus {
+public:
+	static void stationSSID(Print &out);
+	static void softAPSSID(Print &out);
+	static void getAddress(Print &out);
+	static void getStatus(Print &out);
+
+private:
+    static const __FlashStringHelper *getTxPowerStr();
+};
 
 #endif

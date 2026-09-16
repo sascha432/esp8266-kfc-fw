@@ -248,7 +248,7 @@ public:
 
 private:
     friend class KFCConfigurationPlugin;
-    friend void WiFi_get_status(Print &out);
+    friend class WiFiStatus;
 
     String _lastError;
     decltype(millis()) _wifiConnected;            // time of connection

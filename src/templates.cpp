@@ -38,9 +38,9 @@ String WebTemplate::_aliveRedirection;
 
 void WebTemplate::printSystemTime(time_t now, PrintHtmlEntitiesString &output)
 {
-    auto format = PSTR("%a, %d %b %Y " HTML_SA(span, HTML_A("id", "system_time")) "%H:%M:%S" HTML_E(span) " %Z");
-    output.printf_P(PSTR(HTML_SA(span, HTML_A("id", "system_date") HTML_A("format", "%s"))), PrintHtmlEntitiesString(FPSTR(format)).c_str());
-    output.strftime_P(format, localtime(&now));
+    auto format = F("%a, %d %b %Y " HTML_SA(span, HTML_A("id", "system_time")) "%H:%M:%S" HTML_E(span) " %Z");
+    output.printf_P(PSTR(HTML_SA(span, HTML_A("id", "system_date") HTML_A("format", "%s"))), PrintHtmlEntitiesString(format).c_str());
+    output.strftime(format, localtime(&now));
     output.print(F(HTML_E(span)));
 }
 
@@ -367,7 +367,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         output.print(System::Flags::getConfig().is_station_mode_enabled ? (wifiUp == 0 ? FSPGM(Offline, "Offline") : formatTime(wifiUp / 1000)) : F("Client mode disabled"));
     }
     else if (key == F("IP_ADDRESS")) {
-        WiFi_get_address(output);
+        WiFiStatus::getAddress(output);
     }
     else if (key == F("FILE_SYSTEM_INFO")) {
         WebTemplate::printFileSystemInfo(output);
@@ -551,20 +551,10 @@ void NotFoundTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
     if (key == F("STATUS_CODE")) {
         output.print(_code);
         return;
-        // if (_code >= 200 && _code < 600) {
-        //     output.print(_code);
-        //     return;
-        // }
-        // return;
     }
     else if (key == F("TPL_TITLE")) {
-        output.printf_P("Status Code: %u", _code);
+        output.printf_P(PSTR("Status Code: %u"), _code);
         return;
-        // if (_code >= 200 && _code < 600) {
-        //     output.printf_P("Status Code: %u", _code);
-        //     return;
-        // }
-        // return;
     }
     else if (_titleClass == nullptr && key == F("TPL_TITLE_CLASS")) {
         if (_code >= 400) {
@@ -614,7 +604,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (key.startsWith(F("MODE_"))) {
         if (System::Flags::getConfig().getWifiMode() == key.substring(5).toInt()) {
-            output.print(FSPGM(_selected, " selected"));
+            output.print(F(" selected"));
         }
     }
     else if (key == F("SSL_CERT")) {
@@ -690,20 +680,20 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (key == F("WIFI_SSID")) {
         if (WiFi.getMode() == WIFI_AP_STA) {
             output.print(F("Station connected to " HTML_S(strong)));
-            WiFi_Station_SSID(output);
+            WiFiStatus::stationSSID(output);
             output.printf(PSTR(HTML_E(strong) HTML_S(br) "%s " HTML_S(strong)), SPGM(Access_Point));
-            WiFi_SoftAP_SSID(output);
+            WiFiStatus::softAPSSID(output);
             output.print(F(HTML_E(strong)));
         }
         else if (WiFi.getMode() & WIFI_STA) {
-            WiFi_Station_SSID(output);
+            WiFiStatus::stationSSID(output);
         }
         else if (WiFi.getMode() & WIFI_AP) {
-            WiFi_SoftAP_SSID(output);
+            WiFiStatus::softAPSSID(output);
         }
     }
     else if (key == F("WIFI_STATUS")) {
-        WiFi_get_status(output);
+        WiFiStatus::getStatus(output);
     }
     else {
         WebTemplate::process(key, output);
@@ -728,10 +718,6 @@ void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &outpu
 SettingsForm::SettingsForm(AsyncWebServerRequest *request) : BaseForm(static_cast<FormUI::Form::Data *>(request)) //, _json(nullptr)
 {
 }
-
-
-// void EmptyTemplate::process(const String &key, PrintHtmlEntitiesString &output) {
-// }
 
 #include <TemplateDataProvider.h>
 

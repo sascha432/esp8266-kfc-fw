@@ -14,7 +14,6 @@
 #include "failure_counter.h"
 #include "fs_mapping.h"
 #include "kfc_fw_config.h"
-#include "rest_api.h"
 #include "save_crash.h"
 #include "session.h"
 #include "templates.h"

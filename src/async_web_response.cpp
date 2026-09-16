@@ -608,7 +608,9 @@ AsyncFillBufferCallbackResponse::AsyncFillBufferCallbackResponse(const Callback 
     }
     _code = 200;
     _contentType = FSPGM(mime_text_html);
-    *_async = true; // mark this as alive
+    if (_async) {
+        *_async = true; // mark this as alive
+    }
     _callback(_async, false, this);
 }
 

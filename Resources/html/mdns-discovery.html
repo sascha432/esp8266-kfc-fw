@@ -94,7 +94,7 @@
 
     <script>
         var mdns_discovery = {
-            timeout: [2000, 5000],  // first, consequent
+            timeout: [2500, 5000],  // first, consequent
             interval: [1000, 30000, 10000], // first, consequent, on error
             uri: '/mdns_discovery',
             init: function() {
@@ -111,6 +111,10 @@
                     try {
                         var self = this;
                         $(data['l']).each(function(key, val) {
+                            // ignore incomplete records
+                            if (typeof val['s'] !== 'string' || typeof val['h'] !== 'string' || val['s'].length == 0 || val['h'].length == 0) {
+                                return;
+                            }
                             var name = val['s'];
                             var pos = name.indexOf('._');
                             if (pos == -1) {
@@ -126,7 +130,8 @@
                             }
                             var title = val['t'] ? val['t'] : '-';
                             var device = val['d'] ? val['d'] : '-';
-                            var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + val['a'] + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td><td>' + device + '</td></tr>';
+                            var addresses = Array.isArray(val['a']) ? val['a'].join(', ') : '';
+                            var html = '<tr scope="row" id="mdns_id_' + name + '"><td>' + val['h'] + '</td><td>' + addresses + '</td><td>' + name + '</td><td>' + title + '</td><td>' + version + '</td><td>' + device + '</td></tr>';
                             if (row.length) {
                                 row.html($(html).find('tr').html());
                             }

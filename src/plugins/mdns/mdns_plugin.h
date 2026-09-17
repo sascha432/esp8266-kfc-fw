@@ -8,6 +8,7 @@
 
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
+#include <functional>
 #include <build.h>
 #include <kfc_fw_config.h>
 #include <plugins.h>
@@ -101,6 +102,9 @@ public:
         }
 
         #if ESP8266
+            // called after new data was added to _output to flush a pending response,
+            // must not be called while _lock is held (_fillBuffer() takes the same lock)
+            std::function<void()> _notify;
             String _current;
         #elif ESP32
             //TODO check if the async notifier callback is supported, currently missing in the IDF framework

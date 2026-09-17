@@ -52,7 +52,9 @@ public:
         AsyncBaseResponse(true),
         _output(output),
         _startTime(millis()),
-        _sentSize(0)
+        _sentSize(0),
+        _request(nullptr),
+        _inAck(false)
     {
         _contentLength = 0;
     }
@@ -64,12 +66,27 @@ public:
     }
 
     // src/plugins/mdns/mdns_resolver.cpp
+    virtual void _respond(AsyncWebServerRequest *request) override;
+
+    #if ESP8266
+        // src/plugins/mdns/mdns_resolver.cpp
+        //
+        // Flush the response from the MDNS answer callback. On ESP8266 the MDNS callback and the
+        // AsyncTCP callbacks (which normally drive _ack()/_fillBuffer()) run in the same WiFi
+        // stack context, so the response can be pumped instead of waiting for the next ack/poll
+        // event. See MDNSPlugin::Output::_notify
+        void wakeup();
+    #endif
+
+    // src/plugins/mdns/mdns_resolver.cpp
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
 
 private:
     MDNSPlugin::Output *_output;
     uint32_t _startTime;
     size_t _sentSize;
+    AsyncWebServerRequest *_request;
+    bool _inAck;
 };
 
 #endif

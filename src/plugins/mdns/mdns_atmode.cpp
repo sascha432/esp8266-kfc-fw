@@ -46,8 +46,9 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
         return;
     }
 
+    uint32_t outputLength = 0;
     MUTEX_LOCK_BLOCK(output._lock) {
-
+        outputLength = output._output.length();
         if (output._current != mdnsServiceInfo.serviceDomain()) {
             output.next();
             output._current = mdnsServiceInfo.serviceDomain();
@@ -57,7 +58,7 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
             case MDNSResponder::AnswerType::ServiceDomain: {
                     JsonTools::Utf8Buffer buffer;
                     output._output.print(F("\"s\":\""));
-                    JsonTools::printToEscaped(output._output, mdnsServiceInfo.serviceDomain(), strlen(mdnsServiceInfo.serviceDomain()), &buffer);
+                    JsonTools::printToEscaped(output._output, mdnsServiceInfo.serviceDomain(), length, &buffer);
                     output._output.print(F("\","));
                 }
                 break;
@@ -73,7 +74,6 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
                     for (const IPAddress &ip: mdnsServiceInfo.IP4Adresses()) {
                         output._output.print('"');
                         ip.printTo(output._output);
-                        // output._output.print(ip.toString());
                         output._output.print(F("\","));
                     }
                     output._output.rtrim(',');
@@ -83,12 +83,11 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
             case MDNSResponder::AnswerType::Txt: {
                     auto keys = PSTR("vbtd");
                     auto ptr = keys;
-                    char ch;
-                    while((ch = pgm_read_byte(ptr++)) != 0) {
-                        String key(ch);
-                        auto value = mdnsServiceInfo.value(key.c_str());
+                    char key[2] = { 0, 0 };
+                    while((key[0] = pgm_read_byte(ptr++)) != 0) {
+                        auto value = mdnsServiceInfo.value(key);
                         if (value) {
-                            output._output.printf_P(PSTR("\"%s\":\""), key.c_str());
+                            output._output.printf_P(PSTR("\"%s\":\""), key);
                             JsonTools::Utf8Buffer buffer;
                             JsonTools::printToEscaped(output._output, value, strlen(value), &buffer);
                             output._output.print(F("\","));
@@ -99,11 +98,11 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
             default:
                 break;
         }
-        if (output._output.length() + 1024 > ESP.getFreeHeap()) {
-            output.end();
-            __DBG_printf("out of memory len=%u", output._output.length());
-        }
-        // __DBG_printf("%s", output._output.c_str());
+    }
+
+    // flush a pending response right away. _lock must not be held here, _fillBuffer() takes the same lock
+    if (output._notify && output._output.length() != outputLength) {
+        output._notify();
     }
 }
 

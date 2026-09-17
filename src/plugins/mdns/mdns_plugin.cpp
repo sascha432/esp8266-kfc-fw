@@ -79,7 +79,7 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
         if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
             auto timeout = request->arg(F("timeout")).toInt();
             if (timeout == 0) {
-                timeout = 3000;
+                timeout = 5000;
             }
             auto output = new Output(timeout);
             HttpHeaders httpHeaders(false);
@@ -100,6 +100,14 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
                 #endif
             }
             auto response = new AsyncMDNSResponse(output);
+            #if ESP8266
+                // ESP8266 only: flush the response when new answers were added instead of waiting
+                // for the next TCP ack/poll event. The response owns the output, so the captured
+                // pointer cannot outlive the response
+                output->_notify = [response]() {
+                    response->wakeup();
+                };
+            #endif
             httpHeaders.setResponseHeaders(response);
             request->send(response);
         }

@@ -383,15 +383,45 @@ void MDNSResolver::Query::createZeroConf(Print &output) const
     output.print('}');
 }
 
+void AsyncMDNSResponse::_respond(AsyncWebServerRequest *request)
+{
+    _request = request;
+    AsyncBaseResponse::_respond(request);
+}
+
+#if ESP8266
+
+void AsyncMDNSResponse::wakeup()
+{
+    // AsyncWebServerRequest::_onPoll() is not accessible and its canSend() check is useless here:
+    // on ESP8266 canSend() is '!_pcb_busy && space() > 0' and _pcb_busy stays true until every
+    // written byte was acknowledged, which is exactly the case while the answers are coming in
+    // (delayed ACK). _ack() limits the write to client()->space() and does not write anything if
+    // there is no room or no data, so it is safe to call it directly
+    if (_inAck || !_request || _finished()) {
+        return;
+    }
+    auto client = _request->client();
+    if (!client || !client->connected()) {
+        return;
+    }
+    // __LDBG_printf("wakeup=%p output=%u", this, _output->_output.length());
+    _inAck = true;
+    _ack(_request, 0, 0);
+    _inAck = false;
+}
+
+#endif
+
 size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
 {
     bool end = false;
     MUTEX_LOCK_BLOCK(_output->_lock) {
         uint32_t runtime = millis() - _startTime;
-        __LDBG_printf("runtime=%u timeout=%u", runtime, _output->_timeout);
         if (runtime >= _output->_timeout) {
             end = true;
         }
+        __LDBG_printf("runtime=%u timeout=%u output=%u end=%u", runtime, _output->_timeout, _output->_output.length(), end);
 
         #if ESP32
             if (!end && !_output->poll(1000, false)) {
@@ -411,33 +441,28 @@ size_t AsyncMDNSResponse::_fillBuffer(uint8_t *data, size_t len)
             outputLen = _output->_output.length();
         }
         auto space = std::min(outputLen, len);
-        __LDBG_printf("end=%u space=%u output=%u send=%*.*s", end, space, _output->_output.length(), space, space, _output->_output.c_str());
+        __LDBG_printf("end=%u space=%u output=%u send='%*.*s'", end, space, _output->_output.length(), space, space, _output->_output.c_str());
         if (space) {
             memcpy(data, _output->_output.c_str(), space);
             outputLen -= space;
-            if (_output->_output.capacity() - outputLen > 64) {
-                // create new string to release the memory
-                _output->_output = _output->_output.c_str() + space;
-            }
-            else {
-                _output->_output.remove(0, space);
-            }
+            _output->_output.remove(0, space);
             _sentSize += space;
             return space;
         }
     }
     if (end) {
         if (_sentSize == 0 && len >= 2) {
+            // send empty response if nothing was sent
             data[0] = '{';
             data[1] = '}';
             _sentSize = 2;
-            __LDBG_printf("end=%u send=%*.*s", end, 2, 2, data);
+            // __LDBG_printf("end=%u send=%*.*s", end, 2, 2, data);
             return 2;
         }
-        __LDBG_printf("result=%d", 0);
+        // __LDBG_printf("result=%d", 0);
         return 0;
     }
-    __LDBG_printf("result=%d", RESPONSE_TRY_AGAIN);
+    // __LDBG_printf("result=%d", RESPONSE_TRY_AGAIN);
     return RESPONSE_TRY_AGAIN;
 }
 

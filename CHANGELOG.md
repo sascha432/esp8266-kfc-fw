@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Fixed storing unixtime in RTC memory to survive resets
  - Fixed savecrash issues
  - Updated MQTT sensors
  - Fixed invalid MQTT device class for BME680 VOC sensor and added persistent eCO2 calibration

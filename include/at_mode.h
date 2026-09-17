@@ -179,7 +179,6 @@ inline void at_mode_print_prefix(Stream &output, const String &command) {
 }
 void enable_at_mode(Stream *output);
 void disable_at_mode(Stream *output);
-void serial_handle_event(String command);
 void at_mode_serial_input_handler(Stream &client);
 void at_mode_print_invalid_arguments(Stream &output, uint16_t num = 0, uint16_t min = ~0, uint16_t max = ~0);
 

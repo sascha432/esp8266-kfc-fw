@@ -16,8 +16,6 @@
 #include <time.h>
 #include <vector>
 
-#include <push_pack.h>
-
 typedef struct __attribute__packed__ FailureCounterFileRecordStruct  {
     uint32_t addr;
     uint16_t counter;
@@ -98,7 +96,5 @@ private:
     uint16_t _checkTimeframe;
     uint8_t _attempts;
 };
-
-#include <pop_pack.h>
 
 #endif

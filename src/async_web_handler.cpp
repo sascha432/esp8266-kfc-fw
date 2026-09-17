@@ -57,8 +57,8 @@ void AsyncFileUploadWebHandler::_handleUpload(AsyncWebServerRequest *request, co
 void AsyncFileUploadWebHandler::_cleanUp(AsyncWebServerRequest *request)
 {
     if (request->_tempFile && request->_tempFile.fullName()) {
-        String filename = request->_tempFile.fullName();
-        __LDBG_printf("removing temporary file %s", filename.c_str());
+        auto filename = request->_tempFile.fullName();
+        __LDBG_printf("removing temporary file %s", filename);
         request->_tempFile.close();
         KFCFS.remove(filename);
     }

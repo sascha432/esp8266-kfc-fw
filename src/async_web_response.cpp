@@ -444,8 +444,8 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
         while (_position < n && space > 0) {
             bool hidden = WiFi_isHidden(_position);
             String ssid = hidden ? String() : WiFi.SSID(_position);
-            const char *ssidText = hidden ? "<i>HIDDEN</i>" : ssid.c_str();
-            size_t ssidLength = strlen(ssidText);
+            const char *ssidText = hidden ? PSTR("<i>HIDDEN</i>") : ssid.c_str();
+            const size_t ssidLength = strlen_P(ssidText);
             size_t escapedLength = ssidLength;
             if (!hidden) {
                 for (size_t i = 0; i < ssidLength; ++i) {
@@ -456,30 +456,29 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
                 }
             }
 
-            char tail[96];
             const uint8_t *bssid = WiFi.BSSID(_position);
             if (!bssid) {
                 break;
             }
-            int tailLength = snprintf_P(tail, sizeof(tail), PSTR("\",\"c\":%d,\"r\":%d,\"b\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"e\":\""),
+            char tail[68];
+            const int tailLength = snprintf_P(tail, sizeof(tail), PSTR("\",\"c\":%d,\"r\":%d,\"b\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"e\":\""),
                 WiFi.channel(_position),
                 WiFi.RSSI(_position),
                 bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]
             );
+            if (tailLength < 0 || (size_t)tailLength >= sizeof(tail)) {
+                break;
+            }
             PGM_P encryption = reinterpret_cast<PGM_P>(KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position)));
-            size_t prefixLength = hidden ? sizeof("{\"t\":\"table-secondary\",\"s\":\"") - 1 : sizeof("{\"t\":\"has-network-name\",\"d\":\"network-name\",\"s\":\"") - 1;
-            size_t encryptionLength = strlen_P(encryption);
-            if (tailLength < 0) {
+            const size_t prefixLength = hidden ? sizeof("{\"t\":\"table-secondary\",\"s\":\"") - 1 : sizeof("{\"t\":\"has-network-name\",\"d\":\"network-name\",\"s\":\"") - 1;
+            const size_t encryptionLength = strlen_P(encryption);
+            const size_t itemLength = (writePrefix ? 6 : 0) + prefixLength + escapedLength + static_cast<size_t>(tailLength) + encryptionLength + 3;
+            if (itemLength > space) {
                 break;
             }
-            size_t itemLength = (writePrefix ? 7 : 0) + prefixLength + escapedLength + static_cast<size_t>(tailLength) + encryptionLength + 3;
-            if (static_cast<size_t>(tailLength) + 3 > sizeof(tail) || itemLength > space) {
-                break;
-            }
-
             if (writePrefix) {
-                memcpy_P(ptr, PSTR("{\"r\":["), 7);
-                ptr += 7;
+                memcpy_P(ptr, PSTR("{\"r\":["), 6);
+                ptr += 6;
             }
             if (hidden) {
                 memcpy_P(ptr, PSTR("{\"t\":\"table-secondary\",\"s\":\""), prefixLength);
@@ -489,7 +488,7 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             }
             ptr += prefixLength;
             if (hidden) {
-                memcpy(ptr, ssidText, ssidLength);
+                memcpy_P(ptr, ssidText, ssidLength);
                 ptr += ssidLength;
             }
             else {
@@ -515,8 +514,8 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             ptr += tailLength;
             memcpy_P(ptr, encryption, encryptionLength);
             ptr += encryptionLength;
-            memcpy_P(ptr, PSTR("\"},"), 4);
-            ptr += 4;
+            memcpy_P(ptr, PSTR("\"},"), 3);
+            ptr += 3;
             space -= itemLength;
             sptr = ptr;
             _position++;

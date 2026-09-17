@@ -326,7 +326,7 @@ namespace MQTT {
 
             // JSON array
             // ["Mode1","Mode2",...]
-            void addPresetModes(String json) {
+            void addPresetModes(const String &json) {
                 __addParameter(FSPGM(mqtt_preset_modes), json.c_str(), false);
             }
 

@@ -1687,9 +1687,9 @@ void KFCFWConfiguration::setupRTC()
         // after a reset, the time is marked as not synchronized (lostPower == true) until set by NTP or manually
         // while it does not work if a device gets turned off, it is still ok when rebooting or recovering from a
         // crash time() won't start at 1970...
-        RTCMemoryManager::setSyncStatus(RTCMemoryManager::SyncStatus::NO);
         auto rtc = RTCMemoryManager::readTime();
         __DBG_RTC_printf("unixtime=%u", rtc.time);
+        RTCMemoryManager::setSyncStatus(RTCMemoryManager::SyncStatus::NO);
         struct timeval tv = { static_cast<time_t>(rtc.time), 0 };
         settimeofday(&tv, nullptr);
         RTCMemoryManager::setupRTC();

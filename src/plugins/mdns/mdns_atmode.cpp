@@ -58,7 +58,7 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
             case MDNSResponder::AnswerType::ServiceDomain: {
                     JsonTools::Utf8Buffer buffer;
                     output._output.print(F("\"s\":\""));
-                    JsonTools::printToEscaped(output._output, mdnsServiceInfo.serviceDomain(), length, &buffer);
+                    JsonTools::printToEscaped(output._output, mdnsServiceInfo.serviceDomain(), strlen(mdnsServiceInfo.serviceDomain()), &buffer);
                     output._output.print(F("\","));
                 }
                 break;

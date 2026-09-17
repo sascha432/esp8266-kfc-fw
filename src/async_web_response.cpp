@@ -415,18 +415,16 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             WiFi.scanNetworks(true, _hidden);
         }
         _position = -1;
-        setLocked(false);
         __LDBG_printf("Scan running");
-        auto space = static_cast<int32_t>(len);
+        int32_t space = (int32_t)len;
         auto dst = reinterpret_cast<char *>(data);
         return _strcpy_P_safe(dst, PSTR("{\"p\":true,\"m\":\"Network scan still running\"}"), space);
     }
     else if (n == 0) {
         _position = -1;
         __LDBG_printf("No networks in range");
-        auto space = static_cast<int32_t>(len);
+        int32_t space = (int32_t)len;
         auto dst = reinterpret_cast<char *>(data);
-        setLocked(false);
         return _strcpy_P_safe(dst, PSTR("{\"m\":\"No WiFi networks in range\"}"), space);
     }
     else {
@@ -434,105 +432,65 @@ size_t AsyncNetworkScanResponse::_fillBuffer(uint8_t *data, size_t len)
             __LDBG_printf("AsyncNetworkScanResponse %d >= %d, EOF", (int)_position, (int)n);
             return 0;
         }
-        if (len < 2) {
-            return 0;
-        }
         auto ptr = reinterpret_cast<char *>(data);
         auto sptr = ptr;
-        size_t space = len - 2; // reserve 2 bytes
-        bool writePrefix = _position == 0;
+        int32_t space = len - 2; // reserve 2 bytes
+        if (_position == 0) {
+            _strcpy_P_safe(ptr, PSTR("{\"r\":["), space);
+        }
+        uint16_t l;
         while (_position < n && space > 0) {
-            bool hidden = WiFi_isHidden(_position);
-            String ssid = hidden ? String() : WiFi.SSID(_position);
-            const char *ssidText = hidden ? PSTR("<i>HIDDEN</i>") : ssid.c_str();
-            const size_t ssidLength = strlen_P(ssidText);
-            size_t escapedLength = ssidLength;
-            if (!hidden) {
-                for (size_t i = 0; i < ssidLength; ++i) {
-                    uint8_t ch = static_cast<uint8_t>(ssidText[i]);
-                    if (ch == '"' || ch == '\\' || ch < 0x20) {
-                        escapedLength += ch < 0x20 ? 5 : 1;
-                    }
-                }
-            }
-
-            const uint8_t *bssid = WiFi.BSSID(_position);
-            if (!bssid) {
-                break;
-            }
-            char tail[68];
-            const int tailLength = snprintf_P(tail, sizeof(tail), PSTR("\",\"c\":%d,\"r\":%d,\"b\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"e\":\""),
-                WiFi.channel(_position),
-                WiFi.RSSI(_position),
-                bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]
-            );
-            if (tailLength < 0 || (size_t)tailLength >= sizeof(tail)) {
-                break;
-            }
-            PGM_P encryption = reinterpret_cast<PGM_P>(KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position)));
-            const size_t prefixLength = hidden ? sizeof("{\"t\":\"table-secondary\",\"s\":\"") - 1 : sizeof("{\"t\":\"has-network-name\",\"d\":\"network-name\",\"s\":\"") - 1;
-            const size_t encryptionLength = strlen_P(encryption);
-            const size_t itemLength = (writePrefix ? 6 : 0) + prefixLength + escapedLength + static_cast<size_t>(tailLength) + encryptionLength + 3;
-            if (itemLength > space) {
-                break;
-            }
-            if (writePrefix) {
-                memcpy_P(ptr, PSTR("{\"r\":["), 6);
-                ptr += 6;
-            }
-            if (hidden) {
-                memcpy_P(ptr, PSTR("{\"t\":\"table-secondary\",\"s\":\""), prefixLength);
+            _strcpy_P_safe(ptr, PSTR("{\"t\":\""), space);
+            if (WiFi_isHidden(_position)) {
+                _strcpy_P_safe(ptr, PSTR("table-secondary"), space);
             }
             else {
-                memcpy_P(ptr, PSTR("{\"t\":\"has-network-name\",\"d\":\"network-name\",\"s\":\""), prefixLength);
+                _strcpy_P_safe(ptr, PSTR("has-network-name\",\"d\":\"network-name"), space);
             }
-            ptr += prefixLength;
-            if (hidden) {
-                memcpy_P(ptr, ssidText, ssidLength);
-                ptr += ssidLength;
+            _strcpy_P_safe(ptr, PSTR("\",\"s\":\""), space);
+            if (WiFi_isHidden(_position)) {
+                _strcpy_P_safe(ptr, PSTR("<i>HIDDEN</i>"), space);
             }
             else {
-                for (size_t i = 0; i < ssidLength; ++i) {
-                    uint8_t ch = static_cast<uint8_t>(ssidText[i]);
-                    if (ch == '"' || ch == '\\') {
-                        *ptr++ = '\\';
-                    }
-                    if (ch < 0x20) {
-                        *ptr++ = '\\';
-                        *ptr++ = 'u';
-                        *ptr++ = '0';
-                        *ptr++ = '0';
-                        *ptr++ = pgm_read_byte(SPGM(hex_chars) + (ch >> 4));
-                        *ptr++ = pgm_read_byte(SPGM(hex_chars) + (ch & 0x0f));
-                    }
-                    else {
-                        *ptr++ = ch;
-                    }
+                PrintString ssid;
+                KFCJson::JsonTools::printToEscaped(ssid, WiFi.SSID(_position));
+                if (static_cast<int16_t>(ssid.length()) >= space) {
+                    break;
                 }
+                strcpy(ptr, ssid.c_str());
+                ptr += ssid.length();
+                space -= ssid.length();
             }
-            memcpy(ptr, tail, tailLength);
-            ptr += tailLength;
-            memcpy_P(ptr, encryption, encryptionLength);
-            ptr += encryptionLength;
-            memcpy_P(ptr, PSTR("\"},"), 3);
-            ptr += 3;
-            space -= itemLength;
+            if ((l = snprintf_P(ptr, space, PSTR("\",\"c\":%d,\"r\":%d,\"b\":\"%s\",\"e\":\"%s\"},"),
+                    WiFi.channel(_position),
+                    WiFi.RSSI(_position),
+                    WiFi.BSSIDstr(_position).c_str(),
+                    KFCFWConfiguration::getWiFiEncryptionType(WiFi.encryptionType(_position))
+                )) >= space)
+            {
+                space = 0;
+                break;
+            }
+            ptr += l;
+            space -= l;
             sptr = ptr;
             _position++;
-            writePrefix = false;
         }
         if (_position >= n) {
-            if (sptr > reinterpret_cast<char *>(data) && sptr[-1] == ',') {
-                --sptr;
+            if (sptr != reinterpret_cast<char *>(data)) { // any data copied?
+                sptr--;
+                if (*sptr != ',') { // trailing comma?
+                    sptr++;
+                }
             }
-            *sptr++ = ']';
-            *sptr++ = '}';
+             if (space >= 0) { // 2 byte have been reserved
+                *sptr++ = ']';
+                *sptr++ = '}';
+             }
             _done = true;
             _position = -1;
         }
         else if (_position == 0) {  // not enough space in the buffer for the first entry, abort response
-            _done = true;
-            setLocked(false);
             _position = -1;
         }
         // int ll = (sptr - (char *)data);

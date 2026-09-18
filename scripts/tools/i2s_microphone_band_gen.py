@@ -1,4 +1,9 @@
 
+# NOTE: obsolete, the band table is calculated at runtime by I2SMicrophone
+# (see src/plugins/clock/i2s_microphone.cpp, kFftSize/kLogScale/kFreqMax) and the
+# generated src/plugins/clock/i2s_microphone_bands.h has been removed.
+# kept for reference only
+
 import math
 import random
 

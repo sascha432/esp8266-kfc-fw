@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Python CLI audio spectrum analyzer for the LED matrix and improved I2S microphone FFT
  - Reduced heap usage for file manager and MDNS Discovery
  - Fixed storing unix time in RTC memory to survive resets
  - Fixed savecrash issues

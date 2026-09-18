@@ -9,5 +9,5 @@ if not exist "%DIR%.venv\Scripts\python.exe" (
     echo     "%DIR%.venv\Scripts\python.exe" -m pip install -r "%DIR%requirements.txt"
     exit /b 1
 )
-"%DIR%.venv\Scripts\python.exe" "%DIR%audio_analyser.py" %*
+"%DIR%.venv\Scripts\python.exe" "%DIR%audio_analyzer.py" %*
 exit /b %ERRORLEVEL%

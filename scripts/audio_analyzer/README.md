@@ -1,4 +1,4 @@
-# audio_analyser
+# Audio Analyzer
 
 Streams the audio spectrum and the loudness of the Windows output device to a single
 kfc_fw LED matrix over UDP (WARLS protocol).
@@ -12,15 +12,15 @@ and send one UDP packet every 20 ms.
 ## Setup
 
 ```bat
-py -3 -m venv scripts\audio_analyser\.venv
-scripts\audio_analyser\.venv\Scripts\python.exe -m pip install --upgrade pip
-scripts\audio_analyser\.venv\Scripts\python.exe -m pip install -r scripts\audio_analyser\requirements.txt
+py -3 -m venv scripts\audio_analyzer\.venv
+scripts\audio_analyzer\.venv\Scripts\python.exe -m pip install --upgrade pip
+scripts\audio_analyzer\.venv\Scripts\python.exe -m pip install -r scripts\audio_analyzer\requirements.txt
 ```
 
 `run.bat` calls the venv interpreter, no activation needed:
 
 ```bat
-scripts\audio_analyser\run.bat --ip 192.168.0.196
+scripts\audio_analyzer\run.bat --ip 192.168.0.196
 ```
 
 ## Device configuration (once)

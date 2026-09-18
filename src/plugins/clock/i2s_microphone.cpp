@@ -18,29 +18,29 @@
 #endif
 
 
-inline static uint8_t getBandStart(uint8_t band)
-{
-    return bands[band] & 0xff;
-}
+// the DMA ring buffer has to hold more than one update period (48000 / 1000 * 20 = 960 samples)
+static_assert(I2SMicrophone::kSampleRate / 1000 * Clock::kUpdateRate < I2SMicrophone::kMaxReadSamples, "read buffer too small");
+static_assert((I2SMicrophone::kFftSize & (I2SMicrophone::kFftSize - 1)) == 0, "FFT size must be a power of two");
 
-inline static uint8_t getBandEnd(uint8_t band)
-{
-    return bands[band] >> 8;
-}
-
-inline static float getBandFactor1(uint8_t band)
-{
-    return factors1[band];
-}
-
-inline static float getBandFactor2(uint8_t band)
-{
-    return factors2[band];
-}
+static constexpr float kTwoPi = 6.28318530718f;
+static constexpr float kBandScale = 3.0f * 255.0f;          // sqrt(peak) * 3 * 255 - 4
+static constexpr float kBandOffset = 4.0f;
+static constexpr float kLoudnessScale = 128.0f * 10.0f;     // mic_loudness_gain 275 = 0.215 * peak
 
 void IRAM_ATTR I2SMicrophoneHandler(void *clsPtr)
 {
     reinterpret_cast<I2SMicrophone *>(clsPtr)->task();
+}
+
+bool I2SMicrophone::_allocate()
+{
+    _bins.reset(new _binsType());
+    _vReal.reset(new _fftBufferType());
+    _vImag.reset(new _fftBufferType());
+    _window.reset(new _windowBufferType());
+    _readBuffer.reset(new _readBufferType());
+    _windowFactors.reset(new _windowFactorsType());
+    return _bins && _vReal && _vImag && _window && _readBuffer && _windowFactors;
 }
 
 I2SMicrophone::I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, uint8_t i2sSck, uint8_t *data, size_t dataSize, uint8_t &loudnessLeft, uint8_t &loudnessRight, float loudnessGain, float bandGain) :
@@ -51,24 +51,12 @@ I2SMicrophone::I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, u
     _loudnessLeft(loudnessLeft),
     _loudnessRight(loudnessRight),
     _loudnessGain(loudnessGain),
-    _bandGain(bandGain)
+    _bandGain(bandGain),
+    _magnitudeScale(0)
 {
     i2s_driver_uninstall(_i2sPort);
 
-    _vReal.reset(new _sampleBufferType());
-    if (!_vReal) {
-        __LDBG_printf("out of memory");
-        return;
-    }
-
-    _vImag.reset(new _fftBufferType());
-    if (!_vImag) {
-        __LDBG_printf("out of memory");
-        return;
-    }
-
-    _output.reset(new _outputBufferType());
-    if (!_output) {
+    if (!_allocate()) {
         __LDBG_printf("out of memory");
         return;
     }
@@ -81,8 +69,9 @@ I2SMicrophone::I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, u
         .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
         .communication_format = I2S_COMM_FORMAT_STAND_I2S,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-        .dma_buf_count = 2,
-        .dma_buf_len = kMaxSamples,
+        // 4 x 512 frames = 42.7 ms, more than one update period including jitter
+        .dma_buf_count = 4,
+        .dma_buf_len = 512,
         .use_apll = false
     };
 
@@ -116,10 +105,48 @@ I2SMicrophone::I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, u
 
     std::fill_n(_data, _dataSize, 0); // clear all bands
     _dataSize = std::min<size_t>(_dataSize, kNumBands); // only process available bands
+    _window->fill(0);
+
+    // band edges of the UDP/desktop path: freq(k) = px**k * fIncr * (k + 1) / px**bands
+    {
+        const float fIncr = kFreqMax / kNumBands;
+        const float pxMul = 1.0f / powf(kLogScale, kNumBands);
+        const float binScale = (kFftSize / 2.0f) / (kSampleRate / 2.0f);
+        float maxFrequency = fIncr;
+        float mul = maxFrequency * pxMul;
+        float pxPow = 1.0f;
+        for (uint8_t i = 0; i < kNumBands; i++) {
+            const float frequency = pxPow * mul;
+            pxPow *= kLogScale;
+            maxFrequency += fIncr;
+            mul = maxFrequency * pxMul;
+            (*_bins)[i] = std::min<uint16_t>(static_cast<uint16_t>(frequency * binScale), kFftSize / 2);
+        }
+    }
+
+    // symmetric Hann window, the same as np.hanning() of the UDP path
+    {
+        float windowSum = 0;
+        for (uint16_t i = 0; i < kFftSize / 2; i++) {
+            const float factor = 0.5f - 0.5f * cosf(kTwoPi * i / (kFftSize - 1.0f));
+            (*_windowFactors)[i] = factor;
+            windowSum += factor;
+        }
+        // the window is symmetric, every factor is used twice
+        windowSum *= 2.0f;
+        // a full scale sine is 1.0, same scale as the spectrum sent over UDP
+        _magnitudeScale = 2.0f / (windowSum * 32768.0f);
+    }
+
+    _fft.reset(new ArduinoFFT<float>(_vReal->data(), _vImag->data(), kFftSize, static_cast<float>(kSampleRate)));
+    if (!_fft) {
+        __LDBG_printf("out of memory");
+        return;
+    }
 
     // start audio processor task
-    xTaskCreatePinnedToCore(I2SMicrophoneHandler, "I2SMicrophone", 1024 * 2, this, tskIDLE_PRIORITY + 2, &_taskHandle, 0);
-    __LDBG_printf("microphone task=%p", _taskHandle);
+    xTaskCreatePinnedToCore(I2SMicrophoneHandler, "I2SMicrophone", 1024 * 4, this, tskIDLE_PRIORITY + 2, &_taskHandle, 0);
+    __LDBG_printf("microphone task=%p fft=%u bands=%u", _taskHandle, kFftSize, kNumBands);
 }
 
 I2SMicrophone::~I2SMicrophone()
@@ -138,112 +165,110 @@ I2SMicrophone::~I2SMicrophone()
     i2s_driver_uninstall(_i2sPort);
 }
 
-bool I2SMicrophone::_i2s_read_double(float &loudness)
+void I2SMicrophone::_fadeOut()
 {
-    esp_err_t err;
-    size_t readBytes = 0;
-    int16_t sampleBuffer[kMaxSamples];
-    if ((err = i2s_read(_i2sPort, sampleBuffer, sizeof(sampleBuffer), &readBytes, 100 / portTICK_RATE_MS)) == ESP_OK) {
-        if (readBytes == sizeof(sampleBuffer)) {
-
-            // clear data
-            _vReal->fill(0.0);
-
-            // copy 16bit sample buffer to double array and calculate loudness
-            auto src = sampleBuffer;
-            auto dst = _vReal->data();
-            auto count = kMaxSamples;
-            while(count--) {
-                const auto val = *src++;
-                loudness += powf(val, 2.0);
-                *dst++ = val;
-            }
-
-            // get mean value and adjust level to fit into 8bit
-            const auto kLoudnessGain = kMaxSamples * _loudnessGain;
-            loudness = std::min(loudness / kLoudnessGain, 255.0f);
-
-            return true;
-        }
-        else {
-            __LDBG_printf("not enough data %d!=%d", readBytes, sizeof(sampleBuffer));
-        }
+    // no data from the microphone, fade out the display
+    for (size_t i = 0; i < _dataSize; i++) {
+        _data[i] = _data[i] > kPeakDecay ? _data[i] - kPeakDecay : 0;
     }
-    else {
-        __LDBG_printf("i2s_read failed err=%x", err);
-    }
-   return false;
+    _loudnessLeft = _loudnessRight = 0;
 }
 
 void I2SMicrophone::task()
 {
     for(;;) {
-        auto start = millis();
+        const uint32_t start = millis();
 
         readI2S();
 
-        constexpr unsigned long kReadRateMillis = Clock::kUpdateRate;
-        const uint32_t dly = std::clamp(kReadRateMillis - (millis() - start), 1UL, kReadRateMillis);
-        delay(dly);
+        // i2s_read() already waits for the update period, only delay the remaining time
+        const uint32_t elapsed = millis() - start;
+        if (elapsed < Clock::kUpdateRate) {
+            delay(Clock::kUpdateRate - elapsed);
+        }
     }
 }
 
 void I2SMicrophone::readI2S()
 {
-    auto &vReal = *_vReal.get();
-    auto &vImag = *_vImag.get();
-    auto &output = *_output.get();
-    float loudness;
+    auto &vReal = *_vReal;
+    auto &vImag = *_vImag;
+    auto &window = *_window;
+    auto &readBuffer = *_readBuffer;
 
-    // read i2s data and convert it to double
-    if (_i2s_read_double(loudness)) {
-
-        // clear data
-        vImag.fill(0.0);
-        output.fill(0.0);
-
-        // run FFT
-        arduinoFFT _fft(vReal.data(), vImag.data(), kMaxSamples, kSampleRate);
-        _fft.DCRemoval();
-        // _fft.Windowing(FFTWindow::Blackman_Harris, FFTDirection::Forward); // this is slower than Hamming (3ms)
-        _fft.Windowing(FFTWindow::Hamming, FFTDirection::Forward);
-        _fft.Compute(FFTDirection::Forward);
-        _fft.ComplexToMagnitude();
-
-        // get peak values per band
-        for(uint8_t i = 0; i < _dataSize; i++) {
-            float peak = 0;
-            auto start = getBandStart(i);
-            auto end = getBandEnd(i);
-            auto f1 = getBandFactor1(i);
-            auto f2 = getBandFactor2(i);
-            for(uint8_t j = start; j <= end; j++) {
-                float val = vReal[j];
-                if (val < kNoiseLevel) { // filter noise
-                    if (j == start && f1 != 0.0) {
-                        val *= f1; // use partial part of first sample
-                    }
-                    if (j == end) {
-                        val *= f2; // use partial part of last sample
-                    }
-                    peak = std::max(peak, val);
-                }
-            }
-            // store peak value
-            output[i] = peak;
-        }
-
-        // copy processed output
-        const auto peak = 255.0f * _bandGain / 32768.0f;
-        for(uint8_t i = 0; i < _dataSize; i++) {
-            _data[i] = output[i] * peak;
-        }
-
-        // we have mono only
-        _loudnessLeft = loudness;
-        _loudnessRight = _loudnessLeft;
-
+    // read everything that is available, the request is larger than the amount of data
+    // that arrives during one update period, so the call returns what has accumulated
+    size_t bytes = 0;
+    const auto err = i2s_read(_i2sPort, readBuffer.data(), readBuffer.size() * sizeof(int16_t), &bytes, pdMS_TO_TICKS(Clock::kUpdateRate));
+    const auto count = std::min<size_t>(bytes / sizeof(int16_t), readBuffer.size());
+    if (count == 0) {
+        __LDBG_printf("i2s_read err=%x bytes=%u", err, bytes);
+        _fadeOut();
+        return;
     }
+
+    // keep the newest kFftSize samples
+    if (count >= kFftSize) {
+        memcpy(window.data(), readBuffer.data() + (count - kFftSize), kFftSize * sizeof(int16_t));
+    }
+    else {
+        memmove(window.data(), window.data() + count, (kFftSize - count) * sizeof(int16_t));
+        memcpy(window.data() + (kFftSize - count), readBuffer.data(), count * sizeof(int16_t));
+    }
+
+    // loudness is the peak of the new samples, same scale as BASS_WASAPI_GetLevel() >> 7
+    int32_t peak = 0;
+    for (size_t i = 0; i < count; i++) {
+        const auto value = static_cast<int32_t>(readBuffer[i]);
+        peak = std::max(peak, value < 0 ? -value : value);
+    }
+
+    // remove the DC offset of the microphone and apply the window
+    float mean = 0;
+    for (uint16_t i = 0; i < kFftSize; i++) {
+        mean += window[i];
+    }
+    mean /= kFftSize;
+    const auto &factors = *_windowFactors;
+    for (uint16_t i = 0; i < kFftSize; i++) {
+        const float factor = factors[i < kFftSize / 2 ? i : kFftSize - 1 - i];
+        vReal[i] = (window[i] - mean) * factor;
+        vImag[i] = 0;
+    }
+
+    _fft->compute(FFTDirection::Forward);
+    _fft->complexToMagnitude();
+
+    // peak of every band, the bin of the upper edge belongs to the next band
+    uint16_t b0 = 0;
+    for (size_t i = 0; i < _dataSize; i++) {
+        const uint16_t b1 = (*_bins)[i];
+        float magnitude;
+        if (b1 > b0) {
+            magnitude = 0;
+            const uint16_t end = std::min<uint16_t>(b1, kFftSize / 2);
+            for (uint16_t j = b0; j < end; j++) {
+                magnitude = std::max(magnitude, vReal[j]);
+            }
+        }
+        else {
+            magnitude = vReal[std::min<uint16_t>(b0, kFftSize / 2 - 1)];
+        }
+        b0 = b1;
+
+        // amplitude relative to full scale without the noise floor
+        const float value = magnitude * _magnitudeScale - kNoiseLevel;
+        int32_t output = value > 0 ? static_cast<int32_t>(sqrtf(value * _bandGain) * kBandScale - kBandOffset) : 0;
+        output = std::clamp<int32_t>(output, 0, 255);
+        // slower falloff to reduce flickering
+        if (kPeakDecay && output < _data[i]) {
+            output = std::max<int32_t>(output, _data[i] - kPeakDecay);
+        }
+        _data[i] = static_cast<uint8_t>(output);
+    }
+
+    // we have mono only
+    _loudnessLeft = _loudnessRight = static_cast<uint8_t>(std::min(255.0f, peak * _loudnessGain / kLoudnessScale));
 }
 
 #endif

@@ -8,7 +8,7 @@ Python replacement for the Windows application
 `IoT-Audio-Visualization-Center <https://github.com/NimmLor/IoT-Audio-Visualization-Center>`_
 (Analyzer.exe, C#/BASS/WASAPI) that sends WARLS packets to a single device.
 
-    scripts\\audio_analyser\\.venv\\Scripts\\python.exe scripts\\audio_analyser\\audio_analyser.py --ip 192.168.0.196
+    scripts\\audio_analyzer\\.venv\\Scripts\\python.exe scripts\\audio_analyzer\\audio_analyzer.py --ip 192.168.0.196
 
 The device has to be configured once: LED matrix firmware built with
 ``IOT_LED_MATRIX_ENABLE_VISUALIZER=1``, clock animation ``VISUALIZER``,
@@ -324,7 +324,7 @@ def timeout_type(value):
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
-        prog='audio_analyser',
+        prog='audio_analyzer',
         description='Send the spectrum and loudness of the Windows output device to a single kfc_fw LED matrix.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )

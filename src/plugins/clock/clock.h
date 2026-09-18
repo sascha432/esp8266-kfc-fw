@@ -888,7 +888,7 @@ inline Clock::ShowMethodType ClockPlugin::getShowMethod()
 inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
 {
     _method = method;
-    #if ESP32 && FASTLED_VERSION == 3004000
+    #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S
         if (_method != Clock::ShowMethodType::FASTLED) {
             ESP32RMTController::deinit();
         }
@@ -1099,7 +1099,7 @@ inline void ClockPlugin::_updateBrightnessSettings()
 inline void ClockPlugin::_reset()
 {
     // turn off all LEDs during restart or a crash
-    #if ESP32 && FASTLED_VERSION == 3004000
+    #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S
         ESP32RMTController::deinit();
     #endif
     NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));

@@ -134,7 +134,6 @@ namespace KFCConfigurationClasses {
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         "Visualizer,"
                     #endif
-                    "Interleaved,"
                     "Xmas"
                 );
             }
@@ -153,7 +152,6 @@ namespace KFCConfigurationClasses {
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                         "\042Visualizer\042,"
                     #endif
-                    "\042Interleaved\042,"
                     "\042Xmas\042"
                     #if !IOT_LED_MATRIX
                         ",\042Colon: Solid\042,"
@@ -213,8 +211,6 @@ namespace KFCConfigurationClasses {
                         return F("Fire");
                     case AnimationType::PLASMA:
                         return F("Plasma");
-                    case AnimationType::INTERLEAVED:
-                        return F("Interleaved");
                     case AnimationType::XMAS:
                         return F("Xmas");
                     case AnimationType::SOLID:
@@ -262,8 +258,6 @@ namespace KFCConfigurationClasses {
                         return F("fire");
                     case AnimationType::PLASMA:
                         return F("plasma");
-                    case AnimationType::INTERLEAVED:
-                        return F("interleaved");
                     case AnimationType::SOLID:
                         return F("solid");
                     case AnimationType::XMAS:
@@ -303,8 +297,6 @@ namespace KFCConfigurationClasses {
                         return F("Fire Animation");
                     case AnimationType::PLASMA:
                         return F("Plasma Animation");
-                    case AnimationType::INTERLEAVED:
-                        return F("Interleaved Animation");
                     case AnimationType::XMAS:
                         return F("Xmas Animation");
                     case AnimationType::SOLID:

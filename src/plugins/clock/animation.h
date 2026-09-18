@@ -355,8 +355,6 @@ namespace Clock {
 
 #include "animation_rainbow_FastLED.h"
 
-#include "animation_interleaved.h"
-
 #include "animation_fire.h"
 
 #include "animation_gradient.h"

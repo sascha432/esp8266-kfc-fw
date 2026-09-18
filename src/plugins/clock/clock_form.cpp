@@ -102,19 +102,6 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 form.addFormUI(F("Random Color Factor"));
             }
             break;
-        case AnimationType::INTERLEAVED: {
-                form.addObjectGetterSetter(F("ilr"), FormGetterSetter(cfg.interleaved, rows));
-                form.addFormUI(F("Display every nth row"));
-                // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_ROWS));
-
-                form.addObjectGetterSetter(F("ilc"), FormGetterSetter(cfg.interleaved, cols));
-                form.addFormUI(F("Display every nth column"));
-                // form.addValidator(FormUI::Validator::Range(0, IOT_LED_MATRIX_COLS));
-
-                form.addObjectGetterSetter(F("ilt"), FormGetterSetter(cfg.interleaved, time));
-                form.addFormUI(F("Rotate Through Rows And Columns"), FormUI::Suffix(F("milliseconds")), FormUI::IntAttribute(F("disabled-value"), 0));
-            }
-            break;
         case AnimationType::FIRE: {
                 form.addObjectGetterSetter(F("fic"), FormGetterSetter(cfg.fire, cooling));
                 form.addFormUI(F("Cooling Value:"));
@@ -556,9 +543,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
             // --------------------------------------------------------------------
             _createConfigureFormAnimation(AnimationType::PLASMA, form, cfg, TitleType::ADD_GROUP);
-
-            // --------------------------------------------------------------------
-            _createConfigureFormAnimation(AnimationType::INTERLEAVED, form, cfg, TitleType::ADD_GROUP);
 
             // --------------------------------------------------------------------
             _createConfigureFormAnimation(AnimationType::FADING, form, cfg, TitleType::ADD_GROUP);

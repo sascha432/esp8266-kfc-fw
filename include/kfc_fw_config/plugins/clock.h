@@ -55,7 +55,6 @@ namespace KFCConfigurationClasses {
                 #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                     VISUALIZER,
                 #endif
-                INTERLEAVED,
                 XMAS,
                 LAST,   // this can be used to loop through all animations: for(int i = 0; i <static_cast<int>(AnimationType::LAST); i++) {}
                 #if !IOT_LED_MATRIX
@@ -343,14 +342,6 @@ namespace KFCConfigurationClasses {
                 };
             #endif
 
-            struct __attribute__packed__ InterleavedAnimationType {
-                using Type = InterleavedAnimationType;
-                CREATE_UINT32_BITFIELD_MIN_MAX(time, 32, 0, 0xffffffffU, 60000, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(rows, 12, 0, 1024, 2, 1);
-                CREATE_UINT16_BITFIELD_MIN_MAX(cols, 12, 0, 1024, 0, 1);
-                InterleavedAnimationType() : time(kDefaultValueFor_time), rows(kDefaultValueFor_rows), cols(kDefaultValueFor_cols) {}
-            };
-
             #if IOT_LED_MATRIX_CONFIGURABLE
             struct __attribute__packed__ MatrixConfigType {
                 using Type = MatrixConfigType;
@@ -448,7 +439,6 @@ namespace KFCConfigurationClasses {
                 FireAnimationType fire;
                 PlasmaAnimationType plasma;
                 AlarmType alarm;
-                InterleavedAnimationType interleaved;
                 PowerConfigType power;
                 #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                     VisualizerType visualizer;
@@ -493,7 +483,6 @@ namespace KFCConfigurationClasses {
                         case AnimationType::FADING:
                         case AnimationType::SOLID:
                         case AnimationType::FLASHING:
-                        case AnimationType::INTERLEAVED:
                         case AnimationType::PLASMA:
                         #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                             case AnimationType::VISUALIZER:

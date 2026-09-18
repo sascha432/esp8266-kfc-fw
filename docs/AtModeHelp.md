@@ -272,7 +272,7 @@ Run command
 - tem[perature],<value>
 - lo[op],<enable|disable>
 - met[hod]<fast|neo|neoex> (FastLED|Adafruit NeoPixel|NeoPixelEx)
-- ani[mation][,<solid|gradient|rainbow|rainbow-fastled|flash|color-fade|fire|interleaved>][,blend_time=4000ms]
+- ani[mation][,<solid|gradient|rainbow|rainbow-fastled|flash|color-fade|fire|plasma|xmas>][,blend_time=4000ms]
 - out[put],<on|off>
 - dit[her],<on|off>
 - co[lor],<#color>

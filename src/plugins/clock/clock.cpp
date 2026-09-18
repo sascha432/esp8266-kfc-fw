@@ -800,9 +800,6 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
         case AnimationType::PLASMA:
             _setAnimation(new Clock::PlasmaAnimation(*this, _getColor(), _config.plasma));
             break;
-        case AnimationType::INTERLEAVED:
-            _setAnimation(new Clock::InterleavedAnimation(*this, _getColor(), _config.interleaved.rows, _config.interleaved.cols, _config.interleaved.time));
-            break;
         case AnimationType::XMAS:
             _setAnimation(new Clock::XmasAnimation(*this, _config.xmas));
             break;
@@ -836,6 +833,11 @@ void ClockPlugin::readConfig(bool setup)
     _display.updateSegments(_config.matrix.pixels0, _config.matrix.offset0, _config.matrix.pixels1, _config.matrix.offset1, _config.matrix.pixels2, _config.matrix.offset2, _config.matrix.pixels3, _config.matrix.offset3);
 
     // update matrix configuration
+    // rows/cols = 0 would divide by zero in DynamicPixelMapping::setParams()
+    if (!_config.matrix.rows || !_config.matrix.cols) {
+        _config.matrix.rows = IOT_LED_MATRIX_ROWS;
+        _config.matrix.cols = IOT_LED_MATRIX_COLS;
+    }
     if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved, _config.matrix.rowOfs, _config.matrix.colOfs)) {
         __DBG_printf("_display.setParams() failed");
     }

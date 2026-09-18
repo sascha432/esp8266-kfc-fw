@@ -316,6 +316,7 @@
         "C_Cpp.default.intelliSenseMode": "gcc-arm",
         "cSpell.words": [
             "__LDBG_PRINTF",
+            "_IRREMOTEESP8266_VERSION_STR",
             "ADAFRUIT",
             "ADATE",
             "APIP",

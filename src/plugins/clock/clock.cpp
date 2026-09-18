@@ -85,7 +85,11 @@ ClockPlugin::ClockPlugin() :
     _targetBrightness(0),
     _animation(nullptr),
     _blendAnimation(nullptr),
-    _method(Clock::ShowMethodType::NONE)
+    _method(Clock::ShowMethodType::NONE),
+    _pendingAnimation{ nullptr, nullptr },
+    _requestedBlendTime(Clock::BlendAnimation::kDefaultTime),
+    _pendingColor(0),
+    _pendingColorSet(false)
 {
     REGISTER_PLUGIN(this, "ClockPlugin");
 }
@@ -758,12 +762,9 @@ void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
 void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
 {
     __LDBG_printf("animation=%d blend_time=%u", animation, blendTime);
-    if (_animation && _animation->hasBlendSupport()) {
-        _blendTime = blendTime;
-    }
-    else {
-        _blendTime = 0;
-    }
+    // _animation is not touched here, the blend time is evaluated by the loop task when the
+    // new animation is published, see _setAnimation()/_applyPendingAnimation()
+    _requestedBlendTime = blendTime;
     #if IOT_LED_MATRIX == 0
         switch(animation) {
             case AnimationType::COLON_SOLID:
@@ -1076,6 +1077,9 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 void IRAM_ATTR ClockPlugin::_loop()
 {
+    // animations requested by other tasks are published/destroyed here
+    _applyPendingAnimation();
+
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
 
@@ -1136,6 +1140,46 @@ void IRAM_ATTR ClockPlugin::_display_show()
 #if ESP8266
 #   pragma GCC pop_options
 #endif
+
+// publish queued animations and destroy the animations they replace
+// this is the only place where an animation object gets published, started or deleted
+void ICACHE_FLASH_ATTR ClockPlugin::_applyPendingAnimation()
+{
+    for(auto &pending: _pendingAnimation) {
+        auto animation = pending;
+        if (!animation) {
+            continue;
+        }
+        pending = nullptr;
+
+        if (_animation && _animation->hasBlendSupport()) {
+            _blendTime = _requestedBlendTime;
+        }
+        else {
+            _blendTime = 0;
+        }
+
+        if (_animation && _setBlendAnimation(animation)) {
+            // blending started, the BlendAnimation owns the new animation as _target
+        }
+        else {
+            // no animation set yet
+            if (_animation) {
+                delete _animation;
+            }
+            if ((_animation = animation) != nullptr) {
+                _animation->begin();
+            }
+        }
+    }
+
+    if (_pendingColorSet) {
+        _pendingColorSet = false;
+        if (_animation) {
+            _animation->setColor(_pendingColor);
+        }
+    }
+}
 
 // keep all the animation code in flash memory
 void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)

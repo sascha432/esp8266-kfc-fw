@@ -310,6 +310,8 @@ public:
 private:
     void _loop();
     void  _loopDoUpdate(LoopOptionsType &options);
+    // publishes/destroys queued animations, must only be called by the loop task
+    void _applyPendingAnimation();
     void _setupTimer();
     void _display_show();
 
@@ -653,6 +655,19 @@ private:
     Clock::Animation *_animation;
     Clock::BlendAnimation *_blendAnimation;
     Clock::ShowMethodType _method;
+
+    // An animation object may be created by any task (WebServer/WebSocket, MQTT, timers,
+    // buttons), but it is published, started and destroyed by the loop task only.
+    // Assigning or deleting _animation while the display is being rendered on the other
+    // core would be a use-after-free, therefore changes are queued here.
+    // The queue is filled by _setAnimation() and emptied by _applyPendingAnimation().
+    // NOTE: the writer must never delete an entry of the queue, the loop task owns it.
+    Clock::Animation *_pendingAnimation[2];
+    // last requested blend time, the loop task decides if it can be used
+    uint16_t _requestedBlendTime;
+    // color for the animation, applied by the loop task, see _setColor()
+    uint32_t _pendingColor;
+    bool _pendingColorSet;
 
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
         AmbientLightSensorHandler _lightSensor2;
@@ -1006,8 +1021,10 @@ inline KFCConfigurationClasses::Plugins::ClockConfigNS::ColorType &ClockPlugin::
 inline void ClockPlugin::_setColor(uint32_t color, bool updateAnimation)
 {
     _getColorVar() = color;
-    if (updateAnimation && _animation) {
-        _animation->setColor(color);
+    if (updateAnimation) {
+        // the animation is owned by the loop task, see _setAnimation()
+        _pendingColor = color;
+        _pendingColorSet = true;
     }
 }
 
@@ -1024,18 +1041,24 @@ inline Clock::ClockConfigType &ClockPlugin::getWriteableConfig()
 inline void ClockPlugin::_setAnimation(Clock::Animation *animation)
 {
     __LDBG_printf("animation=%p _ani=%p _blend_ani=%p", animation, _animation, _blendAnimation);
-    if (_animation && _setBlendAnimation(animation)) {
-        // blending started
+    if (!animation) {
+        return;
     }
-    else {
-        // no animation set yet
-        if (_animation) {
-            delete _animation;
-        }
-        if ((_animation = animation) != nullptr) {
-            _animation->begin();
+    // The new animation is queued and published by the loop task, see _applyPendingAnimation().
+    // Deleting the current animation here would free an object another core might be
+    // rendering right now (WebServer/WebSocket/MQTT callbacks, timers).
+    // NOTE: entries of the queue must never be deleted here, the loop task owns them.
+    for(auto &pending: _pendingAnimation) {
+        if (!pending) {
+            pending = animation;
+            return;
         }
     }
+    // the loop task has not collected the queued animations yet, replace the oldest one
+    __DBG_printf("animation queue overflow");
+    auto replaced = _pendingAnimation[0];
+    _pendingAnimation[0] = animation;
+    (void)replaced; // leaked on purpose, see comment above
 }
 
 inline bool ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)

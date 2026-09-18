@@ -19,6 +19,7 @@ scripts/tcp_*
 scripts/syslog.bat
 kfcfw_tool.json
 __pycache__
+**/.venv/
 fwbins/*
 **/tests/*
 src/plugins/weather_station/graphics/*

@@ -25,22 +25,13 @@
 #include <debug_helper_disable.h>
 #endif
 
-AUTO_STRING_DEF(ping_monitor_response, "%d bytes from %s: icmp_seq=%d ttl=%d time=%u ms")
-AUTO_STRING_DEF(ping_monitor_end_response, "Total answer from %s sent %d recevied %d time %u ms")
-AUTO_STRING_DEF(ping_monitor_ethernet_detected, "Detected eth address %s")
-AUTO_STRING_DEF(ping_monitor_request_timeout, "Request timed out.")
-AUTO_STRING_DEF(ping_monitor_service_status, "Ping monitor service has been %s%s")
-AUTO_STRING_DEF(ping_monitor_ping_for_hostname_failed, "Pinging %s failed")
-AUTO_STRING_DEF(ping_monitor_cancelled, "Ping cancelled")
-AUTO_STRING_DEF(ping_monitor_service, "Ping Monitor Service")
-
 using KFCConfigurationClasses::System;
 using Plugins = KFCConfigurationClasses::PluginsType;
 
 bool PingMonitor::resolveHost(const String &host, IPAddress &addr, PrintString &errorMessage)
 {
     if (!host.length()) {
-        errorMessage.print(FSPGM(ping_monitor_cancelled));
+        errorMessage.print(F("Ping cancelled"));
         return false;
     }
 
@@ -55,7 +46,7 @@ bool PingMonitor::resolveHost(const String &host, IPAddress &addr, PrintString &
         __LDBG_printf("resolved host %s=%s isset=%u addr=%x", host.c_str(), addr.toString().c_str(), IPAddress_isValid(addr), (uint32_t)addr);
         return true;
     }
-    errorMessage.printf_P(SPGM(ping_monitor_unknown_service), host.c_str());
+    errorMessage.printf_P(PSTR("ping: %s: Name or service not known"), host.c_str());
     return false;
 }
 
@@ -213,7 +204,7 @@ void PingMonitorPlugin::getStatus(Print &output)
         _task->printStats(output);
     }
     else {
-        output.print(FSPGM(ping_monitor_service));
+        output.print(F("Ping Monitor Service"));
         output.print(' ');
         output.print(FSPGM(disabled));
     }
@@ -284,7 +275,7 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
 
     mainGroup.end();
 
-    auto &serviceGroup = form.addCardGroup(F("pingbs"), FSPGM(ping_monitor_service), cfg.service);
+    auto &serviceGroup = form.addCardGroup(F("pingbs"), F("Ping Monitor Service"), cfg.service);
 
     PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 8, h);
     static_assert(8 == Plugins::Ping::kHostsMax, "adjust value above");
@@ -322,7 +313,7 @@ bool PingMonitorPlugin::atModeHandler(AtModeArgs &args)
         else if (args.size() == 0) {
             if (_ping) {
                 _ping.reset();
-                args.print(FSPGM(ping_monitor_cancelled));
+                args.print(F("Ping cancelled"));
             }
         }
         else if (args.requireArgs(1, 3)) {
@@ -342,26 +333,23 @@ bool PingMonitorPlugin::atModeHandler(AtModeArgs &args)
 
             auto &serial = args.getStream();
             if (PingMonitor::resolveHost(host, addr, message)) {
-                int count = args.toInt(1);
-                int timeout = args.toInt(2);
+                int count = args.toInt(1, 4);
+                int timeout = args.toInt(2, 1000);
 
                 _ping->on(true, [&serial](const AsyncPingResponse &response) {
                     __LDBG_AsyncPingResponse(true, response);
                     if (response.answer) {
-                        serial.printf_P(SPGM(ping_monitor_response), response.size, response.addr.toString().c_str(), response.icmp_seq, response.ttl, response.time);
-                        serial.println();
+                        serial.printf_P(PSTR("%d bytes from %s: icmp_seq=%d ttl=%d time=%u ms\n"), response.size, response.addr.toString().c_str(), response.icmp_seq, response.ttl, response.time);
                     } else {
-                        serial.println(FSPGM(ping_monitor_request_timeout));
+                        serial.println(F("Request timed out."));
                     }
                     return false;
                 });
                 _ping->on(false, [this, &serial](const AsyncPingResponse &response) {
                     __LDBG_AsyncPingResponse(false, response);
-                    serial.printf_P(SPGM(ping_monitor_end_response), response.addr.toString().c_str(), response.total_sent, response.total_recv, response.total_time);
-                    serial.println();
+                    serial.printf_P(PSTR("Total answer from %s sent %d received %d time %u ms\n"), response.addr.toString().c_str(), response.total_sent, response.total_recv, response.total_time);
                     if (response.mac) {
-                        serial.printf_P(SPGM(ping_monitor_ethernet_detected), mac2String(response.mac->addr).c_str());
-                        serial.println();
+                        serial.printf_P(PSTR("Detected eth address %s\n"), mac2String(response.mac->addr).c_str());
                     }
                     _ping.reset();
                     return true;

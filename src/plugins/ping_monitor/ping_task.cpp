@@ -100,7 +100,7 @@ namespace PingMonitor {
             _ping->cancel();
 
             if (!_ping->begin(host.c_str(), _count, _timeout)) {
-                Logger_notice(FSPGM(ping_monitor_ping_for_hostname_failed), host.c_str());
+                Logger_notice(F("Pinging %s failed"), host.c_str());
                 _next(true);
             }
         }
@@ -214,7 +214,7 @@ namespace PingMonitor {
                 }, this);
             }
 
-            Logger_notice(FSPGM(ping_monitor_service_status), SPGM(started), state);
+            Logger_notice(F("Ping monitor service has been %s%s"), SPGM(started), state);
         }
         else {
             __LDBG_printf("no hosts");
@@ -227,7 +227,7 @@ namespace PingMonitor {
         WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
         _cancelPing();
         _pingHosts.clear();
-        Logger_notice(FSPGM(ping_monitor_service_status), SPGM(stopped), emptyString.c_str());
+        Logger_notice(F("Ping monitor service has been %s%s"), SPGM(stopped), emptyString.c_str());
     }
 
     void Task::_cancelPing()

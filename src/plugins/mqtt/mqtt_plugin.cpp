@@ -128,6 +128,7 @@ ATModeCommandHelpArrayPtr Plugin::atModeCommandHelp(size_t &size) const
 }
 
 #endif
+
 bool Plugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {

@@ -74,7 +74,9 @@ void Queue::onPacketAck(uint16_t packetId, PacketAckType type)
         __LDBG_printf("packet=%u type=%u", packetId, type);
         _packetId = 0;
         if (type == PacketAckType::TIMEOUT) {
-            LoopFunctions::callOnce([this]() {
+            // deferred, but using the managed timer: it is removed by clear()/~Queue() and can
+            // never run after the queue has been destroyed (LoopFunctions::callOnce() cannot be cancelled)
+            _Timer(_timer).add(Event::milliseconds(kAckCallbackDelay), false, [this](Event::CallbackTimerPtr) {
                 _publishDone(StatusType::FAILURE);
             });
             return;
@@ -82,7 +84,8 @@ void Queue::onPacketAck(uint16_t packetId, PacketAckType type)
         else {
             _crcs.update(_iterator->getTopic(), _iterator->getPayload());
             ++_iterator;
-            LoopFunctions::callOnce([this]() {
+            // see above, deferred to avoid re-entering Client::_onPacketAck()
+            _Timer(_timer).add(Event::milliseconds(kAckCallbackDelay), false, [this](Event::CallbackTimerPtr) {
                 _publishNextMessage();
             });
         }
@@ -108,8 +111,12 @@ void Queue::clear()
     _crcs.clear();
     _iterator = _entities.end();
     // stop proxies if still running
-    _remove->stop(_remove);
-    _collect->stop(_collect);
+    if (_remove) {
+        _remove->stop(_remove);
+    }
+    if (_collect) {
+        _collect->stop(_collect);
+    }
 }
 
 bool Queue::isUpdateScheduled()

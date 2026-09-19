@@ -147,7 +147,7 @@ MQTT::PacketQueue MQTT::Client::getQueueStatus(int packetId)
     auto iterator = std::find_if(_packetQueue.begin(), _packetQueue.end(), [packetId](const PacketQueue &queue) {
         return queue.getInternalId() == packetId;
     });
-    if (iterator != _packetQueue.end()) {
+    if (iterator == _packetQueue.end()) {
         return PacketQueue();
     }
     return *iterator;

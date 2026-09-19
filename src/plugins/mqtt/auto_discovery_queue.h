@@ -34,6 +34,11 @@ namespace MQTT {
 
             static constexpr uint32_t kDefaultDelay = ~0;
 
+            // delay before a received packet ack is processed.
+            // the callback uses the managed timer and not LoopFunctions::callOnce(), so that it is
+            // removed by clear()/~Queue() and can never run after the queue has been destroyed
+            static constexpr uint32_t kAckCallbackDelay = 1;    // milliseconds
+
             // publish queue
             void publish(RunFlags flags = RunFlags::DEFAULTS, uint32_t startDelay = kDefaultDelay) {
                 _runFlags = flags;

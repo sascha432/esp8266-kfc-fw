@@ -30,6 +30,10 @@ Discard changes and load settings from EEPROM/NVS
 
 Store current settings in EEPROM/NVS
 
+### `+IMPORT=<filename|set_dirty>[,<handle>[,<handle>,...]]`
+
+Import settings from a JSON file, or mark the configuration dirty with `set_dirty`
+
 ### `+FACTORY`
 
 Restore factory settings (but do not store in EEPROM/NVS)
@@ -74,9 +78,21 @@ Display heap usage every interval (can be 1s or 1000ms, 0 shows it once). If `um
 
 Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)
 
+### `+RSSI=[interval in seconds|0=disable]`
+
+Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)
+
 ### `+PWM=<pin>,<input|input_pullup|high|low|waveform|level=0-1023[,<frequency=100-40000Hz>[,<duration/ms>]]`
 
 Control PIN input, output and PWM state. Setting a PIN high or low implicitly sets it to output.
+
+### `+ADC=<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]`
+
+Read the ADC and display values. A `websocket` mode streams the samples to a web socket client instead
+
+### `+CPU=[<80|160>]`
+
+Set the CPU speed (ESP8266 with core < 3.x) or toggle displaying CPU usage (ESP32)
 
 ### `+DLY=<milliseconds>`
 
@@ -109,6 +125,10 @@ List files and directories
 ### `+LSR=[<directory>]`
 
 List files and directories using FS.openDir(). This will not display read only virtual files.
+
+### `+FSM`
+
+Display the file system mapping
 
 ### `+AOTA=<start|stop>`
 
@@ -151,13 +171,13 @@ Set internal LED mode or an LED on a certain PIN.
 
 Set NeoPixel colors for a given PIN if available
 
+### `+X9C=<value> [<cs pin>, <inc pin>, <ud pin>]`
+
+Set the value of an X9C digitally controlled potentiometer. Only available if compiled in (`ATMODE_X9C_ENABLE`)
+
 ### `+PING=<target[,count=4[,timeout=5000]]>`
 
 Ping host or IP address if compiled in
-
-### `PWM=<pin>,<input|input_pullup|waveform|level=0-1024>[,<frequency=100-40000Hz>[,<duration/ms>]]`
-
-PWM output on PIN, min./max. level set it to LOW/HIGH" using digitalWrite
 
 ### `+RD?`
 
@@ -397,18 +417,6 @@ Manage MQTT
   auto[discovery][,restart][,force]           Publish auto discovery
   list[,<full|crc|file>]                      List auto discovery (file = /.logs/mqtt_auto_discovery.json)
 
-## Weather Station
-
-### `+WSSET=<touchpad|timeformat24h|metric|tft|scroll|stats|lock|unlock|screen|screens>,<on|off|options>`
-
-### `+WSBL=<level=0-1023>`
-
-Set backlight level
-
-### `+WSU=<i|f>`
-
-Update weather info/forecast
-
 ## STK500v1 Programmer
 
 ### `+STK500V1F=<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]`
@@ -495,3 +503,65 @@ Set zero crossing offset (16bit) in CPU cycles (16MHz = 62.5ns). The EEPROM must
 ### `+DIMCF=zc,<+-value>`
 
 Increase or decrease zero crossing offset
+
+## NTP
+
+### `+NOW=<update>`
+
+Display the current time or update the time from NTP
+
+### `+TZ=<timezone>`
+
+Set the timezone. Query with `+TZ?` to display timezone information
+
+## Syslog
+
+### `+SQ=<clear|info|queue|pause>`
+
+Syslog queue command
+
+### `+LOG=[<error|security|warning|notice|debug>,]<message>`
+
+Send a message to the logger component. Only available if compiled in (`LOGGER`)
+
+## Serial2TCP
+
+### `+S2TCP=<0=disable/1=server/2=client>`
+
+Enable or disable Serial2TCP
+
+## HTTP2Serial
+
+### `+H2SBD=<baud>`
+
+Set the serial port baud rate
+
+## Sensors
+
+### `+SENSORINA219=<interval in ms>`
+
+Print INA219 sensor data every interval
+
+### `+HLWCAL=<u=voltage/i=current/p=power>[,<repeat>]|[,<displayed value>,<real value>]`
+
+Enter calibration mode or set calibration values (HLW8012/HLW8032)
+
+### `+HLWMODE=<u=voltage/i=current/c=cycle>[,<delay in ms>]`
+
+Set voltage or current mode (HLW8012/HLW8032)
+
+### `+HLWCFG=<params,params,...>`
+
+Configure the sensor inputs. Query with `+HLWCFG?` to display the configuration (HLW8012/HLW8032)
+
+### `+HLWXD=<count/0-4>`
+
+Display extra digits (HLW80xx)
+
+### `+HLWDUMP=<0=off/1...=seconds/2=cycle>`
+
+Dump sensor data (HLW80xx)
+
+### `+HLWPLOT=<ClientID>,<U/I/P/0=disable>[,<1/true=convert units>]`
+
+Request data for plotting a live graph (HLW80xx)

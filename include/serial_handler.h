@@ -92,7 +92,6 @@ namespace SerialHandler {
         cbuf _tx;
     };
 
-
     class Wrapper : public StreamWrapper
     {
     public:

@@ -159,7 +159,9 @@ namespace SerialHandler {
 
         Clients _clients;
         bool _txFlag; // indicator that _clients have _tx with data
-        SemaphoreMutex _lock;
+        // recursive: clients callbacks are invoked while the lock is held and can re-enter
+        // (Client::write, addClient, removeClient, nested Wrapper::write)
+        SemaphoreMutexRecursive _lock;
     };
 
     //
@@ -229,7 +231,9 @@ namespace SerialHandler {
     inline void Wrapper::end()
     {
         removeLoop();
-        _clients.clear();
+        MUTEX_LOCK_BLOCK(_lock) {
+            _clients.clear();
+        }
     }
 
     inline void Wrapper::addLoop()
@@ -303,7 +307,9 @@ namespace SerialHandler {
 
     inline void Wrapper::pollSerial()
     {
-        serialHandler._pollSerial();
+        MUTEX_LOCK_BLOCK(serialHandler._lock) {
+            serialHandler._pollSerial();
+        }
     }
 
 }

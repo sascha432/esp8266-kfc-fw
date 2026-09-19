@@ -95,17 +95,27 @@ namespace SerialHandler {
 
     size_t Client::write(uint8_t data)
     {
-        _checkBufferSize(_tx, sizeof(data));
-        serialHandler._txFlag = true;
-        return _tx.write(data);
+        auto &wrapper = Wrapper::getInstance();
+        size_t written = 0;
+        MUTEX_LOCK_BLOCK(wrapper._lock) {
+            _checkBufferSize(_tx, sizeof(data));
+            wrapper._txFlag = true;
+            written = _tx.write(data);
+        }
+        return written;
     }
 
     size_t Client::write(const uint8_t *buffer, size_t size)
     {
         __DBG_validatePointerCheck(buffer, VP_HS);
-        _checkBufferSize(_tx, size);
-        serialHandler._txFlag = true;
-        return _tx.write((const char *)buffer, size);
+        auto &wrapper = Wrapper::getInstance();
+        size_t written = 0;
+        MUTEX_LOCK_BLOCK(wrapper._lock) {
+            _checkBufferSize(_tx, size);
+            wrapper._txFlag = true;
+            written = _tx.write((const char *)buffer, size);
+        }
+        return written;
     }
 
 
@@ -151,11 +161,18 @@ namespace SerialHandler {
 
     size_t Wrapper::write(const uint8_t *buffer, size_t size)
     {
-        if (_txFlag) {
-            _transmitClientsTx(); // check if any other data is queued
+        MUTEX_LOCK_BLOCK(_lock) {
+            if (_txFlag) {
+                _transmitClientsTx(); // check if any other data is queued
+            }
         }
+        // the output streams are written without the lock: StreamWrapper::write() can block
+        // for up to a second and on ESP8266 SemaphoreMutex locks by disabling interrupts,
+        // which must not span a blocking write
         const size_t written = StreamWrapper::write(buffer, size);
-        _writeClientsRx(nullptr, buffer, written, EventType::WRITE);
+        MUTEX_LOCK_BLOCK(_lock) {
+            _writeClientsRx(nullptr, buffer, written, EventType::WRITE);
+        }
         return written;
     }
 

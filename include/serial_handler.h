@@ -11,6 +11,7 @@
 #include <Arduino.h>
 #include <functional>
 #include <list>
+#include <memory>
 #include <Stream.h>
 #include <StreamWrapper.h>
 #include <NullStream.h>
@@ -143,8 +144,6 @@ namespace SerialHandler {
     private:
         // write data that is received by serial or written to serial
         void _writeClientsRx(Client *src, const uint8_t *buffer, size_t size, EventType type);
-        // write data to serial and other clients
-        void _writeClientsTx(Client *src, const uint8_t *buffer, size_t size);
 
         // read serial data
         void _pollSerial();
@@ -250,7 +249,7 @@ namespace SerialHandler {
     inline Client &Wrapper::addClient(const Callback &cb, EventType events)
     {
         MUTEX_LOCK_BLOCK(_lock) {
-            _clients.emplace_back(new Client(cb, events));
+            _clients.emplace_back(std::make_unique<Client>(cb, events));
             return *_clients.back().get();
         }
         __builtin_unreachable();

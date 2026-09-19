@@ -182,21 +182,6 @@ namespace SerialHandler {
         }
     }
 
-    void Wrapper::_writeClientsTx(Client *src, const uint8_t *buffer, size_t size)
-    {
-        for(const auto &clientPtr: _clients) {
-            if (clientPtr && (src != clientPtr.get()) && __DBG_validatePointer(clientPtr.get(), VP_HS)->_hasAny(EventType::WRITE)) {
-                auto &tx = clientPtr->_getTx();
-                clientPtr->_checkBufferSize(tx, size);
-                tx.write(reinterpret_cast<const char *>(buffer), size);
-                _txFlag = true;
-                #if ESP32
-                    esp_task_wdt_reset();
-                #endif
-            }
-        }
-    }
-
     void Wrapper::_pollSerial()
     {
         auto &serial = *getInput();

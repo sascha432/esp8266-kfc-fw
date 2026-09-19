@@ -207,7 +207,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     // }
     // __LDBG_printf("headers for %s:\n%s", request->url().c_str(), implode('\n', list).c_str());
 
-    auto &url = request->url();
+    const String &url = request->url();
     // --------------------------------------------------------------------
     #if ENABLE_ARDUINO_OTA
         if (url.endsWith(F("-arduino-ota"))) {
@@ -978,10 +978,11 @@ void Plugin::setUpdateFirmwareCallback(UpdateFirmwareCallback callback)
 #endif
 }
 
-bool Plugin::_handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &headers)
+bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &headers)
 {
-    __LDBG_printf("path=%s gz=%u request=%p", path.c_str(), client_accepts_gzip, request);
+    __LDBG_printf("path=%s gz=%u request=%p", pathIn.c_str(), client_accepts_gzip, request);
 
+    String path = pathIn;
     if (path.endsWith('/')) {
         path += FSPGM(index_html);
     }

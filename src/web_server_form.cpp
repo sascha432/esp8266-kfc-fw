@@ -85,7 +85,7 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &name, Form
         cfg.setPort(value.toInt());
         field.setValue(cfg.getPortAsString());
     });
-    form.addFormUI(FormUI::Type::NUMBER, FSPGM(Port), FormUI::PlaceHolder(System::WebServer::kPortDefault));
+    form.addFormUI(FormUI::Type::NUMBER, F("Port"), FormUI::PlaceHolder(System::WebServer::kPortDefault));
     form.addValidator(FormUI::Validator::NetworkPort(true));
 
     #if WEBSERVER_TLS_SUPPORT
@@ -109,15 +109,15 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &name, Form
         cfg.addRangeValidatorFor_login_attempts(form);
 
         form.addObjectGetterSetter(F("ltf"), cfg, cfg.get_bits_login_timeframe, cfg.set_bits_login_attempts);
-        form.addFormUI(F("Login Attempts Timeframe"), FormUI::Suffix("seconds"));
+        form.addFormUI(F("Login Attempts Timeframe"), FormUI::Suffix(F("seconds")));
         cfg.addRangeValidatorFor_login_timeframe(form);
 
         form.addObjectGetterSetter(F("lst"), cfg, cfg.get_bits_login_storage_timeframe, cfg.set_bits_login_storage_timeframe);
-        form.addFormUI(F("Store Login Attempts Duration"), FormUI::Suffix("days"));
+        form.addFormUI(F("Store Login Attempts Duration"), FormUI::Suffix(F("days")));
         cfg.addRangeValidatorFor_login_rewrite_interval(form);
 
         form.addObjectGetterSetter(F("lri"), cfg, cfg.get_bits_login_rewrite_interval, cfg.set_bits_login_rewrite_interval);
-        form.addFormUI(F("Rewrite Login Storage File Interval"), FormUI::Suffix("minutes"));
+        form.addFormUI(F("Rewrite Login Storage File Interval"), FormUI::Suffix(F("minutes")));
         cfg.addRangeValidatorFor_login_rewrite_interval(form);
 
         loginSecurityGroup.end();

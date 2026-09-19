@@ -408,7 +408,7 @@ namespace WebServer {
 
 #endif
 
-        bool _handleFileRead(String path, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
+        bool _handleFileRead(const String &path, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
         bool _sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
         AsyncWebServerResponse *_beginFileResponse(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
 

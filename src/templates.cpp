@@ -325,7 +325,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.printf_P(PSTR(HTML_S(br) "Last Factory Reset (Version %s-%08x): "), SaveCrash::Data::FirmwareVersion(cfg.config_version).toString().c_str(), cfg.config_magic);
             auto timestamp = cfg.getLastFactoryResetTimestamp();
             if (timestamp) {
-                output.strftime_P(SPGM(strftime_date_time_zone), timestamp);
+                output.strftime(FSPGM(strftime_date_time_zone), timestamp);
             }
             else {
                 output.print(F("No time available"));
@@ -364,7 +364,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     }
     else if (key == F("WIFI_UPTIME")) {
         auto wifiUp = KFCFWConfiguration::getWiFiUp();
-        output.print(System::Flags::getConfig().is_station_mode_enabled ? (wifiUp == 0 ? FSPGM(Offline, "Offline") : formatTime(wifiUp / 1000)) : F("Client mode disabled"));
+        output.print(System::Flags::getConfig().is_station_mode_enabled ? (wifiUp == 0 ? F("Offline") : formatTime(wifiUp / 1000)) : F("Client mode disabled"));
     }
     else if (key == F("IP_ADDRESS")) {
         WiFiStatus::getAddress(output);
@@ -430,10 +430,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             if (num < Plugins::Alarm::MAX_ALARMS) {
                 auto cfg = Plugins::Alarm::getConfig().alarms[num];
                 if (cfg.is_enabled) {
-                    char buf[32];
-                    time_t _now = (time_t)cfg.time.timestamp;
-                    strftime_P(buf, sizeof(buf), SPGM(strftime_date_time_zone), localtime(&_now));
-                    output.print(buf);
+                    output.strftime(FSPGM(strftime_date_time_zone), (time_t)cfg.time.timestamp);
                 }
             }
         }
@@ -449,7 +446,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 return;
             }
         }
-        output.print(FSPGM(Not_supported, "Not supported"));
+        output.print(F("Not supported"));
     }
     else {
         __DBG_printf("strlist check key='%s'", key.c_str());

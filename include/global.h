@@ -361,10 +361,6 @@
 #    define IOT_WEATHER_STATION 0
 #endif
 
-#ifndef SSD1306_PLUGIN
-#    define SSD1306_PLUGIN 0
-#endif
-
 #ifndef IOT_ATOMIC_SUN_V2
 #    define IOT_ATOMIC_SUN_V2 0
 #endif

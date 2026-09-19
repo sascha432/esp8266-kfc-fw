@@ -255,8 +255,6 @@ https://github.com/akaJes/AsyncPing
 
 [Adafruit-ST7735-Library](https://github.com/adafruit/Adafruit-ST7735-Library)
 
-[Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306)
-
 [adafruit/RTClib](https://github.com/adafruit/RTClib)
 
 [Adafruit_MPR121](https://github.com/adafruit/Adafruit_MPR121)

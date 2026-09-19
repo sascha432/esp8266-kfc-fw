@@ -15,9 +15,6 @@
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #include "../src/plugins/plugins.h"
-#if IOT_LED_MATRIX_HAVE_SSD1306
-#    include <Adafruit_SSD1306.h>
-#endif
 #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
 #    pragma push_macro("DEBUG")
 #    undef DEBUG
@@ -673,27 +670,6 @@ private:
         AmbientLightSensorHandler _lightSensor2;
     #endif
 
-    #if IOT_LED_MATRIX_HAVE_SSD1306
-    private:
-        #ifndef SSD1306_DISPLAY_CONFIG
-            #error SSD1306_DISPLAY_CONFIG not set
-        #endif
-        Adafruit_SSD1306 _ssd1306{SSD1306_DISPLAY_CONFIG};
-        Event::Timer _ssd1306Timer;
-        bool _ssd1306Blank{false};
-
-        void ssd1306Begin();
-        void ssd1306End();
-        void ssd1306Clear(bool display = true);
-        void ssd1306Update();
-        // enable screen saver/blank screen
-        void ssd1306Blank(bool state);
-
-        static void ssd1306InitTimer(Event::CallbackTimerPtr);
-        static void ssd1306UpdateTimer(Event::CallbackTimerPtr);
-        static void ssd1306WiFiCallback(WiFiCallbacks::EventType, void *);
-    #endif
-
 public:
     static Clock::ShowMethodType getShowMethod();
     static const __FlashStringHelper *getShowMethodStr();
@@ -785,14 +761,14 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
         if (P_Watt == 0) {
             return ~0U; // unlimited
         }
-        auto diff = P_Watt - __getPowerLevel(P_Watt);
+        const float diff = P_Watt - __getPowerLevel(P_Watt);
         return (P_Watt + diff) * 1000;
     }
 
     inline uint8_t ClockPlugin::_calcPowerLevel(uint8_t brightness)
     {
-        uint32_t timestamp = micros();
-        auto diff = _powerLevel.timer ? _powerLevel.updateRate / static_cast<float>(get_time_since(_powerLevel.timer, timestamp)) : 0.0f;
+        const uint32_t timestamp = micros();
+        const float diff = _powerLevel.timer ? _powerLevel.updateRate / static_cast<float>(get_time_since(_powerLevel.timer, timestamp)) : 0.0f;
         _powerLevel.average_mW = ((_powerLevel.average_mW * diff) + _powerLevel.current_mW) / (diff + 1.0);
         _powerLevel.timer = timestamp;
         return brightness;
@@ -836,9 +812,6 @@ inline ClockPlugin &ClockPlugin::getInstance()
         #if defined(IOT_CLOCK_MOTION_SENSOR_OUTPUT_PIN) && IOT_CLOCK_MOTION_SENSOR_OUTPUT_PIN != -1
             digitalWrite(IOT_CLOCK_MOTION_SENSOR_OUTPUT_PIN, !motion);
         #endif
-        #if IOT_LED_MATRIX_HAVE_SSD1306
-            ssd1306Blank(!motion);
-        #endif
     }
 
     inline bool ClockPlugin::eventMotionAutoOff(bool state)
@@ -849,7 +822,7 @@ inline ClockPlugin &ClockPlugin::getInstance()
             return true;
         }
         // state false = turn on
-        if (!state && !_isEnabled && _motionAutoOff == true) {
+        if (!state && !_isEnabled && _motionAutoOff) {
             _setState(true, false);
             return true;
         }

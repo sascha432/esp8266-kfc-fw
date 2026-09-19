@@ -47,9 +47,9 @@ void WebUISocket::onText(uint8_t *data, size_t len)
         auto client = getClient();
         String command;
         std::array<String, 4> args;
-        uint8_t argc;
+        size_t argc;
 
-        auto ptr = (char *)data;
+        auto ptr = reinterpret_cast<const char *>(data);
         while(len && !isspace(*ptr)) {
             command += (char)tolower(*ptr++);
             len--;

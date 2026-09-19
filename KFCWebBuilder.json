@@ -45,9 +45,6 @@
                 "./src/plugins/stk500v1/atmega.csv",
                 "./src/plugins/dimmer_module/firmware/hex/*"
             ],
-            "#if !SSD1306_PLUGIN": [
-                "./src/plugins/ssd1306_plugin/fonts/7digit"
-            ],
             "#if !FILE_MANAGER": [
                 "./Resources/html/file-manager.html",
                 "./Resources/js/file-manager.js"

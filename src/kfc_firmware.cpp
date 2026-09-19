@@ -17,7 +17,6 @@
 #include "plugins_menu.h"
 #include "reset_detector.h"
 #include "save_crash.h"
-#include "serial2udp.h"
 #include "serial_handler.h"
 #include "web_server.h"
 #include "../src/plugins/plugins.h"
@@ -26,9 +25,6 @@
 #endif
 #if HAVE_IOEXPANDER
 #    include <IOExpander.h>
-#endif
-#if PRINTF_WRAPPER_ENABLED
-#    include <printf_wrapper.h>
 #endif
 
 #if DEBUG_ALL
@@ -205,11 +201,6 @@ void setup()
         if (resetDetector.getResetCounter()) {
             resetDetector.clearCounter();
         }
-    #endif
-
-    #if 0
-        #include "../include/retracted/custom_wifi.h"
-        Serial2Udp::initWiFi(F(CUSTOM_WIFI_SSID), F(CUSTOM_WIFI_PASSWORD), IPAddress(192, 168, 0, 3), 6577);
     #endif
 
     #if defined(HAVE_IOEXPANDER)
@@ -499,7 +490,7 @@ void setup()
             __LDBG_printf("rebooting in %u minutes", rebootDelay);
             // restart device if running in safe mode for rebootDelay minutes
             _Scheduler.add(Event::minutes(rebootDelay), false, [](Event::CallbackTimerPtr timer) {
-                Logger_notice(F("Rebooting device after safe mode timeout"));
+                Logger_notice(F("R,.ebooting device after safe mode timeout"));
                 config.restartDevice();
             });
         }
@@ -614,11 +605,10 @@ void loop()
         loopFunctions.shrink_to_fit();
     }
     __Scheduler.run(); // check all events
-    #if ESP32 && defined(CONFIG_HEAP_POISONING_COMPREHENSIVE)
-        heap_caps_check_integrity_all(true);
-    #endif
-
-    #if _MSC_VER || ESP32
+    #if ESP32
+        #if CONFIG_HEAP_POISONING_COMPREHENSIVE
+            heap_caps_check_integrity_all(true);
+        #endif
         run_scheduled_functions();
     #endif
 }

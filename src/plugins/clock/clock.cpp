@@ -302,10 +302,6 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         _PCF8574.PORT = 0xff;
     #endif
 
-    #if IOT_LED_MATRIX_HAVE_SSD1306
-        ssd1306Begin();
-    #endif
-
     #if IOT_LED_MATRIX_STANDBY_PIN != -1
         digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
         pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
@@ -590,10 +586,6 @@ void ClockPlugin::shutdown()
             _display.delay(10);
         }
     }
-
-    #if IOT_LED_MATRIX_HAVE_SSD1306
-        ssd1306End();
-    #endif
 
     _removeLoop();
 

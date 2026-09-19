@@ -197,7 +197,7 @@ void Entity::finalize()
     __LDBG_printf("MQTT auto discovery payload '%s'", printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
 }
 
-const String Entity::_getUniqueId(const String &name)
+String Entity::_getUniqueId(const String &name)
 {
     PrintString tmp;
     WebTemplate::printUniqueId(tmp, name);

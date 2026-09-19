@@ -198,13 +198,13 @@ namespace MQTT {
 
             // JSON array
             // ["Effect1","Effect2",...]
-            void addEffectList(String json) {
+            void addEffectList(const String &json) {
                 __addParameter(FSPGM(mqtt_effect_list), json.c_str(), false);
             }
 
             // JSON array
             // ["rgbw","color_temp",...]
-            void addSupportedColorModes(String json) {
+            void addSupportedColorModes(const String &json) {
                 __addParameter(F("supported_color_modes"), json.c_str(), false);
             }
 
@@ -357,7 +357,7 @@ namespace MQTT {
 
         private:
             bool _create(ComponentType componentType, const String &name, FormatType format, NameType platform = FSPGM(mqtt));
-            const String _getUniqueId(const String &name);
+            String _getUniqueId(const String &name);
 
             FormatType _format;
             PrintString _discovery;

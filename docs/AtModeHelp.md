@@ -538,10 +538,6 @@ Set the serial port baud rate
 
 ## Sensors
 
-### `+SENSORINA219=<interval in ms>`
-
-Print INA219 sensor data every interval
-
 ### `+HLWCAL=<u=voltage/i=current/p=power>[,<repeat>]|[,<displayed value>,<real value>]`
 
 Enter calibration mode or set calibration values (HLW8012/HLW8032)

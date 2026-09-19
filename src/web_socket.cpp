@@ -187,8 +187,8 @@ void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, i
         //     wsClient->_displayData(wsClient, (AwsFrameInfo*)arg, data, len);
         // #endif
 
-        constexpr size_t pingLen = constexpr_strlen("+iPING ");
-        constexpr size_t sidLen = constexpr_strlen("+SID ");
+        constexpr size_t pingLen = sizeof("+iPING ") - 1;
+        constexpr size_t sidLen = sizeof("+SID ") - 1;
 
         if (len > pingLen && strncmp_P((const char *)data, PSTR("+iPING "), pingLen) == 0) {
             char buffer[32];

@@ -311,9 +311,6 @@
         "files.insertFinalNewline": true,
         "files.trimTrailingWhitespace": true,
         "editor.detectIndentation": false,
-        "C_Cpp.default.cppStandard": "c++17",
-        "C_Cpp.default.cStandard": "c99",
-        "C_Cpp.default.intelliSenseMode": "gcc-arm",
         "cSpell.words": [
             "__LDBG_PRINTF",
             "_IRREMOTEESP8266_VERSION_STR",

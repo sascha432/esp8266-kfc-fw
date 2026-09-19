@@ -39,8 +39,9 @@ namespace PingMonitor {
         if (isAuthenticated()) {
             Buffer buffer;
 
-            static constexpr size_t commandLength = constexpr_strlen("+PING ");
-            if (len > commandLength && strncmp_P(reinterpret_cast<char *>(data), PSTR("+PING "), commandLength) == 0) {
+            #define PING_CMD_STR "+PING "
+            constexpr size_t commandLength = sizeof(PING_CMD_STR) - 1;
+            if (len > commandLength && strncmp_P(reinterpret_cast<char *>(data), PSTR(PING_CMD_STR), commandLength) == 0) {
 
                 buffer.write(data + commandLength, len - commandLength);
                 StringVector items;
@@ -69,18 +70,18 @@ namespace PingMonitor {
                                 _ping.reset(new AsyncPing(), WsPingClient::getDefaultDeleter);
                             }
 
-                            __DBG_printf("_ping=%p", &_ping);
-                            __DBG_printf("_ping.get()=%p", _ping.get());
-                            __DBG_printf("client=%p", &client);
+                            __LDBG_printf("_ping=%p", &_ping);
+                            __LDBG_printf("_ping.get()=%p", _ping.get());
+                            __LDBG_printf("client=%p", &client);
 
                             _ping->on(true, [client](AsyncPingResponse response) {
                                 __LDBG_AsyncPingResponse(true, response);
                                 LoopFunctions::callOnce([client, response]() {
                                     if (response.answer) {
-                                        WsClient::safeSend(wsPing, client, PrintString(FSPGM(ping_monitor_response), response.size, response.addr.toString().c_str(), response.icmp_seq, response.ttl, response.time));
+                                        WsClient::safeSend(wsPing, client, PrintString(F("%d bytes from %s: icmp_seq=%d ttl=%d time=%u ms"), response.size, response.addr.toString().c_str(), response.icmp_seq, response.ttl, response.time));
                                     }
                                     else {
-                                        WsClient::safeSend(wsPing, client, FSPGM(ping_monitor_request_timeout));
+                                        WsClient::safeSend(wsPing, client, F("Request timed out."));
                                     }
                                 });
                                 return false;
@@ -91,9 +92,9 @@ namespace PingMonitor {
                                 // create a copy for callOnce()
                                 String mac = mac2String(response.mac);
                                 LoopFunctions::callOnce([client, response, mac]() {
-                                    WsClient::safeSend(wsPing, client, PrintString(FSPGM(ping_monitor_end_response), response.addr.toString().c_str(), response.total_sent, response.total_recv, response.total_time));
+                                    WsClient::safeSend(wsPing, client, PrintString(F("Total answer from %s sent %d received %d time %u ms"), response.addr.toString().c_str(), response.total_sent, response.total_recv, response.total_time));
                                     if (mac.length()) {
-                                        WsClient::safeSend(wsPing, client, PrintString(FSPGM(ping_monitor_ethernet_detected), mac.c_str()));
+                                        WsClient::safeSend(wsPing, client, PrintString(F("Detected eth address %s"), mac.c_str()));
                                     }
                                     WsClient::safeSend(wsPing, client, F("+CLOSE"));
                                 });

@@ -25,11 +25,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-AUTO_STRING_DEF(uptime, "uptime")
-AUTO_STRING_DEF(heap, "heap")
-AUTO_STRING_DEF(bytes, "bytes")
-AUTO_STRING_DEF(version, "version")
-
 Sensor_SystemMetrics::Sensor_SystemMetrics() : MQTT::Sensor(MQTT::SensorType::SYSTEM_METRICS)
 {
     REGISTER_SENSOR_CLIENT(this);
@@ -73,10 +68,10 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(static_cast<AutoDiscoveryEnum>(num)) {
         case AutoDiscoveryEnum::UPTIME_SECONDS:
-            if (discovery->create(this, FSPGM(uptime), format)) {
+            if (discovery->create(this, F("uptime"), format)) {
                 discovery->addStateTopic(_getTopic());
                 discovery->addUnitOfMeasurement(FSPGM(seconds));
-                discovery->addValueTemplate(FSPGM(uptime));
+                discovery->addValueTemplate(F("uptime"));
                 discovery->addName(F("System Uptime (seconds)"));
                 discovery->addObjectId(baseTopic + F("system_utime_seconds"));
             }
@@ -91,10 +86,10 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
             }
             break;
         case AutoDiscoveryEnum::HEAP:
-            if (discovery->create(this, FSPGM(heap), format)) {
+            if (discovery->create(this, F("heap"), format)) {
                 discovery->addStateTopic(_getTopic());
-                discovery->addUnitOfMeasurement(FSPGM(bytes));
-                discovery->addValueTemplate(FSPGM(heap));
+                discovery->addUnitOfMeasurement(F("bytes"));
+                discovery->addValueTemplate(F("heap"));
                 discovery->addIcon(F("mdi:memory"));
                 discovery->addName(F("Free Heap"));
                 discovery->addObjectId(baseTopic + F("free_heap"));
@@ -114,7 +109,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
             case AutoDiscoveryEnum::PSRAM:
                 if (discovery->create(this, "psram", format)) {
                     discovery->addStateTopic(_getTopic());
-                    discovery->addUnitOfMeasurement(FSPGM(bytes));
+                    discovery->addUnitOfMeasurement(F("bytes"));
                     discovery->addValueTemplate(F("psram"));
                     discovery->addIcon(F("mdi:memory"));
                     discovery->addName(F("Free PSRAM"));
@@ -123,9 +118,9 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 break;
         #endif
         case AutoDiscoveryEnum::VERSION:
-            if (discovery->create(this, FSPGM(version), format)) {
+            if (discovery->create(this, F("version"), format)) {
                 discovery->addStateTopic(_getTopic());
-                discovery->addValueTemplate(FSPGM(version));
+                discovery->addValueTemplate(F("version"));
                 discovery->addIcon(F("mdi:wrench"));
                 discovery->addName(F("Firmware Version"));
                 discovery->addObjectId(baseTopic + F("firmware_version"));
@@ -206,7 +201,7 @@ uint8_t Sensor_SystemMetrics::getAutoDiscoveryCount() const
 
 void Sensor_SystemMetrics::getStatus(Print &output)
 {
-    output.printf_P(PSTR("System Metrics" HTML_S(br)));
+    output.print(F("System Metrics" HTML_S(br)));
 }
 
 void Sensor_SystemMetrics::publishState()
@@ -305,9 +300,9 @@ String Sensor_SystemMetrics::_getMetricsJson() const
     #endif
 
     UnnamedObject jsonObj(
-        NamedUint32(FSPGM(uptime), getSystemUptime()),
+        NamedUint32(F("uptime"), getSystemUptime()),
         NamedStoredString(F("uptime_hr"), _getUptime(F("\n"))),
-            NamedUint32(FSPGM(heap), getTotalFreeHeap()),
+            NamedUint32(F("heap"), getTotalFreeHeap()),
             NamedInt32(F("rssi"), WiFi.RSSI()),
         #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
             NamedUint32(F("psram"), ESP.getFreePsram()),
@@ -316,7 +311,7 @@ String Sensor_SystemMetrics::_getMetricsJson() const
             NamedShort(F("savecrash_cnt"), saveCrashInfo.numTraces()),
             NamedShort(F("heap_frag"), ESP.getHeapFragmentation()),
         #endif
-        NamedStoredString(FSPGM(version), version)
+        NamedStoredString(F("version"), version)
     );
 
     #if PING_MONITOR_SUPPORT

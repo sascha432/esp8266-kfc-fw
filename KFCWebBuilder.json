@@ -66,7 +66,6 @@
                 "./Resources/html/serial-console.html",
                 "./lib/KFCLibrary/KFCWebBuilder/Resources/js/selectize.min.js",
                 "./Resources/js/http2serial.js",
-                "./Resources/js/led-matrix.js",
                 "./Resources/css/http2serial.css"
             ],
             "#if !PING_MONITOR_SUPPORT": [
@@ -77,7 +76,6 @@
             ],
             "#if !IOT_CLOCK && !IOT_LED_MATRIX": [
                 "./Resources/images/light.svg",
-                "./Resources/js/led-matrix.js",
                 "./Resources/js/forms/led-matrix.js",
                 "./Resources/js/webui-led-matrix.js"
             ],
@@ -157,7 +155,6 @@
                         "./Resources/js/file-manager.js",
                         "./Resources/js/ws-console.js",
                         "./Resources/js/http2serial.js",
-                        "./Resources/js/led-matrix.js",
                         "./Resources/js/ping-console.js",
                         "./Resources/js/webui.js",
                         "./Resources/js/webui-led-matrix.js",

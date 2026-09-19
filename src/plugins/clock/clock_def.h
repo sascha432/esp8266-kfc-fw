@@ -38,15 +38,6 @@
 #    define DEBUG_IOT_CLOCK (0 || defined(DEBUG_ALL))
 #endif
 
-// allows to display the RGB leds in the browser
-#ifndef IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-#    define IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL 0
-#endif
-
-#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL == 1 && HTTP2SERIAL_SUPPORT != 1
-#   error HTTP2SERIAL_SUPPORT=1 required
-#endif
-
 // the number of pixels and order can be changed if set to 1
 // configurable requires memory and CPU time of the maximum. number of configured LEDs, even if only 1 is active
 // set IOT_LED_MATRIX_COLS=1 and IOT_LED_MATRIX_ROWS=max. number of LEDs

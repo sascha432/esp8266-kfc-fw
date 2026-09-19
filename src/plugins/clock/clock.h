@@ -239,37 +239,6 @@ public:
 
     #if AT_MODE_SUPPORTED
 
-    private:
-        #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-            struct LedMatrixDisplayTimer {
-                Event::Timer timer;
-                void *clientId;
-                String host;
-                uint16_t udpPort;
-                uint16_t wsPort;
-                uint32_t errors;
-                uint32_t maxErrors;
-                LedMatrixDisplayTimer(void *pClientId, uint32_t pMaxErrors) : clientId(pClientId), udpPort(0), wsPort(0), errors(0), maxErrors(pMaxErrors) {
-                }
-                ~LedMatrixDisplayTimer() {
-                    _Timer(timer).remove();
-                    clientId = nullptr;
-                }
-                void print(const String &str) {
-                    auto client = Http2Serial::getClientById(clientId);
-                    if (client) {
-                        client->text(str);
-                    }
-                    else {
-                        Serial.println(str);
-                    }
-                }
-            };
-            LedMatrixDisplayTimer *_displayLedTimer{nullptr};
-
-            void _removeDisplayLedTimer();
-        #endif
-
     public:
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif

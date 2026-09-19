@@ -324,10 +324,6 @@ Scan I2C Bus for devices.
 
 ## 7 Segment Clock / LED Matrix / LED Strip
 
-### `+LMTESTP=<#color>[,<time=500ms>]`
-
-Test peak values. WARNING! This command will bypass all protections and limits
-
 ### `+LMC=<command>[,<options>]`
 
 Run command
@@ -349,10 +345,6 @@ Run command
 - test,<1=pixel order|2=clock|3=row/col>[,#color=#330033][,<brightness=128>][,<speed=100ms>]
 - get[,<range>]
 - set,<range(=0-7)>,[#color]
-
-### `+LMVIEW=<interval in ms|0=disable>,<client_id>`
-
-Display LEDs over http2serial. Requires a proxy that listens to UDP and sends the data back over a web socket. An example can be found in `scripts\udp2ws_proxy`
 
 ## Weather Station / Clock / LED Matrix
 

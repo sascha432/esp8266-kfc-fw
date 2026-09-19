@@ -474,9 +474,6 @@ void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
     _isRunning = false;
-    #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-        _removeDisplayLedTimer();
-    #endif
     if (source.startsWith(F("ani-"))) {
         // do not reset just apply new config
         _config.enabled = false;
@@ -538,15 +535,6 @@ void ClockPlugin::shutdown()
     #if IOT_SENSOR_HAVE_MOTION_SENSOR || IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
                 default:
                     break;
-            }
-        }
-    #endif
-
-    #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-        if (_displayLedTimer) {
-            _removeDisplayLedTimer();
-            if (!_targetBrightness || !_config.enabled) {
-                _display.delay(250);
             }
         }
     #endif
@@ -911,11 +899,6 @@ void ClockPlugin::_setBrightness(uint8_t brightness, bool useEnable)
     _forceUpdate = true;
     _isFading = false;
     _schedulePublishState = true;
-    #if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-        if (_displayLedTimer) {
-            _displayLedTimer->print(PrintString(F("+LED_MATRIX_BRIGHTNESS=%u"), _getBrightness()));
-        }
-    #endif
 }
 
 void ClockPlugin::_enable()

@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Removed the `AT_MODE_HELP_SUPPORTED` option. See [docs/AtModeHelp.md](docs/AtModeHelp.md) for the command reference
  - Removed the unfinished Interleaved animation
  - Python CLI audio spectrum analyzer for the LED matrix and improved I2S microphone FFT
  - Reduced heap usage for file manager and MDNS Discovery

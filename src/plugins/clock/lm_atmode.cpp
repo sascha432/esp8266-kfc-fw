@@ -43,25 +43,6 @@ void ClockPlugin::_removeDisplayLedTimer()
 
 #endif
 
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr ClockPlugin::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = {
-#if IOT_SENSOR_HAVE_INA219
-        PROGMEM_AT_MODE_HELP_COMMAND(LMTESTP),
-#endif
-        PROGMEM_AT_MODE_HELP_COMMAND(LMC),
-#if IOT_CLOCK_VIEW_LED_OVER_HTTP2SERIAL
-        PROGMEM_AT_MODE_HELP_COMMAND(LMVIEW)
-#endif
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
-
 bool ClockPlugin::atModeHandler(AtModeArgs &args)
 {
     // if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(CLOCKTS))) {

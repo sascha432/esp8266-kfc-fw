@@ -165,9 +165,6 @@ public:
     static void addGroup(WebUINS::Root &webUI, const __FlashStringHelper *title);
 
     #if AT_MODE_SUPPORTED
-        #if AT_MODE_HELP_SUPPORTED
-            virtual void atModeHelpGenerator() override;
-        #endif
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif
 

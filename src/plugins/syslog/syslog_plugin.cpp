@@ -232,22 +232,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(SQ, "SQ", "<clear|info|queue|pause>", "Sys
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LOG, "LOG", "[<error|security|warning|notice|debug>,]<message>", "Send message to the logger component");
 #endif
 
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr SyslogPlugin::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = {
-        PROGMEM_AT_MODE_HELP_COMMAND(SQ),
-        #if LOGGER
-            PROGMEM_AT_MODE_HELP_COMMAND(LOG),
-        #endif
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
-
 bool SyslogPlugin::atModeHasStream(AtModeArgs &args) const
 {
     if (!_syslog) {

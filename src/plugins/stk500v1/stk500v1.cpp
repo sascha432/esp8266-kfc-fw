@@ -23,9 +23,6 @@ public:
     STK500v1Plugin();
 
     #if AT_MODE_SUPPORTED
-        #if AT_MODE_HELP_SUPPORTED
-            virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-        #endif
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif
 
@@ -62,20 +59,6 @@ STK500v1Plugin::STK500v1Plugin() : PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(ST
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(STK500V1F, "STK500V1F", "<filename>,[<0=Serial/1=Serial1>[,<0=disable/1=logger/2=serial/3=serial2http/4=file>]]", "Flash ATmega micro controller over Serial Port");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(STK500V1S, "STK500V1S", "<atmega328p/0x1e1234/...>", "Set signature (/stk500v1/atmega.csv)", "Display signature");
-
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr STK500v1Plugin::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = {
-        PROGMEM_AT_MODE_HELP_COMMAND(STK500V1F),
-        PROGMEM_AT_MODE_HELP_COMMAND(STK500V1S)
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
 
 class HardwareSerialHelper : public HardwareSerial {
 public:

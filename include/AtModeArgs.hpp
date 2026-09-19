@@ -148,11 +148,7 @@ inline void AtModeArgs::print() const
 
 inline void AtModeArgs::help() const
 {
-    #if AT_MODE_HELP_SUPPORTED
-        _output.printf_P(PSTR("try +HELP=%s\n"), _command.c_str());
-    #else
-        _output.printf_P(PSTR("try https://github.com/sascha432/esp8266-kfc-fw/blob/master/docs/AtModeHelp.md#%s\n"), _command.c_str());
-    #endif
+    _output.printf_P(PSTR("try https://github.com/sascha432/esp8266-kfc-fw/blob/master/docs/AtModeHelp.md#%s\n"), _command.c_str());
 }
 
 inline bool AtModeArgs::isInvalidArg(uint16_t num) const
@@ -373,24 +369,6 @@ inline AtModeArgs::Range AtModeArgs::toRange(uint16_t num, uint32_t min, uint32_
     }
     return Range(from, to);
 }
-
-#if AT_MODE_HELP_SUPPORTED
-
-inline bool AtModeArgs::isCommand(const ATModeCommandHelp_t *help) const
-{
-    __DBG_validatePointerCheck(help, VP_HPS);
-    __DBG_validatePointerCheck(help->commandPrefix, VP_NHPS);
-    __DBG_validatePointerCheck(help->command, VP_HPS);
-    if (help->commandPrefix && pgm_read_byte(help->commandPrefix)) { // check if not nullptr or empty string
-        // check prefix and rest of the command
-        return _command.startsWithIgnoreCase(FPSTR(help->commandPrefix)) && _command.equalsIgnoreCase(FPSTR(help->command), strlen_P(help->commandPrefix));
-    }
-    // compare commands
-    return _command.equalsIgnoreCase(FPSTR(help->command));
-
-}
-
-#endif
 
 inline bool AtModeArgs::has(const __FlashStringHelper *str, bool ignoreCase) const
 {

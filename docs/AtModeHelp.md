@@ -1,6 +1,8 @@
 # AT Mode Commands
 
-After the command help takes a lot of FLASH memory, it has been moved to this document here. Most commands without DEBUG MODE are listed.
+This document is the reference, most commands without DEBUG MODE are listed.
+
+Commands marked **(DEBUG)** require a firmware built with `DEBUG=1` and are not available in release builds.
 
 ## Common Commands
 
@@ -27,13 +29,6 @@ Discard changes and load settings from EEPROM/NVS
 ### `+STORE`
 
 Store current settings in EEPROM/NVS
-
-### `+DUMP=[<dirty|json>]`
-
-Dump config information and data
-
-  - `dirty` show modified entries only
-  - `json` use JSON as output format
 
 ### `+FACTORY`
 
@@ -127,7 +122,7 @@ Plugin management. If a plugin malfunctions, it can be blacklisted in SAFE MODE.
 
 Display RTC status or set RTC time from current time. Only available with a real time clock (i.e. DS3231)
 
-### `+RTCM=<list|set|remove|clear|dump|quickconnect>`
+### `+RTCM=<list|set|remove|clear|dump|quickconnect>[,<id>[,<data>]]` **(DEBUG)**
 
 RTC memory access
 
@@ -155,10 +150,6 @@ Set internal LED mode or an LED on a certain PIN.
 ### `+NEOPX=<pin>,<num>,<r>,<g>,<b>`
 
 Set NeoPixel colors for a given PIN if available
-
-### `+METRICS`
-
-Displays versions of the SDK, framework, libraries, memory addresses and a lot more. Available in DEBUG mode only
 
 ### `+PING=<target[,count=4[,timeout=5000]]>`
 
@@ -231,6 +222,62 @@ sp: 3ffff970 end: 3fffffd0 offset: 0270
 +SAVECRASH: free space=124560 largest block=4020
 ```
 
+## Debug Commands
+
+The following commands are only compiled in if the firmware is built with `DEBUG=1`.
+
+### `+PSTORE=[<clear|remove|add>[,<key>[,<value>]]]` **(DEBUG)**
+
+Display/modify persistent storage
+
+### `+METRICS` **(DEBUG)**
+
+Displays versions of the SDK, framework, libraries, memory addresses and a lot more
+
+### `+DUMP=[<dirty|json|config.name>]` **(DEBUG)**
+
+Dump config information and data
+
+  - `dirty` show modified entries only
+  - `json` use JSON as output format
+  - `config.name` dump a single configuration section
+
+### `+DUMPT` **(DEBUG)**
+
+Dump timers
+
+### `+DUMPH=[<log|panic|clear>]` **(DEBUG)**
+
+Dump configuration handles (requires `DEBUG_CONFIGURATION_GETHANDLE`)
+
+### `+DUMPIO=<address=0x60000000>[,<end address|length=4>]` **(DEBUG)**
+
+Dump IO memory
+
+### `+DUMPM=<address>[,<length=32>][,<insecure=false>,<use ESP.flashRead()=true>]` **(DEBUG)**
+
+Dump memory (32bit aligned)
+
+### `+DUMPF=<start=0x40200000>[,<end address|length=32>]` **(DEBUG)**
+
+Dump flash memory
+
+### `+FLASH=<e[rase]>,<address>|<r[ead]>,<address>[,<offset=0>,<length=4096>]|w[rite],<address>,<byte1>[,<byte2>[,...]]` **(DEBUG)**
+
+Erase, read or write flash memory
+
+### `+DUMPFS` **(DEBUG)**
+
+Display file system information
+
+### `+LOGDBG=<1|0>` **(DEBUG)**
+
+Enable/disable writing debug output to `log://debug` (requires `LOGGER`)
+
+### `+PANIC=[<address|wdt|hwdt|alloc>]` **(DEBUG)**
+
+Cause an exception by calling `panic()`, writing zeros to memory `<address>` or triggering the (hardware) WDT
+
 ## I2C Bus
 
 ### `+I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]`
@@ -301,11 +348,11 @@ Set backlight level
 
 Update weather info/forecast
 
-### `+WSM=<date YYYY-MM-DD>[,<days>]`
+### `+WSM=<date YYYY-MM-DD>[,<days>]` **(DEBUG)**
 
-Show Moon Phase for given date. Only available in DEBUG MODE
+Show Moon Phase for given date
 
-### `+MDNSR`=<service>,<proto>,[<wait=3000ms>]`
+### `+MDNSQ=<service>,<proto>,[<wait=3000ms>]`
 
 Query MDNS
 

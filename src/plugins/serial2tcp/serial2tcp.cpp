@@ -164,19 +164,6 @@ void Serial2TcpPlugin::createConfigureForm(FormCallbackType type, const String &
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(S2TCP, "S2TCP", "<0=disable/1=server/2=client>", "Enable or disable Serial2Tcp");
 
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr Serial2TcpPlugin::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = {
-        PROGMEM_AT_MODE_HELP_COMMAND(S2TCP)
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
-
 bool Serial2TcpPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(S2TCP))) {

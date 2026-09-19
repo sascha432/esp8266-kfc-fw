@@ -139,9 +139,6 @@ public:
     #endif
 
     #if AT_MODE_SUPPORTED
-        #if AT_MODE_HELP_SUPPORTED
-            virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-        #endif
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif
 

@@ -283,25 +283,6 @@ void SensorPlugin::getStatus(Print &output)
 
     #include "at_mode.h"
 
-    #if AT_MODE_HELP_SUPPORTED
-
-        void SensorPlugin::atModeHelpGenerator()
-        {
-            if (isEnabled() && !_sensors.empty()) {
-                for(const auto sensor: _sensors) {
-                    size_t size;
-                    auto help = sensor->atModeCommandHelp(size);
-                    if (help) {
-                        for(size_t i = 0; i < size; i++) {
-                            at_mode_add_help(help[i], getName_P());
-                        }
-                    }
-                }
-            }
-        }
-
-    #endif
-
     bool SensorPlugin::atModeHandler(AtModeArgs &args)
     {
         for(const auto sensor: _sensors) {

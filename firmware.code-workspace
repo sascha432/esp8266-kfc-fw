@@ -424,6 +424,7 @@
             "PREINIT",
             "PROBEREQRECVED",
             "PROGMEM",
+            "PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN",
             "PROJECTDATA",
             "PSPGM",
             "PSRAM",

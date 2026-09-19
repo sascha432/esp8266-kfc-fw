@@ -321,22 +321,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCAP, "BCAP", "<voltage>", "Calculate batt
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(BCTAB, "BCTAB", "<from>,<to-voltage>[,<true=charging>]", "Create a table for the given voltage range");
 #endif
 
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr Sensor_Battery::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = {
-    #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
-        PROGMEM_AT_MODE_HELP_COMMAND(BCAP),
-        PROGMEM_AT_MODE_HELP_COMMAND(BCTAB),
-    #endif
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
-
 bool Sensor_Battery::atModeHandler(AtModeArgs &args)
 {
     #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL

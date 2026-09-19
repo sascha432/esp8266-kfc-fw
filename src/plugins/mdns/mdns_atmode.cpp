@@ -24,20 +24,6 @@ using KFCConfigurationClasses::System;
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSQ, "MDNSQ", "<service>,<proto>,[<wait=3000ms>]", "Query MDNS");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<stop|start|enable|disable|zeroconf>", "Configure MDNS");
 
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr MDNSPlugin::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = {
-        PROGMEM_AT_MODE_HELP_COMMAND(MDNSQ),
-        PROGMEM_AT_MODE_HELP_COMMAND(MDNSR)
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
-
 #if ESP8266
 
 void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)

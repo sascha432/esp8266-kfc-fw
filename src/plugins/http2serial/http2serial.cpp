@@ -23,10 +23,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-AUTO_STRING_DEF(serial_console_html, "serial-console.html")
-AUTO_STRING_DEF(_serial_console, "/serial-console")
-AUTO_STRING_DEF(Serial_Console, "Serial Console")
-
 using KFCConfigurationClasses::System;
 
 Http2Serial *Http2Serial::_instance = nullptr;
@@ -136,14 +132,11 @@ public:
     }
 
     virtual void createMenu() override {
-        bootstrapMenu.addMenuItem(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.util);
-        bootstrapMenu.addMenuItem(FSPGM(Serial_Console), FSPGM(serial_console_html), navMenu.home, bootstrapMenu.findMenuByURI(FSPGM(password_html), navMenu.home)->getId());
+        bootstrapMenu.addMenuItem(F("Serial Console"), F("serial-console.html"), navMenu.util);
+        bootstrapMenu.addMenuItem(F("Serial Console"), F("serial-console.html"), navMenu.home, bootstrapMenu.findMenuByURI(FSPGM(password_html), navMenu.home)->getId());
     }
 
     #if AT_MODE_SUPPORTED
-        #if AT_MODE_HELP_SUPPORTED
-            virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const override;
-        #endif
         virtual bool atModeHandler(AtModeArgs &args) override;
     #endif
 };
@@ -180,7 +173,7 @@ void Http2SerialPlugin::setup(SetupModeType mode, const PluginComponents::Depend
     auto server = WebServer::Plugin::getWebServerObject();
     if (server) {
         // __LDBG_printf("server=%p console=%p", server, wsSerialConsole);
-        auto ws = new WsClientAsyncWebSocket(FSPGM(_serial_console), &wsSerialConsole);
+        auto ws = new WsClientAsyncWebSocket(F("/serial-console"), &wsSerialConsole);
         ws->onEvent(Http2Serial::eventHandler);
         server->addHandler(ws);
         __LDBG_printf("Web socket for http2serial running on port %u", System::WebServer::getConfig().port);
@@ -192,19 +185,6 @@ void Http2SerialPlugin::setup(SetupModeType mode, const PluginComponents::Depend
 #include "at_mode.h"
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(H2SBD, "H2SBD", "<baud>", "Set serial port rate");
-
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr Http2SerialPlugin::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = {
-        PROGMEM_AT_MODE_HELP_COMMAND(H2SBD),
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
 
 bool Http2SerialPlugin::atModeHandler(AtModeArgs &args)
 {

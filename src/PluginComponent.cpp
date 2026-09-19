@@ -137,29 +137,6 @@ bool PluginComponent::getValue(const String &id, String &value, bool &state)
     return false;
 }
 
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr PluginComponent::atModeCommandHelp(size_t &size) const
-{
-    size = 0;
-    return nullptr;
-}
-
-void PluginComponent::atModeHelpGenerator()
-{
-    if (isEnabled()) {
-        size_t size;
-        auto help = atModeCommandHelp(size);
-        if (help) {
-            for(size_t i = 0; i < size; i++) {
-                at_mode_add_help(help[i], getName_P());
-            }
-        }
-    }
-}
-
-#endif
-
 bool PluginComponent::atModeHandler(AtModeArgs &args)
 {
     __DBG_panic_pure_virtual();

@@ -429,20 +429,6 @@ void RemoteControlPlugin::createMenu()
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCDSLP, "RCDSLP", "[<time in seconds|0>]", "Set or disable auto sleep");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RCBAT, "RCBAT", "[<interval in seconds|0>]", "Publish battery status");
 
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr RemoteControlPlugin::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = {
-        PROGMEM_AT_MODE_HELP_COMMAND(RCDSLP),
-        PROGMEM_AT_MODE_HELP_COMMAND(RCBAT)
-    };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
-
 bool RemoteControlPlugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(RCDSLP))) {

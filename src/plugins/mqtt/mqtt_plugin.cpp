@@ -118,17 +118,6 @@ PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<" COMMANDS ">", "Manage MQTT\n"
     "Display MQTT status"
 );
 
-#if AT_MODE_HELP_SUPPORTED
-
-ATModeCommandHelpArrayPtr Plugin::atModeCommandHelp(size_t &size) const
-{
-    static ATModeCommandHelpArray tmp PROGMEM = { PROGMEM_AT_MODE_HELP_COMMAND(MQTT) };
-    size = sizeof(tmp) / sizeof(tmp[0]);
-    return tmp;
-}
-
-#endif
-
 bool Plugin::atModeHandler(AtModeArgs &args)
 {
     if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {

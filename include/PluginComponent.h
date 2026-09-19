@@ -19,11 +19,6 @@ class WebTemplate;
 class AtModeArgs;
 class KFCFWConfiguration;
 
-struct ATModeCommandHelp_t;
-
-using ATModeCommandHelpArray = const ATModeCommandHelp_t *[];
-using ATModeCommandHelpArrayPtr = const ATModeCommandHelp_t **;
-
 namespace FormUI {
     namespace Form {
         class BaseForm;
@@ -239,13 +234,6 @@ namespace PluginComponents {
 
 }
 
-class PluginComponentAtModeHelpInterface {
-public:
-#if AT_MODE_HELP_SUPPORTED
-    virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const = 0;
-#endif
-};
-
 // set to one to copy PROGMEM to the stack before reading the data
 #define PLUGINS_USE_MEMCPY_P_TO_READ_CONFIG ESP8266
 
@@ -253,7 +241,7 @@ public:
 using prog_uint32_t = uint32_t;
 #endif
 
-class PluginComponent : public PluginComponents::Component, public PluginComponentAtModeHelpInterface {
+class PluginComponent : public PluginComponents::Component {
 public:
     using Dependencies = PluginComponents::Dependencies;
     using DependencyCallback = PluginComponents::DependencyCallback;
@@ -434,11 +422,6 @@ public:
     virtual bool getValue(const String &id, String &value, bool &state);
 
     #if AT_MODE_SUPPORTED
-    #    if AT_MODE_HELP_SUPPORTED
-        // returns array ATModeCommandHelp_t[size] or nullptr for no help
-        virtual ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
-        virtual void atModeHelpGenerator();
-    #    endif
         virtual bool atModeHandler(AtModeArgs &args);
     #endif
 

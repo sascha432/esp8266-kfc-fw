@@ -226,9 +226,6 @@ namespace Dimmer {
 // ATMode
 #if AT_MODE_SUPPORTED
     protected:
-#    if AT_MODE_HELP_SUPPORTED
-        ATModeCommandHelpArrayPtr atModeCommandHelp(size_t &size) const;
-#    endif
         bool atModeHandler(AtModeArgs &args, const Base &dimmer, int32_t maxLevel);
 #endif
 

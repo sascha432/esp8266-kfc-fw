@@ -33,18 +33,6 @@
 #    include <debug_helper_disable.h>
 #endif
 
-// connect to wifi and serial2tcp before booting to see all debug output
-#ifndef DEBUG_PRE_INIT_SERIAL2TCP
-#    define DEBUG_PRE_INIT_SERIAL2TCP 0
-#endif
-
-#if DEBUG_PRE_INIT_SERIAL2TCP
-#    include "../src/plugins/serial2tcp/Serial2TcpBase.h"
-#    include "../src/plugins/serial2tcp/Serial2TcpClient.h"
-#    include "../src/plugins/serial2tcp/serial2tcp.h"
-#    include "PluginComponent.h"
-#endif
-
 #if ESP8266
 
 extern "C" void preinit(void)
@@ -247,29 +235,6 @@ void setup()
         }
 
         BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-
-        #if DEBUG_PRE_INIT_SERIAL2TCP
-            #include "../include/retracted/custom_wifi.h"
-            BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::FAST);
-            WiFi.setAutoConnect(true);
-            WiFi.setAutoReconnect(true);
-            WiFi.enableSTA(true);
-            Serial.printf_P(PSTR("WiFi.begin=%u\n"), WiFi.begin(CUSTOM_WIFI_SSID, CUSTOM_WIFI_PASSWORD));
-            Serial.printf_P(PSTR("WiFi.reconnect=%u\n"), WiFi.reconnect());
-            Serial.printf_P(PSTR("WiFi.waitForConnectResult=%u\n"), WiFi.waitForConnectResult());
-            Serial.printf_P(PSTR("WiFi.connected=%u\n"), WiFi.isConnected());
-            if (WiFi.isConnected()) {
-                using Serial2TCP = KFCConfigurationClasses::Plugins::Serial2TCP;
-                Serial2TCP::Serial2Tcp_t cfg = CUSTOM_SERIAL2TCP_CFG;
-                auto instance = Serial2TcpBase::createInstance(cfg, CUSTOM_SERIAL2TCP_SERVER);
-                instance->begin();
-                delay(1000);
-                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);
-            }
-            else {
-                BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::SOS);
-            }
-        #endif
 
         KFC_SAFE_MODE_SERIAL_PORT.println(F("Booting KFC firmware..."));
         // KFC_SAFE_MODE_SERIAL_PORT.printf_P(PSTR("SAFE MODE %d, reset counter %d, wake up %d\n"), resetDetector.getSafeMode(), resetDetector.getResetCounter(), resetDetector.hasWakeUpDetected());

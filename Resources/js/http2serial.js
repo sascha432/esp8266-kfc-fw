@@ -26,6 +26,10 @@
     isConnected: false,
     socket: null,
 
+    isLinkCursor: false,
+    // matches URLs and source code references like file.cpp:123
+    linkRegex: /(?<url>http(s)?:\/\/[^\s\)\]]+)|(?<src>\S+\.(c(pp)?):[0-9]+)/,
+
     addCommands: function(commands) {
         $.http2serialPlugin.console.log(commands);
         this.commands = commands;
@@ -173,6 +177,97 @@
         }
     },
 
+    isTokenDelimiter: function(ch) {
+        return ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n' || ch === '(' || ch === '[' || ch === ')' || ch === ']';
+    },
+
+    // extract the token (word) that contains the given character offset
+    tokenAtOffset: function(text, offset) {
+        if (offset < 0 || offset >= text.length || this.isTokenDelimiter(text[offset])) {
+            return null;
+        }
+        var start = offset;
+        while (start > 0 && !this.isTokenDelimiter(text[start - 1])) {
+            start--;
+        }
+        var end = offset + 1;
+        while (end < text.length && !this.isTokenDelimiter(text[end])) {
+            end++;
+        }
+        return text.substring(start, end);
+    },
+
+    // check if the returned caret node belongs to the textarea (textareas use a shadow root in Chrome)
+    isTextAreaNode: function(node, textarea) {
+        if (!node) {
+            return false;
+        }
+        if (node === textarea) {
+            return true;
+        }
+        if (node.nodeType !== 3) { // only text nodes carry character offsets
+            return false;
+        }
+        var root = node.getRootNode ? node.getRootNode() : node.parentNode;
+        if (root && root.host) { // shadow root of the textarea
+            root = root.host;
+        }
+        return root === textarea || node.parentNode === textarea;
+    },
+
+    // translate mouse coordinates into a character offset inside a textarea
+    caretOffsetFromPoint: function(textarea, x, y) {
+        var offset = -1;
+        var pos, range;
+        if (document.caretPositionFromPoint) {
+            pos = document.caretPositionFromPoint(x, y);
+            if (pos && this.isTextAreaNode(pos.offsetNode, textarea)) {
+                offset = pos.offset;
+            }
+        }
+        if (offset < 0 && document.caretRangeFromPoint) {
+            range = document.caretRangeFromPoint(x, y);
+            if (range && this.isTextAreaNode(range.startContainer, textarea)) {
+                offset = range.startOffset;
+            }
+        }
+        if (offset < 0 || offset > textarea.value.length) {
+            return -1;
+        }
+        return offset;
+    },
+
+    isLinkAtPoint: function(x, y) {
+        var text = this.output.val();
+        var offset = this.caretOffsetFromPoint(this.output[0], x, y);
+        if (offset < 0) {
+            return false;
+        }
+        // the caret is located between two characters, check both sides
+        var offsets = [offset, offset - 1];
+        for (var i = 0; i < offsets.length; i++) {
+            var token = this.tokenAtOffset(text, offsets[i]);
+            if (token) {
+                var m = token.match(this.linkRegex);
+                if (m && m[0] === token) { // the whole token has to be a link
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+
+    setLinkCursor: function(enabled) {
+        if (this.isLinkCursor !== enabled) {
+            this.isLinkCursor = enabled;
+            this.output.css('cursor', enabled ? 'pointer' : '');
+        }
+    },
+
+    updateLinkCursor: function(x, y) {
+        this.setLinkCursor(this.isLinkAtPoint(x, y));
+    },
+
     setFilter: function(filter) {
         $.http2serialPlugin.console.log('set filter', filter);
         this.filter = filter;
@@ -310,7 +405,7 @@
                     }
                 }
                 try {
-                    var g = text.substr(start + 1).match(/((?<url>http(s)?:\/\/[^\s\)\]]+)|(?<src>\S+\.(c(pp)?):[0-9]+))/).groups; // catch url or src code with line number
+                    var g = text.substr(start + 1).match(self.linkRegex).groups; // catch url or src code with line number
                     if (g['url'] !== undefined) {
                         window.open(g['url'], '_blank').focus(); // open in a new tab
                     }
@@ -325,6 +420,14 @@
                 } catch(e) {
                 }
             }
+        });
+
+        // show a pointer cursor while hovering over a link
+        this.output.on('mousemove', function(e) {
+            self.updateLinkCursor(e.clientX, e.clientY);
+        });
+        this.output.on('mouseleave', function() {
+            self.setLinkCursor(false);
         });
 
         this.history = Cookies.getJSON('http2serial_history', this.history);

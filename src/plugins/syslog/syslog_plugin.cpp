@@ -86,33 +86,47 @@ void SyslogPlugin::_timerCallback(Event::CallbackTimerPtr timer)
 
 void SyslogPlugin::_begin()
 {
-    _end();
+    // create the new stream before publishing it. Assigning _syslog unlocked lets
+    // two concurrent calls (Settings/reconfigure runs on the webserver task)
+    // overwrite the pointer and leak the previous object incl. its AsyncClient
+    Syslog *syslog = nullptr;
+    bool zeroconf = false;
+    String hostname;
+    uint16_t port = 0;
 
     if (SyslogClient::isEnabled()) {
 
         auto cfg = SyslogClient::getConfig();
-        String hostname = SyslogClient::getHostname();
-        uint16_t port = cfg.getPort();
+        hostname = SyslogClient::getHostname();
+        port = cfg.getPort();
         if (hostname.trim().length() && port) {
-            bool zeroconf = config.hasZeroConf(hostname);
+            zeroconf = config.hasZeroConf(hostname);
 
-            _syslog = SyslogFactory::create(_lock, System::Device::getName(), cfg._get_enum_protocol(), zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
-            #if LOGGER
-                _logger.setSyslog(_syslog);
-            #endif
+            syslog = SyslogFactory::create(_lock, System::Device::getName(), cfg._get_enum_protocol(), zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));
 
             __LDBG_printf("zeroconf=%u port=%u", zeroconf, port);
-            if (zeroconf) {
-                auto syslog = _syslog; // pass a copy of the pointer in case _syslog gets destroyed before the callback
-                config.resolveZeroConf(getFriendlyName(), hostname, port, [syslog](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-                    getInstance()._zeroConfCallback(syslog, hostname, address, port, type);
-                });
-            }
-
         }
         else {
             __LDBG_printf("hostname=%s port=%u", hostname.c_str(), port);
         }
+    }
+
+    // swap the new stream in and free the old one, the pointer is never
+    // overwritten without deleting the previous object
+    MUTEX_LOCK_BLOCK(_lock) {
+        _Timer(_timer).remove();
+        #if LOGGER
+            _logger.setSyslog(syslog);
+        #endif
+        delete _syslog;
+        _syslog = syslog;
+    }
+
+    if (syslog && zeroconf) {
+        auto ptr = syslog; // pass a copy of the pointer in case _syslog gets destroyed before the callback
+        config.resolveZeroConf(getFriendlyName(), hostname, port, [ptr](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
+            getInstance()._zeroConfCallback(ptr, hostname, address, port, type);
+        });
     }
 }
 
@@ -144,7 +158,7 @@ void SyslogPlugin::_end()
 void SyslogPlugin::_waitForQueue(uint32_t timeout)
 {
     if (_syslog) {
-        uint32_t start = millis();
+        const uint32_t start = millis();
         while(get_time_since(start, millis()) < timeout) {
             if (!_syslog->deliverQueue()) {
                 break;

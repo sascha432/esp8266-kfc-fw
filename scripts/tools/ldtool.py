@@ -1,3 +1,8 @@
+#
+# Author: sascha_lammers@gmx.de
+#
+# for ESP8266
+#
 
 import os
 import sys

@@ -455,7 +455,7 @@ void setup()
             __LDBG_printf("rebooting in %u minutes", rebootDelay);
             // restart device if running in safe mode for rebootDelay minutes
             _Scheduler.add(Event::minutes(rebootDelay), false, [](Event::CallbackTimerPtr timer) {
-                Logger_notice(F("R,.ebooting device after safe mode timeout"));
+                Logger_notice(F("Rebooting device after safe mode timeout"));
                 config.restartDevice();
             });
         }

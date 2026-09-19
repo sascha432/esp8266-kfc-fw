@@ -1,6 +1,8 @@
 #
 # Author: sascha_lammers@gmx.de
 #
+# for ESP32
+#
 
 import os
 import sys

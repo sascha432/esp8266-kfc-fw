@@ -143,19 +143,17 @@ void PingMonitorPlugin::_setup()
     auto config = Plugins::Ping::getConfig();
     _setPingConsoleMenu(config.console);
 
-    __LDBG_printf("service=%u interval=%u count=%d timeout=%d hosts=%u", config.service, config.interval, config.count, config.timeout, Plugins::Ping::getHosts().size());
+    const auto hosts = Plugins::Ping::getHosts();
+    const auto count = hosts.count();
+    __LDBG_printf("service=%u interval=%u count=%d timeout=%d hosts=%u", config.service, config.interval, config.count, config.timeout, count);
 
     // setup ping monitor background service
-    if (config.service && config.interval && config.count) {
-        auto hosts = Plugins::Ping::getHosts();
-        auto size = hosts.size();
-        if (size) {
-            _task.reset(new PingMonitor::Task(config.interval, config.count, config.timeout));
-            for(uint8_t i = 0; i < size; i++) {
-                _task->addHost(hosts[i]);
-            }
-            _task->start();
+    if (config.service && config.interval && config.count && count) {
+        _task.reset(new PingMonitor::Task(config.interval, config.count, config.timeout));
+        for(uint8_t i = 0; i < count; i++) {
+            _task->addHost(hosts[i]);
         }
+        _task->start();
     }
 }
 

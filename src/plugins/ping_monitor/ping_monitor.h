@@ -23,6 +23,8 @@ extern WsClientAsyncWebSocket *wsPing;
 
 namespace PingMonitor {
 
+    static constexpr uint32_t kDNSResolveTimeoutMillis = 2000; // this is a blocking operation
+
     using UnnamedObject = MQTT::Json::UnnamedObject;
 
     bool resolveHost(const String &host, IPAddress &addr, PrintString &errorMessage);

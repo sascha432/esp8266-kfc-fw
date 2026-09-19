@@ -42,7 +42,7 @@ bool PingMonitor::resolveHost(const String &host, IPAddress &addr, PrintString &
     }
 
     // hostByName can returns true and INADDR_NONE
-    if (WiFi.hostByName(host.c_str(), addr) && IPAddress_isValid(addr)) {
+    if (WiFi.hostByName(host.c_str(), addr, kDNSResolveTimeoutMillis) && IPAddress_isValid(addr)) {
         __LDBG_printf("resolved host %s=%s isset=%u addr=%x", host.c_str(), addr.toString().c_str(), IPAddress_isValid(addr), (uint32_t)addr);
         return true;
     }
@@ -57,7 +57,7 @@ bool PingMonitor::begin(const AsyncPingPtr &ping, const String &host, IPAddress 
     message.printf_P(PSTR("PING %s (%s) 56(84) bytes of data."), host.c_str(), addr.toString().c_str());
     auto result = ping->begin(addr, count, timeout);
     if (!result) {
-        message = F("Unknown error occured"); //ping running?
+        message = F("Unknown error occurred"); //ping running?
     }
     return result;
 }
@@ -202,9 +202,7 @@ void PingMonitorPlugin::getStatus(Print &output)
         _task->printStats(output);
     }
     else {
-        output.print(F("Ping Monitor Service"));
-        output.print(' ');
-        output.print(FSPGM(disabled));
+        output.print(F("Ping Monitor Service disabled"));
     }
 }
 

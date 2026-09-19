@@ -27,7 +27,7 @@
 void FileManagerWebHandler::onRequestHandler(AsyncWebServerRequest *request)
 {
     if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
-        FileManager fm(request, true, FSPGM(upload, "upload"));
+        FileManager fm(request, true, F("upload"));
         fm.handleRequest();
     }
     else {
@@ -89,13 +89,13 @@ bool FileManager::_requireAuthentication()
     return _isAuthenticated;
 }
 
-String FileManager::_requireDir(const String &name)
+const String &FileManager::_requireDir(const String &name)
 {
     if (!_request->hasArg(name.c_str())) {
         _errors++;
         __LDBG_printf("%s is not set", name.c_str());
     }
-    String path = _request->arg(name);
+    const String &path = _request->arg(name);
     if (!path.length()) {
         _errors++;
         __LDBG_printf("%s is empty", name.c_str());
@@ -104,21 +104,23 @@ String FileManager::_requireDir(const String &name)
     return path;
 }
 
-String FileManager::_requireFile(const String &name, bool mustExists)
+const String &FileManager::_requireFileMustExist(const String &name)
 {
     if (!_request->hasArg(name.c_str())) {
         _errors++;
         __LDBG_printf("%s is not set", name.c_str());
+        return emptyString;
     }
-    String path = _request->arg(name);
+    const String &path = _request->arg(name);
     if (!path.length()) {
         _errors++;
         __LDBG_printf("%s is empty", name.c_str());
+        return emptyString;
     }
     else if (!FSWrapper::exists(path)) {
         _errors++;
         __LDBG_printf("File %s not found", path.c_str());
-        path = String();
+        return emptyString;
     }
     __LDBG_printf("requireFile(%s) = %s (%d)", name.c_str(), path.c_str(), _errors);
     return path;
@@ -126,20 +128,20 @@ String FileManager::_requireFile(const String &name, bool mustExists)
 
 File FileManager::_requireFile(const String &name)
 {
-    String path = _requireFile(name, true);
+    const String &path = _requireFileMustExist(name);
     if (!path.length()) {
         return File();
     }
     return FSWrapper::open(path, fs::FileOpenMode::read);
 }
 
-String FileManager::_requireArgument(const String &name)
+const String &FileManager::_requireArgument(const String &name)
 {
     if (!_request->hasArg(name.c_str())) {
         _errors++;
         __LDBG_printf("%s is not set", name.c_str());
     }
-    String value = _request->arg(name);
+    const String &value = _request->arg(name);
     if (!value.length()) {
         _errors++;
         __LDBG_printf("%s is empty", name.c_str());
@@ -147,17 +149,15 @@ String FileManager::_requireArgument(const String &name)
     return value;
 }
 
-String FileManager::_getArgument(const String &name)
+const String &FileManager::_getArgument(const String &name)
 {
     return _request->arg(name);
 }
 
 void FileManager::handleRequest()
 {
-    _headers.addNoCache(true);
-
     __LDBG_printf("is authenticated %d request uri %s", _isAuthenticated, _uri.c_str());
-
+    _headers.addNoCache(true);
     if (!_isAuthenticated) {
         _sendResponse(403);
     }
@@ -190,7 +190,7 @@ void FileManager::handleRequest()
 uint16_t FileManager::list()
 {
     __LDBG_printf("FileManager::list()");
-    auto dirName = _requireDir(FSPGM(dir));
+    const String &dirName = _requireDir(F("dir"));
     if (_isValidData()) {
         _response = new AsyncDirResponse(dirName, _request->arg(F("hidden")).toInt());
         return 200;
@@ -200,7 +200,7 @@ uint16_t FileManager::list()
 
 uint16_t FileManager::mkdir()
 {
-    auto dir = _requireDir(FSPGM(dir));
+    const String &dir = _requireDir(F("dir"));
     auto newDir = _requireArgument(F("new_dir"));
     uint16_t httpCode = 200;
     String message;
@@ -208,23 +208,20 @@ uint16_t FileManager::mkdir()
 
     append_slash(newDir);
     newDir += '.';
-    if (newDir.charAt(0) != '/') {
-        append_slash(dir);
-        newDir = dir + newDir;
+    if (!newDir.startsWith('/')) {
+        newDir = append_slash(dir) + newDir;
     }
     normalizeFilename(newDir);
 
     if (FSWrapper::exists(newDir)) {
-        message = FSPGM(ERROR_, "ERROR:");
-        message += F("Directory already exists");
+        message = F("ERROR:Directory already exists");
     } else {
         File file = FSWrapper::open(newDir, fs::FileOpenMode::write);
         if (file) {
             file.close();
             success = true;
         } else {
-            message = FSPGM(ERROR_);
-            message += F("Failed to create directory");
+            message = F("ERROR:Failed to create directory");
         }
     }
 
@@ -241,10 +238,9 @@ uint16_t FileManager::upload()
     auto filename = _request->arg(F("upload_filename"));
     auto overwriteTarget = _request->arg(F("overwrite_target")).toInt();
 
-
     httpCode = 200;
-    if (_request->hasParam(FSPGM(upload_file, "upload_file"), true, true)) {
-        AsyncWebParameter *p = _request->getParam(FSPGM(upload_file), true, true);
+    if (_request->hasParam(F("upload_file"), true, true)) {
+        AsyncWebParameter *p = _request->getParam(F("upload_file"), true, true);
 
         if (filename.length() == 0) {
             filename = p->value();
@@ -258,14 +254,12 @@ uint16_t FileManager::upload()
             if (overwriteTarget) {
                 if (!KFCFS.remove(filename)) {
                     httpCode = 409;
-                    message = FSPGM(ERROR_);
-                    message.printf_P(PSTR("Cannot remove %s"), filename.c_str());
+                    message.printf_P(PSTR("ERROR:Cannot remove %s"), filename.c_str());
                 }
             }
             else {
                 httpCode = 409; // 409 Conflict
-                message = FSPGM(ERROR_);
-                message.printf_P(PSTR("File %s already exists"), filename.c_str());
+                message.printf_P(PSTR("ERROR:File %s already exists"), filename.c_str());
             }
         }
 
@@ -288,21 +282,19 @@ uint16_t FileManager::upload()
             }
 
             if (httpCode != 200) {
-                message = FSPGM(ERROR_);
-                message += F("Could not rename temporary file");
+                message = F("ERROR:Could not rename temporary file");
             }
         }
 
     }
     else {
         httpCode = 406; // 406 Not Acceptable
-        message = FSPGM(ERROR_);
-        message += F("Upload file parameter missing");
+        message = F("ERROR:Upload file parameter missing");
     }
 
     __LDBG_printf("message %s http code %d", message.c_str(), httpCode);
 
-    uint8_t ajax_request = _request->arg(F("ajax_upload")).toInt();
+    bool ajax_request = _request->arg(F("ajax_upload")).toInt();
     __LDBG_printf("File upload status %d, message %s, ajax %d", httpCode, message.c_str(), ajax_request);
 
     if (httpCode == 200) {
@@ -313,17 +305,19 @@ uint16_t FileManager::upload()
     }
 
     if (!ajax_request) {
-        String url = PrintString(F("/%s?_message="), SPGM(file_manager_html_uri, "file-manager.html"));
-        url += urlEncode(message);
+        PrintString url = '/';
+        url.print(FSPGM(file_manager_html_uri, "file-manager.html"));
+        url.print(F("?_message="));
+        url.print(urlEncode(message));
         if (httpCode == 200) {
-            url += F("&_type=success&_title=Information");
+            url.print(F("&_type=success&_title=Information"));
         }
         else {
-            url += F("&_title=ERROR%20");
-            url += String(httpCode);
+            url.print(F("&_title=ERROR%20"));
+            url.printf_P(PSTR("%u"), httpCode);
         }
-        url += '#';
-        url += uploadDir;
+        url.print('#');
+        url.print(uploadDir);
 
         message = String();
         httpCode = 302;
@@ -338,17 +332,16 @@ uint16_t FileManager::upload()
 uint16_t FileManager::view(bool isDownload)
 {
     uint16_t httpCode = 200;
-    File file = _requireFile(FSPGM(filename, "filename"));
-    String requestFilename = _request->arg(FSPGM(filename));
+    File file = _requireFile(F("filename"));
+    const String &requestFilename = _request->arg(F("filename"));
     if (!file) {
-        String message = FSPGM(ERROR_);
-        message += F("Cannot open ");
+        String message = F("ERROR:Cannot open ");
         message += requestFilename;
         _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
         __LDBG_printf("msg=%s", message.c_str());
     }
     else {
-        String filename = file.name();
+        const String &filename = file.name();
         __LDBG_printf("%s %s (request %s)", isDownload ? PSTR("Downloading") : PSTR("Viewing"), filename.c_str(), requestFilename.c_str());
         _response = _request->beginResponse(file, filename, String(), isDownload);
     }
@@ -360,25 +353,23 @@ uint16_t FileManager::remove()
     uint16_t httpCode = 200;
     String message;
     bool success = false;
-    File file = _requireFile(FSPGM(filename));
-    String requestFilename = _request->arg(FSPGM(filename));
+    File file = _requireFile(F("filename"));
+    const String &requestFilename = _request->arg(F("filename"));
 
     if (!file) {
-        message = FSPGM(ERROR_);
-        message += F("Cannot open ");
+        message = F("ERROR:Cannot open ");
         message += requestFilename;
     }
     else {
-        String filename = file.fullName();
+        const String &filename = file.fullName();
         file.close();
 
         if (!FSWrapper::remove(filename)) {
-            message = FSPGM(ERROR_);
-            message += F("Cannot remove ");
+            message = F("ERROR:Cannot remove ");
             message += filename;
         }
         else {
-            message = FSPGM(OK);
+            message = F("OK");
             success = true;
         }
         Logger_notice(F("Removing %s (request %s) - %s"), filename.c_str(), requestFilename.c_str(), success ? SPGM(success) : SPGM(failure));
@@ -393,42 +384,40 @@ uint16_t FileManager::rename()
     uint16_t httpCode = 200;
     String message;
     auto success = false;
-    auto file = _requireFile(FSPGM(filename));
-    auto requestFilename = _request->arg(FSPGM(filename));
-    auto dir = _requireDir(FSPGM(dir));
+    auto file = _requireFile(F("filename"));
+    const String &requestFilename = _request->arg(F("filename"));
+    const String &dir = _requireDir(F("dir"));
     auto renameTo = _requireArgument(F("to"));
 
     if (!file) {
-        message = FSPGM(ERROR_);
-        message += F("Cannot open ");
+        message = F("ERROR:Cannot open ");
         message += requestFilename;
     }
     else {
         FSInfo info;
         KFCFS.info(info);
-        String renameFrom = file.fullName();
+        const String &renameFrom = file.fullName();
         file.close();
 
         if (renameTo.charAt(0) != '/') {
-            append_slash(dir);
-            renameTo = dir + renameTo;
+            renameTo = append_slash(dir) + renameTo;
         }
         normalizeFilename(renameTo);
 
         if (renameTo.length() >= info.maxPathLength) {
-            message = PrintString(F("%sFilename %s exceeds %d characters"), SPGM(ERROR_), renameTo.c_str(), info.maxPathLength - 1);
+            message = PrintString(F("ERROR:Filename %s exceeds %d characters"), renameTo.c_str(), info.maxPathLength - 1);
         }
         else {
             if (FSWrapper::exists(renameTo)) {
-                message = PrintString(F("%sFile %s already exists"), SPGM(ERROR_), renameTo.c_str());
+                message = PrintString(F("ERROR:File %s already exists"), renameTo.c_str());
                 _response = _request->beginResponse(httpCode, FSPGM(mime_text_plain), message);
             }
             else {
                 if (!FSWrapper::rename(renameFrom, renameTo)) {
-                    message = PrintString(F("%sCannot rename %s to %s"), SPGM(ERROR_), renameFrom.c_str(), renameTo.c_str());
+                    message = PrintString(F("ERROR:Cannot rename %s to %s"), renameFrom.c_str(), renameTo.c_str());
                 }
                 else {
-                    message = FSPGM(OK);
+                    message = F("OK");
                     success = true;
                 }
                 Logger_notice(F("Renaming %s => %s - %s"), renameFrom.c_str(), renameTo.c_str(), success ? SPGM(success) : SPGM(failure));

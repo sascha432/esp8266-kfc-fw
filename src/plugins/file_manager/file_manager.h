@@ -40,11 +40,11 @@ public:
 
     // String &require(const String name);
     bool _requireAuthentication();
-    String _requireFile(const String &name, bool mustExist);
+    const String &_requireFileMustExist(const String &name);
     File _requireFile(const String &name);
-    String _requireDir(const String &name);
-    String _requireArgument(const String &name);
-    String _getArgument(const String &name);
+    const String &_requireDir(const String &name);
+    const String &_requireArgument(const String &name);
+    const String &_getArgument(const String &name);
 
     void normalizeFilename(String &filename);
 

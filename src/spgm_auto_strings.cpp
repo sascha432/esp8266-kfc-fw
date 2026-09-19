@@ -60,7 +60,6 @@ PROGMEM_STRING_DEF(Device_Configuration, "Device Configuration");
 PROGMEM_STRING_DEF(Device_is_rebooting, "Device is rebooting...\\n");
 PROGMEM_STRING_DEF(Disabled, "Disabled");
 PROGMEM_STRING_DEF(EN, "EN");
-PROGMEM_STRING_DEF(ERROR_, "ERROR:");
 PROGMEM_STRING_DEF(Enabled, "Enabled");
 PROGMEM_STRING_DEF(Encryption, "Encryption");
 PROGMEM_STRING_DEF(Expires, "Expires");

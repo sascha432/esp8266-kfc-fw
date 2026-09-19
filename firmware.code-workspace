@@ -359,6 +359,7 @@
             "ETHARP",
             "FADETIME",
             "FASTLED",
+            "filemgr",
             "FPSTR",
             "FSPGM",
             "FSTAT",

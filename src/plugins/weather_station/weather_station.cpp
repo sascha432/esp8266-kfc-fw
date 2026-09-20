@@ -521,10 +521,10 @@ void WeatherStationPlugin::getStatus(Print &output)
         output.printf_P(PSTR(HTML_S(br) "%ux WS2812 RGB LED"), IOT_WEATHER_STATION_WS2812_NUM);
     #endif
     #if IOT_WEATHER_STATION_HAS_TOUCHPAD
-        output.printf_P(PSTR(HTML_S(br) "MPR121 Touch Pad"));
+        output.print(F(HTML_S(br) "MPR121 Touch Pad"));
     #endif
     #if IOT_SENSOR_USE_BME680_AS_INDOOR_SENSOR
-        output.printf_P(PSTR(HTML_S(br) "BME680 as primary sensor"));
+        output.print(F(HTML_S(br) "BME680 as primary sensor"));
     #endif
 }
 

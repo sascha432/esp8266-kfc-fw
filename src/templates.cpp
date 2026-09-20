@@ -646,7 +646,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             #if WEBSERVER_TLS_SUPPORT
                 output.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? SPGM(enabled, "enabled") : SPGM(Disabled));
             #else
-                output.printf_P(PSTR("TLS enabled, HTTPS not supported"));
+                output.print(F("TLS enabled, HTTPS not supported"));
             #endif
         #else
             output.print(FSPGM(Not_supported));

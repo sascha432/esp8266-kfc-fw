@@ -107,7 +107,7 @@ void Sensor_DS3231::publishState()
 
 void Sensor_DS3231::getStatus(Print &output)
 {
-    output.printf_P(PSTR("DS3231 @ I2C address 0x68" HTML_S(br)));
+    output.print(F("DS3231 @ I2C address 0x68" HTML_S(br)));
 }
 
 bool Sensor_DS3231::getSensorData(String &name, StringVector &values)

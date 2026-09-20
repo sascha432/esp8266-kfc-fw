@@ -67,7 +67,7 @@ void WiFiStatus::getStatus(Print &out)
     uint8_t mode = WiFi.getMode();
     if (mode & WIFI_STA) {
 
-        out.printf_P(PSTR(HTML_S(strong) "Station:" HTML_E(strong) HTML_S(br)));
+        out.print(F(HTML_S(strong) "Station:" HTML_E(strong) HTML_S(br)));
     #if defined(ESP8266)
         switch (wifi_station_get_connect_status()) {
             case STATION_GOT_IP:

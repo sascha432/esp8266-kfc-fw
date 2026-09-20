@@ -58,7 +58,7 @@ Sensor_HLW8032::~Sensor_HLW8032()
 
 void Sensor_HLW8032::getStatus(Print &output)
 {
-    output.printf_P(PSTR("Power Monitor HLW8032" HTML_S(br)));
+    output.print(F("Power Monitor HLW8032" HTML_S(br)));
 }
 
 String Sensor_HLW8032::_getId(const __FlashStringHelper *type)

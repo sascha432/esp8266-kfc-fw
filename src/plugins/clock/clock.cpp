@@ -651,13 +651,13 @@ void ClockPlugin::getStatus(Print &output)
                             stats.clear();
                         }
                     #else
-                        output.printf_P(PSTR(", NeoPixel"));
+                        output.print(F(", NeoPixel"));
                     #endif
                 } break;
         #endif
         #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
             case Clock::ShowMethodType::AF_NEOPIXEL: {
-                    output.printf_P(PSTR(", Adafruit NeoPixel"));
+                    output.print(F(", Adafruit NeoPixel"));
                 } break;
         #endif
         default:
@@ -669,9 +669,9 @@ void ClockPlugin::getStatus(Print &output)
     #elif IOT_CLOCK_BUTTON_PIN != -1
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
             #if IOT_CLOCK_TOUCH_PIN
-                output.printf_P(PSTR(HTML_S(br) "Rotary encoder with capacitive touch sensor and button"));
+                output.print(F(HTML_S(br) "Rotary encoder with capacitive touch sensor and button"));
             #else
-                output.printf_P(PSTR(HTML_S(br) "Rotary encoder with button"));
+                output.print(F(HTML_S(br) "Rotary encoder with button"));
             #endif
         #else
         #endif

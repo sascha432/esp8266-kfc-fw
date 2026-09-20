@@ -83,7 +83,7 @@ void scanI2C(Print &output, int8_t sda, int8_t scl, uint8_t startAddress, uint8_
 {
     TwoWire *wire;
     if (sda == 0xff || scl == 0xff || sda == scl || isFlashInterfacePin(sda) || isFlashInterfacePin(scl)) {
-        output.printf_P(PSTR("Scanning (SDA : SCL) - "));
+        output.print(F("Scanning (SDA : SCL) - "));
         wire = &config.initTwoWire(false, &output);
     }
     else {

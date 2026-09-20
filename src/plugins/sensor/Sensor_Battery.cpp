@@ -196,7 +196,7 @@ void Sensor_Battery::publishState()
 
 void Sensor_Battery::getStatus(Print &output)
 {
-    output.printf_P(PSTR(IOT_SENSOR_NAMES_BATTERY));
+    output.print(F(IOT_SENSOR_NAMES_BATTERY));
     #if IOT_SENSOR_BATTERY_DISPLAY_LEVEL
         output.print(F(", Battery Level Indicator"));
     #endif
@@ -353,7 +353,7 @@ bool Sensor_Battery::atModeHandler(AtModeArgs &args)
             }
             args.printf_P(PSTR("Generating table for %.2f-%.2fV"), start, end);
             auto &stream = args.getStream();
-            stream.printf_P("voltage,level\n");
+            stream.print(F("voltage,level\n"));
             for(float v = start; v <= end; v += 0.05) {
                 auto n = Sensor_Battery::calcLipoCapacity(v, 1, charging);
                 stream.printf_P("%.2f,%.2f\n", v, n);

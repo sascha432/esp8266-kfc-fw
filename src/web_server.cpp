@@ -632,7 +632,7 @@ static String _getUrlAndPostDataFromRequest(AsyncWebServerRequest *request)
             log.printf_P(PSTR(" HTTP/1.%u\" %d %s \"%s\""), request->version(), response->getCode(), contentLengthStr.c_str(), response->getContentType().c_str());
         }
         else {
-            log.printf_P(PSTR("\" failed"));
+            log.print(F("\" failed"));
         }
         Serial.println(log);
     }

@@ -327,7 +327,7 @@ public:
 
     void printGPIO()
     {
-        Serial.printf_P(PSTR("+GPIO: "));
+        Serial.print(F("+GPIO: "));
         #if defined(ESP8266)
             for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
                 if (i == 10 || (i != 1 && !isFlashInterfacePin(i))) { // do not display TX and flash SPI

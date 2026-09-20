@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Removed Serial2TCP support
  - Support for DHTxx sensor removed
  - Ping monitor command crashed when hostname was not found
  - Retired ArduinoFlashStringGenerator

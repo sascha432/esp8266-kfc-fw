@@ -552,7 +552,7 @@ void loop()
             #else
                 loopFunctions[i].callback();
             #endif
-            #if ESP32 && defined(CONFIG_HEAP_POISONING_COMPREHENSIVE)
+            #if ESP32 && CONFIG_HEAP_POISONING_COMPREHENSIVE
                 heap_caps_check_integrity_all(true);
             #endif
         }

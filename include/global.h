@@ -32,6 +32,10 @@
 #    define ASYNC_TCP_SSL_ENABLED 0
 #endif
 
+#ifndef KFC_DEBUG_SERIAL_PORT
+#    define KFC_DEBUG_SERIAL_PORT Serial
+#endif
+
 // this port gets initialized during boot and all output is displayed there until
 // the system has been initialized
 // NOTE: Serial0 = Serial

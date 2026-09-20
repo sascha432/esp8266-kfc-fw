@@ -17,30 +17,15 @@ using KFCConfigurationClasses::Network;
 static FormUI::Container::List createWifiModes()
 {
     return FormUI::Container::List(
-        WIFI_OFF, FSPGM(Disabled),
-        WIFI_STA, FSPGM(Station_Mode),
-        WIFI_AP, FSPGM(Access_Point),
+        WIFI_OFF, F("Disabled"),
+        WIFI_STA, F("Station Mode"),
+        WIFI_AP, F("Access Point"),
         WIFI_AP_STA, F("Access Point and Station Mode")
     );
 }
 
 void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
-    // auto scheduledTasks = File2String<const __FlashStringHelper *>(FSPGM(scheduler_config_file));
-    // if (type == FormCallbackType::CREATE_POST) {
-    //     if (formName.equals(FSPGM(device))) {
-    //         auto field = form.getField(F("schet"));
-    //         if (field && field->hasChanged()) {
-    //             auto crc = crc16_update(field->getValue().c_str(), field->getValue().length());
-    //             _formatSchedulerList(field->getValue());
-    //             if (crc != crc16_update(field->getValue().c_str(), field->getValue().length())) {
-    //                 __DBG_print("scheduler changed on createpost");
-    //                 field->setChanged(true);
-    //             }
-    //         }
-    //     }
-    // }
-    // else
     if (type == FormCallbackType::SAVE) {
         if (formName.equals(FSPGM(password))) {
             auto field = form.getField(FSPGM(npwd));
@@ -52,11 +37,6 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
         }
         else if (formName.equals(FSPGM(device))) {
             config.setConfigDirty(true);
-            // auto field = form.getField(F("schet"));
-            // if (field && field->hasChanged()) {
-            //     __DBG_print("saving scheduler");
-            //     scheduledTasks.fromString(field->getValue());
-            // }
         }
     }
     else if (isCreateFormCallbackType(type)) {
@@ -82,7 +62,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
                     ENC_TYPE_WEP, F("WEP"),
                     ENC_TYPE_TKIP, F("WPA TKIP"),
                     ENC_TYPE_CCMP, F("WPA CCMP"),
-                    ENC_TYPE_AUTO, FSPGM(Auto)
+                    ENC_TYPE_AUTO, F("Auto")
                 );
 
             #elif ESP32
@@ -250,14 +230,14 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             auto &apGroup = stationGroup->end().addCardGroup(FSPGM(ap_mode), FSPGM(Access_Point));
 
             form.addObjectGetterSetter(F("ap_dhcpd"), flags, flags.get_bit_is_softap_dhcpd_enabled, flags.set_bit_is_softap_dhcpd_enabled);
-            form.addFormUI(FSPGM(DHCP_Server), FormUI::BoolItems());
+            form.addFormUI(F("DHCP Server"), FormUI::BoolItems());
 
             form.addObjectGetterSetter(F("ap_ip"), FormGetterSetter(softAp, address));
-            form.addFormUI(FSPGM(IP_Address));
+            form.addFormUI(F("IP Address"));
             softAp.addHostnameValidatorFor_address(form);
 
             form.addObjectGetterSetter(F("ap_subnet"), FormGetterSetter(softAp, subnet));
-            form.addFormUI(FSPGM(Subnet));
+            form.addFormUI(F("Subnet"));
             softAp.addHostnameValidatorFor_subnet(form);
 
             form.addObjectGetterSetter(F("ap_dhcpds"), FormGetterSetter(softAp, dhcp_start)).setOptional(true);
@@ -277,13 +257,13 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             auto &ui = form.createWebUI();
             ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
-            ui.setTitle(FSPGM(Device_Configuration));
+            ui.setTitle(F("Device Configuration"));
             ui.setContainerId(F("device_settings"));
 
-            auto &deviceGroup = form.addCardGroup(FSPGM(device), FSPGM(Device), true);
+            auto &deviceGroup = form.addCardGroup(F("device"), F("Device"), true);
 
             form.addStringGetterSetter(FSPGM(dev_title), System::Device::getTitle, System::Device::setTitle);
-            form.addFormUI(FSPGM(Title));
+            form.addFormUI(F("Title"));
             System::Device::addTitleLengthValidator(form);
 
             form.addStringGetterSetter(F("objid"), System::Device::get_ObjectId, System::Device::set_ObjectId);
@@ -291,11 +271,11 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             System::Device::add_ObjectIdLengthValidator(form);
 
             form.addObjectGetterSetter(F("safem_to"), cfg, cfg.get_bits_safe_mode_reboot_timeout_minutes, cfg.set_bits_safe_mode_reboot_timeout_minutes);
-            form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(FSPGM(minutes)), FormUI::IntAttribute(F("disabled-value"), 0));
+            form.addFormUI(F("Reboot Delay Running In Safe Mode"), FormUI::Suffix(F("minutes")), FormUI::IntAttribute(F("disabled-value"), 0));
             cfg.addRangeValidatorFor_safe_mode_reboot_timeout_minutes(form, true);
 
             form.addObjectGetterSetter(F("crfrst"), cfg, cfg.get_bits_erase_eeprom_fs_counter_minutes, cfg.set_bits_erase_eeprom_fs_counter_minutes);
-            form.addFormUI(F("Erase EEPROM and file system if the device keeps crashing"), FormUI::Suffix(FSPGM(minutes)), FormUI::IntAttribute(F("disabled-value"), 0));
+            form.addFormUI(F("Erase EEPROM and file system if the device keeps crashing"), FormUI::Suffix(F("minutes")), FormUI::IntAttribute(F("disabled-value"), 0));
             cfg.addRangeValidatorFor_erase_eeprom_fs_counter_minutes(form, true);
 
             #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
@@ -324,7 +304,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             #if MDNS_PLUGIN
 
                 form.addObjectGetterSetter(F("mdns_en"), flags, System::Flags::ConfigStructType::get_bit_is_mdns_enabled, System::Flags::ConfigStructType::set_bit_is_mdns_enabled);
-                form.addFormUI(F("mDNS Announcements"), FormUI::BoolItems(FSPGM(Enabled), F("Disabled (Zeroconf is still available)")));
+                form.addFormUI(F("mDNS Announcements"), FormUI::BoolItems(F("Enabled"), F("Disabled (Zeroconf is still available)")));
 
                 #if MDNS_NETBIOS_SUPPORT
                     form.addObjectGetterSetter(F("nbns_en"), flags, System::Flags::ConfigStructType::get_bit_is_netbios_enabled, System::Flags::ConfigStructType::set_bit_is_netbios_enabled);
@@ -332,7 +312,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
                 #endif
 
                 form.addObjectGetterSetter(F("zconf_to"), cfg, cfg.get_bits_zeroconf_timeout, cfg.set_bits_zeroconf_timeout);
-                form.addFormUI(FSPGM(Zeroconf_Timeout), FormUI::Suffix(FSPGM(milliseconds)));
+                form.addFormUI(FSPGM(Zeroconf_Timeout), FormUI::Suffix(F("milliseconds")));
                 cfg.addRangeValidatorFor_zeroconf_timeout(form);
 
                 form.addObjectGetterSetter(F("zconf_log"), cfg, System::Device::ConfigStructType::get_bits_zeroconf_logging, System::Device::ConfigStructType::set_bits_zeroconf_logging);
@@ -350,44 +330,36 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             form.addFormUI(FSPGM(WebUI), FormUI::BoolItems());
 
             form.addObjectGetterSetter(F("scookie_lt"), cfg, System::Device::ConfigStructType::get_bits_webui_cookie_lifetime_days, System::Device::ConfigStructType::set_bits_webui_cookie_lifetime_days);
-            form.addFormUI(F("Allow to store credentials in a cookie to login automatically"), FormUI::Suffix(FSPGM(days)));
+            form.addFormUI(F("Allow to store credentials in a cookie to login automatically"), FormUI::Suffix(F("days")));
             cfg.addRangeValidatorFor_webui_cookie_lifetime_days(form);
 
             webUIGroup.end();
-
-            // auto &schedulerGroup = form.addCardGroup(F("scheduler"), F("Task Scheduler"), true);
-
-            // form.add(F("schet"), scheduledTasks.toString(), FormUI::InputFieldType::TEXTAREA);
-            // form.addFormUI(F("Scheduler"), FormUI::Type::TEXTAREA, FormUI::IntAttribute(F("rows"), 8));
-
-            // schedulerGroup.end();
-
         }
         else if (formName.equals(FSPGM(password))) {
 
             auto &ui = form.createWebUI();
             ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
-            ui.setTitle(FSPGM(Change_Password));
+            ui.setTitle(F("Change Password"));
             ui.setContainerId(F("password_settings"));
 
             auto &group = form.addCardGroup(FSPGM(config));
 
             auto password = String(System::Device::getPassword());
 
-            form.add(FSPGM(password), emptyString, FormUI::InputFieldType::TEXT);
+            form.add(F("password"), emptyString, FormUI::InputFieldType::TEXT);
             form.addFormUI(FormUI::Type::PASSWORD, F("Current Password"));
             form.addValidator(FormUI::Validator::Match(F("The entered password is not correct"), [](FormUI::Field::BaseField &field) {
                 return field.getValue().equals(System::Device::getPassword());
             }));
 
-            form.add(FSPGM(npwd), emptyString, FormUI::InputFieldType::TEXT);
+            form.add(F("npwd"), emptyString, FormUI::InputFieldType::TEXT);
             form.addFormUI(FormUI::Type::NEW_PASSWORD, F("New Password"));
             form.addValidator(FormUI::Validator::Length(System::Device::kPasswordMinSize, System::Device::kPasswordMaxSize));
 
             form.add(F("cpwd"), emptyString, FormUI::InputFieldType::TEXT);
             form.addFormUI(FormUI::Type::NEW_PASSWORD, F("Confirm New Password"));
             form.addValidator(FormUI::Validator::Match(F("The password confirmation does not match"), [](FormUI::Field::BaseField &field) {
-                return field.equals(field.getForm().getField(FSPGM(npwd)));
+                return field.equals(field.getForm().getField(F("npwd")));
             }));
 
             group.end();
@@ -397,48 +369,5 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             return;
         }
         form.finalize();
-    }
-}
-
-void KFCConfigurationPlugin::_formatSchedulerList(String &items)
-{
-    //TODO
-    StringVector list;
-    explode(items.c_str(), '\n', list);
-    items.remove(0);
-    for(auto &item: list) {
-        item.trim();
-        if (item.length()) {
-            auto sep = item.indexOf(',');
-            if (sep == -1) {
-                items += F("!INVALID,");
-                items += item;
-                items += '\n';
-            }
-            else {
-                auto col1 = item.begin();
-                auto col2 = col1 + sep;
-                *col2++ = 0;
-                while(isspace(*col2)) {
-                    col2++;
-                }
-                if (strchr(col1, '!')) {
-                }
-                else {
-                    char *endptr = nullptr;
-                    auto value = strtof(col1, &endptr);
-                    if (value < 1) {
-                        items += F("!INVALID ");
-                    }
-                    if (!*col2) {
-                        items += F("!INVALID ");
-                    }
-                }
-                items += col1;
-                items += ',';
-                items += col2;
-                items += '\n';
-            }
-        }
     }
 }

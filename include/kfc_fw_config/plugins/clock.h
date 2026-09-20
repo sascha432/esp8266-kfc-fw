@@ -345,7 +345,7 @@ namespace KFCConfigurationClasses {
                             speed_gain(kDefaultValueFor_speed_gain),
                             enable_hue(true),
                             hue_gain(kDefaultValueFor_hue_gain),
-                            enable_zoom(true),
+                            enable_zoom(false),
                             zoom_gain(kDefaultValueFor_zoom_gain),
                             enable_bands(true),
                             band_gain(kDefaultValueFor_band_gain)

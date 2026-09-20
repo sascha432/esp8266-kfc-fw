@@ -2,6 +2,8 @@
 
 ## Version 0.0.9 (master)
 
+ - Audio reactive plasma visualization mode for the LED matrix (speed, hue rotation, zoom and spectrum ripples)
+ - Removed the 1D visualizer modes (VU meter and rainbow spectrum)
  - Removed Serial2TCP support
  - Support for DHTxx sensor removed
  - Ping monitor command crashed when hostname was not found

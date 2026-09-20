@@ -167,16 +167,12 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addFormUI(FormUI::Type::HIDDEN_SELECT, orientationItems);
 
                     auto VisualizerAnimationTypeItems = FormUI::Container::List(
-                        VisualizerAnimationType::VUMETER_1D, F("VU Meter Mono Gradient"),
-                        VisualizerAnimationType::VUMETER_COLOR_1D, F("VU Meter Mono Color"),
-                        VisualizerAnimationType::VUMETER_STEREO_1D, F("VU Meter Stereo Gradient"),
-                        VisualizerAnimationType::VUMETER_COLOR_STEREO_1D, F("VU Meter Stereo Color"),
-                        VisualizerAnimationType::SPECTRUM_RAINBOW_1D, F("Spectrum Rainbow 1D"),
                         VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D, F("Spectrum Rainbow Bars 2D"),
                         VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D, F("Spectrum Gradient 2D"),
                         VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D, F("Spectrum Single Color Bars 2D"),
                         VisualizerAnimationType::RGB565_VIDEO, F("RGB565 Video"),
-                        VisualizerAnimationType::RGB24_VIDEO, F("RGB24 Video")
+                        VisualizerAnimationType::RGB24_VIDEO, F("RGB24 Video"),
+                        VisualizerAnimationType::PLASMA_AUDIO, F("Plasma Audio Reactive")
                     );
                     form.addObjectGetterSetter(F("v_ln"), FormGetterSetter(cfg.visualizer, type));
                     form.addFormUI(F("Visualization Type"), VisualizerAnimationTypeItems, FormUI::SelectSuffix(orientation));
@@ -264,6 +260,75 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addObjectGetterSetter(F("v_port"), FormGetterSetter(cfg.visualizer, port));
                     form.addFormUI(F("UDP Port"), FormUI::CheckboxButtonSuffix(multicast, F("Multicast")));
                     cfg.visualizer.addRangeValidatorFor_port(form);
+
+                    // audio reactive plasma, all parameters are independent from the plasma animation
+                    auto &plasmaAudioSpeedEnable = form.addObjectGetterSetter(F("v_pase"), FormGetterSetter(cfg.visualizer.plasma_audio, enable_speed));
+                    form.addFormUI(FormUI::Type::HIDDEN);
+                    form.addObjectGetterSetter(F("v_pasg"), FormGetterSetter(cfg.visualizer.plasma_audio, speed_gain));
+                    form.addFormUI(F("Plasma Speed Reaction"), FormUI::CheckboxButtonSuffix(plasmaAudioSpeedEnable, F("Enabled")));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_speed_gain(form);
+
+                    auto &plasmaAudioHueEnable = form.addObjectGetterSetter(F("v_pahe"), FormGetterSetter(cfg.visualizer.plasma_audio, enable_hue));
+                    form.addFormUI(FormUI::Type::HIDDEN);
+                    form.addObjectGetterSetter(F("v_pahg"), FormGetterSetter(cfg.visualizer.plasma_audio, hue_gain));
+                    form.addFormUI(F("Plasma Hue Rotation"), FormUI::CheckboxButtonSuffix(plasmaAudioHueEnable, F("Enabled")));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_hue_gain(form);
+
+                    auto &plasmaAudioZoomEnable = form.addObjectGetterSetter(F("v_paze"), FormGetterSetter(cfg.visualizer.plasma_audio, enable_zoom));
+                    form.addFormUI(FormUI::Type::HIDDEN);
+                    form.addObjectGetterSetter(F("v_pazg"), FormGetterSetter(cfg.visualizer.plasma_audio, zoom_gain));
+                    form.addFormUI(F("Plasma Zoom Reaction"), FormUI::CheckboxButtonSuffix(plasmaAudioZoomEnable, F("Enabled")));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_zoom_gain(form);
+
+                    auto &plasmaAudioBandsEnable = form.addObjectGetterSetter(F("v_pabe"), FormGetterSetter(cfg.visualizer.plasma_audio, enable_bands));
+                    form.addFormUI(FormUI::Type::HIDDEN);
+                    form.addObjectGetterSetter(F("v_pabg"), FormGetterSetter(cfg.visualizer.plasma_audio, band_gain));
+                    form.addFormUI(F("Plasma Spectrum Ripples (Bass, Low Mid, High Mid, Treble)"), FormUI::CheckboxButtonSuffix(plasmaAudioBandsEnable, F("Enabled")));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_band_gain(form);
+
+                    form.addObjectGetterSetter(F("v_pase2"), FormGetterSetter(cfg.visualizer.plasma_audio, sensitivity));
+                    form.addFormUI(F("Audio Sensitivity (Gain x100)"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_sensitivity(form);
+
+                    form.addObjectGetterSetter(F("v_paat"), FormGetterSetter(cfg.visualizer.plasma_audio, attack));
+                    form.addFormUI(F("Attack Time (ms)"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_attack(form);
+
+                    form.addObjectGetterSetter(F("v_pare"), FormGetterSetter(cfg.visualizer.plasma_audio, release));
+                    form.addFormUI(F("Release Time (ms)"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_release(form);
+
+                    form.addObjectGetterSetter(F("v_pasp"), FormGetterSetter(cfg.visualizer.plasma_audio, speed));
+                    form.addFormUI(F("Plasma Speed"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_speed(form);
+
+                    form.addObjectGetterSetter(F("v_paa1"), FormGetterSetter(cfg.visualizer.plasma_audio, angle1));
+                    form.addFormUI(F("Plasma Angle 1"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_angle1(form);
+
+                    form.addObjectGetterSetter(F("v_paa2"), FormGetterSetter(cfg.visualizer.plasma_audio, angle2));
+                    form.addFormUI(F("Plasma Angle 2"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_angle2(form);
+
+                    form.addObjectGetterSetter(F("v_paa3"), FormGetterSetter(cfg.visualizer.plasma_audio, angle3));
+                    form.addFormUI(F("Plasma Angle 3"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_angle3(form);
+
+                    form.addObjectGetterSetter(F("v_paa4"), FormGetterSetter(cfg.visualizer.plasma_audio, angle4));
+                    form.addFormUI(F("Plasma Angle 4"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_angle4(form);
+
+                    form.addObjectGetterSetter(F("v_pahs"), FormGetterSetter(cfg.visualizer.plasma_audio, hue_shift));
+                    form.addFormUI(F("Plasma Hue Shift"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_hue_shift(form);
+
+                    form.addObjectGetterSetter(F("v_paxs"), FormGetterSetter(cfg.visualizer.plasma_audio, x_size));
+                    form.addFormUI(F("Plasma X Size"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_x_size(form);
+
+                    form.addObjectGetterSetter(F("v_pays"), FormGetterSetter(cfg.visualizer.plasma_audio, y_size));
+                    form.addFormUI(F("Plasma Y Size"));
+                    cfg.visualizer.plasma_audio.addRangeValidatorFor_y_size(form);
                 }
                 break;
         #endif

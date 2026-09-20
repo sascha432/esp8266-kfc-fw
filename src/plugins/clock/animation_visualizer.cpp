@@ -21,6 +21,9 @@
 // most code is from
 // https://github.com/NimmLor/esp8266-fastled-iot-webserver/blob/master/esp8266-fastled-iot-webserver.ino
 //
+// python software for windows (untested) and other OSs
+// scripts/audio_analyzer/
+//
 // windows software
 // https://github.com/NimmLor/IoT-Audio-Visualization-Center
 //
@@ -131,17 +134,12 @@ void VisualizerAnimation::begin()
         }
     #endif
 
-    if (_cfg.get_enum_orientation(_cfg) == OrientationType::HORIZONTAL) {
-        _colsInterpolation = _parent._display.getCols() / static_cast<float>(kVisualizerPacketSize);
-        _rowsInterpolation = (_parent._display.getRows() - _cfg.vumeter_rows) / kVisualizerMaxPacketValue;
-    }
-    else {
-        _colsInterpolation = _parent._display.getRows() / static_cast<float>(kVisualizerPacketSize);
-        _rowsInterpolation = (_parent._display.getCols() - _cfg.vumeter_rows) / kVisualizerMaxPacketValue;
-
-    }
-
     _clear();
+
+    // the plasma phase starts at zero, the audio reactions are reset by _clear()
+    _plasmaTime = 0;
+    _plasmaHue = 0;
+    _plasmaLastUpdate = millis();
 
     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
 
@@ -193,6 +191,9 @@ void VisualizerAnimation::_clear()
     _video.clear();
     _lastPacketTime = millis();
     _timeout = kUDPInfiniteTimeout;
+    // the plasma phase keeps running, only the audio reactions are reset
+    _plasmaLevel = 0;
+    _plasmaBands.fill(0);
 }
 
 void VisualizerAnimation::_listen()
@@ -483,6 +484,76 @@ void VisualizerAnimation::_updatePeakData(uint32_t millisValue)
     _peakLoudness.updatePeaks(_storedLoudness);
 }
 
+// audio reactive plasma
+// the audio level is turned into an envelope with a fast attack and a slow release,
+// the envelope and the smoothed spectrum are used by the plasma reactions
+void VisualizerAnimation::_updatePlasmaAudio(uint32_t millisValue)
+{
+    const auto &cfg = _cfg.plasma_audio;
+
+    const uint32_t elapsed = millisValue - _plasmaLastUpdate;
+    if (elapsed == 0) {
+        return;
+    }
+    _plasmaLastUpdate = millisValue;
+
+    // level of the loudest channel, sensitivity is in percent
+    const uint16_t rawLevel = std::max(_storedLoudness.getLeftLevel(), _storedLoudness.getRightLevel());
+    const float target = std::min<uint32_t>(255, static_cast<uint32_t>(rawLevel * (cfg.sensitivity / 100.0f))) / 255.0f;
+
+    // fast attack, slow release
+    const float tau = (target > _plasmaLevel ? cfg.attack : cfg.release) * 0.001f; // seconds
+    float reaction = (elapsed * 0.001f) / tau;
+    if (reaction > 1.0f) {
+        reaction = 1.0f;
+    }
+    _plasmaLevel += (target - _plasmaLevel) * reaction;
+
+    // the phase time is accumulated instead of using the millis value, so the speed can be modulated
+    float speed = 1.0f;
+    if (cfg.enable_speed) {
+        speed += _plasmaLevel * (cfg.speed_gain / 255.0f) * kPlasmaMaxSpeedBoost;
+    }
+    _plasmaTime += elapsed * (cfg.speed * (1.0f / (192.0f * 100000.0f))) * speed;
+
+    if (cfg.enable_hue) {
+        _plasmaHue += elapsed * (cfg.hue_gain / 255.0f) * kPlasmaMaxHueRate * _plasmaLevel;
+        if (_plasmaHue >= 1024.0f) {
+            _plasmaHue -= 1024.0f; // one full hue rotation
+        }
+    }
+}
+
+template<typename _Ta>
+void VisualizerAnimation::_copyToPlasmaAudio(_Ta &display)
+{
+    const auto &cfg = _cfg.plasma_audio;
+
+    // smooth the spectrum, it is updated by the audio input source (a few frames time constant)
+    for(size_t i = 0; i < _plasmaBands.size(); i++) {
+        _plasmaBands[i] = (_plasmaBands[i] * 3 + _storedData[i]) >> 2;
+    }
+
+    float zoomX = 1.0f;
+    float zoomY = 1.0f;
+    if (cfg.enable_zoom) {
+        // the plasma is getting larger with a rising level
+        const float zoom = 1.0f + _plasmaLevel * (cfg.zoom_gain / 255.0f) * kPlasmaMaxZoom;
+        zoomX = zoom;
+        zoomY = zoom;
+    }
+
+    const uint8_t *bands = nullptr;
+    uint8_t bandGain = 0;
+    if (cfg.enable_bands && cfg.band_gain) {
+        bands = _plasmaBands.data();
+        bandGain = cfg.band_gain;
+    }
+
+    const uint32_t hueShift = cfg.hue_shift + static_cast<uint32_t>(_plasmaHue);
+    PlasmaField::copyTo(display, cfg, PlasmaField::ParamsType(_plasmaTime, hueShift, zoomX, zoomY, bands, bandGain));
+}
+
 template<typename _Ta>
 void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
 {
@@ -490,85 +561,6 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
 
     // display data
     switch(_cfg.get_enum_type(_cfg)) {
-        case VisualizerAnimationType::VUMETER_COLOR_1D:
-        case VisualizerAnimationType::VUMETER_1D: {
-            display.fill(CRGB(0));
-            auto color = _getColor();
-            auto cols = display.getCols();
-            auto visType = _cfg.get_enum_type(_cfg);
-            auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
-            CoordinateType end = std::min(((_storedLoudness.getLeftLevel() + _storedLoudness.getRightLevel()) * cols) / 512, cols - 1);
-            CoordinateType peak = std::min((peakLevel * cols) / 256, cols - 1);
-            for (int row = 0; row < display.getRows(); row++) {
-                for (int col = 0; col < cols; col++) {
-                    const auto colOfs = cols;
-                    if (_cfg.vumeter_peaks && col == peak) {
-                        display.setPixel(row, colOfs, CRGB(255, 0, 0));
-                    }
-                    else if (col < end) {
-                        if (visType == VisualizerAnimationType::VUMETER_COLOR_1D) {
-                            display.setPixel(row, colOfs, color);
-                        }
-                        else {
-                            display.setPixel(row, colOfs, CRGB(255, std::max(255 - peakLevel, 0), 0));
-                        }
-                    }
-                }
-            }
-        }
-        break;
-        case VisualizerAnimationType::VUMETER_COLOR_STEREO_1D:
-        case VisualizerAnimationType::VUMETER_STEREO_1D: {
-            display.fill(CRGB(0));
-            auto color = _getColor();
-            auto cols = display.getCols();
-            auto visType = _cfg.get_enum_type(_cfg);
-            // auto peakLevel = (_peakLoudness.getLeftLevel() + _peakLoudness.getRightLevel()) >> 1;
-            CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
-            CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
-            CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
-            CoordinateType peakLoudnessColLeft = std::max(centerCol - ((_peakLoudness.getLeftLevel() * centerCol) >> 8) - 1, 0);
-            CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), cols - 1);
-            for (int row = 0; row < display.getRows(); row++) {
-                for (int col = 0; col < cols; col++) {
-                    const auto colOfs = cols;
-                    if (_cfg.vumeter_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
-                        display.setPixel(row, colOfs, CRGB(255, 0, 0));
-                    }
-                    else if (col >= loudnessLeft && col < loudnessRight) {
-                        if (visType == VisualizerAnimationType::VUMETER_COLOR_STEREO_1D) {
-                            display.setPixel(row, colOfs, color);
-                        }
-                        else {
-                            int pos = (col < centerCol ? _peakLoudness.getLeftLevel() : _peakLoudness.getRightLevel()) >> 1;
-                            display.setPixel(row, colOfs, CRGB(255, std::max(255 - pos, 0), 0));
-                        }
-                    }
-                }
-            }
-        }
-        break;
-        case VisualizerAnimationType::SPECTRUM_RAINBOW_1D: {
-            display.fill(CRGB(0));
-            CHSV hsv;
-            hsv.hue = 0;
-            hsv.val = 255;
-            hsv.sat = 240;
-            auto cols = display.getCols();
-            float hue = 0;
-            float hueIncr = 232 / static_cast<float>(cols); // starts with red and ends with pink
-            for (int col = 0; col < cols; col++) {
-                hsv.hue = hue;
-                hue += hueIncr;
-                auto rgb = CRGB(hsv);
-                auto index = _getDataIndex(display, col);
-                rgb.fadeToBlackBy(kVisualizerMaxPacketValue - _storedData[index]);
-                for (int row = 0; row < display.getRows(); row++) {
-                    display.setPixel(row, cols, rgb);
-                }
-            }
-        }
-        break;
         case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
         case VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D:
         case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D: {
@@ -663,6 +655,10 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             }
         }
         break;
+        case VisualizerAnimationType::PLASMA_AUDIO: {
+            _copyToPlasmaAudio(display);
+        }
+        break;
         default:
             //TODO blink red green to show an error has occurred
             uint8_t r = ((millis() / 500) % 2) ? 32 : 0;
@@ -679,13 +675,9 @@ void VisualizerAnimation::loop(uint32_t millisValue)
         // read udp in every loop
         _parseUdp();
     }
-    // #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
-    //     else if (_cfg.get_enum_input(_cfg) == AudioInputType::MICROPHONE) {
-    //         if (_microphone) {
-    //             _microphone->readI2S();
-    //         }
-    //     }
-    // #endif
+    if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::PLASMA_AUDIO) {
+        _updatePlasmaAudio(millisValue);
+    }
 }
 
 #endif

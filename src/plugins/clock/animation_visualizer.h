@@ -5,6 +5,7 @@
 #pragma once
 
 #include "animation.h"
+#include "animation_plasma.h"
 #include <FastLED.h>
 
 // how to create video streaming:
@@ -86,7 +87,12 @@ namespace Clock {
             _video(getNumPixels()),
             _timeout(5),
             _lastPacketTime(0),
-            _cfg(cfg)
+            _cfg(cfg),
+            _plasmaTime(0),
+            _plasmaLevel(0),
+            _plasmaHue(0),
+            _plasmaBands(),
+            _plasmaLastUpdate(0)
         {
             _usageCounter++;
             _disableBlinkColon = true;
@@ -126,10 +132,19 @@ namespace Clock {
         void _listen();
         void _parseUdp();
 
+        // audio reactive plasma (VisualizerAnimationType::PLASMA_AUDIO)
+        void _updatePlasmaAudio(uint32_t millisValue);
+
+        template<typename _Ta>
+        void _copyToPlasmaAudio(_Ta &display);
+
     protected:
         static constexpr int kVisualizerPacketSize = 32;
-        static constexpr int kVisualizerInterpolation = 16;
-        static constexpr float kVisualizerMaxPacketValue = 254.0;
+
+        // audio reactive plasma reactions, all values are reached at full level and maximum gain
+        static constexpr float kPlasmaMaxSpeedBoost = 16.0f;    // speed multiplier added to the base speed
+        static constexpr float kPlasmaMaxZoom = 1.5f;           // size multiplier for the zoom reaction
+        static constexpr float kPlasmaMaxHueRate = 0.5f;        // hue units per millisecond for the hue rotation
 
         void _updatePeakData(uint32_t millisValue);
 
@@ -343,8 +358,13 @@ namespace Clock {
         uint32_t _timeout;
         uint32_t _lastPacketTime;
         VisualizerAnimationConfig &_cfg;
-        float _colsInterpolation; // horizontal
-        float _rowsInterpolation; // vertical
+
+        // audio reactive plasma (VisualizerAnimationType::PLASMA_AUDIO)
+        float _plasmaTime;          // phase time of the plasma, the speed reaction is applied while it is accumulated
+        float _plasmaLevel;         // smoothed audio level, 0.0-1.0
+        float _plasmaHue;           // hue offset accumulated from the audio level, 0.0-1024.0
+        std::array<uint8_t, kVisualizerPacketSize> _plasmaBands;    // smoothed spectrum used by the band reaction
+        uint32_t _plasmaLastUpdate; // last update of the audio level, used to calculate the delta time
 
         static constexpr auto kUDPTimeoutMultiplier = 1000U;
         static constexpr auto kUDPInfiniteTimeout = 255 * kUDPTimeoutMultiplier;

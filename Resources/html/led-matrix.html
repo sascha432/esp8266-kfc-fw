@@ -40,6 +40,17 @@
                 <div data-target="#plma1">The angles are causing the different disturbances in the horizontal, vertical, diagonal and circular direction</div>
                 <div data-target="#plmhs">The change of color without without movement</div>
                 <div data-target="#plmxs">The x and y size define the size of the circular motion</div>
+                <div data-target="#v_pase,#v_pasg">"Plasma Audio Reactive" only: speeds up the plasma while the music is loud. 0 keeps the base speed at all times, 255 makes the plasma move up to 17 times faster at full volume.</div>
+                <div data-target="#v_pahe,#v_pahg">"Plasma Audio Reactive" only: rotates the colors of the plasma while the music is loud. 0 disables the rotation, 255 cycles through all colors in about 2 seconds at full volume.</div>
+                <div data-target="#v_paze,#v_pazg">"Plasma Audio Reactive" only: enlarges the plasma pattern while the music is loud, so the animation breathes with the beat. 0 keeps the size constant, 255 makes it up to 2.5 times larger at full volume.</div>
+                <div data-target="#v_pabe,#v_pabg">"Plasma Audio Reactive" only: the 32 frequency bands deform the plasma. Each of the four ring layers is stretched by another part of the spectrum - bass (bands 1-8), low mids (9-16), high mids (17-24) and treble (25-32), so bass moves the large shapes and the high frequencies add fine details. 0 disables the effect.</div>
+                <div data-target="#v_pase2">"Plasma Audio Reactive" only: multiplier for the level received from the UDP sender or the microphone. 100 uses the level unchanged, 1000 amplifies it 10 times (for quiet sources) and 1 reduces it to 1/100 (for very loud sources).</div>
+                <div data-target="#v_paat">"Plasma Audio Reactive" only: time in milliseconds the animation takes to follow a rising volume. Small values react immediately and punchy, large values smooth out the reaction.</div>
+                <div data-target="#v_pare">"Plasma Audio Reactive" only: time in milliseconds the animation takes to fall back after a loud passage. Small values make the effect flicker, large values let it fade out slowly.</div>
+                <div data-target="#v_pasp">"Plasma Audio Reactive" only: base speed of the plasma, used while the audio level is zero and as the starting point for the speed reaction.</div>
+                <div data-target="#v_paa1">"Plasma Audio Reactive" only: the angles are causing the different disturbances in the horizontal, vertical, diagonal and circular direction</div>
+                <div data-target="#v_pahs">"Plasma Audio Reactive" only: the change of color without movement</div>
+                <div data-target="#v_paxs">"Plasma Audio Reactive" only: the x and y size define the size of the circular motion</div>
                 <div data-target="#xsl">Use white to achieve a seamless blending effect between colors</div>
                 <div data-target="#ficf">Provide alpha channels for RGB color blending to correct colors (e.g., #805000 for a candle effect or #000000 for a fire effect)</div>
                 <div data-target="#xcp">

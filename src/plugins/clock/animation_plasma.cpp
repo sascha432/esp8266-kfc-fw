@@ -55,7 +55,7 @@ static const int8_t PROGMEM sineTable[256] = {
     -22, -19, -16, -13, -9, -6, -3, 0
 };
 
-int8_t Clock::PlasmaAnimation::_readSineTab(uint8_t ofs)
+int8_t Clock::PlasmaField::_readSineTab(uint8_t ofs)
 {
      return pgm_read_byte(sineTable + ofs);
 }

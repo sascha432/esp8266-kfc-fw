@@ -275,17 +275,12 @@ namespace KFCConfigurationClasses {
                         MAX
                     };
                     enum class VisualizerAnimationType : uint8_t {
-                        VUMETER_1D,
-                        VUMETER_COLOR_1D,
-                        VUMETER_STEREO_1D,
-                        VUMETER_COLOR_STEREO_1D,
-                        SPECTRUM_RAINBOW_1D,
-                        SPECTRUM_RAINBOW_STEREO_1D,
                         SPECTRUM_RAINBOW_BARS_2D,
                         SPECTRUM_GRADIENT_BARS_2D,
                         SPECTRUM_COLOR_BARS_2D,
                         RGB565_VIDEO,
                         RGB24_VIDEO,
+                        PLASMA_AUDIO,
                         MAX,
                     };
                     enum class VisualizerPeakType : uint8_t {
@@ -307,6 +302,57 @@ namespace KFCConfigurationClasses {
                         MAX,
                     };
 
+                    // audio reactive plasma animation, all parameters are independent from the standalone plasma animation
+                    struct __attribute__packed__ PlasmaAudioType {
+                        using Type = PlasmaAudioType;
+
+                        // plasma field
+                        CREATE_UINT32_BITFIELD_MIN_MAX(angle1, 9, 0, 360, 30, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(angle2, 9, 0, 360, 50, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(angle3, 9, 0, 360, 80, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(angle4, 9, 0, 360, 150, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(hue_shift, 8, 0, 255, 20, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(speed, 8, 1, 255, 32, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(x_size, 8, 1, 255, 8, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(y_size, 8, 1, 255, 16, 1);
+
+                        // audio reaction
+                        CREATE_UINT32_BITFIELD_MIN_MAX(sensitivity, 10, 1, 1000, 100, 1); // gain for the level in percent (100 = 1x)
+                        CREATE_UINT32_BITFIELD_MIN_MAX(attack, 16, 1, 5000, 40, 5); // milliseconds to follow a rising level
+                        CREATE_UINT32_BITFIELD_MIN_MAX(release, 16, 1, 5000, 400, 10); // milliseconds to follow a falling level
+                        CREATE_BOOL_BITFIELD(enable_speed);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(speed_gain, 8, 0, 255, 128, 1);
+                        CREATE_BOOL_BITFIELD(enable_hue);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(hue_gain, 8, 0, 255, 96, 1);
+                        CREATE_BOOL_BITFIELD(enable_zoom);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(zoom_gain, 8, 0, 255, 128, 1);
+                        CREATE_BOOL_BITFIELD(enable_bands);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(band_gain, 8, 0, 255, 128, 1);
+
+                        PlasmaAudioType() :
+                            angle1(kDefaultValueFor_angle1),
+                            angle2(kDefaultValueFor_angle2),
+                            angle3(kDefaultValueFor_angle3),
+                            angle4(kDefaultValueFor_angle4),
+                            hue_shift(kDefaultValueFor_hue_shift),
+                            speed(kDefaultValueFor_speed),
+                            x_size(kDefaultValueFor_x_size),
+                            y_size(kDefaultValueFor_y_size),
+                            sensitivity(kDefaultValueFor_sensitivity),
+                            attack(kDefaultValueFor_attack),
+                            release(kDefaultValueFor_release),
+                            enable_speed(true),
+                            speed_gain(kDefaultValueFor_speed_gain),
+                            enable_hue(true),
+                            hue_gain(kDefaultValueFor_hue_gain),
+                            enable_zoom(true),
+                            zoom_gain(kDefaultValueFor_zoom_gain),
+                            enable_bands(true),
+                            band_gain(kDefaultValueFor_band_gain)
+                        {
+                        }
+                    };
+
                     CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT);
                     CREATE_UINT32_BITFIELD_MIN_MAX(peak_falling_speed, 15, 250, 15000, 2500, 100);
                     CREATE_UINT32_BITFIELD_MIN_MAX(peak_extra_color, 1, 0, 1, 1);
@@ -322,6 +368,8 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_loudness_gain, 10, 1, 1000, 275, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_band_gain, 10, 1, 1000, 175, 1);
 
+                    PlasmaAudioType plasma_audio;
+
                     VisualizerType() :
                         port(kDefaultValueFor_port),
                         peak_falling_speed(kDefaultValueFor_peak_falling_speed),
@@ -336,7 +384,8 @@ namespace KFCConfigurationClasses {
                         orientation(kDefaultValueFor_orientation),
                         input(kDefaultValueFor_input),
                         mic_loudness_gain(kDefaultValueFor_mic_loudness_gain),
-                        mic_band_gain(kDefaultValueFor_mic_band_gain)
+                        mic_band_gain(kDefaultValueFor_mic_band_gain),
+                        plasma_audio()
                     {
                     }
                 };

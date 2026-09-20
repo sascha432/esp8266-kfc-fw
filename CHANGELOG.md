@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Support for DHTxx sensor removed
  - Ping monitor command crashed when hostname was not found
  - Retired ArduinoFlashStringGenerator
  - Removed the `AT_MODE_HELP_SUPPORTED` option. See [docs/AtModeHelp.md](docs/AtModeHelp.md) for the command reference

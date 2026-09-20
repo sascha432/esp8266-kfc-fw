@@ -76,7 +76,7 @@ void WebUISocket::onText(uint8_t *data, size_t len)
             sendValues(client);
         }
         else if (command.equalsIgnoreCase(F("+set_state"))) {
-            bool state = args[1].toInt() || (strcasecmp_P(args[1].c_str(), SPGM(true)) == 0);
+            bool state = args[1].toInt() || args[1].equalsIgnoreCase(F("true"));
             for(auto plugin: PluginComponents::Register::getPlugins()) {
                 if (plugin->hasWebUI()) {
                     plugin->setValue(args[0], String(), false, state, true);

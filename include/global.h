@@ -368,9 +368,7 @@
 #    define IOT_SENSOR_HAVE_SYSTEM_METRICS 1
 #endif
 
-#ifndef SERIAL2TCP_SUPPORT
-#    define SERIAL2TCP_SUPPORT 0
-#endif
+
 
 #ifndef STK500V1
 #    define STK500V1 0

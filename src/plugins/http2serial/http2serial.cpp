@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-// Allows to connect over web sockets to the serial port, similar to Serial2TCP
+// Allows to connect over web sockets to the serial port
 
 #include <Arduino_compat.h>
 #include <ESPAsyncWebServer.h>

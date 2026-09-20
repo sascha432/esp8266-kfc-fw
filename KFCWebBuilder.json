@@ -126,10 +126,6 @@
             ],
             "#if !WEBSERVER_KFC_OTA": [
                 "./Resources/html/update-fw.html"
-            ],
-            "#if !SERIAL2TCP_SUPPORT": [
-                "./Resources/html/serial2tcp.html",
-                "./Resources/js/forms/serial2tcp.js"
             ]
         },
 

@@ -136,7 +136,7 @@ bool FailureCounterContainer::isAddressBlocked(const IPAddress &addr)
 String FailureCounter::getFirstFailure() const
 {
     PrintString tmp;
-    tmp.strftime_P(PSTR("%Y-%m-%dT%H:%M:%S %Z"), _firstFailure);
+    tmp.strftime(F("%Y-%m-%dT%H:%M:%S %Z"), _firstFailure);
     return tmp;
 }
 

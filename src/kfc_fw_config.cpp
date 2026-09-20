@@ -646,9 +646,6 @@ void KFCFWConfiguration::restoreFactorySettings()
     #if IOT_REMOTE_CONTROL
         __DBG_CALL(Plugins::RemoteControl::defaults());
     #endif
-    #if SERIAL2TCP_SUPPORT
-        __DBG_CALL(Plugins::Serial2TCP::defaults());
-    #endif
     #if SYSLOG_SUPPORT
         __DBG_CALL(Plugins::SyslogClient::defaults());
     #endif

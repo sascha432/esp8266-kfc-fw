@@ -17,7 +17,6 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameDeviceConfig_t, "MainConfig().system.
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameWebServerConfig_t, "MainConfig().system.webserver.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleStationsConfig, "MainConfig().network.settings.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameAlarm_t, "MainConfig().plugins.alarm.cfg");
-DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSerial2TCPConfig_t, "MainConfig().plugins.serial2tcp.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameMqttConfig_t, "MainConfig().plugins.mqtt.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameSyslogConfig_t, "MainConfig().plugins.syslog.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameNtpClientConfig_t, "MainConfig().plugins.ntpclient.cfg");
@@ -44,7 +43,6 @@ namespace KFCConfigurationClasses {
         is_softap_standby_mode_enabled(true),
         is_softap_dhcpd_enabled(true),
         is_station_mode_enabled(false),
-        // is_station_mode_dhcp_enabled(true),
         use_static_ip_during_wakeup(true),
         is_at_mode_enabled(true),
         is_mdns_enabled(true),
@@ -53,7 +51,7 @@ namespace KFCConfigurationClasses {
         is_web_server_enabled(true),
         is_mqtt_enabled(false),
         is_rest_api_enabled(),
-        is_serial2tcp_enabled(true),
+        __UNUSED__is_serial2tcp_enabled(true), // TODO __UNUSED__ FIELD
         is_webui_enabled(true),
         is_ssdp_enabled(true),
         is_netbios_enabled(true),
@@ -227,7 +225,6 @@ namespace KFCConfigurationClasses {
         // auto flags = System::Flags::getConfig();
         // flags.setWifiMode(WIFI_AP);
         // flags.is_softap_standby_mode_enabled = true;
-        // flags.is_station_mode_dhcp_enabled = true;
         // System::Flags::setConfig(flags);
     }
 

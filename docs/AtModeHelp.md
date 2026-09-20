@@ -516,12 +516,6 @@ Syslog queue command
 
 Send a message to the logger component. Only available if compiled in (`LOGGER`)
 
-## Serial2TCP
-
-### `+S2TCP=<0=disable/1=server/2=client>`
-
-Enable or disable Serial2TCP
-
 ## HTTP2Serial
 
 ### `+H2SBD=<baud>`

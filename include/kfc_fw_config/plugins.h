@@ -14,7 +14,6 @@
 #include "plugins/remote.h"
 #include "plugins/iot_switch.h"
 #include "plugins/alarm.h"
-#include "plugins/serial2tcp.h"
 #include "plugins/mqtt_client.h"
 #include "plugins/syslog.h"
 #include "plugins/ntp_client.h"
@@ -33,7 +32,6 @@ namespace KFCConfigurationClasses {
         using RemoteControl = Plugins::RemoteControlConfigNS::RemoteControl;
         using IotSwitch = Plugins::SwitchConfigNS::IotSwitch;
         using WeatherStation = Plugins::WeatherStationConfigNS::WeatherStation;
-        using Serial2TCP = Plugins::Serial2TCPConfigNS::Serial2TCP;
         using SyslogClient = Plugins::SyslogConfigNS::SyslogClient;
         using MqttClient = Plugins::MQTTConfigNS::MqttClient;
         using Blinds  = Plugins::BlindsConfigNS::Blinds;
@@ -53,7 +51,6 @@ namespace KFCConfigurationClasses {
         IotSwitch iotswitch;
         WeatherStation weatherstation;
         Alarm alarm;
-        Serial2TCP serial2tcp;
         MqttClient mqtt;
         SyslogClient syslog;
         NTPClient ntpclient;

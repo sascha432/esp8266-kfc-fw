@@ -68,7 +68,6 @@ namespace PluginComponents {
         DEEP_SLEEP,
         RTC,
         CONFIG,
-        SERIAL2TCP,
         SAFE_MODE,
         SWITCH,
         DIMMER,
@@ -82,7 +81,6 @@ namespace PluginComponents {
         CONFIG,
         REMOTE,
         SAVECRASH,
-        SERIAL2TCP,
         BUTTONS,
         MDNS,
         SSDP,
@@ -329,8 +327,6 @@ public:
             return F("Reset Detector");
         case RTCMemoryId::QUICK_CONNECT:
             return F("Quick Connect");
-        case RTCMemoryId::SERIAL2TCP:
-            return F("Serial2TCP");
         case RTCMemoryId::RTC:
             return F("RTC");
         case RTCMemoryId::SAFE_MODE:

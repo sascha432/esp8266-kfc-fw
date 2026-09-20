@@ -24,7 +24,6 @@ namespace KFCConfigurationClasses {
                 CREATE_BOOL_BITFIELD(is_softap_standby_mode_enabled);
                 CREATE_BOOL_BITFIELD(is_softap_dhcpd_enabled);
                 CREATE_BOOL_BITFIELD(is_station_mode_enabled);
-                // CREATE_BOOL_BITFIELD(is_station_mode_dhcp_enabled); // 7
                 CREATE_BOOL_BITFIELD(use_static_ip_during_wakeup); // 7
                 CREATE_BOOL_BITFIELD(is_at_mode_enabled);
                 CREATE_BOOL_BITFIELD(is_mdns_enabled);
@@ -33,7 +32,7 @@ namespace KFCConfigurationClasses {
                 CREATE_BOOL_BITFIELD(is_web_server_enabled);
                 CREATE_BOOL_BITFIELD(is_mqtt_enabled);
                 CREATE_BOOL_BITFIELD(is_rest_api_enabled);
-                CREATE_BOOL_BITFIELD(is_serial2tcp_enabled); // 15
+                CREATE_BOOL_BITFIELD(__UNUSED__is_serial2tcp_enabled); // 15 - TODO __UNUSED__ FIELD, reuse
                 CREATE_BOOL_BITFIELD(is_webui_enabled);
                 CREATE_BOOL_BITFIELD(is_ssdp_enabled);
                 CREATE_BOOL_BITFIELD(is_netbios_enabled);

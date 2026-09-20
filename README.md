@@ -38,9 +38,8 @@ Running on a modified framework-arduinoespressif32 v2.0.9
 
 ## Requirements
 
- - Visual Studio Code for Windows or Linux
- - PlatformIO 6.1.4 (Linux compiles way faster, see [compile_time.md](compile_time.md))
- - WSL2 Virtual Linux and WSL remote extension. Speeds up compiling with many cores by 10-30%
+ - Visual Studio Code for Windows or Linux, some tools might now work with OSX
+ - PlatformIO 6.2.0
  - See ``Building the VFS`` for more requirements
 
 ### ESP8266
@@ -101,10 +100,6 @@ MDNS discovery and zeroconf support for MQTT, Syslog and Home Assistant
 
 Serial console access over the WebUI using web sockets
 
-### Serial2TCP
-
-Serial console redirection via TCP in client or server mode
-
 ### STK500v1
 
 Fully asynchronous STK500v1 programmer over WiFi, serial or web server upload...
@@ -127,7 +122,7 @@ Scan GPIO pins for I2C devices
 
 ### Sensor
 
-Plugin for different sensors. Supply Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219, DHT11, DHT22, AM2301, BH1750FVI, Motion sensors and system metrics
+Plugin for different sensors. Supply Voltage/Battery with charging indicator, BME280, BME680, CCS811, HLW8012, LM75A, DS3231, INA219, AM2301, BH1750FVI, Motion sensors and system metrics
 Support for native WebUI and MQTT
 
 ### Mpr121Touchpad
@@ -187,8 +182,8 @@ Plugin for my 2 channel blinds controller
 
 ### WiFi Remote Control
 
-Plugin for my 4 button ultra low power WiFi remote control. 16.5µA standby, 250ms wakeup time to send first UDP packets and 300ms for a fully established MQTT session with QoS.
-Supports MQTT / Homeassistant Device Triggers and UDP packets.
+Plugin for my 4 button ultra low power WiFi remote control. 16.5µA standby, 250ms wake-up time to send first UDP packets and 300ms for a fully established MQTT session with QoS.
+Supports MQTT / Home Assistant Device Triggers and UDP packets.
 
 [ESP8266-WiFi-Remote-Control](https://github.com/sascha432/ESP8266-WiFi-Remote-Control)
 
@@ -260,7 +255,3 @@ https://github.com/akaJes/AsyncPing
 [Adafruit_MPR121](https://github.com/adafruit/Adafruit_MPR121)
 
 [Adafruit_NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel)
-
-### Rotary encoder handler for arduino. v1.1
-
-[buxtronix/arduino/Rotary.cpp](https://github.com/buxtronix/arduino/blob/master/libraries/Rotary/Rotary.cpp)

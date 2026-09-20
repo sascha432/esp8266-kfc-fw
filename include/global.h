@@ -32,16 +32,6 @@
 #    define ASYNC_TCP_SSL_ENABLED 0
 #endif
 
-#ifndef KFC_SERIAL_PORT
-#    define KFC_SERIAL_PORT Serial
-#endif
-
-// set to baud rate to use Serial1 for all debug output
-#ifndef KFC_DEBUG_USE_SERIAL1
-#    define KFC_DEBUG_USE_SERIAL1 0
-// #define KFC_DEBUG_USE_SERIAL1                        115200
-#endif
-
 // this port gets initialized during boot and all output is displayed there until
 // the system has been initialized
 // NOTE: Serial0 = Serial
@@ -134,10 +124,6 @@
 #endif
 #ifndef HTTP2SERIAL_SERIAL_BUFFER_MIN_LEN
 #    define HTTP2SERIAL_SERIAL_BUFFER_MIN_LEN 128
-#endif
-
-#ifndef KFC_SERIAL_PORT
-#    define KFC_SERIAL_PORT Serial
 #endif
 
 // disable at mode when a client connects to the serial console via web socket

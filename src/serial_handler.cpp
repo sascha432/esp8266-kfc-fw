@@ -24,16 +24,9 @@ Stream &Serial = serialHandler;
 // Stream &Serial = Serial0;
 
 #if DEBUG
-#    if KFC_DEBUG_USE_SERIAL1
-        StreamWrapper debugStreamWrapper(&Serial1);
-        Stream &Serial = debugStreamWrapper;
-#    elif 1
-        StreamWrapper debugStreamWrapper(&Serial);
-        // Stream &DebugSerial = Serial0;
-        Stream &DebugSerial = debugStreamWrapper;
-#    else
-        Stream &DebugSerial = serialHandler;
-#    endif
+    StreamWrapper debugStreamWrapper(&Serial);
+    // Stream &DebugSerial = Serial0;
+    Stream &DebugSerial = debugStreamWrapper;
 #else
     Stream &DebugSerial = NullSerial;
 #endif

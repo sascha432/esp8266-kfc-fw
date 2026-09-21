@@ -10,15 +10,13 @@
 namespace Clock {
 
     // ------------------------------------------------------------------------
-    // FireAnimation
+    // FireField
 
-    class FireAnimation : public Animation {
+    // heat based fire simulation, shared by the fire animation and the audio reactive visualizer
+    // adapted from an example in FastLED, which is adapted from work done by Mark Kriegsman (called Fire2012).
+
+    class FireField {
     public:
-        // adapted from an example in FastLED, which is adapted from work done by Mark Kriegsman (called Fire2012).
-        using FireAnimationConfig = KFCConfigurationClasses::Plugins::ClockConfigNS::FireAnimationType;
-        using Orientation = FireAnimationConfig::OrientationType;
-
-    private:
         class Line {
         public:
 
@@ -89,6 +87,21 @@ namespace Clock {
                 }
             }
 
+            // adds heat to the bottom cells, used by the audio reactions
+            void addHeat(uint8_t value)
+            {
+                if (!value || !_num || !_heat) {
+                    return;
+                }
+                auto n = std::max<uint8_t>(_num / 5, 2);
+                for(uint8_t i = 0; i < n; i++) {
+                    // the injected heat decreases towards the top of the ignition area
+                    auto add = (uint16_t)value * (n - i) / n;
+                    auto heat = (uint16_t)_heat[i] + add;
+                    _heat[i] = heat > 255 ? 255 : (uint8_t)heat;
+                }
+            }
+
             uint16_t getNum() const
             {
                 return _num;
@@ -135,27 +148,40 @@ namespace Clock {
         };
 
     public:
-        FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg) :
-            Animation(clock),
-            _lineCount((cfg.cast_enum_orientation(cfg.orientation) == Orientation::VERTICAL) ? getCols() : getRows()), // rows
-            _lines(new Line[_lineCount + 1]),
-            _lineBuffer(new uint8_t[getNumPixels() + 1]),
-            _cfg(cfg)
+        FireField() : _lineCount(0), _lines(nullptr), _lineBuffer(nullptr)
         {
-            _disableBlinkColon = false;
-            if (!_lines || !_lineBuffer) {
-                _lineCount = 0;
-            }
-            else {
-                auto cols = (_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL) ? getRows() : getCols(); // columns
-                for(uint16_t i = 0; i < _lineCount; i++) {
-                    _lines[i].init(&_lineBuffer[i * cols], cols);
-                }
-            }
         }
 
-        ~FireAnimation() {
-            __LDBG_printf("end lines=%u", _lineCount);
+        ~FireField()
+        {
+            free();
+        }
+
+        FireField(const FireField &) = delete;
+        FireField &operator=(const FireField &) = delete;
+
+        // allocates the heat buffer, lineCount lines with lineLength cells
+        bool init(uint16_t lineCount, uint16_t lineLength)
+        {
+            free();
+            if (!lineCount || !lineLength) {
+                return false;
+            }
+            _lineCount = lineCount;
+            _lines = new Line[lineCount + 1];
+            _lineBuffer = new uint8_t[lineCount * lineLength + 1];
+            if (!_lines || !_lineBuffer) {
+                free();
+                return false;
+            }
+            for(uint16_t i = 0; i < lineCount; i++) {
+                _lines[i].init(&_lineBuffer[i * lineLength], lineLength);
+            }
+            return true;
+        }
+
+        void free()
+        {
             if (_lines) {
                 delete[] _lines;
                 _lines = nullptr;
@@ -167,45 +193,42 @@ namespace Clock {
             _lineCount = 0;
         }
 
-        virtual void begin() override
+        bool isValid() const
         {
-            _loopTimer = millis();
-            _updateRate = std::max<uint16_t>(5, _cfg.speed);
-            __LDBG_printf("begin lines=%u update_rate=%u", _lineCount, _updateRate);
+            return _lineCount != 0;
         }
 
-        virtual void loop(uint32_t millisValue) override
+        uint16_t getLineCount() const
         {
-            if (get_time_since(_loopTimer, millisValue) >= _updateRate) {
-                _loopTimer = millisValue;
-                // update all lines
-                srand(millisValue);
-                for(uint16_t i = 0; i < _lineCount; i++) {
-                    _lines[i].cooldown(_cfg.cooling);
-                    _lines[i].heatup();
-                    _lines[i].ignite(_cfg.sparking);
-                }
+            return _lineCount;
+        }
+
+        // advances the simulation, cooling and sparking are 0-255
+        void update(uint32_t millisValue, uint8_t cooling, uint8_t sparking)
+        {
+            srand(millisValue);
+            for(uint16_t i = 0; i < _lineCount; i++) {
+                _lines[i].cooldown(cooling);
+                _lines[i].heatup();
+                _lines[i].ignite(sparking);
             }
         }
 
-        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        // adds extra heat to the bottom of a line, used by the audio reactions
+        void addHeat(uint16_t line, uint8_t value)
         {
-            _copyTo(display, millisValue);
-        }
-
-        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
-        {
-            _copyTo(buffer, millisValue);
+            if (line < _lineCount) {
+                _lines[line].addHeat(value);
+            }
         }
 
         template<typename _Ta>
-        void _copyTo(_Ta &output, uint32_t millisValue)
+        void copyTo(_Ta &output, uint8_t mapping, ColorType factor)
         {
-            uint8_t mapping = ((_cfg.cast_enum_orientation(_cfg.orientation) == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction));
             for(uint16_t i = 0; i < _lineCount; i++) {
                 auto &line = _lines[i];
                 for(uint16_t j = 0; j < line.getNum(); j++) {
-                    auto color = line.getHeatColor(j, _cfg.factor);
+                    auto color = line.getHeatColor(j, factor);
                     auto coords = PixelCoordinatesType(i, j);
                     switch(mapping) {
                         case 1:
@@ -227,11 +250,73 @@ namespace Clock {
         }
 
     private:
-        uint32_t _loopTimer;
-        uint16_t _updateRate;
         uint16_t _lineCount;
         Line *_lines;
         uint8_t *_lineBuffer;
+    };
+
+    // ------------------------------------------------------------------------
+    // FireAnimation
+
+    class FireAnimation : public Animation {
+    public:
+        using FireAnimationConfig = KFCConfigurationClasses::Plugins::ClockConfigNS::FireAnimationType;
+        using Orientation = FireAnimationConfig::OrientationType;
+
+    public:
+        FireAnimation(ClockPlugin &clock, FireAnimationConfig &cfg) :
+            Animation(clock),
+            _cfg(cfg)
+        {
+            _disableBlinkColon = false;
+            auto vertical = (_cfg.getOrientation() == Orientation::VERTICAL);
+            if (!_fire.init(vertical ? getCols() : getRows(), vertical ? getRows() : getCols())) {
+                __LDBG_printf("allocating the fire buffer failed");
+            }
+        }
+
+        ~FireAnimation()
+        {
+            __LDBG_printf("end lines=%u", _fire.getLineCount());
+        }
+
+        virtual void begin() override
+        {
+            _loopTimer = millis();
+            _updateRate = std::max<uint16_t>(5, _cfg.speed);
+            __LDBG_printf("begin lines=%u update_rate=%u", _fire.getLineCount(), _updateRate);
+        }
+
+        virtual void loop(uint32_t millisValue) override
+        {
+            if (get_time_since(_loopTimer, millisValue) >= _updateRate) {
+                _loopTimer = millisValue;
+                // update all lines
+                _fire.update(millisValue, _cfg.cooling, _cfg.sparking);
+            }
+        }
+
+        virtual void copyTo(DisplayType &display, uint32_t millisValue) override
+        {
+            _copyTo(display, millisValue);
+        }
+
+        virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) override
+        {
+            _copyTo(buffer, millisValue);
+        }
+
+        template<typename _Ta>
+        void _copyTo(_Ta &output, uint32_t millisValue)
+        {
+            uint8_t mapping = ((_cfg.getOrientation() == Orientation::VERTICAL ? 2 : 0) + (_cfg.invert_direction));
+            _fire.copyTo(output, mapping, _cfg.factor);
+        }
+
+    private:
+        uint32_t _loopTimer;
+        uint16_t _updateRate;
+        FireField _fire;
         FireAnimationConfig &_cfg;
     };
 

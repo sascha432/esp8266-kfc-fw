@@ -2,7 +2,7 @@
 
 ## Version 0.0.9 (master)
 
- - Audio reactive plasma visualization mode for the LED matrix (speed, hue rotation, zoom and spectrum ripples)
+ - Audio reactive plasma and fire visualization modes for the LED matrix (speed, hue rotation, zoom, spectrum ripples and volume driven flames)
  - Removed the 1D visualizer modes (VU meter and rainbow spectrum)
  - Removed Serial2TCP support
  - Support for DHTxx sensor removed

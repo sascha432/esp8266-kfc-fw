@@ -6,6 +6,7 @@
 
 #include "animation.h"
 #include "animation_plasma.h"
+#include "animation_fire.h"
 #include <FastLED.h>
 
 // how to create video streaming:
@@ -89,10 +90,11 @@ namespace Clock {
             _lastPacketTime(0),
             _cfg(cfg),
             _plasmaTime(0),
-            _plasmaLevel(0),
             _plasmaHue(0),
-            _plasmaBands(),
-            _plasmaLastUpdate(0)
+            _audioLevel(0),
+            _audioBands(),
+            _audioLastUpdate(0),
+            _fireUpdateTime(0)
         {
             _usageCounter++;
             _disableBlinkColon = true;
@@ -132,11 +134,22 @@ namespace Clock {
         void _listen();
         void _parseUdp();
 
+        // audio reaction, shared by the audio reactive plasma/fire (VisualizerAnimationType::PLASMA_AUDIO/FIRE_AUDIO)
+        template<typename _Tc>
+        float _updateAudioLevel(uint32_t millisValue, const _Tc &cfg);
+        void _updateAudioBands();
+
         // audio reactive plasma (VisualizerAnimationType::PLASMA_AUDIO)
         void _updatePlasmaAudio(uint32_t millisValue);
 
         template<typename _Ta>
         void _copyToPlasmaAudio(_Ta &display);
+
+        // audio reactive fire (VisualizerAnimationType::FIRE_AUDIO)
+        void _updateFireAudio(uint32_t millisValue);
+
+        template<typename _Ta>
+        void _copyToFireAudio(_Ta &display);
 
     protected:
         static constexpr int kVisualizerPacketSize = 32;
@@ -145,6 +158,12 @@ namespace Clock {
         static constexpr float kPlasmaMaxSpeedBoost = 16.0f;    // speed multiplier added to the base speed
         static constexpr float kPlasmaMaxZoom = 1.5f;           // size multiplier for the zoom reaction
         static constexpr float kPlasmaMaxHueRate = 0.5f;        // hue units per millisecond for the hue rotation
+
+        // audio reactive fire reactions, all values are reached at full level and maximum gain
+        static constexpr float kFireMaxSpeedBoost = 6.0f;       // the update interval is divided by up to this value
+        static constexpr uint32_t kFireMinUpdateRate = 10;      // milliseconds between two updates
+        static constexpr uint16_t kFireMaxHeat = 255;           // heat added to the bottom cells
+        static constexpr uint16_t kFireMaxBandHeat = 255;       // heat added to the bottom cells per column
 
         void _updatePeakData(uint32_t millisValue);
 
@@ -359,12 +378,18 @@ namespace Clock {
         uint32_t _lastPacketTime;
         VisualizerAnimationConfig &_cfg;
 
+        // audio reaction, shared by the audio reactive plasma/fire
+        float _audioLevel;          // smoothed audio level, 0.0-1.0
+        std::array<uint8_t, kVisualizerPacketSize> _audioBands;    // smoothed spectrum used by the band reactions
+        uint32_t _audioLastUpdate;  // last update of the audio level, used to calculate the delta time
+
         // audio reactive plasma (VisualizerAnimationType::PLASMA_AUDIO)
         float _plasmaTime;          // phase time of the plasma, the speed reaction is applied while it is accumulated
-        float _plasmaLevel;         // smoothed audio level, 0.0-1.0
         float _plasmaHue;           // hue offset accumulated from the audio level, 0.0-1024.0
-        std::array<uint8_t, kVisualizerPacketSize> _plasmaBands;    // smoothed spectrum used by the band reaction
-        uint32_t _plasmaLastUpdate; // last update of the audio level, used to calculate the delta time
+
+        // audio reactive fire (VisualizerAnimationType::FIRE_AUDIO)
+        FireField _fireField;       // heat buffer, allocated by begin() for the audio reactive fire
+        uint32_t _fireUpdateTime;   // time of the last simulation update
 
         static constexpr auto kUDPTimeoutMultiplier = 1000U;
         static constexpr auto kUDPInfiniteTimeout = 255 * kUDPTimeoutMultiplier;

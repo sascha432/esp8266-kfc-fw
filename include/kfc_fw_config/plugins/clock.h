@@ -281,6 +281,7 @@ namespace KFCConfigurationClasses {
                         RGB565_VIDEO,
                         RGB24_VIDEO,
                         PLASMA_AUDIO,
+                        FIRE_AUDIO,
                         MAX,
                     };
                     enum class VisualizerPeakType : uint8_t {
@@ -353,6 +354,69 @@ namespace KFCConfigurationClasses {
                         }
                     };
 
+                    // audio reactive fire animation, all parameters are independent from the standalone fire animation
+                    struct __attribute__packed__ FireAudioType {
+                        using Type = FireAudioType;
+                        enum class DirectionType : uint8_t {
+                            MIN = 0,
+                            HORIZONTAL = MIN,       // fire lines are the rows, the flames grow along the columns
+                            HORIZONTAL_FLIPPED,     // ... into the opposite direction
+                            VERTICAL,               // fire lines are the columns, the flames grow along the rows
+                            VERTICAL_FLIPPED,       // ... into the opposite direction
+                            MAX
+                        };
+
+                        // fire
+                        CREATE_UINT32_BITFIELD_MIN_MAX(cooling, 8, 0, 255, 60, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(sparking, 8, 0, 255, 95, 1);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(speed, 8, 1, 100, 50, 1); // milliseconds between two updates
+                        CREATE_COLOR_FIELD(factor, 0x000000);
+                        // the enum values match the pixel mapping of FireField::copyTo()
+                        CREATE_ENUM_D_BITFIELD(direction, DirectionType, DirectionType::VERTICAL);
+
+                        // audio reaction
+                        CREATE_UINT32_BITFIELD_MIN_MAX(sensitivity, 10, 1, 1000, 100, 1); // gain for the level in percent (100 = 1x)
+                        CREATE_UINT32_BITFIELD_MIN_MAX(attack, 16, 1, 5000, 40, 5); // milliseconds to follow a rising level
+                        CREATE_UINT32_BITFIELD_MIN_MAX(release, 16, 1, 5000, 400, 10); // milliseconds to follow a falling level
+                        CREATE_BOOL_BITFIELD(enable_speed);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(speed_gain, 8, 0, 255, 128, 1);
+                        CREATE_BOOL_BITFIELD(enable_heat);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(heat_gain, 8, 0, 255, 96, 1);
+                        CREATE_BOOL_BITFIELD(enable_sparks);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(spark_gain, 8, 0, 255, 128, 1);
+                        CREATE_BOOL_BITFIELD(enable_bands);
+                        CREATE_UINT32_BITFIELD_MIN_MAX(band_gain, 8, 0, 255, 160, 1);
+
+                        DirectionType getDirection() const {
+                            return get_enum_direction(*this);
+                        }
+
+                        // vertical directions use the columns as fire lines
+                        bool isVertical() const {
+                            return getDirection() >= DirectionType::VERTICAL;
+                        }
+
+                        FireAudioType() :
+                            cooling(kDefaultValueFor_cooling),
+                            sparking(kDefaultValueFor_sparking),
+                            speed(kDefaultValueFor_speed),
+                            factor(kDefaultValueFor_factor),
+                            direction(kDefaultValueFor_direction),
+                            sensitivity(kDefaultValueFor_sensitivity),
+                            attack(kDefaultValueFor_attack),
+                            release(kDefaultValueFor_release),
+                            enable_speed(true),
+                            speed_gain(kDefaultValueFor_speed_gain),
+                            enable_heat(true),
+                            heat_gain(kDefaultValueFor_heat_gain),
+                            enable_sparks(true),
+                            spark_gain(kDefaultValueFor_spark_gain),
+                            enable_bands(true),
+                            band_gain(kDefaultValueFor_band_gain)
+                        {
+                        }
+                    };
+
                     CREATE_UINT32_BITFIELD_MIN_MAX(port, 16, 0, 65535, IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT);
                     CREATE_UINT32_BITFIELD_MIN_MAX(peak_falling_speed, 15, 250, 15000, 2500, 100);
                     CREATE_UINT32_BITFIELD_MIN_MAX(peak_extra_color, 1, 0, 1, 1);
@@ -369,6 +433,7 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_band_gain, 10, 1, 1000, 175, 1);
 
                     PlasmaAudioType plasma_audio;
+                    FireAudioType fire_audio;
 
                     VisualizerType() :
                         port(kDefaultValueFor_port),
@@ -385,7 +450,8 @@ namespace KFCConfigurationClasses {
                         input(kDefaultValueFor_input),
                         mic_loudness_gain(kDefaultValueFor_mic_loudness_gain),
                         mic_band_gain(kDefaultValueFor_mic_band_gain),
-                        plasma_audio()
+                        plasma_audio(),
+                        fire_audio()
                     {
                     }
                 };

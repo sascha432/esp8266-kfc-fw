@@ -172,18 +172,22 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D, F("Spectrum Single Color Bars 2D"),
                         VisualizerAnimationType::RGB565_VIDEO, F("RGB565 Video"),
                         VisualizerAnimationType::RGB24_VIDEO, F("RGB24 Video"),
-                        VisualizerAnimationType::PLASMA_AUDIO, F("Plasma Audio Reactive")
+                        VisualizerAnimationType::PLASMA_AUDIO, F("Plasma Audio Reactive"),
+                        VisualizerAnimationType::FIRE_AUDIO, F("Fire Audio Reactive")
                     );
                     form.addObjectGetterSetter(F("v_ln"), FormGetterSetter(cfg.visualizer, type));
                     form.addFormUI(F("Visualization Type"), VisualizerAnimationTypeItems, FormUI::SelectSuffix(orientation));
 
-                    form.add(F("v_sc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-                        if (store) {
-                            cfg.visualizer.color = Color::fromString(value);
-                        }
-                        return false;
-                    });
-                    form.addFormUI(F("Color For Single Color Mode"));
+                    // the fields of the visualization types are added inside groups that are shown and hidden by forms.js
+                    // (form-dependency-group, see Form::BaseForm::addDivGroup). fields outside of a group are always visible
+
+                    // spectrum bars
+                    auto &visualizerSpectrumGroup = form.addDivGroup(F("v_grp_spec"), PrintString(
+                        F("{'i':'#v_ln','s':{'%d':'$T.show()','%d':'$T.show()','%d':'$T.show()'},'m':'$T.hide()'}"),
+                        static_cast<int>(VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D),
+                        static_cast<int>(VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D),
+                        static_cast<int>(VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D)
+                    ));
 
                     auto showPeaksItems = FormUI::List(
                         VisualizerPeakType::DISABLED, F("Disabled"),
@@ -226,6 +230,24 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addObjectGetterSetter(F("v_sln"), cfg.visualizer, cfg.visualizer.get_bits_vumeter_rows, cfg.visualizer.set_bits_vumeter_rows);
                     form.addFormUI(F("Show VUMeter at the top"), FormUI::Type::SELECT, showVuMeterRowsItems, FormUI::CheckboxButtonSuffix(showLoudnessPeaks, F("Show Peaks")));
 
+                    visualizerSpectrumGroup.end();
+
+                    // single color spectrum bars
+                    auto &visualizerColorGroup = form.addDivGroup(F("v_grp_col"), PrintString(
+                        F("{'i':'#v_ln','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
+                        static_cast<int>(VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D)
+                    ));
+
+                    form.add(F("v_sc"), Color(cfg.visualizer.color).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                        if (store) {
+                            cfg.visualizer.color = Color::fromString(value);
+                        }
+                        return false;
+                    });
+                    form.addFormUI(F("Color For Single Color Mode"));
+
+                    visualizerColorGroup.end();
+
                     #if !IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT && !IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
                     #    error No audio input type defined
                     #endif
@@ -245,6 +267,11 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addFormUI(F("Audio Input Source"), FormUI::Type::SELECT, inputTypeItems);
 
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                        auto &visualizerMicGroup = form.addDivGroup(F("v_grp_mic"), PrintString(
+                            F("{'i':'#v_ait','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
+                            static_cast<int>(AudioInputType::MICROPHONE)
+                        ));
+
                         form.addObjectGetterSetter(F("v_mlg"), cfg.visualizer, cfg.visualizer.get_bits_mic_loudness_gain, cfg.visualizer.set_bits_mic_loudness_gain);
                         form.addFormUI(F("Microphone Loudness Gain"));
                         cfg.visualizer.addRangeValidatorFor_mic_loudness_gain(form);
@@ -252,16 +279,32 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         form.addObjectGetterSetter(F("v_mbg"), cfg.visualizer, cfg.visualizer.get_bits_mic_band_gain, cfg.visualizer.set_bits_mic_band_gain);
                         form.addFormUI(F("Microphone Band Gain"));
                         cfg.visualizer.addRangeValidatorFor_mic_band_gain(form);
+
+                        visualizerMicGroup.end();
                     #endif
 
-                    auto &multicast = form.addObjectGetterSetter(F("v_muca"), FormGetterSetter(cfg.visualizer, multicast));
-                    form.addFormUI(FormUI::Type::HIDDEN);
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
+                        auto &visualizerUdpGroup = form.addDivGroup(F("v_grp_udp"), PrintString(
+                            F("{'i':'#v_ait','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
+                            static_cast<int>(AudioInputType::UDP)
+                        ));
 
-                    form.addObjectGetterSetter(F("v_port"), FormGetterSetter(cfg.visualizer, port));
-                    form.addFormUI(F("UDP Port"), FormUI::CheckboxButtonSuffix(multicast, F("Multicast")));
-                    cfg.visualizer.addRangeValidatorFor_port(form);
+                        auto &multicast = form.addObjectGetterSetter(F("v_muca"), FormGetterSetter(cfg.visualizer, multicast));
+                        form.addFormUI(FormUI::Type::HIDDEN);
+
+                        form.addObjectGetterSetter(F("v_port"), FormGetterSetter(cfg.visualizer, port));
+                        form.addFormUI(F("UDP Port"), FormUI::CheckboxButtonSuffix(multicast, F("Multicast")));
+                        cfg.visualizer.addRangeValidatorFor_port(form);
+
+                        visualizerUdpGroup.end();
+                    #endif
 
                     // audio reactive plasma, all parameters are independent from the plasma animation
+                    auto &visualizerPlasmaGroup = form.addDivGroup(F("v_grp_plm"), PrintString(
+                        F("{'i':'#v_ln','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
+                        static_cast<int>(VisualizerAnimationType::PLASMA_AUDIO)
+                    ));
+
                     auto &plasmaAudioSpeedEnable = form.addObjectGetterSetter(F("v_pase"), FormGetterSetter(cfg.visualizer.plasma_audio, enable_speed));
                     form.addFormUI(FormUI::Type::HIDDEN);
                     form.addObjectGetterSetter(F("v_pasg"), FormGetterSetter(cfg.visualizer.plasma_audio, speed_gain));
@@ -329,6 +372,83 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addObjectGetterSetter(F("v_pays"), FormGetterSetter(cfg.visualizer.plasma_audio, y_size));
                     form.addFormUI(F("Plasma Y Size"));
                     cfg.visualizer.plasma_audio.addRangeValidatorFor_y_size(form);
+
+                    visualizerPlasmaGroup.end();
+
+                    // audio reactive fire, all parameters are independent from the fire animation
+                    auto &visualizerFireGroup = form.addDivGroup(F("v_grp_fir"), PrintString(
+                        F("{'i':'#v_ln','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
+                        static_cast<int>(VisualizerAnimationType::FIRE_AUDIO)
+                    ));
+
+                    auto &fireSpeedEnable = form.addObjectGetterSetter(F("v_fase"), FormGetterSetter(cfg.visualizer.fire_audio, enable_speed));
+                    form.addFormUI(FormUI::Type::HIDDEN);
+                    form.addObjectGetterSetter(F("v_fasg"), FormGetterSetter(cfg.visualizer.fire_audio, speed_gain));
+                    form.addFormUI(F("Fire Speed Reaction"), FormUI::CheckboxButtonSuffix(fireSpeedEnable, F("Enabled")));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_speed_gain(form);
+
+                    auto &fireHeatEnable = form.addObjectGetterSetter(F("v_fahe"), FormGetterSetter(cfg.visualizer.fire_audio, enable_heat));
+                    form.addFormUI(FormUI::Type::HIDDEN);
+                    form.addObjectGetterSetter(F("v_fahg"), FormGetterSetter(cfg.visualizer.fire_audio, heat_gain));
+                    form.addFormUI(F("Fire Heat Reaction"), FormUI::CheckboxButtonSuffix(fireHeatEnable, F("Enabled")));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_heat_gain(form);
+
+                    auto &fireSparksEnable = form.addObjectGetterSetter(F("v_fape"), FormGetterSetter(cfg.visualizer.fire_audio, enable_sparks));
+                    form.addFormUI(FormUI::Type::HIDDEN);
+                    form.addObjectGetterSetter(F("v_fapg"), FormGetterSetter(cfg.visualizer.fire_audio, spark_gain));
+                    form.addFormUI(F("Fire Spark Reaction"), FormUI::CheckboxButtonSuffix(fireSparksEnable, F("Enabled")));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_spark_gain(form);
+
+                    auto &fireBandsEnable = form.addObjectGetterSetter(F("v_fabe"), FormGetterSetter(cfg.visualizer.fire_audio, enable_bands));
+                    form.addFormUI(FormUI::Type::HIDDEN);
+                    form.addObjectGetterSetter(F("v_fabg"), FormGetterSetter(cfg.visualizer.fire_audio, band_gain));
+                    form.addFormUI(F("Fire Spectrum Ripples"), FormUI::CheckboxButtonSuffix(fireBandsEnable, F("Enabled")));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_band_gain(form);
+
+                    form.addObjectGetterSetter(F("v_fasens"), FormGetterSetter(cfg.visualizer.fire_audio, sensitivity));
+                    form.addFormUI(F("Audio Sensitivity (Gain x100)"));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_sensitivity(form);
+
+                    form.addObjectGetterSetter(F("v_faat"), FormGetterSetter(cfg.visualizer.fire_audio, attack));
+                    form.addFormUI(F("Attack Time (ms)"));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_attack(form);
+
+                    form.addObjectGetterSetter(F("v_fare"), FormGetterSetter(cfg.visualizer.fire_audio, release));
+                    form.addFormUI(F("Release Time (ms)"));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_release(form);
+
+                    using FireDirectionType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::FireAudioType::DirectionType;
+                    auto fireDirectionItems = FormUI::List(
+                        FireDirectionType::HORIZONTAL, F("Horizontal (flames move sideways)"),
+                        FireDirectionType::HORIZONTAL_FLIPPED, F("Horizontal, flipped (opposite direction)"),
+                        FireDirectionType::VERTICAL, F("Vertical (flames rise)"),
+                        FireDirectionType::VERTICAL_FLIPPED, F("Vertical, flipped (flames move down)")
+                    );
+
+                    form.addObjectGetterSetter(F("v_faor"), FormGetterSetter(cfg.visualizer.fire_audio, direction));
+                    form.addFormUI(F("Fire Direction"), fireDirectionItems);
+
+                    form.addObjectGetterSetter(F("v_fasd"), FormGetterSetter(cfg.visualizer.fire_audio, speed));
+                    form.addFormUI(F("Fire Update Rate (ms)"));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_speed(form);
+
+                    form.addObjectGetterSetter(F("v_fac"), FormGetterSetter(cfg.visualizer.fire_audio, cooling));
+                    form.addFormUI(F("Fire Cooling"));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_cooling(form);
+
+                    form.addObjectGetterSetter(F("v_fasp"), FormGetterSetter(cfg.visualizer.fire_audio, sparking));
+                    form.addFormUI(F("Fire Sparking"));
+                    cfg.visualizer.fire_audio.addRangeValidatorFor_sparking(form);
+
+                    form.add(F("v_faf"), Color(cfg.visualizer.fire_audio.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                        if (store) {
+                            cfg.visualizer.fire_audio.factor.value = Color::fromString(value);
+                        }
+                        return false;
+                    });
+                    form.addFormUI(F("Fire Color Correction"));
+
+                    visualizerFireGroup.end();
                 }
                 break;
         #endif

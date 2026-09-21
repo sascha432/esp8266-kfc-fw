@@ -139,7 +139,16 @@ void VisualizerAnimation::begin()
     // the plasma phase starts at zero, the audio reactions are reset by _clear()
     _plasmaTime = 0;
     _plasmaHue = 0;
-    _plasmaLastUpdate = millis();
+    _audioLastUpdate = millis();
+    _fireUpdateTime = millis();
+
+    // the heat buffer is only required for the audio reactive fire
+    if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::FIRE_AUDIO) {
+        auto vertical = _cfg.fire_audio.isVertical();
+        if (!_fireField.init(vertical ? getCols() : getRows(), vertical ? getRows() : getCols())) {
+            __DBG_printf("allocating the fire buffer failed");
+        }
+    }
 
     WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
 
@@ -191,9 +200,9 @@ void VisualizerAnimation::_clear()
     _video.clear();
     _lastPacketTime = millis();
     _timeout = kUDPInfiniteTimeout;
-    // the plasma phase keeps running, only the audio reactions are reset
-    _plasmaLevel = 0;
-    _plasmaBands.fill(0);
+    // the plasma phase and the fire keep running, only the audio reactions are reset
+    _audioLevel = 0;
+    _audioBands.fill(0);
 }
 
 void VisualizerAnimation::_listen()
@@ -481,40 +490,59 @@ void VisualizerAnimation::_updatePeakData(uint32_t millisValue)
     _peakLoudness.updatePeaks(_storedLoudness);
 }
 
-// audio reactive plasma
-// the audio level is turned into an envelope with a fast attack and a slow release,
-// the envelope and the smoothed spectrum are used by the plasma reactions
-void VisualizerAnimation::_updatePlasmaAudio(uint32_t millisValue)
+// audio reaction, shared by the audio reactive plasma and fire
+// the audio level is turned into an envelope with a fast attack and a slow release
+template<typename _Tc>
+float VisualizerAnimation::_updateAudioLevel(uint32_t millisValue, const _Tc &cfg)
 {
-    const auto &cfg = _cfg.plasma_audio;
-
-    const uint32_t elapsed = millisValue - _plasmaLastUpdate;
+    const uint32_t elapsed = millisValue - _audioLastUpdate;
     if (elapsed == 0) {
-        return;
+        return _audioLevel;
     }
-    _plasmaLastUpdate = millisValue;
+    _audioLastUpdate = millisValue;
 
-    // level of the loudest channel, sensitivity is in percent
+    // level of the loudest channel, sensitivity is a gain (100 = unchanged)
     const uint16_t rawLevel = std::max(_storedLoudness.getLeftLevel(), _storedLoudness.getRightLevel());
     const float target = std::min<uint32_t>(255, static_cast<uint32_t>(rawLevel * (cfg.sensitivity / 100.0f))) / 255.0f;
 
     // fast attack, slow release
-    const float tau = (target > _plasmaLevel ? cfg.attack : cfg.release) * 0.001f; // seconds
+    const float tau = (target > _audioLevel ? cfg.attack : cfg.release) * 0.001f; // seconds
     float reaction = (elapsed * 0.001f) / tau;
     if (reaction > 1.0f) {
         reaction = 1.0f;
     }
-    _plasmaLevel += (target - _plasmaLevel) * reaction;
+    _audioLevel += (target - _audioLevel) * reaction;
+    return _audioLevel;
+}
+
+// smooths the spectrum, the raw values are updated by the audio input source (a few frames time constant)
+void VisualizerAnimation::_updateAudioBands()
+{
+    for(size_t i = 0; i < _audioBands.size(); i++) {
+        _audioBands[i] = (_audioBands[i] * 3 + _storedData[i]) >> 2;
+    }
+}
+
+// audio reactive plasma
+void VisualizerAnimation::_updatePlasmaAudio(uint32_t millisValue)
+{
+    const auto &cfg = _cfg.plasma_audio;
+
+    const uint32_t elapsed = millisValue - _audioLastUpdate;
+    if (elapsed == 0) {
+        return;
+    }
+    const float level = _updateAudioLevel(millisValue, cfg);
 
     // the phase time is accumulated instead of using the millis value, so the speed can be modulated
     float speed = 1.0f;
     if (cfg.enable_speed) {
-        speed += _plasmaLevel * (cfg.speed_gain / 255.0f) * kPlasmaMaxSpeedBoost;
+        speed += level * (cfg.speed_gain / 255.0f) * kPlasmaMaxSpeedBoost;
     }
     _plasmaTime += elapsed * (cfg.speed * (1.0f / (192.0f * 100000.0f))) * speed;
 
     if (cfg.enable_hue) {
-        _plasmaHue += elapsed * (cfg.hue_gain / 255.0f) * kPlasmaMaxHueRate * _plasmaLevel;
+        _plasmaHue += elapsed * (cfg.hue_gain / 255.0f) * kPlasmaMaxHueRate * level;
         if (_plasmaHue >= 1024.0f) {
             _plasmaHue -= 1024.0f; // one full hue rotation
         }
@@ -526,16 +554,13 @@ void VisualizerAnimation::_copyToPlasmaAudio(_Ta &display)
 {
     const auto &cfg = _cfg.plasma_audio;
 
-    // smooth the spectrum, it is updated by the audio input source (a few frames time constant)
-    for(size_t i = 0; i < _plasmaBands.size(); i++) {
-        _plasmaBands[i] = (_plasmaBands[i] * 3 + _storedData[i]) >> 2;
-    }
+    _updateAudioBands();
 
     float zoomX = 1.0f;
     float zoomY = 1.0f;
     if (cfg.enable_zoom) {
         // the plasma is getting larger with a rising level
-        const float zoom = 1.0f + _plasmaLevel * (cfg.zoom_gain / 255.0f) * kPlasmaMaxZoom;
+        const float zoom = 1.0f + _audioLevel * (cfg.zoom_gain / 255.0f) * kPlasmaMaxZoom;
         zoomX = zoom;
         zoomY = zoom;
     }
@@ -543,12 +568,83 @@ void VisualizerAnimation::_copyToPlasmaAudio(_Ta &display)
     const uint8_t *bands = nullptr;
     uint8_t bandGain = 0;
     if (cfg.enable_bands && cfg.band_gain) {
-        bands = _plasmaBands.data();
+        bands = _audioBands.data();
         bandGain = cfg.band_gain;
     }
 
     const uint32_t hueShift = cfg.hue_shift + static_cast<uint32_t>(_plasmaHue);
     PlasmaField::copyTo(display, cfg, PlasmaField::ParamsType(_plasmaTime, hueShift, zoomX, zoomY, bands, bandGain));
+}
+
+// audio reactive fire
+// the level makes the fire bigger and more turbulent, the spectrum lets the flames follow the music
+void VisualizerAnimation::_updateFireAudio(uint32_t millisValue)
+{
+    const auto &cfg = _cfg.fire_audio;
+
+    const uint32_t elapsed = millisValue - _audioLastUpdate;
+    if (elapsed == 0) {
+        return;
+    }
+    const float level = _updateAudioLevel(millisValue, cfg);
+
+    if (!_fireField.isValid()) {
+        return;
+    }
+
+    // the update interval is shortened with a rising level, the fire is getting more turbulent
+    float speed = 1.0f;
+    if (cfg.enable_speed) {
+        speed += level * (cfg.speed_gain / 255.0f) * kFireMaxSpeedBoost;
+    }
+    const uint32_t updateRate = std::max<uint32_t>(kFireMinUpdateRate, static_cast<uint32_t>(cfg.speed / speed));
+    if (millisValue - _fireUpdateTime < updateRate) {
+        return;
+    }
+    _fireUpdateTime = millisValue;
+
+    // the sparks are getting denser with a rising level
+    uint16_t sparking = cfg.sparking;
+    if (cfg.enable_sparks) {
+        sparking += static_cast<uint16_t>((255 - sparking) * level * (cfg.spark_gain / 255.0f));
+        if (sparking > 255) {
+            sparking = 255;
+        }
+    }
+
+    _fireField.update(millisValue, cfg.cooling, sparking);
+
+    // extra heat at the bottom of every line: the level makes the flames taller,
+    // the spectrum lets every column burn according to its frequency band
+    uint16_t heat = 0;
+    if (cfg.enable_heat) {
+        heat = static_cast<uint16_t>(level * (cfg.heat_gain / 255.0f) * kFireMaxHeat);
+    }
+    const float bandGain = cfg.enable_bands ? (cfg.band_gain / 255.0f) : 0.0f;
+    if (heat || bandGain) {
+        const uint16_t lineCount = _fireField.getLineCount();
+        for(uint16_t i = 0; i < lineCount; i++) {
+            uint16_t value = heat;
+            if (bandGain) {
+                value += static_cast<uint16_t>((_audioBands[i * kVisualizerPacketSize / lineCount] / 255.0f) * bandGain * kFireMaxBandHeat);
+            }
+            if (value) {
+                _fireField.addHeat(i, value > 255 ? 255 : static_cast<uint8_t>(value));
+            }
+        }
+    }
+}
+
+template<typename _Ta>
+void VisualizerAnimation::_copyToFireAudio(_Ta &display)
+{
+    const auto &cfg = _cfg.fire_audio;
+
+    _updateAudioBands();
+
+    // the enum values match the pixel mapping of FireField::copyTo()
+    const uint8_t mapping = static_cast<uint8_t>(cfg.getDirection());
+    _fireField.copyTo(display, mapping, cfg.factor);
 }
 
 template<typename _Ta>
@@ -656,6 +752,10 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             _copyToPlasmaAudio(display);
         }
         break;
+        case VisualizerAnimationType::FIRE_AUDIO: {
+            _copyToFireAudio(display);
+        }
+        break;
         default:
             //TODO blink red green to show an error has occurred
             uint8_t r = ((millis() / 500) % 2) ? 32 : 0;
@@ -672,8 +772,15 @@ void VisualizerAnimation::loop(uint32_t millisValue)
         // read udp in every loop
         _parseUdp();
     }
-    if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::PLASMA_AUDIO) {
-        _updatePlasmaAudio(millisValue);
+    switch(_cfg.get_enum_type(_cfg)) {
+        case VisualizerAnimationType::PLASMA_AUDIO:
+            _updatePlasmaAudio(millisValue);
+            break;
+        case VisualizerAnimationType::FIRE_AUDIO:
+            _updateFireAudio(millisValue);
+            break;
+        default:
+            break;
     }
 }
 

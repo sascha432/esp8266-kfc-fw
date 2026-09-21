@@ -19,8 +19,9 @@ for n, i in table.items():
     print('%d%s' % (i, (n < len(table) and ', ' or '')), end=(n == len(table)) and '\n};' or (n % 8 == 0) and nl_indent or '')
 
 */
+namespace Clock {
 
-static const int8_t PROGMEM sineTable[256] = {
+const int8_t PROGMEM sineTable[256] = {
     0, 3, 6, 9, 13, 16, 19, 22,
     25, 28, 31, 34, 37, 40, 43, 46,
     49, 52, 55, 58, 60, 63, 66, 68,
@@ -55,7 +56,4 @@ static const int8_t PROGMEM sineTable[256] = {
     -22, -19, -16, -13, -9, -6, -3, 0
 };
 
-int8_t Clock::PlasmaField::_readSineTab(uint8_t ofs)
-{
-     return pgm_read_byte(sineTable + ofs);
 }

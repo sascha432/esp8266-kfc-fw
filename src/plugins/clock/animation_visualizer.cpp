@@ -216,9 +216,6 @@ void VisualizerAnimation::_listen()
     }
 }
 
-extern "C" float m_factor;
-
-
 enum class UdpProtocolType : uint8_t {
     /*
         byte zero is the protocol id

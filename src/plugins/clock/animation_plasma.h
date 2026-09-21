@@ -15,6 +15,8 @@ namespace Clock {
     // generates the plasma field, used by the plasma animation and the audio reactive visualizer
     // all pixels of the output are written
 
+    extern const int8_t PROGMEM sineTable[256];
+
     class PlasmaField {
     public:
         struct ParamsType {
@@ -113,7 +115,10 @@ namespace Clock {
             return sum / (8.0f * 255.0f);
         }
 
-        static int8_t _readSineTab(uint8_t ofs);
+        static inline int8_t _readSineTab(uint8_t ofs)
+        {
+            return pgm_read_byte(sineTable + ofs);
+        }
 
         static constexpr float radius1 = 65.2, radius2 = 92.0, radius3 = 163.2, radius4 = 176.8, centerX1 = 64.4, centerX2 = 46.4, centerX3 = 93.6, centerX4 = 16.4, centerY1 = 34.8, centerY2 = 26.0, centerY3 = 56.0, centerY4 = -11.6;
     };

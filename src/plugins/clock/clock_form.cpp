@@ -160,11 +160,9 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     using VisualizerAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerAnimationType;
                     using VisualizerPeakType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerPeakType;
                     auto orientationItems = FormUI::List(
-                        OrientationType::VERTICAL, F("Vertical"),
-                        OrientationType::HORIZONTAL, F("Horizontal")
+                        OrientationType::HORIZONTAL, F("Horizontal (spectrum from left to right)"),
+                        OrientationType::VERTICAL, F("Vertical (spectrum from bottom to top)")
                     );
-                    auto &orientation = form.addObjectGetterSetter(F("v_or"), cfg.visualizer, cfg.visualizer.get_bits_orientation, cfg.visualizer.set_bits_orientation);
-                    form.addFormUI(FormUI::Type::HIDDEN_SELECT, orientationItems);
 
                     auto VisualizerAnimationTypeItems = FormUI::Container::List(
                         VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D, F("Spectrum Rainbow Bars 2D"),
@@ -176,10 +174,62 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         VisualizerAnimationType::FIRE_AUDIO, F("Fire Audio Reactive")
                     );
                     form.addObjectGetterSetter(F("v_ln"), FormGetterSetter(cfg.visualizer, type));
-                    form.addFormUI(F("Visualization Type"), VisualizerAnimationTypeItems, FormUI::SelectSuffix(orientation));
+                    form.addFormUI(F("Visualization Type"), VisualizerAnimationTypeItems);
+
+                    // the common audio options are shared by every visualization type
+                    #if !IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT && !IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                    #    error No audio input type defined
+                    #endif
+
+                    auto inputTypeItems = FormUI::List(
+                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
+                            AudioInputType::UDP, F("UDP")
+                        #endif
+                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                            #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
+                                ,
+                            #endif
+                            AudioInputType::MICROPHONE, F("Microphone")
+                        #endif
+                    );
+                    form.addObjectGetterSetter(F("v_ait"), FormGetterSetter(cfg.visualizer, input));
+                    form.addFormUI(F("Audio Input Source"), FormUI::Type::SELECT, inputTypeItems);
 
                     // the fields of the visualization types are added inside groups that are shown and hidden by forms.js
                     // (form-dependency-group, see Form::BaseForm::addDivGroup). fields outside of a group are always visible
+
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
+                        auto &visualizerUdpGroup = form.addDivGroup(F("v_grp_udp"), PrintString(
+                            F("{'i':'#v_ait','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
+                            static_cast<int>(AudioInputType::UDP)
+                        ));
+
+                        auto &multicast = form.addObjectGetterSetter(F("v_muca"), FormGetterSetter(cfg.visualizer, multicast));
+                        form.addFormUI(FormUI::Type::HIDDEN);
+
+                        form.addObjectGetterSetter(F("v_port"), FormGetterSetter(cfg.visualizer, port));
+                        form.addFormUI(F("UDP Port"), FormUI::CheckboxButtonSuffix(multicast, F("Multicast")));
+                        cfg.visualizer.addRangeValidatorFor_port(form);
+
+                        visualizerUdpGroup.end();
+                    #endif
+
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                        auto &visualizerMicGroup = form.addDivGroup(F("v_grp_mic"), PrintString(
+                            F("{'i':'#v_ait','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
+                            static_cast<int>(AudioInputType::MICROPHONE)
+                        ));
+
+                        form.addObjectGetterSetter(F("v_mlg"), cfg.visualizer, cfg.visualizer.get_bits_mic_loudness_gain, cfg.visualizer.set_bits_mic_loudness_gain);
+                        form.addFormUI(F("Microphone Loudness Gain"));
+                        cfg.visualizer.addRangeValidatorFor_mic_loudness_gain(form);
+
+                        form.addObjectGetterSetter(F("v_mbg"), cfg.visualizer, cfg.visualizer.get_bits_mic_band_gain, cfg.visualizer.set_bits_mic_band_gain);
+                        form.addFormUI(F("Microphone Band Gain"));
+                        cfg.visualizer.addRangeValidatorFor_mic_band_gain(form);
+
+                        visualizerMicGroup.end();
+                    #endif
 
                     // spectrum bars
                     auto &visualizerSpectrumGroup = form.addDivGroup(F("v_grp_spec"), PrintString(
@@ -188,6 +238,10 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         static_cast<int>(VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D),
                         static_cast<int>(VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D)
                     ));
+
+                    // the bars and the VU meter can be drawn horizontally or vertically (transposed)
+                    form.addObjectGetterSetter(F("v_or"), cfg.visualizer, cfg.visualizer.get_bits_orientation, cfg.visualizer.set_bits_orientation);
+                    form.addFormUI(F("Orientation"), orientationItems);
 
                     auto showPeaksItems = FormUI::List(
                         VisualizerPeakType::DISABLED, F("Disabled"),
@@ -247,57 +301,6 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addFormUI(F("Color For Single Color Mode"));
 
                     visualizerColorGroup.end();
-
-                    #if !IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT && !IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
-                    #    error No audio input type defined
-                    #endif
-
-                    auto inputTypeItems = FormUI::List(
-                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
-                            AudioInputType::UDP, F("UDP")
-                        #endif
-                        #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
-                            #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
-                                ,
-                            #endif
-                            AudioInputType::MICROPHONE, F("Microphone")
-                        #endif
-                    );
-                    form.addObjectGetterSetter(F("v_ait"), FormGetterSetter(cfg.visualizer, input));
-                    form.addFormUI(F("Audio Input Source"), FormUI::Type::SELECT, inputTypeItems);
-
-                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
-                        auto &visualizerMicGroup = form.addDivGroup(F("v_grp_mic"), PrintString(
-                            F("{'i':'#v_ait','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
-                            static_cast<int>(AudioInputType::MICROPHONE)
-                        ));
-
-                        form.addObjectGetterSetter(F("v_mlg"), cfg.visualizer, cfg.visualizer.get_bits_mic_loudness_gain, cfg.visualizer.set_bits_mic_loudness_gain);
-                        form.addFormUI(F("Microphone Loudness Gain"));
-                        cfg.visualizer.addRangeValidatorFor_mic_loudness_gain(form);
-
-                        form.addObjectGetterSetter(F("v_mbg"), cfg.visualizer, cfg.visualizer.get_bits_mic_band_gain, cfg.visualizer.set_bits_mic_band_gain);
-                        form.addFormUI(F("Microphone Band Gain"));
-                        cfg.visualizer.addRangeValidatorFor_mic_band_gain(form);
-
-                        visualizerMicGroup.end();
-                    #endif
-
-                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT
-                        auto &visualizerUdpGroup = form.addDivGroup(F("v_grp_udp"), PrintString(
-                            F("{'i':'#v_ait','s':{'%d':'$T.show()'},'m':'$T.hide()'}"),
-                            static_cast<int>(AudioInputType::UDP)
-                        ));
-
-                        auto &multicast = form.addObjectGetterSetter(F("v_muca"), FormGetterSetter(cfg.visualizer, multicast));
-                        form.addFormUI(FormUI::Type::HIDDEN);
-
-                        form.addObjectGetterSetter(F("v_port"), FormGetterSetter(cfg.visualizer, port));
-                        form.addFormUI(F("UDP Port"), FormUI::CheckboxButtonSuffix(multicast, F("Multicast")));
-                        cfg.visualizer.addRangeValidatorFor_port(form);
-
-                        visualizerUdpGroup.end();
-                    #endif
 
                     // audio reactive plasma, all parameters are independent from the plasma animation
                     auto &visualizerPlasmaGroup = form.addDivGroup(F("v_grp_plm"), PrintString(

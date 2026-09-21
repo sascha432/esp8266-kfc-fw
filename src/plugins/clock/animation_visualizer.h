@@ -121,10 +121,10 @@ namespace Clock {
             _copyTo(buffer, millisValue);
         }
 
-        template<typename _Ta>
-        uint8_t _getDataIndex(_Ta &display, int col)
+        // returns the index into the spectrum data for a bar
+        uint8_t _getDataIndex(CoordinateType bar, CoordinateType barCount) const
         {
-            return std::clamp<uint16_t>((col * kVisualizerPacketSize) / display.getCols(), 0, kVisualizerPacketSize - 1);
+            return static_cast<uint8_t>(std::clamp<int>((bar * kVisualizerPacketSize) / barCount, 0, kVisualizerPacketSize - 1));
         }
 
         template<typename _Ta>

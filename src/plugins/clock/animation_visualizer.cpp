@@ -664,15 +664,21 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             hsv.sat = 240;
             int16_t oldIndex = -1;
             CRGB color = _getColor();
-            CoordinateType lastRow = display.getRows() - _cfg.vumeter_rows;
-            CoordinateType centerCol = std::max(display.getCols() >> 1, 1);
-            CoordinateType loudnessLeft = std::max(centerCol - ((_storedLoudness.getLeftLevel() * centerCol) >> 8), 0);
-            CoordinateType loudnessRight = std::min(centerCol + ((_storedLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
-            CoordinateType peakLoudnessColLeft = std::max(centerCol - ((_peakLoudness.getLeftLevel() * centerCol) >> 8) - 1, 0);
-            CoordinateType peakLoudnessColRight = std::min(centerCol + ((_peakLoudness.getRightLevel() * centerCol) >> 8), display.getCols() - 1);
-            for (CoordinateType col = 0; col < display.getCols(); col++) {
+            auto visType = _cfg.get_enum_type(_cfg);
+            // horizontal: the spectrum runs from left to right, every column is a bar that grows over the rows
+            // vertical: transposed, the spectrum runs from bottom to top, every row is a bar that grows over the columns
+            const bool transposed = (_cfg.get_enum_orientation(_cfg) == OrientationType::VERTICAL);
+            const CoordinateType barCount = transposed ? display.getRows() : display.getCols();
+            const CoordinateType barLength = transposed ? display.getCols() : display.getRows();
+            const CoordinateType lastBarPos = barLength - _cfg.vumeter_rows;
+            const CoordinateType center = std::max<CoordinateType>(barCount >> 1, 1);
+            const CoordinateType loudnessLeft = std::max<int>(center - ((_storedLoudness.getLeftLevel() * center) >> 8), 0);
+            const CoordinateType loudnessRight = std::min<int>(center + ((_storedLoudness.getRightLevel() * center) >> 8), barCount - 1);
+            const CoordinateType peakLoudnessLeft = std::max<int>(center - ((_peakLoudness.getLeftLevel() * center) >> 8) - 1, 0);
+            const CoordinateType peakLoudnessRight = std::min<int>(center + ((_peakLoudness.getRightLevel() * center) >> 8), barCount - 1);
+            for (CoordinateType bar = 0; bar < barCount; bar++) {
                 CRGB rgb;
-                switch(_cfg.get_enum_type(_cfg)) {
+                switch(visType) {
                     case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D:
                         rgb = CRGB(hsv);
                         break;
@@ -682,26 +688,26 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                         break;
 
                 }
-                int8_t index = _getDataIndex(display, col);
+                int8_t index = _getDataIndex(bar, barCount);
                 if (index != oldIndex) {
                     oldIndex = index;
                     // change color for each bar
                     hsv.hue += (224 / kVisualizerPacketSize); // starts with red and ends with pink
                 }
                 // bar pixels
-                CoordinateType endRow = std::min<int>(((_storedData[index] * (lastRow + 1)) >> 8), lastRow);
-                for (CoordinateType row = 0; row < endRow; row++) {
-                    if (_cfg.get_enum_type(_cfg) == VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D) {
-                        // int pos = ((row << 8) / lastRow);
-                        // rgb = CRGB(pos, std::max(255 - pos, 0), 0);
-                        int pos = ((row << (8 + 7)) / lastRow); // multiply by 128 shifting another 7 bits to the left
-                        pos = std::min(pos / 115, 255); // now we can use 7 bits additional precision: pos * (128/115==1.113)
-                        rgb = CRGB(pos, 255 - pos, 0);
+                CoordinateType endPos = std::min<int>(((_storedData[index] * (lastBarPos + 1)) >> 8), lastBarPos);
+                for (CoordinateType pos = 0; pos < endPos; pos++) {
+                    if (visType == VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D) {
+                        // int colorPos = ((pos << 8) / lastBarPos);
+                        // rgb = CRGB(colorPos, std::max(255 - colorPos, 0), 0);
+                        int colorPos = ((pos << (8 + 7)) / lastBarPos); // multiply by 128 shifting another 7 bits to the left
+                        colorPos = std::min(colorPos / 115, 255); // now we can use 7 bits additional precision: colorPos * (128/115==1.113)
+                        rgb = CRGB(colorPos, 255 - colorPos, 0);
                     }
                     // reduce brightness for spectrum pixels
                     // CRGB rgbTmp = rgb;
                     // fadeToBlackBy(&rgbTmp, 1, 200);
-                    display.setPixel(row, col, rgb);
+                    display.setPixel(PixelCoordinatesType(transposed ? bar : pos, transposed ? pos : bar), rgb);
                 }
                 // peak pixels
                 if (_cfg.get_enum_peak_show(_cfg) != VisualizerPeakType::DISABLED) {
@@ -710,25 +716,24 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                     if (peakLoudness) {
                         // the udp handler updates the pixels in real time in an interrupt
                         // make sure the peak is above the current level at all times
-                        CoordinateType peakLoudnessRow = std::min<int>(((std::max<int16_t>(_storedData[index] + 1, peakLoudness) * (lastRow + 1)) >> 8), lastRow - 1);
-                        if (peakLoudnessRow >= endRow - 1) {
-                            display.setPixel(peakLoudnessRow, col, _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? uint32_t(_cfg.peak_color) : uint32_t(rgb), millisValue));
+                        CoordinateType peakLoudnessPos = std::min<int>(((std::max<int16_t>(_storedData[index] + 1, peakLoudness) * (lastBarPos + 1)) >> 8), lastBarPos - 1);
+                        if (peakLoudnessPos >= endPos - 1) {
+                            display.setPixel(PixelCoordinatesType(transposed ? bar : peakLoudnessPos, transposed ? peakLoudnessPos : bar), _storedPeaks[index].getPeakColor(_cfg.peak_extra_color ? uint32_t(_cfg.peak_color) : uint32_t(rgb), millisValue));
                         }
                     }
                 }
                 // VU Meter
                 if (_cfg.vumeter_rows) {
-                    constexpr auto colOfs = 0;
-                    for (CoordinateType row = lastRow; row < display.getRows(); row++) {
-                        if (_cfg.vumeter_peaks && ((col == peakLoudnessColLeft) || (col == peakLoudnessColRight))) {
-                            display.setPixel(row, col + colOfs, CRGB(255, 0, 0));
+                    for (CoordinateType pos = lastBarPos; pos < barLength; pos++) {
+                        if (_cfg.vumeter_peaks && ((bar == peakLoudnessLeft) || (bar == peakLoudnessRight))) {
+                            display.setPixel(PixelCoordinatesType(transposed ? bar : pos, transposed ? pos : bar), CRGB(255, 0, 0));
                         }
-                        else if (col >= loudnessLeft && col < loudnessRight) {
-                            int position = ((centerCol - col) * 256) / centerCol;
-                            if (position < 0) {
-                                position = -position;
+                        else if (bar >= loudnessLeft && bar < loudnessRight) {
+                            int colorPos = ((center - bar) * 256) / center;
+                            if (colorPos < 0) {
+                                colorPos = -colorPos;
                             }
-                            display.setPixel(row, col + colOfs, CRGB(position, std::max(200 - position, 0), 0));
+                            display.setPixel(PixelCoordinatesType(transposed ? bar : pos, transposed ? pos : bar), CRGB(colorPos, std::max(200 - colorPos, 0), 0));
                         }
                     }
                 }

@@ -303,6 +303,22 @@ namespace KFCConfigurationClasses {
                         MAX,
                     };
 
+                    // audio reaction, shared by the audio reactive plasma and fire modes
+                    struct __attribute__packed__ AudioReactionType {
+                        using Type = AudioReactionType;
+
+                        CREATE_UINT32_BITFIELD_MIN_MAX(sensitivity, 10, 1, 1000, 100, 1); // gain for the level in percent (100 = 1x)
+                        CREATE_UINT32_BITFIELD_MIN_MAX(attack, 16, 1, 5000, 40, 5); // milliseconds to follow a rising level
+                        CREATE_UINT32_BITFIELD_MIN_MAX(release, 16, 1, 5000, 400, 10); // milliseconds to follow a falling level
+
+                        AudioReactionType() :
+                            sensitivity(kDefaultValueFor_sensitivity),
+                            attack(kDefaultValueFor_attack),
+                            release(kDefaultValueFor_release)
+                        {
+                        }
+                    };
+
                     // audio reactive plasma animation, all parameters are independent from the standalone plasma animation
                     struct __attribute__packed__ PlasmaAudioType {
                         using Type = PlasmaAudioType;
@@ -317,10 +333,7 @@ namespace KFCConfigurationClasses {
                         CREATE_UINT32_BITFIELD_MIN_MAX(x_size, 8, 1, 255, 8, 1);
                         CREATE_UINT32_BITFIELD_MIN_MAX(y_size, 8, 1, 255, 16, 1);
 
-                        // audio reaction
-                        CREATE_UINT32_BITFIELD_MIN_MAX(sensitivity, 10, 1, 1000, 100, 1); // gain for the level in percent (100 = 1x)
-                        CREATE_UINT32_BITFIELD_MIN_MAX(attack, 16, 1, 5000, 40, 5); // milliseconds to follow a rising level
-                        CREATE_UINT32_BITFIELD_MIN_MAX(release, 16, 1, 5000, 400, 10); // milliseconds to follow a falling level
+                        // reactions
                         CREATE_BOOL_BITFIELD(enable_speed);
                         CREATE_UINT32_BITFIELD_MIN_MAX(speed_gain, 8, 0, 255, 128, 1);
                         CREATE_BOOL_BITFIELD(enable_hue);
@@ -339,9 +352,7 @@ namespace KFCConfigurationClasses {
                             speed(kDefaultValueFor_speed),
                             x_size(kDefaultValueFor_x_size),
                             y_size(kDefaultValueFor_y_size),
-                            sensitivity(kDefaultValueFor_sensitivity),
-                            attack(kDefaultValueFor_attack),
-                            release(kDefaultValueFor_release),
+
                             enable_speed(true),
                             speed_gain(kDefaultValueFor_speed_gain),
                             enable_hue(true),
@@ -374,10 +385,7 @@ namespace KFCConfigurationClasses {
                         // the enum values match the pixel mapping of FireField::copyTo()
                         CREATE_ENUM_D_BITFIELD(direction, DirectionType, DirectionType::VERTICAL);
 
-                        // audio reaction
-                        CREATE_UINT32_BITFIELD_MIN_MAX(sensitivity, 10, 1, 1000, 100, 1); // gain for the level in percent (100 = 1x)
-                        CREATE_UINT32_BITFIELD_MIN_MAX(attack, 16, 1, 5000, 40, 5); // milliseconds to follow a rising level
-                        CREATE_UINT32_BITFIELD_MIN_MAX(release, 16, 1, 5000, 400, 10); // milliseconds to follow a falling level
+                        // reactions
                         CREATE_BOOL_BITFIELD(enable_speed);
                         CREATE_UINT32_BITFIELD_MIN_MAX(speed_gain, 8, 0, 255, 128, 1);
                         CREATE_BOOL_BITFIELD(enable_heat);
@@ -402,9 +410,6 @@ namespace KFCConfigurationClasses {
                             speed(kDefaultValueFor_speed),
                             factor(kDefaultValueFor_factor),
                             direction(kDefaultValueFor_direction),
-                            sensitivity(kDefaultValueFor_sensitivity),
-                            attack(kDefaultValueFor_attack),
-                            release(kDefaultValueFor_release),
                             enable_speed(true),
                             speed_gain(kDefaultValueFor_speed_gain),
                             enable_heat(true),
@@ -432,6 +437,7 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_loudness_gain, 10, 1, 1000, 275, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_band_gain, 10, 1, 1000, 175, 1);
 
+                    AudioReactionType audio_reaction;
                     PlasmaAudioType plasma_audio;
                     FireAudioType fire_audio;
 
@@ -450,6 +456,7 @@ namespace KFCConfigurationClasses {
                         input(kDefaultValueFor_input),
                         mic_loudness_gain(kDefaultValueFor_mic_loudness_gain),
                         mic_band_gain(kDefaultValueFor_mic_band_gain),
+                        audio_reaction(),
                         plasma_audio(),
                         fire_audio()
                     {

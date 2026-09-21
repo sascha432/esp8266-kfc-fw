@@ -231,6 +231,27 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         visualizerMicGroup.end();
                     #endif
 
+                    // the audio reaction is shared by the audio reactive plasma and fire
+                    auto &visualizerReactionGroup = form.addDivGroup(F("v_grp_rct"), PrintString(
+                        F("{'i':'#v_ln','s':{'%d':'$T.show()','%d':'$T.show()'},'m':'$T.hide()'}"),
+                        static_cast<int>(VisualizerAnimationType::PLASMA_AUDIO),
+                        static_cast<int>(VisualizerAnimationType::FIRE_AUDIO)
+                    ));
+
+                    form.addObjectGetterSetter(F("v_ars"), FormGetterSetter(cfg.visualizer.audio_reaction, sensitivity));
+                    form.addFormUI(F("Audio Sensitivity (Gain x100)"));
+                    cfg.visualizer.audio_reaction.addRangeValidatorFor_sensitivity(form);
+
+                    form.addObjectGetterSetter(F("v_ara"), FormGetterSetter(cfg.visualizer.audio_reaction, attack));
+                    form.addFormUI(F("Attack Time (ms)"));
+                    cfg.visualizer.audio_reaction.addRangeValidatorFor_attack(form);
+
+                    form.addObjectGetterSetter(F("v_are"), FormGetterSetter(cfg.visualizer.audio_reaction, release));
+                    form.addFormUI(F("Release Time (ms)"));
+                    cfg.visualizer.audio_reaction.addRangeValidatorFor_release(form);
+
+                    visualizerReactionGroup.end();
+
                     // spectrum bars
                     auto &visualizerSpectrumGroup = form.addDivGroup(F("v_grp_spec"), PrintString(
                         F("{'i':'#v_ln','s':{'%d':'$T.show()','%d':'$T.show()','%d':'$T.show()'},'m':'$T.hide()'}"),
@@ -332,18 +353,6 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addFormUI(F("Plasma Spectrum Ripples (Bass, Low Mid, High Mid, Treble)"), FormUI::CheckboxButtonSuffix(plasmaAudioBandsEnable, F("Enabled")));
                     cfg.visualizer.plasma_audio.addRangeValidatorFor_band_gain(form);
 
-                    form.addObjectGetterSetter(F("v_pase2"), FormGetterSetter(cfg.visualizer.plasma_audio, sensitivity));
-                    form.addFormUI(F("Audio Sensitivity (Gain x100)"));
-                    cfg.visualizer.plasma_audio.addRangeValidatorFor_sensitivity(form);
-
-                    form.addObjectGetterSetter(F("v_paat"), FormGetterSetter(cfg.visualizer.plasma_audio, attack));
-                    form.addFormUI(F("Attack Time (ms)"));
-                    cfg.visualizer.plasma_audio.addRangeValidatorFor_attack(form);
-
-                    form.addObjectGetterSetter(F("v_pare"), FormGetterSetter(cfg.visualizer.plasma_audio, release));
-                    form.addFormUI(F("Release Time (ms)"));
-                    cfg.visualizer.plasma_audio.addRangeValidatorFor_release(form);
-
                     form.addObjectGetterSetter(F("v_pasp"), FormGetterSetter(cfg.visualizer.plasma_audio, speed));
                     form.addFormUI(F("Plasma Speed"));
                     cfg.visualizer.plasma_audio.addRangeValidatorFor_speed(form);
@@ -407,18 +416,6 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                     form.addObjectGetterSetter(F("v_fabg"), FormGetterSetter(cfg.visualizer.fire_audio, band_gain));
                     form.addFormUI(F("Fire Spectrum Ripples"), FormUI::CheckboxButtonSuffix(fireBandsEnable, F("Enabled")));
                     cfg.visualizer.fire_audio.addRangeValidatorFor_band_gain(form);
-
-                    form.addObjectGetterSetter(F("v_fasens"), FormGetterSetter(cfg.visualizer.fire_audio, sensitivity));
-                    form.addFormUI(F("Audio Sensitivity (Gain x100)"));
-                    cfg.visualizer.fire_audio.addRangeValidatorFor_sensitivity(form);
-
-                    form.addObjectGetterSetter(F("v_faat"), FormGetterSetter(cfg.visualizer.fire_audio, attack));
-                    form.addFormUI(F("Attack Time (ms)"));
-                    cfg.visualizer.fire_audio.addRangeValidatorFor_attack(form);
-
-                    form.addObjectGetterSetter(F("v_fare"), FormGetterSetter(cfg.visualizer.fire_audio, release));
-                    form.addFormUI(F("Release Time (ms)"));
-                    cfg.visualizer.fire_audio.addRangeValidatorFor_release(form);
 
                     using FireDirectionType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::FireAudioType::DirectionType;
                     auto fireDirectionItems = FormUI::List(

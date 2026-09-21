@@ -492,8 +492,7 @@ void VisualizerAnimation::_updatePeakData(uint32_t millisValue)
 
 // audio reaction, shared by the audio reactive plasma and fire
 // the audio level is turned into an envelope with a fast attack and a slow release
-template<typename _Tc>
-float VisualizerAnimation::_updateAudioLevel(uint32_t millisValue, const _Tc &cfg)
+float VisualizerAnimation::_updateAudioLevel(uint32_t millisValue, const AudioReactionType &cfg)
 {
     const uint32_t elapsed = millisValue - _audioLastUpdate;
     if (elapsed == 0) {
@@ -532,7 +531,7 @@ void VisualizerAnimation::_updatePlasmaAudio(uint32_t millisValue)
     if (elapsed == 0) {
         return;
     }
-    const float level = _updateAudioLevel(millisValue, cfg);
+    const float level = _updateAudioLevel(millisValue, _cfg.audio_reaction);
 
     // the phase time is accumulated instead of using the millis value, so the speed can be modulated
     float speed = 1.0f;
@@ -586,7 +585,7 @@ void VisualizerAnimation::_updateFireAudio(uint32_t millisValue)
     if (elapsed == 0) {
         return;
     }
-    const float level = _updateAudioLevel(millisValue, cfg);
+    const float level = _updateAudioLevel(millisValue, _cfg.audio_reaction);
 
     if (!_fireField.isValid()) {
         return;

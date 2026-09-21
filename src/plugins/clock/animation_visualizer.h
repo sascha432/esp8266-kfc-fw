@@ -77,6 +77,7 @@ namespace Clock {
         using VisualizerPeakType = VisualizerAnimationConfig::VisualizerPeakType;
         using OrientationType = VisualizerAnimationConfig::OrientationType;
         using AudioInputType = VisualizerAnimationConfig::AudioInputType;
+        using AudioReactionType = VisualizerAnimationConfig::AudioReactionType;
         using DisplayType = Clock::DisplayType;
 
     public:
@@ -135,8 +136,7 @@ namespace Clock {
         void _parseUdp();
 
         // audio reaction, shared by the audio reactive plasma/fire (VisualizerAnimationType::PLASMA_AUDIO/FIRE_AUDIO)
-        template<typename _Tc>
-        float _updateAudioLevel(uint32_t millisValue, const _Tc &cfg);
+        float _updateAudioLevel(uint32_t millisValue, const AudioReactionType &cfg);
         void _updateAudioBands();
 
         // audio reactive plasma (VisualizerAnimationType::PLASMA_AUDIO)

@@ -17,61 +17,6 @@
 
 namespace KFCConfigurationClasses {
 
-// #if IOT_LED_MATRIX
-//     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
-//         value(1.23),
-//         min(2.5),
-//         max(11.0),
-//         incr(0.00326)
-//     {
-//     }
-// #else
-//     Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t() :
-//         value(5.23),
-//         min(0),
-//         max(0),
-//         incr(0)
-//     {
-//     }
-// #endif
-
-    // Plugins::ClockConfig::RainbowMultiplier_t::RainbowMultiplier_t(float a, float b, float c, float d) :
-    //     value(a),
-    //     min(b),
-    //     max(c),
-    //     incr(d)
-    // {
-    // }
-
-// #if IOT_LED_MATRIX
-//     Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
-//         min(0x000000),
-//         factor(0xffffff),
-//         red_incr(0.1),
-//         green_incr(0.25),
-//         blue_incr(0.125)
-//     {
-//     }
-// #else
-//     Plugins::ClockConfig::RainbowColor_t::RainbowColor_t() :
-//         min(0x000000),
-//         factor(0xffffff),
-//         red_incr(0),
-//         green_incr(0),
-//         blue_incr(0)
-//     {
-//     }
-// #endif
-
-    // Plugins::ClockConfig::RainbowColor_t::RainbowColor_t(uint32_t _min, uint32_t _max, float r, float g, float b) :
-    //     min(_min),
-    //     factor(_max),
-    //     red_incr(r),
-    //     green_incr(g),
-    //     blue_incr(b)
-    // {
-    // }
-
     namespace Plugins {
 
         namespace ClockConfigNS {

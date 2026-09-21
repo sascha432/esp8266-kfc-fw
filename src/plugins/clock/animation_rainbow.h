@@ -67,11 +67,11 @@ namespace Clock {
         {
             Color color;
             for (uint16_t i = 0; i < display.getNumPixels(); i++) {
-                uint32_t ind = (i * _multiplier.value) + (millisValue / _speed);
-                uint8_t indMod = (ind % _mod);
-                uint8_t idx = (indMod / _divMul);
-                float factor1 = 1.0f - (float(indMod - (idx * _divMul)) / _divMul);
-                float factor2 = float(int(ind - (idx * _divMul)) % _mod) / _divMul;
+                const uint32_t ind = (i * _multiplier.value) + (millisValue / _speed);
+                const uint8_t indMod = (ind % _mod);
+                const uint8_t idx = (indMod / _divMul);
+                const float factor1 = 1.0f - (float(indMod - (idx * _divMul)) / _divMul);
+                const float factor2 = float(int(ind - (idx * _divMul)) % _mod) / _divMul;
                 switch(idx) {
                     case 0:
                         color = _normalizeColor(_factor.red() * factor1, _factor.green() * factor2, 0);
@@ -84,8 +84,8 @@ namespace Clock {
                         color = _normalizeColor(_factor.red() * factor2, 0, _factor.blue() * factor1);
                         break;
                 }
-                CoordinateType col = i / display.getRows();
-                CoordinateType row = i % display.getRows();
+                const CoordinateType col = i / display.getRows();
+                const CoordinateType row = i % display.getRows();
                 display.setPixel(row, col, color);
             }
         }

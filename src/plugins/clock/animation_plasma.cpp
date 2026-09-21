@@ -14,7 +14,7 @@ for i in range(0, 256):
     table[i + 1] = v
 
 nl_indent = '\n    '
-print("static const int8_t PROGMEM sineTable[%u] = {" % len(table), end=nl_indent)
+print("const int8_t PROGMEM sineTable[%u] = {" % len(table), end=nl_indent)
 for n, i in table.items():
     print('%d%s' % (i, (n < len(table) and ', ' or '')), end=(n == len(table)) and '\n};' or (n % 8 == 0) and nl_indent or '')
 

@@ -149,22 +149,6 @@ namespace Clock {
         virtual void copyTo(DisplayType &display, uint32_t millisValue) = 0;
         virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue) = 0;
 
-        // virtual void copyTo(DisplayType &display, uint32_t millisValue)
-        // {
-        //     __LDBG_printf("_buffer=%p display=%u", _buffer, &display);
-        //     if (hasBuffer()) {
-        //         display.copy(*_buffer, display, display.kNumPixels);
-        //     }
-        // }
-
-        // virtual void copyTo(DisplayBufferType &buffer, uint32_t millisValue)
-        // {
-        //     __LDBG_printf("_buffer=%p buffer=%u", _buffer, &buffer);
-        //     if (hasBuffer()) {
-        //         buffer.copy(*_buffer, buffer, buffer.kNumPixels);
-        //     }
-        // }
-
         virtual void loop(uint32_t millisValue)
         {
         }

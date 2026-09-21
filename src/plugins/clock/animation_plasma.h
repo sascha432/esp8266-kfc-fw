@@ -151,8 +151,8 @@ namespace Clock {
         template<typename _Ta>
         void _copyTo(_Ta &output, uint32_t millisValue)
         {
-            float t = millisValue * (_cfg.speed * ((1.0 / (192.0 * 100000.0))));
-            uint32_t hueShift = _cfg.hue_shift / ((millisValue >> 14) + 1); // limit hue_shift to 16.384 per second
+            const float t = millisValue * (_cfg.speed * ((1.0 / (192.0 * 100000.0))));
+            const uint32_t hueShift = _cfg.hue_shift / ((millisValue >> 14) + 1); // limit hue_shift to 16.384 per second
 
             PlasmaField::copyTo(output, _cfg, PlasmaField::ParamsType(t, hueShift));
         }

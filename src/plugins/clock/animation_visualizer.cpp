@@ -769,7 +769,6 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
     }
 }
 
-
 void VisualizerAnimation::loop(uint32_t millisValue)
 {
     if (_cfg.get_enum_input(_cfg) == AudioInputType::UDP) {

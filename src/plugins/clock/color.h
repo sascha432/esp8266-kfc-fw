@@ -37,9 +37,6 @@ namespace Clock {
         static Color fromBGR(uint32_t value);
 
         String toString() const;
-        // void printAnsiCode(Print &stream) const;
-        // static void printClearScreenAnsiCode(Print &stream, uint8_t code = 2, uint16_t row = 0, uint16_t col = 0);
-        // static void printResetAnsiCode(Print &stream);
         String implode(char sep) const;
 
         Color &operator=(CRGB value);

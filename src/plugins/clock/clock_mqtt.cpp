@@ -145,7 +145,7 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
         } else
     #endif
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
-        auto animation = _getAnimationType(FPSTR(payload));
+        const auto animation = _getAnimationType(FPSTR(payload));
         if (animation < AnimationType::LAST) {
             setAnimation(static_cast<AnimationType>(animation));
             _saveState();
@@ -153,7 +153,7 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
     }
     else if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
         if (len) {
-            auto value = strtoul(payload, nullptr, 0);
+            const auto value = strtoul(payload, nullptr, 0);
             setBrightness(std::clamp<uint8_t>(value, 0, kMaxBrightness));
             _saveState();
         }
@@ -167,11 +167,11 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
         else {
             // red,green,blue
             char *endptr = nullptr;
-            auto red = static_cast<uint8_t>(strtoul(payload, &endptr, 10));
+            const auto red = static_cast<uint8_t>(strtoul(payload, &endptr, 10));
             if (endptr && *endptr++ == ',') {
-                auto green = static_cast<uint8_t>(strtoul(endptr, &endptr, 10));
+                const auto green = static_cast<uint8_t>(strtoul(endptr, &endptr, 10));
                 if (endptr && *endptr++ == ',') {
-                    auto blue = static_cast<uint8_t>(strtoul(endptr, nullptr, 10));
+                    const auto blue = static_cast<uint8_t>(strtoul(endptr, nullptr, 10));
                     setColorAndRefresh(Color(red, green, blue));
                     _saveState();
                 }
@@ -179,7 +179,7 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_set))) {
-        auto res = MQTT::Client::toBool(payload);
+        const auto res = MQTT::Client::toBool(payload);
         if (res >= 0) {
             _setState(res);
         }
@@ -193,21 +193,21 @@ void ClockPlugin::_publishState()
             _publishedValues.enabled = _getEnabledState();
             publish(MQTT::Client::formatTopic(FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_publishedValues.enabled));
         }
-        int brightness = _targetBrightness == 0 ? _savedBrightness : _targetBrightness;
+        const int32_t brightness = (_targetBrightness == 0) ? _savedBrightness : _targetBrightness;
         if (_publishedValues.brightness != brightness) {
             _publishedValues.brightness = brightness;
             publish(MQTT::Client::formatTopic(FSPGM(_brightness_state)), true, String(brightness));
         }
-        if (_publishedValues.color != int(getColor())) {
-            _publishedValues.color = int(getColor());
+        if (_publishedValues.color != static_cast<int32_t>(getColor())) {
+            _publishedValues.color = getColor();
             publish(MQTT::Client::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
         }
-        if (_publishedValues.animation != int(_config.getAnimation())) {
-            _publishedValues.animation = int(_config.getAnimation());
+        if (_publishedValues.animation != static_cast<int32_t>(_config.getAnimation())) {
+            _publishedValues.animation = static_cast<int32_t>(_config.getAnimation());
             publish(MQTT::Client::formatTopic(FSPGM(_effect_state)), true, KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationName(_config.getAnimation()));
         }
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
-            auto level = _getPowerLevel();
+            const auto level = _getPowerLevel();
             if (_publishedValues.powerLevel != level) {
                 _publishedValues.powerLevel = level;
                 publish(MQTT::Client::formatTopic(F("power")), true, String(level, 2));

@@ -30,21 +30,6 @@ String Color::toString() const
     return buf;
 }
 
-// void Color::printAnsiCode(Print &stream) const
-// {
-//     stream.printf_P(PSTR("\x1b[48;2;%u;%u;%um"), _red, _green, _blue);
-// }
-
-// void Color::printClearScreenAnsiCode(Print &stream, uint8_t code, uint16_t row, uint16_t col)
-// {
-//     stream.printf_P(PSTR("\x1b[%uJ\x1b[%u;%uH"), code, row, col);
-// }
-
-// void Color::printResetAnsiCode(Print &stream)
-// {
-//     stream.print(F("\x1b[0m"));
-// }
-
 String Color::implode(char sep) const
 {
     char buf[16];

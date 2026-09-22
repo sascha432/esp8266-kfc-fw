@@ -187,7 +187,7 @@ Show reset detector status
 
 Clear reset detector status
 
-### `+SAVECRASH=<info|list|print|clear|format|test>`
+### `+SAVECRASH=<info|list|print|clear|format>`
 
 Run command
 
@@ -196,7 +196,6 @@ Run command
  - `print` show stack trace for a crash log
  - `clear` clear all data (marks used sectors as invalid, they will be re-used and formatted once no free sectors are available)
  - `format` format all savecrash data sectors
- - `test` cause crash manually
 
 ``` text
 +savecrash=info

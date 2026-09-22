@@ -48,6 +48,8 @@
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
 
+#if DEBUG
+
 AtModePrintLoop *atModePrintLoop;
 
 AtModePrintLoop::AtModePrintLoop() :
@@ -283,24 +285,39 @@ static void atModePrintLoopCommand(AtModeArgs &args, bool isHeap, AtModePrintLoo
     }
 }
 
+// +HEAP=<interval[,umm]>  (DEBUG)
+// Display heap usage every interval (can be 1s or 1000ms, 0 shows it once). If `umm` is added, the umm heap statistics are displayed (ESP8266 only)
+
 void ATModeCommands::HeapCommand(AtModeArgs &args)
 {
     atModePrintLoopCommand(args, true, AtModePrintLoop::DisplayType::HEAP);
 }
+
+// +RSSI=[interval in seconds|0=disable]  (DEBUG)
+// Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)
 
 void ATModeCommands::RssiCommand(AtModeArgs &args)
 {
     atModePrintLoopCommand(args, false, AtModePrintLoop::DisplayType::RSSI);
 }
 
+// +GPIO=<interval>  (DEBUG)
+// Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)
+
 void ATModeCommands::GpioCommand(AtModeArgs &args)
 {
     atModePrintLoopCommand(args, false, AtModePrintLoop::DisplayType::GPIO);
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
+#endif
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(REM, "REM", "Ignore comment");
+// +AT
+// Print OK
+// +AT?
+// Show help
+
+// +REM
+// Ignore comment
 
 void ATModeCommands::IgnoreCommand(AtModeArgs &args)
 {
@@ -309,9 +326,10 @@ void ATModeCommands::IgnoreCommand(AtModeArgs &args)
 
 #ifndef DISABLE_TWO_WIRE
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CS, "I2CS", "<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]", "Configure I2C Bus");
+// +I2CS=<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]
+// Configure I2C Bus
 
-void ATModeCommands::I2CSCommand(AtModeArgs &args)
+void ATModeCommands::I2CSetupCommand(AtModeArgs &args)
 {
     auto sda = args.toIntMinMax<uint8_t>(0, 0, NUM_DIGITAL_PINS, KFC_TWOWIRE_SDA);
     auto scl = args.toIntMinMax<uint8_t>(1, 0, NUM_DIGITAL_PINS, KFC_TWOWIRE_SCL);
@@ -336,9 +354,10 @@ void ATModeCommands::I2CSCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CTM, "I2CTM", "<address>,<data,...>", "Transmit data to slave");
+// +I2CTM=<address>,<data,...>
+// Transmit data to slave
 
-void ATModeCommands::I2CTMCommand(AtModeArgs &args)
+void ATModeCommands::I2CTransmitCommand(AtModeArgs &args)
 {
     if (args.requireArgs(1)) {
         uint8_t address = args.toNumber(0, 0x48);
@@ -357,9 +376,10 @@ void ATModeCommands::I2CTMCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CRQ, "I2CRQ", "<address>,<length>", "Request data from slave");
+// +I2CRQ=<address>,<length>
+// Request data from slave
 
-void ATModeCommands::I2CRQCommand(AtModeArgs &args)
+void ATModeCommands::I2CReceiveCommand(AtModeArgs &args)
 {
     if (args.requireArgs(1, 2)) {
         uint8_t address = args.toNumber(0, 0x48);
@@ -386,9 +406,10 @@ void ATModeCommands::I2CRQCommand(AtModeArgs &args)
 
 #if HAVE_I2CSCANNER
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(I2CSCAN, "I2CSCAN", "[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]", "Scan I2C Bus. If 'any' is passed as third argument, all available PINs are probed for I2C devices");
+// +I2CSCAN=[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]
+// Scan I2C Bus. If 'any' is passed as third argument, all available PINs are probed for I2C devices
 
-void ATModeCommands::I2CSCANCommand(AtModeArgs &args)
+void ATModeCommands::I2CScanForDevicesCommand(AtModeArgs &args)
 {
     auto startAddress = args.toIntMinMax<uint8_t>(0, 1, 255, 1);
     auto endAddress = args.toIntMinMax<uint8_t>(1, startAddress, 255, 127);
@@ -411,7 +432,8 @@ void ATModeCommands::I2CSCANCommand(AtModeArgs &args)
 
 #endif
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DSLP, "DSLP", "[<milliseconds>[,<mode>]]", "Enter deep sleep");
+// +DSLP=[<milliseconds>[,<mode>]]
+// Enter deep sleep
 
 void ATModeCommands::DeepSleepCommand(AtModeArgs &args)
 {
@@ -433,7 +455,8 @@ void ATModeCommands::DeepSleepCommand(AtModeArgs &args)
     #endif
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RST, "RST", "[<s>]", "Soft reset. 's' enables safe mode");
+// +RST=[<s>]
+// Soft reset. 's' enables safe mode
 
 void ATModeCommands::ResetCommand(AtModeArgs &args)
 {
@@ -451,7 +474,8 @@ void ATModeCommands::ResetCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(LOAD, "LOAD", "Discard changes and load settings from EEPROM");
+// +LOAD
+// Discard changes and load settings from EEPROM
 
 void ATModeCommands::LoadCommand(AtModeArgs &args)
 {
@@ -459,7 +483,8 @@ void ATModeCommands::LoadCommand(AtModeArgs &args)
     args.ok();
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(STORE, "STORE", "Store current settings in EEPROM");
+// +STORE
+// Store current settings in EEPROM
 
 void ATModeCommands::StoreCommand(AtModeArgs &args)
 {
@@ -467,7 +492,8 @@ void ATModeCommands::StoreCommand(AtModeArgs &args)
     args.ok();
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(IMPORT, "IMPORT", "<filename|set_dirty>[,<handle>[,<handle>,...]]", "Import settings from JSON file");
+// +IMPORT=<filename|set_dirty>[,<handle>[,<handle>,...]]
+// Import settings from JSON file
 
 void ATModeCommands::ImportCommand(AtModeArgs &args)
 {
@@ -511,7 +537,8 @@ void ATModeCommands::ImportCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FACTORY, "FACTORY", "Restore factory settings (but do not store in EEPROM)");
+// +FACTORY
+// Restore factory settings (but do not store in EEPROM)
 
 void ATModeCommands::FactoryCommand(AtModeArgs &args)
 {
@@ -519,7 +546,8 @@ void ATModeCommands::FactoryCommand(AtModeArgs &args)
     args.ok();
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(FSR, "FSR", "FACTORY, STORE, RST in sequence");
+// +FSR
+// FACTORY, STORE, RST in sequence
 
 void ATModeCommands::FactoryStoreResetCommand(AtModeArgs &args)
 {
@@ -543,7 +571,8 @@ public:
     }
 };
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NVS, "NVS", "<format|dump>", "Format NVS partition and do factory reset or dump debug info");
+// +NVS=<format|dump>
+// Format NVS partition and do factory reset or dump debug info
 
 void ATModeCommands::NVSCommand(AtModeArgs &args)
 {
@@ -615,7 +644,8 @@ void ATModeCommands::NVSCommand(AtModeArgs &args)
 
 #endif
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(TOUCH, "TOUCH", "<filename>", "Touch file");
+// +TOUCH=<filename>
+// Touch file
 
 void ATModeCommands::TouchCommand(AtModeArgs &args)
 {
@@ -627,7 +657,8 @@ void ATModeCommands::TouchCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MD, "MD", "<directory>", "Create directory");
+// +MD=<directory>
+// Create directory
 
 void ATModeCommands::MkdirCommand(AtModeArgs &args)
 {
@@ -639,7 +670,8 @@ void ATModeCommands::MkdirCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RM, "RM", "<path>", "Delete file or directory");
+// +RM=<path>
+// Delete file or directory
 
 void ATModeCommands::RemoveCommand(AtModeArgs &args)
 {
@@ -654,7 +686,8 @@ void ATModeCommands::RemoveCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RN, "RN", "<path>,<new path>", "Rename file or directory");
+// +RN=<path>,<new path>
+// Rename file or directory
 
 void ATModeCommands::RenameCommand(AtModeArgs &args)
 {
@@ -666,7 +699,8 @@ void ATModeCommands::RenameCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LS, "LS", "[<directory>[,<hidden=true|false>,<subdirs=true|false>]]", "List files and directories");
+// +LS=[<directory>[,<hidden=true|false>,<subdirs=true|false>]]
+// List files and directories
 
 void ATModeCommands::ListCommand(AtModeArgs &args)
 {
@@ -684,7 +718,8 @@ void ATModeCommands::ListCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LSR, "LSR", "[<directory>]", "List files and directories using FS.openDir()");
+// +LSR=[<directory>]
+// List files and directories using FS.openDir()
 
 void ATModeCommands::ListRecursiveCommand(AtModeArgs &args)
 {
@@ -702,7 +737,8 @@ void ATModeCommands::ListRecursiveCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(CAT, "CAT", "<filename>", "Display text file");
+// +CAT=<filename>
+// Display text file
 
 void ATModeCommands::CatCommand(AtModeArgs &args)
 {
@@ -767,6 +803,20 @@ static void at_mode_print_WiFi_info(AtModeArgs &args, uint8_t num, const Network
         }
     }
 }
+
+// +WIFI=<reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next>
+// Manage WiFi
+//     reset                       Reset WiFi connection
+//     on                          Enable WiFi station mode
+//     off                         Disable WiFi station mode
+//     list[,<show passwords>]     List WiFi networks
+//     cfg,[<...>]                 Configure WiFi network
+//     ap_on                       Enable WiFi AP mode
+//     ap_off                      Disable WiFi AP mode
+//     ap_standby                  Set AP to stand-by mode (turns AP mode on if station mode cannot connect)
+//     diag                        Print diagnostic information
+//     stl                         List available WiFi stations
+//     next                        Switch to next WiFi station
 
 void ATModeCommands::WiFiCommand(AtModeArgs &args)
 {
@@ -878,7 +928,8 @@ void ATModeCommands::WiFiCommand(AtModeArgs &args)
 
 #if ENABLE_ARDUINO_OTA
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(AOTA, "AOTA", "<start|stop>", "Start/stop Arduino OTA");
+// +AOTA=<start|stop>
+// Start/stop Arduino OTA
 
 void ATModeCommands::AOTACommand(AtModeArgs &args)
 {
@@ -903,7 +954,8 @@ void ATModeCommands::AOTACommand(AtModeArgs &args)
 
 #if __LED_BUILTIN_WS2812_NUM_LEDS
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NEOPX, "NEOPX", "<pin>,<num>,<r>,<g>,<b>", "Set NeoPixel color for given pin");
+// +NEOPX=<pin>,<num>,<r>,<g>,<b>
+// Set NeoPixel color for given pin
 
 void ATModeCommands::NeoPixelCommand(AtModeArgs &args)
 {
@@ -939,7 +991,8 @@ void ATModeCommands::NeoPixelCommand(AtModeArgs &args)
 
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(LED, "LED", "<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]", "Set LED mode");
+// +LED=<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]
+// Set LED mode
 
 void ATModeCommands::LEDCommand(AtModeArgs &args)
 {
@@ -1004,7 +1057,8 @@ void ATModeCommands::LEDCommand(AtModeArgs &args)
 
 #endif
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PWM, "PWM", "<pin>,<input|input_pullup|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]", "PWM output on PIN, min./max. level set it to LOW/HIGH");
+// +PWM=<pin>,<input|input_pullup|waveform|level=0-1023>[,<frequency=100-40000Hz>[,<duration/ms>]]
+// PWM output on PIN, min./max. level set it to LOW/HIGH
 
 void ATModeCommands::PWMCommand(AtModeArgs &args)
 {
@@ -1134,7 +1188,8 @@ void ATModeCommands::PWMCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PLG, "PLG", "<list|start|stop|add-blacklist|add|remove>[,<name>]", "Plugin management");
+// +PLG=<list|start|stop|add-blacklist|add|remove>[,<name>]
+// Plugin management
 
 void ATModeCommands::PLGCommand(AtModeArgs &args)
 {
@@ -1200,7 +1255,8 @@ void ATModeCommands::PLGCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DLY, "DLY", "<milliseconds>", "Call delay(milliseconds)");
+// +DLY=<milliseconds>
+// Call delay(milliseconds)
 
 void ATModeCommands::DelayCommand(AtModeArgs &args)
 {
@@ -1209,8 +1265,12 @@ void ATModeCommands::DelayCommand(AtModeArgs &args)
     delay(delayTime);
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CPU, "CPU", "Toggle displaying CPU usage");
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
+// +CPU  (ESP32)
+// Toggle displaying CPU usage
+// +CPU=[<80|160>]  (ESP8266, core < 3.x)
+// Set CPU speed
+// +CPU?
+// Display CPU speed
 
 void ATModeCommands::CPUCommand(AtModeArgs &args)
 {
@@ -1235,7 +1295,10 @@ void ATModeCommands::CPUCommand(AtModeArgs &args)
 }
 
 #if RTC_SUPPORT
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF(RTC, "RTC", "[<set>]", "Set RTC time", "Display RTC time");
+// +RTC=[<set>]
+// Set RTC time
+// +RTC?
+// Display RTC time
 
 void ATModeCommands::RTCCommand(AtModeArgs &args)
 {
@@ -1255,7 +1318,8 @@ void ATModeCommands::RTCCommand(AtModeArgs &args)
 
 #if DEBUG
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMP, "DUMP", "[<dirty|config.name>]", "Display settings");
+// +DUMP=[<dirty|config.name>]
+// Display settings
 
 void ATModeCommands::DumpCommand(AtModeArgs &args)
 {
@@ -1278,7 +1342,8 @@ void ATModeCommands::DumpCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPT, "DUMPT", "Dump timers");
+// +DUMPT
+// Dump timers
 
 void ATModeCommands::DumpTimersCommand(AtModeArgs &args)
 {
@@ -1300,19 +1365,18 @@ static void dumpFileSystemInfo(Print &output)
     );
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(DUMPFS, "DUMPFS", "Display file system information");
+// +DUMPFS
+// Display file system information
 
 void ATModeCommands::DumpFsCommand(AtModeArgs &args)
 {
     dumpFileSystemInfo(args.getStream());
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PSTORE, "PSTORE", "[<clear|remove|add>[,<key>[,<value>]]]", "Display/modify persistent storage");
-// no handler, the persistent storage feature has been removed - documentation only (see docs/AtModeHelp.md)
-
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(DUMPH, "DUMPH", "[<log|panic|clear>]", "Dump configuration handles");
-
 #if DEBUG_CONFIGURATION_GETHANDLE
+
+// +DUMPH=[<log|panic|clear>]
+// Dump configuration handles
 
 void ATModeCommands::DumpHandlesCommand(AtModeArgs &args)
 {
@@ -1329,7 +1393,8 @@ void ATModeCommands::DumpHandlesCommand(AtModeArgs &args)
 
 #endif
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(METRICS, "METRICS", "Display system metrics");
+// +METRICS
+// Display system metrics
 
 void ATModeCommands::MetricsCommand(AtModeArgs &args)
 {
@@ -1427,7 +1492,8 @@ void ATModeCommands::MetricsCommand(AtModeArgs &args)
     #endif
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(RTCM, "RTCM", "<list|dump|clear|set|get|quickconnect>[,<id>[,<data>]", "RTC memory access");
+// +RTCM=<list|dump|clear|set|get|quickconnect>[,<id>[,<data>]]
+// RTC memory access
 
 void ATModeCommands::RtcMemoryCommand(AtModeArgs &args)
 {
@@ -1523,7 +1589,8 @@ void ATModeCommands::RtcMemoryCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(ATMODE, "ATMODE", "<1|0>", "Enable/disable AT Mode");
+// +ATMODE=<1|0>
+// Enable/disable AT Mode
 
 void ATModeCommands::AtModeCommand(AtModeArgs &args)
 {
@@ -1537,7 +1604,8 @@ void ATModeCommands::AtModeCommand(AtModeArgs &args)
     }
 }
 
-// PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(PANIC, "PANIC", "[<address|wdt|hwdt|alloc>]", "Cause an exception by calling panic(), writing zeros to memory <address> or triggering the (hardware)WDT");
+// +PANIC=[<address|wdt|hwdt|alloc>]
+// Cause an exception by calling panic(), writing zeros to memory <address> or triggering the (hardware)WDT
 
 void ATModeCommands::PanicCommand(AtModeArgs &args)
 {
@@ -1594,12 +1662,12 @@ PROGMEM_STRING_DEF(RemarkCommandString, "REM");
     PROGMEM_STRING_DEF(Serial2WireTransmitCommandString, "I2CT");
     PROGMEM_STRING_DEF(Serial2WireAnswerCommandString, "I2CA");
     PROGMEM_STRING_DEF(Serial2WireReceiveCommandString, "I2CR");
-    PROGMEM_STRING_DEF(I2CSCommandString, "I2CS");
+    PROGMEM_STRING_DEF(I2CSetupCommandString, "I2CS");
     PROGMEM_STRING_DEF(I2CTMCommandString, "I2CTM");
     PROGMEM_STRING_DEF(I2CRQCommandString, "I2CRQ");
 #endif
 #if HAVE_I2CSCANNER
-    PROGMEM_STRING_DEF(I2CSCANCommandString, "I2CSCAN");
+    PROGMEM_STRING_DEF(I2CScanForDevicesCommandString, "I2CSCAN");
 #endif
 PROGMEM_STRING_DEF(DeepSleepCommandString, "DSLP");
 PROGMEM_STRING_DEF(ResetCommandString, "RST");
@@ -1631,9 +1699,11 @@ PROGMEM_STRING_DEF(WiFiCommandString, "WIFI");
 PROGMEM_STRING_DEF(PWMCommandString, "PWM");
 PROGMEM_STRING_DEF(PLGCommandString, "PLG");
 PROGMEM_STRING_DEF(DelayCommandString, "DLY");
-PROGMEM_STRING_DEF(HeapCommandString, "HEAP");
-PROGMEM_STRING_DEF(RssiCommandString, "RSSI");
-PROGMEM_STRING_DEF(GpioCommandString, "GPIO");
+#if DEBUG
+    PROGMEM_STRING_DEF(HeapCommandString, "HEAP");
+    PROGMEM_STRING_DEF(RssiCommandString, "RSSI");
+    PROGMEM_STRING_DEF(GpioCommandString, "GPIO");
+#endif
 #if ESP32 || (defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3))
     PROGMEM_STRING_DEF(CPUCommandString, "CPU");
 #endif
@@ -1654,7 +1724,7 @@ PROGMEM_STRING_DEF(GpioCommandString, "GPIO");
 #endif
 
 // commands table in PROGMEM
-// the help/arguments/query text is for creating the documentation and not included
+// the help/arguments/query text is documented in a comment block above each command handler, see docs/AtModeHelp.md
 
 static const ATModeCommands::Item PROGMEM ATModeCommandsTable[] = {
     ATModeCommands::Item(ATModeCommands::IgnoreCommand, SPGM(RemarkCommandString)),
@@ -1662,78 +1732,67 @@ static const ATModeCommands::Item PROGMEM ATModeCommandsTable[] = {
         ATModeCommands::Item(ATModeCommands::IgnoreCommand, SPGM(Serial2WireTransmitCommandString)),
         ATModeCommands::Item(ATModeCommands::IgnoreCommand, SPGM(Serial2WireAnswerCommandString)),
         ATModeCommands::Item(ATModeCommands::IgnoreCommand, SPGM(Serial2WireReceiveCommandString)),
-        ATModeCommands::Item(ATModeCommands::I2CSCommand, SPGM(I2CSCommandString), "Configure I2C Bus", "<pin-sda>,<pin-scl>[,<speed=100000>,<clock-stretch=45000>,<start|stop>]"),
-        ATModeCommands::Item(ATModeCommands::I2CTMCommand, SPGM(I2CTMCommandString), "Transmit data to slave", "<address>,<data,...>"),
-        ATModeCommands::Item(ATModeCommands::I2CRQCommand, SPGM(I2CRQCommandString), "Request data from slave", "<address>,<length>"),
+        ATModeCommands::Item(ATModeCommands::I2CSetupCommand, SPGM(I2CSetupCommandString)),
+        ATModeCommands::Item(ATModeCommands::I2CTransmitCommand, SPGM(I2CTMCommandString)),
+        ATModeCommands::Item(ATModeCommands::I2CReceiveCommand, SPGM(I2CRQCommandString)),
     #endif
     #if HAVE_I2CSCANNER
-        ATModeCommands::Item(ATModeCommands::I2CSCANCommand, SPGM(I2CSCANCommandString), "Scan I2C Bus. If 'any' is passed as third argument, all available PINs are probed for I2C devices", "[<start-address=1>][,<end-address=127>][,<sda=4|any|no-init>,<scl=5>]"),
+        ATModeCommands::Item(ATModeCommands::I2CScanForDevicesCommand, SPGM(I2CScanForDevicesCommandString)),
     #endif
-    ATModeCommands::Item(ATModeCommands::DeepSleepCommand, SPGM(DeepSleepCommandString), "Enter deep sleep", "[<milliseconds>[,<mode>]]"),
-    ATModeCommands::Item(ATModeCommands::ResetCommand, SPGM(ResetCommandString), "Soft reset. argument 's' enables safe mode", "[<s>]"),
-    ATModeCommands::Item(ATModeCommands::LoadCommand, SPGM(LoadCommandString), "Discard changes and load settings from EEPROM"),
-    ATModeCommands::Item(ATModeCommands::StoreCommand, SPGM(StoreCommandString), "Store current settings in EEPROM"),
-    ATModeCommands::Item(ATModeCommands::ImportCommand, SPGM(ImportCommandString), "Import settings from JSON file", "<filename|set_dirty>[,<handle>[,<handle>,...]]"),
-    ATModeCommands::Item(ATModeCommands::FactoryCommand, SPGM(FactoryCommandString), "Restore factory settings (but do not store in EEPROM)"),
-    ATModeCommands::Item(ATModeCommands::FactoryStoreResetCommand, SPGM(FactoryStoreResetCommandString), "FACTORY, STORE, RST in sequence"),
+    ATModeCommands::Item(ATModeCommands::DeepSleepCommand, SPGM(DeepSleepCommandString)),
+    ATModeCommands::Item(ATModeCommands::ResetCommand, SPGM(ResetCommandString)),
+    ATModeCommands::Item(ATModeCommands::LoadCommand, SPGM(LoadCommandString)),
+    ATModeCommands::Item(ATModeCommands::StoreCommand, SPGM(StoreCommandString)),
+    ATModeCommands::Item(ATModeCommands::ImportCommand, SPGM(ImportCommandString)),
+    ATModeCommands::Item(ATModeCommands::FactoryCommand, SPGM(FactoryCommandString)),
+    ATModeCommands::Item(ATModeCommands::FactoryStoreResetCommand, SPGM(FactoryStoreResetCommandString)),
     #if defined(HAVE_NVS_FLASH)
-        ATModeCommands::Item(ATModeCommands::NVSCommand, SPGM(NVSCommandString), "Format NVS partition and do factory reset or dump debug info", "<format|dump>"),
+        ATModeCommands::Item(ATModeCommands::NVSCommand, SPGM(NVSCommandString)),
     #endif
-    ATModeCommands::Item(ATModeCommands::TouchCommand, SPGM(TouchCommandString), "Touch file", "<filename>"),
-    ATModeCommands::Item(ATModeCommands::MkdirCommand, SPGM(MkdirCommandString), "Create directory", "<directory>"),
-    ATModeCommands::Item(ATModeCommands::RemoveCommand, SPGM(RemoveCommandString), "Delete file or directory", "<path>"),
-    ATModeCommands::Item(ATModeCommands::RenameCommand, SPGM(RenameCommandString), "Rename file or directory", "<path>,<new path>"),
-    ATModeCommands::Item(ATModeCommands::ListCommand, SPGM(ListCommandString), "List files and directories", "[<directory>[,<hidden=true|false>,<subdirs=true|false>]]"),
-    ATModeCommands::Item(ATModeCommands::ListRecursiveCommand, SPGM(ListRecursiveCommandString), "List files and directories using FS.openDir()", "[<directory>]"),
-    ATModeCommands::Item(ATModeCommands::CatCommand, SPGM(CatCommandString), "Display text file", "<filename>"),
-    ATModeCommands::Item(ATModeCommands::WiFiCommand, SPGM(WiFiCommandString),
-        "Manage WiFi\n"
-        "    reset                                       Reset WiFi connection\n"
-        "    on                                          Enable WiFi station mode\n"
-        "    off                                         Disable WiFi station mode\n"
-        "    list[,<show passwords>]                     List WiFi networks. \n"
-        "    cfg,[<...>]                                 Configure WiFi network\n"
-        "    ap_on                                       Enable WiFi AP mode\n"
-        "    ap_off                                      Disable WiFi AP mode\n"
-        "    ap_standby                                  Set AP to stand-by mode (turns AP mode on if station mode cannot connect)\n"
-        "    diag                                        Print diagnostic information\n"
-        "    stl                                         List available WiFi stations\n"
-        "    next                                        Switch to next WiFi station\n",
-        "<" WIFI_COMMANDS ">"),
+    ATModeCommands::Item(ATModeCommands::TouchCommand, SPGM(TouchCommandString)),
+    ATModeCommands::Item(ATModeCommands::MkdirCommand, SPGM(MkdirCommandString)),
+    ATModeCommands::Item(ATModeCommands::RemoveCommand, SPGM(RemoveCommandString)),
+    ATModeCommands::Item(ATModeCommands::RenameCommand, SPGM(RenameCommandString)),
+    ATModeCommands::Item(ATModeCommands::ListCommand, SPGM(ListCommandString)),
+    ATModeCommands::Item(ATModeCommands::ListRecursiveCommand, SPGM(ListRecursiveCommandString)),
+    ATModeCommands::Item(ATModeCommands::CatCommand, SPGM(CatCommandString)),
+    ATModeCommands::Item(ATModeCommands::WiFiCommand, SPGM(WiFiCommandString)),
     #if ENABLE_ARDUINO_OTA
-        ATModeCommands::Item(ATModeCommands::AOTACommand, SPGM(AOTACommandString), "Start/stop Arduino OTA", "<start|stop>"),
+        ATModeCommands::Item(ATModeCommands::AOTACommand, SPGM(AOTACommandString)),
     #endif
     #if __LED_BUILTIN_WS2812_NUM_LEDS
-        ATModeCommands::Item(ATModeCommands::NEOPXCommand, SPGM(NEOPXCommandString), "Set NeoPixel color for given pin", "<pin>,<num>,<r>,<g>,<b>"),
+        ATModeCommands::Item(ATModeCommands::NEOPXCommand, SPGM(NeoPixelCommandString)),
     #endif
     #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
-        ATModeCommands::Item(ATModeCommands::LEDCommand, SPGM(LEDCommandString), "Set LED mode", "<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]"),
+        ATModeCommands::Item(ATModeCommands::LEDCommand, SPGM(LEDCommandString)),
     #endif
-    ATModeCommands::Item(ATModeCommands::PWMCommand, SPGM(PWMCommandString), "PWM output on PIN, min./max. level set it to LOW/HIGH", "<pin>,<input|input_pullup|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]"),
-    ATModeCommands::Item(ATModeCommands::PLGCommand, SPGM(PLGCommandString), "Plugin management", "<list|start|stop|add-blacklist|add|remove>[,<name>]"),
-    ATModeCommands::Item(ATModeCommands::DelayCommand, SPGM(DelayCommandString), "Call delay(milliseconds)", "<milliseconds>"),
-    ATModeCommands::Item(ATModeCommands::HeapCommand, SPGM(HeapCommandString), "Display heap usage every interval (can be 1s or 1000ms, 0 shows it once). If `umm` is added, the umm heap statistics are displayed (ESP8266 only)", "<interval[,umm]>"),
-    ATModeCommands::Item(ATModeCommands::RssiCommand, SPGM(RssiCommandString), "Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)", "[interval in seconds|0=disable]"),
-    ATModeCommands::Item(ATModeCommands::GpioCommand, SPGM(GpioCommandString), "Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)", "<interval>"),
+    ATModeCommands::Item(ATModeCommands::PWMCommand, SPGM(PWMCommandString)),
+    ATModeCommands::Item(ATModeCommands::PLGCommand, SPGM(PLGCommandString)),
+    ATModeCommands::Item(ATModeCommands::DelayCommand, SPGM(DelayCommandString)),
+    #if DEBUG
+        ATModeCommands::Item(ATModeCommands::HeapCommand, SPGM(HeapCommandString)),
+        ATModeCommands::Item(ATModeCommands::RssiCommand, SPGM(RssiCommandString)),
+        ATModeCommands::Item(ATModeCommands::GpioCommand, SPGM(GpioCommandString)),
+    #endif
     #if ESP32
-        ATModeCommands::Item(ATModeCommands::CPUCommand, SPGM(CPUCommandString), "Toggle displaying CPU usage"),
+        ATModeCommands::Item(ATModeCommands::CPUCommand, SPGM(CPUCommandString)),
     #elif defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
-        ATModeCommands::Item(ATModeCommands::CPUCommand, SPGM(CPUCommandString), "Set CPU speed", "<80|160>", "Display CPU speed"),
+        ATModeCommands::Item(ATModeCommands::CPUCommand, SPGM(CPUCommandString)),
     #endif
     #if RTC_SUPPORT
-        ATModeCommands::Item(ATModeCommands::RTCCommand, SPGM(RTCCommandString), "Set RTC time", "[<set>]", "Display RTC time"),
+        ATModeCommands::Item(ATModeCommands::RTCCommand, SPGM(RTCCommandString)),
     #endif
     #if DEBUG
-        ATModeCommands::Item(ATModeCommands::DumpCommand, SPGM(DumpCommandString), "Display settings", "[<dirty|config.name>]"),
-        ATModeCommands::Item(ATModeCommands::DumpTimersCommand, SPGM(DumpTimersCommandString), "Dump timers"),
-        ATModeCommands::Item(ATModeCommands::DumpFsCommand, SPGM(DumpFsCommandString), "Display file system information"),
+        ATModeCommands::Item(ATModeCommands::DumpCommand, SPGM(DumpCommandString)),
+        ATModeCommands::Item(ATModeCommands::DumpTimersCommand, SPGM(DumpTimersCommandString)),
+        ATModeCommands::Item(ATModeCommands::DumpFsCommand, SPGM(DumpFsCommandString)),
         #if DEBUG_CONFIGURATION_GETHANDLE
-            ATModeCommands::Item(ATModeCommands::DumpHandlesCommand, SPGM(DumpHandlesCommandString), "Dump configuration handles", "[<log|panic|clear>]"),
+            ATModeCommands::Item(ATModeCommands::DumpHandlesCommand, SPGM(DumpHandlesCommandString)),
         #endif
-        ATModeCommands::Item(ATModeCommands::MetricsCommand, SPGM(MetricsCommandString), "Display system metrics"),
-        ATModeCommands::Item(ATModeCommands::RtcMemoryCommand, SPGM(RtcMemoryCommandString), "RTC memory access", "<list|dump|clear|set|get|quickconnect>[,<id>[,<data>]"),
-        ATModeCommands::Item(ATModeCommands::AtModeCommand, SPGM(AtModeCommandString), "Enable/disable AT Mode", "<1|0>"),
-        ATModeCommands::Item(ATModeCommands::PanicCommand, SPGM(PanicCommandString), "Cause an exception by calling panic(), writing zeros to memory <address> or triggering the (hardware)WDT", "[<address|wdt|hwdt|alloc>]"),
+        ATModeCommands::Item(ATModeCommands::MetricsCommand, SPGM(MetricsCommandString)),
+        ATModeCommands::Item(ATModeCommands::RtcMemoryCommand, SPGM(RtcMemoryCommandString)),
+        ATModeCommands::Item(ATModeCommands::AtModeCommand, SPGM(AtModeCommandString)),
+        ATModeCommands::Item(ATModeCommands::PanicCommand, SPGM(PanicCommandString)),
     #endif
 };
 

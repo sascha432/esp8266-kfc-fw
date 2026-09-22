@@ -398,6 +398,6 @@ inline void ATMode::printInvalidCommand(Stream &output)
 
 extern ATMode atMode;
 
-#include "AtModeArgs.hpp"
+#include "at_mode_args.hpp"
 
 #endif

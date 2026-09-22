@@ -23,14 +23,14 @@
 #    include <debug_helper_disable.h>
 #endif
 
-using KFCConfigurationClasses::System;
-
 ATMode atMode;
 
 void ATMode::wifiCallback(WiFiCallbacks::EventType event, void *payload)
 {
     if (event == WiFiCallbacks::EventType::CONNECTED) {
-        Serial.printf_P(PSTR("WiFi connected to %s - IP %s\n"), WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+        Serial.printf_P(PSTR("WiFi connected to %s - IP "), WiFi.SSID().c_str());
+        WiFi.localIP().printTo(Serial);
+        Serial.println();
     }
     else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
         Serial.println(F("WiFi connection lost"));
@@ -39,7 +39,7 @@ void ATMode::wifiCallback(WiFiCallbacks::EventType event, void *payload)
 
 void ATMode::setup()
 {
-    enabled = System::Flags::getConfig().is_at_mode_enabled;
+    enabled = KFCConfigurationClasses::System::Flags::getConfig().is_at_mode_enabled;
     if (client) {
         serialHandler.removeClient(*client);
     }

@@ -66,21 +66,6 @@ python .platformio/packages/tool-esptoolpy/esptool.py erase_region 4009984 32768
 
 For the ESP32, check the documentation for NVS
 
-### `+ATMODE=<1|0>`
-
-Enable/disable AT Mode if compiled in
-
-### `+HEAP=<interval[,umm]>`
-
-Display heap usage every interval (can be 1s or 1000ms, 0 shows it once). If `umm` is added, the umm heap statistics are displayed (ESP8266 only)
-
-### `+GPIO=<interval>`
-
-Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)
-
-### `+RSSI=[interval in seconds|0=disable]`
-
-Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)
 
 ### `+PWM=<pin>,<input|input_pullup|high|low|waveform|level=0-1023[,<frequency=100-40000Hz>[,<duration/ms>]]`
 
@@ -88,7 +73,7 @@ Control PIN input, output and PWM state. Setting a PIN high or low implicitly se
 
 ### `+CPU=[<80|160>]`
 
-Set the CPU speed (ESP8266 with core < 3.x) or toggle displaying CPU usage (ESP32)
+Set the CPU speed (ESP8266 with core < 3.x) or toggle displaying CPU usage (ESP32). Query with `+CPU?` to display the CPU speed
 
 ### `+DLY=<milliseconds>`
 
@@ -132,7 +117,7 @@ Plugin management. If a plugin malfunctions, it can be blacklisted in SAFE MODE.
 
 ### `+RTC=[set]`
 
-Display RTC status or set RTC time from current time. Only available with a real time clock (i.e. DS3231)
+Display RTC status or set RTC time from current time. Query with `+RTC?` to display the status. Only available with a real time clock (i.e. DS3231)
 
 ### `+RTCM=<list|set|remove|clear|dump|quickconnect>[,<id>[,<data>]]` **(DEBUG)**
 
@@ -153,7 +138,6 @@ Run WiFi command
  - diag                                        Print diagnostic information
  - stl                                         List available WiFi stations
  - next                                        Switch to next WiFi station
- - stop_ping                                   Stop pinging the gateway (Only if compiled in)
 
 ### `+LED=<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]`
 
@@ -233,10 +217,6 @@ sp: 3ffff970 end: 3fffffd0 offset: 0270
 
 The following commands are only compiled in if the firmware is built with `DEBUG=1`.
 
-### `+PSTORE=[<clear|remove|add>[,<key>[,<value>]]]` **(DEBUG)**
-
-Display/modify persistent storage
-
 ### `+METRICS` **(DEBUG)**
 
 Displays versions of the SDK, framework, libraries, memory addresses and a lot more
@@ -264,6 +244,22 @@ Display file system information
 ### `+PANIC=[<address|wdt|hwdt|alloc>]` **(DEBUG)**
 
 Cause an exception by calling `panic()`, writing zeros to memory `<address>` or triggering the (hardware) WDT
+
+### `+HEAP=<interval[,umm]>` **(DEBUG)**
+
+Display heap usage every interval (can be 1s or 1000ms, 0 shows it once). If `umm` is added, the umm heap statistics are displayed (ESP8266 only)
+
+### `+GPIO=<interval>` **(DEBUG)**
+
+Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)
+
+### `+RSSI=[interval in seconds|0=disable]` **(DEBUG)**
+
+Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)
+
+### `+ATMODE=<1|0>` **(DEBUG)**
+
+Enable/disable AT Mode
 
 ## I2C Bus
 

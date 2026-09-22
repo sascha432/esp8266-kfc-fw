@@ -8,6 +8,9 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 
+// the print loop is a debug feature only, the whole class is compiled out in release builds
+#if DEBUG
+
 class AtModePrintLoop {
 public:
     enum class DisplayType {
@@ -50,6 +53,8 @@ private:
 
 extern AtModePrintLoop *atModePrintLoop;
 
+#endif
+
 class ATModeCommands
 {
 public:
@@ -59,13 +64,11 @@ public:
         PGM_P command;
         ATModeCommandCallback handler;
 
-        constexpr Item(ATModeCommandCallback handler, PGM_P command, PGM_P help = nullptr, PGM_P args = nullptr, PGM_P queryHelp = nullptr) :
+        // the command is put in PROGMEM, help/argument text is documented in a comment block above each handler
+        constexpr Item(ATModeCommandCallback handler, PGM_P command) :
             command(command),
             handler(handler)
         {
-            (void)help;
-            (void)args;
-            (void)queryHelp;
         }
     };
 
@@ -78,12 +81,12 @@ public:
 
     #ifndef DISABLE_TWO_WIRE
         // I2C bus
-        static void I2CSCommand(AtModeArgs &args);
-        static void I2CTMCommand(AtModeArgs &args);
-        static void I2CRQCommand(AtModeArgs &args);
+        static void I2CSetupCommand(AtModeArgs &args);
+        static void I2CTransmitCommand(AtModeArgs &args);
+        static void I2CReceiveCommand(AtModeArgs &args);
     #endif
     #if HAVE_I2CSCANNER
-        static void I2CSCANCommand(AtModeArgs &args);
+        static void I2CScanForDevicesCommand(AtModeArgs &args);
     #endif
 
     // reset / power
@@ -124,10 +127,12 @@ public:
     // IO
     static void PWMCommand(AtModeArgs &args);
 
-    // print loop
-    static void HeapCommand(AtModeArgs &args);
-    static void RssiCommand(AtModeArgs &args);
-    static void GpioCommand(AtModeArgs &args);
+    #if DEBUG
+        // print loop
+        static void HeapCommand(AtModeArgs &args);
+        static void RssiCommand(AtModeArgs &args);
+        static void GpioCommand(AtModeArgs &args);
+    #endif
 
     // plugins
     static void PLGCommand(AtModeArgs &args);
@@ -144,8 +149,9 @@ public:
         static void DumpCommand(AtModeArgs &args);
         static void DumpTimersCommand(AtModeArgs &args);
         static void DumpFsCommand(AtModeArgs &args);
-        // implementation requires DEBUG_CONFIGURATION_GETHANDLE, the macro is not available in this header
-        static void DumpHandlesCommand(AtModeArgs &args);
+        #if DEBUG_CONFIGURATION_GETHANDLE
+            static void DumpHandlesCommand(AtModeArgs &args);
+        #endif
         static void MetricsCommand(AtModeArgs &args);
         static void RtcMemoryCommand(AtModeArgs &args);
         static void AtModeCommand(AtModeArgs &args);

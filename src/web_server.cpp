@@ -395,16 +395,34 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         }
     #endif
     // --------------------------------------------------------------------
-    #if ESP8266
-        else if (url == F("/savecrash.json")) {
+    else if (url == F("/savecrash.json")) {
+        if (!getInstance().isAuthenticated(request)) {
+            auto response = request->beginResponse(403);
+            _logRequest(request, response);
+            request->send(response);
+            return;
+        }
+        headers.addNoCache(true);
+        response = SaveCrash::webHandler::json(request, headers);
+    }
+    #if ESP32
+        // --------------------------------------------------------------------
+        // downloads the core dump stored by the ESP-IDF panic handler
+        else if (url == F("/coredump.bin")) {
             if (!getInstance().isAuthenticated(request)) {
                 auto response = request->beginResponse(403);
                 _logRequest(request, response);
                 request->send(response);
                 return;
             }
+            if (!SaveCrash::CoreDump::exists()) {
+                auto response = request->beginResponse(404);
+                _logRequest(request, response);
+                request->send(response);
+                return;
+            }
             headers.addNoCache(true);
-            response = SaveCrash::webHandler::json(request, headers);
+            response = SaveCrash::webHandler::coreDump(request, headers);
         }
     #endif
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
@@ -1442,6 +1460,58 @@ AuthType Plugin::getAuthenticated(AsyncWebServerRequest *request)
 
 namespace SaveCrash {
 
+#if ESP32
+
+    // the ESP32 panic handler stores the crash report as a core dump in the `coredump` partition,
+    // there is no savecrash flash storage on this platform
+    AsyncWebServerResponse *webHandler::json(AsyncWebServerRequest *request, HttpHeaders &headers)
+    {
+        using namespace MQTT::Json;
+
+        PrintString jsonStr;
+        AsyncWebServerResponse *response;
+
+        if (request->arg(F("cmd")) == F("erase-coredump")) {
+            if (SaveCrash::CoreDump::erase()) {
+                response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
+            }
+            else {
+                response = request->beginResponse_P(500, FSPGM(mime_application_json), PSTR("{\"error\":\"Failed to erase the core dump\"}"));
+            }
+        }
+        else {
+            SaveCrash::CoreDumpSummary coreDump;
+            if (SaveCrash::CoreDump::getSummary(coreDump)) {
+                NamedArray backtrace(F("backtrace"));
+                for(uint8_t i = 0; i < coreDump._backtraceDepth; i++) {
+                    backtrace.append(UnnamedFormattedInteger(coreDump._backtrace[i], F("\"0x%08x\"")));
+                }
+                UnnamedObjectWriter(jsonStr, NamedObject(F("coredump"),
+                    NamedUint32(F("size"), coreDump._size),
+                    NamedUint32(F("version"), coreDump._version),
+                    NamedString(F("task"), coreDump._task),
+                    NamedFormattedInteger(F("pc"), coreDump._pc, F("\"0x%08x\"")),
+                    NamedUint32(F("cause"), coreDump._cause),
+                    NamedString(F("cause_name"), SaveCrash::getExceptionFPStr(coreDump._cause)),
+                    NamedFormattedInteger(F("vaddr"), coreDump._vaddr, F("\"0x%08x\"")),
+                    NamedBool(F("corrupted"), coreDump._backtraceCorrupted),
+                    NamedString(F("sha256"), coreDump._elfSha256),
+                    backtrace
+                ));
+            }
+            else {
+                __LDBG_printf("no core dump available");
+                jsonStr.print(F("{}"));
+            }
+            response = request->beginResponse(200, FSPGM(mime_application_json), std::move(jsonStr));
+        }
+
+        headers.setResponseHeaders(response);
+        return response;
+    }
+
+#else
+
     AsyncWebServerResponse *webHandler::json(AsyncWebServerRequest *request, HttpHeaders &headers)
     {
         using namespace MQTT::Json;
@@ -1513,6 +1583,24 @@ namespace SaveCrash {
         headers.setResponseHeaders(response);
         return response;
     }
+
+#endif
+
+#if ESP32
+
+    AsyncWebServerResponse *webHandler::coreDump(AsyncWebServerRequest *request, HttpHeaders &headers)
+    {
+        headers.add<HttpDispositionHeader>(F("coredump.bin"));
+        auto response = new AsyncCoreDumpResponse(F("application/octet-stream"));
+        if (!response) {
+            __LDBG_printf_E("memory allocation failed");
+            return nullptr;
+        }
+        headers.setResponseHeaders(response);
+        return response;
+    }
+
+#endif
 }
 
 #include "web_server_action.h"

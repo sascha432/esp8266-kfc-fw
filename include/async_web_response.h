@@ -125,6 +125,27 @@ private:
     GFXCanvas::BitmapFileHeaderType _header;
 };
 
+#if ESP32
+
+// streams the core dump stored in the `coredump` partition, see SaveCrash::CoreDump
+class AsyncCoreDumpResponse : public AsyncBaseResponse {
+public:
+    static constexpr size_t kBufferSize = 1280; // multiple of 4
+
+public:
+    AsyncCoreDumpResponse(const String &contentType);
+
+    virtual bool _sourceValid() const override;
+    virtual size_t _fillBuffer(uint8_t *buf, size_t maxLen) override;
+
+private:
+    size_t _size;
+    size_t _offset;
+    uint32_t _buffer[kBufferSize / sizeof(uint32_t)];
+};
+
+#endif
+
 class AsyncDirResponse : public AsyncBaseResponse {
 public:
     enum class StateType : uint8_t {

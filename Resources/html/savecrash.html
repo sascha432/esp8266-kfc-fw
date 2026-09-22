@@ -24,6 +24,7 @@
     </nav>
     <!--NAV%%-->
     <style type="text/css">
+/*--#if ESP8266--*/
     .collapsible td {
         padding: 0 !important;
         margin: 0 !important;
@@ -34,28 +35,40 @@
     .collapsible pre {
         overflow-x: hidden;
     }
-    .oi-clipboard {
-        font-size: 1.25rem;
-    }
     tr.collapsible, tr.collapsible:hover {
         background-color: transparent !important;
     }
     tr.collapsible div.content {
         background-color: rgba(0,0,0,.025);
     }
+/*--#endif--*/
+    .oi-clipboard {
+        font-size: 1.25rem;
+    }
     </style>
     <div class="container" id="message">
         <div class="accordion pt-3">
             <div class="card">
                 <div class="card-header text-white bg-primary">
-                    <h2 class="mb-0">SaveCrash Log</h2>
+                    <h2 class="mb-0">
+<!--#if ESP8266-->
+SaveCrash Log
+<!--#else-->
+Core Dump
+<!--#endif-->
+                    </h2>
                 </div>
             </div>
             <div class="card">
                 <div class="card-body">
                     <div class="pb-3 hidden" id="savecrash-buttons">
+<!--#if ESP8266-->
                         <button class="btn btn-primary" id="clear-log">Clear Log</button><span class="pl-3 info"></span>
+<!--#else-->
+                        <a class="btn btn-primary" id="coredump-download" role="button" download>Download</a><button class="btn btn-danger ml-2" id="coredump-erase">Delete</button>
+<!--#endif-->
                     </div>
+<!--#if ESP8266-->
                     <table class="table table-hover">
                         <thead>
                             <tr>
@@ -85,10 +98,25 @@
                             </tr>
                         </tbody>
                     </table>
+<!--#else-->
+                    <div class="text-center hidden" id="coredump-loading"><img src="images/spinner.gif" width="64" height="64"></div>
+                    <div class="alert alert-info hidden" id="coredump-message"></div>
+                    <dl class="row mb-0" id="coredump-details"></dl>
+                    <div class="pt-3 hidden" id="coredump-backtrace">
+                        <div class="d-flex justify-content-between">
+                            <p class="mb-0">Backtrace</p>
+                            <button class="btn btn-link p-0" id="coredump-copy">Copy to clipboard <span class="oi oi-clipboard pl-2"></span></button>
+                        </div>
+                        <pre></pre>
+                    </div>
+                    <p class="text-muted mb-0 pt-3"><small>Decode the downloaded dump with <code>esp-coredump</code> and the matching <code>firmware.elf</code>.</small></p>
+<!--#endif-->
                 </div>
             </div>
         </div>
+<!--#if ESP8266-->
         <div id="stack-trace-prototype" class="hidden"><button class="btn btn-link float-right">Copy to clipboard <span class="oi oi-clipboard pl-2"></span></button><pre></pre></div>
+<!--#endif-->
 
         <!--%%FOOT-->
         <div class="row">
@@ -107,6 +135,7 @@
     <!--JAVASCRIPT%%-->
 
     <script>
+/*--#if ESP8266--*/
         var savecrash_log = {
             uri: 'savecrash.json',
             init: function () {
@@ -235,6 +264,106 @@
                 this.load_index();
             }
         };
+/*--#else--*/
+        // ESP32 stores crash reports as an ESP-IDF core dump in the `coredump` partition
+        var savecrash_log = {
+            uri: 'savecrash.json',
+            init: function () {
+                this.log_buttons = $('#savecrash-buttons');
+                this.log_loading = $('#coredump-loading');
+                this.log_message = $('#coredump-message');
+                this.coredump_details = $('#coredump-details');
+                this.coredump_backtrace = $('#coredump-backtrace');
+                this.coredump_download = $('#coredump-download');
+                this.coredump_erase = $('#coredump-erase');
+            },
+            message: function (msg, cssClass) {
+                this.log_message.removeClass('alert-info alert-danger hidden').addClass(cssClass).text(msg).show();
+            },
+            error: function (msg) {
+                if (typeof msg !== 'string') {
+                    msg = 'Failed to load data';
+                }
+                this.log_buttons.hide();
+                this.log_loading.hide();
+                this.coredump_details.empty();
+                this.coredump_backtrace.addClass('hidden');
+                this.message(msg, 'alert-danger');
+            },
+            fail: function () {
+                this.coredump_erase.prop('disabled', false);
+                this.error('Failed to load the core dump information');
+            },
+            coredump: function (item) {
+                this.log_loading.hide();
+                if (!item || !item.size) {
+                    this.log_buttons.hide();
+                    this.coredump_details.empty();
+                    this.coredump_backtrace.addClass('hidden');
+                    this.message('No core dump is stored', 'alert-info');
+                    return;
+                }
+                this.log_buttons.removeClass('hidden').show();
+                this.log_message.hide();
+                var details = this.coredump_details.empty();
+                var rows = [
+                    ['Size', item.size + ' byte'],
+                    ['Task', item.task ? item.task : 'unknown'],
+                    ['Exception', (item.cause_name ? item.cause_name : 'unknown cause') + ' (' + item.cause + ')'],
+                    ['Fault address', 'pc ' + item.pc + ', vaddr ' + item.vaddr],
+                    ['Firmware', item.sha256 ? item.sha256 : 'unknown']
+                ];
+                $(rows).each(function (key, row) {
+                    details.append($('<dt class="col-sm-2"></dt>').text(row[0]));
+                    details.append($('<dd class="col-sm-10"></dd>').text(row[1]));
+                });
+                if (item.backtrace && item.backtrace.length) {
+                    this.coredump_backtrace.removeClass('hidden').find('pre').text(item.backtrace.join('\n') + (item.corrupted ? '\n(backtrace corrupted)' : ''));
+                }
+                else {
+                    this.coredump_backtrace.addClass('hidden');
+                }
+                this.coredump_download.attr('href', 'coredump.bin?SID=' + encodeURIComponent($.getSessionId()));
+            },
+            index_callback: function (data) {
+                try {
+                    this.coredump(data['coredump']);
+                } catch(e) {
+                    this.error(e);
+                }
+            },
+            load_index: function () {
+                var self = this;
+                this.log_loading.show();
+                this.log_message.hide();
+                $.post(this.uri, { SID: $.getSessionId() }, function (data) {
+                    self.index_callback(data);
+                }, 'json').fail(this.fail.bind(this));
+            },
+            start: function () {
+                var self = this;
+                this.coredump_erase.on('click', function (e) {
+                    e.preventDefault();
+                    if (!window.confirm('Delete the core dump? It cannot be restored.')) {
+                        return;
+                    }
+                    self.coredump_erase.prop('disabled', true);
+                    $.post(self.uri, { SID: $.getSessionId(), cmd: 'erase-coredump' }, function () {
+                        self.coredump_erase.prop('disabled', false);
+                        self.load_index();
+                    }, 'json').fail(function () {
+                        self.coredump_erase.prop('disabled', false);
+                        self.fail();
+                    });
+                });
+                $('#coredump-copy').on('click', function (e) {
+                    e.preventDefault();
+                    $.clipboard($(this), self.coredump_backtrace.find('pre').text());
+                });
+                this.load_index();
+            }
+        };
+/*--#endif--*/
         $(function() {
             savecrash_log.init();
             savecrash_log.start();

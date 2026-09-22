@@ -126,8 +126,17 @@ result item. The response may split JSON objects across HTTP chunks.
 
 ## Crash log
 
-`GET /savecrash.json` exposes the saved crash logs on ESP8266 builds. The
-endpoint requires authentication and returns JSON in three modes:
+`GET /savecrash.json` exposes the crash report of the device. The endpoint
+requires authentication. The response depends on the platform:
+
+- **ESP8266** — crash reports are captured by the SaveCrash module into a
+dedicated flash region, the endpoint returns the list of saved crash traces.
+- **ESP32** — the ESP-IDF panic handler stores the core dump in the `coredump`
+data partition, the endpoint returns its summary.
+
+### ESP8266 crash log
+
+`GET /savecrash.json` supports three modes:
 
 - `GET /savecrash.json` lists all saved crash traces.
 - `GET /savecrash.json?id=<hex-id>` returns a single crash trace by id.
@@ -181,6 +190,68 @@ Clear response:
 ```json
 {"result":"OK"}
 ```
+
+### ESP32 core dump
+
+On ESP32 builds the crash report is written by the ESP-IDF panic handler to the
+`coredump` data partition, the SaveCrash storage is not used. The endpoint
+supports two modes:
+
+- `GET /savecrash.json` returns the summary of the stored core dump.
+- `GET /savecrash.json?cmd=erase-coredump` removes the stored core dump.
+- `GET /coredump.bin` downloads the stored core dump (HTTP 404 if there is
+  none).
+
+Summary response (the object is omitted if no core dump is stored, in that case
+the response is an empty JSON object):
+
+```json
+{
+	"coredump": {
+		"size": 45312,
+		"version": 1,
+		"task": "loopTask",
+		"pc": "0x400d1f4e",
+		"cause": 28,
+		"cause_name": "LoadProhibitedCause",
+		"vaddr": "0x00000000",
+		"backtrace": ["0x400d1f4e", "0x4019c9b8"],
+		"corrupted": false,
+		"sha256": "fafe260085d9f4c0"
+	}
+}
+```
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `size` | number | Size of the stored core dump in bytes. |
+| `version` | number | Core dump format version. |
+| `task` | string | Name of the task that caused the exception. |
+| `pc` | string | Program counter at the exception. |
+| `cause` | number | Xtensa exception cause. |
+| `cause_name` | string | Name of the exception cause, e.g. `StoreProhibitedCause` for a write to an invalid address. |
+| `vaddr` | string | Virtual address of the exception. |
+| `backtrace` | array | Application backtrace (array of program counters). |
+| `corrupted` | boolean | `true` if the backtrace is corrupted. |
+| `sha256` | string | First hex characters of the SHA256 of the firmware ELF that produced the dump. |
+
+Clear response:
+
+```json
+{"result":"OK"}
+```
+
+The downloaded dump can be decoded with the ESP-IDF `esp-coredump` tool and the
+matching `firmware.elf` of the build that crashed:
+
+```
+pip install esp-coredump
+esp-coredump info_corefile -c coredump.bin -e .pio/build/<env>/firmware.elf
+```
+
+The dump is stored as an ELF core file (`CONFIG_ESP_COREDUMP_DATA_FORMAT_ELF`),
+so it can also be loaded directly by `xtensa-esp32-elf-gdb`. Use `-t raw` if the
+firmware was built with the raw core dump format and the tool does not detect it.
 
 ## Configuration import/export
 

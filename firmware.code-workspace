@@ -432,6 +432,7 @@
             "PULLUP",
             "PULLUPS",
             "PWMRANGE",
+            "PYTHONIOENCODING",
             "QOUT",
             "RANGESLIDER",
             "REBUILDFS",

@@ -6,6 +6,7 @@
 #include <PrintHtmlEntitiesString.h>
 #include <MicrosTimer.h>
 #include <misc.h>
+#include <save_crash.h>
 #include "fs_mapping.h"
 #include "web_server.h"
 #include "stl_ext/algorithm.h"
@@ -568,6 +569,39 @@ size_t AsyncSpeedTestResponse::_fillBuffer(uint8_t *buf, size_t maxLen)
     _size -= available;
     return available;
 }
+
+#if ESP32
+
+AsyncCoreDumpResponse::AsyncCoreDumpResponse(const String &contentType) :
+    AsyncBaseResponse(false),
+    _size(SaveCrash::CoreDump::getSize()),
+    _offset(0)
+{
+    _code = 200;
+    _contentLength = _size;
+    _sendContentLength = true;
+    _chunked = false;
+    _contentType = contentType;
+}
+
+bool AsyncCoreDumpResponse::_sourceValid() const
+{
+    return _size != 0;
+}
+
+size_t AsyncCoreDumpResponse::_fillBuffer(uint8_t *buf, size_t maxLen)
+{
+    // esp_partition_read() requires an aligned destination, use the internal buffer
+    auto readLen = std::min(maxLen, sizeof(_buffer));
+    auto read = SaveCrash::CoreDump::read(_offset, _buffer, readLen);
+    if (read) {
+        memcpy(buf, _buffer, read);
+        _offset += read;
+    }
+    return read;
+}
+
+#endif
 
 
 AsyncFillBufferCallbackResponse::AsyncFillBufferCallbackResponse(const Callback &callback) :

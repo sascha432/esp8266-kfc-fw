@@ -186,10 +186,7 @@ public:
     StationVector getStations() const;
 
     // return wifi network configuration
-    StationConfig &getStation(int num);
-
-    // return wifi network configuration
-    const StationConfig &getStation(int num) const;
+    StationConfigType getStationId(int num) const;
 
 private:
     void _setupWiFiCallbacks();
@@ -307,7 +304,7 @@ inline void KFCFWConfiguration::apStandbyModeHandler(WiFiCallbacks::EventType ev
 
 inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getWiFiConfigurationId() const
 {
-    return getStation(_wifiNumActive)._id;
+    return getStationId(_wifiNumActive);
 }
 
 inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getWiFiConfigurationNum() const
@@ -317,11 +314,19 @@ inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getWiFiConfigur
 
 inline void KFCFWConfiguration::setWiFiConfigurationNum(int num)
 {
-    if (_wifiNumActive < getStations().size()) {
-        _wifiNumActive = num;
+    // _wifiNumActive is an index into the list of enabled networks (see getStations())
+    // it must always be in range, otherwise every lookup using it (getStation(),
+    // getStations()[_wifiNumActive]) reads out of bounds
+    const auto stationCount = static_cast<int>(getStations().size());
+    if (stationCount == 0) {
+        _wifiNumActive = 0;
     }
     else {
-        _wifiNumActive = 0;
+        auto index = num % stationCount;
+        if (index < 0) {
+            index += stationCount;
+        }
+        _wifiNumActive = static_cast<uint8_t>(index);
     }
 }
 
@@ -330,14 +335,13 @@ inline KFCFWConfiguration::StationVector KFCFWConfiguration::getStations() const
     return KFCConfigurationClasses::Network::WiFi::getStations(nullptr);
 }
 
-inline KFCFWConfiguration::StationConfig &KFCFWConfiguration::getStation(int num)
+inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getStationId(int num) const
 {
-    return getStations()[num];
-}
-
-inline const KFCFWConfiguration::StationConfig &KFCFWConfiguration::getStation(int num) const
-{
-    return getStations()[num];
+    const auto stations = getStations();
+    if (num < 0 || static_cast<size_t>(num) >= stations.size()) {
+        return StationConfigType::CFG_DEFAULT;
+    }
+    return stations[num]._id;
 }
 
 inline void KFCFWConfiguration::setLastError(const String &error)
@@ -369,7 +373,8 @@ inline bool KFCFWConfiguration::registerWiFiError()
         // select next available network
         setWiFiConfigurationNum(_wifiNumActive + 1);
         // display connection error on first attempt to connect to another network
-        if (lastActiveWifiNum != _wifiNumActive && stations.size() > 1) {
+        // the indices are validated, an invalid previous index would read out of bounds
+        if (lastActiveWifiNum != _wifiNumActive && stations.size() > 1 && lastActiveWifiNum < stations.size() && _wifiNumActive < stations.size()) {
             setLastError(PrintString(F("Failed to connect to %s, trying %s"), stations[lastActiveWifiNum]._SSID.c_str(), stations[_wifiNumActive]._SSID.c_str()));
             Logger_error(F("%s"), getLastError());
         }

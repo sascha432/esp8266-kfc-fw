@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Fixed a crash when switching to the next WiFi network (`+WIFI=next`) and corrected the station number handling of the WiFi configuration
  - ESP32 core dump: the ESP-IDF core dump can be viewed, downloaded and deleted from the SaveCrash WebUI (ESP32)
  - Audio reactive plasma and fire visualization modes for the LED matrix (speed, hue rotation, zoom, spectrum ripples and volume driven flames)
  - Removed the 1D visualizer modes (VU meter and rainbow spectrum)

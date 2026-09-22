@@ -125,19 +125,23 @@ RTC memory access
 
 ### `+WIFI=<command>,[args]`
 
-Run WiFi command
+Run WiFi command. The connection number of a station is the number displayed by `list` and `stl`.
 
  - reset                                       Reset WiFi connection
  - on                                          Enable WiFi station mode
  - off                                         Disable WiFi station mode
- - list[,<show passwords>]                     List WiFi networks.
- - cfg,[<...>]                                 Configure WiFi network
+ - list[,<1=show passwords>]                   List WiFi networks, the active connection is marked
+ - cfg,<connection>,<1|0|remove>,<SSID>,<password>[,<DHCP>|<IP>,<subnet>,<gateway>[,<DNS1|global>,<DNS2|global>]]
+                                               Configure the WiFi network `<connection>` and reconnect.
+                                               `1`/`0` enables/disables the network, `remove` deletes SSID and password and keeps the current connection.
+                                               The fifth argument selects DHCP (starts with `dhcp`) or the static `<IP>`,<subnet>,<gateway>.
+                                               `global` uses the DNS servers from the network settings.
  - ap_on                                       Enable WiFi AP mode
  - ap_off                                      Disable WiFi AP mode
  - ap_standby                                  Set AP to stand-by mode (turns AP mode on if station mode cannot connect)
  - diag                                        Print diagnostic information
- - stl                                         List available WiFi stations
- - next                                        Switch to next WiFi station
+ - stl                                         List configured WiFi stations (id, SSID, priority, BSSID)
+ - next                                        Switch to the next enabled WiFi station (wraps around to the first one)
 
 ### `+LED=<slow,fast,flicker,off,solid,sos,pattern>,[,color=0xff0000|pattern=10110...][,pin]`
 

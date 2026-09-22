@@ -169,14 +169,19 @@ public:
 
     static void apStandbyModeHandler(WiFiCallbacks::EventType event, void *payload);
 
-    // return id of the active wifi configuration
+    // return id of the active wifi configuration (station number in the config)
+    // use this for any lookup in Network::Settings::getConfig().stations[]
     StationConfigType getWiFiConfigurationId() const;
 
-    // return index of the active wifi configuration in station list
+    // return index of the active wifi configuration in the list of enabled networks (see getStations())
     StationConfigType getWiFiConfigurationNum() const;
 
-    // set the active wifi configuration
+    // set the active wifi configuration by its index in the list of enabled networks (see getStations())
     void setWiFiConfigurationNum(int num);
+
+    // set the active wifi configuration by its id (station number in the config)
+    // returns false if the network is not configured/enabled
+    bool setWiFiConfigurationId(StationConfigType id);
 
     // return the active wifi configuration
     // if multiple wifi networks are configured without priority, the active network is selected depending on the wifi signal strength
@@ -315,7 +320,7 @@ inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getWiFiConfigur
 inline void KFCFWConfiguration::setWiFiConfigurationNum(int num)
 {
     // _wifiNumActive is an index into the list of enabled networks (see getStations())
-    // it must always be in range, otherwise every lookup using it (getStation(),
+    // it must always be in range, otherwise every lookup using it (getStationId(),
     // getStations()[_wifiNumActive]) reads out of bounds
     const auto stationCount = static_cast<int>(getStations().size());
     if (stationCount == 0) {
@@ -328,6 +333,21 @@ inline void KFCFWConfiguration::setWiFiConfigurationNum(int num)
         }
         _wifiNumActive = static_cast<uint8_t>(index);
     }
+}
+
+inline bool KFCFWConfiguration::setWiFiConfigurationId(StationConfigType id)
+{
+    // _wifiNumActive is an index into the list of enabled networks, the id is the
+    // station number in the configuration (Network::Settings::getConfig().stations[id])
+    const auto stations = getStations();
+    for(size_t i = 0; i < stations.size(); i++) {
+        if (stations[i]._id == id) {
+            _wifiNumActive = static_cast<uint8_t>(i);
+            return true;
+        }
+    }
+    __LDBG_printf("id=%u not enabled or not configured", static_cast<unsigned int>(id));
+    return false;
 }
 
 inline KFCFWConfiguration::StationVector KFCFWConfiguration::getStations() const

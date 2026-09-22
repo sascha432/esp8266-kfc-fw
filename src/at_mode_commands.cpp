@@ -767,7 +767,7 @@ static void at_mode_print_WiFi_info(AtModeArgs &args, uint8_t num, const Network
 {
     auto ssid = Network::WiFi::getSSID(num);
     bool isConfigured = (ssid && *ssid && cfg.isEnabled());
-    bool isActive = (config.getWiFiConfigurationNum() == num);
+    bool isActive = (config.getWiFiConfigurationId() == num);
 
     constexpr size_t kLineLength = 42;
     char line[kLineLength + 1];
@@ -805,18 +805,24 @@ static void at_mode_print_WiFi_info(AtModeArgs &args, uint8_t num, const Network
 }
 
 // +WIFI=<reset|on|off|list|cfg|ap_on|ap_off|ap_standby|diag|stl|next>
-// Manage WiFi
+// Manage WiFi. The connection number of a station is the number displayed by 'list' and 'stl' (0..<max>)
 //     reset                       Reset WiFi connection
 //     on                          Enable WiFi station mode
 //     off                         Disable WiFi station mode
-//     list[,<show passwords>]     List WiFi networks
-//     cfg,[<...>]                 Configure WiFi network
+//     list[,<1=show passwords>]   List WiFi networks, the active connection is marked
+//     cfg,<connection>,<1|0|remove>,<SSID>,<password>[,<DHCP>|<IP>,<subnet>,<gateway>[,<DNS1|global>,<DNS2|global>]]
+//                                 Configure the WiFi network <connection> and reconnect.
+//                                 1/0 enables/disables the network, 'remove' deletes SSID and
+//                                 password and keeps the current connection. The fifth argument
+//                                 selects DHCP (starts with 'dhcp') or the static
+//                                 <IP>,<subnet>,<gateway>. 'global' uses the DNS servers from the
+//                                 network settings
 //     ap_on                       Enable WiFi AP mode
 //     ap_off                      Disable WiFi AP mode
 //     ap_standby                  Set AP to stand-by mode (turns AP mode on if station mode cannot connect)
 //     diag                        Print diagnostic information
-//     stl                         List available WiFi stations
-//     next                        Switch to next WiFi station
+//     stl                         List configured WiFi stations (id, SSID, priority, BSSID)
+//     next                        Switch to the next enabled WiFi station (wraps around to the first one)
 
 void ATModeCommands::WiFiCommand(AtModeArgs &args)
 {
@@ -847,7 +853,7 @@ void ATModeCommands::WiFiCommand(AtModeArgs &args)
                         args.print(F("+WIFI=cfg,<connection=%u-%u>,<enable=1|disable=0|remove>,<SSID>,<password>[,<DHCP>|<IP>,<subnet>,<gateway>[,<DNS1|global>,<DNS2|global>]"),
                             Network::WiFi::StationConfigType::CFG_0, Network::WiFi::StationConfigType::CFG_LAST
                         );
-                        auto num = args.toIntMinMax<uint8_t>(1, 0, Network::WiFi::kNumStations - 1, config.getWiFiConfigurationNum());
+                        auto num = args.toIntMinMax<uint8_t>(1, 0, Network::WiFi::kNumStations - 1, config.getWiFiConfigurationId());
                         auto &network = Network::Settings::getWriteableConfig();
                         auto &cfg = network.stations[num];
                         if (args.startsWithIgnoreCase(2, F("remove"))) {
@@ -882,7 +888,9 @@ void ATModeCommands::WiFiCommand(AtModeArgs &args)
                             config.write();
 
                             at_mode_print_WiFi_info(args, num, network.stations[num]);
-                            config.reconfigureWiFi(F("Reconfiguring WiFi adapter"), static_cast<Network::WiFi::StationConfigType>(network.activeNetwork));
+                            // activate the connection (id) and reconnect
+                            config.setWiFiConfigurationId(static_cast<Network::WiFi::StationConfigType>(num));
+                            config.reconfigureWiFi(F("Reconfiguring WiFi adapter"));
                         }
                     }
                 }

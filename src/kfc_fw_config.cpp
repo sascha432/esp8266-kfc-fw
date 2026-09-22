@@ -190,7 +190,7 @@ void KFCFWConfiguration::_onWiFiConnectCb(const WiFiEventStationModeConnected &e
             _wifiFirstConnectionTime = _wifiConnected;
             append = PrintString(F(" after %ums"), _wifiConnected);
         }
-        Logger_notice(F("WiFi(#%u) connected to %s (%s)%s"), config.getWiFiConfigurationNum() + 1, event.ssid.c_str(), mac2String(event.bssid).c_str(), append.c_str());
+        Logger_notice(F("WiFi(#%u) connected to %s (%s)%s"), config.getWiFiConfigurationId() + 1, event.ssid.c_str(), mac2String(event.bssid).c_str(), append.c_str());
 
         #if ENABLE_DEEP_SLEEP
             config.storeQuickConnect(event.bssid, event.channel);
@@ -257,7 +257,7 @@ void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 {
     _wifiUp = millis_not_zero();
 
-    PrintString msg = Network::Settings::getConfig().stations[getWiFiConfigurationNum()].isDHCPEnabled() ? F("DHCP") : F("Static configuration");
+    PrintString msg = Network::Settings::getConfig().stations[getWiFiConfigurationId()].isDHCPEnabled() ? F("DHCP") : F("Static configuration");
     msg.print(F(": IP/Net "));
     if (IPAddress_isValid(event.ip)) {
         event.ip.printTo(msg);
@@ -1597,7 +1597,8 @@ void KFCFWConfiguration::printInfo(Print &output)
         output.printf_P(PSTR("AP Mode SSID %s\n"), Network::WiFi::getSoftApSSID());
     }
     if (flags.is_station_mode_enabled) {
-        output.printf_P(PSTR("Station Mode SSID %s\n"), Network::WiFi::getSSID(_wifiNumActive));
+        auto ssid = Network::WiFi::getSSID(getWiFiConfigurationId());
+        output.printf_P(PSTR("Station Mode SSID %s\n"), ssid ? ssid : "<none>");
     }
     if (flags.is_factory_settings) {
         output.println(F("Running on factory settings"));

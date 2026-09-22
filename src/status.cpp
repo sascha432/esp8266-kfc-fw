@@ -99,7 +99,7 @@ void WiFiStatus::getStatus(Print &out)
                 break;
             }
 
-            const auto &network = KFCConfigurationClasses::Network::Settings::getConfig().stations[config.getWiFiConfigurationNum()];
+            const auto &network = KFCConfigurationClasses::Network::Settings::getConfig().stations[config.getWiFiConfigurationId()];
             if (network.isDHCPEnabled()) {
                 out.print(F(HTML_S(br) "DHCP client running"));
             }

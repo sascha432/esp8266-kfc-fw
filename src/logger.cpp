@@ -136,7 +136,7 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
         #if LOGGER_SERIAL_OUTPUT
             // send to serial output
-            if (at_mode_enabled()) {
+            if (atMode.isEnabled()) {
                 Serial.print(F("+LOGGER="));
                 Serial.write(item.header(), item.headerSize());
                 Serial.write(item.message(), item.messageSize());

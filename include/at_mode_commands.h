@@ -5,6 +5,50 @@
 #pragma once
 
 #include "at_mode.h"
+#include <Arduino_compat.h>
+#include <EventScheduler.h>
+
+class AtModePrintLoop {
+public:
+    enum class DisplayType {
+        HEAP = 1,
+        HEAP_UMM,
+        RSSI,
+        GPIO,
+    };
+
+    AtModePrintLoop();
+    ~AtModePrintLoop();
+
+    void setType(DisplayType type, Event::milliseconds interval);
+    DisplayType getType() const;
+    void printHeap();
+    void printGPIO();
+    void printRSSI();
+    void print();
+    bool removeTimer();
+    void remove();
+
+    static void printTimerCallback(Event::CallbackTimerPtr timer);
+
+private:
+    void _loop();
+    static void loop();
+
+private:
+    Event::Timer _timer;
+    DisplayType _type;
+    int16_t _rssiMin;
+    int16_t _rssiMax;
+    uint32_t _maxHeap;
+    uint32_t _minHeap;
+    #if ESP8266
+        uint32_t _maxIram;
+        uint32_t _minIram;
+    #endif
+};
+
+extern AtModePrintLoop *atModePrintLoop;
 
 class ATModeCommands
 {
@@ -74,11 +118,16 @@ public:
     #endif
 
     // LED
-    static void NEOPXCommand(AtModeArgs &args);
+    static void NeoPixelCommand(AtModeArgs &args);
     static void LEDCommand(AtModeArgs &args);
 
     // IO
     static void PWMCommand(AtModeArgs &args);
+
+    // print loop
+    static void HeapCommand(AtModeArgs &args);
+    static void RssiCommand(AtModeArgs &args);
+    static void GpioCommand(AtModeArgs &args);
 
     // plugins
     static void PLGCommand(AtModeArgs &args);

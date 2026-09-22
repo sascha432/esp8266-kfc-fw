@@ -92,11 +92,11 @@ inline Stream &AtModeArgs::getStream() const
 inline bool AtModeArgs::requireArgs(uint16_t min, uint16_t max) const
 {
     if (_queryMode && min) {
-        at_mode_print_invalid_arguments(_output, 0, min, max);
+        ATMode::printInvalidArguments(_output, 0, min, max);
         return false;
     }
     if (_args.size() < min || _args.size() > max) {
-        at_mode_print_invalid_arguments(_output, _args.size(), min, max);
+        ATMode::printInvalidArguments(_output, _args.size(), min, max);
         return false;
     }
     return true;

@@ -37,7 +37,7 @@ void Base::begin()
     #if IOT_DIMMER_MODULE_INTERFACE_UART
         _client = &serialHandler.addClient(onData, SerialHandler::EventType::READ);
         #if AT_MODE_SUPPORTED
-            // disable_at_mode(Serial);
+            // atMode.disable(&Serial);
             #if IOT_DIMMER_MODULE_BAUD_RATE != KFC_SERIAL_RATE
                 Serial.flush();
                 Serial.begin(IOT_DIMMER_MODULE_BAUD_RATE);
@@ -85,7 +85,7 @@ void Base::end()
             Serial.begin(KFC_SERIAL_RATE);
         #endif
         #if AT_MODE_SUPPORTED
-            // enable_at_mode(Serial);
+            // atMode.enable(&Serial);
         #endif
     #else
         _Timer(_timer).remove();

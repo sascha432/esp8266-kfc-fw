@@ -1237,12 +1237,10 @@ void KFCFWConfiguration::resetDevice(bool safeMode)
 #    define _DPRINTF(...)
 #endif
 
-extern bool is_at_mode_enabled;
-
 void KFCFWConfiguration::restartDevice(bool safeMode)
 {
     __LDBG_println();
-    is_at_mode_enabled = false;
+    atMode.disable();
 
     String msg = F("Device is being restarted");
     if (safeMode) {
@@ -1611,7 +1609,7 @@ void KFCFWConfiguration::printInfo(Print &output)
     output.printf_P(PSTR("Device %s ready!\n"), System::Device::getName());
 
     #if AT_MODE_SUPPORTED
-        if (at_mode_enabled()) {
+        if (atMode.isEnabled()) {
             output.println(F("Modified AT instruction set available.\n\nType AT? for help"));
         }
     #endif

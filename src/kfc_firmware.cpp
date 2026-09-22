@@ -432,7 +432,7 @@ void setup()
         KFCFS_begin();
 
         #if AT_MODE_SUPPORTED
-            at_mode_setup();
+            atMode.setup();
         #endif
 
         componentRegister.setup(PluginComponent::SetupModeType::SAFE_MODE);
@@ -487,7 +487,7 @@ void setup()
         }
 
         #if AT_MODE_SUPPORTED
-            at_mode_setup();
+            atMode.setup();
         #endif
 
         #if IOT_CLOCK

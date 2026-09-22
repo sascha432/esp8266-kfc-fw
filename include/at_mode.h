@@ -13,7 +13,6 @@
 #define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(name, str1, str3, str4)       ;
 
 #define PROGMEM_AT_MODE_HELP_COMMAND(name)                                  nullptr
-#define PROGMEM_AT_MODE_HELP_COMMAND(name)                                nullptr
 
 #else
 
@@ -34,7 +33,6 @@
 #    endif
 
 #    define PROGMEM_AT_MODE_HELP_COMMAND(name) FPSTR(_at_mode_progmem_command_help_command_##name)
-#    define PROGMEM_AT_MODE_HELP_ARGS(name)    _at_mode_progmem_command_help_command_##name
 
 #    undef PROGMEM_AT_MODE_HELP_COMMAND_PREFIX
 #    define PROGMEM_AT_MODE_HELP_COMMAND_PREFIX ""
@@ -49,18 +47,6 @@
         static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command };
 #    define PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPP(name, command, help, qhelp)                                               \
         static const char _at_mode_progmem_command_help_command_##name[] PROGMEM = { command };
-
-bool at_mode_enabled();
-void at_mode_setup();
-void at_mode_print_prefix(Stream &output, const __FlashStringHelper *command);
-void at_mode_print_prefix(Stream &output, const char *command);
-inline void at_mode_print_prefix(Stream &output, const String &command) {
-    at_mode_print_prefix(output, (const char *)command.c_str());
-}
-void enable_at_mode(Stream *output);
-void disable_at_mode(Stream *output);
-void at_mode_serial_input_handler(Stream &client);
-void at_mode_print_invalid_arguments(Stream &output, uint16_t num = 0, uint16_t min = ~0, uint16_t max = ~0);
 
 using AtModeResolveACallback = std::function<void(const String &name)>;
 
@@ -324,6 +310,93 @@ private:
     ArgumentVector _args;
     bool _queryMode;
 };
+
+class ATMode
+{
+public:
+    static constexpr bool kAllowShortPrefix = true;
+    static constexpr bool kAllowNoPrefix = true;
+    static constexpr uint16_t kUnset = ~0;
+    static constexpr size_t kSerialInputBufferSize = SERIAL_HANDLER_INPUT_BUFFER_MAX;
+
+    ATMode();
+
+    // state
+    void setup();
+    void enable(Stream *output = nullptr);
+    void disable(Stream *output = nullptr);
+    bool isEnabled() const;
+
+    // serial input
+    void serialInputHandler(Stream &stream);
+    static void handleEvent(String &commandString);
+
+    // output helpers
+    static void printPrefix(Stream &output, const __FlashStringHelper *command);
+    static void printPrefix(Stream &output, const char *command);
+    static void printPrefix(Stream &output, const String &command);
+    static void printHelp(Stream &output);
+    static void printInvalidCommand(Stream &output);
+    static void printInvalidArguments(Stream &output, uint16_t num = 0, uint16_t min = kUnset, uint16_t max = kUnset);
+
+private:
+    static void wifiCallback(WiFiCallbacks::EventType event, void *payload);
+    static bool tokenizerCmdLineMode(char ch, int type);
+
+private:
+    SerialHandler::Client *client;
+    bool enabled;
+    // last character was a CR, used to swallow the LF of a CRLF pair
+    bool lastWasCR;
+};
+
+inline ATMode::ATMode() :
+    client(nullptr),
+    enabled(false),
+    lastWasCR(false)
+{
+}
+
+inline void ATMode::enable(Stream *output)
+{
+    if (!enabled) {
+        if (output) {
+            output->println(F("Enabling AT MODE."));
+        }
+        lastWasCR = false;
+        enabled = true;
+    }
+}
+
+inline bool ATMode::isEnabled() const
+{
+    return enabled;
+}
+
+inline void ATMode::printPrefix(Stream &output, const __FlashStringHelper *command)
+{
+    output.print('+');
+    output.print(command);
+    output.print(F(": "));
+}
+
+inline void ATMode::printPrefix(Stream &output, const char *command)
+{
+    output.printf_P(PSTR("+%s: "), command);
+}
+
+inline void ATMode::printPrefix(Stream &output, const String &command)
+{
+    printPrefix(output, command.c_str());
+}
+
+inline void ATMode::printInvalidCommand(Stream &output)
+{
+    output.print(F("ERROR - Invalid command. "));
+    printHelp(output);
+}
+
+extern ATMode atMode;
 
 #include "AtModeArgs.hpp"
 

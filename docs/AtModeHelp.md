@@ -257,29 +257,9 @@ Dump timers
 
 Dump configuration handles (requires `DEBUG_CONFIGURATION_GETHANDLE`)
 
-### `+DUMPIO=<address=0x60000000>[,<end address|length=4>]` **(DEBUG)**
-
-Dump IO memory
-
-### `+DUMPM=<address>[,<length=32>][,<insecure=false>,<use ESP.flashRead()=true>]` **(DEBUG)**
-
-Dump memory (32bit aligned)
-
-### `+DUMPF=<start=0x40200000>[,<end address|length=32>]` **(DEBUG)**
-
-Dump flash memory
-
-### `+FLASH=<e[rase]>,<address>|<r[ead]>,<address>[,<offset=0>,<length=4096>]|w[rite],<address>,<byte1>[,<byte2>[,...]]` **(DEBUG)**
-
-Erase, read or write flash memory
-
 ### `+DUMPFS` **(DEBUG)**
 
 Display file system information
-
-### `+LOGDBG=<1|0>` **(DEBUG)**
-
-Enable/disable writing debug output to `log://debug` (requires `LOGGER`)
 
 ### `+PANIC=[<address|wdt|hwdt|alloc>]` **(DEBUG)**
 

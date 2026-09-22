@@ -15,6 +15,8 @@
 #include "PinMonitor.h"
 #include "plugins.h"
 #include "plugins_menu.h"
+#include <limits>
+#include <stl_ext/memory.h>
 
 #if HAVE_I2CSCANNER
 #    include "i2c_scanner.h"
@@ -25,6 +27,10 @@
 #endif
 
 #if ESP8266
+#    include <umm_malloc/umm_malloc.h>
+     extern "C" {
+#        include <umm_malloc/umm_local.h>
+     }
 #    include <core_esp8266_waveform.h>
 #    include <core_version.h>
 #endif
@@ -41,6 +47,256 @@
 
 using KFCConfigurationClasses::System;
 using KFCConfigurationClasses::Network;
+
+AtModePrintLoop *atModePrintLoop;
+
+AtModePrintLoop::AtModePrintLoop() :
+    _type(DisplayType::HEAP)
+{
+    __DBG_assertf(atModePrintLoop == nullptr, "atModePrintLoop not null");
+    stdex::reset(atModePrintLoop, this);
+}
+
+AtModePrintLoop::~AtModePrintLoop()
+{
+    if (this == atModePrintLoop) {
+        atModePrintLoop = nullptr;
+    }
+}
+
+void AtModePrintLoop::setType(DisplayType type, Event::milliseconds interval)
+{
+    _type = type;
+    if (_type == DisplayType::HEAP || _type == DisplayType::HEAP_UMM) {
+        LOOP_FUNCTION_ADD(loop);
+    }
+    else {
+        LoopFunctions::remove(loop);
+    }
+    _Timer(_timer).add(interval, true, AtModePrintLoop::printTimerCallback);
+    #if ESP8266
+        _maxIram = 0;
+        _minIram = 0;
+    #endif
+    #if HAS_MULTI_HEAP
+        {
+            SELECT_IRAM();
+            _minIram = ESP.getFreeHeap();
+        }
+    #endif
+    {
+        SELECT_DRAM();
+        _maxHeap = 0;
+        _minHeap = ESP.getFreeHeap();
+    }
+    _rssiMin = std::numeric_limits<decltype(_rssiMin)>::min();
+    _rssiMax = 0;
+}
+
+AtModePrintLoop::DisplayType AtModePrintLoop::getType() const
+{
+    return _type;
+}
+
+void AtModePrintLoop::printHeap()
+{
+    #if ESP32
+        Serial.printf_P(PSTR("+HEAP: heap=%u(min=%u/max=%u) psram=%u(min=%u) cpu=%dMHz uptime=%us\n"),
+            ESP.getFreeHeap(),
+            _minHeap,
+            _maxHeap,
+            ESP.getFreePsram(),
+            ESP.getMinFreePsram(),
+            ESP.getCpuFreqMHz(),
+            getSystemUptime()
+        );
+    #else
+        uint32_t freeIram = 0;
+        uint32_t freeDram;
+        #if HAS_MULTI_HEAP
+            {
+                SELECT_IRAM();
+                freeIram = ESP.getFreeHeap();
+            }
+            HeapSelectDram dRam;
+        #endif
+        {
+            SELECT_DRAM();
+            freeDram = ESP.getFreeHeap();
+        }
+
+        Serial.printf_P(PSTR("+HEAP: free=%u(min=%u/max=%u) iram=%u(min=%u/max=%u) cpu=%dMHz frag=%u uptime=%us\n"),
+            freeDram,
+            _minHeap,
+            _maxHeap,
+            freeIram,
+            _minIram,
+            _maxIram,
+            ESP.getCpuFreqMHz(),
+            ESP.getHeapFragmentation(),
+            getSystemUptime()
+        );
+        #if defined(UMM_STATS) || defined(UMM_STATS_FULL)
+            if (_type == DisplayType::HEAP_UMM) {
+                SELECT_DRAM();
+                umm_print_stats(2);
+                #if HAS_MULTI_HEAP
+                    {
+                        SELECT_IRAM();
+                        umm_print_stats(2);
+                    }
+                #endif
+            }
+        #endif
+    #endif
+}
+
+void AtModePrintLoop::printGPIO()
+{
+    Serial.print(F("+GPIO: "));
+    #if defined(ESP8266)
+        for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
+            if (i == 10 || (i != 1 && !isFlashInterfacePin(i))) { // do not display TX and flash SPI
+                // pinMode(i, INPUT);
+                Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
+                #if ESP8266
+                    if (i == 16) {
+                        Serial.print((GP16E & 1) ? F("IN ") : F("OUT "));
+                    }
+                    else {
+                        String tmp;
+                        tmp = GPO & (1 << i) ? F("OUT") : F("IN");
+                        tmp += GPF(i) & (1 << GPFPU) ? F("_PULLUP ") : F(" ");
+                        Serial.print(tmp);
+                    }
+                #endif
+            }
+        }
+        Serial.printf_P(PSTR("A0=%u\n"), analogRead(A0));
+    #elif defined(ESP32)
+        for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
+            Serial.printf_P(PSTR("%u=%u%c"), i, digitalRead(i), (i == NUM_DIGITAL_PINS - 1) ? '\n' : ' ');
+        }
+    #endif
+    #if defined(HAVE_IOEXPANDER)
+        IOExpander::config.dumpPins(Serial);
+    #endif
+}
+
+void AtModePrintLoop::printRSSI()
+{
+    int16_t rssi = WiFi.RSSI();
+    _rssiMin = std::max(_rssiMin, rssi);
+    _rssiMax = std::min(_rssiMax, rssi);
+    Serial.printf_P(PSTR("+RSSI: %d dBm (min/max %d/%d)\n"), rssi, _rssiMin, _rssiMax);
+}
+
+void AtModePrintLoop::print()
+{
+    switch(_type) {
+        case DisplayType::HEAP:
+        case DisplayType::HEAP_UMM:
+            printHeap();
+            break;
+        case DisplayType::GPIO:
+            printGPIO();
+            break;
+        case DisplayType::RSSI:
+            printRSSI();
+        default:
+            break;
+    }
+}
+
+void AtModePrintLoop::printTimerCallback(Event::CallbackTimerPtr timer)
+{
+    if (atModePrintLoop == nullptr) {
+        timer->disarm();
+        return;
+    }
+    atModePrintLoop->print();
+}
+
+bool AtModePrintLoop::removeTimer()
+{
+    return _Timer(_timer).remove();
+}
+
+void AtModePrintLoop::remove()
+{
+    _Timer(_timer).remove();
+    LoopFunctions::remove(loop);
+    delete this;
+}
+
+void AtModePrintLoop::_loop()
+{
+    #if HAS_MULTI_HEAP
+        {
+            SELECT_IRAM();
+            _minIram = std::min<uint32_t>(ESP.getFreeHeap(), _minIram);
+            _maxIram = std::max<uint32_t>(ESP.getFreeHeap(), _maxIram);
+        }
+    #endif
+    SELECT_DRAM();
+    _minHeap = std::min<uint32_t>(ESP.getFreeHeap(), _minHeap);
+    _maxHeap = std::max<uint32_t>(ESP.getFreeHeap(), _maxHeap);
+}
+
+void AtModePrintLoop::loop()
+{
+    if (atModePrintLoop) {
+        atModePrintLoop->_loop();
+    }
+}
+
+static void printHeapOnce()
+{
+    if (atModePrintLoop) {
+        atModePrintLoop->printHeap();
+    }
+    else {
+        Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), ESP.getHeapFragmentation());
+    }
+}
+
+static void atModePrintLoopCommand(AtModeArgs &args, bool isHeap, AtModePrintLoop::DisplayType type)
+{
+    if (args.requireArgs(0, 2)) {
+        auto interval = args.toMillis(0, 0, 3600 * 1000, 0, String('s'));
+        auto umm = isHeap && args.equalsIgnoreCase(1, F("umm"));
+        if (interval < 250) {
+            if (atModePrintLoop) {
+                atModePrintLoop->remove();
+                args.print(F("Interval disabled"));
+            }
+            printHeapOnce();
+            Serial.println();
+        }
+        else {
+            if (!atModePrintLoop) {
+                new AtModePrintLoop();
+            }
+            atModePrintLoop->setType(umm ? AtModePrintLoop::DisplayType::HEAP_UMM : type, Event::milliseconds(interval));
+            args.print(F("Interval set to %ums"), interval);
+        }
+    }
+}
+
+void ATModeCommands::HeapCommand(AtModeArgs &args)
+{
+    atModePrintLoopCommand(args, true, AtModePrintLoop::DisplayType::HEAP);
+}
+
+void ATModeCommands::RssiCommand(AtModeArgs &args)
+{
+    atModePrintLoopCommand(args, false, AtModePrintLoop::DisplayType::RSSI);
+}
+
+void ATModeCommands::GpioCommand(AtModeArgs &args)
+{
+    atModePrintLoopCommand(args, false, AtModePrintLoop::DisplayType::GPIO);
+}
 
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_NNPP(AT, "Print OK", "Show help");
 
@@ -649,7 +905,7 @@ void ATModeCommands::AOTACommand(AtModeArgs &args)
 
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(NEOPX, "NEOPX", "<pin>,<num>,<r>,<g>,<b>", "Set NeoPixel color for given pin");
 
-void ATModeCommands::NEOPXCommand(AtModeArgs &args)
+void ATModeCommands::NeoPixelCommand(AtModeArgs &args)
 {
     // +neopx=16,3,25,0,0
     // +neopx=,,25,0,0
@@ -953,11 +1209,8 @@ void ATModeCommands::DelayCommand(AtModeArgs &args)
     delay(delayTime);
 }
 
-#if ESP32
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF_PNPN(CPU, "CPU", "Toggle displaying CPU usage");
-#elif defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
 // PROGMEM_AT_MODE_HELP_COMMAND_DEF(CPU, "CPU", "<80|160>", "Set CPU speed", "Display CPU speed");
-#endif
 
 void ATModeCommands::CPUCommand(AtModeArgs &args)
 {
@@ -1276,10 +1529,10 @@ void ATModeCommands::AtModeCommand(AtModeArgs &args)
 {
     if (args.requireArgs(1, 1)) {
         if (args.isTrue(0)) {
-            enable_at_mode(&args.getStream());
+            atMode.enable(&args.getStream());
         }
         else {
-            disable_at_mode(&args.getStream());
+            atMode.disable(&args.getStream());
         }
     }
 }
@@ -1370,7 +1623,7 @@ PROGMEM_STRING_DEF(WiFiCommandString, "WIFI");
     PROGMEM_STRING_DEF(AOTACommandString, "AOTA");
 #endif
 #if __LED_BUILTIN_WS2812_NUM_LEDS
-    PROGMEM_STRING_DEF(NEOPXCommandString, "NEOPX");
+    PROGMEM_STRING_DEF(NeoPixelCommandString, "NEOPX");
 #endif
 #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
     PROGMEM_STRING_DEF(LEDCommandString, "LED");
@@ -1378,6 +1631,9 @@ PROGMEM_STRING_DEF(WiFiCommandString, "WIFI");
 PROGMEM_STRING_DEF(PWMCommandString, "PWM");
 PROGMEM_STRING_DEF(PLGCommandString, "PLG");
 PROGMEM_STRING_DEF(DelayCommandString, "DLY");
+PROGMEM_STRING_DEF(HeapCommandString, "HEAP");
+PROGMEM_STRING_DEF(RssiCommandString, "RSSI");
+PROGMEM_STRING_DEF(GpioCommandString, "GPIO");
 #if ESP32 || (defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3))
     PROGMEM_STRING_DEF(CPUCommandString, "CPU");
 #endif
@@ -1456,6 +1712,9 @@ static const ATModeCommands::Item PROGMEM ATModeCommandsTable[] = {
     ATModeCommands::Item(ATModeCommands::PWMCommand, SPGM(PWMCommandString), "PWM output on PIN, min./max. level set it to LOW/HIGH", "<pin>,<input|input_pullup|waveform|level=0-" __STRINGIFY(PWMRANGE) ">[,<frequency=100-40000Hz>[,<duration/ms>]]"),
     ATModeCommands::Item(ATModeCommands::PLGCommand, SPGM(PLGCommandString), "Plugin management", "<list|start|stop|add-blacklist|add|remove>[,<name>]"),
     ATModeCommands::Item(ATModeCommands::DelayCommand, SPGM(DelayCommandString), "Call delay(milliseconds)", "<milliseconds>"),
+    ATModeCommands::Item(ATModeCommands::HeapCommand, SPGM(HeapCommandString), "Display heap usage every interval (can be 1s or 1000ms, 0 shows it once). If `umm` is added, the umm heap statistics are displayed (ESP8266 only)", "<interval[,umm]>"),
+    ATModeCommands::Item(ATModeCommands::RssiCommand, SPGM(RssiCommandString), "Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)", "[interval in seconds|0=disable]"),
+    ATModeCommands::Item(ATModeCommands::GpioCommand, SPGM(GpioCommandString), "Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)", "<interval>"),
     #if ESP32
         ATModeCommands::Item(ATModeCommands::CPUCommand, SPGM(CPUCommandString), "Toggle displaying CPU usage"),
     #elif defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)

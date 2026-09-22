@@ -60,8 +60,8 @@ void STK500v1Programmer::begin(Callback_t cleanup)
         _logPrintf_P(PSTR("Disabling serial handler"));
         // disable all output and handlers while flashing
         DEBUG_HELPER_SILENT();
-        if ((_atMode = at_mode_enabled()) != false) {
-            disable_at_mode(nullptr);
+        if ((_atMode = atMode.isEnabled()) != false) {
+            atMode.disable(nullptr);
         }
         Http2Serial::getInstance()->lockClient(true);
         SerialHandler::Wrapper::getInstance().removeLoop();
@@ -81,7 +81,7 @@ void STK500v1Programmer::end()
         if (&_serial == &Serial0) {
             DEBUG_HELPER_INIT();
             if (_atMode) {
-                enable_at_mode(nullptr);
+                atMode.enable(nullptr);
             }
             SerialHandler::Wrapper::getInstance().addLoop();
             Http2Serial::getInstance()->lockClient(false);

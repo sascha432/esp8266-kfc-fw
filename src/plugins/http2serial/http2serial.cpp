@@ -41,7 +41,7 @@ Http2Serial::Http2Serial() :
         Serial.begin(HTTP2SERIAL_BAUD);
     #endif
     #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
-        disable_at_mode(Serial);
+        atMode.disable(&Serial);
     #endif
     resetOutputBufferTimer();
 
@@ -57,7 +57,7 @@ Http2Serial::~Http2Serial()
         Serial.begin(KFC_SERIAL_RATE);
     #endif
     #if AT_MODE_SUPPORTED && HTTP2SERIAL_DISABLE_AT_MODE
-        enable_at_mode(Serial);
+        atMode.enable(&Serial);
     #endif
 }
 

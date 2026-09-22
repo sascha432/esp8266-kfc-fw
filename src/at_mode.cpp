@@ -2605,11 +2605,6 @@ void at_mode_serial_handle_event(String &commandString)
                 }
             }
         #endif
-        #if DEBUG_COLLECT_STRING_ENABLE
-            else if (args.isCommand(PSTR("JSONSTRDUMP"))) {
-                __debug_json_string_dump(output);
-            }
-        #endif
     else {
         bool commandWasHandled = false;
         for(const auto plugin: PluginComponents::Register::getPlugins()) { // send command to plugins

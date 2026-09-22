@@ -55,7 +55,6 @@ AtModePrintLoop *atModePrintLoop;
 AtModePrintLoop::AtModePrintLoop() :
     _type(DisplayType::HEAP)
 {
-    __DBG_assertf(atModePrintLoop == nullptr, "atModePrintLoop not null");
     stdex::reset(atModePrintLoop, this);
 }
 
@@ -177,7 +176,7 @@ void AtModePrintLoop::printGPIO()
         Serial.printf_P(PSTR("A0=%u\n"), analogRead(A0));
     #elif defined(ESP32)
         for(uint8_t i = 0; i < NUM_DIGITAL_PINS; i++) {
-            Serial.printf_P(PSTR("%u=%u%c"), i, digitalRead(i), (i == NUM_DIGITAL_PINS - 1) ? '\n' : ' ');
+            Serial.printf_P(PSTR("%u=%u%c"), i, digitalRead(i), ((i == NUM_DIGITAL_PINS - 1) || ((i % 8) == 7)) ? '\n' : ' ');
         }
     #endif
     #if defined(HAVE_IOEXPANDER)
@@ -1303,6 +1302,7 @@ void ATModeCommands::CPUCommand(AtModeArgs &args)
 }
 
 #if RTC_SUPPORT
+
 // +RTC=[<set>]
 // Set RTC time
 // +RTC?
@@ -1358,7 +1358,7 @@ void ATModeCommands::DumpTimersCommand(AtModeArgs &args)
     dumpTimers(args.getStream());
 }
 
-static void dumpFileSystemInfo(Print &output)
+static inline void dumpFileSystemInfo(Print &output)
 {
     FSInfo info;
     KFCFS.info(info);

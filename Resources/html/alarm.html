@@ -52,16 +52,16 @@
                         <div class="hidden" id="alarm_container">
                             <script>
                                 window.alarm_values_array = [
-                                    { 'h': '%A0H%', 'm': '%A0M%', 't': '%A0T%', 'd': '%A0D%', 'ts': '%ALARM_TIMESTAMP_0%', 'w': '%A0W%', 'e': '%A0E%' },
-                                    { 'h': '%A1H%', 'm': '%A1M%', 't': '%A1T%', 'd': '%A1D%', 'ts': '%ALARM_TIMESTAMP_1%', 'w': '%A1W%', 'e': '%A1E%' },
-                                    { 'h': '%A2H%', 'm': '%A2M%', 't': '%A2T%', 'd': '%A2D%', 'ts': '%ALARM_TIMESTAMP_2%', 'w': '%A2W%', 'e': '%A2E%' },
-                                    { 'h': '%A3H%', 'm': '%A3M%', 't': '%A3T%', 'd': '%A3D%', 'ts': '%ALARM_TIMESTAMP_3%', 'w': '%A3W%', 'e': '%A3E%' },
-                                    { 'h': '%A4H%', 'm': '%A4M%', 't': '%A4T%', 'd': '%A4D%', 'ts': '%ALARM_TIMESTAMP_4%', 'w': '%A4W%', 'e': '%A4E%' },
-                                    { 'h': '%A5H%', 'm': '%A5M%', 't': '%A5T%', 'd': '%A5D%', 'ts': '%ALARM_TIMESTAMP_5%', 'w': '%A5W%', 'e': '%A5E%' },
-                                    { 'h': '%A6H%', 'm': '%A6M%', 't': '%A6T%', 'd': '%A6D%', 'ts': '%ALARM_TIMESTAMP_6%', 'w': '%A6W%', 'e': '%A6E%' },
-                                    { 'h': '%A7H%', 'm': '%A7M%', 't': '%A7T%', 'd': '%A7D%', 'ts': '%ALARM_TIMESTAMP_7%', 'w': '%A7W%', 'e': '%A7E%' },
-                                    { 'h': '%A8H%', 'm': '%A8M%', 't': '%A8T%', 'd': '%A8D%', 'ts': '%ALARM_TIMESTAMP_8%', 'w': '%A8W%', 'e': '%A8E%' },
-                                    { 'h': '%A9H%', 'm': '%A9M%', 't': '%A9T%', 'd': '%A9D%', 'ts': '%ALARM_TIMESTAMP_9%', 'w': '%A9W%', 'e': '%A9E%' }
+                                    { 'h': '%AH_0%', 'm': '%AM_0%', 't': '%MT_0%', 'd': '%MD_0%', 'ts': '%ALARM_TIMESTAMP_0%', 'w': '%WD_0%', 'e': '%AE_0%' },
+                                    { 'h': '%AH_1%', 'm': '%AM_1%', 't': '%MT_1%', 'd': '%MD_1%', 'ts': '%ALARM_TIMESTAMP_1%', 'w': '%WD_1%', 'e': '%AE_1%' },
+                                    { 'h': '%AH_2%', 'm': '%AM_2%', 't': '%MT_2%', 'd': '%MD_2%', 'ts': '%ALARM_TIMESTAMP_2%', 'w': '%WD_2%', 'e': '%AE_2%' },
+                                    { 'h': '%AH_3%', 'm': '%AM_3%', 't': '%MT_3%', 'd': '%MD_3%', 'ts': '%ALARM_TIMESTAMP_3%', 'w': '%WD_3%', 'e': '%AE_3%' },
+                                    { 'h': '%AH_4%', 'm': '%AM_4%', 't': '%MT_4%', 'd': '%MD_4%', 'ts': '%ALARM_TIMESTAMP_4%', 'w': '%WD_4%', 'e': '%AE_4%' },
+                                    { 'h': '%AH_5%', 'm': '%AM_5%', 't': '%MT_5%', 'd': '%MD_5%', 'ts': '%ALARM_TIMESTAMP_5%', 'w': '%WD_5%', 'e': '%AE_5%' },
+                                    { 'h': '%AH_6%', 'm': '%AM_6%', 't': '%MT_6%', 'd': '%MD_6%', 'ts': '%ALARM_TIMESTAMP_6%', 'w': '%WD_6%', 'e': '%AE_6%' },
+                                    { 'h': '%AH_7%', 'm': '%AM_7%', 't': '%MT_7%', 'd': '%MD_7%', 'ts': '%ALARM_TIMESTAMP_7%', 'w': '%WD_7%', 'e': '%AE_7%' },
+                                    { 'h': '%AH_8%', 'm': '%AM_8%', 't': '%MT_8%', 'd': '%MD_8%', 'ts': '%ALARM_TIMESTAMP_8%', 'w': '%WD_8%', 'e': '%AE_8%' },
+                                    { 'h': '%AH_9%', 'm': '%AM_9%', 't': '%MT_9%', 'd': '%MD_9%', 'ts': '%ALARM_TIMESTAMP_9%', 'w': '%WD_9%', 'e': '%AE_9%' }
                                 ];
                             </script>
                             <div id="alarm_prototype" class="hidden">
@@ -72,15 +72,15 @@
                                                 <div class="form-group">
                                                     <div class="form-row align-items-center">
                                                         <div class="col-auto">
-                                                            <select name="a$$h" id="alarm_$$_hour" class="form-control custom-select alarm-auto-enable">$$H$$</select>
+                                                            <select name="ah_$$" id="alarm_$$_hour" class="form-control custom-select alarm-auto-enable">$$H$$</select>
                                                         </div>
                                                         <div class="col-auto"><strong>:</strong></div>
                                                         <div class="col-auto">
-                                                            <select name="a$$m" id="alarm_$$_minute" class="form-control custom-select alarm-auto-enable">$$M$$</select>
+                                                            <select name="am_$$" id="alarm_$$_minute" class="form-control custom-select alarm-auto-enable">$$M$$</select>
                                                         </div>
                                                         <!--#if IOT_ALARM_PLUGIN_HAS_BUZZER && IOT_ALARM_PLUGIN_HAS_SILENT -->
                                                         <div class="col-auto pl-2 pr-2">
-                                                            <select name="a$$t" id="alarm_$$_type" class="form-control custom-select alarm-auto-enable">
+                                                            <select name="mt_$$" id="alarm_$$_type" class="form-control custom-select alarm-auto-enable">
                                                                 <option value="0">Both</option>
                                                                 <option value="1">Silent</option>
                                                                 <option value="2">Buzzer</option>
@@ -88,7 +88,7 @@
                                                         </div>
                                                         <!--#endif-->
                                                         <div class="col-auto pl-2 pr-2">
-                                                            <select name="a$$d" id="alarm_$$_duration" class="form-control custom-select alarm-auto-enable">
+                                                            <select name="md_$$" id="alarm_$$_duration" class="form-control custom-select alarm-auto-enable">
                                                                 <option value="0">Unlimited</option>
                                                                 <option value="10">for 10 seconds</option>
                                                                 <option value="30">for 30 seconds</option>
@@ -106,7 +106,7 @@
                                             </div>
                                             <div class="col-12">
                                                 <div class="form-group">
-                                                    <input type="hidden" name="a$$w" id="alarm_$$_weekdays">
+                                                    <input type="hidden" name="wd_$$" id="alarm_$$_weekdays">
                                                     <button type="button" class="btn btn-lg alarm-week-day-button">S</button>
                                                     <button type="button" class="btn btn-lg alarm-week-day-button">M</button>
                                                     <button type="button" class="btn btn-lg alarm-week-day-button">T</button>
@@ -120,7 +120,7 @@
                                     </div>
                                     <div class="col-lg-3">
                                         <div class="alarm-enable-slider m-3">
-                                            <input type="range" min="0" max="1" name="a$$e" id="alarm_$$_enabled">
+                                            <input type="range" min="0" max="1" name="ae_$$" id="alarm_$$_enabled">
                                         </div>
                                     </div>
                                 </div>

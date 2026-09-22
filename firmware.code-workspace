@@ -352,6 +352,7 @@
             "dhcps",
             "DOUT",
             "DSIN",
+            "DSLP",
             "EEPROM",
             "ENV",
             "espota",

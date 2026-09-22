@@ -126,10 +126,6 @@ List files and directories
 
 List files and directories using FS.openDir(). This will not display read only virtual files.
 
-### `+FSM`
-
-Display the file system mapping
-
 ### `+AOTA=<start|stop>`
 
 Start/stop Arduino OTA (requires about 1K RAM to run)
@@ -170,10 +166,6 @@ Set internal LED mode or an LED on a certain PIN.
 ### `+NEOPX=<pin>,<num>,<r>,<g>,<b>`
 
 Set NeoPixel colors for a given PIN if available
-
-### `+X9C=<value> [<cs pin>, <inc pin>, <ud pin>]`
-
-Set the value of an X9C digitally controlled potentiometer. Only available if compiled in (`ATMODE_X9C_ENABLE`)
 
 ### `+PING=<target[,count=4[,timeout=5000]]>`
 

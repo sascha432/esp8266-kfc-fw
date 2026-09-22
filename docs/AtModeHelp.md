@@ -86,10 +86,6 @@ Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)
 
 Control PIN input, output and PWM state. Setting a PIN high or low implicitly sets it to output.
 
-### `+ADC=<off|display interval=1s>[,<period=1s>,<multiplier=1.0>,<unit=mV>,<read delay=5000us>]`
-
-Read the ADC and display values. A `websocket` mode streams the samples to a web socket client instead
-
 ### `+CPU=[<80|160>]`
 
 Set the CPU speed (ESP8266 with core < 3.x) or toggle displaying CPU usage (ESP32)

@@ -48,9 +48,6 @@ class PageStart(tk.Frame, PageBase):
         button = ttk.Button(self, text="MPR121 Touchpad", command=lambda: self.show_frame('PageTouchpad'))
         button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
 
-        button = ttk.Button(self, text="ADC", command=lambda: self.show_frame('PageADC'))
-        button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
-
         top = tk.Frame(self)
         top.pack(side=tkinter.TOP, pady=20)
         pad = 2

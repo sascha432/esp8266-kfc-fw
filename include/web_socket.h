@@ -47,7 +47,6 @@ public:
     enum class BinaryPacketType : uint16_t {
         HLW8012_PLOT_DATA,
         TOUCHPAD_DATA,
-        ADC_READINGS,
         LED_MATRIX_DATA,
     };
 

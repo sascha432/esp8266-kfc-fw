@@ -46,18 +46,6 @@ class WebSocket(BaseConnection):
         else:
             self.error('not connected')
 
-    def send_cmd_adc_start(self, interval_micros = 1500, duration_millis = 5000, packet_size = 1536):
-        if self.is_authenticated():
-            self.send_cmd('ADC', 'websocket', self.client_id, interval_micros, duration_millis, packet_size)
-        else:
-            self.error('not connected')
-
-    def send_cmd_adc_stop(self):
-        if self.is_authenticated():
-            self.send_cmd('ADC', 'stop')
-        else:
-            self.error('not connected')
-
     def send(self, msg, end = '\r\n'):
         if self.is_connected():
             self.debug('sending: %s' % msg)
@@ -89,17 +77,6 @@ class WebSocket(BaseConnection):
                     "time": time,
                     "raw_type": event_type
                 }
-            elif packet_id==3: # WsClient::BinaryPacketType::ADC_READINGS
-                odata = data
-                p_len = len(data)
-                fmt = '=HHB'
-                ofs = struct.calcsize(fmt)
-                (packet_id, flags, packet_size) = struct.unpack_from(fmt, data)
-                m = memoryview(data[ofs:])
-                data = m.cast('B')
-                msg = 'id=%u size=%u ofs=%u flags=%04x count=%u * %.1f' % (packet_id, p_len, ofs, flags, len(data), len(data) / (1.0 * packet_size))
-                self.debug('WsClient::BinaryPacketType::ADC_READINGS %s' % msg)
-                self.controller.adc.data_handler(data, flags, packet_size, msg, odata)
         except Exception as e:
             self.console.error('packet parse error: %u: %s' % (packet_id, e))
 
@@ -116,9 +93,7 @@ class WebSocket(BaseConnection):
             elif msg == '+REQ_AUTH':
                 self.send('+SID ' + self.sid, end = '')
         else:
-            if msg.startswith('+ADC: ADC display off'):
-                self.controller.adc.adc_reading_ended()
-            elif msg.startswith('+SP_HLWPLOT:'):
+            if msg.startswith('+SP_HLWPLOT:'):
                 try:
                     pos = msg.find('{')
                     if pos!=-1:

@@ -60,8 +60,6 @@ class MainApp(tk.Tk, kfcfw.connection.Controller):
 
         self.show_frame(pages.base.PageBase.classes[0])
 
-        self.adc = self.frames['PageADC']
-
     def get_config(self):
         return self.config
 

@@ -578,24 +578,44 @@ namespace KFCConfigurationClasses {
                     // color of the COLOR_x buttons
                     ColorType color_value[kNumColors]{};
 
-                    IRRemoteConfigType() :
-                        version(kConfigVersion),
-                        enabled(kDefaultValueFor_enabled),
-                        step(kDefaultValueFor_step)
-                    {
+                    IRRemoteConfigType() {
+                        applyDefaults();
                     }
 
                     bool isInitialized() const {
                         return version == kConfigVersion;
                     }
 
-                    // receiver enabled, no button assigned
+                    // Defaults of the 44 key remote control (docs/IR_Remote_44_Keys.md). Only the NEC
+                    // protocol is implemented in the firmware, the buttons of any other remote can be
+                    // assigned in the IR Remote form. Unassigned buttons keep kNoCode
                     void applyDefaults() {
                         version = kConfigVersion;
                         enabled = kDefaultValueFor_enabled;
                         step = kDefaultValueFor_step;
                         memset(codes, 0, sizeof(codes));
                         memset(color_value, 0, sizeof(color_value));
+
+                        setCode(ActionType::POWER, 0xbf40ff00);
+                        setCode(ActionType::NEXT_ANIMATION, 0xbe41ff00);
+                        setCode(ActionType::BRIGHTNESS_UP, 0xa35cff00);
+                        setCode(ActionType::BRIGHTNESS_DOWN, 0xa25dff00);
+                        // up/down arrows of the red, green and blue block
+                        setCode(ActionType::RED_UP, 0xeb14ff00);
+                        setCode(ActionType::GREEN_UP, 0xea15ff00);
+                        setCode(ActionType::BLUE_UP, 0xe916ff00);
+                        setCode(ActionType::RED_DOWN, 0xef10ff00);
+                        setCode(ActionType::GREEN_DOWN, 0xee11ff00);
+                        setCode(ActionType::BLUE_DOWN, 0xed12ff00);
+                        // R, G, B and W of the color buttons 1-4
+                        setCode(colorAction(0), 0xa758ff00);
+                        setColor(colorAction(0), 0xff0000);
+                        setCode(colorAction(1), 0xa659ff00);
+                        setColor(colorAction(1), 0x00ff00);
+                        setCode(colorAction(2), 0xba45ff00);
+                        setColor(colorAction(2), 0x0000ff);
+                        setCode(colorAction(3), 0xbb44ff00);
+                        setColor(colorAction(3), 0xffffff);
                     }
 
                     // the struct is packed, the members must be accessed by value
@@ -609,6 +629,11 @@ namespace KFCConfigurationClasses {
 
                     static bool isColor(ActionType action) {
                         return action >= ActionType::COLOR_1;
+                    }
+
+                    // color button 0-19 as ActionType, the enum only names the first and the last one
+                    static constexpr ActionType colorAction(uint8_t index) {
+                        return static_cast<ActionType>(static_cast<uint8_t>(ActionType::COLOR_1) + index);
                     }
 
                     uint32_t getColor(ActionType action) const {

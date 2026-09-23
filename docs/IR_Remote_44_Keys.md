@@ -6,8 +6,9 @@ Cheap 44-key infrared remote control (RGB LED strip / LED controller type) that 
 `IOT_LED_MATRIX_IR_REMOTE_PIN` (see `src/plugins/clock/clock_ir_receiver.cpp`).
 
 The table below was captured by pressing the buttons from the top left to right, row by row, while the
-firmware logged the received frames. It is example data for one specific remote, the codes are not
-hard-coded in the firmware - the user assigns the buttons in the WebUI (see
+firmware logged the received frames. It is the data of one specific remote and the **built-in default
+mapping** of the firmware (see [Default button assignments](#default-button-assignments)). The firmware
+only implements the NEC protocol, the buttons of any other remote can be assigned in the WebUI (see
 [Configuring the remote](#configuring-the-remote)).
 
 ## Protocol
@@ -79,9 +80,8 @@ the picture.
 ### Actions in the firmware
 
 The remote is **not** hard-coded. Nothing but the NEC protocol itself is implemented in the firmware,
-the buttons are assigned by the user in the configuration (see
-[Configuring the remote](#configuring-the-remote)). The 44 key remote above is only used as an example
-of a NEC remote, any other NEC remote works as well.
+the buttons are assigned in the configuration (see [Configuring the remote](#configuring-the-remote)).
+The 44 key remote above is the default, any other NEC remote works as well.
 
 A repeat frame only means "the button is still held" and contains no command byte, so the decoder
 reuses the last command. All actions except the brightness/color ramps ignore the repeats.
@@ -115,9 +115,10 @@ the form is provided by `ClockPlugin::_createConfigureFormIRRemote()` in
 set for the build. (The name of the form is `irremote`, `remote` is the form of the Web Server plugin
 for its remote access settings.)
 
-By default the receiver is **enabled** but no button is assigned, every code field is empty. To assign
+By default the receiver is **enabled** and the buttons of the 44 key remote are pre-assigned (see
+[Default button assignments](#default-button-assignments)), the other buttons are unassigned. To change
 a button click the **Learn** button next to the field, press the button of the remote and click
-**Use Code**:
+**Use Code**, an empty field means "not assigned":
 
 1. The **Learn** button (next to every code field) opens the capture dialog and disables all remote
    control actions on the device (the dialog tells the user about it). The code of the next button
@@ -146,22 +147,27 @@ exactly, so two actions cannot share the same button.
 | Assigning Buttons | Brightness Up/Down | brightness ±6 (2%) per click, repeats ±3 (1%) while held |
 | Assigning Buttons | Color Step Per Press | level change of the Red/Green/Blue Up/Down buttons (1-127, default 8) |
 | Assigning Buttons | Red/Green/Blue Up/Down | change the level of one color channel, a held button ramps |
-| Color Buttons 1-5 | Button n Code | run the `Solid` animation with the color of "Button n Color" |
+| Color Buttons 1-5 | Button n Code | set the color of "Button n Color" |
 | Color Buttons 1-5 | Button n Color | color value of the button (e.g. `#ff0000` or a color name) |
 | all code fields | Learn | capture the code of a button press (see above) |
 
 The 20 color buttons are grouped in 5 blocks of 4 to keep the page small, the layout matches the
-5x4 color keypad of the example remote. All color actions switch to the `Solid` animation first,
-otherwise the new color would not be visible while an animation is running. The brightness steps are
-the same that the physical buttons use (see `ClockPlugin::_buttonCallback()`).
+5x4 color keypad of the example remote. The color actions only change the color (`setColorAndRefresh()`),
+the running animation is kept - identically to the color picker in the WebUI. The color is stored in the
+color of the current animation (`flashing_color`, `visualizer.color`, otherwise `solid_color`, see
+`ClockPlugin::_getColorVar()`), animations without color support (e.g. `Rainbow`) are not affected. The
+brightness steps are the same that the physical buttons use (see `ClockPlugin::_buttonCallback()`).
 
 The actions themselves are implemented in `ClockPlugin::_irRemoteAction()`
 (`src/plugins/clock/clock_ir_receiver.cpp`) and are driven by
 `KFCConfigurationClasses::Plugins::ClockConfigNS::IRRemoteConfigType::ActionType`.
 
-### Example: the 44 key remote
+### Default button assignments
 
-| Button | Code | Suggested action |
+The built-in defaults (`IRRemoteConfigType::applyDefaults()`) map the 44 key remote. All of them can be
+changed or cleared in the IR Remote form:
+
+| Button | Code | Action |
 | --- | --- | --- |
 | Power | `bf40ff00` | Power On/Off |
 | Play/Pause | `be41ff00` | Next Animation |
@@ -179,7 +185,8 @@ The actions themselves are implemented in `ClockPlugin::_irRemoteAction()`
 | Down arrow (blue) | `ed12ff00` | Blue Down |
 
 The remaining color buttons of rows 3-6 can be assigned to the other 16 color buttons, the
-color names of the table above can be used as a hint for `Button n Color`.
+color names of the table above can be used as a hint for `Button n Color`. The defaults are applied when
+the stored configuration is empty (new device or after a factory reset).
 
 ## Re-measuring
 

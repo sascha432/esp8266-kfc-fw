@@ -10,7 +10,7 @@
 
 #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
 
-#if DEBUG_IOT_CLOCK || 1
+#if DEBUG_IOT_CLOCK
 #    include <debug_helper_enable.h>
 #else
 #    include <debug_helper_disable.h>
@@ -183,9 +183,8 @@ void ClockPlugin::_irRemoteAction(uint32_t code, bool repeat)
                     break;
             }
             __LDBG_printf("IR color %06x (%c%u)", static_cast<uint32_t>(color), isUp ? '+' : '-', ir.step);
-            // switch to the solid animation first, otherwise the color would not be visible
-            setAnimation(AnimationType::SOLID);
             setColorAndRefresh(color);
+            _saveState();
             return;
         }
     }
@@ -196,8 +195,9 @@ void ClockPlugin::_irRemoteAction(uint32_t code, bool repeat)
         if (code == ir.getCode(action)) {
             if (!repeat) {
                 __LDBG_printf("IR color %06x", ir.getColor(action));
-                setAnimation(AnimationType::SOLID);
+                // only the color is changed, the animation keeps running
                 setColorAndRefresh(Color(ir.getColor(action)));
+                _saveState();
             }
             return;
         }

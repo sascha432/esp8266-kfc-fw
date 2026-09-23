@@ -40,11 +40,6 @@ String Color::implode(char sep) const
 uint8_t Color::_getRand(uint8_t mod, uint8_t mul, uint8_t factor)
 {
     return rand() % mod * mul;
-    // uint8_t rnd = rand() % mod;
-    // if (factor == 255) {
-    //     return rnd * mul;
-    // }
-    // return (rnd * mul * factor) / 255;
 }
 
 uint32_t Color::rnd(uint8_t minValue)
@@ -57,33 +52,3 @@ uint32_t Color::rnd(uint8_t minValue)
 
     return _value;
 }
-
-// uint32_t Color::rnd(Color factor, uint8_t minValue)
-// {
-//     uint8_t minRed = red() * minValue / 255;
-//     uint8_t count = 0;
-//     do {
-//         _red = _getRand(kRndMod, kRndMul, red());
-//         if (++count == 0) {
-//             _red = minValue;
-//         }
-//     } while (_red < minRed);
-//     count = 0;
-//     uint8_t minGreen = green() * minValue / 255;
-//     do {
-//         _green = _getRand(kRndMod, kRndMul, green());
-//         if (++count == 0) {
-//             _green = minValue;
-//         }
-//     } while (_green < minGreen);
-//     count = 0;
-//     uint8_t minBlue = blue() * minValue / 255;
-//     do {
-//         _blue = _getRand(kRndMod, kRndMul, blue());
-//         if (++count == 0) {
-//             _blue = minValue;
-//         }
-//     } while (_blue < minBlue);
-
-//     return _value;
-// }

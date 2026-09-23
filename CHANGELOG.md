@@ -2,10 +2,8 @@
 
 ## Version 0.0.9 (master)
 
+ - User configurable IR remote control actions
  - ESP32 support for the IR remote control
- - User configurable IR remote control: any NEC remote can be taught in the WebUI (LED Matrix -> IR Remote), nothing is hard-coded and no button is assigned by default
- - IR remote control: the Learn button captures the code of a button press in a dialog, all remote control actions are disabled while the dialog is open
- - IR remote control: the code of a button can be captured in a dialog next to the configuration field (all remote control actions are disabled while the dialog is open)
  - Fixed an `Interrupt wdt timeout on CPU1` crash caused by `FastLED.show()` running in two tasks at the same time
  - Fixed broken alarm form
  - Fixed a crash when switching to the next WiFi network (`+WIFI=next`) and corrected the station number handling of the WiFi configuration

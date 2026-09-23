@@ -44,7 +44,7 @@ ClockPlugin ClockPlugin_plugin;
 
 #endif
 
-#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection,matrix,ani-*"
+#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection,matrix,irremote,ani-*"
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,
@@ -169,6 +169,9 @@ void ClockPlugin::createMenu()
         subMenu.addMenuItem(F("Matrix"), F(LED_MATRIX_MENU_URI_PREFIX "matrix.html"));
     #endif
     subMenu.addMenuItem(F("Protection"), F(LED_MATRIX_MENU_URI_PREFIX "protection.html"));
+    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+        subMenu.addMenuItem(F("IR Remote"), F(LED_MATRIX_MENU_URI_PREFIX "irremote.html"));
+    #endif
 }
 
 void ClockPlugin::_setupTimer()
@@ -405,6 +408,10 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     enableLoopNoClear(true);
 
+    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+        _registerIRRemoteWebHandler();
+    #endif
+
     #if IOT_ALARM_PLUGIN_ENABLED
         AlarmPlugin::setCallback(alarmCallback);
     #endif
@@ -478,6 +485,12 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
+    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+        if (source.equals(FSPGM(http))) {
+            // the web server has been restarted, the handler is gone
+            _registerIRRemoteWebHandler();
+        }
+    #endif
     IF_NOT_LOOP_TASK(_pending.reconfigure = source.startsWith(F("ani-")) ? 1 : 2; return);
     _reconfigureNow(source.startsWith(F("ani-")));
 }
@@ -695,6 +708,23 @@ void ClockPlugin::getStatus(Print &output)
         }
     #endif
 
+    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+        #if ESP32
+            output.printf_P(PSTR(HTML_S(br) "IR remote control pin %u, software NEC receiver"), IOT_LED_MATRIX_IR_REMOTE_PIN);
+        #else
+            output.printf_P(PSTR(HTML_S(br) "IR remote control pin %u, IRremoteESP8266 receiver"), IOT_LED_MATRIX_IR_REMOTE_PIN);
+        #endif
+        if (_irFrameCount) {
+            output.printf_P(PSTR(HTML_S(br) "Last IR code %08x"), _irLastCode);
+        }
+        else {
+            output.print(F(HTML_S(br) "Last IR code: none received"));
+        }
+        if (_irFrameCount || _irRepeatCount) {
+            output.printf_P(PSTR(", %u frames, %u repeats"), _irFrameCount, _irRepeatCount);
+        }
+    #endif
+
     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
         if (_config.animation == uint8_t(Clock::AnimationType::VISUALIZER)) {
             #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
@@ -855,6 +885,17 @@ void ClockPlugin::readConfig(bool setup)
     // read config
     _config = Plugins::Clock::getConfig();
     _sanitizeConfig();
+
+    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+        // The IR remote configuration is new. If the stored data predates it, the storage has been
+        // resized and zero filled (see WriteableData::resize). The form reads the storage, therefore
+        // the defaults (receiver enabled, no button assigned) are stored once
+        if (!Plugins::Clock::getWriteableConfig().ir.isInitialized()) {
+            __LDBG_printf("applying the IR remote config defaults");
+            _config.ir.applyDefaults();
+            _saveState();
+        }
+    #endif
 
     _setShowMethod(static_cast<Clock::ShowMethodType>(_config.method));
 

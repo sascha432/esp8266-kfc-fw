@@ -2,6 +2,11 @@
 
 ## Version 0.0.9 (master)
 
+ - ESP32 support for the IR remote control
+ - User configurable IR remote control: any NEC remote can be taught in the WebUI (LED Matrix -> IR Remote), nothing is hard-coded and no button is assigned by default
+ - IR remote control: the Learn button captures the code of a button press in a dialog, all remote control actions are disabled while the dialog is open
+ - IR remote control: the code of a button can be captured in a dialog next to the configuration field (all remote control actions are disabled while the dialog is open)
+ - Fixed an `Interrupt wdt timeout on CPU1` crash caused by `FastLED.show()` running in two tasks at the same time
  - Fixed broken alarm form
  - Fixed a crash when switching to the next WiFi network (`+WIFI=next`) and corrected the station number handling of the WiFi configuration
  - ESP32 core dump: the ESP-IDF core dump can be viewed, downloaded and deleted from the SaveCrash WebUI (ESP32)
@@ -30,7 +35,6 @@
  - Fixed an issue where the OpenWeatherMap forecast was not being updated
  - Updated OpenWeatherMap API to OneCall API 3.0
  - Added a forecast screen for the weather station
- - Fixed an `Interrupt wdt timeout on CPU1` crash caused by `FastLED.show()` running in two tasks at the same time (WebUI/MQTT commands changed the LED matrix while the loop task was rendering). The display, the animation objects, the loop functions and the clock configuration are now owned by the loop task, other tasks queue their changes (`+LMC` display access is limited to the serial console from other contexts)
 
 ## Version 0.0.8
 

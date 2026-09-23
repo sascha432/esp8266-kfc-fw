@@ -652,6 +652,87 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
     }
 }
 
+#if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+
+void ClockPlugin::_createConfigureFormIRRemote(FormUI::Form::BaseForm &form, ClockConfigType &cfg)
+{
+    using IRRemoteConfigType = KFCConfigurationClasses::Plugins::ClockConfigNS::IRRemoteConfigType;
+    using ActionType = IRRemoteConfigType::ActionType;
+
+    // codes are hex values, an empty field means that the button is not assigned.
+    // The Learn button captures the code of a button press (see Resources/js/forms/led-matrix.js).
+    // addFormUI() replaces the UI of the last field, label/suffix must be added in one call
+    auto addCodeField = [&form, &cfg](const __FlashStringHelper *name, ActionType action, const FormUI::Label &label) {
+        form.addCallbackGetterSetter<String>(name, [&cfg, action](String &value, FormUI::Field::BaseField &field, bool store) {
+            if (store) {
+                value.trim();
+                cfg.ir.setCode(action, value.length() ? static_cast<uint32_t>(strtoul(value.c_str(), nullptr, 16)) : IRRemoteConfigType::kNoCode);
+            }
+            else {
+                auto code = cfg.ir.getCode(action);
+                value = code ? PrintString(F("%08x"), code) : String();
+            }
+            return true;
+        }, InputFieldType::TEXT);
+        form.addFormUI(label, FormUI::PlaceHolder(F("not assigned")), FormUI::SuffixHtml(F("<button type=\"button\" class=\"btn btn-default ir_remote_learn\" title=\"Capture the code of a button press\"><span class=\"oi oi-target\"></span> Learn</button>")));
+    };
+
+    auto &group = form.addCardGroup(F("ircfg"), F("IR Remote"), true);
+
+    form.addObjectGetterSetter(F("ir_en"), FormGetterSetter(cfg.ir, enabled));
+    form.addFormUI(F("Enable IR Remote"), FormUI::BoolItems(F("Enable"), F("Disable")));
+
+    addCodeField(F("ir_pwr"), ActionType::POWER, F("Power On/Off"));
+    addCodeField(F("ir_nxt"), ActionType::NEXT_ANIMATION, F("Next Animation"));
+    addCodeField(F("ir_bup"), ActionType::BRIGHTNESS_UP, F("Brightness Up (hold to ramp)"));
+    addCodeField(F("ir_bdn"), ActionType::BRIGHTNESS_DOWN, F("Brightness Down (hold to ramp)"));
+
+    form.addObjectGetterSetter(F("ir_stp"), FormGetterSetter(cfg.ir, step));
+    form.addFormUI(F("Color Step Per Press"));
+    cfg.ir.addRangeValidatorFor_step(form);
+
+    // PROGMEM_DEF_LOCAL_VARNAMES needs a literal, the index is ActionType::RED_UP..BLUE_DOWN
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 30, icd, icv, irr);
+
+    static const char *const kChannelNames[IRRemoteConfigType::kNumChannels] = { "Red", "Green", "Blue" };
+
+    // the color channels, a button held down ramps the level
+    for(uint8_t channel = 0; channel < IRRemoteConfigType::kNumChannels; channel++) {
+        const auto up = static_cast<ActionType>(static_cast<uint8_t>(ActionType::RED_UP) + channel);
+        const auto down = static_cast<ActionType>(static_cast<uint8_t>(ActionType::RED_DOWN) + channel);
+
+        addCodeField(F_VAR(icd, static_cast<uint8_t>(up)), up, FormUI::Label(PrintString(F("%s Up"), kChannelNames[channel])));
+        addCodeField(F_VAR(icd, static_cast<uint8_t>(down)), down, FormUI::Label(PrintString(F("%s Down"), kChannelNames[channel])));
+    }
+
+    // color buttons, 5 rows with 4 buttons like the remote
+    for(uint8_t row = 0; row < IRRemoteConfigType::kNumColors / 4; row++) {
+        auto &rowGroup = form.addCardGroup(F_VAR(irr, row), PrintString(F("Color Buttons %u"), row + 1), false);
+        for(uint8_t col = 0; col < 4; col++) {
+            const uint8_t index = row * 4 + col;
+            const auto action = static_cast<ActionType>(static_cast<uint8_t>(ActionType::COLOR_1) + index);
+
+            addCodeField(F_VAR(icd, static_cast<uint8_t>(action)), action, FormUI::Label(PrintString(F("Button %u Code"), col + 1)));
+
+            form.addCallbackGetterSetter<String>(F_VAR(icv, index), [&cfg, action](String &value, FormUI::Field::BaseField &field, bool store) {
+                if (store) {
+                    cfg.ir.setColor(action, Color::fromString(value).get());
+                }
+                else {
+                    value = Color(cfg.ir.getColor(action)).toString();
+                }
+                return true;
+            }, InputFieldType::TEXT);
+            form.addFormUI(FormUI::Label(PrintString(F("Button %u Color"), col + 1)));
+        }
+        rowGroup.end();
+    }
+
+    group.end();
+}
+
+#endif
+
 void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __LDBG_printf("callback_type=%u name=%s", type, formName.c_str());
@@ -964,6 +1045,13 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             // }));
 
             mainGroup.end();
+
+        }
+    #endif
+    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+        else if (formName == F("irremote")) {
+
+            _createConfigureFormIRRemote(form, cfg);
 
         }
     #endif

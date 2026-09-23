@@ -523,6 +523,109 @@ namespace KFCConfigurationClasses {
 
             #endif
 
+            #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+
+                // IR remote control
+                //
+                // Nothing is hardcoded, every button has to be configured by the user and an
+                // unassigned button does nothing (kNoCode). The receiver decodes the NEC protocol,
+                // which is used by most cheap remotes, and logs the 32 bit code of every data frame
+                // (`IR xxxxxxxx`, visible in the serial console and on status.html). To assign a
+                // button, press it and copy the value into the form.
+                struct __attribute__packed__ IRRemoteConfigType {
+                    using Type = IRRemoteConfigType;
+
+                    static constexpr uint32_t kNoCode = 0;              // button is not assigned
+                    static constexpr uint8_t kNumColors = 20;           // 5 rows with 4 color buttons
+                    static constexpr uint8_t kNumChannels = 3;          // red, green, blue
+                    static constexpr uint8_t kMaxStep = 127;
+                    static constexpr uint8_t kConfigVersion = 1;
+
+                    enum class ActionType : uint8_t {
+                        POWER = 0,
+                        NEXT_ANIMATION,
+                        BRIGHTNESS_UP,
+                        BRIGHTNESS_DOWN,
+                        RED_UP,
+                        GREEN_UP,
+                        BLUE_UP,
+                        RED_DOWN,
+                        GREEN_DOWN,
+                        BLUE_DOWN,
+                        COLOR_1,
+                        COLOR_LAST = COLOR_1 + kNumColors - 1,
+                        MAX = COLOR_LAST + 1,
+                    };
+
+                    // The config is stored as one binary blob and resized/zero filled when the layout
+                    // changes (see WriteableData::resize). A stored config without this version has
+                    // never been written by this firmware and gets the defaults applied once (see
+                    // ClockPlugin::readConfig())
+                    CREATE_UINT8_BITFIELD(version, 4);
+                    // turning this off disables the receiver (no codes are received/logged)
+                    CREATE_UINT8_BITFIELD_MIN_MAX(enabled, 1, false, true, true, 1);
+                    // A bit-field that crosses the boundary of its storage unit (1 byte for uint8_t)
+                    // was laid out differently before GCC 4.4, which is reported by
+                    // -Wpacked-bitfield-compat. Complete the byte to keep the field on the boundary,
+                    // this is a no-op for the layout: version/enabled/step keep their bit positions
+                    // and the size of the structure does not change.
+                    uint8_t : 3;
+                    // the color channels are changed by this value per button press
+                    CREATE_UINT8_BITFIELD_MIN_MAX(step, 7, 1, kMaxStep, 8, 1);
+
+                    // code of every button, index is ActionType
+                    uint32_t codes[static_cast<uint8_t>(ActionType::MAX)]{};
+                    // color of the COLOR_x buttons
+                    ColorType color_value[kNumColors]{};
+
+                    IRRemoteConfigType() :
+                        version(kConfigVersion),
+                        enabled(kDefaultValueFor_enabled),
+                        step(kDefaultValueFor_step)
+                    {
+                    }
+
+                    bool isInitialized() const {
+                        return version == kConfigVersion;
+                    }
+
+                    // receiver enabled, no button assigned
+                    void applyDefaults() {
+                        version = kConfigVersion;
+                        enabled = kDefaultValueFor_enabled;
+                        step = kDefaultValueFor_step;
+                        memset(codes, 0, sizeof(codes));
+                        memset(color_value, 0, sizeof(color_value));
+                    }
+
+                    // the struct is packed, the members must be accessed by value
+                    uint32_t getCode(ActionType action) const {
+                        return codes[static_cast<uint8_t>(action)];
+                    }
+
+                    void setCode(ActionType action, uint32_t code) {
+                        codes[static_cast<uint8_t>(action)] = code;
+                    }
+
+                    static bool isColor(ActionType action) {
+                        return action >= ActionType::COLOR_1;
+                    }
+
+                    uint32_t getColor(ActionType action) const {
+                        return color_value[static_cast<uint8_t>(action) - static_cast<uint8_t>(ActionType::COLOR_1)].value;
+                    }
+
+                    void setColor(ActionType action, uint32_t color) {
+                        color_value[static_cast<uint8_t>(action) - static_cast<uint8_t>(ActionType::COLOR_1)].value = color;
+                    }
+
+                    static bool hasCode(uint32_t code) {
+                        return code != kNoCode;
+                    }
+                };
+
+            #endif
+
             struct __attribute__packed__ ClockConfigType {
                 using Type = ClockConfigType;
                 CREATE_COLOR_FIELD(solid_color, 0xff00ff);
@@ -569,6 +672,9 @@ namespace KFCConfigurationClasses {
                     MatrixConfigType matrix;
                 #endif
                 XmasAnimationType xmas;
+                #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+                    IRRemoteConfigType ir;
+                #endif
 
                 uint16_t getBrightness() const
                 {

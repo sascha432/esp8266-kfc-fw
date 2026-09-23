@@ -107,15 +107,6 @@ void ClockPlugin::buttonCallback(ButtonType button, EventType eventType, uint16_
     });
 }
 
-static constexpr int _getBrightnessChange(float pct)
-{
-    return ((pct * 255) / 100) + 1;
-}
-
-static constexpr int kBrightnessChangeClick = _getBrightnessChange(2);
-static constexpr int kBrightnessChangeLongPress = _getBrightnessChange(10);
-static constexpr int kBrightnessChangeHold = _getBrightnessChange(1);
-
 void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount)
 {
     __LDBG_printf("button=%u event_type=%u repeat=%u", button, eventType, repeatCount);

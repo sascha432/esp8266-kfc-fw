@@ -15,7 +15,12 @@
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #include "../src/plugins/plugins.h"
-#if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+
+#if ESP32
+#    include <atomic>
+#    include <freertos/FreeRTOS.h>
+#    include <freertos/task.h>
+#elif defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
 #    pragma push_macro("DEBUG")
 #    undef DEBUG
 #    include <IRrecv.h>
@@ -23,14 +28,6 @@
 #    include <IRutils.h>
 #    include <IRac.h>
 #    pragma pop_macro("DEBUG")
-#endif
-#include <Adafruit_NeoPixelEx.h>
-
-#if ESP32
-    // task handle of the Arduino loop task and the re-entrancy guard of _display_show()
-    #include <atomic>
-    #include <freertos/FreeRTOS.h>
-    #include <freertos/task.h>
 #endif
 
 namespace WebServer {
@@ -210,6 +207,11 @@ public:
     static constexpr uint8_t kMinimumTemperatureThreshold  = 30;  // °C
     static constexpr uint8_t kUpdateMQTTInterval           = 30;  // seconds
 
+    // brightness change per button event (2%, 10% and 1% of the maximum brightness)
+    static constexpr int kBrightnessChangeClick     = ((2 * 255) / 100) + 1;
+    static constexpr int kBrightnessChangeLongPress = ((10 * 255) / 100) + 1;
+    static constexpr int kBrightnessChangeHold      = ((1 * 255) / 100) + 1;
+
     static constexpr uint8_t kMaxBrightness = Clock::kMaxBrightness;
 
     static constexpr int16_t kAutoBrightnessOff = -1;
@@ -243,6 +245,10 @@ public:
     };
 
     void _createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType);
+
+    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+        void _createConfigureFormIRRemote(FormUI::Form::BaseForm &form, ClockConfigType &cfg);
+    #endif
 
     #if AT_MODE_SUPPORTED
 
@@ -366,12 +372,84 @@ public:
             void beginIRReceiver();
             void endIRReceiver();
 
-        private:
+            static constexpr uint32_t kStandbyLoopDelay = 10;
+
+            // applies an action to a received NEC frame, see docs/IR_Remote_44_Keys.md.
+            // _irRemoteCallback() checks if the code is assigned and queues the action for the loop
+            // task (the receiver runs inside the event scheduler), _irRemoteAction() applies it
+            void _irRemoteCallback(uint32_t code, bool repeat);
+            void _irRemoteAction(uint32_t code, bool repeat);
+
+            // Captures a button press for the "IR Remote" form: while learning is enabled no action
+            // is executed, the raw code is only reported to the browser (/ir-remote.json), which
+            // displays it in a modal dialog next to the field. The browser enables learning when the
+            // dialog opens and disables it when it is closed.
+            void _irSetLearnMode(bool enable);
+            void _irLearnTimeoutCheck();
+            static void _irWebHandler(AsyncWebServerRequest *request);
+            static void _registerIRRemoteWebHandler();
+
+            volatile bool _irLearnMode{false};      // no actions while a button is being captured
+            volatile uint32_t _irLearnId{0};        // incremented for every frame received while learning
+            volatile uint32_t _irLearnCode{0};      // code of the last frame received while learning
+            volatile uint32_t _irLearnTimeout{0};   // millis() after which learning is disabled again
+
+            // learning is disabled if the browser stopped polling (max. time a dialog can stay open)
+            static constexpr uint32_t kIRLearnTimeout = 60000;
+
+        #if ESP32
+
+            // The ESP32 uses a software receiver, see clock_ir_receiver.cpp: FastLED's RMT driver
+            // claims all RMT channels and memory blocks, so IRremoteESP8266 (RMT based on the
+            // ESP32) cannot be used. The interrupt only records the time between two edges, the
+            // pulses are decoded by _irDecodeNec()
+            enum class NecResult : uint8_t {
+                VALID,          // a complete NEC frame
+                INCOMPLETE,     // the frame has not been received completely yet
+                INVALID,        // not a NEC frame
+            };
+
+            static void IRAM_ATTR _irPinISR();
+            void _irDecodeNec();
+            void _irReset();
+
+            // parses one NEC frame at edges[index], next is the index of the following pulse,
+            // only set for NecResult::VALID
+            static NecResult _irParseNecFrame(const uint16_t *edges, uint16_t count, uint16_t index, uint16_t &next, uint32_t &code, bool &repeat);
+
+            // 1 NEC frame = lead mark + lead space + 32 * (mark + space) + stop mark
+            static constexpr uint8_t kNecFrameEdges = 2 + 32 * 2 + 1;
+
+            // holds more than 2 frames, a key held down repeats the frame every 110ms
+            static constexpr uint16_t kIREdgeBufferSize = 2 * (kNecFrameEdges + 1) + 32;
+
+            // edges closer than this are ignored (glitch filter), the shortest NEC pulse is 560us
+            static constexpr uint16_t kIRGlitchFilter = 50;
+
+            // no edge for this long means the frame has been received completely
+            // (the NEC repeat frame is sent 110ms after the previous frame)
+            static constexpr uint16_t kIRFrameIdleTime = 20000;
+
+            // time between two edges in microseconds, clamped to 0xffff, anything above the 9ms
+            // lead mark only means that the input has been idle
+            volatile uint16_t _irEdges[kIREdgeBufferSize];
+            volatile uint16_t _irEdgeCount;
+            volatile uint32_t _irLastEdge;
+            volatile bool _irOverflow;
+
+        #else
+
             IRrecv *_irReceiver{nullptr};
             decode_results _irResults{};
+
+        #endif
+
             Event::Timer _irTimer;
 
-            static constexpr uint32_t kStandbyLoopDelay = 10;
+            // reported by getStatus(), written by the loop task that decodes the frames
+            uint32_t _irLastCode{0};    // code of the last received frame
+            uint16_t _irFrameCount{0};  // number of received frames
+            uint16_t _irRepeatCount{0}; // number of repeat frames (the key is still held)
 
     #else
 

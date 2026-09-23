@@ -32,9 +32,11 @@ void ClockPlugin::_saveState()
     #else
         constexpr uint32_t kSaveDelay = 5000;
     #endif
+    // the storage has to match _config immediately, form callbacks (web server task) read it and
+    // the callback below only writes it to flash
+    Plugins::Clock::setConfig(_config);
     // delay writing config
     _Timer(_saveTimer).add(Event::milliseconds(kSaveDelay), false, [this](Event::CallbackTimerPtr) {
-        Plugins::Clock::setConfig(_config);
         __LDBG_printf("delay save dirty=%u", config.isDirty());
         if (config.isDirty()) {
             config.write();
@@ -671,11 +673,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         return;
     }
 
+    // the storage is kept in sync by the loop task (see _saveState()) and is the only config the
+    // form may use - _config and the save timer belong to the loop task
     auto &cfg = Plugins::Clock::getWriteableConfig();
-    // handle delayed saves
-    if (_saveTimer && memcmp(&cfg, &_config, sizeof(cfg)) != 0) {
-        cfg = _config; // copy updates
-    }
 
     // sub forms for the WebUI or split forms
     if (formName.startsWith(F("ani-"))) {

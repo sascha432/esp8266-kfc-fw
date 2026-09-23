@@ -65,6 +65,19 @@
 #    define IOT_LED_MATRIX_FASTLED_ONLY ((IOT_LED_MATRIX_NEOPIXEL_SUPPORT == 0) && (IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT == 0) ? 1 : 0)
 #endif
 
+// highest Clock::ShowMethodType this build can render (NONE=0, FASTLED=1, [NEOPIXEL_EX], [AF_NEOPIXEL]).
+// a method that is not compiled in would call ESP32RMTController::deinit() while
+// PixelDisplay::show() keeps using FastLED, see ClockPlugin::_setShowMethod()
+#ifndef IOT_CLOCK_SHOW_METHOD_MAX
+#    if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT && IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+#        define IOT_CLOCK_SHOW_METHOD_MAX 3
+#    elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT || IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+#        define IOT_CLOCK_SHOW_METHOD_MAX 2
+#    else
+#        define IOT_CLOCK_SHOW_METHOD_MAX 1
+#    endif
+#endif
+
 // -1 to disable standby LED/Relay/MOSFET
 #ifndef IOT_LED_MATRIX_STANDBY_PIN
 #    define IOT_LED_MATRIX_STANDBY_PIN -1

@@ -672,6 +672,8 @@ private:
             volatile int8_t enable{-1};                 // 0: _disable(), 1: _enable()
             volatile int8_t enableLoop{-1};             // 0/1: enableLoop()
             volatile int8_t reconfigure{-1};            // 1: apply config, 2: reset and apply config
+            volatile int8_t showMethod{-1};             // >= 0: _setShowMethod()
+            volatile bool toggleShowMethod{false};      // toggle the show method
         };
 
         PendingOpsType _pending;
@@ -694,6 +696,7 @@ public:
 
 protected:
     void _setShowMethod(Clock::ShowMethodType method);
+    void _toggleShowMethod();
 };
 
 inline void ClockPlugin::setColor(Color color)
@@ -913,6 +916,11 @@ inline Clock::ShowMethodType ClockPlugin::getShowMethod()
 
 inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
 {
+    #if IOT_LED_MATRIX_FASTLED_ONLY
+        // PixelDisplay::show() calls FastLED.show() for every show method, so the RMT driver has
+        // to stay initialised and FastLED is the only method that can be used
+        method = Clock::ShowMethodType::FASTLED;
+    #endif
     _method = method;
     #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S
         if (_method != Clock::ShowMethodType::FASTLED) {
@@ -923,14 +931,34 @@ inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
 
 inline void ClockPlugin::setShowMethod(Clock::ShowMethodType method)
 {
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+        // deinit() must not run while the loop task is rendering
+        auto &plugin = getInstance();
+        if (!plugin._isLoopTask()) {
+            plugin._pending.showMethod = static_cast<int8_t>(method);
+            return;
+        }
+    #endif
     getInstance()._setShowMethod(method);
 }
 
 inline void ClockPlugin::toggleShowMethod()
 {
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+        auto &plugin = getInstance();
+        if (!plugin._isLoopTask()) {
+            plugin._pending.toggleShowMethod = true;
+            return;
+        }
+    #endif
+    getInstance()._toggleShowMethod();
+}
+
+inline void ClockPlugin::_toggleShowMethod()
+{
     constexpr auto kFirst = static_cast<int>(Clock::ShowMethodType::NONE);
     constexpr auto kRange = static_cast<int>(Clock::ShowMethodType::MAX) - kFirst;
-    auto method = static_cast<uint8_t>(getInstance()._method);
+    auto method = static_cast<uint8_t>(_method);
     method -= kFirst + 1;
     if (method < 0) {
         method = 0;
@@ -938,7 +966,7 @@ inline void ClockPlugin::toggleShowMethod()
     else {
         method %= kRange;
     }
-    getInstance()._setShowMethod(static_cast<Clock::ShowMethodType>(method + kFirst));
+    _setShowMethod(static_cast<Clock::ShowMethodType>(method + kFirst));
 }
 
 
@@ -1125,7 +1153,9 @@ inline void ClockPlugin::_updateBrightnessSettings()
 inline void ClockPlugin::_reset()
 {
     // turn off all LEDs during restart or a crash
-    #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S
+    // IOT_LED_MATRIX_FASTLED_ONLY: PixelDisplay::show() keeps using FastLED, so the RMT driver must
+    // not be torn down here - the pixels are blanked by forceClear() below
+    #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S && !IOT_LED_MATRIX_FASTLED_ONLY
         ESP32RMTController::deinit();
     #endif
     NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));

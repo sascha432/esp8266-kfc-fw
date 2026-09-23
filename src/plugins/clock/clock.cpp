@@ -818,20 +818,45 @@ void ClockPlugin::readConfig(bool setup)
     IF_NOT_LOOP_TASK(_pending.configApply = true; return);
     // read config
     _config = Plugins::Clock::getConfig();
+
+    // The config is written by the web server task (form callbacks) while this runs in the loop
+    // task. Everything that programs the LED driver/mapping has to be sanitized, a torn read must
+    // never tear down the RMT driver (see _setShowMethod) or address pixels outside the buffer.
     _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
+
+    #if IOT_LED_MATRIX_FASTLED_ONLY
+        _config.method = static_cast<uint8_t>(Clock::ShowMethodType::FASTLED);
+    #else
+        if (_config.method > IOT_CLOCK_SHOW_METHOD_MAX) {
+            __DBG_printf("invalid show method %u, using FastLED", _config.method);
+            _config.method = static_cast<uint8_t>(Clock::ShowMethodType::FASTLED);
+        }
+    #endif
+
+    auto &matrix = _config.matrix;
+    // rows/cols = 0 would divide by zero in DynamicPixelMapping::setParams()
+    if (!matrix.rows || !matrix.cols || (static_cast<uint32_t>(matrix.rows) * matrix.cols) > IOT_CLOCK_NUM_PIXELS) {
+        __DBG_printf("invalid matrix %ux%u, using defaults", matrix.rows, matrix.cols);
+        matrix.rows = IOT_LED_MATRIX_ROWS;
+        matrix.cols = IOT_LED_MATRIX_COLS;
+    }
+    matrix.pixels0 = std::min<int>(matrix.pixels0, IOT_CLOCK_NUM_PIXELS);
+    matrix.offset0 = std::min<int>(matrix.offset0, IOT_CLOCK_NUM_PIXELS);
+    matrix.pixels1 = std::min<int>(matrix.pixels1, IOT_CLOCK_NUM_PIXELS);
+    matrix.offset1 = std::min<int>(matrix.offset1, IOT_CLOCK_NUM_PIXELS);
+    matrix.pixels2 = std::min<int>(matrix.pixels2, IOT_CLOCK_NUM_PIXELS);
+    matrix.offset2 = std::min<int>(matrix.offset2, IOT_CLOCK_NUM_PIXELS);
+    matrix.pixels3 = std::min<int>(matrix.pixels3, IOT_CLOCK_NUM_PIXELS);
+    matrix.offset3 = std::min<int>(matrix.offset3, IOT_CLOCK_NUM_PIXELS);
+    matrix.rowOfs = std::min<int>(matrix.rowOfs, matrix.rows - 1);
+    matrix.colOfs = std::min<int>(matrix.colOfs, matrix.cols - 1);
 
     _setShowMethod(static_cast<Clock::ShowMethodType>(_config.method));
 
     // set configured segments
-    _display.updateSegments(_config.matrix.pixels0, _config.matrix.offset0, _config.matrix.pixels1, _config.matrix.offset1, _config.matrix.pixels2, _config.matrix.offset2, _config.matrix.pixels3, _config.matrix.offset3);
+    _display.updateSegments(matrix.pixels0, matrix.offset0, matrix.pixels1, matrix.offset1, matrix.pixels2, matrix.offset2, matrix.pixels3, matrix.offset3);
 
-    // update matrix configuration
-    // rows/cols = 0 would divide by zero in DynamicPixelMapping::setParams()
-    if (!_config.matrix.rows || !_config.matrix.cols) {
-        _config.matrix.rows = IOT_LED_MATRIX_ROWS;
-        _config.matrix.cols = IOT_LED_MATRIX_COLS;
-    }
-    if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved, _config.matrix.rowOfs, _config.matrix.colOfs)) {
+    if (!_display.setParams(matrix.rows, matrix.cols, matrix.reverse_rows, matrix.reverse_cols, matrix.rotate, matrix.interleaved, matrix.rowOfs, matrix.colOfs)) {
         __DBG_printf("_display.setParams() failed");
     }
 
@@ -1198,6 +1223,17 @@ void ICACHE_FLASH_ATTR ClockPlugin::_applyPendingOps()
         auto enable = _pending.enableLoop;
         _pending.enableLoop = -1;
         enableLoop(enable);
+    }
+
+    if (_pending.showMethod >= 0) {
+        auto method = _pending.showMethod;
+        _pending.showMethod = -1;
+        _setShowMethod(static_cast<Clock::ShowMethodType>(method));
+    }
+
+    if (_pending.toggleShowMethod) {
+        _pending.toggleShowMethod = false;
+        _toggleShowMethod();
     }
 
     if (_pending.displayBrightness >= 0) {

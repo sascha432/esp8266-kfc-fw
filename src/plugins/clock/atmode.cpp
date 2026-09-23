@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+ #if AT_MODE_SUPPORTED
+
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <web_socket.h>
@@ -16,7 +18,6 @@
 #include <debug_helper_disable.h>
 #endif
 
-#if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
 

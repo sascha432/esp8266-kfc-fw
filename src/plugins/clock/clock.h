@@ -26,6 +26,13 @@
 #endif
 #include <Adafruit_NeoPixelEx.h>
 
+#if ESP32
+    // task handle of the Arduino loop task and the re-entrancy guard of _display_show()
+    #include <atomic>
+    #include <freertos/FreeRTOS.h>
+    #include <freertos/task.h>
+#endif
+
 namespace WebServer {
     class AsyncUpdateWebHandler;
 }
@@ -273,10 +280,26 @@ public:
 private:
     void _loop();
     void  _loopDoUpdate(LoopOptionsType &options);
-    // publishes/destroys queued animations, must only be called by the loop task
-    void _applyPendingAnimation();
+    // applies all queued changes (display, brightness, state, config) and publishes/destroys
+    // queued animations. must only be called by the loop task.
+    void _applyPendingChanges();
     void _setupTimer();
     void _display_show();
+    // implementation of reconfigure(), must only be called by the loop task
+    void _reconfigureNow(bool applyConfigOnly);
+
+    // Display ownership, see IOT_CLOCK_DEFERRED_DISPLAY_UPDATE: only the loop task touches the
+    // display, other tasks queue their requests (_pending) which are applied by _applyPendingOps().
+    // Use _show()/_clear()/_resetDisplay()/_setDisplayBrightness() instead of the _display member.
+    bool _isLoopTask() const;
+    void _show();
+    void _clear();
+    void _resetDisplay();
+    void _setDisplayBrightness(uint8_t brightness);
+
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+        void _applyPendingOps();
+    #endif
 
     // returns AnimationType::MAX if the name is invalid
     // searched for name, name slug or AnimationType as integer
@@ -632,6 +655,33 @@ private:
     uint32_t _pendingColor;
     bool _pendingColorSet;
 
+    // Requests queued by tasks that do not own the display, applied by _applyPendingOps().
+    // All values are single words, see IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+
+        struct PendingOpsType {
+            volatile bool show{false};                  // _display_show()
+            volatile bool clear{false};                 // _display.clear()
+            volatile bool reset{false};                 // _reset()
+            volatile bool configSync{false};            // _config = Plugins::Clock::getWriteableConfig()
+            volatile bool configApply{false};           // readConfig()
+            volatile bool saveState{false};             // _saveState()
+            volatile int16_t displayBrightness{-1};     // >= 0: _display.setBrightness()
+            volatile int16_t brightness{-1};            // >= 0: setBrightness()
+            volatile int8_t state{-1};                  // >= 0: _setState()
+            volatile int8_t enable{-1};                 // 0: _disable(), 1: _enable()
+            volatile int8_t enableLoop{-1};             // 0/1: enableLoop()
+            volatile int8_t reconfigure{-1};            // 1: apply config, 2: reset and apply config
+        };
+
+        PendingOpsType _pending;
+        // task handle of the Arduino loop task (setup() and loop() run in the same task)
+        TaskHandle_t _loopTaskHandle{nullptr};
+        // last line of defence, show() must never run re-entrantly
+        volatile bool _showInProgress{false};
+
+    #endif
+
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
         AmbientLightSensorHandler _lightSensor2;
     #endif
@@ -658,11 +708,48 @@ inline ClockPlugin::Color ClockPlugin::getColor() const
 
 inline void ClockPlugin::standbyLoop()
 {
+    // apply queued changes while the animation loop is disabled
+    getInstance()._applyPendingChanges();
     ::delay(kStandbyLoopDelay); // energy saving mode
+}
+
+inline bool ClockPlugin::_isLoopTask() const
+{
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+        // a null handle means setup()/early boot, which runs in the same task as loop()
+        return !_loopTaskHandle || _loopTaskHandle == xTaskGetCurrentTaskHandle();
+    #else
+        return true;
+    #endif
+}
+
+inline void ClockPlugin::_show()
+{
+    IF_NOT_LOOP_TASK(_pending.show = true; return);
+    _display_show();
+}
+
+inline void ClockPlugin::_clear()
+{
+    IF_NOT_LOOP_TASK(_pending.clear = true; return);
+    _display.clear();
+}
+
+inline void ClockPlugin::_resetDisplay()
+{
+    IF_NOT_LOOP_TASK(_pending.reset = true; return);
+    _reset();
+}
+
+inline void ClockPlugin::_setDisplayBrightness(uint8_t brightness)
+{
+    IF_NOT_LOOP_TASK(_pending.displayBrightness = brightness; return);
+    _display.setBrightness(brightness);
 }
 
 inline void ClockPlugin::enableLoop(bool enable)
 {
+    IF_NOT_LOOP_TASK(_pending.enableLoop = enable ? 1 : 0; return);
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
         setAutoBrightness(enable ? (Plugins::Sensor::getConfig().ambient.auto_brightness != -1) : false);
     #endif

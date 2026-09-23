@@ -11,6 +11,10 @@
 #include "i2s_microphone.h"
 #include "clock.h"
 
+#if defined(FASTLED_ESP32_I2S) && (IOT_LED_MATRIX_I2S_PORT == I2S_NUM_0)
+#    error "FASTLED_ESP32_I2S (LED data over I2S) and the visualizer I2S microphone both use I2S port 0 - set IOT_LED_MATRIX_I2S_PORT to I2S_NUM_1 or disable IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE"
+#endif
+
 #if 0
 #    include <debug_helper_enable.h>
 #else

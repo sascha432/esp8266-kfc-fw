@@ -362,6 +362,25 @@
 #    define IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS 255
 #endif
 
+// The display, the animation objects and the configuration are owned by the loop task, see
+// ClockPlugin::_isLoopTask(). FastLED's ESP32 driver keeps its state in process globals and its
+// show() is not re-entrant, and the network stack (AsyncTCP/AsyncWebSocket/MQTT) shares the CPU
+// with the loop task, so those tasks only queue their changes.
+// The ESP8266 is single core and its network stack cannot preempt the loop task -> 0
+#ifndef IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+#    define IOT_CLOCK_DEFERRED_DISPLAY_UPDATE (ESP32)
+#endif
+
+// queues the operation if the caller does not own the display, e.g.
+// IF_NOT_LOOP_TASK(_pending.clear = true; return);
+// (the argument is a statement list, only valid inside ClockPlugin member functions,
+// see ClockPlugin::_isLoopTask())
+#if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+#    define IF_NOT_LOOP_TASK(...) if (!_isLoopTask()) { __VA_ARGS__;  __DBG_printf("queued: %s", #__VA_ARGS__); }
+#else
+#    define IF_NOT_LOOP_TASK(...)
+#endif
+
 #if defined(ESP8266)
 #    ifndef FASTLED_ESP8266_RAW_PIN_ORDER
 #        define FASTLED_ESP8266_RAW_PIN_ORDER 1

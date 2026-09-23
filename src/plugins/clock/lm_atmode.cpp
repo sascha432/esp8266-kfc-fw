@@ -117,90 +117,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 }
             }
         }
-        else if (args.startsWithIgnoreCase(0, F("test"))) {
-            enableLoop(false);
-            uint16_t x = 0;
-            uint16_t y = 0;
-            uint16_t n = 0;
-            auto mode = args.toIntMinMax<uint8_t>(1, 1, 3, 1);
-            auto speed = args.toMillis(4, 50, 10000, 100);
-            auto brightness = args.toIntMinMax<uint8_t>(3, 1, 255, 128);
-            _display.setBrightness(brightness);
-            _display.clear();
-            _display.show();
-            delay(1);
-            _display.show();
-            auto color = Color::fromString(args.toString(2, F("#330033")));
-            args.print(F("test=%u color=%s speed=%ums brightness=%u"), mode, color.toString().c_str(), speed, brightness);
-            auto displayPtr = &_display;
-            auto stream = &args.getStream();
-            switch(mode) {
-                case 1:
-                    _Scheduler.add(Event::milliseconds(speed), true, [n, displayPtr, color, stream](Event::CallbackTimerPtr timer) mutable {
-                        auto &display = *displayPtr;
-                        auto point = display.getPoint(n);
-                        stream->printf_P(PSTR("pixel=%u x=%u y=%u addr=%u\n"), n, point.col(), point.row(), display.getAddress(point));
-                        display.fill(0);
-                        display.setPixel(n, color);
-                        display.show();
-                        delay(1);
-                        display.show();
-                        n++;
-                        if (n >= display.size()) {
-                            display.clear();
-                            display.show();
-                            delay(1);
-                            display.show();
-                            timer->disarm();
-                        }
-                    });
-                    break;
-                case 2:
-                    _Scheduler.add(Event::milliseconds(speed), true, [n, displayPtr, color, stream](Event::CallbackTimerPtr timer) mutable {
-                        auto &display = *displayPtr;
-                        auto point = display.getPoint(n);
-                        stream->printf_P(PSTR("pixel=%u x=%u y=%u addr=%u\n"), n, point.col(), point.row(), display.getAddress(point));
-                        display.fill(color);
-                        display.hideAll();
-                        display.setPixelState(n, true);
-                        display.show();
-                        delay(1);
-                        display.show();
-                        n++;
-                        if (n >= display.size()) {
-                            display.clear();
-                            display.show();
-                            delay(1);
-                            display.show();
-                            timer->disarm();
-                        }
-                    });
-                    break;
-                default:
-                    _Scheduler.add(Event::milliseconds(speed), true, [x, y, displayPtr, color, stream](Event::CallbackTimerPtr timer) mutable {
-                        auto &display = *displayPtr;
-                        auto addr = display.getAddress(x, y);
-                        stream->printf_P(PSTR("pixel=%u x=%u y=%u\n"), addr, x, y);
-                        display.fill(0);
-                        display.setPixel(y, x, color);
-                        display.show();
-                        delay(1);
-                        display.show();
-                        x++;
-                        if (x >= display.getCols()) {
-                            y++;
-                            if (y >= display.getRows()) {
-                                display.clear();
-                                display.show();
-                                delay(1);
-                                display.show();
-                                timer->disarm();
-                            }
-                        }
-                    });
-                    break;
-            }
-        }
         // dit[her],<on|off>
         else if (args.startsWithIgnoreCase(0, F("dit"))) {
             bool state = args.isTrue(1);
@@ -220,6 +136,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>,<offset>
         else if (args.startsWithIgnoreCase(0, F("map"))) {
+            // the mapping is used by the renderer, it must not change while the loop task draws
+            IF_NOT_LOOP_TASK(args.print(F("not available from this context, use the serial console")); return true);
             if (args.size() >= 6) {
                 if (!_display.setParams(
                     args.toInt(1, _display.getRows()),
@@ -247,16 +165,16 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         // res[et][,<pixels>]
         else if (args.startsWithIgnoreCase(0, F("res"))) {
-            _reset();
+            _resetDisplay();
             args.print(F("display reset"));
         }
         // cl[ear]
         else if (args.startsWithIgnoreCase(0, F("cl"))) {
             enableLoop(false);
-            _display.clear();
-            _display.show();
+            _clear();
+            _show();
             delay(1);
-            _display.show();
+            _show();
             args.print(F("display cleared"));
         }
         // pr[int],<display=00:00:00>
@@ -283,10 +201,10 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         // lo[op],<enable|disable>
         else if (args.startsWithIgnoreCase(0, F("lo"))) {
-            _display.clear();
-            _display.show();
+            _clear();
+            _show();
             delay(1);
-            _display.show();
+            _show();
             auto value = args.isTrue(1);
             enableLoop(value);
             args.print(F("loop %s"), value ? PSTR("enabled") : PSTR("disabled"));
@@ -366,9 +284,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     _display.setPixel(i, color);
                     _display.setPixelState(i, true);
                 }
-                _display.show();
+                _show();
                 delay(1);
-                _display.show();
+                _show();
             }
             else {
                 args.getStream().printf_P(PSTR("show=%s pin=%u "), getNeopixelShowMethodStr(), IOT_LED_MATRIX_OUTPUT_PIN);

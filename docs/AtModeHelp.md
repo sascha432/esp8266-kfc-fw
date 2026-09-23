@@ -309,7 +309,6 @@ Run command
 - map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>
 - cl[ear]
 - res[et][,<pixels=116>]
-- test,<1=pixel order|2=clock|3=row/col>[,#color=#330033][,<brightness=128>][,<speed=100ms>]
 - get[,<range>]
 - set,<range(=0-7)>,[#color]
 

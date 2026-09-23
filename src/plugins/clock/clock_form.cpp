@@ -26,6 +26,7 @@
 
 void ClockPlugin::_saveState()
 {
+    IF_NOT_LOOP_TASK(_pending.saveState = true; return);
     #if ESP8266
         constexpr uint32_t kSaveDelay = 10000;
     #else
@@ -43,6 +44,7 @@ void ClockPlugin::_saveState()
 
 void ClockPlugin::_setState(bool state, bool autoOff)
 {
+    IF_NOT_LOOP_TASK(_pending.state = state ? 1 : 0; return);
     #if IOT_SENSOR_HAVE_MOTION_SENSOR
         _motionAutoOff = autoOff;
     #endif
@@ -654,6 +656,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     // handle delayed saves
     if (type == FormCallbackType::SAVE) {
+        // a form callback runs in the web server task, the local config copy and the save timer
+        // belong to the loop task
+        IF_NOT_LOOP_TASK(_pending.configSync = true; return);
         // on save copy changes to local memory
         auto &cfg = Plugins::Clock::getWriteableConfig();
         _config = cfg;

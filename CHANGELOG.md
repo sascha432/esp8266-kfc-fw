@@ -30,6 +30,7 @@
  - Fixed an issue where the OpenWeatherMap forecast was not being updated
  - Updated OpenWeatherMap API to OneCall API 3.0
  - Added a forecast screen for the weather station
+ - Fixed an `Interrupt wdt timeout on CPU1` crash caused by `FastLED.show()` running in two tasks at the same time (WebUI/MQTT commands changed the LED matrix while the loop task was rendering). The display, the animation objects, the loop functions and the clock configuration are now owned by the loop task, other tasks queue their changes (`+LMC` display access is limited to the serial console from other contexts)
 
 ## Version 0.0.8
 

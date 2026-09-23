@@ -296,6 +296,11 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+        // setup() and loop() run in the same task, remember it (see _isLoopTask())
+        _loopTaskHandle = xTaskGetCurrentTaskHandle();
+    #endif
+
     #if defined(HAVE_IOEXPANDER)
         auto &_PCF8574 = IOExpander::config._device;
         _PCF8574.DDR = 0b00111111;
@@ -473,8 +478,14 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
+    IF_NOT_LOOP_TASK(_pending.reconfigure = source.startsWith(F("ani-")) ? 1 : 2; return);
+    _reconfigureNow(source.startsWith(F("ani-")));
+}
+
+void ClockPlugin::_reconfigureNow(bool applyConfigOnly)
+{
     _isRunning = false;
-    if (source.startsWith(F("ani-"))) {
+    if (applyConfigOnly) {
         // do not reset just apply new config
         _config.enabled = false;
         _isEnabled = false;
@@ -708,6 +719,7 @@ void ClockPlugin::getStatus(Print &output)
 
 void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
 {
+    IF_NOT_LOOP_TASK(_pending.brightness = brightness; return);
     if (ms < 0) {
         ms = _config.getFadingTimeMillis();
     }
@@ -803,6 +815,7 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
 
 void ClockPlugin::readConfig(bool setup)
 {
+    IF_NOT_LOOP_TASK(_pending.configApply = true; return);
     // read config
     _config = Plugins::Clock::getConfig();
     _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
@@ -903,6 +916,7 @@ void ClockPlugin::_setBrightness(uint8_t brightness, bool useEnable)
 
 void ClockPlugin::_enable()
 {
+    IF_NOT_LOOP_TASK(_pending.enable = 1; return);
     if (_isLocked) {
         _isLocked = false;
         return;
@@ -949,6 +963,7 @@ void ClockPlugin::_enable()
 
 void ClockPlugin::_disable()
 {
+    IF_NOT_LOOP_TASK(_pending.enable = 0; return);
     __LDBG_printf("disable LED pin=%d state=%u (cfg_enabled=%u, is_enabled=%u, config=%u)", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false), _config.standby_led, _isEnabled, _config.enabled);
 
     // turn all leds off and set brightness to 0
@@ -1054,8 +1069,9 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
 
 void IRAM_ATTR ClockPlugin::_loop()
 {
-    // animations requested by other tasks are published/destroyed here
-    _applyPendingAnimation();
+    // the loop task is the only one that may change the display or the config, it applies all
+    // changes requested by other tasks here
+    _applyPendingChanges();
 
     LoopOptionsType options(*this);
     _display.setBrightness(_getBrightness());
@@ -1111,17 +1127,118 @@ void IRAM_ATTR ClockPlugin::_loop()
 
 void IRAM_ATTR ClockPlugin::_display_show()
 {
-    _display.show();
+    IF_NOT_LOOP_TASK(_pending.show = true; return);
+
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+        // last line of defence, show() must never run re-entrantly
+        if (_showInProgress) {
+            _pending.show = true;
+            return;
+        }
+        _showInProgress = true;
+        _display.show();
+        _showInProgress = false;
+    #else
+        _display.show();
+    #endif
 }
 
 #if ESP8266
 #   pragma GCC pop_options
 #endif
 
-// publish queued animations and destroy the animations they replace
-// this is the only place where an animation object gets published, started or deleted
-void ICACHE_FLASH_ATTR ClockPlugin::_applyPendingAnimation()
+#if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+
+// apply the requests queued by tasks that do not own the display
+// the order matters: config -> brightness/state -> display -> save
+void ICACHE_FLASH_ATTR ClockPlugin::_applyPendingOps()
 {
+    if (_pending.configSync) {
+        _pending.configSync = false;
+        _config = Plugins::Clock::getWriteableConfig();
+        // remove timer, everything has been written already
+        _Timer(_saveTimer).remove();
+    }
+
+    if (_pending.configApply) {
+        _pending.configApply = false;
+        readConfig(false);
+    }
+
+    if (_pending.reconfigure >= 0) {
+        auto type = _pending.reconfigure;
+        _pending.reconfigure = -1;
+        _reconfigureNow(type == 1);
+    }
+
+    if (_pending.brightness >= 0) {
+        auto brightness = _pending.brightness;
+        _pending.brightness = -1;
+        setBrightness(brightness);
+    }
+
+    if (_pending.state >= 0) {
+        auto state = _pending.state;
+        _pending.state = -1;
+        _setState(state);
+    }
+
+    if (_pending.enable >= 0) {
+        auto enable = _pending.enable;
+        _pending.enable = -1;
+        if (enable) {
+            _enable();
+        }
+        else {
+            _disable();
+        }
+    }
+
+    if (_pending.enableLoop >= 0) {
+        auto enable = _pending.enableLoop;
+        _pending.enableLoop = -1;
+        enableLoop(enable);
+    }
+
+    if (_pending.displayBrightness >= 0) {
+        auto brightness = _pending.displayBrightness;
+        _pending.displayBrightness = -1;
+        _display.setBrightness(brightness);
+    }
+
+    if (_pending.clear) {
+        _pending.clear = false;
+        _display.clear();
+    }
+
+    if (_pending.reset) {
+        _pending.reset = false;
+        _reset();
+    }
+
+    if (_pending.show) {
+        _pending.show = false;
+        _display_show();
+    }
+
+    if (_pending.saveState) {
+        _pending.saveState = false;
+        _saveState();
+    }
+}
+
+#endif
+
+// apply the changes queued by other tasks and publish queued animations
+// this is the only place where the display, the animation objects and the config are changed
+// (except for the loop task itself), see _isLoopTask()
+void ICACHE_FLASH_ATTR ClockPlugin::_applyPendingChanges()
+{
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+        _applyPendingOps();
+    #endif
+
+    // publish queued animations and destroy the animations they replace
     for(auto &pending: _pendingAnimation) {
         auto animation = pending;
         if (!animation) {

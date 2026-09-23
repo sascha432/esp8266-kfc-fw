@@ -9,6 +9,10 @@
     #include "../src/plugins/clock/clock_def.h"
 #endif
 
+#ifndef IOT_CLOCK_SHOW_METHOD_MAX
+    #define IOT_CLOCK_SHOW_METHOD_MAX 0
+#endif
+
 namespace KFCConfigurationClasses {
 
     namespace Plugins {

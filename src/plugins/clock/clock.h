@@ -287,6 +287,8 @@ private:
     void _display_show();
     // implementation of reconfigure(), must only be called by the loop task
     void _reconfigureNow(bool applyConfigOnly);
+    // fixes/clamps config values that program the LED driver and the pixel mapping
+    void _sanitizeConfig();
 
     // Display ownership, see IOT_CLOCK_DEFERRED_DISPLAY_UPDATE: only the loop task touches the
     // display, other tasks queue their requests (_pending) which are applied by _applyPendingOps().
@@ -296,10 +298,6 @@ private:
     void _clear();
     void _resetDisplay();
     void _setDisplayBrightness(uint8_t brightness);
-
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        void _applyPendingOps();
-    #endif
 
     // returns AnimationType::MAX if the name is invalid
     // searched for name, name slug or AnimationType as integer
@@ -351,7 +349,7 @@ public:
     // ------------------------------------------------------------------------
     // Fan control
     // ------------------------------------------------------------------------
-    #ifdef IOT_LED_MATRIX_FAN_CONTROL
+    #if IOT_LED_MATRIX_FAN_CONTROL
 
     private:
         void _setFanSpeed(uint8_t speed);
@@ -655,33 +653,151 @@ private:
     uint32_t _pendingColor;
     bool _pendingColorSet;
 
-    // Requests queued by tasks that do not own the display, applied by _applyPendingOps().
-    // All values are single words, see IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+    // Requests queued by tasks that do not own the display. The loop task drains the queue once per
+    // iteration, the ESP8266 (single core, no preemption) queues nothing, see
+    // IOT_CLOCK_DEFERRED_DISPLAY_UPDATE. All values are single words.
+    struct PendingOpsType {
+
+        #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
+
+            volatile bool show;                 // _display_show()
+            volatile bool clear;                // _display.clear()
+            volatile bool reset;                // _reset()
+            volatile bool configSync;           // _config = Plugins::Clock::getWriteableConfig()
+            volatile bool configApply;          // readConfig()
+            volatile bool saveState;            // _saveState()
+            volatile int16_t displayBrightness; // >= 0: _display.setBrightness()
+            volatile int16_t brightness;        // >= 0: setBrightness()
+            volatile int8_t state;              // >= 0: _setState()
+            volatile int8_t enable;             // 0: _disable(), 1: _enable()
+            volatile int8_t enableLoop;         // 0/1: enableLoop()
+            volatile int8_t reconfigure;        // 1: apply config, 2: reset and apply config
+            volatile int8_t showMethod;         // >= 0: _setShowMethod()
+            volatile bool toggleShowMethod;     // toggle the show method
+
+            // nothing queued: bools false, the optional values disabled (-1)
+            PendingOpsType() :
+                show(false),
+                clear(false),
+                reset(false),
+                configSync(false),
+                configApply(false),
+                saveState(false),
+                displayBrightness(-1),
+                brightness(-1),
+                state(-1),
+                enable(-1),
+                enableLoop(-1),
+                reconfigure(-1),
+                showMethod(-1),
+                toggleShowMethod(false)
+            {
+            }
+
+            // applies the queued requests, the order matters:
+            // config -> brightness/state -> display -> save
+            void apply(ClockPlugin &plugin)
+            {
+                if (configSync) {
+                    configSync = false;
+                    plugin._config = Plugins::Clock::getWriteableConfig();
+                    // remove timer, everything has been written already
+                    _Timer(plugin._saveTimer).remove();
+                }
+
+                if (configApply) {
+                    configApply = false;
+                    plugin.readConfig(false);
+                }
+
+                if (reconfigure >= 0) {
+                    auto type = reconfigure;
+                    reconfigure = -1;
+                    plugin._reconfigureNow(type == 1);
+                }
+
+                if (brightness >= 0) {
+                    auto value = brightness;
+                    brightness = -1;
+                    plugin.setBrightness(value);
+                }
+
+                if (state >= 0) {
+                    auto value = state;
+                    state = -1;
+                    plugin._setState(value);
+                }
+
+                if (enable >= 0) {
+                    auto value = enable;
+                    enable = -1;
+                    if (value) {
+                        plugin._enable();
+                    }
+                    else {
+                        plugin._disable();
+                    }
+                }
+
+                if (enableLoop >= 0) {
+                    auto value = enableLoop;
+                    enableLoop = -1;
+                    plugin.enableLoop(value);
+                }
+
+                if (showMethod >= 0) {
+                    auto value = showMethod;
+                    showMethod = -1;
+                    plugin._setShowMethod(static_cast<Clock::ShowMethodType>(value));
+                }
+
+                if (toggleShowMethod) {
+                    toggleShowMethod = false;
+                    plugin._toggleShowMethod();
+                }
+
+                if (displayBrightness >= 0) {
+                    auto value = displayBrightness;
+                    displayBrightness = -1;
+                    plugin._display.setBrightness(value);
+                }
+
+                if (clear) {
+                    clear = false;
+                    plugin._display.clear();
+                }
+
+                if (reset) {
+                    reset = false;
+                    plugin._reset();
+                }
+
+                if (show) {
+                    show = false;
+                    plugin._display_show();
+                }
+
+                if (saveState) {
+                    saveState = false;
+                    plugin._saveState();
+                }
+            }
+
+        #else
+
+            // nothing is queued, the ESP8266 cannot be preempted by the network stack
+            void apply(ClockPlugin &) {}
+
+        #endif
+    };
+
+    PendingOpsType _pending;
+
     #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-
-        struct PendingOpsType {
-            volatile bool show{false};                  // _display_show()
-            volatile bool clear{false};                 // _display.clear()
-            volatile bool reset{false};                 // _reset()
-            volatile bool configSync{false};            // _config = Plugins::Clock::getWriteableConfig()
-            volatile bool configApply{false};           // readConfig()
-            volatile bool saveState{false};             // _saveState()
-            volatile int16_t displayBrightness{-1};     // >= 0: _display.setBrightness()
-            volatile int16_t brightness{-1};            // >= 0: setBrightness()
-            volatile int8_t state{-1};                  // >= 0: _setState()
-            volatile int8_t enable{-1};                 // 0: _disable(), 1: _enable()
-            volatile int8_t enableLoop{-1};             // 0/1: enableLoop()
-            volatile int8_t reconfigure{-1};            // 1: apply config, 2: reset and apply config
-            volatile int8_t showMethod{-1};             // >= 0: _setShowMethod()
-            volatile bool toggleShowMethod{false};      // toggle the show method
-        };
-
-        PendingOpsType _pending;
         // task handle of the Arduino loop task (setup() and loop() run in the same task)
         TaskHandle_t _loopTaskHandle{nullptr};
         // last line of defence, show() must never run re-entrantly
         volatile bool _showInProgress{false};
-
     #endif
 
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
@@ -931,26 +1047,13 @@ inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
 
 inline void ClockPlugin::setShowMethod(Clock::ShowMethodType method)
 {
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        // deinit() must not run while the loop task is rendering
-        auto &plugin = getInstance();
-        if (!plugin._isLoopTask()) {
-            plugin._pending.showMethod = static_cast<int8_t>(method);
-            return;
-        }
-    #endif
+    IF_NOT_LOOP_TASK(getInstance()._pending.showMethod = static_cast<int8_t>(method); return);
     getInstance()._setShowMethod(method);
 }
 
 inline void ClockPlugin::toggleShowMethod()
 {
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        auto &plugin = getInstance();
-        if (!plugin._isLoopTask()) {
-            plugin._pending.toggleShowMethod = true;
-            return;
-        }
-    #endif
+    IF_NOT_LOOP_TASK(getInstance()._pending.toggleShowMethod = true; return);
     getInstance()._toggleShowMethod();
 }
 

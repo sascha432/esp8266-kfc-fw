@@ -239,7 +239,7 @@ void ClockPlugin::_setupTimer()
                         #if IOT_LED_MATRIX_FAN_CONTROL
                             _setFanSpeed(255);
                         #endif
-                        #if IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
+                        #if defined(IOT_CLOCK_HAVE_OVERHEATED_PIN) && IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
                             digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, LOW);
                             #if IOT_LED_MATRIX_STANDBY_PIN != -1
                                 digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
@@ -813,15 +813,11 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
     _schedulePublishState = true;
 }
 
-void ClockPlugin::readConfig(bool setup)
+// Sanitize the values that program the LED driver and the pixel mapping. The config is written by
+// the web server task (form callbacks) while this runs in the loop task, so a torn value must not
+// reach ESP32RMTController::deinit() (see _setShowMethod) or the LED buffer.
+void ClockPlugin::_sanitizeConfig()
 {
-    IF_NOT_LOOP_TASK(_pending.configApply = true; return);
-    // read config
-    _config = Plugins::Clock::getConfig();
-
-    // The config is written by the web server task (form callbacks) while this runs in the loop
-    // task. Everything that programs the LED driver/mapping has to be sanitized, a torn read must
-    // never tear down the RMT driver (see _setShowMethod) or address pixels outside the buffer.
     _config.protection.max_temperature = std::max<uint8_t>(kMinimumTemperatureThreshold, _config.protection.max_temperature);
 
     #if IOT_LED_MATRIX_FASTLED_ONLY
@@ -834,29 +830,38 @@ void ClockPlugin::readConfig(bool setup)
     #endif
 
     auto &matrix = _config.matrix;
-    // rows/cols = 0 would divide by zero in DynamicPixelMapping::setParams()
-    if (!matrix.rows || !matrix.cols || (static_cast<uint32_t>(matrix.rows) * matrix.cols) > IOT_CLOCK_NUM_PIXELS) {
+    // rows/cols = 0 would divide by zero, PixelMapping::setParams() takes rowOfs/colOfs modulo them
+    if (!matrix.rows || !matrix.cols) {
         __DBG_printf("invalid matrix %ux%u, using defaults", matrix.rows, matrix.cols);
         matrix.rows = IOT_LED_MATRIX_ROWS;
         matrix.cols = IOT_LED_MATRIX_COLS;
     }
-    matrix.pixels0 = std::min<int>(matrix.pixels0, IOT_CLOCK_NUM_PIXELS);
-    matrix.offset0 = std::min<int>(matrix.offset0, IOT_CLOCK_NUM_PIXELS);
-    matrix.pixels1 = std::min<int>(matrix.pixels1, IOT_CLOCK_NUM_PIXELS);
-    matrix.offset1 = std::min<int>(matrix.offset1, IOT_CLOCK_NUM_PIXELS);
-    matrix.pixels2 = std::min<int>(matrix.pixels2, IOT_CLOCK_NUM_PIXELS);
-    matrix.offset2 = std::min<int>(matrix.offset2, IOT_CLOCK_NUM_PIXELS);
-    matrix.pixels3 = std::min<int>(matrix.pixels3, IOT_CLOCK_NUM_PIXELS);
-    matrix.offset3 = std::min<int>(matrix.offset3, IOT_CLOCK_NUM_PIXELS);
-    matrix.rowOfs = std::min<int>(matrix.rowOfs, matrix.rows - 1);
-    matrix.colOfs = std::min<int>(matrix.colOfs, matrix.cols - 1);
+
+    // updateSegments() does not validate the segments, they have to stay inside the pixel buffer
+    constexpr int kMaxSegmentPixels = IOT_CLOCK_NUM_PIXELS;
+    matrix.pixels0 = std::min<int>(matrix.pixels0, kMaxSegmentPixels);
+    matrix.offset0 = std::min<int>(matrix.offset0, kMaxSegmentPixels);
+    matrix.pixels1 = std::min<int>(matrix.pixels1, kMaxSegmentPixels);
+    matrix.offset1 = std::min<int>(matrix.offset1, kMaxSegmentPixels);
+    matrix.pixels2 = std::min<int>(matrix.pixels2, kMaxSegmentPixels);
+    matrix.offset2 = std::min<int>(matrix.offset2, kMaxSegmentPixels);
+    matrix.pixels3 = std::min<int>(matrix.pixels3, kMaxSegmentPixels);
+    matrix.offset3 = std::min<int>(matrix.offset3, kMaxSegmentPixels);
+}
+
+void ClockPlugin::readConfig(bool setup)
+{
+    IF_NOT_LOOP_TASK(_pending.configApply = true; return);
+    // read config
+    _config = Plugins::Clock::getConfig();
+    _sanitizeConfig();
 
     _setShowMethod(static_cast<Clock::ShowMethodType>(_config.method));
 
     // set configured segments
-    _display.updateSegments(matrix.pixels0, matrix.offset0, matrix.pixels1, matrix.offset1, matrix.pixels2, matrix.offset2, matrix.pixels3, matrix.offset3);
+    _display.updateSegments(_config.matrix.pixels0, _config.matrix.offset0, _config.matrix.pixels1, _config.matrix.offset1, _config.matrix.pixels2, _config.matrix.offset2, _config.matrix.pixels3, _config.matrix.offset3);
 
-    if (!_display.setParams(matrix.rows, matrix.cols, matrix.reverse_rows, matrix.reverse_cols, matrix.rotate, matrix.interleaved, matrix.rowOfs, matrix.colOfs)) {
+    if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved, _config.matrix.rowOfs, _config.matrix.colOfs)) {
         __DBG_printf("_display.setParams() failed");
     }
 
@@ -1152,19 +1157,22 @@ void IRAM_ATTR ClockPlugin::_loop()
 
 void IRAM_ATTR ClockPlugin::_display_show()
 {
+    // _display is owned by the loop task, queued requests are applied by _applyPendingOps()
     IF_NOT_LOOP_TASK(_pending.show = true; return);
 
+    // last line of defence, show() must never run re-entrantly
     #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        // last line of defence, show() must never run re-entrantly
         if (_showInProgress) {
             _pending.show = true;
             return;
         }
         _showInProgress = true;
-        _display.show();
+    #endif
+
+    _display.show();
+
+    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
         _showInProgress = false;
-    #else
-        _display.show();
     #endif
 }
 
@@ -1172,107 +1180,13 @@ void IRAM_ATTR ClockPlugin::_display_show()
 #   pragma GCC pop_options
 #endif
 
-#if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-
-// apply the requests queued by tasks that do not own the display
-// the order matters: config -> brightness/state -> display -> save
-void ICACHE_FLASH_ATTR ClockPlugin::_applyPendingOps()
-{
-    if (_pending.configSync) {
-        _pending.configSync = false;
-        _config = Plugins::Clock::getWriteableConfig();
-        // remove timer, everything has been written already
-        _Timer(_saveTimer).remove();
-    }
-
-    if (_pending.configApply) {
-        _pending.configApply = false;
-        readConfig(false);
-    }
-
-    if (_pending.reconfigure >= 0) {
-        auto type = _pending.reconfigure;
-        _pending.reconfigure = -1;
-        _reconfigureNow(type == 1);
-    }
-
-    if (_pending.brightness >= 0) {
-        auto brightness = _pending.brightness;
-        _pending.brightness = -1;
-        setBrightness(brightness);
-    }
-
-    if (_pending.state >= 0) {
-        auto state = _pending.state;
-        _pending.state = -1;
-        _setState(state);
-    }
-
-    if (_pending.enable >= 0) {
-        auto enable = _pending.enable;
-        _pending.enable = -1;
-        if (enable) {
-            _enable();
-        }
-        else {
-            _disable();
-        }
-    }
-
-    if (_pending.enableLoop >= 0) {
-        auto enable = _pending.enableLoop;
-        _pending.enableLoop = -1;
-        enableLoop(enable);
-    }
-
-    if (_pending.showMethod >= 0) {
-        auto method = _pending.showMethod;
-        _pending.showMethod = -1;
-        _setShowMethod(static_cast<Clock::ShowMethodType>(method));
-    }
-
-    if (_pending.toggleShowMethod) {
-        _pending.toggleShowMethod = false;
-        _toggleShowMethod();
-    }
-
-    if (_pending.displayBrightness >= 0) {
-        auto brightness = _pending.displayBrightness;
-        _pending.displayBrightness = -1;
-        _display.setBrightness(brightness);
-    }
-
-    if (_pending.clear) {
-        _pending.clear = false;
-        _display.clear();
-    }
-
-    if (_pending.reset) {
-        _pending.reset = false;
-        _reset();
-    }
-
-    if (_pending.show) {
-        _pending.show = false;
-        _display_show();
-    }
-
-    if (_pending.saveState) {
-        _pending.saveState = false;
-        _saveState();
-    }
-}
-
-#endif
-
 // apply the changes queued by other tasks and publish queued animations
 // this is the only place where the display, the animation objects and the config are changed
 // (except for the loop task itself), see _isLoopTask()
 void ICACHE_FLASH_ATTR ClockPlugin::_applyPendingChanges()
 {
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        _applyPendingOps();
-    #endif
+    // requests queued by other tasks, see PendingOpsType
+    _pending.apply(*this);
 
     // publish queued animations and destroy the animations they replace
     for(auto &pending: _pendingAnimation) {

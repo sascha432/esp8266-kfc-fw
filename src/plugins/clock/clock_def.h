@@ -265,7 +265,7 @@
 #   define IOT_LED_MATRIX_FAN_CONTROL 0
 #endif
 
-#if IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
+#if defined(IOT_CLOCK_HAVE_OVERHEATED_PIN) && IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
 #       define IF_IOT_IOT_LED_OVERHEATED_PIN(...) __VA_ARGS__
 #else
 #       define IF_IOT_IOT_LED_OVERHEATED_PIN(...)
@@ -384,12 +384,14 @@
 #    define IOT_CLOCK_DEFERRED_DISPLAY_UPDATE (ESP32)
 #endif
 
-// queues the operation if the caller does not own the display, e.g.
+// queues the operation if the caller does not own the display and logs it with DEBUG=1, e.g.
 // IF_NOT_LOOP_TASK(_pending.clear = true; return);
-// (the argument is a statement list, only valid inside ClockPlugin member functions,
-// see ClockPlugin::_isLoopTask())
+// (the argument is a statement list, see ClockPlugin::_isLoopTask())
 #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-#    define IF_NOT_LOOP_TASK(...) if (!_isLoopTask()) { __VA_ARGS__;  __DBG_printf("queued: %s", #__VA_ARGS__); }
+#    define IF_NOT_LOOP_TASK(...)                   \
+        if (!getInstance()._isLoopTask()) {         \
+            __VA_ARGS__;                            \
+        }
 #else
 #    define IF_NOT_LOOP_TASK(...)
 #endif

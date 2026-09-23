@@ -173,8 +173,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             enableLoop(false);
             _clear();
             _show();
-            delay(1);
-            _show();
             args.print(F("display cleared"));
         }
         // pr[int],<display=00:00:00>
@@ -202,8 +200,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         // lo[op],<enable|disable>
         else if (args.startsWithIgnoreCase(0, F("lo"))) {
             _clear();
-            _show();
-            delay(1);
             _show();
             auto value = args.isTrue(1);
             enableLoop(value);
@@ -284,8 +280,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     _display.setPixel(i, color);
                     _display.setPixelState(i, true);
                 }
-                _show();
-                delay(1);
                 _show();
             }
             else {

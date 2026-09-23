@@ -61,7 +61,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_CCS811::getAutoDiscovery(FormatType format
             if (discovery->create(this, _getId(F("tvoc")), format)) {
                 discovery->addStateTopic(MQTT::Client::formatTopic(_getId()));
                 discovery->addValueTemplate(F("TVOC"));
-                discovery->addDeviceClass(F("volatile_organic_compounds"), F("ppb"));
+                discovery->addDeviceClass(F("volatile_organic_compounds_parts"), F("ppb"));
                 discovery->addStateClass(F("measurement"));
                 discovery->addName(F("TVOC"));
                 discovery->addObjectId(baseTopic + F("tvoc"));

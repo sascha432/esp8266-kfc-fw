@@ -22,6 +22,7 @@
  - Fixed savecrash issues
  - Updated MQTT sensors
  - Fixed invalid MQTT device class for BME680 VOC sensor and added persistent eCO2 calibration
+ - Fixed invalid MQTT device class for CCS811 TVOC sensor
  - Intercom plugin for managing a remote doorbell via phone
  - Improved consistency in BME680 CO2 readings using the Adafruit library
  - Fixed issue with the dimmer plugin's off button

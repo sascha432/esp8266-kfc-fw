@@ -169,36 +169,93 @@ namespace HLW80xx {
     static constexpr uint32_t kCurrentMinPulse = IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE;
     static constexpr uint32_t kCurrentMaxPulse = IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE;
 
+    // Fixed part of the conversion formulas below, folded once at compile time.
+    // All three values are "constant / pulseWidthUs", so a reading is a single
+    // multiplication and division instead of multiplying every literal on the fly.
+    //   U = kScaleU / pulseUs,  I = kScaleI / pulseUs,  P = kScaleP / pulseUs
+    // (fosc is in MHz and pulseUs in us, so the 1e6 of the datasheet formulas is implicit)
+    static constexpr float kScaleU = (128.0 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV) / IOT_SENSOR_HLW80xx_F_OSC;
+    static constexpr float kScaleI = (32.0 * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT);
+    static constexpr float kScaleP = (4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF) / (3.0 * IOT_SENSOR_HLW80xx_SHUNT * IOT_SENSOR_HLW80xx_F_OSC);
+
+    // Energy of a single counter increment (one CF edge) in kWh: the power for a 1e6 us
+    // pulse width divided by the Ws of one kWh. Derived from kScaleP instead of
+    // evaluating the power formula with pulse = 1e6 us for every reading.
+    static constexpr float kEnergyPerCount = kScaleP / (1000000.0 * 1000.0 * 3600.0);
+    // Inverse of kEnergyPerCount to convert a saved kWh value back into pulses
+    static constexpr float kCountPerKwh = (1000000.0 * 1000.0 * 3600.0) / kScaleP;
+
 }
 
-// https://datasheet.lcsc.com/szlcsc/1811151452_Hiliwei-Tech-HLW8012_C83804.pdf
+// HLW8012 single-phase energy metering IC
+// Datasheet: https://datasheet.lcsc.com/szlcsc/1811151452_Hiliwei-Tech-HLW8012_C83804.pdf
+//
+// HOW THE CHIP REPORTS DATA
+//   The chip has no digital readout. It outputs pulse trains whose frequency is
+//   proportional to what is being measured, so we time the pulses and convert
+//   the frequency back into a real-world value.
+//     CF  pin: frequency proportional to active power
+//     CF1 pin: frequency proportional to current OR voltage, selected by the SEL pin
+//              (SEL low = current, SEL high = voltage)
+//
+// PULSE WIDTH -> FREQUENCY
+//   The pulses have a 50% duty cycle, so one measured pulse width is half a period:
+//     period = 2 * pulseWidthUs / 1e6 seconds
+//     f      = 1e6 / (2 * pulseWidthUs) Hz
+//   (Older versions of this comment called the measured value "DutyCycleUs".
+//   It is a pulse width in microseconds, not a duty cycle.)
+//
+// SYMBOLS
+//   fosc     = 3579000 Hz  internal oscillator (3.579 MHz)
+//   Vref     = 2.43 V      internal reference voltage
+//   Rshunt   = shunt resistance in ohms
+//   Rdivider = voltage divider ratio, mains voltage / V2,
+//              i.e. (R_top + R_bottom) / R_bottom, not a single resistor value
+//   V1       = current * Rshunt    voltage across the V1P/V1N pins
+//   V2       = voltage / Rdivider  voltage at the V2P pin
+//   The chip only sees these small scaled-down voltages. The shunt turns current
+//   into a voltage, the divider shrinks mains voltage to a safe level, and the
+//   final formulas below undo both.
+//
+// HOW THE FORMULAS BELOW WERE DERIVED
+//   For each pin, take the datasheet's "frequency as a function of input voltage"
+//   equation, set it equal to the measured frequency (1e6 / (2 * pulseUs)), and
+//   solve for the real quantity. The odd constants are just the datasheet gains
+//   combined with the 1e6 / 2 from the pulse-width conversion.
+//   Example (power): 1e6 * 128 / (2 * 48) = 4e6 / 3
+//
+// POWER (CF pin)
+//   Datasheet: f_CF = (48 * V1 * V2 / Vref^2) * (fosc / 128)
+//   Solving for V1 * V2 and using power = voltage * current = V1 * V2 * Rdivider / Rshunt:
+//     power = (4e6 * Rdivider * Vref^2) / (3 * cfPulseUs * Rshunt * fosc)
+//   Note: this is power directly. Dividing it by current gives voltage, but that
+//   is only an intermediate step, not a separate way to measure voltage.
+//
+// CURRENT (CF1 pin, current mode)
+//   Datasheet: f_CF1 = (24 * V1 / Vref) * (fosc / 512)
+//     current = (32e6 * Vref) / (3 * cf1PulseUs * Rshunt * fosc)
+//
+// VOLTAGE (CF1 pin, voltage mode)
+//   Datasheet: f_CF1 = (2 * V2 / Vref) * (fosc / 512)
+//     voltage = (128e6 * Vref * Rdivider) / (cf1PulseUs * fosc)
+//
+// SANITY CHECK
+//   power from the CF formula should roughly equal voltage * current from the
+//   two CF1 formulas, which is a handy way to verify Rshunt and Rdivider.
 
-// Fcf = (((v1 * v2) * 48) / (Vref * Vref)) * (fosc / 128), v1 = (current * Rshunt), v2 = (voltage / Rdivider), power = voltage * current, Fcf = 1 / (FcfDutyCycleUs * 2 / 1000000)
-//  (current * Rshunt) * (voltage / Rdivider) = (4000000 * Vref * Vref) / (FcfDutyCycleUs * 3 * fosc)
-//  voltage = (4000000 * Rdivider * Vref * Vref) / (3 * FcfDutyCycleUs * Rshunt * fosc * current), voltage = power / current
-//  power = (4000000 * Rdivider * Vref * Vref) / (3 * FcfDutyCycleUs * Rshunt * fosc)
-
-// Fcfi = ((v1 * 24) / Vref) * (fosc / 512), v1 = current * Rshunt
-//  1 / (FcfiDutyCycleUs * 2 / 1000000) = (((current * Rshunt) * 24) / Vref) * (fosc / 512)
-//  current = (32000000 * Vref) / (FcfiDutyCycleUs * 3 * Rshunt * fosc)
-
-// Fcfu = ((v2 * 2) / Vref) * (fosc / 512), v2 = voltage / Rdivider
-//  1 / (FcfuDutyCycleUs * 2 / 1000000) = ((voltage / Rdivider * 2) / Vref) * (fosc / 512)
-//  voltage = (128000000 * Vref * Rdivider) / (FcfuDutyCycleUs * fosc)
-
-// v1 = voltage @ v1p/v1n
-// v2 = voltage @ v2p
-// fosc = 3.579Mhz
-// Vref = 2.43V
-
-// pulse is the duty cycle in µs (50% PWM)
-#define IOT_SENSOR_HLW80xx_CALC_U(pulse) (((128.0 * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_V_RES_DIV) * _calibrationU) / (pulse * IOT_SENSOR_HLW80xx_F_OSC))
-#define IOT_SENSOR_HLW80xx_CALC_I(pulse) (((32.0 * IOT_SENSOR_HLW80xx_VREF) * _calibrationI) / (pulse * (3.0 * IOT_SENSOR_HLW80xx_F_OSC * IOT_SENSOR_HLW80xx_SHUNT)))
-#define IOT_SENSOR_HLW80xx_CALC_P(pulse) (((4.0 * IOT_SENSOR_HLW80xx_V_RES_DIV * IOT_SENSOR_HLW80xx_VREF * IOT_SENSOR_HLW80xx_VREF) * _calibrationP) / (pulse * (3.0 * IOT_SENSOR_HLW80xx_SHUNT * IOT_SENSOR_HLW80xx_F_OSC)))
+// pulseWidthUs is the pulse width in µs (50% PWM)
+// The constant parts of the formulas are the pre-folded HLW80xx::kScale* values, so a reading
+// costs one multiplication and one division (the calibration is the only runtime input):
+//     U = (128 * Vref * Rdivider * _calibrationU) / (pulseWidthUs * fosc)           -> _calibrationU * kScaleU / pulseWidthUs
+//     I = (32 * Vref * _calibrationI) / (pulseWidthUs * 3 * fosc * Rshunt)           -> _calibrationI * kScaleI / pulseWidthUs
+//     P = (4 * Rdivider * Vref^2 * _calibrationP) / (pulseWidthUs * 3 * Rshunt * fosc) -> _calibrationP * kScaleP / pulseWidthUs
+#define IOT_SENSOR_HLW80xx_CALC_U(pulseWidthUs) ((_calibrationU * HLW80xx::kScaleU) / (pulseWidthUs))
+#define IOT_SENSOR_HLW80xx_CALC_I(pulseWidthUs) ((_calibrationI * HLW80xx::kScaleI) / (pulseWidthUs))
+#define IOT_SENSOR_HLW80xx_CALC_P(pulseWidthUs) ((_calibrationP * HLW80xx::kScaleP) / (pulseWidthUs))
 
 // count is incremented on falling and raising edge
-#define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count) (count * IOT_SENSOR_HLW80xx_CALC_P(1000000.0) / (1000.0 * 3600.0))
-#define IOT_SENSOR_HLW80xx_KWH_TO_PULSE(kwh)   (((1000.0 * 3600.0) * kwh) / IOT_SENSOR_HLW80xx_CALC_P(1000000.0))
+#define IOT_SENSOR_HLW80xx_PULSE_TO_KWH(count) ((count) * (HLW80xx::kEnergyPerCount * _calibrationP))
+#define IOT_SENSOR_HLW80xx_KWH_TO_PULSE(kwh)   ((kwh) * HLW80xx::kCountPerKwh / _calibrationP)
 
 class Sensor_HLW8012;
 class Sensor_HLW8032;

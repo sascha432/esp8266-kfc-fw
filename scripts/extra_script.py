@@ -160,31 +160,6 @@ def mem_analyzer(source, target, env):
         p.wait()
 
 
-def disassemble(source, target, env):
-
-    verbose = int(ARGUMENTS.get("PIOVERBOSE", 0))
-
-    source = path.abspath(env.subst('$PIOMAINPROG'))
-    target = env.subst(env.GetProjectOption('custom_disassemble_target', '$BUILD_DIR/${PROGNAME}.lst'))
-    target = path.abspath(target)
-
-    command = env.subst(env.GetProjectOption('custom_disassemble_bin', env['CC'].replace('gcc', 'objdump')))
-
-    options = re.split(r'[\s]', env.subst(env.GetProjectOption('custom_disassemble_options', '-S -C')))
-
-    args = [command] + options + [source, '>', target]
-    if verbose:
-        click.echo(' '.join(args))
-
-    return_code = subprocess.run(args, shell=True).returncode
-    if return_code != 0:
-        click.secho('failed to run: %s' % ' '.join(args))
-        env.Exit(1)
-
-    click.echo('-' * click.get_terminal_size()[0])
-    click.secho('Created: ', fg='yellow', nl=False)
-    click.secho(target)
-
 def firmware_config(source, target, env, action):
 
     if env["UPLOAD_PROTOCOL"] != 'espota':
@@ -362,14 +337,10 @@ env.AddPostAction(env['PIOMAINPROG'], mem_analyzer)
 # env.AlwaysBuild(env.Alias('patch_file', None, create_patch_file))
 # env.AlwaysBuild(env.Alias('patch-file', None, create_patch_file))
 
-env.AlwaysBuild(env.Alias('disasm', None, disassemble))
-env.AlwaysBuild(env.Alias('disassemble', [env['PIOMAINPROG']], disassemble))
-
 env.AlwaysBuild(env.Alias('kfcfw_factory', None, lambda source, target, env: firmware_config(source, target, env, 'factory')))
 env.AlwaysBuild(env.Alias('kfcfw_auto_discovery', None, lambda source, target, env: firmware_config(source, target, env, 'auto_discovery')))
 env.AlwaysBuild(env.Alias('upload_file', None, lambda source, target, env: upload_file(source, target, env)))
 
-env.AddCustomTarget('disassemble', None, [], title='disassemble main prog', description='run objdump to create disassembly', always_build=True)
 env.AddCustomTarget('kfcfw_factory', None, [], title='factory reset', description='KFC firmware OTA factory reset', always_build=False)
 env.AddCustomTarget('kfcfw_auto_discovery', None, [], title='auto discovery', description='KFC firmware OTA publish auto discovery', always_build=False)
 env.AddCustomTarget('upload_file', None, [], title='upload file', description='Upload file to file system', always_build=False)

@@ -261,6 +261,14 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_unit_of_measurement), value);
             }
 
+            void setVisibleByDefault(bool visible) {
+                addParameter(FSPGM(mqtt_visible_by_default), visible);
+            }
+
+            void setEnabledByDefault(bool enabled) {
+                addParameter(FSPGM(mqtt_enabled_by_default), enabled);
+            }
+
             void addAutomationType() {
                 addParameter(FSPGM(mqtt_automation_type), FSPGM(mqtt_trigger));
             }

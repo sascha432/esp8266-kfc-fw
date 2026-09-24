@@ -93,6 +93,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addIcon(F("mdi:memory"));
                 discovery->addName(F("Free Heap"));
                 discovery->addObjectId(baseTopic + F("free_heap"));
+                discovery->setEnabledByDefault(false);
+                discovery->setVisibleByDefault(false);
             }
             break;
         case AutoDiscoveryEnum::RSSI:
@@ -103,6 +105,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addName(F("WiFi Signal"));
                 discovery->addDeviceClass(F("signal_strength"), F("dBm"));
                 discovery->addObjectId(baseTopic + F("signal"));
+                discovery->setEnabledByDefault(false);
+                discovery->setVisibleByDefault(false);
             }
             break;
         #if ESP32 && (CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM)
@@ -114,6 +118,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addIcon(F("mdi:memory"));
                     discovery->addName(F("Free PSRAM"));
                     discovery->addObjectId(baseTopic + F("free_psram"));
+                    discovery->setEnabledByDefault(false);
+                    discovery->setVisibleByDefault(false);
                 }
                 break;
         #endif
@@ -124,6 +130,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                 discovery->addIcon(F("mdi:wrench"));
                 discovery->addName(F("Firmware Version"));
                 discovery->addObjectId(baseTopic + F("firmware_version"));
+                discovery->setEnabledByDefault(false);
             }
             break;
         #if ESP8266
@@ -134,6 +141,7 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addIcon(F("mdi:math-log"));
                     discovery->addName(F("SaveCrash Log Count"));
                     discovery->addObjectId(baseTopic + F("savecrash_log_count"));
+                    discovery->setEnabledByDefault(false);
                 }
                 break;
             case AutoDiscoveryEnum::HEAP_FRAGMENTATION:
@@ -142,6 +150,8 @@ MQTT::AutoDiscovery::EntityPtr Sensor_SystemMetrics::getAutoDiscovery(MQTT::Form
                     discovery->addValueTemplate(F("heap_frag"));
                     discovery->addName(F("Heap Fragmentation"));
                     discovery->addObjectId(baseTopic + F("heap_fragmentation"));
+                    discovery->setEnabledByDefault(false);
+                    discovery->setVisibleByDefault(false);
                 }
                 break;
         #endif

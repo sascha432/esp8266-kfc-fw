@@ -510,6 +510,7 @@
         "cmake.configureOnOpen": false,
         "dotnet.defaultSolution": "disable",
         "stm32cube-ide-build-cmake.intellisense.enableAutomaticConfiguration": false,
-        "cmake.buildBeforeRun": false
+        "cmake.buildBeforeRun": false,
+        "stm32cube-ide-clangd.path": "cube"
     }
 }

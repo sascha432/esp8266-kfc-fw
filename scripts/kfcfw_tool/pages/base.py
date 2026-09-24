@@ -4,7 +4,7 @@
 
 class PageBase:
 
-    classes = [ 'PageStart', 'PageEnergyMonitor', 'PageTouchpad' ]
+    classes = [ 'PageStart', 'PageTouchpad' ]
 
     def __init__(self, controller):
         self.controller = controller

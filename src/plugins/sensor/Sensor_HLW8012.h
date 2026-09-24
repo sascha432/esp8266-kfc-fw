@@ -110,10 +110,6 @@ public:
             _callback = callback;
         }
 
-        float convertPulse(double pulseWidth) const {
-            return _callback(pulseWidth);
-        }
-
         float getTarget() const {
             return _target;
         }

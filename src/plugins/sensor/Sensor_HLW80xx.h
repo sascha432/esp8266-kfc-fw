@@ -15,7 +15,6 @@
 #include "WebUIComponent.h"
 #include "plugins.h"
 #include "MQTTSensor.h"
-#include "plugins/http2serial/http2serial.h"
 
 // Simple calibration with 2 multimeters:
 //
@@ -44,11 +43,6 @@
 // 0.008     5.0     5.38     250
 // 0.01      4.0     4.30     200
 // 0.05      0.8     0.86      40
-
-// enables output for the HLW8012 live graph
-#ifndef IOT_SENSOR_HLW80xx_DATA_PLOT
-#    define IOT_SENSOR_HLW80xx_DATA_PLOT 0
-#endif
 
 // voltage divider for V2P
 #ifndef IOT_SENSOR_HLW80xx_V_RES_DIV
@@ -314,26 +308,6 @@ public:
     // can be used to compensate the current when the load is dimmed
     // -1 to disable
     void setDimmingLevel(float dimmingLevel);
-#endif
-
-#if IOT_SENSOR_HLW80xx_DATA_PLOT
-protected:
-    typedef enum {
-        VOLTAGE = 0x0001,
-        CURRENT = 0x0002,
-        POWER = 0x0004,
-        CONVERT_UNIT = 0x8000,
-    } WebSocketDataTypeEnum_t;
-
-    WebSocketDataTypeEnum_t _getWebSocketPlotData() const {
-        return _webSocketPlotData;
-    }
-    std::vector<float> _plotData;
-    uint32_t _plotDataTime;
-
-private:
-    AsyncWebSocketClient *_webSocketClient;
-    WebSocketDataTypeEnum_t _webSocketPlotData;
 #endif
 };
 

@@ -6,8 +6,6 @@
 
 #if IOT_SENSOR_HAVE_HLW8012
 
-// #include <Arduino_compat.h>
-// #include <PrintString.h>
 #include "Sensor_HLW8012.h"
 
 inline Sensor_HLW8012::~Sensor_HLW8012()
@@ -18,7 +16,6 @@ inline Sensor_HLW8012::~Sensor_HLW8012()
     detachInterrupt(digitalPinToInterrupt(_pinCF1));
     UNREGISTER_SENSOR_CLIENT(this);
 }
-
 
 inline String Sensor_HLW8012::_getId(const __FlashStringHelper *type) const
 {

@@ -42,9 +42,6 @@ class PageStart(tk.Frame, PageBase):
         menu.pack(side=tkinter.TOP)
 
         pad = 8
-        button = ttk.Button(self, text="HLW8012 Energy Monitor", command=lambda: self.show_frame('PageEnergyMonitor'))
-        button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
-
         button = ttk.Button(self, text="MPR121 Touchpad", command=lambda: self.show_frame('PageTouchpad'))
         button.pack(in_=menu, side=tkinter.LEFT, padx=pad)
 

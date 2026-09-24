@@ -2,7 +2,6 @@
 # Author: sascha_lammers@gmx.de
 #
 
-from common.Plot import Plot
 from common.Touchpad import Touchpad
 import tkinter
 import tkinter as tk
@@ -21,26 +20,10 @@ class MainApp(tk.Tk, kfcfw.connection.Controller):
         tk.Tk.__init__(self, *args, **kwargs)
         kfcfw.connection.Controller.__init__(self, True)
 
-        self.gui_settings = {
-            'y_range': 0,
-            'convert_units': tk.IntVar(),
-            'noise': tk.IntVar(),
-            'retention': tk.StringVar(),
-            'compress': tk.StringVar(),
-            'plot_type': '',
-            'data_state': [ True, True, True, True ]
-        }
-        self.gui_settings['convert_units'].set(1)
-        self.gui_settings['noise'].set(0)
-        self.gui_settings['retention'].set('60')
-        self.gui_settings['compress'].set('0.1')
-
         self.config = {}
 
-        self.plot = Plot(self)
         self.touchpad = Touchpad(self)
         self.wsc = kfcfw.connection.WebSocket(self)
-        self.set_plot_type('')
 
         tk.Tk.wm_title(self, "KFCFirmware Debug Tool")
 
@@ -96,67 +79,6 @@ class MainApp(tk.Tk, kfcfw.connection.Controller):
                 title += '\n%s' % conn.get_error()
 
         self.connect_label.config(text='Start Page - %s' % title, wraplength=840, font=font)
-        self.set_plot_title()
-
-    def set_plot_title(self):
-        if not self.wsc.is_connected():
-            title = 'Not connected'
-        else:
-            type = self.gui_settings['plot_type']
-            if type=='I':
-                title='Current'
-            elif type=='P':
-                title='Power'
-            elif type=='U':
-                title='Voltage'
-            else:
-                title='Paused'
-        self.plot.title = title
-
-    def toggle_data_state(self, num):
-        self.gui_settings['data_state'][num] = not self.gui_settings['data_state'][num]
-
-    def get_data_state(self, num):
-        return self.gui_settings['data_state'][num]
-
-    def set_y_range(self, val):
-        self.gui_settings['y_range'] = val
-
-    def get_y_range(self):
-        return float(self.gui_settings['y_range']);
-
-    def get_update_rate(self):
-        return 250
-
-    def set_plot_type(self, type):
-        self.gui_settings['plot_type'] = type;
-
-        if self.gui_settings['convert_units'].get()==1:
-            convert_units = 'true'
-        else:
-            convert_units = '0'
-
-        if type == 'U':
-            self.wsc.send_cmd('SP_HLWMODE', 'u'); #, '500');
-            self.wsc.send_cmd('SP_HLWPLOT', self.wsc.client_id, 'u', convert_units);
-        elif type == 'I':
-            self.wsc.send_cmd('SP_HLWMODE', 'i'); #, '1250');
-            self.wsc.send_cmd('SP_HLWPLOT', self.wsc.client_id, 'i', convert_units);
-        elif type == 'P':
-            self.wsc.send_cmd('SP_HLWMODE', 'p');
-            self.wsc.send_cmd('SP_HLWPLOT', self.wsc.client_id, 'p', convert_units);
-        else:
-            self.wsc.send_cmd('SP_HLWMODE', 'c');
-            self.wsc.send_cmd('SP_HLWPLOT', self.wsc.client_id, '0')
-
-        self.set_plot_title()
-
-        if type=='':
-            self.plot.plot_type = ''
-            self.update_plot = False
-        else:
-            self.plot.init_plot(type)
-            self.update_plot = True
 
     def show_frame(self, name):
         if self.active:

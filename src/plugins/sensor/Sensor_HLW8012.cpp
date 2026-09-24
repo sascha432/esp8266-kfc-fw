@@ -5,11 +5,11 @@
 #if IOT_SENSOR_HAVE_HLW8012
 
 #include <EventScheduler.h>
+#include <new>
 #include "Sensor_HLW8012.h"
 #include "sensor.h"
 #include "MQTTSensor.h"
 #include "MicrosTimer.h"
-#include "web_socket.h"
 
 #    if DEBUG_IOT_SENSOR
 #        include <debug_helper_enable.h>
@@ -67,10 +67,6 @@ Sensor_HLW8012::Sensor_HLW8012(const String &name, uint8_t pinSel, uint8_t pinCF
     _inputCFI.setCallback([this](double pulseWidth) -> float {
         return IOT_SENSOR_HLW80xx_ADJ_I_CALC(_dimmingLevel, IOT_SENSOR_HLW80xx_CALC_I(pulseWidth));
     });
-    // auto &settings = _inputCFU.getSettings();
-    // settings.avgValCount = 5;
-    // settings = _inputCF.getSettings();
-    // settings.avgValCount = 3;
 
     #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
         _noiseLevel = 0;
@@ -168,25 +164,6 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
         size = buffer.size();
     }
     if (size >= 2) {
-
-        #if IOT_SENSOR_HLW80xx_DATA_PLOT
-            auto client = Http2Serial::getClientById(_webSocketClient);
-            bool convertUnits = false;
-            uint16_t dataType = 0;
-            if (client) {
-                convertUnits = _getWebSocketPlotData() & WebSocketDataTypeEnum_t::CONVERT_UNIT;
-                if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::CURRENT) && (&input == &_inputCFI)) {
-                    dataType = 'I';
-                }
-                else if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::POWER) && (&input == &_inputCF)) {
-                    dataType = 'P';
-                }
-                else if ((_getWebSocketPlotData() & WebSocketDataTypeEnum_t::VOLTAGE) && (&input == &_inputCFU)) {
-                    dataType = 'U';
-                }
-            }
-        #endif
-
         // tested up to 5KHz
         // jitter +-0.03Hz @ 500Hz
         {
@@ -257,86 +234,14 @@ bool Sensor_HLW8012::_processInterruptBuffer(InterruptBuffer &buffer, SensorInpu
                     input.pulseWidthIntegral = diff2;
                     input.lastIntegration = diff2;
                 }
-
-                #if IOT_SENSOR_HLW80xx_DATA_PLOT
-                    if (dataType) {
-                        _plotData.push_back(value);
-                        if (convertUnits) {
-                            _plotData.push_back(input.convertPulse(diff));
-                            _plotData.push_back(input.convertPulse(input.average));
-                            _plotData.push_back(input.convertPulse(input.pulseWidthIntegral));
-                        }
-                        else {
-                            _plotData.push_back(diff);
-                            _plotData.push_back(input.average);
-                            _plotData.push_back(input.pulseWidthIntegral);
-                        }
-                    }
-                #endif
-
-            new(static_cast<void *>(&lock)) InterruptLock(); // recreate destroyed lock
-        }
-
-        // copy last value and items that have not been processed
-        --iterator;
-        // buffer = std::move(buffer.slice(iterator, buffer.end()));           // takes ~20-30µs
-        buffer.shrink(iterator, buffer.end());                              // <1µs
-    }
-
-    #if IOT_SENSOR_HLW80xx_DATA_PLOT
-        // send every 100ms or 400 data points to keep the packets small
-        // required RAM = (data points * 4 + 32) * 8
-        // tested up to 1KHz which works without dropping any packet with good WiFi
-        if (dataType && ((millis() > _plotDataTime) || _plotData.size() > 400)) {
-            _plotDataTime = millis() + 100;
-
-            if (client->canSend()) { // drop data if the queue is full
-                typedef struct {
-                    WSClient::BinaryPacketType type;
-                    uint16_t outputMode;
-                    uint16_t dataType;
-                    float voltage;
-                    float current;
-                    float power;
-                    float energy;
-                    float pf;
-                    float noise;
-                    float level;
-                } header_t;
-
-                auto wsBuffer = Http2Serial::getServerSocket()->makeBuffer(_plotData.size() * sizeof(*_plotData.data()) + sizeof(header_t));
-                auto buffer = wsBuffer->get();
-                if (buffer) {
-                    header_t *header = reinterpret_cast<header_t *>(buffer);
-                    *header = {
-                        WSClient::BinaryPacketType::HLW8012_PLOT_DATA,
-                        _getOutputMode(&input),
-                        dataType,
-                        _voltage,
-                        _current,
-                        _power,
-                        _getEnergy(0),
-                        _getPowerFactor(),
-                        #if IOT_SENSOR_HLW80xx_NOISE_SUPPRESSION
-                            _noiseLevel,
-                        #else
-                            0.0f,
-                        #endif
-                        #if IOT_SENSOR_HLW80xx_ADJUST_CURRENT
-                            _dimmingLevel
-                        #else
-                            -1.0f
-                        #endif
-                    };
-                    buffer += sizeof(header_t);
-                    memcpy(buffer, _plotData.data(), _plotData.size() * sizeof(*_plotData.data()));
-
-                    client->binary(wsBuffer);
-                }
+                new(static_cast<void *>(&lock)) InterruptLock(); // recreate destroyed lock
             }
-            _plotData.clear();
+
+            // copy last value and items that have not been processed
+            --iterator;
+            // buffer = std::move(buffer.slice(iterator, buffer.end()));           // takes ~20-30µs
+            buffer.shrink(iterator, buffer.end());                              // <1µs
         }
-    #endif
         return true;
     }
     return false;

@@ -10,7 +10,6 @@
 #include "MicrosTimer.h"
 #include "Sensor_HLW8012.h"
 #include "Sensor_HLW8032.h"
-#include "plugins/http2serial/http2serial.h"
 
 #if DEBUG_IOT_SENSOR
 #    include <debug_helper_enable.h>
@@ -41,12 +40,6 @@ Sensor_HLW80xx::Sensor_HLW80xx(const String &name, MQTT::SensorType type) :
 
     setUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE);
     setMqttUpdateRate(IOT_SENSOR_HLW80xx_UPDATE_RATE_MQTT);
-
-    #if IOT_SENSOR_HLW80xx_DATA_PLOT
-        _webSocketClient = nullptr;
-        _webSocketPlotData = VOLTAGE;
-        _plotDataTime = 0;
-    #endif
 }
 
 MQTT::AutoDiscovery::EntityPtr Sensor_HLW80xx::getAutoDiscovery(MQTT::FormatType format, uint8_t num)
@@ -405,7 +398,6 @@ void Sensor_HLW80xx::dump(Print &output)
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWXD, "HLWXD", "<count/0-4>", "Display extra digits");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWDUMP, "HLWDUMP", "<0=off/1...=seconds/2=cycle>", "Dump sensor data");
-PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(HLWPLOT, "HLWPLOT", "<ClientID>,<U/I/P/0=disable>[,<1/true=convert units>]", "Request data for plotting live graph");
 
 bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
 {
@@ -424,54 +416,6 @@ bool Sensor_HLW80xx::atModeHandler(AtModeArgs &args)
         }
         return true;
     }
-    #if IOT_SENSOR_HLW80xx_DATA_PLOT
-        else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWPLOT))) {
-            if (args.requireArgs(2, 3)) {
-                void *clientId = reinterpret_cast<void *>(args.toNumber(0));
-                auto ch = args.toLowerChar(1);
-                if (ch == 'u') {
-                    _webSocketPlotData = WebSocketDataTypeEnum_t::VOLTAGE;
-                }
-                else if (ch == 'i') {
-                    _webSocketPlotData = WebSocketDataTypeEnum_t::CURRENT;
-                }
-                else if (ch == 'p') {
-                    _webSocketPlotData = WebSocketDataTypeEnum_t::POWER;
-                }
-                else {
-                    args.print(F("Disabling plot data"));
-                    return true;
-                }
-                if (args.isTrue(2)) {
-                    _webSocketPlotData = (WebSocketDataTypeEnum_t)(_webSocketPlotData | WebSocketDataTypeEnum_t::CONVERT_UNIT);
-                }
-                _plotDataTime = 0;
-                _plotData.clear();
-
-                _webSocketClient = Http2Serial::getClientById(clientId);
-                // auto wsSerialConsole = Http2Serial::getServerSocket();
-                // if (wsSerialConsole) {
-                //     for(auto client: wsSerialConsole->getClients()) {
-                //         if (reinterpret_cast<void *>(client) == clientId && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                //             _webSocketClient = client;
-                //             break;
-                //         }
-                //     }
-                // }
-
-                if (!_webSocketClient) {
-                    args.printf_P(PSTR("Cannot find ClientID %p"), clientId);
-                }
-                else {
-                    args.printf_P(PSTR("{\"Imin\":%f,\"Imax\":%f,\"Ipmin\":%u,\"Ipmax\":%u,\"Rs\":%f,\"UIPc\":[%f,%f,%f]}"),
-                        IOT_SENSOR_HLW80xx_MIN_CURRENT, IOT_SENSOR_HLW80xx_MAX_CURRENT,
-                        IOT_SENSOR_HLW80xx_CURRENT_MIN_PULSE, IOT_SENSOR_HLW80xx_CURRENT_MAX_PULSE,
-                        IOT_SENSOR_HLW80xx_SHUNT, _calibrationU, _calibrationI, _calibrationP);
-                }
-            }
-            return true;
-        }
-    #endif
     else if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(HLWDUMP))) {
         _Timer(_dumpTimer).remove();
 

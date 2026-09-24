@@ -509,7 +509,3 @@ Display extra digits (HLW80xx)
 ### `+HLWDUMP=<0=off/1...=seconds/2=cycle>`
 
 Dump sensor data (HLW80xx)
-
-### `+HLWPLOT=<ClientID>,<U/I/P/0=disable>[,<1/true=convert units>]`
-
-Request data for plotting a live graph (HLW80xx)

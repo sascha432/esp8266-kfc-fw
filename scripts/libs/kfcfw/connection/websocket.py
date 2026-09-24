@@ -60,14 +60,7 @@ class WebSocket(BaseConnection):
 
         try:
             (packet_id, ) = struct.unpack_from('H', data)
-            if packet_id==1: # WsClient::BinaryPacketType::HLW8012_PLOT_DATA
-                fmt = 'HHHfffffff'
-                header = struct.unpack_from(fmt, data)
-                ofs = struct.calcsize(fmt)
-                m = memoryview(data[ofs:])
-                data = m.cast('f')
-                self.controller.plot.data_handler(header, data)
-            elif packet_id==2: # WsClient::BinaryPacketType::TOUCHPAD_DATA
+            if packet_id==2: # WsClient::BinaryPacketType::TOUCHPAD_DATA
                 (packet_id, x, y, px, py, time, event_type) = struct.unpack_from('HHHHHLc', data)
                 data = {
                     "x": x,
@@ -86,22 +79,13 @@ class WebSocket(BaseConnection):
         if not self.is_authenticated():
             if msg == '+AUTH_OK':
                 self.set_connected(True, True)
-                self.controller.plot.sensor_config = None
             elif msg == '+AUTH_ERROR':
                 self.set_connected(True, False)
                 self.on_error('Authentication failed')
             elif msg == '+REQ_AUTH':
                 self.send('+SID ' + self.sid, end = '')
         else:
-            if msg.startswith('+SP_HLWPLOT:'):
-                try:
-                    pos = msg.find('{')
-                    if pos!=-1:
-                        self.controller.plot.sensor_config = json.loads(msg[pos:])
-                        self.log('Sensor config: %' % str(self.controller.plot.sensor_config))
-                except:
-                    self.log('Sensor config error: ' % e)
-            elif msg.startswith('+CLIENT_ID='):
+            if msg.startswith('+CLIENT_ID='):
                 self.client_id = msg[msg.find('=') + 1:]
                 self.log('ClientID: %s' % self.client_id)
                 self.connection['client_id'] = self.client_id;

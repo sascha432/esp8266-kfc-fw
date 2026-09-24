@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - MQTT System Metrics Heap, Fragmentation, RSSI, Version and SaveCrash are disabled by default
  - User configurable IR remote control actions
  - ESP32 support for the IR remote control
  - Fixed an `Interrupt wdt timeout on CPU1` crash caused by `FastLED.show()` running in two tasks at the same time

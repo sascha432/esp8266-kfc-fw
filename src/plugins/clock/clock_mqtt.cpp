@@ -30,9 +30,6 @@ enum class AutoDiscoverySwitchEnum {
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         POWER_CONSUMPTION,
     #endif
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        FAN_CONTROL,
-    #endif
     MAX
 };
 
@@ -87,22 +84,6 @@ MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, 
         }
         break;
 #endif
-#if IOT_LED_MATRIX_FAN_CONTROL
-        case AutoDiscoverySwitchEnum::FAN_CONTROL: {
-            if (!discovery->create(MQTTComponent::ComponentType::FAN, F("fan"), format)) {
-                return discovery;
-            }
-            discovery->addStateTopicAndPayloadOnOff(MQTT::Client::formatTopic(F("/fan/on/state")));
-            discovery->addCommandTopic(MQTT::Client::formatTopic(F("/fan/on/set")));
-            discovery->addPercentageStateTopic(MQTT::Client::formatTopic(F("/fan/speed/state")));
-            discovery->addPercentageCommandTopic(MQTT::Client::formatTopic(F("/fan/speed/set")));
-            discovery->addSpeedRangeMin(_config.min_fan_speed);
-            discovery->addSpeedRangeMax(_config.max_fan_speed);
-            discovery->addName(F("Fan"));
-            discovery->addObjectId(baseTopic + F("Fan"));
-        }
-        break;
-#endif
         case AutoDiscoverySwitchEnum::MAX:
             break;
     }
@@ -121,11 +102,10 @@ void ClockPlugin::onConnect()
     subscribe(MQTT::Client::formatTopic(FSPGM(_color_set)));
     subscribe(MQTT::Client::formatTopic(FSPGM(_brightness_set)));
     subscribe(MQTT::Client::formatTopic(FSPGM(_effect_set)));
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        subscribe(MQTT::Client::formatTopic(F("/fan/on/set")));
-        subscribe(MQTT::Client::formatTopic(F("/fan/speed/set")));
-    #endif
-    _publishState();
+    // publishing reads the plugin state, it is done by the loop task
+    _enqueue([this] {
+        _publishState();
+    });
 }
 
 void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
@@ -136,33 +116,25 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
         _resetAlarm();
     #endif
 
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        if (!strcmp_end_P(topic, PSTR("/fan/on/set"))) {
-            __DBG_printf("/fan/on/set %s", payload);
-        }
-        else if (!strcmp_end_P(topic, PSTR("/fan/speed/set"))) {
-            __DBG_printf("/fan/speed/set %s", payload);
-        } else
-    #endif
     if (!strcmp_end_P(topic, SPGM(_effect_set))) {
         const auto animation = _getAnimationType(FPSTR(payload));
         if (animation < AnimationType::LAST) {
-            setAnimation(static_cast<AnimationType>(animation));
-            _saveState();
+            setAnimationDeferred(static_cast<AnimationType>(animation));
+            _saveStateDeferred();
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
         if (len) {
             const auto value = strtoul(payload, nullptr, 0);
-            setBrightness(std::clamp<uint8_t>(value, 0, kMaxBrightness));
-            _saveState();
+            setBrightnessDeferred(std::clamp<uint8_t>(value, 0, kMaxBrightness));
+            _saveStateDeferred();
         }
     }
     else if (!strcmp_end_P(topic, SPGM(_color_set))) {
         if (*payload == '#') {
             // rgb color code #FFEECC
-            setColorAndRefresh(Color::fromString(payload));
-            _saveState();
+            setColorAndRefreshDeferred(Color::fromString(payload));
+            _saveStateDeferred();
         }
         else {
             // red,green,blue
@@ -172,16 +144,16 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
                 const auto green = static_cast<uint8_t>(strtoul(endptr, &endptr, 10));
                 if (endptr && *endptr++ == ',') {
                     const auto blue = static_cast<uint8_t>(strtoul(endptr, nullptr, 10));
-                    setColorAndRefresh(Color(red, green, blue));
-                    _saveState();
+                    setColorAndRefreshDeferred(Color(red, green, blue));
+                    _saveStateDeferred();
                 }
             }
         }
     }
-    else if (!strcmp_end_P(topic, SPGM(_set))) {
+    else if (!strcmp_end_P(topic, PSTR("/set"))) {
         const auto res = MQTT::Client::toBool(payload);
         if (res >= 0) {
-            _setState(res);
+            _setStateDeferred(res);
         }
     }
 }
@@ -191,7 +163,7 @@ void ClockPlugin::_publishState()
     if (isConnected()) {
         if (_publishedValues.enabled != _getEnabledState()) {
             _publishedValues.enabled = _getEnabledState();
-            publish(MQTT::Client::formatTopic(FSPGM(_state)), true, MQTT::Client::toBoolOnOff(_publishedValues.enabled));
+            publish(MQTT::Client::formatTopic(F("/state")), true, MQTT::Client::toBoolOnOff(_publishedValues.enabled));
         }
         const int32_t brightness = (_targetBrightness == 0) ? _savedBrightness : _targetBrightness;
         if (_publishedValues.brightness != brightness) {
@@ -211,13 +183,6 @@ void ClockPlugin::_publishState()
             if (_publishedValues.powerLevel != level) {
                 _publishedValues.powerLevel = level;
                 publish(MQTT::Client::formatTopic(F("power")), true, String(level, 2));
-            }
-        #endif
-        #if IOT_LED_MATRIX_FAN_CONTROL
-            int fanOn = _fanSpeed >= _config.min_fan_speed;
-            if (_publishedValues.fanOn != fanOn) {
-                _publishedValues.fanOn = fanOn;
-                publish(MQTT::Client::formatTopic(F("/fan/state")), true, MQTT::Client::toBoolOnOff(fanOn));
             }
         #endif
     }

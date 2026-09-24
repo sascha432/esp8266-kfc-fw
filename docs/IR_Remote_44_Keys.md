@@ -134,7 +134,7 @@ crashed while the dialog was open), the device enables the actions again after 6
 Technically the dialog polls `/ir-remote.json?action=learn|read|stop`: `learn` disables the actions
 and starts capturing, `read` returns the last code (the JSON contains `learn`, `id`, `code`,
 `frames` and `repeats`) and `stop` enables them again. While capturing is active,
-`ClockPlugin::_irRemoteCallback()` only stores the code and skips all actions.
+`ClockPlugin::_irRemoteCallbackDeferred()` only stores the code and skips all actions.
 
 The complete 32 bit value is stored, an empty field means "not assigned". Codes are only matched
 exactly, so two actions cannot share the same button.
@@ -156,9 +156,9 @@ The 20 color buttons are grouped in 5 blocks of 4 to keep the page small, the la
 the running animation is kept - identically to the color picker in the WebUI. The color is stored in the
 color of the current animation (`flashing_color`, `visualizer.color`, otherwise `solid_color`, see
 `ClockPlugin::_getColorVar()`), animations without color support (e.g. `Rainbow`) are not affected. The
-brightness steps are the same that the physical buttons use (see `ClockPlugin::_buttonCallback()`).
+brightness steps are the same that the physical buttons use (see `ClockPlugin::_buttonCallbackQueued()`).
 
-The actions themselves are implemented in `ClockPlugin::_irRemoteAction()`
+The actions themselves are implemented in `ClockPlugin::_irRemoteActionQueued()`
 (`src/plugins/clock/clock_ir_receiver.cpp`) and are driven by
 `KFCConfigurationClasses::Plugins::ClockConfigNS::IRRemoteConfigType::ActionType`.
 

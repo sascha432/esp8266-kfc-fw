@@ -16,11 +16,7 @@
 #include "plugins.h"
 #include "../src/plugins/plugins.h"
 
-#if ESP32
-#    include <atomic>
-#    include <freertos/FreeRTOS.h>
-#    include <freertos/task.h>
-#elif defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+#if ESP8266 && defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
 #    pragma push_macro("DEBUG")
 #    undef DEBUG
 #    include <IRrecv.h>
@@ -161,9 +157,8 @@ namespace Clock {
         int32_t color;
         int32_t animation;
         float powerLevel;
-        int32_t fanOn;
 
-        PublishedStateType() : enabled(-1), brightness(-1), color(-1), animation(-1), powerLevel(NAN), fanOn(-1) {}
+        PublishedStateType() : enabled(-1), brightness(-1), color(-1), animation(-1), powerLevel(NAN) {}
     };
 
 }
@@ -286,24 +281,75 @@ public:
 private:
     void _loop();
     void  _loopDoUpdate(LoopOptionsType &options);
-    // applies all queued changes (display, brightness, state, config) and publishes/destroys
-    // queued animations. must only be called by the loop task.
+    // executes all queued tasks (display, brightness, state, config) and publishes the queued
+    // animations. must only be called by the loop task, it is the single drain point of _tasks
     void _applyPendingChanges();
     void _setupTimer();
+    // renders the display, loop task only
     void _display_show();
-    // implementation of reconfigure(), must only be called by the loop task
-    void _reconfigureNow(bool applyConfigOnly);
+    #if IOT_LED_MATRIX_SHOW_UPDATE_PROGRESS
+        // renders the progress of an OTA update, see setup()
+        void _showUpdateProgressQueued(int progress);
+    #endif
+    // the body of reconfigure(), loop task only
+    void _reconfigureQueued(bool applyConfigOnly);
     // fixes/clamps config values that program the LED driver and the pixel mapping
     void _sanitizeConfig();
+    // adopts the configuration of the form/storage, see createConfigureForm()
+    void _syncConfigFromStorageQueued();
+    // ---------------------------------------------------------------------------------------------
+    // Requests (...Deferred) and the loop task code that does the work
+    // ---------------------------------------------------------------------------------------------
+    //
+    // The loop task is the only one that changes the display, the animations and the configuration.
+    // A request queues the work in _tasks, the loop task executes it in _applyPendingChanges(), in
+    // FIFO order:
+    //
+    //     void ClockPlugin::_saveStateDeferred()
+    //     {
+    //         _enqueue([this] { _saveState(); });
+    //     }
+    //
+    // Naming rule:
+    //   ...Deferred()  the call is always queued, any task may use it: WebUI/WebSocket (setValue),
+    //                  MQTT (onMessage/onConnect), the forms (createConfigureForm) and the OTA
+    //                  upload handler.
+    //   ...Queued()    can only be reached from the queue, never call it directly.
+    //   (no suffix)    executes immediately and must run in the loop task: the queue and the code
+    //                  that already runs in the loop task use it - the AT console (the serial
+    //                  handler is a loop function and the WebUI console feeds the same stream), the
+    //                  render loop, the event timers, PinMonitor, the IR receiver,
+    //                  setup()/shutdown()/readConfig().
+    //
+    // Handlers that fire inside LoopFunctions/__Scheduler.run() (buttonCallbackDeferred,
+    // rotaryCallbackDeferred, _irRemoteCallbackDeferred) have the same pair, they must not modify
+    // those lists while they are being iterated. reconfigure()/createConfigureForm() keep their
+    // framework name, their bodies (_reconfigureQueued/_syncConfigFromStorageQueued) run in the
+    // queue only.
+    //
+    // _applyPendingChanges() is the only drain point, called by _loop()/standbyLoop(), so a request is
+    // executed before the next frame is rendered.
+    bool _enqueue(TaskQueue::Task task);
 
-    // Display ownership, see IOT_CLOCK_DEFERRED_DISPLAY_UPDATE: only the loop task touches the
-    // display, other tasks queue their requests (_pending) which are applied by _applyPendingOps().
-    // Use _show()/_clear()/_resetDisplay()/_setDisplayBrightness() instead of the _display member.
-    bool _isLoopTask() const;
+    static constexpr size_t kTaskQueueCapacity = 16;
+    // FIFO queue of the requests, a full queue discards the request (__DBG_printf). The counters
+    // reported by the status page (dropped/processed/peak) are compiled in with DEBUG_TASK_QUEUE=1
+    TaskQueue _tasks{kTaskQueueCapacity};
+
+    // loop task only, called directly by loop-task code and by the queue
+    void _setBrightness(uint8_t brightness, int ms = -1, uint32_t maxTime = ~0U);
+    void _setAnimation(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
+    void _setState(bool state, bool autoOff);
+    void _saveState();
+    void _setColorAndRefresh(Color color);
+    void _publishAnimation(Clock::Animation *animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
+    void enableLoop(bool enable);
+    void enableLoopNoClear(bool enable);
+
+    // use these instead of touching _display
     void _show();
     void _clear();
     void _resetDisplay();
-    void _setDisplayBrightness(uint8_t brightness);
 
     // returns AnimationType::MAX if the name is invalid
     // searched for name, name slug or AnimationType as integer
@@ -318,18 +364,16 @@ private:
     const __FlashStringHelper *_getAnimationTitle(AnimationType type) const;
 
 public:
-    void enableLoop(bool enable);
-    void enableLoopNoClear(bool enable);
-
-    void setColorAndRefresh(Color color);
+    void setColorAndRefreshDeferred(Color color);
     // time represents fading level 0 to max, the fading time is relative to the different between the brightness levels
-    void setBrightness(uint8_t brightness, int32_t millis = -1, uint32_t maxTime = ~0U);
+    void setBrightnessDeferred(uint8_t brightness, int32_t millis = -1, uint32_t maxTime = ~0U);
     // use NONE to remove all animations
     // use NEXT to remove the current animation and start the next one. if next animation is not set, animation is set to NONE
-    void setAnimation(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
+    void setAnimationDeferred(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
     void nextAnimation()
     {
-        setAnimation(AnimationType((_config.animation + 1) % int(AnimationType::LAST)), 1000);
+        // the animation is published directly, this runs in the loop task
+        _setAnimation(AnimationType((_config.animation + 1) % int(AnimationType::LAST)), 1000);
     }
 
     uint16_t _blendTime{Clock::BlendAnimation::kDefaultTime};
@@ -352,20 +396,6 @@ public:
 
     #endif
 
-    // ------------------------------------------------------------------------
-    // Fan control
-    // ------------------------------------------------------------------------
-    #if IOT_LED_MATRIX_FAN_CONTROL
-
-    private:
-        void _setFanSpeed(uint8_t speed);
-        // void _webUIUpdateFanSpeed();
-
-    private:
-        uint8_t _fanSpeed{0};
-
-    #endif
-
     #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
 
         private:
@@ -375,10 +405,11 @@ public:
             static constexpr uint32_t kStandbyLoopDelay = 10;
 
             // applies an action to a received NEC frame, see docs/IR_Remote_44_Keys.md.
-            // _irRemoteCallback() checks if the code is assigned and queues the action for the loop
-            // task (the receiver runs inside the event scheduler), _irRemoteAction() applies it
-            void _irRemoteCallback(uint32_t code, bool repeat);
-            void _irRemoteAction(uint32_t code, bool repeat);
+            // _irRemoteCallbackDeferred() checks if the code is assigned and queues the action for
+            // the loop task (the receiver runs inside the event scheduler), _irRemoteActionQueued()
+            // applies it
+            void _irRemoteCallbackDeferred(uint32_t code, bool repeat);
+            void _irRemoteActionQueued(uint32_t code, bool repeat);
 
             // Captures a button press for the "IR Remote" form: while learning is enabled no action
             // is executed, the raw code is only reported to the browser (/ir-remote.json), which
@@ -509,16 +540,17 @@ public:
 // Enable/disable LEDs
 // ------------------------------------------------------------------------
 public:
+    // blank the pixels during a reset, the loop task is not running any more
     static void clear() {
         _reset();
     }
 
-    // if the system crashed
+    // if the system crashed, disable the LEDs before the loop task starts
     void lock()
     {
         Logger_warning("The LED subsystem has been locked cause of a crash or hard reset");
         _disable();
-        setBrightness(0);
+        _setBrightness(0);
     }
 
 private:
@@ -535,10 +567,10 @@ private:
 
     // this method needs to be called if any changes in _config are supposed to be stored permanently
     // it delays the write operation to avoid to many writes and also checks if any changes have been made
-    void _saveState();
+    void _saveStateDeferred();
     Event::Timer _saveTimer;
 
-    void _setState(bool state, bool autoOff = false); // set a state and call _saveState()
+    void _setStateDeferred(bool state, bool autoOff = false); // set a state and call _saveStateDeferred()
 
     // ------------------------------------------------------------------------
     // Button
@@ -548,11 +580,14 @@ private:
     public:
         using EventType = Clock::Button::EventType;
         using ButtonType = Clock::ButtonType;
-        void buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount);
-        void _buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount);
+        // called by PinMonitor, queues the action, see _buttonCallbackQueued()
+        void buttonCallbackDeferred(ButtonType button, EventType eventType, uint16_t repeatCount);
+        void _buttonCallbackQueued(ButtonType button, EventType eventType, uint16_t repeatCount);
 
         #if IOT_CLOCK_HAVE_ROTARY_ENCODER
-            void rotaryCallback(bool decrease, uint32_t now);
+            // called by PinMonitor, queues the action, see _rotaryCallbackQueued()
+            void rotaryCallbackDeferred(bool decrease, uint32_t now);
+            void _rotaryCallbackQueued(bool decrease, uint32_t now);
             void setRotaryAction(uint8_t action);
 
         private:
@@ -600,7 +635,12 @@ private:
     //     void _setSevenSegmentDisplay();
 
     public:
-        void setBlinkColon(uint16_t value);
+        // request, see the "Requests" section. the loop task uses _setBlinkColon() directly
+        void setBlinkColonDeferred(uint16_t value);
+
+    private:
+        // loop task only, called directly and by the queue
+        void _setBlinkColon(uint16_t value);
 
     private:
         // std::array<SevenSegmentDisplay::PixelAddressType, IOT_CLOCK_PIXEL_ORDER_LEN * IOT_CLOCK_NUM_DIGITS> _pixelOrder;
@@ -638,7 +678,7 @@ private:
     // set brightness
     // enable LEDs if disabled
     // store new level in config
-    void _setBrightness(uint8_t brightness, bool useEnable = true);
+    void _setBrightnessLevel(uint8_t brightness, bool useEnable = true);
 
     // update brightness settings savedBrightness, config.brightness and config.enabled
     void _updateBrightnessSettings();
@@ -662,7 +702,7 @@ private:
     // get current color
     uint32_t _getColor() const;
 
-    void _setAnimation(Clock::Animation *animation);
+    // blend the new animation into the current one, loop task only
     bool _setBlendAnimation(Clock::Animation *animation);
 
 // ------------------------------------------------------------------------
@@ -708,6 +748,12 @@ private:
     Event::Timer _timer;
     uint32_t _timerCounter;
 
+    #if IOT_LED_MATRIX_SHOW_UPDATE_PROGRESS
+        // progress of an OTA update, -1 until the first update, see _showUpdateProgressQueued().
+        // read by the OTA upload callback to skip values that are applied already
+        volatile int _updateProgress{-1};
+    #endif
+
     MillisTimer _fadeTimer;
     uint8_t _savedBrightness;
     uint8_t _startBrightness;
@@ -718,166 +764,6 @@ private:
     Clock::BlendAnimation *_blendAnimation;
     Clock::ShowMethodType _method;
 
-    // An animation object may be created by any task (WebServer/WebSocket, MQTT, timers,
-    // buttons), but it is published, started and destroyed by the loop task only.
-    // Assigning or deleting _animation while the display is being rendered on the other
-    // core would be a use-after-free, therefore changes are queued here.
-    // The queue is filled by _setAnimation() and emptied by _applyPendingAnimation().
-    // NOTE: the writer must never delete an entry of the queue, the loop task owns it.
-    Clock::Animation *_pendingAnimation[2];
-    // last requested blend time, the loop task decides if it can be used
-    uint16_t _requestedBlendTime;
-    // color for the animation, applied by the loop task, see _setColor()
-    uint32_t _pendingColor;
-    bool _pendingColorSet;
-
-    // Requests queued by tasks that do not own the display. The loop task drains the queue once per
-    // iteration, the ESP8266 (single core, no preemption) queues nothing, see
-    // IOT_CLOCK_DEFERRED_DISPLAY_UPDATE. All values are single words.
-    struct PendingOpsType {
-
-        #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-
-            volatile bool show;                 // _display_show()
-            volatile bool clear;                // _display.clear()
-            volatile bool reset;                // _reset()
-            volatile bool configSync;           // _config = Plugins::Clock::getWriteableConfig()
-            volatile bool configApply;          // readConfig()
-            volatile bool saveState;            // _saveState()
-            volatile int16_t displayBrightness; // >= 0: _display.setBrightness()
-            volatile int16_t brightness;        // >= 0: setBrightness()
-            volatile int8_t state;              // >= 0: _setState()
-            volatile int8_t enable;             // 0: _disable(), 1: _enable()
-            volatile int8_t enableLoop;         // 0/1: enableLoop()
-            volatile int8_t reconfigure;        // 1: apply config, 2: reset and apply config
-            volatile int8_t showMethod;         // >= 0: _setShowMethod()
-            volatile bool toggleShowMethod;     // toggle the show method
-
-            // nothing queued: bools false, the optional values disabled (-1)
-            PendingOpsType() :
-                show(false),
-                clear(false),
-                reset(false),
-                configSync(false),
-                configApply(false),
-                saveState(false),
-                displayBrightness(-1),
-                brightness(-1),
-                state(-1),
-                enable(-1),
-                enableLoop(-1),
-                reconfigure(-1),
-                showMethod(-1),
-                toggleShowMethod(false)
-            {
-            }
-
-            // applies the queued requests, the order matters:
-            // config -> brightness/state -> display -> save
-            void apply(ClockPlugin &plugin)
-            {
-                if (configSync) {
-                    configSync = false;
-                    plugin._config = Plugins::Clock::getWriteableConfig();
-                    // remove timer, everything has been written already
-                    _Timer(plugin._saveTimer).remove();
-                }
-
-                if (configApply) {
-                    configApply = false;
-                    plugin.readConfig(false);
-                }
-
-                if (reconfigure >= 0) {
-                    auto type = reconfigure;
-                    reconfigure = -1;
-                    plugin._reconfigureNow(type == 1);
-                }
-
-                if (brightness >= 0) {
-                    auto value = brightness;
-                    brightness = -1;
-                    plugin.setBrightness(value);
-                }
-
-                if (state >= 0) {
-                    auto value = state;
-                    state = -1;
-                    plugin._setState(value);
-                }
-
-                if (enable >= 0) {
-                    auto value = enable;
-                    enable = -1;
-                    if (value) {
-                        plugin._enable();
-                    }
-                    else {
-                        plugin._disable();
-                    }
-                }
-
-                if (enableLoop >= 0) {
-                    auto value = enableLoop;
-                    enableLoop = -1;
-                    plugin.enableLoop(value);
-                }
-
-                if (showMethod >= 0) {
-                    auto value = showMethod;
-                    showMethod = -1;
-                    plugin._setShowMethod(static_cast<Clock::ShowMethodType>(value));
-                }
-
-                if (toggleShowMethod) {
-                    toggleShowMethod = false;
-                    plugin._toggleShowMethod();
-                }
-
-                if (displayBrightness >= 0) {
-                    auto value = displayBrightness;
-                    displayBrightness = -1;
-                    plugin._display.setBrightness(value);
-                }
-
-                if (clear) {
-                    clear = false;
-                    plugin._display.clear();
-                }
-
-                if (reset) {
-                    reset = false;
-                    plugin._reset();
-                }
-
-                if (show) {
-                    show = false;
-                    plugin._display_show();
-                }
-
-                if (saveState) {
-                    saveState = false;
-                    plugin._saveState();
-                }
-            }
-
-        #else
-
-            // nothing is queued, the ESP8266 cannot be preempted by the network stack
-            void apply(ClockPlugin &) {}
-
-        #endif
-    };
-
-    PendingOpsType _pending;
-
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        // task handle of the Arduino loop task (setup() and loop() run in the same task)
-        TaskHandle_t _loopTaskHandle{nullptr};
-        // last line of defence, show() must never run re-entrantly
-        volatile bool _showInProgress{false};
-    #endif
-
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
         AmbientLightSensorHandler _lightSensor2;
     #endif
@@ -885,6 +771,7 @@ private:
 public:
     static Clock::ShowMethodType getShowMethod();
     static const __FlashStringHelper *getShowMethodStr();
+    static const __FlashStringHelper *getShowMethodStr(Clock::ShowMethodType method);
     static void setShowMethod(Clock::ShowMethodType method);
     static void toggleShowMethod();
 
@@ -905,48 +792,28 @@ inline ClockPlugin::Color ClockPlugin::getColor() const
 
 inline void ClockPlugin::standbyLoop()
 {
-    // apply queued changes while the animation loop is disabled
+    // execute the queued requests while the animation loop is disabled
     getInstance()._applyPendingChanges();
     ::delay(kStandbyLoopDelay); // energy saving mode
 }
 
-inline bool ClockPlugin::_isLoopTask() const
-{
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        // a null handle means setup()/early boot, which runs in the same task as loop()
-        return !_loopTaskHandle || _loopTaskHandle == xTaskGetCurrentTaskHandle();
-    #else
-        return true;
-    #endif
-}
-
 inline void ClockPlugin::_show()
 {
-    IF_NOT_LOOP_TASK(_pending.show = true; return);
     _display_show();
 }
 
 inline void ClockPlugin::_clear()
 {
-    IF_NOT_LOOP_TASK(_pending.clear = true; return);
     _display.clear();
 }
 
 inline void ClockPlugin::_resetDisplay()
 {
-    IF_NOT_LOOP_TASK(_pending.reset = true; return);
     _reset();
-}
-
-inline void ClockPlugin::_setDisplayBrightness(uint8_t brightness)
-{
-    IF_NOT_LOOP_TASK(_pending.displayBrightness = brightness; return);
-    _display.setBrightness(brightness);
 }
 
 inline void ClockPlugin::enableLoop(bool enable)
 {
-    IF_NOT_LOOP_TASK(_pending.enableLoop = enable ? 1 : 0; return);
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
         setAutoBrightness(enable ? (Plugins::Sensor::getConfig().ambient.auto_brightness != -1) : false);
     #endif
@@ -1066,7 +933,7 @@ inline ClockPlugin &ClockPlugin::getInstance()
 
     inline bool ClockPlugin::eventMotionAutoOff(bool state)
     {
-        // state true = turn off
+        // state true = turn the display off
         if (state && _isEnabled) {
             _setState(false, true);
             return true;
@@ -1077,28 +944,6 @@ inline ClockPlugin &ClockPlugin::getInstance()
             return true;
         }
         return false;
-    }
-
-#endif
-
-#if IOT_LED_MATRIX_FAN_CONTROL
-
-    inline void ClockPlugin::_setFanSpeed(uint8_t speed)
-    {
-        #if DEBUG_IOT_CLOCK
-            auto setSpeed = speed;
-        #endif
-        if (speed < _config.min_fan_speed) {
-            speed = 0;
-        }
-        else {
-            speed = std::min<uint8_t>(speed, _config.max_fan_speed);
-        }
-        analogWrite(TINYPWM_BASE_PIN, speed);
-        _fanSpeed = speed;
-        #if DEBUG_IOT_CLOCK
-            __DBG_printf("set %u speed %u result %u", setSpeed, speed, _fanSpeed);
-        #endif
     }
 
 #endif
@@ -1125,13 +970,11 @@ inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
 
 inline void ClockPlugin::setShowMethod(Clock::ShowMethodType method)
 {
-    IF_NOT_LOOP_TASK(getInstance()._pending.showMethod = static_cast<int8_t>(method); return);
     getInstance()._setShowMethod(method);
 }
 
 inline void ClockPlugin::toggleShowMethod()
 {
-    IF_NOT_LOOP_TASK(getInstance()._pending.toggleShowMethod = true; return);
     getInstance()._toggleShowMethod();
 }
 
@@ -1218,7 +1061,12 @@ inline const __FlashStringHelper *ClockPlugin::_getAnimationTitle(AnimationType 
 
 #if !IOT_LED_MATRIX
 
-    inline void ClockPlugin::setBlinkColon(uint16_t value)
+    inline void ClockPlugin::setBlinkColonDeferred(uint16_t value)
+    {
+        _enqueue([this, value] { _setBlinkColon(value); });
+    }
+
+    inline void ClockPlugin::_setBlinkColon(uint16_t value)
     {
         if (value < kMinBlinkColonSpeed) {
             value = 0;
@@ -1230,9 +1078,14 @@ inline const __FlashStringHelper *ClockPlugin::_getAnimationTitle(AnimationType 
 
 #endif
 
-inline void ClockPlugin::setColorAndRefresh(Color color)
+inline void ClockPlugin::setColorAndRefreshDeferred(Color color)
 {
     __LDBG_printf("color=%s", color.toString().c_str());
+    _enqueue([this, color] { _setColorAndRefresh(color); });
+}
+
+inline void ClockPlugin::_setColorAndRefresh(Color color)
+{
     _setColor(color);
     _forceUpdate = true;
     _schedulePublishState = true;
@@ -1256,10 +1109,8 @@ inline KFCConfigurationClasses::Plugins::ClockConfigNS::ColorType &ClockPlugin::
 inline void ClockPlugin::_setColor(uint32_t color, bool updateAnimation)
 {
     _getColorVar() = color;
-    if (updateAnimation) {
-        // the animation is owned by the loop task, see _setAnimation()
-        _pendingColor = color;
-        _pendingColorSet = true;
+    if (updateAnimation && _animation) {
+        _animation->setColor(color);
     }
 }
 
@@ -1273,27 +1124,27 @@ inline Clock::ClockConfigType &ClockPlugin::getWriteableConfig()
     return _config;
 }
 
-inline void ClockPlugin::_setAnimation(Clock::Animation *animation)
+// publish an animation and destroy the one it replaces, loop task only
+inline void ClockPlugin::_publishAnimation(Clock::Animation *animation, uint16_t blendTime)
 {
-    __LDBG_printf("animation=%p _ani=%p _blend_ani=%p", animation, _animation, _blendAnimation);
+    __LDBG_printf("animation=%p blend_time=%u _ani=%p _blend_ani=%p", animation, blendTime, _animation, _blendAnimation);
     if (!animation) {
         return;
     }
-    // The new animation is queued and published by the loop task, see _applyPendingAnimation().
-    // Deleting the current animation here would free an object another core might be
-    // rendering right now (WebServer/WebSocket/MQTT callbacks, timers).
-    // NOTE: entries of the queue must never be deleted here, the loop task owns them.
-    for(auto &pending: _pendingAnimation) {
-        if (!pending) {
-            pending = animation;
-            return;
-        }
+    // the loop task decides if the animation can be blended into the current one
+    _blendTime = (_animation && _animation->hasBlendSupport()) ? blendTime : 0;
+
+    if (_animation && _setBlendAnimation(animation)) {
+        // blending started, the BlendAnimation owns the new animation as _target
+        return;
     }
-    // the loop task has not collected the queued animations yet, replace the oldest one
-    __DBG_printf("animation queue overflow");
-    auto replaced = _pendingAnimation[0];
-    _pendingAnimation[0] = animation;
-    (void)replaced; // leaked on purpose, see comment above
+    // no animation set yet
+    if (_animation) {
+        delete _animation;
+    }
+    if ((_animation = animation) != nullptr) {
+        _animation->begin();
+    }
 }
 
 inline bool ClockPlugin::_setBlendAnimation(Clock::Animation *blendAnimation)
@@ -1368,7 +1219,12 @@ inline void ClockPlugin::_removeLoop()
 
 inline const __FlashStringHelper *ClockPlugin::getShowMethodStr()
 {
-    switch(getShowMethod()) {
+    return getShowMethodStr(getShowMethod());
+}
+
+inline const __FlashStringHelper *ClockPlugin::getShowMethodStr(Clock::ShowMethodType method)
+{
+    switch(method) {
         case Clock::ShowMethodType::NONE:
             return F("None");
         case Clock::ShowMethodType::FASTLED:
@@ -1406,7 +1262,7 @@ inline Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
 {
     if (plugin._isFading && plugin._fadeTimer.reached()) {
         __LDBG_printf("fading=done brightness=%u target_brightness=%u", plugin._getBrightness(), plugin._targetBrightness);
-        plugin._setBrightness(plugin._targetBrightness);
+        plugin._setBrightnessLevel(plugin._targetBrightness);
         plugin._isFading = false;
     }
 }

@@ -56,11 +56,6 @@ namespace KFCConfigurationClasses {
                     motion_auto_off(kDefaultValueFor_motion_auto_off),
                     motion_trigger_timeout(kDefaultValueFor_motion_trigger_timeout),
                 #endif
-                #if IOT_LED_MATRIX_FAN_CONTROL
-                    fan_speed(kDefaultValueFor_fan_speed),
-                    min_fan_speed(kDefaultValueFor_min_fan_speed),
-                    max_fan_speed(kDefaultValueFor_max_fan_speed),
-                #endif
                 power()
             {
             }

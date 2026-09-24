@@ -22,7 +22,7 @@ using namespace Clock;
 void Button::event(EventType eventType, uint32_t now)
 {
     __LDBG_printf("event_type=%s (%02x) repeat=%u button#=%u now=%u", eventTypeToString(eventType), eventType, _repeatCount, _button, now);
-    getBase().buttonCallback(ButtonType(_button), eventType, _repeatCount);
+    getBase().buttonCallbackDeferred(ButtonType(_button), eventType, _repeatCount);
 }
 
 #if IOT_CLOCK_HAVE_ROTARY_ENCODER
@@ -30,10 +30,18 @@ void Button::event(EventType eventType, uint32_t now)
 void Clock::RotaryEncoder::event(EventType eventType, uint32_t now)
 {
     __LDBG_printf("event_type=%u now=%u decrease=%u", eventType, now, eventType == EventType::COUNTER_CLOCK_WISE);
-    ClockPlugin::getInstance().rotaryCallback(eventType == EventType::COUNTER_CLOCK_WISE, now);
+    ClockPlugin::getInstance().rotaryCallbackDeferred(eventType == EventType::COUNTER_CLOCK_WISE, now);
 }
 
-void ClockPlugin::rotaryCallback(bool decrease, uint32_t now)
+void ClockPlugin::rotaryCallbackDeferred(bool decrease, uint32_t now)
+{
+    // the encoder is polled by the event scheduler, see buttonCallbackDeferred()
+    _enqueue([this, decrease, now] {
+        _rotaryCallbackQueued(decrease, now);
+    });
+}
+
+void ClockPlugin::_rotaryCallbackQueued(bool decrease, uint32_t now)
 {
     auto diff = get_time_since(_lastRotaryUpdate, now) / 1000;
     if (_rotaryAction == 0) {
@@ -50,10 +58,10 @@ void ClockPlugin::rotaryCallback(bool decrease, uint32_t now)
         if (_isEnabled) {
             auto brightness = _targetBrightness;
             if (decrease) {
-                _setBrightness(std::max<int16_t>(1, brightness - (_rotaryAcceleration / kRotaryAccelerationDivider)));
+                _setBrightnessLevel(std::max<int16_t>(1, brightness - (_rotaryAcceleration / kRotaryAccelerationDivider)));
             }
             else {
-                _setBrightness(std::min<int16_t>(255, brightness + (_rotaryAcceleration / kRotaryAccelerationDivider)));
+                _setBrightnessLevel(std::min<int16_t>(255, brightness + (_rotaryAcceleration / kRotaryAccelerationDivider)));
             }
             _saveState();
         }
@@ -61,7 +69,7 @@ void ClockPlugin::rotaryCallback(bool decrease, uint32_t now)
     else if (_rotaryAction == 1) {
         if (diff > 1000) { // limit input frequency to once per second
             uint8_t animation = (_config.animation + (decrease ? 1 : 4)) % 5; // limit values to 0-5
-            setAnimation(static_cast<AnimationType>(animation), 750);
+            _setAnimation(static_cast<AnimationType>(animation), 750);
             _saveState();
         }
         setRotaryAction(_rotaryAction); // reset timer
@@ -100,14 +108,17 @@ void ClockPlugin::setRotaryAction(uint8_t action)
 
 #endif
 
-void ClockPlugin::buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount)
+void ClockPlugin::buttonCallbackDeferred(ButtonType button, EventType eventType, uint16_t repeatCount)
 {
-    LoopFunctions::callOnce([this, button, eventType, repeatCount]() {
-        _buttonCallback(button, eventType, repeatCount);
+    // the events are dispatched by the loop task while it iterates the loop functions and the event
+    // scheduler. applying the action from there could modify those lists (e.g. _saveStateDeferred()) or
+    // delete objects that are still in use, therefore the action is queued
+    _enqueue([this, button, eventType, repeatCount] {
+        _buttonCallbackQueued(button, eventType, repeatCount);
     });
 }
 
-void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16_t repeatCount)
+void ClockPlugin::_buttonCallbackQueued(ButtonType button, EventType eventType, uint16_t repeatCount)
 {
     __LDBG_printf("button=%u event_type=%u repeat=%u", button, eventType, repeatCount);
     switch(button) {
@@ -116,7 +127,7 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                 switch (eventType) {
                     case EventType::PRESSED:
                         if (!_config.enabled) {
-                            _setState(true);
+                            _setState(true, false);
                         }
                         IF_IOT_CLOCK_HAVE_ROTARY_ENCODER(
                             else {
@@ -125,7 +136,7 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                         )
                         break;
                     case EventType::LONG_PRESSED:
-                        _setState(!_config.enabled);
+                        _setState(!_config.enabled, false);
                         break;
                     case EventType::HOLD:
                         // start flashing red after 5 seconds and reboot 2 seconds later
@@ -134,7 +145,7 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                             // disable animation blending and start flashing red
                             delete _animation;
                             _animation = nullptr;
-                            _setAnimation(new Clock::FlashingAnimation(*this, Color(255, 0, 0), 250));
+                            _publishAnimation(new Clock::FlashingAnimation(*this, Color(255, 0, 0), 250));
                             _targetBrightness = 255 / 4; // 25%
                             _fadeTimer.disable();
                             _forceUpdate = true;
@@ -176,7 +187,7 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                     case EventType::PRESSED:
                     case EventType::SINGLE_CLICK:
                         if (!_config.enabled) {
-                            _setState(true);
+                            _setState(true, false);
                         }
                         break;
                     default:
@@ -195,7 +206,7 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                     case EventType::PRESSED:
                     case EventType::SINGLE_CLICK: {
                         __LDBG_printf("toggle on off click turn %s", !_config.enabled ? PSTR("on") : PSTR("off"));
-                        _setState(!_config.enabled);
+                        _setState(!_config.enabled, false);
                     }
                     break;
                     #if IOT_LED_MATRIX_TOGGLE_PIN_LONG_PRESS_TYPE == 1
@@ -207,7 +218,7 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                         case EventType::LONG_PRESSED: {
                             if (!_config.enabled) {
                                 __LDBG_printf("toggle long press turn on (was off)");
-                                _setState(true);
+                                _setState(true, false);
                             }
                             else {
                                 __LDBG_printf("toggle long press next animation");
@@ -228,7 +239,7 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                 switch (eventType) {
                     case EventType::LONG_PRESSED:
                         __LDBG_printf("first animation");
-                        setAnimation(AnimationType::SOLID);
+                        _setAnimation(AnimationType::SOLID);
                         break;
                     case EventType::PRESSED:
                     case EventType::SINGLE_CLICK:
@@ -247,13 +258,13 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                 switch (eventType) {
                     case EventType::PRESSED:
                     case EventType::SINGLE_CLICK:
-                        setBrightness(std::min(255, _targetBrightness + kBrightnessChangeClick));
+                        _setBrightness(std::min(255, _targetBrightness + kBrightnessChangeClick));
                         break;
                     case EventType::LONG_PRESSED:
-                        setBrightness(std::min(255, _targetBrightness + kBrightnessChangeLongPress));
+                        _setBrightness(std::min(255, _targetBrightness + kBrightnessChangeLongPress));
                         break;
                     case EventType::HOLD:
-                        setBrightness(std::min(255, _targetBrightness + kBrightnessChangeHold));
+                        _setBrightness(std::min(255, _targetBrightness + kBrightnessChangeHold));
                         break;
                     default:
                         break;
@@ -267,13 +278,13 @@ void ClockPlugin::_buttonCallback(ButtonType button, EventType eventType, uint16
                 switch (eventType) {
                     case EventType::PRESSED:
                     case EventType::SINGLE_CLICK:
-                        setBrightness(std::max(1, _targetBrightness - kBrightnessChangeClick));
+                        _setBrightness(std::max(1, _targetBrightness - kBrightnessChangeClick));
                         break;
                     case EventType::LONG_PRESSED:
-                        setBrightness(std::max(1, _targetBrightness - kBrightnessChangeLongPress));
+                        _setBrightness(std::max(1, _targetBrightness - kBrightnessChangeLongPress));
                         break;
                     case EventType::HOLD:
-                        setBrightness(std::max(1, _targetBrightness - kBrightnessChangeHold));
+                        _setBrightness(std::max(1, _targetBrightness - kBrightnessChangeHold));
                         break;
                     default:
                         break;

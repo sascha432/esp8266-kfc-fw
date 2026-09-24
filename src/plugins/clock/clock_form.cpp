@@ -24,9 +24,13 @@
 #    define FORM_TITLE "Clock Configuration"
 #endif
 
+void ClockPlugin::_saveStateDeferred()
+{
+    _enqueue([this] { _saveState(); });
+}
+
 void ClockPlugin::_saveState()
 {
-    IF_NOT_LOOP_TASK(_pending.saveState = true; return);
     #if ESP8266
         constexpr uint32_t kSaveDelay = 10000;
     #else
@@ -44,19 +48,23 @@ void ClockPlugin::_saveState()
     });
 }
 
+void ClockPlugin::_setStateDeferred(bool state, bool autoOff)
+{
+    _enqueue([this, state, autoOff] { _setState(state, autoOff); });
+}
+
 void ClockPlugin::_setState(bool state, bool autoOff)
 {
-    IF_NOT_LOOP_TASK(_pending.state = state ? 1 : 0; return);
     #if IOT_SENSOR_HAVE_MOTION_SENSOR
         _motionAutoOff = autoOff;
     #endif
     if (state) {
         if (_targetBrightness == 0) {
             if (_savedBrightness) {
-                setBrightness(_savedBrightness);
+                _setBrightness(_savedBrightness);
             }
             else {
-                setBrightness(_config.getBrightness());
+                _setBrightness(_config.getBrightness());
             }
         }
     }
@@ -64,7 +72,7 @@ void ClockPlugin::_setState(bool state, bool autoOff)
         if (_targetBrightness != 0) {
             _savedBrightness = _targetBrightness;
         }
-        setBrightness(0);
+        _setBrightness(0);
     }
     _saveState();
 }
@@ -741,12 +749,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     if (type == FormCallbackType::SAVE) {
         // a form callback runs in the web server task, the local config copy and the save timer
         // belong to the loop task
-        IF_NOT_LOOP_TASK(_pending.configSync = true; return);
-        // on save copy changes to local memory
-        auto &cfg = Plugins::Clock::getWriteableConfig();
-        _config = cfg;
-        // remove timer, everything has been written already
-        _Timer(_saveTimer).remove();
+        _enqueue([this] { _syncConfigFromStorageQueued(); });
         return;
     }
 
@@ -754,7 +757,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         return;
     }
 
-    // the storage is kept in sync by the loop task (see _saveState()) and is the only config the
+    // the storage is kept in sync by the loop task (see _saveStateDeferred()) and is the only config the
     // form may use - _config and the save timer belong to the loop task
     auto &cfg = Plugins::Clock::getWriteableConfig();
 
@@ -876,25 +879,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             #endif
 
             protectionGroup.end();
-        #endif
-
-        #if IOT_LED_MATRIX_FAN_CONTROL
-            auto &fanGroup = form.addCardGroup(F("fan"), F("Fan"), true);
-
-            form.addObjectGetterSetter(F("fs"), FormGetterSetter(cfg, fan_speed));
-            form.addFormUI(F("Fan Speed"));
-            form.addValidator(FormUI::Validator::Range(0, 255));
-            //TODO validator
-
-            form.addObjectGetterSetter(F("mif"), cfg, cfg.get_bits_min_fan_speed, cfg.set_bits_min_fan_speed);
-            form.addFormUI(F("Minimum Fan Speed"));
-            form.addValidator(FormUI::Validator::Range(0, 255));
-
-            form.addObjectGetterSetter(F("maf"), cfg, cfg.get_bits_max_fan_speed, cfg.set_bits_max_fan_speed);
-            form.addFormUI(F("Maximum Fan Speed"));
-            form.addValidator(FormUI::Validator::Range(0, 255));
-
-            fanGroup.end();
         #endif
 
         auto &powerGroup = form.addCardGroup(F("pow"), F("Power"), true);
@@ -1070,10 +1054,10 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         form.addFormUI(F("After Reset"), initialStateItems);
 
         form.addObjectGetterSetter(F("br"), cfg, cfg.get_bits_brightness, cfg.set_bits_brightness);
-        form.addFormUI(FormUI::Type::RANGE_SLIDER, FSPGM(Brightness), FormUI::MinMax(cfg.kMinValueFor_brightness, cfg.kMaxValueFor_brightness));
+        form.addFormUI(FormUI::Type::RANGE_SLIDER, F("Brightness"), FormUI::MinMax(cfg.kMinValueFor_brightness, cfg.kMaxValueFor_brightness));
 
         form.addObjectGetterSetter(F("ft"), FormGetterSetter(cfg, fading_time));
-        form.addFormUI(F("Fading Time From 0 To 100%"), FormUI::Suffix(FSPGM(seconds)));
+        form.addFormUI(F("Fading Time From 0 To 100%"), FormUI::Suffix(F("seconds")));
         cfg.addRangeValidatorFor_fading_time(form, true);
 
         #if IOT_LED_MATRIX == 0

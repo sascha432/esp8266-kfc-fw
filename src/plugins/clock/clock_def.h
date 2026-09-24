@@ -258,25 +258,10 @@
 #define IOT_CLOCK_AMBIENT_LIGHT_SENSOR_INVERTED 0
 #endif
 
-// support for fan control
-// 0 = disabled
-// 1 = TinyPwm Fan Control
-#ifndef IOT_LED_MATRIX_FAN_CONTROL
-#   define IOT_LED_MATRIX_FAN_CONTROL 0
-#endif
-
 #if defined(IOT_CLOCK_HAVE_OVERHEATED_PIN) && IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
 #       define IF_IOT_IOT_LED_OVERHEATED_PIN(...) __VA_ARGS__
 #else
 #       define IF_IOT_IOT_LED_OVERHEATED_PIN(...)
-#endif
-
-#ifndef IF_IOT_LED_MATRIX_FAN_CONTROL
-#   if IOT_LED_MATRIX_FAN_CONTROL
-#       define IF_IOT_LED_MATRIX_FAN_CONTROL(...) __VA_ARGS__
-#   else
-#       define IF_IOT_LED_MATRIX_FAN_CONTROL(...)
-#   endif
 #endif
 
 // add sensor for calculated power level to webui/mqtt
@@ -375,26 +360,9 @@
 #    define IOT_CLOCK_VOLTAGE_REGULATOR_LM75A_ADDRESS 255
 #endif
 
-// The display, the animation objects and the configuration are owned by the loop task, see
-// ClockPlugin::_isLoopTask(). FastLED's ESP32 driver keeps its state in process globals and its
-// show() is not re-entrant, and the network stack (AsyncTCP/AsyncWebSocket/MQTT) shares the CPU
-// with the loop task, so those tasks only queue their changes.
-// The ESP8266 is single core and its network stack cannot preempt the loop task -> 0
-#ifndef IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-#    define IOT_CLOCK_DEFERRED_DISPLAY_UPDATE (ESP32)
-#endif
-
-// queues the operation if the caller does not own the display and logs it with DEBUG=1, e.g.
-// IF_NOT_LOOP_TASK(_pending.clear = true; return);
-// (the argument is a statement list, see ClockPlugin::_isLoopTask())
-#if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-#    define IF_NOT_LOOP_TASK(...)                   \
-        if (!getInstance()._isLoopTask()) {         \
-            __VA_ARGS__;                            \
-        }
-#else
-#    define IF_NOT_LOOP_TASK(...)
-#endif
+// The display, the animations and the configuration are owned by the loop task. Every operation of
+// the plugin is a request that is queued in ClockPlugin::_tasks (a TaskQueue) and executed by the
+// loop task in ClockPlugin::_applyPendingChanges(). See clock.h "Requests" for the API.
 
 #if defined(ESP8266)
 #    ifndef FASTLED_ESP8266_RAW_PIN_ORDER

@@ -85,11 +85,7 @@ ClockPlugin::ClockPlugin() :
     _targetBrightness(0),
     _animation(nullptr),
     _blendAnimation(nullptr),
-    _method(Clock::ShowMethodType::NONE),
-    _pendingAnimation{ nullptr, nullptr },
-    _requestedBlendTime(Clock::BlendAnimation::kDefaultTime),
-    _pendingColor(0),
-    _pendingColorSet(false)
+    _method(Clock::ShowMethodType::NONE)
 {
     REGISTER_PLUGIN(this, "ClockPlugin");
 }
@@ -236,12 +232,9 @@ void ClockPlugin::_setupTimer()
                         auto message = PrintString(F("Over temperature protection activated: %.1f%s &gt; %u%s"), tempSensor, SPGM(UTF8_degreeC), _config.protection.max_temperature, SPGM(UTF8_degreeC));
                         message += F("<br>");
                         message += str;
-                        _setBrightness(0);
+                        _setBrightnessLevel(0);
                         enableLoop(false);
                         _tempBrightness = -1.0;
-                        #if IOT_LED_MATRIX_FAN_CONTROL
-                            _setFanSpeed(255);
-                        #endif
                         #if defined(IOT_CLOCK_HAVE_OVERHEATED_PIN) && IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
                             digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, LOW);
                             #if IOT_LED_MATRIX_STANDBY_PIN != -1
@@ -299,11 +292,6 @@ void ClockPlugin::preSetup(SetupModeType mode)
 
 void ClockPlugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &dependencies)
 {
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        // setup() and loop() run in the same task, remember it (see _isLoopTask())
-        _loopTaskHandle = xTaskGetCurrentTaskHandle();
-    #endif
-
     #if defined(HAVE_IOEXPANDER)
         auto &_PCF8574 = IOExpander::config._device;
         _PCF8574.DDR = 0b00111111;
@@ -400,10 +388,6 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         }
     #endif
 
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        _setFanSpeed(_config.fan_speed);
-    #endif
-
     MQTT::Client::registerComponent(this);
 
     enableLoopNoClear(true);
@@ -429,13 +413,13 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
             // turn device on after reset
             _savedBrightness = std::max<uint8_t>(15, _config.getBrightness()); // restore last brightness but at least ~6%
             _config.enabled = true;
-            setBrightness(_savedBrightness);
+            _setBrightness(_savedBrightness);
             break;
         case InitialStateType::RESTORE:
             // restore last settings
             _savedBrightness = _config.getBrightness();
             if (_config.enabled) {
-                setBrightness(_savedBrightness);
+                _setBrightness(_savedBrightness);
             }
             else {
                 _setBrightness(0);
@@ -450,32 +434,17 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 
     #if IOT_LED_MATRIX_SHOW_UPDATE_PROGRESS
 
-        // show update status during OTA updates
-        int progressValue = -1;
-        WebServer::Plugin::getInstance().setUpdateFirmwareCallback([this, progressValue](size_t position, size_t size) mutable {
-            int progress = position * 100 / size;
-            if (progressValue != progress) {
-                if (progressValue == -1) {
-
-                    // enable LEDs and clear them to show status
-                    #if IOT_LED_MATRIX_STANDBY_PIN != -1
-                        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
-                        pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
-                    #endif
-                    pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
-
-                    LoopFunctions::remove(standbyLoop);
-                    _removeLoop();
-                    _fps = NAN;
-                }
-
-                uint8_t color2 = (progress * progress * progress * progress) / 1000000;
-                uint8_t kBrightnessDivider = 4; // use fill to reduce the brightness to avoid show() to adjust brightness for each pixel
-                _display.fill((((100 - progress) / kBrightnessDivider) << 16) | ((color2 / kBrightnessDivider) << 8));
-                _display._showNeoPixelEx(255);
-
-                progressValue = progress;
+        // show update status during OTA updates. the callback runs in the upload handler, the
+        // progress is rendered by the loop task, see _showUpdateProgressQueued(). _updateProgress is
+        // written by the loop task only, a progress value that is already applied is not queued
+        WebServer::Plugin::getInstance().setUpdateFirmwareCallback([this](size_t position, size_t size) {
+            const int progress = static_cast<int>(position * 100 / size);
+            if (progress == _updateProgress) {
+                return;
             }
+            _enqueue([this, progress] {
+                _showUpdateProgressQueued(progress);
+            });
         });
 
     #endif
@@ -491,11 +460,11 @@ void ClockPlugin::reconfigure(const String &source)
             _registerIRRemoteWebHandler();
         }
     #endif
-    IF_NOT_LOOP_TASK(_pending.reconfigure = source.startsWith(F("ani-")) ? 1 : 2; return);
-    _reconfigureNow(source.startsWith(F("ani-")));
+    const bool applyConfigOnly = source.startsWith(F("ani-"));
+    _enqueue([this, applyConfigOnly] { _reconfigureQueued(applyConfigOnly); });
 }
 
-void ClockPlugin::_reconfigureNow(bool applyConfigOnly)
+void ClockPlugin::_reconfigureQueued(bool applyConfigOnly)
 {
     _isRunning = false;
     if (applyConfigOnly) {
@@ -513,15 +482,43 @@ void ClockPlugin::_reconfigureNow(bool applyConfigOnly)
     endIRReceiver();
     beginIRReceiver();
 
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        _setFanSpeed(_config.fan_speed);
-    #endif
     _schedulePublishState = true;
     if (_targetBrightness) {
         _enable();
     }
     _isRunning = true;
 }
+
+#if IOT_LED_MATRIX_SHOW_UPDATE_PROGRESS
+
+// renders the progress of an OTA update. the LEDs are turned on the first time and the animation
+// loop is stopped, the progress bar replaces it until the update is done
+void ClockPlugin::_showUpdateProgressQueued(int progress)
+{
+    if (_updateProgress == progress) {
+        return;
+    }
+    if (_updateProgress == -1) {
+        #if IOT_LED_MATRIX_STANDBY_PIN != -1
+            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
+            pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
+        #endif
+        pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
+
+        LoopFunctions::remove(standbyLoop);
+        _removeLoop();
+        _fps = NAN;
+    }
+    _updateProgress = progress;
+
+    const uint8_t color2 = (progress * progress * progress * progress) / 1000000;
+    // use fill to reduce the brightness, show() would adjust the brightness of every pixel
+    constexpr uint8_t kBrightnessDivider = 4;
+    _display.fill((((100 - progress) / kBrightnessDivider) << 16) | ((color2 / kBrightnessDivider) << 8));
+    _display._showNeoPixelEx(255);
+}
+
+#endif
 
 void ClockPlugin::shutdown()
 {
@@ -591,7 +588,7 @@ void ClockPlugin::shutdown()
     if (_targetBrightness && _config.enabled) {
         // limit fade time to 1000ms
         uint16_t max_delay = 1000;
-        setBrightness(0, -1, max_delay);
+        _setBrightness(0, -1, max_delay);
         max_delay += 75;
         while(_targetBrightness && max_delay--) {
             loop();
@@ -624,10 +621,6 @@ void ClockPlugin::getStatus(Print &output)
         output.print(F("LED Matrix Plugin" HTML_S(br)));
     #elif IOT_CLOCK
         output.print(F("Clock Plugin" HTML_S(br)));
-    #endif
-
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        output.print(F("Fan control, "));
     #endif
 
     #if IOT_CLOCK_TEMPERATURE_PROTECTION
@@ -745,21 +738,28 @@ void ClockPlugin::getStatus(Print &output)
         }
     #endif
 
+    #if DEBUG_TASK_QUEUE
+        output.printf_P(PSTR(HTML_S(br) "Deferred tasks: %u queued (%u peak of %u), %u processed, %u dropped" HTML_S(br)), static_cast<unsigned>(_tasks.size()), static_cast<unsigned>(_tasks.peakSize()), static_cast<unsigned>(_tasks.capacity()), static_cast<unsigned>(_tasks.processed()), static_cast<unsigned>(_tasks.dropped()));
+    #endif
 }
 
-void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
+void ClockPlugin::setBrightnessDeferred(uint8_t brightness, int ms, uint32_t maxTime)
 {
-    IF_NOT_LOOP_TASK(_pending.brightness = brightness; return);
+    _enqueue([this, brightness, ms, maxTime] { _setBrightness(brightness, ms, maxTime); });
+}
+
+void ClockPlugin::_setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
+{
     if (ms < 0) {
         ms = _config.getFadingTimeMillis();
     }
     __LDBG_printf("brightness=%u fading=%u time=%d", brightness, _isFading, ms);
     if (ms == 0 || maxTime == 0) {
-        // use _setBrightness
-        _setBrightness(brightness);
+        // use _setBrightnessLevel
+        _setBrightnessLevel(brightness);
     }
     else {
-        // _setBrightness is called once the fading is complete
+        // _setBrightnessLevel is called once the fading is complete
         // enable LEDs now if the brightness is not 0, but wait until fading is complete before disabling them
         if (brightness != 0) {
             _enable();
@@ -781,22 +781,25 @@ void ClockPlugin::setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
     }
 }
 
-void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
+void ClockPlugin::setAnimationDeferred(AnimationType animation, uint16_t blendTime)
+{
+    _enqueue([this, animation, blendTime] { _setAnimation(animation, blendTime); });
+}
+
+void ClockPlugin::_setAnimation(AnimationType animation, uint16_t blendTime)
 {
     __LDBG_printf("animation=%d blend_time=%u", animation, blendTime);
-    // _animation is not touched here, the blend time is evaluated by the loop task when the
-    // new animation is published, see _setAnimation()/_applyPendingAnimation()
-    _requestedBlendTime = blendTime;
+    // the animation is created and published here, loop task only, see _publishAnimation()
     #if IOT_LED_MATRIX == 0
         switch(animation) {
             case AnimationType::COLON_SOLID:
-                setBlinkColon(0);
+                _setBlinkColon(0);
                 return;
             case AnimationType::COLON_BLINK_SLOWLY:
-                setBlinkColon(1000);
+                _setBlinkColon(1000);
                 return;
             case AnimationType::COLON_BLINK_FAST:
-                setBlinkColon(0);
+                _setBlinkColon(0);
                 return;
             default:
                 break;
@@ -805,39 +808,39 @@ void ClockPlugin::setAnimation(AnimationType animation, uint16_t blendTime)
     _config.animation = static_cast<uint8_t>(animation);
     switch(animation) {
         case AnimationType::FADING:
-            _setAnimation(new Clock::FadingAnimation(*this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay * 1000, _config.fading.factor.value));
+            _publishAnimation(new Clock::FadingAnimation(*this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay * 1000, _config.fading.factor.value), blendTime);
             break;
         case AnimationType::RAINBOW:
-            _setAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color));
+            _publishAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color), blendTime);
             break;
         case AnimationType::RAINBOW_FASTLED:
-            _setAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.bpm, _config.rainbow.hue, _config.rainbow.invert_direction));
+            _publishAnimation(new Clock::RainbowAnimationFastLED(*this, _config.rainbow.bpm, _config.rainbow.hue, _config.rainbow.invert_direction), blendTime);
             break;
         case AnimationType::FLASHING:
-            _setAnimation(new Clock::FlashingAnimation(*this, _getColor(), _config.flashing_speed));
+            _publishAnimation(new Clock::FlashingAnimation(*this, _getColor(), _config.flashing_speed), blendTime);
             break;
         case AnimationType::FIRE:
-            _setAnimation(new Clock::FireAnimation(*this, _config.fire));
+            _publishAnimation(new Clock::FireAnimation(*this, _config.fire), blendTime);
             break;
         case AnimationType::PLASMA:
-            _setAnimation(new Clock::PlasmaAnimation(*this, _getColor(), _config.plasma));
+            _publishAnimation(new Clock::PlasmaAnimation(*this, _getColor(), _config.plasma), blendTime);
             break;
         case AnimationType::XMAS:
-            _setAnimation(new Clock::XmasAnimation(*this, _config.xmas));
+            _publishAnimation(new Clock::XmasAnimation(*this, _config.xmas), blendTime);
             break;
         case AnimationType::GRADIENT:
-            _setAnimation(new Clock::GradientAnimation(*this, _config.gradient));
+            _publishAnimation(new Clock::GradientAnimation(*this, _config.gradient), blendTime);
             break;
         #if IOT_LED_MATRIX_ENABLE_VISUALIZER
             case  AnimationType::VISUALIZER:
-                _setAnimation(new Clock::VisualizerAnimation(*this, _getColor(), _config.visualizer));
+                _publishAnimation(new Clock::VisualizerAnimation(*this, _getColor(), _config.visualizer), blendTime);
                 break;
         #endif
         case AnimationType::SOLID:
         default:
             _config.animation = static_cast<uint8_t>(AnimationType::SOLID);
             _setColor(_config.solid_color);
-            _setAnimation(new Clock::SolidColorAnimation(*this, _getColor()));
+            _publishAnimation(new Clock::SolidColorAnimation(*this, _getColor()), blendTime);
             break;
     }
     _schedulePublishState = true;
@@ -879,9 +882,9 @@ void ClockPlugin::_sanitizeConfig()
     matrix.offset3 = std::min<int>(matrix.offset3, kMaxSegmentPixels);
 }
 
+// reads the stored configuration and applies it, loop task only
 void ClockPlugin::readConfig(bool setup)
 {
-    IF_NOT_LOOP_TASK(_pending.configApply = true; return);
     // read config
     _config = Plugins::Clock::getConfig();
     _sanitizeConfig();
@@ -955,11 +958,11 @@ void ClockPlugin::readConfig(bool setup)
     beginIRReceiver();
 
     _setColor(_config.solid_color.value);
-    _setBrightness(_config.getBrightness(), false);
-    setAnimation(_config.getAnimation());
+    _setBrightnessLevel(_config.getBrightness(), false);
+    _setAnimation(_config.getAnimation());
 }
 
-void ClockPlugin::_setBrightness(uint8_t brightness, bool useEnable)
+void ClockPlugin::_setBrightnessLevel(uint8_t brightness, bool useEnable)
 {
     if (isTempProtectionActive()) {
         __LDBG_printf("temperature protection active");
@@ -987,7 +990,6 @@ void ClockPlugin::_setBrightness(uint8_t brightness, bool useEnable)
 
 void ClockPlugin::_enable()
 {
-    IF_NOT_LOOP_TASK(_pending.enable = 1; return);
     if (_isLocked) {
         _isLocked = false;
         return;
@@ -1006,10 +1008,6 @@ void ClockPlugin::_enable()
             digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
         }
         __LDBG_printf("enable LED pin=%u state=%u (cfg_enable=%u, is_enabled=%u, config=%u)", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true), _config.standby_led, _isEnabled, _config.enabled);
-    #endif
-
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        _setFanSpeed(_config.fan_speed);
     #endif
 
     enableLoopNoClear(true);
@@ -1034,7 +1032,6 @@ void ClockPlugin::_enable()
 
 void ClockPlugin::_disable()
 {
-    IF_NOT_LOOP_TASK(_pending.enable = 0; return);
     __LDBG_printf("disable LED pin=%d state=%u (cfg_enabled=%u, is_enabled=%u, config=%u)", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false), _config.standby_led, _isEnabled, _config.enabled);
 
     // turn all leds off and set brightness to 0
@@ -1053,10 +1050,6 @@ void ClockPlugin::_disable()
         if (_config.standby_led) {
             digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
         }
-    #endif
-
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        _setFanSpeed(0);
     #endif
 
     _removeLoop();
@@ -1083,7 +1076,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
         if (_isFading) {
             // stop fading
             // the target brightness will be set after the alarm has been disabled
-            _setBrightness(_targetBrightness);
+            _setBrightnessLevel(_targetBrightness);
         }
 
         struct {
@@ -1106,7 +1099,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
                 setAutoBrightness(saved.autoBrightness);
             #endif
             _targetBrightness = saved.targetBrightness;
-            setAnimation(saved.animation);
+            _setAnimation(saved.animation);
             __LDBG_printf("restored parameters brightness=%u auto=%d color=%s animation=%u timer=%u", saved.targetBrightness, saved.autoBrightness, getColor().toString().c_str(), saved.animation, (bool)timer);
             timer->disarm();
             _resetAlarmFunc = nullptr;
@@ -1120,7 +1113,7 @@ void ClockPlugin::_alarmCallback(ModeType mode, uint16_t maxDuration)
             setAutoBrightness(false);
         #endif
         _targetBrightness = kMaxBrightness;
-        _setAnimation(new Clock::FlashingAnimation(*this, _config.alarm.color.value, _config.alarm.speed));
+        _publishAnimation(new Clock::FlashingAnimation(*this, _config.alarm.color.value, _config.alarm.speed));
     }
 
     if (maxDuration == 0) {
@@ -1196,74 +1189,47 @@ void IRAM_ATTR ClockPlugin::_loop()
 #    pragma GCC optimize ("O3")
 #endif
 
+// the display is only rendered by the loop task
 void IRAM_ATTR ClockPlugin::_display_show()
 {
-    // _display is owned by the loop task, queued requests are applied by _applyPendingOps()
-    IF_NOT_LOOP_TASK(_pending.show = true; return);
-
-    // last line of defence, show() must never run re-entrantly
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        if (_showInProgress) {
-            _pending.show = true;
-            return;
-        }
-        _showInProgress = true;
-    #endif
-
     _display.show();
-
-    #if IOT_CLOCK_DEFERRED_DISPLAY_UPDATE
-        _showInProgress = false;
-    #endif
 }
 
 #if ESP8266
 #   pragma GCC pop_options
 #endif
 
-// apply the changes queued by other tasks and publish queued animations
-// this is the only place where the display, the animation objects and the config are changed
-// (except for the loop task itself), see _isLoopTask()
+// queue a request, see the "Requests" section in clock.h. returns false if the queue is full
+bool ICACHE_FLASH_ATTR ClockPlugin::_enqueue(TaskQueue::Task task)
+{
+    if (!task) {
+        return false;
+    }
+    if (_tasks.push(std::move(task)) != TaskQueue::ResultType::SUCCESS) {
+        #if DEBUG_TASK_QUEUE
+            __DBG_printf("task queue full, size=%u dropped=%u", static_cast<unsigned>(_tasks.size()), static_cast<unsigned>(_tasks.dropped()));
+        #else
+            __DBG_printf("task queue full, size=%u", static_cast<unsigned>(_tasks.size()));
+        #endif
+        return false;
+    }
+    return true;
+}
+
+// execute the queued requests. the loop task drains the queue once per iteration, outside of
+// __Scheduler.run(), so a request may add/remove timers and loop functions safely
 void ICACHE_FLASH_ATTR ClockPlugin::_applyPendingChanges()
 {
-    // requests queued by other tasks, see PendingOpsType
-    _pending.apply(*this);
+    _tasks.process();
+}
 
-    // publish queued animations and destroy the animations they replace
-    for(auto &pending: _pendingAnimation) {
-        auto animation = pending;
-        if (!animation) {
-            continue;
-        }
-        pending = nullptr;
-
-        if (_animation && _animation->hasBlendSupport()) {
-            _blendTime = _requestedBlendTime;
-        }
-        else {
-            _blendTime = 0;
-        }
-
-        if (_animation && _setBlendAnimation(animation)) {
-            // blending started, the BlendAnimation owns the new animation as _target
-        }
-        else {
-            // no animation set yet
-            if (_animation) {
-                delete _animation;
-            }
-            if ((_animation = animation) != nullptr) {
-                _animation->begin();
-            }
-        }
-    }
-
-    if (_pendingColorSet) {
-        _pendingColorSet = false;
-        if (_animation) {
-            _animation->setColor(_pendingColor);
-        }
-    }
+// the form (web task) writes into the storage, adopt it. only the loop task touches _config and
+// the save timer, see createConfigureForm()
+void ICACHE_FLASH_ATTR ClockPlugin::_syncConfigFromStorageQueued()
+{
+    _config = Plugins::Clock::getWriteableConfig();
+    // everything has been written already, remove the delayed save
+    _Timer(_saveTimer).remove();
 }
 
 // keep all the animation code in flash memory

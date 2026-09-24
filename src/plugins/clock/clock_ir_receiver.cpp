@@ -29,7 +29,7 @@ using namespace Clock;
 // "the button is still pressed". The decoder passes the last frame again, the actions decide if they
 // can be applied repeatedly (brightness, color channels) or only once (power, animation, color).
 
-void ClockPlugin::_irRemoteCallback(uint32_t code, bool repeat)
+void ClockPlugin::_irRemoteCallbackDeferred(uint32_t code, bool repeat)
 {
     if (!IRRemoteConfigType::hasCode(code)) {
         return;
@@ -43,10 +43,10 @@ void ClockPlugin::_irRemoteCallback(uint32_t code, bool repeat)
         }
         return;
     }
-    // the callbacks are invoked by the event scheduler while it iterates its callbacks, applying the
-    // action from there could modify the timer list (e.g. _saveState()), same as buttonCallback()
-    LoopFunctions::callOnce([this, code, repeat]() {
-        _irRemoteAction(code, repeat);
+    // the callbacks are invoked by the event scheduler while it iterates its timers, applying the
+    // action from there could modify the timer list (e.g. _saveStateDeferred()), same as buttonCallbackDeferred()
+    _enqueue([this, code, repeat] {
+        _irRemoteActionQueued(code, repeat);
     });
 }
 
@@ -122,7 +122,7 @@ void ClockPlugin::_registerIRRemoteWebHandler()
     });
 }
 
-void ClockPlugin::_irRemoteAction(uint32_t code, bool repeat)
+void ClockPlugin::_irRemoteActionQueued(uint32_t code, bool repeat)
 {
     using ActionType = IRRemoteConfigType::ActionType;
     const auto &ir = _config.ir;
@@ -138,11 +138,11 @@ void ClockPlugin::_irRemoteAction(uint32_t code, bool repeat)
         const int step = repeat ? kBrightnessChangeHold : kBrightnessChangeClick;
         if (code == ir.getCode(ActionType::BRIGHTNESS_UP)) {
             __LDBG_printf("IR brightness %u + %d", _targetBrightness, step);
-            setBrightness(std::min<int>(255, _targetBrightness + step));
+            _setBrightness(std::min<int>(255, _targetBrightness + step));
         }
         else {
             __LDBG_printf("IR brightness %u - %d", _targetBrightness, step);
-            setBrightness(std::max<int>(1, _targetBrightness - step));
+            _setBrightness(std::max<int>(1, _targetBrightness - step));
         }
         return;
     }
@@ -150,7 +150,7 @@ void ClockPlugin::_irRemoteAction(uint32_t code, bool repeat)
     if (code == ir.getCode(ActionType::POWER)) {
         if (!repeat) {
             __LDBG_printf("IR power on=%u", !_config.enabled);
-            _setState(!_config.enabled);
+            _setState(!_config.enabled, false);
         }
         return;
     }
@@ -183,7 +183,7 @@ void ClockPlugin::_irRemoteAction(uint32_t code, bool repeat)
                     break;
             }
             __LDBG_printf("IR color %06x (%c%u)", static_cast<uint32_t>(color), isUp ? '+' : '-', ir.step);
-            setColorAndRefresh(color);
+            _setColorAndRefresh(color);
             _saveState();
             return;
         }
@@ -196,7 +196,7 @@ void ClockPlugin::_irRemoteAction(uint32_t code, bool repeat)
             if (!repeat) {
                 __LDBG_printf("IR color %06x", ir.getColor(action));
                 // only the color is changed, the animation keeps running
-                setColorAndRefresh(Color(ir.getColor(action)));
+                _setColorAndRefresh(Color(ir.getColor(action)));
                 _saveState();
             }
             return;
@@ -384,13 +384,13 @@ void ClockPlugin::_irDecodeNec()
         if (repeat) {
             _irRepeatCount++;
             __LDBG_printf("IR repeat");
-            _irRemoteCallback(_irLastCode, true);
+            _irRemoteCallbackDeferred(_irLastCode, true);
         }
         else {
             _irLastCode = code;
             _irFrameCount++;
             __LDBG_printf("IR %08x", code);
-            _irRemoteCallback(code, false);
+            _irRemoteCallbackDeferred(code, false);
         }
         index = next;
     }
@@ -458,7 +458,7 @@ void ClockPlugin::beginIRReceiver()
             if (_irResults.repeat) {
                 _irRepeatCount++;
                 __LDBG_printf("IR repeat");
-                _irRemoteCallback(_irLastCode, true);
+                _irRemoteCallbackDeferred(_irLastCode, true);
             }
             else {
                 if (_irResults.value) {
@@ -466,7 +466,7 @@ void ClockPlugin::beginIRReceiver()
                     _irFrameCount++;
                 }
                 __LDBG_printf("IR %08x", _irResults.value);
-                _irRemoteCallback(_irResults.value, false);
+                _irRemoteCallbackDeferred(_irResults.value, false);
             }
             _irReceiver->resume();
         }

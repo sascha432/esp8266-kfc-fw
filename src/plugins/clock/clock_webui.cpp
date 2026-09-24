@@ -53,10 +53,6 @@ void ClockPlugin::getValues(WebUINS::Events &array)
     #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
         array.append(WebUINS::Values(F("pwrlvl"), _getPowerLevelStr()));
     #endif
-
-    #if IOT_LED_MATRIX_FAN_CONTROL
-        array.append(WebUINS::Values(F("fanspeed"), _fanSpeed, true));
-    #endif
 }
 
 void ClockPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
@@ -69,28 +65,17 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         auto val = static_cast<uint32_t>(value.toInt());
         #if IOT_LED_MATRIX == 0
             if (id == F("colon")) {
-                setBlinkColon(val);
-                _saveState();
+                setBlinkColonDeferred(val);
+                _saveStateDeferred();
             }
             else
         #endif
             if (id == F("power")) {
-            _setState(val);
+            _setStateDeferred(val);
         }
-        #if IOT_LED_MATRIX_FAN_CONTROL
-                if (id == F("fanspeed")) {
-                _setFanSpeed(val);
-                _config.fan_speed = _fanSpeed;
-                _saveState();
-                // if (val != _fanSpeed) {
-                //     _webUIUpdateFanSpeed();
-                // }
-            }
-            else
-        #endif
         if (id == F("ani")) {
-            setAnimation(static_cast<AnimationType>(val));
-            _saveState();
+            setAnimationDeferred(static_cast<AnimationType>(val));
+            _saveStateDeferred();
         }
         else if (id.startsWith(F("ani-"))) {
             // create AsyncWebServerRequest from web socket post data and submit form
@@ -101,12 +86,12 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
             WebServer::Plugin::getInstance().handleFormData(id, &request, *this);
         }
         else if (id == F("color")) {
-            setColorAndRefresh(val);
-            _saveState();
+            setColorAndRefreshDeferred(val);
+            _saveStateDeferred();
         }
         else if (id == FSPGM(brightness)) {
-            setBrightness(std::clamp<uint8_t>(val, 0, kMaxBrightness));
-            _saveState();
+            setBrightnessDeferred(std::clamp<uint8_t>(val, 0, kMaxBrightness));
+            _saveStateDeferred();
         }
     }
 }
@@ -245,15 +230,6 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
             }
         #endif
 
-        #if IOT_LED_MATRIX_FAN_CONTROL
-            {
-                auto fanSpeed = WebUINS::Slider(F("fanspeed"), F("Fan Speed<div class=\"p-1\"></div><span class=\"oi oi-fire\">"), _config.min_fan_speed - 1, _config.max_fan_speed, true, colspan);
-                row.append(fanSpeed.append(
-                    WebUINS::NamedUint32(J(name), static_cast<uint32_t>(WebUINS::NamePositionType::TOP)),
-                    WebUINS::NamedString(J(height), height)));
-            }
-        #endif
-
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
 
             // calculated power and power limit
@@ -299,19 +275,8 @@ void ClockPlugin::_broadcastWebUI()
 void ClockPlugin::_webUIUpdateColor(int color)
 {
     if (WebUISocket::hasAuthenticatedClients()) {
-        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(WebUINS::Values(F("color"), Color(color == -1 ? _getColor() : color).toString(), _getEnabledState() && _config.hasColorSupport()))));
+        WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(
+            WebUINS::Events(WebUINS::Values(F("color"), Color(color == -1 ? _getColor() : color).toString(), _getEnabledState() && _config.hasColorSupport()))
+        ));
     }
 }
-
-// #if IOT_LED_MATRIX_FAN_CONTROL
-
-// void ClockPlugin::_webUIUpdateFanSpeed()
-// {
-//     if (WebUISocket::hasAuthenticatedClients()) {
-//         WebUISocket::broadcast(WebUISocket::getSender(), WebUINS::UpdateEvents(WebUINS::Events(
-//             WebUINS::Values(F("fanspeed"), _fanSpeed, true)
-//         )));
-//     }
-// }
-
-// #endif

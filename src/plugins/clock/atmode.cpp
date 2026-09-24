@@ -50,7 +50,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             else {
                 newType = static_cast<Clock::AnimationType>(visTxtType);
             }
-            setAnimation(newType, 0);
+            _setAnimation(newType, 0);
             args.printf_P(PSTR("Visualizer=%u (%s)"), _config.animation, _getAnimationName(static_cast<Clock::AnimationType>(_config.animation)));
         }
         // br[ightness],<level>
@@ -58,7 +58,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             if (args.requireArgs(2, 3)) {
                 auto brightness = args.toIntMinMax<uint16_t>(1, 0, Clock::kMaxBrightness);
                 auto time = args.toMillis(2, 0, 60000, 10000);
-                setBrightness(brightness, time);
+                _setBrightness(brightness, time);
                 args.printf_P("fading brightness to %.2f%% (%u) in %.3f seconds", brightness / (float)Clock::kMaxBrightness * 100.0, brightness, time / 1000.0);
             }
         }
@@ -112,7 +112,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
                     name.replace(' ', '_');
                     if (animation.equalsIgnoreCase(name)) {
-                        setAnimation(static_cast<AnimationType>(i), blendTime);
+                        _setAnimation(static_cast<AnimationType>(i), blendTime);
                         break;
                     }
                 }
@@ -137,8 +137,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         }
         // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>,<offset>
         else if (args.startsWithIgnoreCase(0, F("map"))) {
-            // the mapping is used by the renderer, it must not change while the loop task draws
-            IF_NOT_LOOP_TASK(args.print(F("not available from this context, use the serial console")); return true);
             if (args.size() >= 6) {
                 if (!_display.setParams(
                     args.toInt(1, _display.getRows()),
@@ -182,7 +180,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 enableLoop(false);
                 if (args.size() < 1) {
                     _display.clear();
-                    _display.show();
+                    _show();
                     args.print(F("display cleared"));
                 }
                 else {
@@ -192,7 +190,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     _display.fill(0x000020);
                     _display.setBrightness(255);
                     _display.print(text);
-                    _display.show();
+                    _show();
                 }
             #else
                 args.print(F("print not supported"));

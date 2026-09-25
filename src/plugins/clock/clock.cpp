@@ -44,7 +44,7 @@ ClockPlugin ClockPlugin_plugin;
 
 #endif
 
-#define PLUGIN_OPTIONS_CONFIG_FORMS                     "settings,animations,protection,matrix,irremote,ani-*"
+#define PLUGIN_OPTIONS_CONFIG_FORMS      "settings,animations,protection,matrix,irremote,ani-*"
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,

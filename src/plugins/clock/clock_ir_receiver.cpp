@@ -79,13 +79,12 @@ void ClockPlugin::_irLearnTimeoutCheck()
 //  repeats number of repeat frames received (the button is still held)
 void ClockPlugin::_irWebHandler(AsyncWebServerRequest *request)
 {
-    auto &plugin = getInstance();
-
     if (!WebServer::Plugin::isAuthenticated(request)) {
         request->send(403);
         return;
     }
 
+    auto &plugin = getInstance();
     const auto action = request->arg(F("action"));
     if (F("learn") == action) {
         plugin._irSetLearnMode(true);

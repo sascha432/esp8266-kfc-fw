@@ -90,11 +90,11 @@ namespace Clock {
             _timeout(5),
             _lastPacketTime(0),
             _cfg(cfg),
-            _plasmaTime(0),
-            _plasmaHue(0),
             _audioLevel(0),
             _audioBands(),
             _audioLastUpdate(0),
+            _plasmaTime(0),
+            _plasmaHue(0),
             _fireUpdateTime(0)
         {
             _usageCounter++;

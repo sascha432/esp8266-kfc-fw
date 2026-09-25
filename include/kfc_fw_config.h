@@ -22,7 +22,7 @@
 #    include <Syslog.h>
 #endif
 #if MDNS_PLUGIN
-#    include "../src/plugins/mdns/mdns_resolver.h"
+#    include "../src/plugins/mdns/mdns_def.h"
 #endif
 #include "at_mode.h"
 #include "blink_led_timer.h"

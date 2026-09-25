@@ -15,6 +15,7 @@
 #include "PinMonitor.h"
 #include "plugins.h"
 #include "plugins_menu.h"
+#include "deep_sleep.h"
 #include <limits>
 #include <stl_ext/memory.h>
 
@@ -1768,7 +1769,7 @@ static const ATModeCommands::Item PROGMEM ATModeCommandsTable[] = {
         ATModeCommands::Item(ATModeCommands::AOTACommand, SPGM(AOTACommandString)),
     #endif
     #if __LED_BUILTIN_WS2812_NUM_LEDS
-        ATModeCommands::Item(ATModeCommands::NEOPXCommand, SPGM(NeoPixelCommandString)),
+        ATModeCommands::Item(ATModeCommands::NeoPixelCommand, SPGM(NeoPixelCommandString)),
     #endif
     #if __LED_BUILTIN != IGNORE_BUILTIN_LED_PIN_ID
         ATModeCommands::Item(ATModeCommands::LEDCommand, SPGM(LEDCommandString)),

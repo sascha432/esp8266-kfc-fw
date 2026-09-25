@@ -10,6 +10,7 @@
 #include <memory>
 #include <list>
 #include <Mutex.h>
+#include "mdns_def.h"
 #if ESP8266
 #include <ESP8266mDNS.h>
 #elif ESP32
@@ -21,19 +22,12 @@ class MDNSPlugin;
 namespace MDNSResolver {
 
     class Query;
-    enum class ResponseType {
-        NONE = 0,
-        TIMEOUT,
-        RESOLVED,
-    };
 
     #if ESP8266
         using ServiceQuery = MDNSResponder::hMDNSServiceQuery;
     #elif ESP32
         using ServiceQuery = mdns_search_once_t *;
     #endif
-
-    using ResolvedCallback = std::function<void(const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, ResponseType type)>;
 
     using QueryPtr = std::shared_ptr<Query>;
     using Queries = std::list<QueryPtr>;

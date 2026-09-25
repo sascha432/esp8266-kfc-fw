@@ -24,11 +24,6 @@ using KFCConfigurationClasses::System;
 using namespace MQTT::AutoDiscovery;
 using namespace KFCJson;
 
-bool Entity::create(ComponentPtr component, const String &componentName, FormatType format)
-{
-    return create(component->getType(), componentName, format);
-}
-
 bool Entity::create(ComponentType componentType, const String &componentName, FormatType format)
 {
     String suffix = System::Device::getObjectIdOrName();
@@ -39,26 +34,6 @@ bool Entity::create(ComponentType componentType, const String &componentName, Fo
         suffix += componentName;
     }
     return _create(componentType, suffix, format);
-}
-
-String Entity::getWildcardTopic()
-{
-    return PrintString(F("%s/+/%s/#"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-}
-
-String Entity::getConfigWildcardTopic()
-{
-    return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-}
-
-String Entity::getConfig2ndLevelWildcardTopic()
-{
-    return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-}
-
-String Entity::getTriggersTopic()
-{
-    return MQTT::Client::formatTopic(F("/triggers"));
 }
 
 bool Entity::_create(ComponentType componentType, const String &name, FormatType format, NameType platform)
@@ -99,8 +74,8 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
     }
     uniqueId = _getUniqueId(name);
     if (componentType != ComponentType::DEVICE_AUTOMATION) {
-        addParameter(FSPGM(name), name);
-        addParameter(F("platform"), platform);
+        addParameter(FSPGM(mqtt_name), name);
+        addParameter(FSPGM(mqtt_platform), platform);
         if (format == FormatType::JSON) {
             addParameter(FSPGM(mqtt_unique_id), uniqueId);
         }
@@ -155,7 +130,6 @@ void Entity::__addParameter(NameType name, const char *str, bool quotes)
         if (quotes) {
             _discovery.print('"');
         }
-        // _discovery.printf_P(PSTR("\"%s\":\""), name);
         #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
                 auto len = strlen_P(RFPSTR(name));
                 if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) { // check if the name ends with "_t"
@@ -194,11 +168,4 @@ void Entity::finalize()
         _discovery.remove(_discovery.length() - 4);
     }
     __LDBG_printf("MQTT auto discovery payload '%s'", printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
-}
-
-String Entity::_getUniqueId(const String &name)
-{
-    PrintString tmp;
-    WebTemplate::printUniqueId(tmp, name);
-    return tmp;
 }

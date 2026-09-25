@@ -1189,9 +1189,9 @@ bool ICACHE_FLASH_ATTR ClockPlugin::_enqueue(TaskQueue::Task task)
     }
     if (_tasks.push(std::move(task)) != TaskQueue::ResultType::SUCCESS) {
         #if DEBUG_TASK_QUEUE
-            __DBG_printf("task queue full, size=%u dropped=%u", static_cast<unsigned>(_tasks.size()), static_cast<unsigned>(_tasks.dropped()));
+            __DBG_printf_E("task queue full, size=%u dropped=%u", static_cast<unsigned>(_tasks.size()), static_cast<unsigned>(_tasks.dropped()));
         #else
-            __DBG_printf("task queue full, size=%u", static_cast<unsigned>(_tasks.size()));
+            __LDBG_printf_E("task queue full, size=%u", static_cast<unsigned>(_tasks.size()));
         #endif
         return false;
     }

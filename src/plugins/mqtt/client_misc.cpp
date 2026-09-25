@@ -20,12 +20,25 @@ StringVector MQTT::Client::_createAutoDiscoveryTopics() const
 
 String MQTT::Client::connectionDetailsString(bool details)
 {
-    auto message = PrintString(F("%s@%s:%u"), _username.length() ? _username.c_str() : SPGM(Anonymous), (IPAddress_isValid(_address) ? _address.toString().c_str() : _hostname.c_str()), _port);
+    PrintString message;
+    if (_username.length()) {
+        message.print(_username);
+    } else {
+        message.print(F("Anonymous"));
+    }
+    message.print('@');
+    if (IPAddress_isValid(_address)) {
+        _address.printTo(message);
+    } else {
+        message.print(_hostname);
+    }
+    message.print(':');
+    message.print(_port);
     if (details) {
         message.printf_P(PSTR(", QoS %u"), _getDefaultQos());
         #if ASYNC_TCP_SSL_ENABLED
             if (_config._get_enum_mode() == ModeType::SECURE) {
-                message += F(", Secure MQTT");
+                message.print(F(", Secure MQTT"));
             }
         #endif
     }
@@ -56,13 +69,8 @@ String MQTT::Client::connectionStatusString()
             break;
 
     }
-    // if (isConnected()) {
-    //     message += F(", connected, ");
-    // } else {
-    //     message += F(", disconnected, ");
-    // }
-    message += F("topic ");
 
+    message += F("topic ");
     #if MQTT_AUTO_DISCOVERY
         message += MQTT::Client::_getBaseTopic();
     #else

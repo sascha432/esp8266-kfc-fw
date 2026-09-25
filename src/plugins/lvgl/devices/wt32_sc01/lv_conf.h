@@ -10,7 +10,7 @@
  * copy the settings you need from there into this file.
  *
  * Enabled with -D LV_CONF_INCLUDE_SIMPLE=1 and found through
- * -I./src/plugins/wt32_sc01 (see conf/envs/wt32_sc01.ini).
+ * -I./src/plugins/lvgl/devices/wt32_sc01 (see conf/envs/wt32_sc01.ini).
  */
 #if 1
 

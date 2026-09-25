@@ -394,6 +394,7 @@
             "LIPO",
             "LISTBOX",
             "LITTLEFS",
+            "lvgl",
             "MDNS",
             "MEMNCPY",
             "MILLIS",
@@ -442,6 +443,7 @@
             "PWMRANGE",
             "PYTHONIOENCODING",
             "QOUT",
+            "qspi",
             "RANGESLIDER",
             "REBUILDFS",
             "REMOTECTRL",
@@ -497,6 +499,7 @@
             "WebUINS",
             "WLED",
             "WRITEPLUS",
+            "WROVER",
             "WSGALLERY",
             "ZEROCONF",
             "ZWEIKLANG"

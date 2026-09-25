@@ -339,6 +339,10 @@
 #    define IOT_ALARM_PLUGIN_ENABLED 0
 #endif
 
+#ifndef IOT_LVGL_SUPPORT
+#    define IOT_LVGL_SUPPORT 0
+#endif
+
 #ifndef IOT_RF24_MASTER
 #    define IOT_RF24_MASTER 0
 #endif

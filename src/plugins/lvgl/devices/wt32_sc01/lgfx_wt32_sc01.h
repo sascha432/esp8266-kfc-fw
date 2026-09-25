@@ -78,7 +78,10 @@ public:
             cfg.memory_height = 480;
             cfg.readable = false;
             cfg.invert = false;
-            cfg.rgb_order = false;
+            // BGR panel: the ST7796S needs MADCTL bit3 (BGR) set, without it red and blue
+            // are swapped. Matches Teneppa/WT32-SC01-Module (MADCTL 0b01001010) and
+            // TFT_eSPI's ST7796 default (0x48 = MX|BGR).
+            cfg.rgb_order = true;
             cfg.dlen_16bit = false;
             cfg.bus_shared = false;
             _panel_instance.config(cfg);

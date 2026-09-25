@@ -90,6 +90,9 @@
                 "./Resources/html/alarm.html",
                 "./Resources/js/forms/alarm.js"
             ],
+            "#if !IOT_LVGL_SUPPORT": [
+                "./Resources/html/lvgl.html"
+            ],
             "#if !IOT_SSDP_SUPPORT": [
                 "./Resources/html/description.xml"
             ],

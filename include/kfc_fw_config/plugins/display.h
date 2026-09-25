@@ -19,7 +19,7 @@ namespace KFCConfigurationClasses {
                 struct __attribute__packed__ Config_t {
                     using Type = Config_t;
 
-                    CREATE_UINT32_BITFIELD_MIN_MAX(backlight_level, 8, 0, 255, 255);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(backlight_level, 7, 0, 100, 100); // level in %
 
                     Config_t() :
                         backlight_level(kDefaultValueFor_backlight_level)

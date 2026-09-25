@@ -947,6 +947,23 @@ public:
     {
         return _client != nullptr && _client->isConnected();
     }
+
+    // AutoDiscovery::Entity methods that require the complete MQTT::Component/MQTT::Client types
+    // (auto_discovery.h is included before either of them is defined)
+
+    namespace AutoDiscovery {
+
+        inline bool Entity::create(ComponentPtr component, const String &componentName, FormatType format)
+        {
+            return create(component->getType(), componentName, format);
+        }
+
+        inline String Entity::getTriggersTopic()
+        {
+            return Client::formatTopic(F("/triggers"));
+        }
+
+    }
 }
 
 #include <debug_helper_disable.h>

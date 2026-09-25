@@ -169,37 +169,3 @@ void Entity::finalize()
     }
     __LDBG_printf("MQTT auto discovery payload '%s'", printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
 }
-
-String Entity::getTriggersTopic()
-{
-    return MQTT::Client::formatTopic(F("/triggers"));
-}
-
-String Entity::_getUniqueId(const String &name)
-{
-    PrintString tmp;
-    WebTemplate::printUniqueId(tmp, name);
-    return tmp;
-}
-
-bool Entity::create(ComponentPtr component, const String &componentName, FormatType format)
-{
-    return create(component->getType(), componentName, format);
-}
-
-using KFCConfigurationClasses::System;
-
-String Entity::getWildcardTopic()
-{
-    return PrintString(F("%s/+/%s/#"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-}
-
-String Entity::getConfigWildcardTopic()
-{
-    return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-}
-
-String Entity::getConfig2ndLevelWildcardTopic()
-{
-    return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-}

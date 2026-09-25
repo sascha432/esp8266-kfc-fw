@@ -6,6 +6,7 @@
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
+#include <templates.h>
 #include "mqtt_base.h"
 #include "mqtt_strings.h"
 
@@ -388,6 +389,28 @@ namespace MQTT {
         inline size_t Entity::getMessageSize() const
         {
             return _discovery.length() + _topic.length() + 16;
+        }
+
+        inline String Entity::getWildcardTopic()
+        {
+            return PrintString(F("%s/+/%s/#"), MqttClient::getAutoDiscoveryPrefix(), KFCConfigurationClasses::System::Device::getObjectIdOrName());
+        }
+
+        inline String Entity::getConfigWildcardTopic()
+        {
+            return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), KFCConfigurationClasses::System::Device::getObjectIdOrName());
+        }
+
+        inline String Entity::getConfig2ndLevelWildcardTopic()
+        {
+            return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), KFCConfigurationClasses::System::Device::getObjectIdOrName());
+        }
+
+        inline String Entity::_getUniqueId(const String &name)
+        {
+            PrintString tmp;
+            WebTemplate::printUniqueId(tmp, name);
+            return tmp;
         }
 
     }

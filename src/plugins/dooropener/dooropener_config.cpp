@@ -12,10 +12,8 @@ namespace KFCConfigurationClasses {
 
         namespace DoorOpenerConfigNS {
 
-            #ifndef  _MSC_VER
             #pragma GCC diagnostic push
             #pragma GCC diagnostic ignored "-Woverflow"
-            #endif
 
                 Blinds::BlindsConfig_t::BlindsConfig_t() :
                     channels(),
@@ -34,9 +32,7 @@ namespace KFCConfigurationClasses {
                 {
                 }
 
-            #ifndef  _MSC_VER
             #pragma GCC diagnostic pop
-            #endif
 
             Blinds::BlindsConfigChannel_t::BlindsConfigChannel_t() :
                 current_limit_mA(kDefaultValueFor_current_limit_mA),

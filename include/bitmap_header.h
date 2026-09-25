@@ -6,11 +6,7 @@
 
 #include <Arduino_compat.h>
 
-#include "push_pack.h"
-
-#if !_MSC_VER
-
-typedef struct __attribute__packed__ {
+typedef struct __attribute__((packed)) {
     uint16_t        bfType;
     uint32_t        bfSize;
     uint16_t        bfReserved1;
@@ -18,7 +14,7 @@ typedef struct __attribute__packed__ {
     uint32_t        bfOffBits;
 } BITMAPFILEHEADER;
 
-typedef struct __attribute__packed__ {
+typedef struct __attribute__((packed)) {
     uint32_t        biSize;
     int32_t         biWidth;
     int32_t         biHeight;
@@ -31,8 +27,6 @@ typedef struct __attribute__packed__ {
     uint32_t        biClrUsed;
     uint32_t        biClrImportant;
 } BITMAPINFOHEADER;
-
-#endif
 
 namespace GFXCanvas {
 
@@ -53,5 +47,3 @@ namespace GFXCanvas {
     static_assert(sizeof(BitmapFileHeaderType) == 54, "Invalid size");
 
 }
-
-#include "pop_pack.h"

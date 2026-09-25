@@ -1639,10 +1639,8 @@ void ATModeCommands::PanicCommand(AtModeArgs &args)
         delay(1000);
         while(malloc(4096)) {
         }
-        #ifndef _MSC_VER
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wnonnull"
-        #endif
         memset((void *)address, 0, 2147483647);
         memset((void *)2147483647, 0, 2147483647);
         memset((void *)0, 0, 2147483647);
@@ -1654,9 +1652,7 @@ void ATModeCommands::PanicCommand(AtModeArgs &args)
         memset((void *)address, 0, 2147483647);
         memset((void *)2147483647, 0, 2147483647);
         memset((void *)0, 0, 2147483647);
-        #ifndef _MSC_VER
         #pragma GCC diagnostic pop
-        #endif
     }
     else {
         args.print(F("calling panic()"));

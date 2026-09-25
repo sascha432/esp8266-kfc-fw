@@ -191,10 +191,6 @@
             "**/boost/xpressive/*": true,
             "**/boost/yap/*": true,
             "**/elf": true,
-            "**/lib-mock": true,
-            "**/lib-mock/ignore-KFCGfx": true,
-            "**/lib-mock/tmp": true,
-            "**/lib/KFCGfx/mock*": true,
             "**/frameworks": true
         },
         "files.associations": {

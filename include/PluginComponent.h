@@ -55,8 +55,6 @@ virtual void createConfigureForm(FormCallbackType type, const String &formName, 
 __LDBG_printf("source=%s", source.c_str());
 */
 
-#include <push_pack.h>
-
 class PluginComponent;
 
 namespace PluginComponents {
@@ -555,5 +553,3 @@ inline bool PluginComponent::isEnabled() const
     };
 
 #define PROGMEM_GET_PLUGIN_OPTIONS(class_name) &_plugins_config_progmem_config_t_##class_name
-
-#include <pop_pack.h>

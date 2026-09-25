@@ -17,7 +17,6 @@
 #include <boost/preprocessor/control/if.hpp>
 #include <boost/preprocessor/comparison/equal.hpp>
 #include <boost/preprocessor/punctuation/remove_parens.hpp>
-#include <push_pack.h>
 
 #include <kfc_fw_config_types.h>
 

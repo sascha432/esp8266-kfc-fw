@@ -24,49 +24,12 @@
 #include "moon_phase.h"
 #include <vector>
 
-#ifndef _MSC_VER
 #include <kfc_fw_config.h>
-#endif
 
 #if DEBUG_IOT_WEATHER_STATION
 #include <debug_helper_enable.h>
 #else
 #include <debug_helper_disable.h>
-#endif
-
-#if _MSC_VER
-
-namespace KFCConfigurationClasses {
-    namespace Plugins {
-        namespace WeatherStationConfigNS {
-            class WeatherStationConfig {
-                struct __attribute__packed__ Config_t {
-                    using Type = Config_t;
-                    uint8_t weather_poll_interval;
-                    uint16_t api_timeout;
-                    uint8_t backlight_level;
-                    uint8_t touch_threshold;
-                    uint8_t released_threshold;
-                    CREATE_UINT8_BITFIELD(is_metric, 1);
-                    CREATE_UINT8_BITFIELD(time_format_24h, 1);
-                    CREATE_UINT8_BITFIELD(show_webui, 1);
-                    uint8_t screenTimer[8];
-                    Config_t() : weather_poll_interval(15),
-                        api_timeout(30),
-                        backlight_level(100),
-                        touch_threshold(5),
-                        released_threshold(8),
-                        is_metric(true),
-                        time_format_24h(true),
-                        screenTimer{ 10, 10 }
-                    {
-                    }
-                };
-            };
-        }
-    }
-}
-
 #endif
 
 #ifndef DISPLAY_PLUGIN_TFT_TYPE

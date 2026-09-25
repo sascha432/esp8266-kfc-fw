@@ -15,10 +15,8 @@
 #include "moontool.h"
 #include "../moon_phase.h"
 
-#ifndef _MSC_VER
 #pragma GCC push_options
 #pragma GCC optimize ("Os")
-#endif
 
 /*  Astronomical constants  */
 
@@ -317,6 +315,4 @@ void phaseShort(double pDate, MoonPhaseType &moon)
     moon.mAge = synmonth * moon.pPhase;
 }
 
-#ifndef _MSC_VER
 #pragma GCC pop_options
-#endif

@@ -84,3 +84,4 @@ scripts/tools/loudness_from_spectrum.ipynb
 Untitled1.ipynb
 Untitled.ipynb
 node_modules/
+compile_commands.json

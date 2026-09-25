@@ -390,40 +390,6 @@ namespace MQTT {
             return _discovery.length() + _topic.length() + 16;
         }
 
-        inline bool Entity::create(ComponentPtr component, const String &componentName, FormatType format)
-        {
-            return create(component->getType(), componentName, format);
-        }
-
-        using KFCConfigurationClasses::System;
-
-        inline String Entity::getWildcardTopic()
-        {
-            return PrintString(F("%s/+/%s/#"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-        }
-
-        inline String Entity::getConfigWildcardTopic()
-        {
-            return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-        }
-
-        inline String Entity::getConfig2ndLevelWildcardTopic()
-        {
-            return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
-        }
-
-        inline String Entity::getTriggersTopic()
-        {
-            return MQTT::Client::formatTopic(F("/triggers"));
-        }
-
-        inline String Entity::_getUniqueId(const String &name)
-        {
-            PrintString tmp;
-            WebTemplate::printUniqueId(tmp, name);
-            return tmp;
-        }
-
     }
 
 }

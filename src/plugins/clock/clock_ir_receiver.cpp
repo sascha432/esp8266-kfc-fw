@@ -87,10 +87,10 @@ void ClockPlugin::_irWebHandler(AsyncWebServerRequest *request)
     }
 
     const auto action = request->arg(F("action"));
-    if (action == F("learn")) {
+    if (F("learn") == action) {
         plugin._irSetLearnMode(true);
     }
-    else if (action == F("stop")) {
+    else if (F("stop") == action) {
         plugin._irSetLearnMode(false);
     }
     else if (plugin._irLearnMode) {

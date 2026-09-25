@@ -34,22 +34,22 @@ bool Reader::processElement()
         case JsonType_t::JSON_TYPE_INT:
         case JsonType_t::JSON_TYPE_FLOAT:
         case JsonType_t::JSON_TYPE_NUMBER:
-        if (path == F("brightness")) {
+        if (F("brightness") == path) {
                 brightness = getIntValue();
             }
-            else if (path == F("color_temp")) {
+            else if (F("color_temp") == path) {
                 color_temp = getIntValue();
             }
-            else if (path == F("white_value")) {
+            else if (F("white_value") == path) {
                 white_value = getIntValue();
             }
-            else if (path == F("transition")) {
+            else if (F("transition") == path) {
                 transition = JsonVar::getDouble(_valueStr.c_str());
             }
-            else if (path == F("state")) {
+            else if (F("state") == path) {
                 state = getType() == JsonType_t::JSON_TYPE_FLOAT ? (JsonVar::getDouble(_valueStr.c_str()) != 0) : (getIntValue() != 0);
             }
-            else if (path == F("effect")) {
+            else if (F("effect") == path) {
                 effect = _valueStr;
             }
             else if (path.startsWith(F("color.")) && path.length() == 7) {
@@ -86,15 +86,15 @@ bool Reader::processElement()
             }
             break;
         case JsonType_t::JSON_TYPE_STRING:
-            if (path == F("effect")) {
+            if (F("effect") == path) {
                 effect = _valueStr;
             }
-            else if (path == F("state")) {
+            else if (F("state") == path) {
                 state = MQTT::Client::toBool(_valueStr.c_str());
             }
             break;
         case JsonType_t::JSON_TYPE_BOOLEAN:
-            if (path == F("state")) {
+            if (F("state") == path) {
                 auto var = JsonVar(getType(), _valueStr);
                 state = static_cast<int8_t>(var.getBooleanValue());
             }

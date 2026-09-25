@@ -190,18 +190,18 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
             auto resetOptionsArg = request->arg(F("rst_opts"));
             auto imageTypeArg = request->arg(FSPGM(image_type));
 
-            if (resetOptionsArg == F("fsr")) { // clear EEPROM to restore factory settings during reboot
+            if (F("fsr") == resetOptionsArg) { // clear EEPROM to restore factory settings during reboot
                 status->resetOptions = WebServer::ResetOptionsType::FSR;
             }
-            else if (resetOptionsArg == F("ffs")) { // format file system
+            else if (F("ffs") == resetOptionsArg) { // format file system
                 status->resetOptions = WebServer::ResetOptionsType::FFS;
             }
-            else if (resetOptionsArg == F("fsr_ffs")) { // fsr + ffs
+            else if (F("fsr_ffs") == resetOptionsArg) { // fsr + ffs
                 status->resetOptions = WebServer::ResetOptionsType::FSR_FFS;
             }
 
             #if ESP8266
-                if (imageTypeArg == F("u_flash")) {
+                if (F("u_flash") == imageTypeArg) {
                     // clear save crash, the stack traces are invalid after a firmware upgrade
                     // this needs to be done before the upload in case the partitioning changes
                     auto fs = SaveCrash::createFlashStorage();
@@ -216,13 +216,13 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
                 PGM_P imageTypeStr = PSTR("U_UNKNOWN");
             #endif
 
-            if (imageTypeArg == F("u_flash")) { // firmware selected
+            if (F("u_flash") == imageTypeArg) { // firmware selected
                 imageType = 0;
                 #if DEBUG
                     imageTypeStr = PSTR("U_FLASH");
                 #endif
             }
-            else if (imageTypeArg == F("u_fs")) { // filesystem selected
+            else if (F("u_fs") == imageTypeArg) { // filesystem selected
                 imageType = 1;
                 #if DEBUG
                     imageTypeStr = PSTR("U_FS");

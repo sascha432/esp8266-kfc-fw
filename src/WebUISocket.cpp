@@ -41,9 +41,6 @@ void WebUISocket::onText(uint8_t *data, size_t len)
 {
     __LDBG_printf("data=%p len=%d", data, len);
     if (isAuthenticated()) {
-        #if HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
-            ScopeCounter<volatile uint16_t>(AsyncWebServer::_requestCounter);
-        #endif
         auto client = getClient();
         String command;
         std::array<String, 4> args;
@@ -111,9 +108,6 @@ void WebUISocket::onText(uint8_t *data, size_t len)
 
 void WebUISocket::sendValues(AsyncWebSocketClient *client)
 {
-    #if HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
-        ScopeCounter<volatile uint16_t>(AsyncWebServer::_responseCounter);
-    #endif
     WebUINS::Events events;
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->hasWebUI()) {
@@ -135,7 +129,7 @@ WebUINS::Root WebUISocket::createWebUIJSON()
     WebUINS::Root webUI;
 
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
-        // __DBG_printf("plugin=%s webui=%u", plugin->getName_P(), plugin->hasWebUI());
+        // __DBG_printf("plugin=%s webui=%u", plugin->getName(), plugin->hasWebUI());
         if (plugin->hasWebUI()) {
             plugin->createWebUI(webUI);
         }

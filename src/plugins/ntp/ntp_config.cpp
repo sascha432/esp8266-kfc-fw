@@ -58,5 +58,7 @@ String NTPClient::getServer(uint8_t num)
     if (!server) {
         return String();
     }
-    return String(server).trim();
+    String result = server;
+    StrWrapper(result).trim();
+    return result;
 }

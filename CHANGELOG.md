@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Replaced custom Arduino frameworks
  - Refactored deferred calls in clock plugin using TaskQueue
  - Removed the unfinished LED matrix fan control (`IOT_LED_MATRIX_FAN_CONTROL`)
  - MQTT System Metrics Heap, Fragmentation, RSSI, Version and SaveCrash are disabled by default

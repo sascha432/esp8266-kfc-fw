@@ -25,7 +25,7 @@ void WeatherStationPlugin::createConfigureForm(FormCallbackType type, const Stri
     auto &ui = form.createWebUI();
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    if (formName.equals(F("world-clock"))) {
+    if (F("world-clock") == formName) {
 
         ui.setTitle(F("World Clock Configuration"));
         ui.setContainerId(F("wc_settings"));

@@ -27,15 +27,15 @@ static FormUI::Container::List createWifiModes()
 void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (type == FormCallbackType::SAVE) {
-        if (formName.equals(FSPGM(password))) {
+        if (FSPGM(password) == formName) {
             auto field = form.getField(FSPGM(npwd));
             if (field) {
                 auto &flags = System::Flags::getWriteableConfig();
-                flags.is_default_password = field->getValue() != FSPGM(defaultPassword);
+                flags.is_default_password = FSPGM(defaultPassword) != field->getValue();
                 System::Device::setPassword(field->getValue());
             }
         }
-        else if (formName.equals(FSPGM(device))) {
+        else if (FSPGM(device) == formName) {
             config.setConfigDirty(true);
         }
     }
@@ -44,7 +44,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
         auto scanWiFiSuffix = F("<button class=\"btn btn-default wifi_scan_button\" type=\"button\" data-toggle=\"modal\" data-target=\"#network_dialog\">Scan...</button>");
         auto &flags = System::Flags::getWriteableConfig();
 
-        if (formName.equals(FSPGM(wifi))) {
+        if (FSPGM(wifi) == formName) {
 
             // auto &network = Network::Settings::getWriteableConfig();
             auto &softAp = Network::SoftAP::getWriteableConfig();
@@ -130,7 +130,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             apModeGroup.end();
 
         }
-        else if (formName.equals(FSPGM(network))) {
+        else if (FSPGM(network) == formName) {
 
             auto &network = Network::Settings::getWriteableConfig();
             auto &softAp = Network::SoftAP::getWriteableConfig();
@@ -251,7 +251,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
             apGroup.end();
 
         }
-        else if (formName.equals(FSPGM(device))) {
+        else if (FSPGM(device) == formName) {
 
             auto &cfg = System::Device::getWriteableConfig();
 
@@ -335,7 +335,7 @@ void KFCConfigurationPlugin::createConfigureForm(FormCallbackType type, const St
 
             webUIGroup.end();
         }
-        else if (formName.equals(FSPGM(password))) {
+        else if (FSPGM(password) == formName) {
 
             auto &ui = form.createWebUI();
             ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);

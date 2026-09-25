@@ -340,10 +340,9 @@ inline void Logger::log(Level level, const char *message, ...)
 inline Logger::Level Logger::getLevelFromString(PGM_P str)
 {
     auto len = strlen_P(str);
-
     for(auto i: LoggerEnum()) {
         auto level = String(getLevelAsString(i));
-        if (level.equalsIgnoreCase(FPSTR(str)) || (len >= 2 && level.startsWithIgnoreCase(FPSTR(str)))) {
+        if (level.equalsIgnoreCase(FPSTR(str)) || (len >= 2 && StrView(level).startsWithIgnoreCase(FPSTR(str)))) {
             return i;
         }
     }

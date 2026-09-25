@@ -58,14 +58,18 @@ String AtModeArgs::toString(uint16_t num, const String &defaultStr) const
 
 bool AtModeArgs::has(const __FlashStringHelper *str, bool ignoreCase) const
 {
-    for (auto arg: _args) {
-        if (ignoreCase) {
-            if (strcasecmp_P(arg, reinterpret_cast<PGM_P>(str)) == 0) {
+    if (ignoreCase) {
+        for (auto arg: _args) {
+            if (StrView(arg).equalsIgnoreCase(str)) {
                 return true;
             }
         }
-        else if (strcmp_P(arg, reinterpret_cast<PGM_P>(str)) == 0) {
-            return true;
+    }
+    else {
+        for (auto arg: _args) {
+            if (StrView(arg).equals(str)) {
+                return true;
+            }
         }
     }
     return false;
@@ -118,19 +122,19 @@ uint32_t AtModeArgs::toMillis(uint16_t num, uint32_t minTime, uint32_t maxTime, 
     }
 
     uint32_t result;
-    if (suffix.startsWithIgnoreCase(F("ms")) || suffix.startsWithIgnoreCase(F("mil"))) {
+    if (StrView(suffix).startsWithIgnoreCase(F("ms")) || StrView(suffix).startsWithIgnoreCase(F("mil"))) {
         result =  value;
     }
-    else if (suffix.startsWithIgnoreCase('s')) {
+    else if (StrView(suffix).startsWithIgnoreCase('s')) {
         result =  value * 1000;
     }
-    else if (suffix.startsWithIgnoreCase('m')) {
+    else if (StrView(suffix).startsWithIgnoreCase('m')) {
         result =  value * 1000 * 60;
     }
-    else if (suffix.startsWithIgnoreCase('h')) {
+    else if (StrView(suffix).startsWithIgnoreCase('h')) {
         result =  value * 1000 * 3600;
     }
-    else if (suffix.startsWithIgnoreCase('d')) {
+    else if (StrView(suffix).startsWithIgnoreCase('d')) {
         result =  value * 1000 * 86400;
     }
     else {

@@ -40,7 +40,8 @@ namespace PingMonitor {
     void Task::addHost(String host)
     {
         __LDBG_printf("host=%s", host.c_str());
-        if (host.trim().length()) {
+        StrWrapper(host).trim();
+        if (host.length()) {
             _pingHosts.emplace_back(std::move(host));
         }
     }

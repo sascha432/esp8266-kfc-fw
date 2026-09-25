@@ -73,7 +73,8 @@ void AlarmPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("client=%p topic=%s payload=%s alarm_state=%u callback=%u", client, topic, payload, _alarmState, (bool)_callback);
 
-    if (strcmp_P(topic, PSTR("/rgb/set")) == 0) {
+    // topic is a const char *, the comparison has to go through StrView (F(...) == topic does not compile)
+    if (StrView(topic) == F("/rgb/set")) {
 
         __DBG_printf("alarm color %s", payload);
 

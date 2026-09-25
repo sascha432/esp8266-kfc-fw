@@ -458,7 +458,7 @@ void setup()
 
         // handle softAP behavior and shutdown in safe mode
         auto flags = System::Flags::getConfig();
-        if ((flags.is_softap_enabled || flags.is_softap_standby_mode_enabled) && !strcmp_P(Network::WiFi::getSoftApPassword(), SPGM(defaultPassword))) {
+        if ((flags.is_softap_enabled || flags.is_softap_standby_mode_enabled) && StrView(Network::WiFi::getSoftApPassword()) == FSPGM(defaultPassword)) {
             Logger_warning(F("SoftAP is using default password and will be disabled in " _STRINGIFY(SOFTAP_SHUTDOWN_TIME) " minutes..."));
             _Scheduler.add(Event::minutes(SOFTAP_SHUTDOWN_TIME), false, [](Event::CallbackTimerPtr timer) {
                 if (WiFi.getMode() & WIFI_AP) {

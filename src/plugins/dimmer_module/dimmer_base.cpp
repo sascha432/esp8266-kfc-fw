@@ -377,7 +377,7 @@ void Base::setValue(const String &id, const String &value, bool hasValue, bool s
 {
     __LDBG_printf("id=%s has_value=%u has_state=%u value=%s state=%u", id.c_str(), hasValue, hasState, value.c_str(), state);
 
-    if (id == F("group-switch-0")) {
+    if (F("group-switch-0") == id) {
         if (hasValue) {
             auto val = value.toInt() != 0;
             _setOnOffState(val);
@@ -489,7 +489,7 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
             return;
         }
         // ----------------------------------------------------------------
-        if (type->value() == F("reset")) {
+        if (F("reset") == type->value()) {
             resetDimmerMCU();
             HttpHeaders httpHeaders(false);
             httpHeaders.addNoCache();
@@ -498,7 +498,7 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
             WebServer::Plugin::send(request, response);
         }
         // ----------------------------------------------------------------
-        else if ((read = (type->value() == F("read-config"))) || type->value() == F("write-config")) {
+        else if ((read = (F("read-config") == type->value())) || F("write-config") == type->value()) {
             auto redirect = request->getParam(F("redirect"));
             if (!redirect) {
                 __LDBG_printf("redirect missing");
@@ -544,7 +544,7 @@ void Base::handleWebServer(AsyncWebServerRequest *request)
             WebServer::Plugin::send(request, response);
         }
         // ----------------------------------------------------------------
-        else if ((read = (type->value() == F("read-ci"))) || type->value() == F("write-ci")) {
+        else if ((read = (F("read-ci") == type->value())) || F("write-ci") == type->value()) {
             auto channel = _getChannelFrom(request);
             if (channel == 0xff) {
                 return;

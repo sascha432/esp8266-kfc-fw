@@ -25,13 +25,13 @@
 
 AUTO_STRING_DEF(__pure_virtual, "pure virtual call: %s\n")
 #define __DBG_panic_pure_virtual() \
-    DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual), getName_P()); \
+    DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual), (PGM_P)getName()); \
     __debugbreak_and_panic()
 
 PluginComponent *PluginComponent::findPlugin(NameType name, bool isSetup)
 {
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
-        __LDBG_printf("name=%s plugin=%s", __S(name), __S(plugin->getName_P()));
+        __LDBG_printf("name=%s plugin=%s", __S(name), __S(plugin->getName()));
         if (plugin->nameEquals(name) && (!isSetup || plugin->_setupTime)) {
             return plugin;
         }
@@ -41,17 +41,17 @@ PluginComponent *PluginComponent::findPlugin(NameType name, bool isSetup)
 
 bool PluginComponent::nameEquals(NameType name) const
 {
-    return strcmp_P_P(getName_P(), RFPSTR(name)) == 0;
+    return StrView(name).equals(getName());
 }
 
 bool PluginComponent::nameEquals(const char *name) const
 {
-    return strcmp_P_P(name, getName_P()) == 0;
+    return StrView(FPSTR(name)).equals(getName());
 }
 
 bool PluginComponent::nameEquals(const String &name) const
 {
-    return strcmp_P(name.c_str(), getName_P()) == 0;
+    return name.equals(getName());
 }
 
 void PluginComponent::preSetup(SetupModeType mode)
@@ -150,7 +150,7 @@ PluginComponent *PluginComponent::getForm(const String &name)
     }
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->canHandleForm(name)) {
-            __LDBG_printf("form=%s plugin=%s", name.c_str(), plugin->getName_P());
+            __LDBG_printf("form=%s plugin=%s", name.c_str(), plugin->getName());
             return plugin;
         }
     }
@@ -162,7 +162,7 @@ PluginComponent *PluginComponent::getTemplate(const String &name)
 {
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->hasWebTemplate(name)) {
-            __LDBG_printf("template=%s plugin=%s", name.c_str(), plugin->getName_P());
+            __LDBG_printf("template=%s plugin=%s", name.c_str(), plugin->getName());
             return plugin;
         }
     }
@@ -174,7 +174,7 @@ PluginComponent *PluginComponent::getByName(NameType name)
 {
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->nameEquals(name)) {
-            __LDBG_printf("name=%s plugin=%s", name, plugin->getName_P());
+            __LDBG_printf("name=%s plugin=%s", name, plugin->getName());
             return plugin;
         }
     }
@@ -186,7 +186,7 @@ PluginComponent *PluginComponent::getByMemoryId(RTCMemoryId memoryId)
 {
     for(const auto plugin: PluginComponents::Register::getPlugins()) {
         if (plugin->getOptions().memory_id == memoryId) {
-            __LDBG_printf("id=%u result=%s", memoryId, plugin->getName_P());
+            __LDBG_printf("id=%u result=%s", memoryId, plugin->getName());
             return plugin;
         }
     }
@@ -254,7 +254,7 @@ bool PluginComponent::removeFromBlacklist(const String &name)
                 // somewhere in the middle
                 tmp += ',';
                 _blacklist.replace(tmp, String(','));
-                _blacklist.trim(',');
+                StrWrapper(_blacklist).trim(',');
             }
         }
     }

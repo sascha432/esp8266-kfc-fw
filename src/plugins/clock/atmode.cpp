@@ -34,7 +34,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             if (*newTypeCStr) {
                 auto newTypeStr = String(newTypeCStr);
                 _config.normalizeSlug(newTypeStr);
-                if (newTypeStr.trim().length()) {
+                if (StrWrapper(newTypeStr).trim().length()) {
                     for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::LAST); i++) {
                         auto name = String(_getAnimationNameSlug(static_cast<AnimationType>(i)));
                         if (_config.normalizeSlug(name) == newTypeStr) {
@@ -106,11 +106,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             else {
                 auto animation = args.toString(1);
-                animation.replace(' ', '_');
+                StrWrapper(animation).replace(' ', '_');
                 auto blendTime = args.toMillis(2, 0, 30000, 4000);
                 for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::LAST); i++) {
                     auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
-                    name.replace(' ', '_');
+                    StrWrapper(name).replace(' ', '_');
                     if (animation.equalsIgnoreCase(name)) {
                         _setAnimation(static_cast<AnimationType>(i), blendTime);
                         break;
@@ -262,14 +262,16 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             // <set>,[<any|*>[,<range>,<#color>]
             if (args.equalsIgnoreCase(0, F("set"))) {
-                if (args.toString(2).trim() == F("0")) {
+                // the wrapper needs a named String, args.toString() returns a temporary
+                auto colorStr = args.toString(2);
+                if (StrWrapper(colorStr).trim() == F("0")) {
                     color = 0;
                 }
                 else if (args.size() > 4) {
                     color = Color(args.toNumber(2, 0), args.toNumber(3, 0), args.toNumber(4, 0x80));
                 }
                 else {
-                    color = Color::fromString(args.toString(2));
+                    color = Color::fromString(colorStr);
                 }
                 auto point = _display.getPoint(range.offset);
                 auto address = _display.getAddress(point);

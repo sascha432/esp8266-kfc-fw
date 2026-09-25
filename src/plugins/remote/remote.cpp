@@ -315,7 +315,7 @@ void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
 
     __LDBG_printf("remote control web server handler url=%s", request->url().c_str());
 
-    if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "deep_sleep.html")) {
+    if (F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "deep_sleep.html") == request->url()) {
         auto &session = Handler::getInstance().initSession(request, F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "deep_sleep.html"), F("Remote Control"), AuthType::AUTH);
         if (session.isNew()) {
             session.setStatus(F("Device is entering deep sleep... Press any button to wake it up"), MessageType::WARNING);
@@ -338,11 +338,11 @@ void RemoteControlPlugin::webHandler(AsyncWebServerRequest *request)
             });
         }
     }
-    else if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "disable_auto_sleep.html")) {
+    else if (F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "disable_auto_sleep.html") == request->url()) {
         RemoteControlPlugin::disableAutoSleep();
         Plugin::message(request, WebServer::MessageType::INFO, F("Auto sleep has been disabled"), F("Remote Control"));
     }
-    else if (request->url() == F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "enable_auto_sleep.html")) {
+    else if (F(REMOTE_CONTROL_WEB_HANDLER_PREFIX "enable_auto_sleep.html") == request->url()) {
         RemoteControlPlugin::enableAutoSleep();
         Plugin::message(request, MessageType::SUCCESS, F("Auto sleep has been enabled"), F("Remote Control"));
     }

@@ -121,7 +121,8 @@ int8_t MQTT::Client::toBool(const char *str, int8_t invalid)
     }
     // check if it is a string match
     auto tmp = String(str);
-    auto cTmp = tmp.trim().c_str();
+    StrWrapper(tmp).trim();
+    auto cTmp = tmp.c_str();
     if (
         // (strcasecmp_P(cTmp, PSTR("true")) == 0) ||
         (strcasecmp_P(cTmp, PSTR("on")) == 0) ||

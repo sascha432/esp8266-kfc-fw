@@ -470,7 +470,7 @@ namespace MQTT {
                     auto pos = output.indexOf('.', length);
                     if (pos != -1) {
                         // trim all zeros
-                        output.rtrim('0');
+                        StrWrapper(output).rtrim('0');
                         // if the dot is the last character, append a 0
                         if (pos == static_cast<decltype(pos)>(output.length() - 1)) {
                             output += '0';
@@ -503,7 +503,7 @@ namespace MQTT {
                     auto pos = output.indexOf('.', length);
                     if (pos != -1) {
                         // trim all zeros
-                        output.rtrim('0');
+                        StrWrapper(output).rtrim('0');
                         // if the dot is the last character, append a 0
                         if (pos == static_cast<decltype(pos)>(output.length() - 1)) {
                             output += '0';
@@ -867,7 +867,7 @@ namespace MQTT {
             void _setLast(char ch) {
                 if (_output.length() > 1) {
                     #if MQTT_JSON_WRITER_DEBUG
-                        __DBG_assertf(_output.endsWith(']') || _output.endsWith('}') || _output.endsWith(','), "expected }, ] or ',': ...'%s'", _output.c_str() + std::max<int>(0, _output.length() - 10));
+                        __DBG_assertf(StrView(_output).endsWith(']') || StrView(_output).endsWith('}') || StrView(_output).endsWith(','), "expected }, ] or ',': ...'%s'", _output.c_str() + std::max<int>(0, _output.length() - 10));
                     #endif
                     _output.setCharAt(_output.length() - 1, ch);
                 }
@@ -877,7 +877,7 @@ namespace MQTT {
                     #if MQTT_JSON_WRITER_DEBUG
                         __DBG_assertf(ch != '[' || (ch == '[' && _output.charAt(0) == '['), "expected [: '%.10s'", _output.c_str());
                         __DBG_assertf(ch != '{' || (ch == '{' && _output.charAt(0) == '{'), "expected {: '%.10s'", _output.c_str());
-                        __DBG_assertf(_output.startsWith('{') || _output.startsWith('['), "expected { or [: '%.10s'", _output.c_str());
+                        __DBG_assertf(StrView(_output).startsWith('{') || StrView(_output).startsWith('['), "expected { or [: '%.10s'", _output.c_str());
                     #endif
                 }
             }

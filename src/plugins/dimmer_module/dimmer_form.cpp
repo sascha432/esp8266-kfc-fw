@@ -22,7 +22,7 @@ namespace Dimmer {
     void Base::createConfigureForm(PluginComponent::FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
     {
         if (type == PluginComponent::FormCallbackType::SAVE) {
-            if (formName == F("channels")) {
+            if (F("channels") == formName) {
                 auto &cfg = Plugins::Dimmer::getWriteableConfig();
                 for(size_t i = 0; i < kNumChannels; i++) {
                     if (cfg.level.from[i] > cfg.level.to[i]) {
@@ -30,7 +30,7 @@ namespace Dimmer {
                     }
                 }
             }
-            else if (formName == F("advanced") || formName == F("general")) {
+            else if (F("advanced") == formName || F("general") == formName) {
                 LoopFunctions::callOnce([this]() {
                     writeConfig(_config);
                 });
@@ -44,14 +44,14 @@ namespace Dimmer {
 
         auto &cfg = Plugins::Dimmer::getWriteableConfig();
         if (type == PluginComponent::FormCallbackType::CREATE_GET) {
-            if (formName == F("channels")) {
+            if (F("channels") == formName) {
                 for(size_t i = 0; i < kNumChannels; i++) {
                     if (cfg.level.from[i] > cfg.level.to[i]) {
                         cfg.level.from[i] = cfg.level.to[i];
                     }
                 }
             }
-            else if (formName == F("advanced") || formName == F("general")) {
+            else if (F("advanced") == formName || F("general") == formName) {
                 if (!_config._version) {
                     auto str = PrintString(F("../dimmer-fw?type=read-config&redirect=dimmer/%s.html"), formName.c_str());
                     auto response = request->beginResponse(302);
@@ -73,7 +73,7 @@ namespace Dimmer {
         ui.setContainerId(F("dimmer_settings"));
         ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-        if (formName == F("general")) {
+        if (F("general") == formName) {
 
             auto &mainGroup = form.addCardGroup(FSPGM(config), F("General"), true);
 
@@ -125,7 +125,7 @@ namespace Dimmer {
             #endif
 
         }
-        else if (formName == F("channels")) {
+        else if (F("channels") == formName) {
 
             auto &channelGroup = form.addCardGroup(F("chcfg"), F("Channel Configuration"), true);
 
@@ -187,7 +187,7 @@ namespace Dimmer {
 
         }
         #if IOT_DIMMER_MODULE_HAS_BUTTONS
-            else if (formName == F("buttons")) {
+            else if (F("buttons") == formName) {
 
                 auto &buttonGroup = form.addCardGroup(F("btncfg"), F("Button Configuration"), false);
 
@@ -250,7 +250,7 @@ namespace Dimmer {
 
             }
         #endif
-        else if (formName == F("advanced")) {
+        else if (F("advanced") == formName) {
 
             auto &fwGroup = form.addCardGroup(F("fwcfg"), F("Advanced Firmware Configuration"), true);
 

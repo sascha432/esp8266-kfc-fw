@@ -139,10 +139,10 @@ inline void BlindsControl::onConnect()
 inline void BlindsControl::onMessage(const char *topic, const char *payload, size_t len)
 {
     ChannelType channel;
-    if (strcmp_end_P(topic, PSTR("channel_0/set")) == 0) {
+    if (StrView(topic).endsWith(F("channel_0/set"))) {
         channel = ChannelType::CHANNEL0;
     }
-    else if (strcmp_end_P(topic, PSTR("channel_1/set")) == 0) {
+    else if (StrView(topic).endsWith(F("channel_1/set"))) {
         channel = ChannelType::CHANNEL1;
     }
     else {

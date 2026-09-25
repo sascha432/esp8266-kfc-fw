@@ -638,7 +638,7 @@ namespace WSDraw {
             uint32_t count = 0;
             auto dir = KFCFS_openDir(String(F("/CuratedArt")).c_str());
             while(dir.next()) {
-                if (dir.isFile() && String(dir.fileName()).endsWithIgnoreCase(F(".jpg"))) {
+                if (dir.isFile() && StrView(dir.fileName()).endsWithIgnoreCase(F(".jpg"))) {
                     if (_scanCallback && _scanCallback(count, dir)) {
                         __LDBG_printf("#%u _scanCallback=true file=%s", count, dir.fileName());
                         break;
@@ -669,7 +669,7 @@ namespace WSDraw {
                 }
                 __LDBG_printf("_galleryImages.size=%u/%s", _galleryImages.size(), implode(',', _galleryImages).c_str());
 
-                uint32_t num = ESP.random() % count;
+                uint32_t num = getRandom() % count;
                 __LDBG_printf("random=%u count=%u", num, count);
                 String candidate;
 
@@ -694,7 +694,7 @@ namespace WSDraw {
                         found = true;
                     }
                 }
-                __LDBG_printf("name=%s/%s found=%u size=%u", candidate.c_str(), _galleryFile.fullName(), found, _galleryFile.size());
+                __LDBG_printf("name=%s/%s found=%u size=%u", candidate.c_str(), fullName(_galleryFile), found, _galleryFile.size());
 
             }
             if (!found) {

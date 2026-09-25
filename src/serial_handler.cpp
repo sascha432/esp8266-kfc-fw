@@ -18,6 +18,10 @@
 
 NullStream NullSerial;
 HardwareSerial Serial0(UART0);
+#if ESP32
+// the core's global UART instances are disabled (NO_GLOBAL_SERIAL), the firmware owns all UARTs
+HardwareSerial Serial1(1);
+#endif
 // stream wrapper allows to intercept send and receive on Serial
 SerialHandler::Wrapper serialHandler(&Serial0);
 Stream &Serial = serialHandler;

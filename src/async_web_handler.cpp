@@ -50,14 +50,14 @@ void AsyncFileUploadWebHandler::_handleUpload(AsyncWebServerRequest *request, co
         return;
     }
     else if (final) {
-        __DBG_printf("filename=%s index=%d len=%d final=%d tmp_file=%s size=%u", filename.c_str(), index, len, final, __S(request->_tempFile.fullName()), request->_tempFile.size());
+        __DBG_printf("filename=%s index=%d len=%d final=%d tmp_file=%s size=%u", filename.c_str(), index, len, final, __S(fullName(request->_tempFile)), request->_tempFile.size());
     }
 }
 
 void AsyncFileUploadWebHandler::_cleanUp(AsyncWebServerRequest *request)
 {
-    if (request->_tempFile && request->_tempFile.fullName()) {
-        auto filename = request->_tempFile.fullName();
+    if (request->_tempFile && fullName(request->_tempFile)) {
+        auto filename = fullName(request->_tempFile);
         __LDBG_printf("removing temporary file %s", filename);
         request->_tempFile.close();
         KFCFS.remove(filename);

@@ -284,7 +284,7 @@ void Plugin::getValues(WebUINS::Events &array)
 
 void Plugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
-    if (id == F("d-br")) {
+    if (F("d-br") == id) {
         bool doPublish = false;
         int val = value.toInt();
         __LDBG_printf("has_value=%d value=%d has_state=%d state=%d", hasValue, val, hasState, state);

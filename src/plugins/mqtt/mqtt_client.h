@@ -8,7 +8,6 @@
 #include <AsyncMqttClient.h>
 #include <Buffer.h>
 #include <EventScheduler.h>
-#include <FixedString.h>
 #include <vector>
 #include "mqtt_base.h"
 #include "kfc_fw_config.h"
@@ -640,7 +639,7 @@ public:
         inline static String getBaseTopicPrefix()
         {
             String baseTopic = _filterString(KFCConfigurationClasses::System::Device::getObjectIdOrName(), true);
-            if (!baseTopic.endsWith('_')) {
+            if (!StrView(baseTopic).endsWith('_')) {
                 baseTopic += '_';
             }
             return baseTopic;

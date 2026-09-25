@@ -724,6 +724,11 @@ namespace KFCConfigurationClasses {
                     return get_enum_animation(*this);
                 }
 
+                int32_t getAnimationInt() const
+                {
+                    return static_cast<int32_t>(getAnimation());
+                }
+
                 void setAnimation(AnimationType animation)
                 {
                     set_enum_animation(*this, animation);

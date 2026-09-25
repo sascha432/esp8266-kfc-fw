@@ -128,14 +128,14 @@ void ATMode::handleEvent(String &commandString)
 
         // determine if query mode by checking for a trailing '?'
         commandString.trim();
-        bool isQueryMode = commandString.endsWith('?');
+        bool isQueryMode = StrView(commandString).endsWith('?');
 
         // check command prefix
-        if (commandString.startsWithIgnoreCase(F("AT"))) {
+        if (StrView(commandString).startsWithIgnoreCase(F("AT"))) {
             // remove AT from the command
             commandString.remove(0, 2);
         }
-        else if (kAllowShortPrefix && commandString.startsWith('+')) {
+        else if (kAllowShortPrefix && StrView(commandString).startsWith('+')) {
             // allow using AT+COMMAND[?|=<args,...>] and +COMMAND[?|=<args,...>]
         }
         else if __CONSTEXPR17 (kAllowNoPrefix) {

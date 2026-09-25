@@ -113,8 +113,8 @@ namespace KFCConfigurationClasses {
                 if (endPtr && (name.c_str() != endPtr) && !*endPtr && (typeNum < static_cast<decltype(typeNum)>(AnimationType::LAST))) {
                     return static_cast<AnimationType>(typeNum);
                 }
-                name.replace(' ', '-');
-                name.replace('_', '-');
+                StrWrapper(name).replace(' ', '-');
+                StrWrapper(name).replace('_', '-');
                 // search slugs first since it just is a stricmp
                 for(int i = 0; i < static_cast<int>(AnimationType::LAST); i++) {
                     // __LDBG_printf("cmp %s==%s", name.c_str(), getAnimationNameSlug(static_cast<AnimationType>(i)));
@@ -122,12 +122,13 @@ namespace KFCConfigurationClasses {
                         return static_cast<AnimationType>(i);
                     }
                 }
+                String str; // one buffer, reused - StrWrapper needs a named String to write into
                 for(int i = 0; i <static_cast<int>(AnimationType::LAST); i++) {
-                    String str = getAnimationName(static_cast<AnimationType>(i));
-                    str.replace(' ', '-');
-                    str.replace('_', '-');
+                    str = getAnimationName(static_cast<AnimationType>(i));
+                    StrWrapper(str).replace(' ', '-');
+                    StrWrapper(str).replace('_', '-');
                     // __LDBG_printf("cmp %s==%s", name.c_str(), str.c_str());
-                    if (name.equalsIgnoreCase(str)) {
+                    if (str.equalsIgnoreCase(name)) {
                         return static_cast<AnimationType>(i);
                     }
                 }
@@ -176,9 +177,10 @@ namespace KFCConfigurationClasses {
 
             String &ClockConfigType::normalizeSlug(String &slug)
             {
-                slug.replace(' ', '_');
-                slug.replace('-', '_');
-                return slug.toLowerCase();
+                StrWrapper(slug).replace(' ', '_');
+                StrWrapper(slug).replace('-', '_');
+                StrWrapper(slug).toLowerCase();
+                return slug;
             }
 
             const __FlashStringHelper *ClockConfigType::getAnimationNameSlug(AnimationType type)

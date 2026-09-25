@@ -107,7 +107,7 @@ void Channel::onConnect()
 void Channel::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("topic=%s payload=%s", topic, payload);
-    if (strcmp_end_P(topic, _topic.c_str())) {
+    if (!StrView(topic).endsWith(_topic)) {
         return;
     }
     auto stream = HeapStream(payload, len);

@@ -99,7 +99,8 @@ void SyslogPlugin::_begin()
         auto cfg = SyslogClient::getConfig();
         hostname = SyslogClient::getHostname();
         port = cfg.getPort();
-        if (hostname.trim().length() && port) {
+        StrWrapper(hostname).trim();
+        if (hostname.length() && port) {
             zeroconf = config.hasZeroConf(hostname);
 
             syslog = SyslogFactory::create(_lock, System::Device::getName(), cfg._get_enum_protocol(), zeroconf ? emptyString : hostname, static_cast<uint16_t>(zeroconf ? SyslogFactory::kZeroconfPort : port));

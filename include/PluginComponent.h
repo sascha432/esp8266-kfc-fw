@@ -169,9 +169,8 @@ namespace PluginComponents {
         void invoke(const PluginComponent *plugin) const;
         void invoke(DependencyResponseType type) const;
 
-        bool operator==(NameType name) const
-        {
-            return strcmp_P_P(reinterpret_cast<PGM_P>(_name), reinterpret_cast<PGM_P>(name)) == 0;
+        bool operator==(NameType name) const {
+            return StrView(_name) == name;
         }
     };
 
@@ -347,7 +346,6 @@ public:
     const Config_t getConfig() const;
     const Options_t getOptions() const;
 
-    PGM_P getName_P() const;
     NameType getName() const;
     NameType getFriendlyName() const;
 
@@ -459,11 +457,6 @@ inline const PluginComponent::Options_t PluginComponent::getOptions() const
         options.__dword = pgm_read_dword(&_pluginConfigPtr->options.__dword);
         return options;
     #endif
-}
-
-inline PGM_P PluginComponent::getName_P() const
-{
-    return getConfig().name;
 }
 
 inline PluginComponent::NameType PluginComponent::getName() const

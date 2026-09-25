@@ -158,7 +158,7 @@ void WebTemplate::printFileSystemInfo(Print &output)
 {
     #if USE_LITTLEFS
         FSInfo info;
-        KFCFS.info(info);
+        getFSInfo(info);
 
         auto file = LittleFS.open(String(F("/.pvt/build")), FileOpenMode::read);
         if (file) {
@@ -210,19 +210,19 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     // ------------------------------------------------------------------------------------
     // public variables
     // ------------------------------------------------------------------------------------
-    if (key == F("HOSTNAME")) {
+    if (F("HOSTNAME") == key) {
         output.print(System::Device::getName());
     }
-    else if (key == F("LOGIN_USERNAME")) {
+    else if (F("LOGIN_USERNAME") == key) {
         output.print(System::Device::getUsername());
     }
-    else if (key == F("TITLE")) {
+    else if (F("TITLE") == key) {
         output.print(System::Device::getTitle());
     }
-    else if (key == F("SELF_URI")) {
+    else if (F("SELF_URI") == key) {
         output.print(_selfUri);
     }
-    else if (key == F("ALIVE_REDIRECTION")) {
+    else if (F("ALIVE_REDIRECTION") == key) {
         if (_aliveRedirection.length()) {
             output.print(_aliveRedirection);
         }
@@ -231,35 +231,35 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
     #if DEBUG_ASSETS
-        else if (key == F("DEBUG_ASSETS_URL1")) {
+        else if (F("DEBUG_ASSETS_URL1") == key) {
             output.print(F(DEBUG_ASSETS_URL1));
         }
-        else if (key == F("DEBUG_ASSETS_URL2")) {
+        else if (F("DEBUG_ASSETS_URL2") == key) {
             output.print(F(DEBUG_ASSETS_URL2));
         }
     #endif
     // ------------------------------------------------------------------------------------
     // SSDP public info
     // ------------------------------------------------------------------------------------
-    else if (key == F("WIFI_IP_ADDRESS")) {
+    else if (F("WIFI_IP_ADDRESS") == key) {
         WiFi.localIP().printTo(output);
     }
-    else if (key == F("WEB_INTERFACE_URL")) {
+    else if (F("WEB_INTERFACE_URL") == key) {
         printWebInterfaceUrl(output);
     }
-    else if (key == F("VERSION")) {
+    else if (F("VERSION") == key) {
         printVersion(output);
     }
-    else if (key == F("VERSION_ONLY")) {
+    else if (F("VERSION_ONLY") == key) {
         printVersion(output, false);
     }
-    else if (key == F("MODEL")) {
+    else if (F("MODEL") == key) {
         printModel(output);
     }
-    else if (key == F("UNIQUE_ID")) {
+    else if (F("UNIQUE_ID") == key) {
         printUniqueId(output, FSPGM(kfcfw), -1);
     }
-    else if (key == F("SSDP_UUID")) {
+    else if (F("SSDP_UUID") == key) {
         #if IOT_SSDP_SUPPORT
                 printSSDPUUID(output);
         #else
@@ -272,10 +272,10 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (!isAuthenticated()) {
         // replacements for unauthenticated clients
         // everything else will be replaced with an empty string
-        if (key == F("IS_CONFIG_DIRTY")) {
+        if (F("IS_CONFIG_DIRTY") == key) {
             output.print(FSPGM(_hidden));
         }
-        else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
+        else if (F("IS_CONFIG_DIRTY_CLASS") == key) {
             output.print(FSPGM(hidden));
         }
         // __DBG_printf("return key='%s'", key.c_str());
@@ -284,7 +284,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     // ------------------------------------------------------------------------------------
     // private variables
     // ------------------------------------------------------------------------------------
-    else if (key == F("HARDWARE")) {
+    else if (F("HARDWARE") == key) {
         #if ESP8266
             output.printf_P(PSTR("ESP8266 %s Flash %s, %dMHz, Free RAM %s"),
                 formatBytes(ESP.getFlashChipRealSize()).c_str(),
@@ -315,7 +315,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             #error Platform not supported
         #endif
     }
-    else if (key == F("SOFTWARE")) {
+    else if (F("SOFTWARE") == key) {
         printVersion(output);
         if (System::Flags::getConfig().is_default_password) {
             output.printf_P(PSTR(HTML_S(br) HTML_S(strong) "%s" HTML_E(strong)), SPGM(default_password_warning));
@@ -332,11 +332,11 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             }
         }
     }
-    else if (key == F("CONFIG_STORAGE")) {
+    else if (F("CONFIG_STORAGE") == key) {
         config.getStatus(output);
     }
     #if NTP_CLIENT || RTC_SUPPORT
-        else if (key == F("TIME")) {
+        else if (F("TIME") == key) {
             auto now = time(nullptr);
             if (isTimeValid(now)) {
                 printSystemTime(now, output);
@@ -347,45 +347,45 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     #endif
     #if defined(HAVE_IOEXPANDER)
-        else if (key == F("IOEXPANDER_STATUS")) {
+        else if (F("IOEXPANDER_STATUS") == key) {
             IOExpander::config.printStatus<true>(output);
         }
     #endif
-    else if (key == F("RTC_STATUS")) {
+    else if (F("RTC_STATUS") == key) {
         config.printRTCStatus(output, config.getRTCStatus(), false);
     }
-    else if (key == F("SAFEMODE")) {
+    else if (F("SAFEMODE") == key) {
         if (config.isSafeMode()) {
             output.print(F(" - Running in SAFE MODE"));
         }
     }
-    else if (key == F("UPTIME")) {
+    else if (F("UPTIME") == key) {
         output.print(formatTime(getSystemUptime()));
     }
-    else if (key == F("WIFI_UPTIME")) {
+    else if (F("WIFI_UPTIME") == key) {
         auto wifiUp = KFCFWConfiguration::getWiFiUp();
         output.print(System::Flags::getConfig().is_station_mode_enabled ? (wifiUp == 0 ? F("Offline") : formatTime(wifiUp / 1000)) : F("Client mode disabled"));
     }
-    else if (key == F("IP_ADDRESS")) {
+    else if (F("IP_ADDRESS") == key) {
         WiFiStatus::getAddress(output);
     }
-    else if (key == F("FILE_SYSTEM_INFO")) {
+    else if (F("FILE_SYSTEM_INFO") == key) {
         WebTemplate::printFileSystemInfo(output);
     }
-    else if (key == F("RANDOM")) {
+    else if (F("RANDOM") == key) {
         uint8_t buf[8];
-        ESP.random(buf, sizeof(buf));
+        getRandom(buf, sizeof(buf));
         for(auto n: buf) {
             n %= 36;
             output.print((char)(n < 26 ? (n + 'a') : (n + ('0' - 26))));
         }
     }
-    else if (key == F("IS_CONFIG_DIRTY")) {
+    else if (F("IS_CONFIG_DIRTY") == key) {
         if (!config.isConfigDirty()) {
             output.print(FSPGM(_hidden));
         }
     }
-    else if (key == F("IS_CONFIG_DIRTY_CLASS")) {
+    else if (F("IS_CONFIG_DIRTY_CLASS") == key) {
         if (config.isConfigDirty()) {
             output.print(F("alert alert-dismissible alert-danger fade show"));
         }
@@ -393,31 +393,31 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(hidden));
         }
     }
-    else if (key == F("LED_MATRIX_FORM_PREFIX")) {
+    else if (F("LED_MATRIX_FORM_PREFIX") == key) {
         #if IOT_CLOCK
             output.print(F("/" LED_MATRIX_MENU_URI_PREFIX));
         #endif
     }
     #if defined(TFT_WIDTH) && defined(TFT_HEIGHT)
-        else if (key == F("TFT_WIDTH")) {
+        else if (F("TFT_WIDTH") == key) {
             output.print(TFT_WIDTH);
         }
-        else if (key == F("TFT_HEIGHT")) {
+        else if (F("TFT_HEIGHT") == key) {
             output.print(TFT_HEIGHT);
         }
     #endif
     #if IOT_WEATHER_STATION && HAVE_WEATHER_STATION_CURATED_ART
-        else if (key == F("GALLERY_IMAGES_COUNT")) {
+        else if (F("GALLERY_IMAGES_COUNT") == key) {
             output.print(WeatherStationPlugin::_getInstance()._scanGalleryDirectory(nullptr));
         }
-        else if (key == F("GALLERY_IMAGES_IMAGES")) {
+        else if (F("GALLERY_IMAGES_IMAGES") == key) {
             WeatherStationPlugin::_getInstance()._scanGalleryDirectory([&output](uint32_t count, fs::Dir &dir) {
                 output.printf_P(PSTR(HTML_SA(div, HTML_A("class", "col")) HTML_SA(div, HTML_A("class", "ca-image") HTML_A("src", "/CuratedArt/%s") HTML_A("width", "%u") HTML_A("height", "%u")) HTML_E(div) HTML_E(div)), __S(dir.fileName()), TFT_WIDTH, TFT_HEIGHT, __S(dir.fileName()));
                 return false;
             });
         }
     #endif
-    else if (key == F("PIN_MONITOR_STATUS")) {
+    else if (F("PIN_MONITOR_STATUS") == key) {
         #if PIN_MONITOR
             PinMonitor::pinMonitor.printStatus(output);
         #else
@@ -441,7 +441,7 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
     else if (key.endsWith(F("_STATUS"))) {
         uint8_t cmp_length = key.length() - 7;
         for(auto plugin: PluginComponents::Register::getPlugins()) {
-            if (plugin->hasStatus() && strncasecmp_P(key.c_str(), plugin->getName_P(), cmp_length) == 0) {
+            if (plugin->hasStatus() && strncasecmp_P(key.c_str(), (PGM_P)plugin->getName(), cmp_length) == 0) {
                 plugin->getStatus(output);
                 return;
             }
@@ -464,15 +464,15 @@ void WebTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 void LoginTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key == F("LOGIN_ERROR_MESSAGE")) {
+    if (F("LOGIN_ERROR_MESSAGE") == key) {
         output.print(_errorMessage);
     }
-    else if (key == F("LOGIN_ERROR_CLASS")) {
+    else if (F("LOGIN_ERROR_CLASS") == key) {
         if (_errorMessage.length() == 0) {
             output.print(FSPGM(_hidden));
         }
     }
-    else if (key == F("LOGIN_KEEP_DAYS")) {
+    else if (F("LOGIN_KEEP_DAYS") == key) {
         output.print(System::Device::getConfig().getWebUICookieLifetime());
     }
     else {
@@ -487,7 +487,7 @@ void LoginTemplate::setErrorMessage(const String &errorMessage)
 
 void MessageTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key == F("TPL_MESSAGE")) {
+    if (F("TPL_MESSAGE") == key) {
         if (_containsHtml & kHtmlMessage) {
             auto mode = output.setMode(PrintHtmlEntities::Mode::RAW);
             output.print(_message);
@@ -497,7 +497,7 @@ void MessageTemplate::process(const String &key, PrintHtmlEntitiesString &output
             output.print(_message);
         }
     }
-    else if (key == F("TPL_TITLE")) {
+    else if (F("TPL_TITLE") == key) {
         if (_containsHtml & kHtmlTitle) {
             auto mode = output.setMode(PrintHtmlEntities::Mode::RAW);
             output.print(_title);
@@ -507,7 +507,7 @@ void MessageTemplate::process(const String &key, PrintHtmlEntitiesString &output
             output.print(_title);
         }
     }
-    else if (key == F("TPL_TITLE_CLASS")) {
+    else if (F("TPL_TITLE_CLASS") == key) {
         if (_titleClass) {
             output.print(' ');
             output.print(_titleClass);
@@ -516,7 +516,7 @@ void MessageTemplate::process(const String &key, PrintHtmlEntitiesString &output
             output.print(F(" text-white bg-primary"));
         }
     }
-    else if (key == F("TPL_MESSAGE_CLASS")) {
+    else if (F("TPL_MESSAGE_CLASS") == key) {
         if (_messageClass) {
             output.print(' ');
             output.print(_messageClass);
@@ -545,15 +545,15 @@ void MessageTemplate::checkForHtml()
 
 void NotFoundTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key == F("STATUS_CODE")) {
+    if (F("STATUS_CODE") == key) {
         output.print(_code);
         return;
     }
-    else if (key == F("TPL_TITLE")) {
+    else if (F("TPL_TITLE") == key) {
         output.printf_P(PSTR("Status Code: %u"), _code);
         return;
     }
-    else if (_titleClass == nullptr && key == F("TPL_TITLE_CLASS")) {
+    else if (_titleClass == nullptr && F("TPL_TITLE_CLASS") == key) {
         if (_code >= 400) {
         }
         else if (_code >= 300) {
@@ -582,7 +582,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         }
     }
 
-    if (key ==  F("NETWORK_MODE")) {
+    if (F("NETWORK_MODE") == key) {
         bool m = false;
         auto flags = System::Flags::getConfig();
         if (flags.is_softap_enabled) {
@@ -604,7 +604,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(F(" selected"));
         }
     }
-    else if (key == F("SSL_CERT")) {
+    else if (F("SSL_CERT") == key) {
         #if WEBSERVER_TLS_SUPPORT
             File file = KFCFS.open(FSPGM(server_crt, "/.pvt/server.crt"), fs::FileOpenMode::read);
             if (file) {
@@ -612,7 +612,7 @@ void ConfigTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             }
         #endif
     }
-    else if (key == F("SSL_KEY")) {
+    else if (F("SSL_KEY") == key) {
         #if WEBSERVER_TLS_SUPPORT
             File file = KFCFS.open(FSPGM(server_key, "/.pvt/server.key"), fs::FileOpenMode::read);
             if (file) {
@@ -631,17 +631,17 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
         WebTemplate::process(key, output);
         return;
     }
-    if (key == F("GATEWAY")) {
+    if (F("GATEWAY") == key) {
         WiFi.gatewayIP().printTo(output);
     }
-    else if (key == F("DNS")) {
+    else if (F("DNS") == key) {
         WiFi.dnsIP().printTo(output);
         if (WiFi.dnsIP(1)) {
             output.print(FSPGM(comma_));
             WiFi.dnsIP(1).printTo(output);
         }
     }
-    else if (key == F("SSL_STATUS")) {
+    else if (F("SSL_STATUS") == key) {
         #if ASYNC_TCP_SSL_ENABLED
             #if WEBSERVER_TLS_SUPPORT
                 output.printf_P(PSTR("TLS enabled, HTTPS %s"), _Config.getOptions().isHttpServerTLS() ? SPGM(enabled, "enabled") : SPGM(Disabled));
@@ -652,7 +652,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             output.print(FSPGM(Not_supported));
         #endif
     }
-    else if (key == F("WIFI_MODE")) {
+    else if (F("WIFI_MODE") == key) {
         switch (WiFi.getMode()) {
             case WIFI_STA: {
                     output.print(FSPGM(Station_Mode, "Station Mode"));
@@ -674,7 +674,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
                 break;
         }
     }
-    else if (key == F("WIFI_SSID")) {
+    else if (F("WIFI_SSID") == key) {
         if (WiFi.getMode() == WIFI_AP_STA) {
             output.print(F("Station connected to " HTML_S(strong)));
             WiFiStatus::stationSSID(output);
@@ -689,7 +689,7 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
             WiFiStatus::softAPSSID(output);
         }
     }
-    else if (key == F("WIFI_STATUS")) {
+    else if (F("WIFI_STATUS") == key) {
         WiFiStatus::getStatus(output);
     }
     else {
@@ -699,10 +699,10 @@ void StatusTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 
 void PasswordTemplate::process(const String &key, PrintHtmlEntitiesString &output)
 {
-    if (key == F("PASSWORD_ERROR_MESSAGE")) {
+    if (F("PASSWORD_ERROR_MESSAGE") == key) {
         output.print(_errorMessage);
     }
-    else if (key == F("PASSWORD_ERROR_CLASS")) {
+    else if (F("PASSWORD_ERROR_CLASS") == key) {
         if (_errorMessage.length() == 0) {
             output.print(FSPGM(_hidden));
         }
@@ -776,7 +776,7 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
     auto fbMethod = FillBufferMethod::NONE;
 
     // menus
-    if (name == F("MENU_HTML_MAIN")) {
+    if (F("MENU_HTML_MAIN") == name) {
         bootstrapMenu.html(printArgs);
         fbMethod = FillBufferMethod::PRINT_ARGS;
     }
@@ -789,14 +789,14 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
         fbMethod = FillBufferMethod::PRINT_ARGS;
     }
     // forms
-    else if (name == F("FORM_HTML")) {
+    else if (F("FORM_HTML") == name) {
         auto form = webTemplate.getForm();
         if (form) {
             form->createHtml(printArgs);
             fbMethod = FillBufferMethod::PRINT_ARGS;
         }
     }
-    else if (name == F("FORM_VALIDATOR")) {
+    else if (F("FORM_VALIDATOR") == name) {
         auto form = webTemplate.getForm();
         if (form) {
             form->createJavascript(printArgs);
@@ -814,7 +814,7 @@ bool TemplateDataProvider::callback(const String& name, DataProviderInterface& p
     //     }
     // }
     // plugin status
-    else if (name == F("PLUGIN_STATUS")) {
+    else if (F("PLUGIN_STATUS") == name) {
         auto stream = std::shared_ptr<PluginStatusStream>(new PluginStatusStream());
         if (!stream) {
             __DBG_printf_E("memory allocation failed");

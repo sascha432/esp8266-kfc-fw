@@ -62,7 +62,7 @@ void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo 
                         ip.printTo(output._output);
                         output._output.print(F("\","));
                     }
-                    output._output.rtrim(',');
+                    StrWrapper(output._output).rtrim(',');
                     output._output.print(F("],"));
                 }
                 break;
@@ -128,7 +128,7 @@ bool MDNSPlugin::Output::poll(uint32_t timeout, bool lock)
                         addr = addr->next;
                     }
                     if (ipCount) {
-                        _output.rtrim(',');
+                        StrWrapper(_output).rtrim(',');
                         _output.print(F("],"));
                     }
 

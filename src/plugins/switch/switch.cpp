@@ -192,7 +192,7 @@ void SwitchPlugin::createConfigureForm(FormCallbackType type, const String &form
 
         form.addCallbackGetterSetter<String>(F_VAR(ico, i), [i](String &str, Field::BaseField &, bool store) {
             if (store) {
-                if (str.trim().length()) {
+                if (StrWrapper(str).trim().length()) {
                     Plugins::IotSwitch::setIcon(i, str.c_str());
                 }
             }
@@ -293,7 +293,7 @@ void SwitchPlugin::onMessage(const char *topic, const char *payload, size_t len)
     for (uint8_t i = 0; i < _pins.size(); i++) {
         PrintString topicSuffix(FSPGM(channel__u), i);
         topicSuffix += FSPGM(_set);
-        if (topicSuffix.endEquals(topic)) {
+        if (StrView(topic).endsWith(topicSuffix)) {
             _setChannel(i, MQTT::Client::toBool(payload, false));
             _publishState(i);
         }

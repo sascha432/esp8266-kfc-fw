@@ -95,7 +95,7 @@ bool AsyncRestWebHandler::canHandle(AsyncWebServerRequest *request)
 
     auto &url = request->url();
     for(const auto &handler: Plugin::getInstance()._server->_restCallbacks) {
-        if (url == FPSTR(handler.getURL())) {
+        if (FPSTR(handler.getURL()) == url) {
             request->addInterestingHeader(FSPGM(Authorization));
 
             // emulate AsyncWebServerRequest dtor using onDisconnect callback

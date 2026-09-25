@@ -200,7 +200,7 @@ inline bool AtModeArgs::equalsIgnoreCase(uint16_t num, const __FlashStringHelper
     if (isInvalidArg(num)) {
         return false;
     }
-    return strcasecmp_P(get(num), RFPSTR(str)) == 0;
+    return StrView(get(num)).equalsIgnoreCase(str);
 }
 
 inline bool AtModeArgs::equalsIgnoreCase(uint16_t num, const String &str) const
@@ -216,7 +216,7 @@ inline bool AtModeArgs::equals(uint16_t num, const __FlashStringHelper *str) con
     if (isInvalidArg(num)) {
         return false;
     }
-    return strcmp_P(get(num), RFPSTR(str)) == 0;
+    return StrView(get(num)) == str;
 }
 
 inline bool AtModeArgs::equals(uint16_t num, const String &str) const
@@ -241,7 +241,7 @@ inline bool AtModeArgs::startsWith(uint16_t num, const __FlashStringHelper *str)
     if (isInvalidArg(num)) {
         return false;
     }
-    return strncmp_P(get(num), RFPSTR(str), strlen_P(RFPSTR(str))) == 0;
+    return StrView(get(num)).startsWith(str);
 }
 
 inline bool AtModeArgs::startsWithIgnoreCase(uint16_t num, const __FlashStringHelper *str) const
@@ -249,7 +249,7 @@ inline bool AtModeArgs::startsWithIgnoreCase(uint16_t num, const __FlashStringHe
     if (isInvalidArg(num)) {
         return false;
     }
-    return strncasecmp_P(get(num), RFPSTR(str), strlen_P(RFPSTR(str))) == 0;
+    return StrView(get(num)).startsWithIgnoreCase(str);
 }
 
 inline bool AtModeArgs::isAnyMatchIgnoreCase(uint16_t num, const __FlashStringHelper *strings) const

@@ -235,9 +235,11 @@ void PingMonitorPlugin::createConfigureForm(FormCallbackType type, const String 
         auto hosts = Plugins::Ping::getHosts();
         hosts.clear();
         for (const auto &field: form.getFields()) {
-            if (strncmp_P_P(reinterpret_cast<PGM_P>(field->getName()), PSTR("h_"), 2) == 0) {
+            if (StrView(field->getName()).startsWith(F("h_"))) {
                 __LDBG_printf("%s=%s", field->getName(), field->getValue().c_str());
-                hosts.append(field->getValue().trim());
+                auto value = field->getValue();
+                StrWrapper(value).trim();
+                hosts.append(value);
             }
         }
         return;

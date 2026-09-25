@@ -161,25 +161,25 @@ void FileManager::handleRequest()
     if (!_isAuthenticated) {
         _sendResponse(403);
     }
-    else if (_uri.equals(F("list"))) {
+    else if (F("list") == _uri) {
         _sendResponse(list());
     }
-    else if (_uri.equals(F("mkdir"))) {
+    else if (F("mkdir") == _uri) {
         _sendResponse(mkdir());
     }
-    else if (_uri.equals(F("upload"))) {
+    else if (F("upload") == _uri) {
         _sendResponse(upload());
     }
-    else if (_uri.equals(F("remove"))) {
+    else if (F("remove") == _uri) {
         _sendResponse(remove());
     }
-    else if (_uri.equals(F("rename"))) {
+    else if (F("rename") == _uri) {
         _sendResponse(rename());
     }
-    else if (_uri.equals(F("view"))) {
+    else if (F("view") == _uri) {
         _sendResponse(view(false));
     }
-    else if (_uri.equals(F("download"))) {
+    else if (F("download") == _uri) {
         _sendResponse(view(true));
     }
     else {
@@ -208,7 +208,7 @@ uint16_t FileManager::mkdir()
 
     append_slash(newDir);
     newDir += '.';
-    if (!newDir.startsWith('/')) {
+    if (!StrView(newDir).startsWith('/')) {
         newDir = append_slash(dir) + newDir;
     }
     normalizeFilename(newDir);
@@ -265,9 +265,9 @@ uint16_t FileManager::upload()
 
         // check if we can an error
         if (httpCode == 200) {
-            if (_request->_tempFile && _request->_tempFile.fullName()) {
+            if (_request->_tempFile && fullName(_request->_tempFile)) {
                 // get filename before closing the file
-                String fullname = _request->_tempFile.fullName();
+                String fullname = fullName(_request->_tempFile);
                 _request->_tempFile.close();
 
                 if (FSWrapper::rename(fullname, filename)) {
@@ -361,7 +361,7 @@ uint16_t FileManager::remove()
         message += requestFilename;
     }
     else {
-        const String &filename = file.fullName();
+        const String &filename = fullName(file);
         file.close();
 
         if (!FSWrapper::remove(filename)) {
@@ -395,8 +395,8 @@ uint16_t FileManager::rename()
     }
     else {
         FSInfo info;
-        KFCFS.info(info);
-        const String &renameFrom = file.fullName();
+        getFSInfo(info);
+        const String &renameFrom = fullName(file);
         file.close();
 
         if (renameTo.charAt(0) != '/') {

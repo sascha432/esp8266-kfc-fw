@@ -33,7 +33,7 @@ bool Entity::create(ComponentType componentType, const String &componentName, Fo
 {
     String suffix = System::Device::getObjectIdOrName();
     if (componentName.length()) {
-        if (!componentName.startsWith('/')) {
+        if (!StrView(componentName).startsWith('/')) {
             suffix += '/';
         }
         suffix += componentName;
@@ -69,12 +69,12 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
     _topic = MqttClient::getAutoDiscoveryPrefix();
     _topic += '/';
     _topic += Component::getNameByType(componentType);
-    if (!name.startsWith('/')) {
+    if (!StrView(name).startsWith('/')) {
         _topic += '/';
     }
     _topic += name;
 
-    if (!_topic.endsWith('/')) {
+    if (!StrView(_topic).endsWith('/')) {
         _topic += '/';
     }
     _topic += F("config");
@@ -118,7 +118,7 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
         #define JSON_NEXT_KEY_START         "\",\""
 
         auto namePtr = System::Device::getTitle();
-        if (strcmp_P(namePtr, SPGM(KFC_Firmware)) == 0) {
+        if (StrView(namePtr) == FSPGM(KFC_Firmware)) {
             namePtr = System::Device::getName();
         }
 
@@ -152,7 +152,6 @@ void Entity::__addParameter(NameType name, const char *str, bool quotes)
     }
     else if (_format == FormatType::JSON) {
         _discovery.printf_P(PSTR("\"%s\":"), name);
-        // bool isBool = strcmp_P_P(str, PSTR("true")) == 0 || strcmp_P_P(str, PSTR("false")) == 0;
         if (quotes) {
             _discovery.print('"');
         }

@@ -42,7 +42,7 @@ void Register::_add(PluginComponent *plugin, const char *name)
         reset_detector_setup_global_ctors();
     #endif
     __LDBG_printf("name=%s plugin=%p", __S(name), plugin);
-    __LDBG_printf("register_plugin=%s priority=%d plugins=%u", plugin->getName_P(), plugin->getOptions().priority, _plugins.size());
+    __LDBG_printf("register_plugin=%s priority=%d plugins=%u", plugin->getName(), plugin->getOptions().priority, _plugins.size());
     _plugins.push_back(plugin);
 }
 
@@ -62,7 +62,7 @@ void Register::dumpList(Print &output)
         __LDBG_printf("plugin=%p", plugin);
         auto options = plugin->getOptions();
         output.printf_P(format,
-            plugin->getName_P(),
+            plugin->getName(),
             static_cast<int8_t>(options.priority),
             BOOL_STR(plugin->allowSafeMode()),
             #if ENABLE_DEEP_SLEEP
@@ -154,20 +154,20 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
     auto blacklist = System::Firmware::getPluginBlacklist();
 
     for(const auto plugin : _plugins) {
-        if (stringlist_find_P_P(blacklist, plugin->getName_P()) != -1) {
-            __DBG_printf("plugin=%s blacklist=%s", plugin->getName_P(), blacklist);
+        if (stringlist_find_P_P(blacklist, (PGM_P)plugin->getName()) != -1) {
+            __DBG_printf("plugin=%s blacklist=%s", (PGM_P)plugin->getName(), blacklist);
             continue;
         }
         if ((mode != SetupModeType::SAFE_MODE) || (mode == SetupModeType::SAFE_MODE && plugin->allowSafeMode())) {
-            __LDBG_printf("presetup plugin=%s", plugin->getName_P());
+            __LDBG_printf("presetup plugin=%s", (PGM_P)plugin->getName());
             plugin->preSetup(mode);
-            __LDBG_printf("presetup plugin=%s done", plugin->getName_P());
+            __LDBG_printf("presetup plugin=%s done", (PGM_P)plugin->getName());
         }
     }
 
     for(const auto plugin : _plugins) {
-        if (stringlist_find_P_P(blacklist, plugin->getName_P()) != -1) {
-            __DBG_printf("plugin=%s blacklist=%s", plugin->getName_P(), blacklist);
+        if (stringlist_find_P_P(blacklist, (PGM_P)plugin->getName()) != -1) {
+            __DBG_printf("plugin=%s blacklist=%s", (PGM_P)plugin->getName(), blacklist);
             continue;
         }
         bool runSetup = (
@@ -179,18 +179,18 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             (mode == SetupModeType::DELAYED_AUTO_WAKE_UP && !plugin->autoSetupAfterDeepSleep())
 #endif
         );
-        __LDBG_printf("name=%s prio=%d setup=%d mode=%u menu=%u add_menu=%u", plugin->getName_P(), plugin->getOptions().priority, runSetup, mode, plugin->getMenuType(), (mode != SetupModeType::DELAYED_AUTO_WAKE_UP));
+        __LDBG_printf("name=%s prio=%d setup=%d mode=%u menu=%u add_menu=%u", plugin->getName(), plugin->getOptions().priority, runSetup, mode, plugin->getMenuType(), (mode != SetupModeType::DELAYED_AUTO_WAKE_UP));
         if (runSetup) {
             plugin->setSetupTime();
-            __LDBG_printf("setup plugin=%s mode=%u plugin=%p", plugin->getName_P(), mode, plugin);
+            __LDBG_printf("setup plugin=%s mode=%u plugin=%p", plugin->getName(), mode, plugin);
             plugin->setup(mode, dependencies);
-            __LDBG_printf("end_setup plugin=%s", plugin->getName_P());
+            __LDBG_printf("end_setup plugin=%s", plugin->getName());
             dependencies->check();
         }
         if (mode != SetupModeType::DELAYED_AUTO_WAKE_UP) {
             switch (plugin->getMenuType()) {
             case MenuType::CUSTOM:
-                __LDBG_printf("menu=custom plugin=%s", plugin->getName_P());
+                __LDBG_printf("menu=custom plugin=%s", plugin->getName());
                 plugin->createMenu();
                 break;
             case MenuType::AUTO: {
@@ -199,7 +199,7 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
                 if (std::find(list.begin(), list.end(), plugin->getName()) == list.end()) {
                     list.emplace_back(plugin->getName());
                 }
-                __LDBG_printf("menu=auto plugin=%s forms=%s", plugin->getName_P(), implode(',', list).c_str());
+                __LDBG_printf("menu=auto plugin=%s forms=%s", plugin->getName(), implode(',', list).c_str());
                 for (const auto &str : list) {
                     if (plugin->canHandleForm(str)) {
                         __LDBG_printf("menu=auto form=%s can_handle=true", str.c_str());
@@ -209,7 +209,7 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             } break;
             case MenuType::NONE:
             default:
-                __LDBG_printf("menu=none plugin=%s", plugin->getName_P());
+                __LDBG_printf("menu=none plugin=%s", plugin->getName());
                 break;
             }
         }

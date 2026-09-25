@@ -212,7 +212,6 @@ protected:
     static void invokeStartOrEndCallback(WsClient *wsClient, bool isStart);
 
 private:
-    static uint16_t getQueueDelay();
     // static AsyncWebSocketMessageBuffer *jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json);
     static AsyncWebSocketMessageBuffer *utf8ToBuffer(AsyncWebSocket *server, const char *str, size_t length);
     static AsyncWebSocketMessageBuffer *moveStringToBuffer(AsyncWebSocket *server, String &&str);

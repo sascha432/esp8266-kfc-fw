@@ -417,11 +417,12 @@ namespace MQTT {
             topic.replace(F("${device_title_no_space}"), _filterString(System::Device::getTitle(), true));
         }
         #if DEBUG_MQTT_CLIENT && 0
-            topic.rtrim('/');
+            StrWrapper(topic).rtrim('/');
             __DBG_printf("base_topic=%s replaced", __S(topic));
             return topic;
         #else
-            return topic.rtrim('/');
+            StrWrapper(topic).rtrim('/');
+            return topic;
         #endif
     }
 
@@ -729,19 +730,17 @@ namespace MQTT {
         if (_autoDiscoveryStatusTopic == topic) {
             if (_autoDiscoveryLastFailure == ~0U || _autoDiscoveryLastSuccess == ~0U) {
                 _resetAutoDiscoveryInitialState();
-                char *ptr;
-                ptr = strstr_P(payload, PSTR("failure\":"));
-                if (ptr) {
-                    ptr += 9;
-                    uint32_t time = atol(ptr);
+                // payload is the RAM buffer of the MQTT client and the needle is a PROGMEM string
+                auto pos = StrView(payload).indexOf(F("failure\":"));
+                if (pos != -1) {
+                    uint32_t time = atol(payload + pos + 9);
                     if (time) {
                         _autoDiscoveryLastFailure = time;
                     }
                 }
-                ptr = strstr_P(payload, PSTR("success\":"));
-                if (ptr) {
-                    ptr += 9;
-                    uint32_t time = atol(ptr);
+                pos = StrView(payload).indexOf(F("success\":"));
+                if (pos != -1) {
+                    uint32_t time = atol(payload + pos + 9);
                     if (time) {
                         _autoDiscoveryLastSuccess = time;
                     }

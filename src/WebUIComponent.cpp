@@ -98,7 +98,7 @@ namespace WebUINS {
 #ifndef _MSC_VER
         for(auto plugin: PluginComponents::Register::getPlugins()) {
             if (plugin->hasWebUI()) {
-                __LDBG_printf("plugin %s", plugin->getName_P());
+                __LDBG_printf("plugin %s", plugin->getName());
                 plugin->getValues(values);
             }
         }

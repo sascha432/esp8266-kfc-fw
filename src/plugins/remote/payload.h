@@ -93,10 +93,20 @@ namespace RemoteControl {
 
         public:
             Binary(::String &&move) : _data(nullptr), _size(move.length()) {
+#if WSTRING_HAVE_EXTENDED_API
+                // the patched core hands the buffer over, no copy is required
                 _data = reinterpret_cast<uint8_t *>(move.__release());
                 if (!_data) {
                     _size = 0;
                 }
+#else
+                // the stock Arduino core cannot hand over the buffer of a String
+                // (String::__release() does not exist), the content is copied
+                if (_size) {
+                    _data = new uint8_t[_size];
+                    memcpy(_data, move.c_str(), _size);
+                }
+#endif
             }
 
         protected:

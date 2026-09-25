@@ -250,7 +250,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 
     if (_state == StateType::FILL) { // fill _buffer
         FSInfo info;
-        KFCFS.info(info);
+        getFSInfo(info);
 
         char bufTotalBytes[16];
         char bufUsedBytes[16];

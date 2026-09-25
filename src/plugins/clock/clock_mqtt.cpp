@@ -36,21 +36,22 @@ enum class AutoDiscoverySwitchEnum {
 MQTT::AutoDiscovery::EntityPtr ClockPlugin::getAutoDiscovery(FormatType format, uint8_t num)
 {
     auto discovery = new AutoDiscovery::Entity();
+    __DBG_discovery_printf("num=%u/%u d=%p", num, getAutoDiscoveryCount(), discovery);
     auto baseTopic = MQTT::Client::getBaseTopicPrefix();
     switch(static_cast<AutoDiscoverySwitchEnum>(num)) {
         case AutoDiscoverySwitchEnum::BRIGHTNESS: {
             if (!discovery->create(this, F(MQTT_NAME), format)) {
                 return discovery;
             }
-            discovery->addStateTopicAndPayloadOnOff(MQTT::Client::formatTopic(FSPGM(_state)));
-            discovery->addCommandTopic(MQTT::Client::formatTopic(FSPGM(_set)));
-            discovery->addBrightnessStateTopic(MQTT::Client::formatTopic(FSPGM(_brightness_state)));
-            discovery->addBrightnessCommandTopic(MQTT::Client::formatTopic(FSPGM(_brightness_set)));
+            discovery->addStateTopicAndPayloadOnOff(MQTT::Client::formatTopic(F("/state")));
+            discovery->addCommandTopic(MQTT::Client::formatTopic(F("/set")));
+            discovery->addBrightnessStateTopic(MQTT::Client::formatTopic(F("/brightness/state")));
+            discovery->addBrightnessCommandTopic(MQTT::Client::formatTopic(F("/brightness/set")));
             discovery->addBrightnessScale(kMaxBrightness);
-            discovery->addRGBStateTopic(MQTT::Client::formatTopic(FSPGM(_color_state)));
-            discovery->addRGBCommandTopic(MQTT::Client::formatTopic(FSPGM(_color_set)));
-            discovery->addEffectStateTopic(MQTT::Client::formatTopic(FSPGM(_effect_state)));
-            discovery->addEffectCommandTopic(MQTT::Client::formatTopic(FSPGM(_effect_set)));
+            discovery->addRGBStateTopic(MQTT::Client::formatTopic(F("/color/state")));
+            discovery->addRGBCommandTopic(MQTT::Client::formatTopic(F("/color/set")));
+            discovery->addEffectStateTopic(MQTT::Client::formatTopic(F("/effect/state")));
+            discovery->addEffectCommandTopic(MQTT::Client::formatTopic(F("/effect/set")));
             discovery->addEffectList(KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationNamesJsonArray());
             #if IOT_LED_MATRIX_HEXAGON_PANEL
                 discovery->addName(F("Hexagon Panel"));
@@ -98,10 +99,10 @@ uint8_t ClockPlugin::getAutoDiscoveryCount() const
 void ClockPlugin::onConnect()
 {
     _publishedValues = Clock::PublishedStateType();
-    subscribe(MQTT::Client::formatTopic(FSPGM(_set)));
-    subscribe(MQTT::Client::formatTopic(FSPGM(_color_set)));
-    subscribe(MQTT::Client::formatTopic(FSPGM(_brightness_set)));
-    subscribe(MQTT::Client::formatTopic(FSPGM(_effect_set)));
+    subscribe(MQTT::Client::formatTopic(F("/set")));
+    subscribe(MQTT::Client::formatTopic(F("/color/set")));
+    subscribe(MQTT::Client::formatTopic(F("/brightness/set")));
+    subscribe(MQTT::Client::formatTopic(F("/effect/set")));
     // publishing reads the plugin state, it is done by the loop task
     _enqueue([this] {
         _publishState();
@@ -116,21 +117,21 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
         _resetAlarm();
     #endif
 
-    if (!strcmp_end_P(topic, SPGM(_effect_set))) {
+    if (StrView(topic).endsWith(F("/effect/set"))) {
         const auto animation = _getAnimationType(FPSTR(payload));
         if (animation < AnimationType::LAST) {
             setAnimationDeferred(static_cast<AnimationType>(animation));
             _saveStateDeferred();
         }
     }
-    else if (!strcmp_end_P(topic, SPGM(_brightness_set))) {
+    else if (StrView(topic).endsWith(F("/brightness/set"))) {
         if (len) {
             const auto value = strtoul(payload, nullptr, 0);
             setBrightnessDeferred(std::clamp<uint8_t>(value, 0, kMaxBrightness));
             _saveStateDeferred();
         }
     }
-    else if (!strcmp_end_P(topic, SPGM(_color_set))) {
+    else if (StrView(topic).endsWith(F("/color/set"))) {
         if (*payload == '#') {
             // rgb color code #FFEECC
             setColorAndRefreshDeferred(Color::fromString(payload));
@@ -150,7 +151,7 @@ void ClockPlugin::onMessage(const char *topic, const char *payload, size_t len)
             }
         }
     }
-    else if (!strcmp_end_P(topic, PSTR("/set"))) {
+    else if (StrView(topic).endsWith(F("/set"))) {
         const auto res = MQTT::Client::toBool(payload);
         if (res >= 0) {
             _setStateDeferred(res);
@@ -168,15 +169,15 @@ void ClockPlugin::_publishState()
         const int32_t brightness = (_targetBrightness == 0) ? _savedBrightness : _targetBrightness;
         if (_publishedValues.brightness != brightness) {
             _publishedValues.brightness = brightness;
-            publish(MQTT::Client::formatTopic(FSPGM(_brightness_state)), true, String(brightness));
+            publish(MQTT::Client::formatTopic(F("/brightness/state")), true, String(brightness));
         }
         if (_publishedValues.color != static_cast<int32_t>(getColor())) {
             _publishedValues.color = getColor();
-            publish(MQTT::Client::formatTopic(FSPGM(_color_state)), true, getColor().implode(','));
+            publish(MQTT::Client::formatTopic(F("/color/state")), true, getColor().implode(','));
         }
-        if (_publishedValues.animation != static_cast<int32_t>(_config.getAnimation())) {
-            _publishedValues.animation = static_cast<int32_t>(_config.getAnimation());
-            publish(MQTT::Client::formatTopic(FSPGM(_effect_state)), true, KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationName(_config.getAnimation()));
+        if (_publishedValues.animation != _config.getAnimationInt()) {
+            _publishedValues.animation = _config.getAnimationInt();
+            publish(MQTT::Client::formatTopic(F("/effect/state")), true, KFCConfigurationClasses::Plugins::ClockConfigNS::ClockConfigType::getAnimationName(_config.getAnimation()));
         }
         #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
             const auto level = _getPowerLevel();

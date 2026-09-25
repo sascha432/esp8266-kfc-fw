@@ -98,10 +98,10 @@ namespace Dimmer {
     {
         __LDBG_printf("topic=%s payload=%s", topic, payload);
 
-        if (strcmp_end_P(topic, PSTR("/lock/set")) == 0) {
+        if (StrView(topic).endsWith(F("/lock/set"))) {
             _setLockChannels(MQTT::Client::toBool(payload));
         }
-        else if (strcmp_end_P(topic, PSTR("/set")) == 0) {
+        else if (StrView(topic).endsWith(F("/set"))) {
             __LDBG_printf("set main");
             auto stream = HeapStream(payload, len);
             auto reader = MQTT::Json::Reader(&stream);
@@ -155,16 +155,16 @@ namespace Dimmer {
     {
         __LDBG_printf("id=%s val=%s has_val=%u state=%d has_state=%u", __S(id), __S(value), hasValue, state, hasState);
         if (hasValue) {
-            if (id == F("d-lck")) {
+            if (F("d-lck") == id) {
                 _setLockChannels(value.toInt());
                 _publish();
             }
-            else if (id == F("d-ct")) {
+            else if (F("d-ct") == id) {
                 _color = value.toFloat();
                 _brightnessToChannels();
                 _publish();
             }
-            else if (id == F("d-br")) {
+            else if (F("d-br") == id) {
                 _brightness = value.toInt();
                 _brightnessToChannels();
                 _publish();

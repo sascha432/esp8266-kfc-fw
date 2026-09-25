@@ -117,10 +117,10 @@ void WeatherStationPlugin::__recvTFTCtrl(AsyncWebServerRequest *request)
     }
     int code = 200;
     auto type = request->arg(F("type"));
-    if (type == F("click")) {
+    if (F("click") == type) {
         _setScreen(_getNextScreen(_getCurrentScreen(), true));
     }
-    else if (type == F("tap")) {
+    else if (F("tap") == type) {
         #if HAVE_WEATHER_STATION_CURATED_ART
             if (_currentScreen == ScreenType::CURATED_ART) {
                 _setScreen(ScreenType::CURATED_ART);
@@ -135,7 +135,7 @@ void WeatherStationPlugin::__recvTFTCtrl(AsyncWebServerRequest *request)
             _setScreen(_getNextScreen(_getCurrentScreen(), true));
         }
     }
-    else if (type == F("dbltap")) {
+    else if (F("dbltap") == type) {
         #if HAVE_WEATHER_STATION_CURATED_ART
             if (_currentScreen == ScreenType::CURATED_ART) {
                 _setScreen(_getNextScreen(_getCurrentScreen(), true));
@@ -157,12 +157,12 @@ void WeatherStationPlugin::__recvTFTCtrl(AsyncWebServerRequest *request)
 
 class WS_AsyncJpegResponse : public AsyncFileResponse {
 public:
-    WS_AsyncJpegResponse(fs::File &file) : AsyncFileResponse(file, file.name(), FSPGM(mime_image_jpeg)), _file(file)/*m _fullName(file.fullName())*/ {
+    WS_AsyncJpegResponse(fs::File &file) : AsyncFileResponse(file, file.name(), FSPGM(mime_image_jpeg)), _file(file)/*m _fullName(fullName(file))*/ {
         _file.seek(0);
     }
     virtual ~WS_AsyncJpegResponse() {
-        _file = LittleFS.open(_file.fullName(), fs::FileOpenMode::read);
-        __DBG_printf("jpeg unlock file=%s", __S(_file.fullName()));
+        _file = LittleFS.open(fullName(_file), fs::FileOpenMode::read);
+        __DBG_printf("jpeg unlock file=%s", __S(fullName(_file)));
         WeatherStationPlugin::_getInstance().unlock();
     }
 private:
@@ -198,7 +198,7 @@ void WeatherStationPlugin::__sendScreenCaptureBMP(AsyncWebServerRequest *request
                     request->send(204); // invalid image
                     return;
                 }
-                name = PrintString(F("%s<br><div class=\"h6\">%s</div>"), getScreenName(_currentScreen), _galleryFile.fullName());
+                name = PrintString(F("%s<br><div class=\"h6\">%s</div>"), getScreenName(_currentScreen), fullName(_galleryFile));
                 // just send the jpeg image
                 response = new WS_AsyncJpegResponse(_galleryFile);
             }
@@ -471,7 +471,7 @@ void WeatherStationPlugin::setup(SetupModeType mode, const PluginComponents::Dep
 void WeatherStationPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("reconfigure src=%s", source.c_str());
-    if (source.equals(FSPGM(http))) {
+    if (FSPGM(http) == source) {
         _installWebhooks();
     }
     else {
@@ -577,7 +577,7 @@ void WeatherStationPlugin::getValues(WebUINS::Events &array)
 void WeatherStationPlugin::setValue(const String &id, const String &value, bool hasValue, bool state, bool hasState)
 {
     __LDBG_printf("id=%s value=%s has=%u", __S(id), __S(value), hasValue);
-    if (hasValue && id.equals(F("bl_br"))) {
+    if (hasValue && F("bl_br") == id) {
         _updateBacklight(value.toInt());
         publishDelayed();
     }

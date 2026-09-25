@@ -37,7 +37,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     auto &cfg = Plugins::RemoteControl::getWriteableConfig();
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    if (formName == F("general")) {
+    if (F("general") == formName) {
 
         ui.setTitle(F("Remote Control Configuration"));
         ui.setContainerId(F("remotectrl_general"));
@@ -92,7 +92,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         mqttGroup.end();
 
     }
-    else if (formName == F("events")) {
+    else if (F("events") == formName) {
 
         ui.setTitle(F("Remote Control Events"));
         ui.setContainerId(F("remotectrl_events"));
@@ -185,7 +185,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         }
 
     }
-    else if (formName == F("combos")) {
+    else if (F("combos") == formName) {
 
         ui.setTitle(F("Remote Control Button Combinations"));
         ui.setContainerId(F("remotectrl_combos"));
@@ -300,7 +300,7 @@ void RemoteControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         group.end();
 
     }
-    else if (formName == F("actions")) {
+    else if (F("actions") == formName) {
 
         ui.setTitle(F("Remote Control Actions (Currently not implemented)"));
         ui.setContainerId(F("remotectrl_actions"));

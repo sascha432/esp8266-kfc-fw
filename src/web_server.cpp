@@ -167,17 +167,17 @@ void Plugin::executeDelayed(AsyncWebServerRequest *request, std::function<void()
 
 bool Plugin::_isPublic(const String &pathString) const
 {
-    auto path = pathString.c_str();
-    if (strstr_P(path, PSTR(".."))) { // deny any path traversing attempts
+    if (pathString.indexOf(F(".."))) {
         return false;
     }
-    else if (*path++ == '/') {
+    auto path = pathString.c_str();
+    if (*path++ == '/') {
         return (
-            !strcmp_P(path, SPGM(description_xml)) ||
-            !strncmp_P(path, PSTR("css/"), 4) ||
-            !strncmp_P(path, PSTR("js/"), 3) ||
-            !strncmp_P(path, PSTR("images/"), 7) ||
-            !strncmp_P(path, PSTR("fonts/"), 6)
+            StrView(path) == FSPGM(description_xml) ||
+            StrView(path).startsWith(F("css/")) ||
+            StrView(path).startsWith(F("js/")) ||
+            StrView(path).startsWith(F("images/")) ||
+            StrView(path).startsWith(F("fonts/"))
         );
     }
     return false;
@@ -185,12 +185,12 @@ bool Plugin::_isPublic(const String &pathString) const
 
 bool Plugin::_clientAcceptsGzip(AsyncWebServerRequest *request) const
 {
-    auto header = request->getHeader(FSPGM(Accept_Encoding, "Accept-Encoding"));
+    auto header = request->getHeader(F("Accept-Encoding"));
     if (!header) {
         return false;
     }
-    auto acceptEncoding = header->value().c_str();
-    return (strstr_P(acceptEncoding, SPGM(gzip, "gzip")) || strstr_P(acceptEncoding, SPGM(deflate, "deflate")));
+    const auto &acceptEncoding = header->value();
+    return (acceptEncoding.indexOf(F("gzip")) != -1) || (acceptEncoding.indexOf(F("deflate")) != -1);
 }
 
 // 404 handler
@@ -232,8 +232,8 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         else
     #endif
     // --------------------------------------------------------------------
-    if (url == F("/is-alive")) {
-        auto content = String(request->arg(String('p')).toInt());
+    if (F("/is-alive") == url) {
+        auto content = request->arg(String('p').toInt());
         #if DEBUG
             switch(request->arg(F("reset-device")).toInt()) {
                 case 1:
@@ -250,31 +250,31 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     }
     #if IOT_CLOCK && 0 //TODO implement WLED json API
         // --------------------------------------------------------------------
-        else if (url == F("/json")) {
+        else if (F("/json") == url) {
             auto json = ClockPlugin::getInstance().getWLEDJson();
             response = request->beginResponse(200, FSPGM(mime_application_json), json.c_str());
             headers.addNoCache(true);
             headers.setResponseHeaders(response);
         }
         // --------------------------------------------------------------------
-        else if (url == F("/presets.json")) {
+        else if (F("/presets.json") == url) {
             response = request->beginResponse(200, FSPGM(mime_application_json), F("{}"));
             headers.addNoCache(true);
             headers.setResponseHeaders(response);
         }
     #endif
     // --------------------------------------------------------------------
-    else if (url == F("/webui-handler")) {
+    else if (F("/webui-handler") == url) {
         getInstance()._handlerWebUI(request, headers);
         return;
     }
     // --------------------------------------------------------------------
-    else if (url == F("/alerts")) {
+    else if (F("/alerts") == url) {
         getInstance()._handlerAlerts(request, headers);
         return;
     }
     // --------------------------------------------------------------------
-    else if (url == F("/sync-time")) {
+    else if (F("/sync-time") == url) {
         if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403);
             _logRequest(request, response);
@@ -291,17 +291,17 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
-    else if (url == F("/export-settings")) {
+    else if (F("/export-settings") == url) {
         getInstance()._handlerExportSettings(request, headers);
         return;
     }
     // --------------------------------------------------------------------
-    else if (url == F("/import-settings")) {
+    else if (F("/import-settings") == url) {
         getInstance()._handlerImportSettings(request, headers);
         return;
     }
     // --------------------------------------------------------------------
-    else if (url == F("/scan-wifi")) {
+    else if (F("/scan-wifi") == url) {
         if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403, FSPGM(mime_text_html));
             _logRequest(request, response);
@@ -316,7 +316,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.setResponseHeaders(response);
     }
     // --------------------------------------------------------------------
-    else if (url == F("/logout")) {
+    else if (F("/logout") == url) {
         __SID(__DBG_printf("sending remove SID cookie"));
         headers.addNoCache(true);
         headers.add(createRemoveSessionIdCookie());
@@ -328,7 +328,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         response = HttpLocationHeader::redir(request, String('/'), headers);
     }
     // --------------------------------------------------------------------
-    else if (url == F("/mqtt-publish-ad.html")) {
+    else if (F("/mqtt-publish-ad.html") == url) {
         if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403, FSPGM(mime_text_html));
             _logRequest(request, response);
@@ -374,7 +374,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         return;
     }
     // --------------------------------------------------------------------
-    else if (url == F("/zeroconf")) {
+    else if (F("/zeroconf") == url) {
         if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403);
             _logRequest(request, response);
@@ -389,13 +389,13 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
         headers.setResponseHeaders(response);
     }
     #if MDNS_PLUGIN
-        else if (url == F("/mdns_discovery")) {
+        else if (F("/mdns_discovery") == url) {
             MDNSPlugin::mdnsDiscoveryHandler(request);
             return;
         }
     #endif
     // --------------------------------------------------------------------
-    else if (url == F("/savecrash.json")) {
+    else if (F("/savecrash.json") == url) {
         if (!getInstance().isAuthenticated(request)) {
             auto response = request->beginResponse(403);
             _logRequest(request, response);
@@ -408,7 +408,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     #if ESP32
         // --------------------------------------------------------------------
         // downloads the core dump stored by the ESP-IDF panic handler
-        else if (url == F("/coredump.bin")) {
+        else if (F("/coredump.bin") == url) {
             if (!getInstance().isAuthenticated(request)) {
                 auto response = request->beginResponse(403);
                 _logRequest(request, response);
@@ -427,7 +427,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     #endif
     #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR
         // --------------------------------------------------------------------
-        else if (url == F("/ambient_light_sensor")) {
+        else if (F("/ambient_light_sensor") == url) {
             if (!getInstance().isAuthenticated(request)) {
                 auto response = request->beginResponse(403);
                 _logRequest(request, response);
@@ -911,7 +911,7 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
     }
 
     auto &path = mapping.getFilenameString();
-    if (path.startsWith('.') || path.indexOf(F("/.")) != -1) {
+    if (StrView(path).startsWith('.') || path.indexOf(F("/.")) != -1) {
         return nullptr; // hidden file
     }
 
@@ -1001,7 +1001,7 @@ bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, Asy
     __LDBG_printf("path=%s gz=%u request=%p", pathIn.c_str(), client_accepts_gzip, request);
 
     String path = pathIn;
-    if (path.endsWith('/')) {
+    if (StrView(path).endsWith('/')) {
         path += FSPGM(index_html);
     }
 
@@ -1125,7 +1125,7 @@ bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, Asy
         __LDBG_printf("HTTP post %s", path.c_str());
         headers.addNoCache(true);
 
-        if (path.startsWith('/') && path.endsWith(FSPGM(_html))) {
+        if (StrView(path).startsWith('/') && path.endsWith(FSPGM(_html))) {
             // auto name = path.substring(1, path.length() - 5);
 
             __LDBG_printf("get_form=%s", formName.c_str());
@@ -1213,23 +1213,23 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
     uint32_t code = 200;
     auto action = WebSocketAction::NONE;
     auto actionStr = request->arg(F("__websocket_action"));
-    if (actionStr == F("discard")) {
+    if (F("discard") == actionStr) {
         action = WebSocketAction::DISCARD;
     }
-    else if (actionStr == F("save")) {
+    else if (F("save") == actionStr) {
         action = WebSocketAction::SAVE;
     }
-    else if (actionStr == F("apply")) {
+    else if (F("apply") == actionStr) {
         action = WebSocketAction::APPLY;
     }
     __LDBG_printf("actionStr=%s action=%u", __S(actionStr), action);
 
     if (action == WebSocketAction::NONE) {
-        __LDBG_printf("plugin=%s form=%s invalid action=%s", plugin.getName_P(), formName.c_str(), actionStr.c_str());
+        __LDBG_printf("plugin=%s form=%s invalid action=%s", plugin.getName(), formName.c_str(), actionStr.c_str());
         code = 400;
     }
     else if (!plugin.canHandleForm(formName)) {
-        __LDBG_printf("plugin=%s cannot handle form=%s", plugin.getName_P(), formName.c_str());
+        __LDBG_printf("plugin=%s cannot handle form=%s", plugin.getName(), formName.c_str());
         code = 404;
     }
     else {
@@ -1239,7 +1239,7 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
         if (action == WebSocketAction::DISCARD || !form->validate()) {
             modified = modified || form->hasChanged();
             // form->dump(DEBUG_OUTPUT, emptyString);
-            __LDBG_printf("plugin=%s discard config changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
+            __LDBG_printf("plugin=%s discard config changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
             if (modified) {
                 __LDBG_printf("discarding modified data");
                 plugin.createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
@@ -1250,7 +1250,7 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
         else {
             // form->dump(DEBUG_OUTPUT, emptyString);
             modified = modified || form->hasChanged();
-            __LDBG_printf("plugin=%s validated changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName_P(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
+            __LDBG_printf("plugin=%s validated changed=%u dirty=%u modified=%u form=%s action=%s", plugin.getName(), form->hasChanged(), config.isDirty(), modified, formName.c_str(), actionStr.c_str());
             plugin.createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
             if (action == WebSocketAction::SAVE && modified) {
                 __LDBG_printf("saving modified data");
@@ -1260,7 +1260,7 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
             // only reconfigure if the form has changed
             // if config is dirty, those changes have been applied already
             if (form->hasChanged()) {
-                __LDBG_printf("reconfigure plugin=%s", plugin.getName_P());
+                __LDBG_printf("reconfigure plugin=%s", plugin.getName());
                 plugin.reconfigure(formName);
             }
         }
@@ -1303,7 +1303,7 @@ void Plugin::setup(SetupModeType mode, const PluginComponents::DependenciesPtr &
 
 void Plugin::reconfigure(const String &source)
 {
-    if (source == F("mdns")) {
+    if (F("mdns") == source) {
         #if MDNS_PLUGIN
             _addMDNS();
         #endif
@@ -1471,7 +1471,7 @@ namespace SaveCrash {
         PrintString jsonStr;
         AsyncWebServerResponse *response;
 
-        if (request->arg(F("cmd")) == F("erase-coredump")) {
+        if (F("erase-coredump") == request->arg(F("cmd"))) {
             if (SaveCrash::CoreDump::erase()) {
                 response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
             }
@@ -1521,7 +1521,7 @@ namespace SaveCrash {
         auto fs = SaveCrash::createFlashStorage();
 
         auto &cmd = request->arg(F("cmd"));
-        if (cmd == F("clear")) {
+        if (F("clear") == cmd) {
             fs.clear(SPIFlash::ClearStorageType::ERASE);
             response = request->beginResponse_P(200, FSPGM(mime_application_json), PSTR("{\"result\":\"OK\"}"));
         }

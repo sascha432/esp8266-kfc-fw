@@ -35,7 +35,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
     ui.setContainerId(F("blinds_settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    if (formName == F("channels")) {
+    if (F("channels") == formName) {
 
         PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 2, grp, n0, n1, otl, ctl, il, ip, dac, pwm);
 
@@ -83,7 +83,7 @@ void BlindsControlPlugin::createConfigureForm(FormCallbackType type, const Strin
         }
 
     }
-    else if (formName == F("automation")) {
+    else if (F("automation") == formName) {
 
         // FormUI::Container::List currentLimitItems(
         //      500, F("Extra Fast (500µs)"),

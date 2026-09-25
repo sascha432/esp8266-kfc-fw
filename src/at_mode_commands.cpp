@@ -257,7 +257,7 @@ static void printHeapOnce()
         atModePrintLoop->printHeap();
     }
     else {
-        Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), ESP.getHeapFragmentation());
+        Serial.printf_P(PSTR("+HEAP: free=%u cpu=%dMHz frag=%u"), ESP.getFreeHeap(), ESP.getCpuFreqMHz(), getHeapFragmentation());
     }
 }
 
@@ -347,7 +347,10 @@ void ATModeCommands::I2CSetupCommand(AtModeArgs &args)
     else {
         config.initTwoWire(true);
         Wire.begin(sda, scl);
-        Wire.setClockStretchLimit(stretch);
+        #if ESP8266
+            // the stock ESP32 Wire has no clock stretch limit
+            Wire.setClockStretchLimit(stretch);
+        #endif
         Wire.setClock(speed);
         args.print(F("I2C started on %u:%u (sda:scl), speed %u, clock stretch %u"), sda, scl, speed, stretch);
     }
@@ -499,7 +502,7 @@ void ATModeCommands::ImportCommand(AtModeArgs &args)
     if (args.requireArgs(1)) {
         auto res = false;
         auto filename = args.get(0);
-        if (!strcmp_P(filename, PSTR("set_dirty"))) {
+        if (StrView(F("set_dirty")).equals(filename)) {
             config.setConfigDirty(true);
             args.print(F("Configuration marked dirty"));
         }
@@ -576,13 +579,13 @@ public:
 void ATModeCommands::NVSCommand(AtModeArgs &args)
 {
     auto cmd = args.toString(0);
-    if (cmd == F("format")) {
+    if (F("format") == cmd) {
         config.formatNVS();
         config.restoreFactorySettings();
         config.write();
         args.ok();
     }
-    else if (cmd == F("stats")) {
+    else if (F("stats") == cmd) {
         auto stream = &args.getStream();
         LoopFunctions::callOnce([stream]() {
             stream->println(F("+NVS: Stats"));
@@ -612,7 +615,7 @@ void ATModeCommands::NVSCommand(AtModeArgs &args)
         });
     }
     #if 0
-        else if (cmd == F("dump")) {
+        else if (F("dump") == cmd) {
             auto stream = &args.getStream();
             LoopFunctions::callOnce([stream]() {
                 stream->println(F("+NVS: Dumping partition"));
@@ -866,7 +869,7 @@ void ATModeCommands::WiFiCommand(AtModeArgs &args)
                             auto password = args.toString(4);
                             auto ip = args.toString(5);
                             cfg.enabled = args.isTrue(2);
-                            if (ip.startsWithIgnoreCase(F("dhcp"))) {
+                            if (StrView(ip).startsWithIgnoreCase(F("dhcp"))) {
                                 cfg.dhcp = true;
                             }
                             else {
@@ -878,8 +881,8 @@ void ATModeCommands::WiFiCommand(AtModeArgs &args)
                                 cfg.local_ip = IPAddress().fromString(ip);
                                 cfg.subnet = IPAddress().fromString(subnet);
                                 cfg.gateway = IPAddress().fromString(gateway);
-                                cfg.dns1 = dns1.startsWithIgnoreCase(F("glob")) ? Network::Settings::kGlobalDNS : IPAddress().fromString(dns1);
-                                cfg.dns2 = dns2.startsWithIgnoreCase(F("glob")) ? Network::Settings::kGlobalDNS : IPAddress().fromString(dns2);
+                                cfg.dns1 = StrView(dns1).startsWithIgnoreCase(F("glob")) ? Network::Settings::kGlobalDNS : IPAddress().fromString(dns1);
+                                cfg.dns2 = StrView(dns2).startsWithIgnoreCase(F("glob")) ? Network::Settings::kGlobalDNS : IPAddress().fromString(dns2);
                             }
                             Network::WiFi::setSSID(num, SSID);
                             Network::WiFi::setPassword(num, password);
@@ -1218,23 +1221,23 @@ void ATModeCommands::PLGCommand(AtModeArgs &args)
                 switch(cmd) {
                     case 1: // start
                         if (plugin->getSetupTime() == 0) {
-                            args.print(F("Calling %s.setup()"), plugin->getName_P());
+                            args.print(F("Calling %s.setup()"), plugin->getName());
                             plugin->setSetupTime();
                             PluginComponents::DependenciesPtr deps(new PluginComponents::Dependencies());
                             plugin->setup(PluginComponent::SetupModeType::DEFAULT, deps);
                         }
                         else {
-                            args.print(F("%s already running"), plugin->getName_P());
+                            args.print(F("%s already running"), plugin->getName());
                         }
                         break;
                     case 2: // stop
                         if (plugin->getSetupTime() != 0) {
-                            args.print(F("Calling %s.shutdown()"), plugin->getName_P());
+                            args.print(F("Calling %s.shutdown()"), plugin->getName());
                             plugin->shutdown();
                             plugin->clearSetupTime();
                         }
                         else {
-                            args.print(F("%s not running"), plugin->getName_P());
+                            args.print(F("%s not running"), plugin->getName());
                         }
                         break;
                     case 3:     // add-blacklist
@@ -1361,7 +1364,7 @@ void ATModeCommands::DumpTimersCommand(AtModeArgs &args)
 static inline void dumpFileSystemInfo(Print &output)
 {
     FSInfo info;
-    KFCFS.info(info);
+    getFSInfo(info);
     output.printf_P(PSTR(
         "+FS: Block size           %d\n"
         "+FS: Max. open files      %d\n"
@@ -1434,11 +1437,11 @@ void ATModeCommands::MetricsCommand(AtModeArgs &args)
             options += F("BREAK_ON_INIT ");
             #endif
 
-            args.print(F("GDBStub: %s"), options.trim().c_str());
+            args.print(F("GDBStub: %s"), StrWrapper(options).trim().c_str());
         }
         #endif
         args.print(F("Uptime: %u seconds / %s"), getSystemUptime(), formatTime(getSystemUptime(), true).c_str());
-        args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), ESP.getHeapFragmentation());
+        args.print(F("Free heap/fragmentation: %u / %u"), ESP.getFreeHeap(), getHeapFragmentation());
         #if ARDUINO_ESP8266_MAJOR >= 3
             #ifdef UMM_HEAP_IRAM
                 {
@@ -1493,7 +1496,7 @@ void ATModeCommands::MetricsCommand(AtModeArgs &args)
             PrintString tmp;
             PinMonitor::pinMonitor.printStatus(tmp);
             tmp.replace(F(HTML_S(br)), "\n");
-            tmp.rtrim('\n');
+            StrWrapper(tmp).rtrim('\n');
             args.print(tmp);
         #endif
 

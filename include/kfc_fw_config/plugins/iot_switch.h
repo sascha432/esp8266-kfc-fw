@@ -171,7 +171,7 @@ namespace KFCConfigurationClasses {
                     Buffer buffer;
                     for(uint8_t i = 0; i < names.size(); i++) {
                         auto name = String(names[i]);
-                        name.rtrim();
+                        StrWrapper(name).rtrim();
                         configs[i] = name;
                         buffer.push_back(configs[i].data());
                         buffer.writeString(name);

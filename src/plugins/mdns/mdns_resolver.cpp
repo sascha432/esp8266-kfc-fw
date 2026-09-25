@@ -18,6 +18,14 @@
 
 using KFCConfigurationClasses::System;
 
+// the stock ESP32 core has no IPAddress(ip_addr_t)/IPAddress(const ip_addr_t*), the IPv4 address
+// is a 32 bit value in network byte order (see IPAddress(addr->addr.u_addr.ip4.addr) below)
+#if ESP32
+#    define IP_ADDR_TO_IPADDRESS(ip)    IPAddress((ip)->u_addr.ip4.addr)
+#else
+#    define IP_ADDR_TO_IPADDRESS(ip)    IPAddress(ip)
+#endif
+
 #if ESP8266
 
     IPAddress MDNSResolver::MDNSServiceInfo::findIP4Address(const IPAddress &myAddress)
@@ -44,13 +52,11 @@ using KFCConfigurationClasses::System;
 
     char *MDNSResolver::MDNSServiceInfo::findTxtValue(const String &key)
     {
-        for (auto kv = p_pMDNSResponder._answerKeyValue(p_hServiceQuery, p_u32AnswerIndex); kv != nullptr; kv = kv->m_pNext) {
-            __LDBG_printf("find_key=%s key=%s value=%s", key.c_str(), kv->m_pcKey, kv->m_pcValue);
-            if (key.equals(kv->m_pcKey)) {
-                return kv->m_pcValue;
-            }
-        }
-        return nullptr;
+        // MDNSResponder::_answerKeyValue() is protected in the Arduino core, the base class of
+        // this class provides the public accessor (same linear search)
+        auto valuePtr = value(key.c_str());
+        __LDBG_printf("find_key=%s value=%s", key.c_str(), valuePtr ? valuePtr : "");
+        return const_cast<char *>(valuePtr);
     }
 
     void MDNSResolver::Query::serviceCallback(bool map, MDNSResolver::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
@@ -132,8 +138,8 @@ MDNSResolver::Query::Query(const String &name, const String &service, const Stri
     _dataCollected(DATA_COLLECTED_NONE),
     _state(StateType::NONE),
     _resolved(false),
-    _isAddress(addressValue.equals(FSPGM(address))),
-    _isPort(portValue.equals(FSPGM(port)))
+    _isAddress(FSPGM(address) == addressValue),
+    _isPort(FSPGM(port) == portValue)
 {
     __LDBG_printf("name=%s service=%s proto=%s address_value=%s port_value=%s fallback=%s port=%u prefix=%s suffix=%s timeout=%u is_address=%u is_port=%u",
         name.c_str(), service.c_str(), proto.c_str(), addressValue.c_str(), portValue.c_str(), fallback.c_str(), port, prefix.c_str(), suffix.c_str(), timeout, _isAddress, _isPort
@@ -227,12 +233,12 @@ void MDNSResolver::Query::end(bool removeQuery)
 
 void MDNSResolver::Query::dnsFoundCallback(const char *name, const ip_addr *ipaddr, void *arg)
 {
-    __LDBG_printf("dnsFoundCallback=%p query=%p address=%s", arg, MDNSPlugin::getInstance().findQuery(arg), IPAddress(ipaddr).toString().c_str());
+    __LDBG_printf("dnsFoundCallback=%p query=%p address=%s", arg, MDNSPlugin::getInstance().findQuery(arg), IP_ADDR_TO_IPADDRESS(ipaddr).toString().c_str());
     if (ipaddr) {
         MUTEX_LOCK_BLOCK(MDNSPlugin::getInstance().getLock()) {
             if (MDNSPlugin::getInstance().findQuery(arg)) {  // verify that the query has not been deleted yet
                 auto &query = *reinterpret_cast<MDNSResolver::Query *>(arg);
-                query._hostname = IPAddress(ipaddr).toString();
+                query._hostname = IP_ADDR_TO_IPADDRESS(ipaddr).toString();
                 query._dataCollected |= DATA_COLLECTED_HOSTNAME;
                 __LDBG_printf("resolved=%s", query._hostname.c_str());
             }
@@ -339,7 +345,7 @@ void MDNSResolver::Query::poll()
                     // try to resolve before marking as collected
                     auto result = dns_gethostbyname_addrtype(hostname.c_str(), &addr, reinterpret_cast<dns_found_callback>(dnsFoundCallback), this, LWIP_DNS_ADDRTYPE_IPV4);
                     if (result == ERR_OK) {
-                        _hostname = IPAddress(addr).toString();
+                        _hostname = IP_ADDR_TO_IPADDRESS(&addr).toString();
                         _dataCollected |= DATA_COLLECTED_HOSTNAME;
                     }
                     else if (result == ERR_INPROGRESS) {

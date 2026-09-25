@@ -1286,7 +1286,7 @@ void KFCFWConfiguration::restartDevice(bool safeMode)
     auto &plugins = PluginComponents::RegisterEx::getPlugins();
     for(auto iterator = plugins.rbegin(); iterator != plugins.rend(); ++iterator) {
         const auto plugin = *iterator;
-        _DPRINTF("shutdown plugin=%s", plugin->getName_P());
+        _DPRINTF("shutdown plugin=%s", plugin->getName());
         plugin->shutdown();
         plugin->clearSetupTime();
     }
@@ -1652,7 +1652,10 @@ uint32_t KFCFWConfiguration::getWiFiUp()
             __DBG_RTC_printf("SDA=%u,SCL=%u,stretch=%u,speed=%u,rst=%u", KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL, KFC_TWOWIRE_CLOCK_STRETCH, KFC_TWOWIRE_CLOCK_SPEED, reset);
             _initTwoWire = true;
             Wire.begin(KFC_TWOWIRE_SDA, KFC_TWOWIRE_SCL);
-            Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRETCH);
+            #if ESP8266
+                // the stock ESP32 Wire has no clock stretch limit
+                Wire.setClockStretchLimit(KFC_TWOWIRE_CLOCK_STRETCH);
+            #endif
             Wire.setClock(KFC_TWOWIRE_CLOCK_SPEED);
         }
         return Wire;
@@ -1920,7 +1923,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
 
 void KFCConfigurationPlugin::reconfigure(const String &source)
 {
-    if (source == FSPGM(network) || source == FSPGM(wifi)) {
+    if (FSPGM(network) == source || FSPGM(wifi) == source) {
         config.reconfigureWiFi();
     }
 }

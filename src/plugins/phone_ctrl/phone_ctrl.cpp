@@ -265,11 +265,11 @@ void PhoneCtrlPlugin::onConnect()
 void PhoneCtrlPlugin::onMessage(const char *topic, const char *payload, size_t len)
 {
     __LDBG_printf("topic=%s payload=%s(%u)", topic, payload, MQTT::Client::toBool(payload, false));
-    if (!strcmp_end_P(topic, PSTR("/allow/set"))) {
+    if (!StrView(topic).endsWith(F("/allow/set"))) {
         _allowAnswering = MQTT::Client::toBool(payload, false);
         _publishState();
     }
-    else if (!strcmp_end_P(topic, PSTR("/answer")) && !strcasecmp_P(payload, PSTR("press"))) {
+    else if (!StrView(topic).endsWith(F("/answer")) && !StrView(payload).equalsIgnoreCase(F("press"))) {
         _doAnswer();
     }
 }
@@ -295,11 +295,11 @@ void PhoneCtrlPlugin::setValue(const String &id, const String &value, bool hasVa
     __LDBG_printf("id=%s value=%s hasValue=%u state=%u hasState=%u", id.c_str(), value.c_str(), hasValue, state, hasState);
     if (hasValue) {
         int val = value.toInt();
-        if (id == F("allow")) {
+        if (F("allow") == id) {
             _allowAnswering = val;
             _publishState();
         }
-        else if (id == F("answer")) {
+        else if (F("answer") == id) {
             if (val) {
                 _doAnswer();
             }

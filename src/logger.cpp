@@ -96,7 +96,7 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
             PrintString msg;
 
             msg.vprintf_P(message, arg);
-            msg.rtrim();
+            StrWrapper(msg).rtrim();
             item.buffer.resize(item.headerSize() + msg.length());
             memmove(item.message(), msg.c_str(), msg.length());
 
@@ -210,16 +210,14 @@ void Logger::_flushQueue()
         File file;
         for(auto iterator = tmp.begin(); iterator != tmp.end(); iterator = tmp.begin()) {
             auto &item = *iterator;
-
             __LDBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
             if (last != item.logLevel || !file) {
                 // store as last
                 last = item.logLevel;
-
                 // check if the filenames match if the file is open
                 for(;;) {
                     if (file) {
-                        if (strcmp_P(file.fullName(), (PGM_P)_getLogFilename(last)) == 0) {
+                        if (StrView(_getLogFilename(last)).equals(fullName(file))) {
                             break; // already open
                         }
                     }
@@ -300,7 +298,7 @@ void Logger::_closeLog(File file)
     if (!file) {
         return;
     }
-    String filename = file.fullName();
+    String filename = fullName(file);
     #if LOGGER_MAX_FILESIZE
         if (file.size() >= LOGGER_MAX_FILESIZE) {
             #if LOGGER_MAX_BACKUP_FILES

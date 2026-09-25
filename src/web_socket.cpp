@@ -93,7 +93,7 @@ void WsClientAsyncWebSocket::_enableAuthentication()
 {
     uint8_t buf[32];
     String password = String('\xff');
-    ESP.random(buf, sizeof(buf));
+    getRandom(buf, sizeof(buf));
     const char *ptr = (const char *)buf;
     for(uint8_t i = 0; i < (uint8_t)sizeof(buf); i++) {
         if (*ptr) {
@@ -301,37 +301,6 @@ void WsClient::invokeStartOrEndCallback(WsClient *wsClient, bool isStart)
     }
 }
 
-uint16_t WsClient::getQueueDelay()
-{
-    #if HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
-        // calculate delay depending on the queue size
-        auto qCount = AsyncWebSocket::_getQueuedMessageCount();
-        auto qSize = AsyncWebSocket::_getQueuedMessageSize();
-        uint16_t qDelay = 1;
-        if (qCount > 10) {
-            qDelay = 50;
-        }
-        else if (qCount > 5) {
-            qDelay = 10;
-        }
-        else if (qCount > 3) {
-            qDelay = 5;
-        }
-        if (qSize > 8192) {
-            qDelay = std::max(qDelay, (uint16_t)50);
-        }
-        else if (qSize > 4096) {
-            qDelay = std::max(qDelay, (uint16_t)10);
-        }
-        else if (qSize > 1024) {
-            qDelay = std::max(qDelay, (uint16_t)5);
-        }
-        return qDelay;
-    #else
-        return 1;
-    #endif
-}
-
 // validate server and sender
 // server may be nullptr if sender is not nullptr
 // sender may be nullptr for broadcasts
@@ -379,16 +348,15 @@ void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSock
             }
         }
     #endif
-    auto qDelay = getQueueDelay();
     buffer->lock();
-    WsClient::foreach(server, sender, [buffer, qDelay](AsyncWebSocketClient *client) {
+    WsClient::foreach(server, sender, [buffer](AsyncWebSocketClient *client) {
         if (client->canSend()) {
             client->text(buffer);
             #if ESP32
                 esp_task_wdt_reset();
             #elif ESP8266
                 if (can_yield()) {
-                    delay(qDelay); // let the device work on its tcp buffers
+                    delay(1); // let the device work on its tcp buffers
                 }
             #endif
         }
@@ -409,23 +377,6 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocke
     }
 }
 
-// AsyncWebSocketMessageBuffer *WsClient::jsonToBuffer(AsyncWebSocket *server, const JsonUnnamedObject &json)
-// {
-//     // more efficient than JsonBuffer
-//     String str = json.toString();
-//     size_t len = str.length();
-//     auto cStr = str.__release();
-//     if (!cStr) {
-//         cStr = reinterpret_cast<char *>(calloc(1, len));
-//     }
-//     return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
-//     // auto buffer = server->makeBuffer(str.length());
-//     // if (buffer) {
-//     //     memcpy((char *)buffer->get(), cStr, len + 1);
-//     // }
-//     // return buffer;
-// }
-
 AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, const char *str, size_t length)
 {
     size_t buflen = length;
@@ -441,27 +392,10 @@ AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, cons
 
 AsyncWebSocketMessageBuffer *WsClient::moveStringToBuffer(AsyncWebSocket *server, String &&str)
 {
-    // size_t len = str.length();
-    // auto cStr = str.__release();
-    // if (!cStr) {
-    //     cStr = reinterpret_cast<char *>(calloc(1, len));
-    // }
-    // return server->makeBuffer(reinterpret_cast<uint8_t *>(cStr), len, false/* use cStr instead of allocating new memory and copying */);
     auto buffer = server->makeBuffer(reinterpret_cast<uint8_t *>(const_cast<char *>(str.c_str())), str.length());
     str.clear();
     return buffer;
 }
-
-// void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const JsonUnnamedObject &json)
-// {
-//     if (!__get_server(server, sender)) {
-//         return;
-//     }
-//     auto buffer = jsonToBuffer(server, json);
-//     if (buffer) {
-//         _broadcast(server, sender, buffer);
-//     }
-// }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const uint8_t *str, size_t length)
 {
@@ -539,7 +473,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
                     esp_task_wdt_reset();
                 #elif ESP8266
                     if (can_yield()) {
-                        delay(WsClient::getQueueDelay());
+                        delay(1); // let the device work on its tcp buffers
                     }
                 #endif
             }
@@ -570,7 +504,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
                     esp_task_wdt_reset();
                 #elif ESP8266
                     if (can_yield()) {
-                        delay(WsClient::getQueueDelay());
+                        delay(1); // let the device work on its tcp buffers
                     }
                 #endif
             }
@@ -599,7 +533,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
                 esp_task_wdt_reset();
             #elif ESP8266
                 if (can_yield()) {
-                    delay(WsClient::getQueueDelay());
+                    delay(1); // let the device work on its tcp buffers
                 }
             #endif
         }

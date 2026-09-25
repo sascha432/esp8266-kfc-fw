@@ -64,16 +64,16 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         #endif
         auto val = static_cast<uint32_t>(value.toInt());
         #if IOT_LED_MATRIX == 0
-            if (id == F("colon")) {
+            if (F("colon") == id) {
                 setBlinkColonDeferred(val);
                 _saveStateDeferred();
             }
             else
         #endif
-            if (id == F("power")) {
+        if (F("power") == id) {
             _setStateDeferred(val);
         }
-        if (id == F("ani")) {
+        else if (F("ani") == id) {
             setAnimationDeferred(static_cast<AnimationType>(val));
             _saveStateDeferred();
         }
@@ -85,11 +85,11 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
 
             WebServer::Plugin::getInstance().handleFormData(id, &request, *this);
         }
-        else if (id == F("color")) {
+        else if (F("color") == id) {
             setColorAndRefreshDeferred(val);
             _saveStateDeferred();
         }
-        else if (id == FSPGM(brightness)) {
+        else if (F("brightness") == id) {
             setBrightnessDeferred(std::clamp<uint8_t>(val, 0, kMaxBrightness));
             _saveStateDeferred();
         }

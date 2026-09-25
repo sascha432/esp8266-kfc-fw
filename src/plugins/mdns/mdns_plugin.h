@@ -82,7 +82,7 @@ public:
 
         void end() {
             if (_timeout && _resultCounter) {
-                _output.trim(',');
+                StrWrapper(_output).trim(',');
                 _output.print(F("}]}"));
                 #if ESP8266
                     _current = String();
@@ -93,7 +93,7 @@ public:
 
         void next() {
             if (_resultCounter++) {
-                _output.trim(',');
+                StrWrapper(_output).trim(',');
                 _output.print(F("},{"));
             }
             else {

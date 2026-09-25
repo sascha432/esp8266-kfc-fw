@@ -540,7 +540,7 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
 
                     auto &pos = form.addCallbackGetterSetter<String>(F_VAR(gd_px, i), [&cfg, this, i](String &value, Field::BaseField &field, bool store) {
                         if (store) {
-                            if (value.trim().length() == 0) {
+                            if (StrWrapper(value).trim().length() == 0) {
                                 cfg.gradient.entries[i].pixel = cfg.gradient.kDisabled;
                             }
                             else {
@@ -673,7 +673,7 @@ void ClockPlugin::_createConfigureFormIRRemote(FormUI::Form::BaseForm &form, Clo
     auto addCodeField = [&form, &cfg](const __FlashStringHelper *name, ActionType action, const FormUI::Label &label) {
         form.addCallbackGetterSetter<String>(name, [&cfg, action](String &value, FormUI::Field::BaseField &field, bool store) {
             if (store) {
-                value.trim();
+                StrWrapper(value).trim();
                 cfg.ir.setCode(action, value.length() ? static_cast<uint32_t>(strtoul(value.c_str(), nullptr, 16)) : IRRemoteConfigType::kNoCode);
             }
             else {
@@ -783,7 +783,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
     #if ESP32
-        if (formName == F("animations")) {
+        if (F("animations") == formName) {
 
             // --------------------------------------------------------------------
             auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
@@ -851,7 +851,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         }
         else
     #endif
-    if (formName == F("protection")) {
+    if (F("protection") == formName) {
 
         // --------------------------------------------------------------------
         #if IOT_CLOCK_TEMPERATURE_PROTECTION
@@ -921,7 +921,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     }
     #if IOT_LED_MATRIX_CONFIGURABLE
-        else if (formName == F("matrix")) {
+        else if (F("matrix") == formName) {
 
             auto &mainGroup = form.addCardGroup(F("matrix"));
 
@@ -1033,7 +1033,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         }
     #endif
     #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
-        else if (formName == F("irremote")) {
+        else if (F("irremote") == formName) {
 
             _createConfigureFormIRRemote(form, cfg);
 

@@ -19,16 +19,16 @@ using namespace PluginComponents;
 
 void Dependency::invoke(const PluginComponent *plugin) const
 {
-    __LDBG_printf("invoking callback name=%s plugin=%p source=%s", _name, plugin, _source->getName_P());
+    __LDBG_printf("invoking callback name=%s plugin=%p source=%s", (PGM_P)_name, plugin, (PGM_P)_source->getName());
     __LDBG_assertf(plugin, "plugin nullptr");
     __LDBG_assertf(!!_callback, "invalid callback");
-    __LDBG_assertf(std::find(PluginComponents::RegisterEx::getPlugins().begin(), PluginComponents::RegisterEx::getPlugins().end(), plugin) != PluginComponents::RegisterEx::getPlugins().end(), "plugin %p does not exists", plugin->getName_P());
+    __LDBG_assertf(std::find(PluginComponents::RegisterEx::getPlugins().begin(), PluginComponents::RegisterEx::getPlugins().end(), plugin) != PluginComponents::RegisterEx::getPlugins().end(), "plugin %p does not exists", plugin->getName());
     _callback(plugin, DependencyResponseType::SUCCESS);
 }
 
 void Dependency::invoke(DependencyResponseType response) const
 {
-    __LDBG_printf("invoking callback name=%s plugin=<NULL> source=%s", _name, _source->getName_P());
+    __LDBG_printf("invoking callback name=%s plugin=<NULL> source=%s", (PGM_P)_name, (PGM_P)_source->getName());
     _callback(nullptr, response);
 }
 
@@ -41,7 +41,7 @@ void PluginComponents::Dependencies::check()
     _dependencies.erase(std::remove_if(_dependencies.begin(), _dependencies.end(), [](const Dependency &dep) {
         auto plugin = PluginComponent::findPlugin(dep._name, true);
         if (plugin) {
-            __LDBG_printf("dependency callback type=call_delayed name=%s source=%s", (PGM_P)dep._name, dep._source->getName_P());
+            __LDBG_printf("dependency callback type=call_delayed name=%s source=%s", (PGM_P)dep._name, dep._source->getName());
             dep.invoke(plugin);
             return true;
         }
@@ -57,7 +57,7 @@ void PluginComponents::Dependencies::cleanup()
 void PluginComponents::Dependencies::destroy()
 {
     for(const auto &dep: _dependencies) {
-        __DBG_printf("unresolved dependency name=%s source=%p", dep._name, dep._source->getName_P());
+        __DBG_printf("unresolved dependency name=%s source=%p", dep._name, (PGM_P)dep._source->getName());
         dep.invoke(DependencyResponseType::NOT_LOADED);
     }
 }
@@ -69,7 +69,7 @@ void PluginComponents::Dependencies::destroy()
 //     }
 //     _dependencies->erase(std::remove_if(_dependencies->begin(), _dependencies->end(), [name, plugin](const Dependency &dep) {
 //         if (dep == name) {
-//             __LDBG_printf("dependency callback type=previously delayed name=%s plugin=%p source=%s", (PGM_P)name, plugin, dep._source.getName_P());
+//             __LDBG_printf("dependency callback type=previously delayed name=%s plugin=%p source=%s", (PGM_P)name, plugin, dep._source.getName());
 //             dep._callback(plugin);
 //             return true;
 //         }
@@ -86,12 +86,12 @@ bool PluginComponents::Dependencies::dependsOn(NameType name, DependencyCallback
         if (plugin->_setupTime) {
             // check if there is any dependencies left
             check();
-            __LDBG_printf("dependency callback type=call name=%s source=%s", (PGM_P)name, source->getName_P());
+            __LDBG_printf("dependency callback type=call name=%s source=%s", (PGM_P)name, (PGM_P)source->getName());
             Dependency(name, callback, source).invoke(plugin);
         }
         else {
             // create delayed dependency
-            __LDBG_printf("dependency callback type=delayed name=%s source=%s", (PGM_P)name, source->getName_P());
+            __LDBG_printf("dependency callback type=delayed name=%s source=%s", (PGM_P)name, (PGM_P)source->getName());
             _dependencies.emplace_back(name, callback, source);
         }
         return true;

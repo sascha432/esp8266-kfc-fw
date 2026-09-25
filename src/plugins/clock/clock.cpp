@@ -455,7 +455,7 @@ void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
     #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
-        if (source.equals(FSPGM(http))) {
+        if (F("http") == source) {
             // the web server has been restarted, the handler is gone
             _registerIRRemoteWebHandler();
         }
@@ -1163,24 +1163,6 @@ void IRAM_ATTR ClockPlugin::_loop()
     }
 
     _display_show();
-
-    #if ESP8266 && HAVE_ESP_ASYNC_WEBSERVER_COUNTERS
-        if (WebServer::Plugin::getRunningRequests() || WebServer::Plugin::getRunningResponses()) {
-            // give system time to process the requests
-            // if the cpu is overloaded, the animation will get very choppy and the web server will be slow
-            uint32_t count = WebServer::Plugin::getRunningRequestsAndResponses();
-            delay(count > 2 ? 50 : count > 1 ? 25 : 5);
-
-            #if DEBUG_IOT_CLOCK
-                static uint32_t lastValue = 0;
-                uint32_t currentValue;
-                if ((currentValue = WebServer::Plugin::getRunningRequestsAndResponsesUint32()) != lastValue) {
-                    lastValue = currentValue;
-                    __DBG_printf("requests=%u responses=%u sum=%u _fps=%.1f fps=%u", WebServer::Plugin::getRunningRequests(), WebServer::Plugin::getRunningResponses(), count, _fps, FastLED.getFPS());
-                }
-            #endif
-        }
-    #endif
 }
 
 // use O3 for the show function on ESP8266 and keep all code in IRAM since it is called very frequently

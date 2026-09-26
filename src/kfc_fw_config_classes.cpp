@@ -28,6 +28,7 @@ DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameDimmerConfig_t, "MainConfig().plugins
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameClockConfig_t, "MainConfig().plugins.clock.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNamePingConfig_t, "MainConfig().plugins.ping.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameWeatherStationConfig_t, "MainConfig().plugins.weatherstation.cfg");
+DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameDisplayConfig_t, "MainConfig().plugins.display.cfg");
 DEFINE_CONFIG_HANDLE_PROGMEM_STR(handleNameRemoteConfig_t, "MainConfig().plugins.remote.cfg");
 
 // --------------------------------------------------------------------
@@ -247,5 +248,21 @@ namespace KFCConfigurationClasses {
         SoftAPSettings cfg = {};
         setConfig(cfg);
     }
+
+    // --------------------------------------------------------------------
+    // Display (LVGL)
+    //
+    // Plugins::DisplayConfigNS::Display::defaults() was declared in plugins/display.h but never
+    // defined or called, so the display configuration stayed all zero after a factory reset
+    // (the backlight level, default 100%)
+
+    #if IOT_LVGL_SUPPORT
+
+    void Plugins::DisplayConfigNS::Display::defaults()
+    {
+        setConfig(Config_t());
+    }
+
+    #endif
 
 }

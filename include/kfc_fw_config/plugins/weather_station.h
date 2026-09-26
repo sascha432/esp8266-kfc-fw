@@ -128,6 +128,12 @@ namespace KFCConfigurationClasses {
                 CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, ApiKey, 0, 64);
                 CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, Location, 0, 64);
 
+                // Source of the indoor metrics of the weather station 2.x plugin
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, TemperatureSource, 0, 128);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, HumiditySource, 0, 128);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, PressureSource, 0, 128);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, Eco2Source, 0, 128);
+
                 #if WEATHER_STATION_MAX_CLOCKS
                     CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, TZ0, 0, 64);
                 #endif

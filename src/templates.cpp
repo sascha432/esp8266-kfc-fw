@@ -763,8 +763,8 @@ private:
 };
 
 
-bool TemplateDataProvider::callback(const String& name, DataProviderInterface& provider, WebTemplate &webTemplate) {
-
+bool TemplateDataProvider::callback(const String& name, DataProviderInterface& provider, WebTemplate &webTemplate)
+{
     enum class FillBufferMethod {
         NONE = 0,
         PRINT_ARGS,

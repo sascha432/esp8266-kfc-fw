@@ -673,6 +673,10 @@ void KFCFWConfiguration::restoreFactorySettings()
     #if IOT_CLOCK
         __DBG_CALL(Plugins::Clock::defaults());
     #endif
+    // the display configuration is initialized here, its defaults() was never implemented before
+    #if IOT_LVGL_SUPPORT
+        __DBG_CALL(Plugins::Display::defaults());
+    #endif
 
     #if CUSTOM_CONFIG_PRESET
         __DBG_CALL(customSettings());

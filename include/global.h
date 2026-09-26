@@ -343,6 +343,17 @@
 #    define IOT_LVGL_SUPPORT 0
 #endif
 
+// debug helper of the LVGL UI: HTTP screenshot transfer + pushing data into the screens
+// (src/plugins/lvgl/lvgl_debug.cpp). Debug only, it costs flash and PSRAM buffers
+#ifndef DEBUG_LVGL_SCREENSHOT
+#    define DEBUG_LVGL_SCREENSHOT 0
+#endif
+
+// weather station 2.x: LVGL screens, requires a display plugin (see src/plugins/weather_station2)
+#ifndef IOT_WEATHER_STATION2
+#    define IOT_WEATHER_STATION2 0
+#endif
+
 #ifndef IOT_RF24_MASTER
 #    define IOT_RF24_MASTER 0
 #endif

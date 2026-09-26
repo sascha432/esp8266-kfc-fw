@@ -228,7 +228,7 @@ void Sensor_SystemMetrics::getValues(WebUINS::Events &array, bool timer)
         #if ESP32
             , WebUINS::Values(_getId(MetricsType::MEMORY), PrintString(F("%.2f KB"), getTotalFreeHeap() / 1024.0), true)
             #if CONFIG_SPIRAM_SUPPORT || CONFIG_SPIRAM
-                , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.2f KB"), getTotalFreeHeap() / 1024.0), true)
+                , WebUINS::Values(_getId(MetricsType::PSRAM), PrintString(F("%.2f KB"), ESP.getFreePsram() / 1024.0), true)
             #endif
         #endif
         #if ESP8266

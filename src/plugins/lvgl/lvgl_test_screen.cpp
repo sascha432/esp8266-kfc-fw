@@ -7,6 +7,8 @@
 #if IOT_LVGL_SUPPORT
 
 #include <lvgl.h>
+#include <Arduino.h>
+#include <esp32-hal-psram.h>
 #include "devices/wt32_sc01/wt32_sc01.h"
 
 static constexpr lv_coord_t kWidth = IOT_WT32_SC01_TFT_WIDTH;
@@ -18,6 +20,38 @@ static int32_t _lastY = -1;
 
 static lv_obj_t *_pressLabel = nullptr;
 static lv_obj_t *_pointLabel = nullptr;
+
+// 1 pixel checkerboard. The panel only resolves single pixels if a fine black/white
+// grid is visible - an even gray field means the image is soft, scaled or band limited.
+// It is also the reference for tuning the SPI clock (speckle/noise shows up first here).
+static constexpr lv_coord_t kCheckerHeight = 22;
+static lv_color_t *_checkerPixels = nullptr;
+static lv_img_dsc_t _checkerImg;
+
+static void _addCheckerboard(lv_obj_t *parent, lv_coord_t y)
+{
+    if (!_checkerPixels) {
+        _checkerPixels = static_cast<lv_color_t *>(ps_malloc(kWidth * kCheckerHeight * sizeof(lv_color_t)));
+        if (!_checkerPixels) {
+            return;
+        }
+        for (lv_coord_t py = 0; py < kCheckerHeight; py++) {
+            for (lv_coord_t px = 0; px < kWidth; px++) {
+                _checkerPixels[py * kWidth + px] = ((px + py) & 1) ? lv_color_white() : lv_color_black();
+            }
+        }
+        _checkerImg = {};
+        _checkerImg.header.cf = LV_IMG_CF_TRUE_COLOR;
+        _checkerImg.header.w = kWidth;
+        _checkerImg.header.h = kCheckerHeight;
+        _checkerImg.data_size = static_cast<uint32_t>(sizeof(lv_color_t)) * kWidth * kCheckerHeight;
+        _checkerImg.data = reinterpret_cast<const uint8_t *>(_checkerPixels);
+    }
+
+    auto img = lv_img_create(parent);
+    lv_img_set_src(img, &_checkerImg);
+    lv_obj_set_pos(img, 0, y);
+}
 
 static void _updateLabels()
 {
@@ -83,12 +117,14 @@ void LVGLTestScreen::create()
     auto title = lv_label_create(screen);
     lv_label_set_text(title, "WT32-SC01 touch display test");
     lv_obj_set_style_text_color(title, lv_color_black(), LV_PART_MAIN);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_28, LV_PART_MAIN);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 4);
 
     auto info = lv_label_create(screen);
     lv_label_set_text_fmt(info, "LVGL %d.%d, %dx%d, ST7796S + FT6336U", LVGL_VERSION_MAJOR, LVGL_VERSION_MINOR, static_cast<int>(kWidth), static_cast<int>(kHeight));
     lv_obj_set_style_text_color(info, lv_color_black(), LV_PART_MAIN);
-    lv_obj_align(info, LV_ALIGN_TOP_MID, 0, 26);
+    lv_obj_set_style_text_font(info, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_align(info, LV_ALIGN_TOP_MID, 0, 44);
 
     // color bars to verify the panel and the color order
     static const uint32_t colors[] = {
@@ -96,8 +132,10 @@ void LVGLTestScreen::create()
     };
     static constexpr size_t numColors = sizeof(colors) / sizeof(colors[0]);
     for (size_t i = 0; i < numColors; i++) {
-        _addColorBar(screen, static_cast<lv_coord_t>(i * (kWidth / numColors)), 50, static_cast<lv_coord_t>(kWidth / numColors), 100, colors[i]);
+        _addColorBar(screen, static_cast<lv_coord_t>(i * (kWidth / numColors)), 76, static_cast<lv_coord_t>(kWidth / numColors), 94, colors[i]);
     }
+
+    _addCheckerboard(screen, 172);
 
     // touch area
     auto pad = lv_obj_create(screen);
@@ -114,12 +152,14 @@ void LVGLTestScreen::create()
     _pressLabel = lv_label_create(pad);
     lv_label_set_text(_pressLabel, "Presses: 0");
     lv_obj_set_style_text_color(_pressLabel, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_font(_pressLabel, &lv_font_montserrat_20, LV_PART_MAIN);
     lv_obj_align(_pressLabel, LV_ALIGN_TOP_LEFT, 8, 8);
 
     _pointLabel = lv_label_create(pad);
     lv_label_set_text(_pointLabel, "Touch the blue area");
     lv_obj_set_style_text_color(_pointLabel, lv_color_white(), LV_PART_MAIN);
-    lv_obj_align(_pointLabel, LV_ALIGN_TOP_LEFT, 8, 32);
+    lv_obj_set_style_text_font(_pointLabel, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_align(_pointLabel, LV_ALIGN_TOP_LEFT, 8, 40);
 
     lv_refr_now(disp);
 }

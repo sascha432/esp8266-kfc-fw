@@ -40,6 +40,14 @@
 
 #include <LovyanGFX.hpp>
 
+// Panel write clock. LovyanGFX' WT32_SC01 detector uses 40MHz, TFT_eSPI's
+// Setup201_WT32_SC01.h uses 27MHz. Too high a clock over the FPC shows up as a
+// fuzzy/speckled image, so the safe value is the default - raise it once the
+// picture is clean, override with -D IOT_WT32_SC01_TFT_SPI_FREQUENCY=...
+#ifndef IOT_WT32_SC01_TFT_SPI_FREQUENCY
+#    define IOT_WT32_SC01_TFT_SPI_FREQUENCY 27000000
+#endif
+
 class LGFX_WT32_SC01 : public lgfx::LGFX_Device
 {
     lgfx::Panel_ST7796 _panel_instance;
@@ -62,7 +70,7 @@ public:
             cfg.pin_mosi = IOT_WT32_SC01_PIN_TFT_MOSI;
             cfg.pin_miso = IOT_WT32_SC01_PIN_TFT_MISO; // -1, LCD_RD is not connected
             cfg.pin_dc = IOT_WT32_SC01_PIN_TFT_DC;
-            cfg.freq_write = 40000000;
+            cfg.freq_write = IOT_WT32_SC01_TFT_SPI_FREQUENCY;
             cfg.freq_read = 16000000;
             _bus_instance.config(cfg);
             _panel_instance.setBus(&_bus_instance);
@@ -78,10 +86,13 @@ public:
             cfg.memory_height = 480;
             cfg.readable = false;
             cfg.invert = false;
-            // BGR panel: the ST7796S needs MADCTL bit3 (BGR) set, without it red and blue
-            // are swapped. Matches Teneppa/WT32-SC01-Module (MADCTL 0b01001010) and
-            // TFT_eSPI's ST7796 default (0x48 = MX|BGR).
-            cfg.rgb_order = true;
+            // LovyanGFX writes `rgb_order ? MAD_RGB(0x00) : MAD_BGR(0x08)` into MADCTL
+            // (Panel_LCD.inl:169), so rgb_order = false SETS the BGR bit: the name is
+            // the opposite of the bit. This panel needs the BGR bit set - Teneppa's
+            // WT32-SC01 module uses MADCTL 0b01001010 (bit3 set) and LovyanGFX' own
+            // WT32_SC01 detector leaves rgb_order at its default false as well.
+            // Getting this wrong swaps red and blue only (green stays green).
+            cfg.rgb_order = false;
             cfg.dlen_16bit = false;
             cfg.bus_shared = false;
             _panel_instance.config(cfg);

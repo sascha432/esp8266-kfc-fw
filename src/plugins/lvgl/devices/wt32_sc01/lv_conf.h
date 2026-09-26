@@ -26,9 +26,14 @@
 /* 1: 1 byte per pixel, 8: RGB332, 16: RGB565, 32: ARGB8888 */
 #define LV_COLOR_DEPTH 16
 
-/* Swap the 2 bytes of RGB565 - used with lcd.pushImage(), not together with
-   lcd.setSwapBytes(true). If the colors look wrong, flip exactly one of the two. */
-#define LV_COLOR_16_SWAP 0
+/* Swap the 2 bytes of RGB565. LovyanGFX' setSwapBytes() is false by default, so the
+   panel receives the low byte of every pixel first and the LVGL buffer has to hold
+   byte swapped pixels. This is the combination the official LovyanGFX LVGL example
+   uses (examples/Advanced/LVGL_PlatformIO: LV_COLOR_DEPTH 16 + LV_COLOR_16_SWAP 1).
+   With 0 the 16 bit pixel is scrambled - the green bar shows up red and the blue
+   touch pad shows up green. Never combine with lcd.setSwapBytes(true), exactly one
+   of the two may be active. */
+#define LV_COLOR_16_SWAP 1
 
 /*------------------
  * MEMORY SETTINGS
@@ -57,11 +62,39 @@
 #define LV_INDEV_DEF_READ_PERIOD 30 /* [ms] */
 
 /*------------------
+ * RENDERING / ANTI ALIASING
+ *------------------*/
+
+/* Complex draw engine: shadows, gradients, rounded corners, circles, arcs, skew
+   lines, image transformations, masks - and the anti-aliasing of all of them.
+   LVGL's default is already 1, it is written out here so the setting is visible. */
+#define LV_DRAW_COMPLEX 1
+
+/* Cache of the 1/4 circle outlines used to anti-alias rounded corners (radius * 4 bytes each) */
+#define LV_CIRCLE_CACHE_SIZE 4
+
+/* Shadow buffer cache. This UI uses no shadows, caching would only cost RAM. */
+#define LV_SHADOW_CACHE_SIZE 0
+
+/* Dithering of gradients, only affects gradients on 16bpp and costs RAM */
+#define LV_DITHER_GRADIENT 0
+
+/* Subpixel (RGB) text rendering. The built in Montserrat fonts are converted as
+   4bpp grayscale + anti-aliasing, they contain no subpixel data, so this cannot be
+   used with them. It also requires a font converted with subpixel support. */
+#define LV_USE_FONT_SUBPX 0
+
+/*------------------
  * FONTS
  *------------------*/
 
 /* the built in fonts are enough to start with, size them in the UI */
 #define LV_FONT_MONTSERRAT_14 1
+#define LV_FONT_MONTSERRAT_20 1
+#define LV_FONT_MONTSERRAT_28 1
+
+/* default font for every widget that does not set its own (was montserrat_14) */
+#define LV_FONT_DEFAULT &lv_font_montserrat_20
 
 #endif /* LV_CONF_H */
 #endif /* 1 */

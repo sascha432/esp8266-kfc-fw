@@ -658,6 +658,9 @@ void KFCFWConfiguration::restoreFactorySettings()
     #if IOT_WEATHER_STATION
         __DBG_CALL(Plugins::WeatherStation::defaults());
     #endif
+    #if IOT_WEATHER_STATION2
+        __DBG_CALL(Plugins::WeatherStation::defaults());
+    #endif
     #if IOT_SENSOR
         __DBG_CALL(Plugins::Sensor::defaults());
     #endif

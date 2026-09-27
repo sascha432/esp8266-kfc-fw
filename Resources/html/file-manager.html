@@ -157,6 +157,10 @@
                                 <label for="upload_filename">Name:</label>
                                 <input type="text" class="form-control" name="upload_filename" id="upload_filename" maxlength="31">
                             </div>
+                            <div class="form-group form-check">
+                                <input type="checkbox" class="form-check-input" name="overwrite_target" id="overwrite_target" value="1">
+                                <label class="form-check-label" for="overwrite_target">Overwrite if exists</label>
+                            </div>
                             <input type="hidden" name="upload_current_dir" id="upload_current_dir" value="">
                             <input type="hidden" name="ajax_upload" id="ajax_upload" value="0">
                             <button type="submit" class="btn btn-primary">Upload...</button>

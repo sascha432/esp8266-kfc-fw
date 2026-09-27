@@ -217,6 +217,7 @@
             cleanup_dialog($('#upload_dialog'));
             $('#upload_filename').val('').attr('placeholder', '');
             $('#upload_file').val('');
+            $('#overwrite_target').prop('checked', false);
             $('#upload_status').hide();
             $('#upload_form').show();
             $('#upload_form').off('submit').on('submit', function(e) {
@@ -231,6 +232,7 @@
                     formData.append("upload_file",  $('#upload_file')[0].files[0]);
                     formData.append("ajax_upload", "1");
                     formData.append("upload_current_dir", currentDirectory);
+                    formData.append("overwrite_target", $('#overwrite_target').is(':checked') ? "1" : "0");
 
                     var request = new XMLHttpRequest();
                     request.open("POST", $.getHttpLocation('/file_manager/upload') + defaultParams + '&id=' + random_str(), true);
@@ -241,17 +243,23 @@
                     $('#upload_form').hide();
                     request.onload = function(e) {
                         var response = request.responseText ? request.responseText : request.response;
+                        var failed = false;
                         if (response.substring(0, 6) == "ERROR:") {
                             response = response.substring(6);
-                            request.status = 0;
+                            failed = true;
                         }
-                        if (request.status == 1) {
+                        // a successful upload answers with the status code 1 of the upload handler
+                        // or with HTTP 200, an existing file that is not overwritten is a 409
+                        var success = !failed && (request.status == 1 || (request.status >= 200 && request.status < 300));
+                        if (success) {
                             refresh_files(currentDirectory);
-                            upload_status.html('<p class="text-center"><button type="button" class="btn btn-primary" data-dismiss="modal">Upload complete</button></p>');
+                            upload_status.html('<p class="text-center text-success font-weight-bold">' +
+                                (response ? response : 'Upload successful') + '</p>' +
+                                '<p class="text-center"><button type="button" class="btn btn-primary" data-dismiss="modal">Close</button></p>');
                         } else {
                             $('#upload_form').show();
                             upload_status.hide();
-                            pop_error('danger', 'ERROR!', response, $('#upload_dialog .modal-body'), true);
+                            pop_error('danger', 'ERROR!', response ? response : 'Upload failed', $('#upload_dialog .modal-body'), true);
                         }
                         $('#upload_dialog').find('button').prop('disabled', false);
                     };

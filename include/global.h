@@ -90,17 +90,15 @@
 #ifndef LOGGER_MAX_FILESIZE
 // max. size of the log file. if the size is exceeded, a backup is created
 // and a new log started. 0 = no size limit (NOT recommended)
-#    define LOGGER_MAX_FILESIZE (4096 * 16)      // 64kb
+// 16kb x (1 + LOGGER_MAX_BACKUP_FILES) per log file and up to 5 log files (messages + one per
+// level) have to fit into the file system next to the WebUI files
+#    define LOGGER_MAX_FILESIZE (4096 * 4)       // 16kb
 #endif
 
 #ifndef LOGGER_MAX_BACKUP_FILES
 // max. number of backup files to keep
 // make sure that the file system has enough free space at all times
-#    if DEBUG
-#        define LOGGER_MAX_BACKUP_FILES 3
-#    else
-#        define LOGGER_MAX_BACKUP_FILES 1
-#    endif
+#    define LOGGER_MAX_BACKUP_FILES 1
 #endif
 
 #ifndef AT_MODE_SUPPORTED
@@ -352,6 +350,13 @@
 // weather station 2.x: LVGL screens, requires a display plugin (see src/plugins/weather_station2)
 #ifndef IOT_WEATHER_STATION2
 #    define IOT_WEATHER_STATION2 0
+#endif
+
+// Home Assistant dashboard: an extra screen of the weather station 2.x plugin that shows the
+// entities of a Home Assistant instance, configured by /hass.yaml
+// (src/plugins/weather_station2/docs/hass_config.md)
+#ifndef IOT_HASS_DASHBOARD
+#    define IOT_HASS_DASHBOARD 0
 #endif
 
 #ifndef IOT_RF24_MASTER

@@ -48,6 +48,11 @@ public:
     static constexpr size_t kQueueMaxSize = 1536; // do not use more than this amount of RAM
     static constexpr size_t kQueueFlushSize = kQueueMaxSize / 2; // schedule queueFlush if the queue size gets bigger than that
     static constexpr size_t kQueueMaxTimeout = 1000; // queue flush timeout
+    // free space that has to stay in the file system. The littlefs of the ESP32 core divides by
+    // zero in lfs_alloc() when a file system has no free block left (it should return
+    // LFS_ERR_NOSPC), which panics the device. Below this limit the log file is not written, the
+    // messages are only sent to the configured output (serial/syslog)
+    static constexpr size_t kMinFreeSpace = 0xffff;
 
     enum class Level : uint8_t {
         NONE = 0,

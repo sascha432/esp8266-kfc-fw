@@ -192,6 +192,23 @@ void Logger::_flushQueue()
         MUTEX_LOCK_BLOCK(_queueLock) {
             tmp = std::move(_queue);
         }
+
+        #if ESP32
+        // Never write into a file system that is (almost) full: the littlefs of the ESP32 core
+        // divides by zero in lfs_alloc() when there is no free block left instead of returning
+        // LFS_ERR_NOSPC, which panics the device (IntegerDivideByZero) and ends in a reboot loop
+        // that restores the factory settings after a few resets. The messages are dropped, they
+        // were already written to the serial port by writeLog()
+        FSInfo fsInfo;
+        getFSInfo(fsInfo);
+        if (fsInfo.totalBytes && (fsInfo.totalBytes - fsInfo.usedBytes) < kMinFreeSpace) {
+            _lastFlushTimer = millis();
+            __DBG_printf_E("file system is full (%u of %u bytes used), dropping %u queued log message(s)",
+                static_cast<unsigned>(fsInfo.usedBytes), static_cast<unsigned>(fsInfo.totalBytes), static_cast<unsigned>(tmp.size()));
+            return;
+        }
+        #endif
+
         // sort by loglevel and time
         tmp.sort([](const MemoryQueueType &a, const MemoryQueueType &b) {
             if (a.logLevel == b.logLevel) {

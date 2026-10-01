@@ -20,6 +20,8 @@
 #    define DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE 0
 #endif
 
+// TODO AsyncBaseResponse rewrite pending buffer thing, just a temporary fix.. should use shared buffer instead of _head,_pending and new[]
+
 AsyncBaseResponse::AsyncBaseResponse(bool chunked)
 {
     if (chunked) {
@@ -84,6 +86,7 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
     }
     _ackedLength += len;
     size_t space = request->client()->space();
+    __LDBG_printf("ack: state=%u space=%u sent=%u written=%u acked=%u", (unsigned)_state, (unsigned)space, (unsigned)_sentLength, (unsigned)_writtenLength, (unsigned)_ackedLength);
 
     size_t headLen = _head.length();
     if (_state == RESPONSE_HEADERS) {
@@ -98,17 +101,46 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
     }
 
     if (_state == RESPONSE_CONTENT) {
+        // The space() of a connection is the free room of its send buffer and it changes while the
+        // response runs: producing the content can take seconds (rendering a form, resolving a
+        // template) and the stack can be short of buffers (MQTT, websocket, ...). Handing more
+        // than the current space() to write() silently drops the excess -> the response is
+        // truncated, the accounting is wrong and the connection stays open (the client waits for
+        // data that was never queued, the abandoned connection keeps buffers and PCBs busy). So
+        // send only what fits and keep the rest for the next call
+        if (_pending.length()) {
+            _flushPending(request);
+            if (_pending.length()) {
+                return 0; // no room yet, wait for the next acknowledgement
+            }
+        }
+
+        space = request->client()->space();
         size_t outLen;
-        space -= headLen; // remove header length if we have headers
+        space -= std::min(space, headLen); // remove header length if we have headers
+        // one frame per call, see kMaxFrameSize
+        const size_t maxPayload = (headLen < kMaxFrameSize) ? (kMaxFrameSize - headLen) : 0;
         if (_chunked) {
             if (space <= 8) { // we need at 8 extra bytes for the chunked header
                 return 0;
             }
-            outLen = space;
+            outLen = std::min(space, maxPayload);
         } else if (!_sendContentLength) { // unknown content length
-            outLen = space;
-        } else {
-            outLen = std::min(space, (_contentLength - _sentLength)); // max. data we have to send
+            outLen = std::min(space, maxPayload);
+        } else { // max. data we have to send
+            outLen = std::min(std::min(space, maxPayload), (_contentLength > _sentLength) ? (_contentLength - _sentLength) : maxPayload);
+        }
+        // The send buffer can be full although the content is not complete (the window is closed
+        // until the receiver acknowledges and consumes the data). Asking the source for 0 bytes
+        // returns 0 and would finish the response right there - the rest of the content is never
+        // sent, the client waits for it and times out, and the connection it abandons keeps the
+        // device busy. Only the acknowledgement of the last chunk ends the response, so the state
+        // has to stay RESPONSE_CONTENT until all of the content was handed to the client
+        if (!outLen) {
+            if (_sentLength >= _contentLength) {
+                _state = RESPONSE_WAIT_ACK;
+            }
+            return 0;
         }
 
         auto bufPtr = std::unique_ptr<uint8_t[]>(new uint8_t[outLen + headLen]);
@@ -144,15 +176,21 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
             memcpy(buf, _head.c_str(), headLen);
             _head = String();
         }
-        _writtenLength += request->client()->write(reinterpret_cast<char *>(buf), outLen);
 
-        if (!readLen) {
+        // the frame (head + chunk header + content) is wire ready, buffer it and send what the
+        // send buffer takes right now (it can be much less than the space that was read before the
+        // content was produced)
+        _pending.write(buf, outLen);
+        size_t written = _flushPending(request);
+        __LDBG_printf("ack: write readLen=%u outLen=%u headLen=%u written=%u pending=%u space=%u", (unsigned)readLen, (unsigned)outLen, (unsigned)headLen, (unsigned)written, (unsigned)_pending.length(), (unsigned)request->client()->space());
+
+        if (!readLen && _pending.length() == 0) {
             _state = RESPONSE_WAIT_ACK;
         }
-        return outLen;
+        return written;
 
     } else if (_state == RESPONSE_WAIT_ACK) {
-        if (!_sendContentLength || _ackedLength >= _writtenLength) {
+        if ((!_sendContentLength || _ackedLength >= _writtenLength) && _pending.length() == 0) {
             _state = RESPONSE_END;
             if (!_chunked && !_sendContentLength) {
                 request->client()->close(true);
@@ -160,6 +198,22 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
         }
     }
     return 0;
+}
+
+size_t AsyncBaseResponse::_flushPending(AsyncWebServerRequest *request)
+{
+    if (!_pending.length()) {
+        return 0;
+    }
+    size_t len = std::min(request->client()->space(), _pending.length());
+    if (!len) {
+        return 0;
+    }
+    len = request->client()->write(reinterpret_cast<const char *>(_pending.begin()), len);
+    _writtenLength += len;
+    _pending.remove(0, len);
+    __LDBG_printf("flush pending len=%u left=%u space=%u", (unsigned)len, (unsigned)_pending.length(), (unsigned)request->client()->space());
+    return len;
 }
 
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const File &file, TemplateDataProvider::ResolveCallback callback) :
@@ -182,7 +236,9 @@ bool AsyncProgmemFileResponse::_sourceValid() const
 
 size_t AsyncProgmemFileResponse::_fillBuffer(uint8_t *data, size_t len)
 {
-    return _content.read(data, len);
+    auto readLen = _content.read(data, len);
+    __LDBG_printf("fillBuffer(%u) -> %d", (unsigned)len, (int)readLen);
+    return readLen;
 }
 
 #if DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE

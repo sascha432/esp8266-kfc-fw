@@ -27,6 +27,12 @@ class HttpHeaders;
 
 class AsyncBaseResponse : public AsyncWebServerResponse {
 public:
+    // Maximum size of one frame (Content-Length/chunk header + content). A larger write is queued in
+    // the network stack at once and can exhaust its (small) buffer pool - not only the response but
+    // every other connection (MQTT, websocket, syslog, ...) is then unable to transmit, which shows
+    // up as a page that never finishes. One segment per call keeps the buffers of the stack free
+    static constexpr size_t kMaxFrameSize = 1024;
+
     AsyncBaseResponse(bool chunked);
 
     virtual void _respond(AsyncWebServerRequest* request);
@@ -40,8 +46,14 @@ public:
 protected:
     virtual void __assembleHead(uint8_t version);
 
+    // Send as much as the send buffer of the connection takes and keep the rest for the next call
+    // (see _ack()). The leftovers are already framed for the wire (chunk header, content, CRLF),
+    // so they are written as they are
+    size_t _flushPending(AsyncWebServerRequest *request);
+
     HttpHeaders _httpHeaders;
     String _head;
+    Buffer _pending;
 };
 
 #if MDNS_PLUGIN

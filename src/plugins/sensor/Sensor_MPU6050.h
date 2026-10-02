@@ -19,8 +19,8 @@
 #endif
 
 // InvenSense MPU-6050 (3 axis accelerometer, 3 axis gyroscope and an on-chip temperature sensor).
-// The accelerometer is used as a display rotation sensor (0/90/180/270 degrees) and as a binary
-// tilt sensor ("not resting in a stable orientation"). The registers are accessed directly over
+// The accelerometer is used as a rotation sensor (0/90/180/270 degrees) and as a binary tilt
+// sensor ("not resting in a stable orientation"). The registers are accessed directly over
 // I2C, no external library is required. A serial calibration output is available through the AT
 // command +MPU6050, see atModeHandler().
 class Sensor_MPU6050 : public MQTT::Sensor {
@@ -75,7 +75,7 @@ public:
         return _address;
     }
 
-    // display rotation in degrees, one of 0/90/180/270
+    // rotation in degrees, one of 0/90/180/270
     uint16_t getRotation() const {
         return _rotation;
     }
@@ -90,9 +90,9 @@ public:
         return _detected;
     }
 
-    // Register a callback that is invoked when the display rotation changes (0/90/180/270 degrees).
+    // Register a callback that is invoked when the rotation changes (0/90/180/270 degrees).
     // An empty std::function unregisters it. The sensor invokes it from the main loop task and calls
-    // a newly registered callback immediately with the current state so a display can synchronize.
+    // a newly registered callback immediately with the current state so a consumer can synchronize.
     void setRotationCallback(RotationCallback callback);
 
     // Register a callback that is invoked when the binary tilt state changes.

@@ -522,21 +522,21 @@ Serial calibration output of the MPU-6050 (rotation/tilt sensor). Without an arg
 +MPU6050: accel_range=2g gyro_range=250°/s rot_offset=0° tilt_threshold=25° tilt_hysteresis=5°
 +MPU6050: invert a=[0,0,0] g=[0,0,0] offset a=[0.000,0.000,0.000]g g=[0.0,0.0,0.0]dps
 +MPU6050: a[-0.146,+0.078,+1.316]g u[-0.11,+0.06,+0.99] dev=83.7° rot=0° tilt=tilted settled=1 gyro[+0.4,+0.3,-1.9]dps
-+MPU6050: event tilt -> tilted (display callback none)
++MPU6050: event tilt -> tilted (callback none)
 ```
 
 Columns:
 
 - `a[x,y,z]` acceleration in g with the offsets and the axis inversion applied
 - `u[x,y,z]` unit gravity vector
-- `dev` angle to the nearest display axis, the closer to 0° the better the device is aligned
-- `rot` display rotation in degrees, `tilt` `level`/`tilted`
+- `dev` angle to the nearest horizontal module axis, the closer to 0° the better the device is aligned
+- `rot` rotation in degrees, `tilt` `level`/`tilted`
 - `settled` `1` while the gyroscope is at rest, `0` while the device is moved
 - `gyro[x,y,z]` rotation rate in °/s
-- `event` a rotation or tilt change was latched, `display callback registered`/`none` tells whether a display callback is attached
+- `event` a rotation or tilt change was latched, `callback registered`/`none` tells whether a callback is attached
 
 Calibration:
 
 1. Put the device in the orientation it is mounted in and read `a[...]`: the accelerometer offsets are the values the axes read at rest (bias), the gyroscope offsets are the values the axes read while it does not rotate
-2. The rotation offset aligns a stable device with the display, the tilt threshold is the allowed deviation (`dev`) and the debounce time filters short movements. `rot` is the orientation of the display: `0` landscape, `90` portrait, `180`/`270` the same turned 180 degrees. The rotation assumes the module is mounted flat on the back of the display (Z pointing away from the screen, Y along the long side with the display upright in portrait); a module mounted rotated in the plane is aligned with the rotation offset, a module mounted on the front needs its accelerometer X axis inverted
+2. The rotation offset aligns a stable device with the reference orientation of the installation, the tilt threshold is the allowed deviation (`dev`) and the debounce time filters short movements. `rot` counts 90 degree steps clockwise from the module's -X axis (the X axis pointing down): `+X` up is `180`, `+Y` up is `90`. A module that is mounted differently is aligned with the invert flags and the rotation offset
 3. While `settled=0` the gyroscope still sees movement (above 15°/s). The rotation, the tilt state and the callbacks are only updated once the device has come to rest, so wiggling it does not toggle them

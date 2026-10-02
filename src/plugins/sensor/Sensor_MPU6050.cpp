@@ -22,8 +22,8 @@ namespace {
     constexpr float kRadToDeg = 57.29577951308232f;
     // minimum length of the gravity vector in g
     constexpr float kMinGravity = 0.1f;
-    // no display orientation for this sample (the rotation is kept). Values are degrees, so it has
-    // to differ from 0/90/180/270 (and the rotation itself needs more than 8 bits, 270 > 255)
+    // no rotation for this sample (the previous one is kept). Values are degrees, so it has to
+    // differ from 0/90/180/270 (and the rotation itself needs more than 8 bits, 270 > 255)
     constexpr uint16_t kKeepRotation = 0xffff;
     // the device counts as settled while the gyroscope magnitude is below this value (deg/s).
     // The state (and the callbacks) are only updated while it is settled, otherwise wiggling the
@@ -473,24 +473,23 @@ void Sensor_MPU6050::_update()
             float cosEnter = cosf(kDegToRad * static_cast<float>(_cfg.tilt_threshold));
             float cosLeave = cosf(kDegToRad * (static_cast<float>(_cfg.tilt_threshold) - kTiltHysteresis));
 
+            // The rotation counts 90 degree steps clockwise from the module's -X axis (the X axis
+            // pointing down): +X up is 180, +Y up is 90. A module that is mounted differently is
+            // aligned with the invert flags and `rotation_offset` of the configuration
             uint16_t candidate = kKeepRotation;
             float axis;
             if (fabsf(uz) >= fmaxf(fabsf(ux), fabsf(uy))) {
-                // lying flat, no display orientation -> not resting in a stable orientation
+                // the module is lying flat, the gravity vector is on its Z axis and no rotation can
+                // be told from it
                 axis = fmaxf(fabsf(ux), fabsf(uy));
             }
             else if (fabsf(ux) >= fabsf(uy)) {
-                // The rotation is the orientation of the display, and the module is normally
-                // mounted flat on the back of it (Z pointing away from the screen). Seen from the
-                // front that mounting mirrors the module's X axis, so the X that points up is the
-                // negative one: the candidates are swapped, otherwise the display would be turned
-                // the wrong way and landscape and landscape turned 180 degrees would trade places.
-                // A module mounted on the front needs the accelerometer X axis inverted, a module
-                // mounted rotated in the plane is aligned with `rotation_offset`
+                // the module's X axis points up (or down)
                 candidate = (ux >= 0) ? 180 : 0;
                 axis = fabsf(ux);
             }
             else {
+                // the module's Y axis points up (or down)
                 candidate = (uy >= 0) ? 90 : 270;
                 axis = fabsf(uy);
             }
@@ -580,11 +579,11 @@ void Sensor_MPU6050::_serialDebug(bool rotationChanged, bool tiltChanged)
     }
 
     if (rotationChanged) {
-        Serial.printf_P(PSTR("+MPU6050: event rotation -> %u%s (display callback %s)\n"),
+        Serial.printf_P(PSTR("+MPU6050: event rotation -> %u%s (callback %s)\n"),
             static_cast<unsigned>(_rotation), SPGM(UTF8_degree), _rotationCallback ? PSTR("registered") : PSTR("none"));
     }
     if (tiltChanged) {
-        Serial.printf_P(PSTR("+MPU6050: event tilt -> %s (display callback %s)\n"),
+        Serial.printf_P(PSTR("+MPU6050: event tilt -> %s (callback %s)\n"),
             _tilted ? PSTR("tilted") : PSTR("level"), _tiltCallback ? PSTR("registered") : PSTR("none"));
     }
 

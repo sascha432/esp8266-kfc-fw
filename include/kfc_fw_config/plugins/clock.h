@@ -57,7 +57,13 @@ namespace KFCConfigurationClasses {
                 FIRE,
                 PLASMA,
                 #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                    VISUALIZER,
+                    // each visualizer mode is a separate animation, the matching sub type is
+                    // mirrored into VisualizerType::type
+                    VISUALIZER_SPECTRUM_RAINBOW_BARS,
+                    VISUALIZER_SPECTRUM_GRADIENT_BARS,
+                    VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS,
+                    VISUALIZER_PLASMA_REACTIVE,
+                    VISUALIZER_FIRE_REACTIVE,
                 #endif
                 XMAS,
                 LAST,   // this can be used to loop through all animations: for(int i = 0; i <static_cast<int>(AnimationType::LAST); i++) {}
@@ -742,13 +748,46 @@ namespace KFCConfigurationClasses {
                         case AnimationType::FLASHING:
                         case AnimationType::PLASMA:
                         #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                            case AnimationType::VISUALIZER:
+                            case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
                         #endif
                             return true;
                         default:
                             break;
                     }
                     return false;
+                }
+
+                #if IOT_LED_MATRIX_ENABLE_VISUALIZER
+                    // sub type of a visualizer animation, VisualizerAnimationType::MAX if the type is not a preset
+                    static VisualizerType::VisualizerAnimationType getVisualizerType(AnimationType type);
+                    // matching visualizer animation for a sub type, AnimationType::MAX if there is none
+                    static AnimationType getVisualizerAnimation(VisualizerType::VisualizerAnimationType type);
+
+                    inline static uint8_t get_bits_visualizer_type(const Type &obj)
+                    {
+                        return obj.visualizer.get_bits_type(obj.visualizer);
+                    }
+
+                    // keeps the animation and the sub type in sync, the animation is the mode selector
+                    // and VisualizerType::type is the mirror the form, the animation and the status use
+                    inline static void set_bits_visualizer_type(Type &obj, uint8_t value)
+                    {
+                        const auto type = static_cast<VisualizerType::VisualizerAnimationType>(value);
+                        obj.visualizer.set_enum_type(obj.visualizer, type);
+                        auto animation = getVisualizerAnimation(type);
+                        if (animation != AnimationType::MAX) {
+                            obj.setAnimation(animation);
+                        }
+                    }
+                #endif
+
+                bool isVisualizer() const
+                {
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
+                        return getVisualizerType(getAnimation()) != VisualizerType::VisualizerAnimationType::MAX;
+                    #else
+                        return false;
+                    #endif
                 }
 
                 InitialStateType getInitialState() const

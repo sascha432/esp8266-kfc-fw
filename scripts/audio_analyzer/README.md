@@ -29,7 +29,7 @@ The kfc_fw device is the receiver, nothing has to be changed there:
 
 * firmware built with `IOT_LED_MATRIX_ENABLE_VISUALIZER=1`
   (`conf/envs/led_matrix.ini`, `led_strip.ini`, `hexagon_panel.ini` or `wled_board.ini`)
-* clock plugin: `animation` = `VISUALIZER`, `visualizer.input` = `UDP`,
+* clock plugin: `animation` = `Spectrum Rainbow Bars`, `visualizer.input` = `UDP`,
   `visualizer.port` = 21324 (default of `IOT_LED_MATRIX_ENABLE_VISUALIZER_UDP_PORT`),
   `multicast` off
 * the animation can be switched from the WebUI, MQTT or AT mode

@@ -719,15 +719,17 @@ void ClockPlugin::getStatus(Print &output)
     #endif
 
     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-        if (_config.animation == uint8_t(Clock::AnimationType::VISUALIZER)) {
+        if (_config.isVisualizer()) {
+            output.printf_P(PSTR(HTML_S(br)));
+            output.print(_getAnimationName(_config.getAnimation()));
             #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
                 if (_config.visualizer.input == uint8_t(Clock::VisualizerType::AudioInputType::MICROPHONE)) {
-                    output.printf_P(PSTR(HTML_S(br) "I2S Microphone, Loudness Gain %u, Band Gain %u"), _config.visualizer.mic_loudness_gain, _config.visualizer.mic_band_gain);
+                    output.printf_P(PSTR(", I2S Microphone, Loudness Gain %u, Band Gain %u"), _config.visualizer.mic_loudness_gain, _config.visualizer.mic_band_gain);
                 }
                 else
             #endif
             {
-                output.printf_P(PSTR(HTML_S(br) "UDP%s Active Port %u"), _config.visualizer.multicast ? PSTR(" Multicast") : PSTR(""), _config.visualizer.port);
+                output.printf_P(PSTR(", UDP%s Active Port %u"), _config.visualizer.multicast ? PSTR(" Multicast") : PSTR(""), _config.visualizer.port);
             }
         }
     #endif
@@ -783,7 +785,23 @@ void ClockPlugin::_setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
 
 void ClockPlugin::setAnimationDeferred(AnimationType animation, uint16_t blendTime)
 {
-    _enqueue([this, animation, blendTime] { _setAnimation(animation, blendTime); });
+    _enqueue([this, animation, blendTime] {
+        _syncVisualizerType(animation);
+        _setAnimation(animation, blendTime);
+    });
+}
+
+// copies the visualizer mode of an animation into VisualizerType::type, the two RGB video modes
+// are not presets and keep whatever the configuration select
+void ClockPlugin::_syncVisualizerType(AnimationType animation)
+{
+    #if IOT_LED_MATRIX_ENABLE_VISUALIZER
+        const auto type = ClockConfigType::getVisualizerType(animation);
+        if (type != VisualizerAnimationType::MAX && type != _config.visualizer.get_enum_type(_config.visualizer)) {
+            __LDBG_printf("animation=%u visualizer_type=%u", static_cast<unsigned>(animation), static_cast<unsigned>(type));
+            _config.visualizer.type = static_cast<uint8_t>(type);
+        }
+    #endif
 }
 
 void ClockPlugin::_setAnimation(AnimationType animation, uint16_t blendTime)
@@ -832,7 +850,16 @@ void ClockPlugin::_setAnimation(AnimationType animation, uint16_t blendTime)
             _publishAnimation(new Clock::GradientAnimation(*this, _config.gradient), blendTime);
             break;
         #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-            case  AnimationType::VISUALIZER:
+            // The animation is the mode selector and VisualizerType::type mirrors it. The value is
+            // not written here: readConfig()/reconfigure() call this function with the stored
+            // animation, and the two RGB video modes (selected through VisualizerType::type) must
+            // survive that. The selection paths (setAnimationDeferred, nextAnimation, AT mode) keep
+            // the mirror in sync, see _syncVisualizerType().
+            case AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS:
+            case AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS:
+            case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
+            case AnimationType::VISUALIZER_PLASMA_REACTIVE:
+            case AnimationType::VISUALIZER_FIRE_REACTIVE:
                 _publishAnimation(new Clock::VisualizerAnimation(*this, _getColor(), _config.visualizer), blendTime);
                 break;
         #endif

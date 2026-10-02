@@ -11,7 +11,7 @@ Python replacement for the Windows application
     scripts\\audio_analyzer\\.venv\\Scripts\\python.exe scripts\\audio_analyzer\\audio_analyzer.py --ip 192.168.0.196
 
 The device has to be configured once: LED matrix firmware built with
-``IOT_LED_MATRIX_ENABLE_VISUALIZER=1``, clock animation ``VISUALIZER``,
+``IOT_LED_MATRIX_ENABLE_VISUALIZER=1``, clock animation ``Spectrum Rainbow Bars``,
 visualizer input ``UDP`` and the same port (default 21324).
 """
 

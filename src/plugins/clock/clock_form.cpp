@@ -84,8 +84,16 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
         case TitleType::SET_TITLE_AND_ADD_GROUP:
             form.getWebUIConfig().setTitle(F(FORM_TITLE));
             // fall through
-        case TitleType::ADD_GROUP:
-            group = &form.addCardGroup(_getAnimationNameSlug(animation), _getAnimationTitle(animation), true);
+        case TitleType::ADD_GROUP: {
+                auto title = _getAnimationTitle(animation);
+                #if IOT_LED_MATRIX_ENABLE_VISUALIZER
+                    // every visualizer mode is configured in the same card
+                    if (ClockConfigType::getVisualizerType(animation) != VisualizerAnimationType::MAX) {
+                        title = F("Visualizer");
+                    }
+                #endif
+                group = &form.addCardGroup(_getAnimationNameSlug(animation), title, true);
+            }
             break;
         case TitleType::SET_TITLE:
             form.getWebUIConfig().setTitle(_getAnimationTitle(animation));
@@ -164,7 +172,12 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             }
             break;
         #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-            case AnimationType::VISUALIZER: {
+            // every visualizer mode shares the same form, the animation selects the sub type
+            case AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS:
+            case AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS:
+            case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
+            case AnimationType::VISUALIZER_PLASMA_REACTIVE:
+            case AnimationType::VISUALIZER_FIRE_REACTIVE: {
                     SELECT_IRAM();
 
                     using OrientationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::OrientationType;
@@ -185,7 +198,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         VisualizerAnimationType::PLASMA_AUDIO, F("Plasma Audio Reactive"),
                         VisualizerAnimationType::FIRE_AUDIO, F("Fire Audio Reactive")
                     );
-                    form.addObjectGetterSetter(F("v_ln"), FormGetterSetter(cfg.visualizer, type));
+                    // changing the mode also updates the animation (they are two controls for one value)
+                    form.addObjectGetterSetter(F("v_ln"), FormGetterSetter(cfg, visualizer_type));
                     form.addFormUI(F("Visualization Type"), VisualizerAnimationTypeItems);
 
                     // the common audio options are shared by every visualization type
@@ -809,7 +823,30 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
             // --------------------------------------------------------------------
             #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                _createConfigureFormAnimation(AnimationType::VISUALIZER, form, cfg, TitleType::ADD_GROUP);
+                _createConfigureFormAnimation(AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS, form, cfg, TitleType::ADD_GROUP);
+
+                // The animation select and the visualization type are two controls for the same mode.
+                // Mirroring the animation into the type select updates the visible sub groups and
+                // prevents a stale type value from overriding the new animation when the form is
+                // submitted. A value the user picked in the type select is left alone, so the RGB video
+                // modes stay selected until the animation changes.
+                {
+                    PrintString syncMap;
+                    for(uint8_t i = 0; i < 5; i++) {
+                        auto animation = static_cast<AnimationType>(static_cast<uint8_t>(AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS) + i);
+                        if (i) {
+                            syncMap.print(',');
+                        }
+                        // $I input (#ani), $T target (#v_ln), $V value. The dependency group fires
+                        // change once after the page has been loaded, syncPrev detects that first call
+                        syncMap.printf_P(PSTR("'%u':'if($I[0].syncPrev===undefined){$I[0].syncPrev=$V}else if($I[0].syncPrev!=$V){$I[0].syncPrev=$V;$T.val(%u).change()}'"),
+                            static_cast<unsigned>(animation),
+                            static_cast<unsigned>(ClockConfigType::getVisualizerType(animation))
+                        );
+                    }
+                    auto &visualizerSyncGroup = form.addDivGroup(F("v_grp_sync"), PrintString(F("{'i':'#ani','t':'#v_ln','s':{%s}}"), syncMap.c_str()));
+                    visualizerSyncGroup.end();
+                }
             #endif
 
             // --------------------------------------------------------------------

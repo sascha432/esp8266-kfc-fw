@@ -339,6 +339,8 @@ private:
     // loop task only, called directly by loop-task code and by the queue
     void _setBrightness(uint8_t brightness, int ms = -1, uint32_t maxTime = ~0U);
     void _setAnimation(AnimationType animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);
+    // copies the visualizer mode of an animation into VisualizerType::type
+    void _syncVisualizerType(AnimationType animation);
     void _setState(bool state, bool autoOff);
     void _saveState();
     void _setColorAndRefresh(Color color);
@@ -373,7 +375,9 @@ public:
     void nextAnimation()
     {
         // the animation is published directly, this runs in the loop task
-        _setAnimation(AnimationType((_config.animation + 1) % int(AnimationType::LAST)), 1000);
+        auto animation = AnimationType((_config.animation + 1) % int(AnimationType::LAST));
+        _syncVisualizerType(animation);
+        _setAnimation(animation, 1000);
     }
 
     uint16_t _blendTime{Clock::BlendAnimation::kDefaultTime};
@@ -1097,7 +1101,11 @@ inline KFCConfigurationClasses::Plugins::ClockConfigNS::ColorType &ClockPlugin::
         case AnimationType::FLASHING:
             return _config.flashing_color;
         #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-            case AnimationType::VISUALIZER:
+            case AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS:
+            case AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS:
+            case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
+            case AnimationType::VISUALIZER_PLASMA_REACTIVE:
+            case AnimationType::VISUALIZER_FIRE_REACTIVE:
                 return _config.visualizer.color;
         #endif
         default:

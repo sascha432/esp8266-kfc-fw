@@ -72,7 +72,11 @@ namespace KFCConfigurationClasses {
                     "Fire,"
                     "Plasma,"
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                        "Visualizer,"
+                        "Spectrum Rainbow Bars,"
+                        "Spectrum Gradient Bars,"
+                        "Spectrum Single Color Bars,"
+                        "Plasma Reactive,"
+                        "Fire Reactive,"
                     #endif
                     "Xmas"
                 );
@@ -90,7 +94,11 @@ namespace KFCConfigurationClasses {
                     "\042Fire\042,"
                     "\042Plasma\042,"
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                        "\042Visualizer\042,"
+                        "\042Spectrum Rainbow Bars\042,"
+                        "\042Spectrum Gradient Bars\042,"
+                        "\042Spectrum Single Color Bars\042,"
+                        "\042Plasma Reactive\042,"
+                        "\042Fire Reactive\042,"
                     #endif
                     "\042Xmas\042"
                     #if !IOT_LED_MATRIX
@@ -157,8 +165,16 @@ namespace KFCConfigurationClasses {
                     case AnimationType::SOLID:
                         return F("Solid");
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                        case AnimationType::VISUALIZER:
-                            return F("Visualizer");
+                        case AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS:
+                            return F("Spectrum Rainbow Bars");
+                        case AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS:
+                            return F("Spectrum Gradient Bars");
+                        case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
+                            return F("Spectrum Single Color Bars");
+                        case AnimationType::VISUALIZER_PLASMA_REACTIVE:
+                            return F("Plasma Reactive");
+                        case AnimationType::VISUALIZER_FIRE_REACTIVE:
+                            return F("Fire Reactive");
                     #endif
                     #if !IOT_LED_MATRIX
                         case AnimationType::COLON_SOLID:
@@ -205,8 +221,18 @@ namespace KFCConfigurationClasses {
                     case AnimationType::XMAS:
                         return F("Xmas");
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                        case AnimationType::VISUALIZER:
-                            return F("visualizer");
+                        // the slugs are exposed through the AT console (LMC=vis,<slug>), the MQTT
+                        // effect list and the "ani-<slug>.html" form URLs
+                        case AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS:
+                            return F("spectrum-rainbow-bars");
+                        case AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS:
+                            return F("spectrum-gradient-bars");
+                        case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
+                            return F("spectrum-single-color-bars");
+                        case AnimationType::VISUALIZER_PLASMA_REACTIVE:
+                            return F("plasma-reactive");
+                        case AnimationType::VISUALIZER_FIRE_REACTIVE:
+                            return F("fire-reactive");
                     #endif
                     #if !IOT_LED_MATRIX
                         case AnimationType::COLON_SOLID:
@@ -244,8 +270,16 @@ namespace KFCConfigurationClasses {
                     case AnimationType::SOLID:
                         return F("Solid Color");
                     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                        case AnimationType::VISUALIZER:
-                            return F("Music Visualizer");
+                        case AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS:
+                            return F("Spectrum Rainbow Bars");
+                        case AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS:
+                            return F("Spectrum Gradient Bars");
+                        case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
+                            return F("Spectrum Single Color Bars");
+                        case AnimationType::VISUALIZER_PLASMA_REACTIVE:
+                            return F("Plasma Reactive");
+                        case AnimationType::VISUALIZER_FIRE_REACTIVE:
+                            return F("Fire Reactive");
                     #endif
                     #if !IOT_LED_MATRIX
                         case AnimationType::COLON_SOLID:
@@ -260,11 +294,54 @@ namespace KFCConfigurationClasses {
                 return nullptr;
             }
 
+            #if IOT_LED_MATRIX_ENABLE_VISUALIZER
+
+                VisualizerType::VisualizerAnimationType ClockConfigType::getVisualizerType(AnimationType type)
+                {
+                    using VisualizerAnimationType = VisualizerType::VisualizerAnimationType;
+                    switch(type) {
+                        case AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS:
+                            return VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D;
+                        case AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS:
+                            return VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D;
+                        case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
+                            return VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D;
+                        case AnimationType::VISUALIZER_PLASMA_REACTIVE:
+                            return VisualizerAnimationType::PLASMA_AUDIO;
+                        case AnimationType::VISUALIZER_FIRE_REACTIVE:
+                            return VisualizerAnimationType::FIRE_AUDIO;
+                        default:
+                            break;
+                    }
+                    return VisualizerAnimationType::MAX;
+                }
+
+                AnimationType ClockConfigType::getVisualizerAnimation(VisualizerType::VisualizerAnimationType type)
+                {
+                    using VisualizerAnimationType = VisualizerType::VisualizerAnimationType;
+                    switch(type) {
+                        case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D:
+                            return AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS;
+                        case VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D:
+                            return AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS;
+                        case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
+                            return AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS;
+                        case VisualizerAnimationType::PLASMA_AUDIO:
+                            return AnimationType::VISUALIZER_PLASMA_REACTIVE;
+                        case VisualizerAnimationType::FIRE_AUDIO:
+                            return AnimationType::VISUALIZER_FIRE_REACTIVE;
+                        default:
+                            break;
+                    }
+                    return AnimationType::MAX;
+                }
+
+            #endif
+
             void Clock::defaults()
             {
                 setConfig(ClockConfigType());
             }
-
         }
     }
 }

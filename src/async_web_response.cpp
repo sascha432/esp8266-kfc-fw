@@ -20,9 +20,40 @@
 #    define DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE 0
 #endif
 
-// TODO AsyncBaseResponse rewrite pending buffer thing, just a temporary fix.. should use shared buffer instead of _head,_pending and new[]
+// print formatted output directly into the output window. Print::printf() formats into a 64 byte
+// stack buffer and allocates for anything longer, this formats into the window and only allocates
+// when the output does not fit into the stack buffer
+static void _windowPrintf_P(PrintBuffer &out, PGM_P format, ...)
+{
+    char buf[128];
+    va_list arg;
+    va_start(arg, format);
+    auto len = vsnprintf_P(buf, sizeof(buf), format, arg);
+    va_end(arg);
+    if (len < 0) {
+        return;
+    }
+    if (len < static_cast<int>(sizeof(buf))) {
+        out.write(reinterpret_cast<const uint8_t *>(buf), len);
+        return;
+    }
+    // very long output, format it into the window itself
+    if (!out.reserve(out.length() + len + 1)) {
+        __DBG_printf_E("memory allocation failed");
+        return;
+    }
+    va_start(arg, format);
+    len = vsnprintf_P(reinterpret_cast<char *>(out.end()), out.size() - out.length(), format, arg);
+    va_end(arg);
+    if (len > 0) {
+        out.advance(len);
+    }
+}
 
-AsyncBaseResponse::AsyncBaseResponse(bool chunked)
+AsyncBaseResponse::AsyncBaseResponse(bool chunked) :
+    _out(),
+    _outSent(0),
+    _sourceDone(false)
 {
     if (chunked) {
         // change those 2 values for chunked
@@ -33,8 +64,12 @@ AsyncBaseResponse::AsyncBaseResponse(bool chunked)
 
 void AsyncBaseResponse::__assembleHead(uint8_t version)
 {
-    PrintString out;
-    out.printf_P(PSTR("HTTP/1.%d %d %s\r\n"), version, _code, _responseCodeToString(_code));
+    // the whole response is built in the output window, the head needs no extra String and the
+    // window is only allocated once
+    if (!_out.reserve(kMaxFrameSize)) {
+        __DBG_printf_E("memory allocation failed");
+    }
+    _windowPrintf_P(_out, PSTR("HTTP/1.%d %d %s\r\n"), version, _code, _responseCodeToString(_code));
 
     if (_sendContentLength) {
         _httpHeaders.replace<HttpContentLengthHeader>(_contentLength);
@@ -49,25 +84,25 @@ void AsyncBaseResponse::__assembleHead(uint8_t version)
     _httpHeaders.replace<HttpConnectionHeader>(HttpConnectionHeader::ConnectionType::CLOSE);
 
     for(const auto &header : _headers) {
-        out.printf_P(PSTR("%s: %s\r\n"), header->name().c_str(), header->value().c_str());
+        _windowPrintf_P(_out, PSTR("%s: %s\r\n"), header->name().c_str(), header->value().c_str());
     }
     _headers.free();
 
     if (version) {
-        out.printf_P(PSTR("%s: %s\r\n"), PSTR("Accept-Ranges"), PSTR("none"));
+        _windowPrintf_P(_out, PSTR("%s: %s\r\n"), PSTR("Accept-Ranges"), PSTR("none"));
         if (_chunked) {
-            out.printf_P(PSTR("%s: %s\r\n"), PSTR("Transfer-Encoding"), PSTR("chunked"));
+            _windowPrintf_P(_out, PSTR("%s: %s\r\n"), PSTR("Transfer-Encoding"), PSTR("chunked"));
         }
     }
 
     for(const auto &header : _httpHeaders) {
-        header->printTo(out);
+        header->printTo(_out);
     }
     _httpHeaders.clear();
 
-    out.println();
-    _headLength = out.length();
-    _head = std::move(out);
+    _out.println();
+    _headLength = _out.length();
+    _outSent = 0;
 }
 
 void AsyncBaseResponse::_respond(AsyncWebServerRequest *request)
@@ -85,135 +120,159 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
         return 0;
     }
     _ackedLength += len;
-    size_t space = request->client()->space();
-    __LDBG_printf("ack: state=%u space=%u sent=%u written=%u acked=%u", (unsigned)_state, (unsigned)space, (unsigned)_sentLength, (unsigned)_writtenLength, (unsigned)_ackedLength);
+    __LDBG_printf("ack: state=%u space=%u sent=%u written=%u acked=%u left=%u", (unsigned)_state, (unsigned)request->client()->space(), (unsigned)_sentLength, (unsigned)_writtenLength, (unsigned)_ackedLength, (unsigned)_outPending());
 
-    size_t headLen = _head.length();
-    if (_state == RESPONSE_HEADERS) {
-        if (space > headLen) {
-            // do not send extra packet for remaining headers
+    // The space() of a connection is the free room of its send buffer and it changes while the
+    // response runs: producing the content can take seconds (rendering a form, resolving a
+    // template) and the stack can be short of buffers (MQTT, websocket, ...). Handing more than the
+    // current space() to write() silently drops the excess -> the response is truncated, the
+    // accounting is wrong and the connection stays open (the client waits for data that was never
+    // queued, the abandoned connection keeps buffers and PCBs busy). So only what fits is handed to
+    // the socket and the rest stays in the window for the next call
+    auto written = _flushOut(request);
+
+    // This method is called when the client acknowledged data or when the connection was polled -
+    // both mean that the send buffer has room again. The buffer is filled up to its current space
+    // (tcp_sndbuf, about 5.7 KB) instead of handing over a single frame: with one frame per call the
+    // window stays almost empty and the transfer waits for an acknowledgement after every 1 KB,
+    // which costs most of the possible rate (measured: 15 KB/s instead of 300 KB/s). Producing the
+    // content can be slow (a template token, a rendered form), so one call gives up after
+    // kMaxProduceTime and the next acknowledgement or poll continues where the call stopped
+    auto deadline = millis() + kMaxProduceTime;
+
+    for (;;) {
+        if (_state == RESPONSE_HEADERS) {
+            if (_outPending()) {
+                break; // the head was not completely handed over yet
+            }
             _state = RESPONSE_CONTENT;
-        } else {
-            _writtenLength += request->client()->write(_head.c_str(), space);
-            _head.remove(0, space);
-            return space;
-        }
-    }
-
-    if (_state == RESPONSE_CONTENT) {
-        // The space() of a connection is the free room of its send buffer and it changes while the
-        // response runs: producing the content can take seconds (rendering a form, resolving a
-        // template) and the stack can be short of buffers (MQTT, websocket, ...). Handing more
-        // than the current space() to write() silently drops the excess -> the response is
-        // truncated, the accounting is wrong and the connection stays open (the client waits for
-        // data that was never queued, the abandoned connection keeps buffers and PCBs busy). So
-        // send only what fits and keep the rest for the next call
-        if (_pending.length()) {
-            _flushPending(request);
-            if (_pending.length()) {
-                return 0; // no room yet, wait for the next acknowledgement
-            }
         }
 
-        space = request->client()->space();
-        size_t outLen;
-        space -= std::min(space, headLen); // remove header length if we have headers
-        // one frame per call, see kMaxFrameSize
-        const size_t maxPayload = (headLen < kMaxFrameSize) ? (kMaxFrameSize - headLen) : 0;
-        if (_chunked) {
-            if (space <= 8) { // we need at 8 extra bytes for the chunked header
-                return 0;
+        if (_state == RESPONSE_CONTENT) {
+            if (_outPending()) {
+                break; // no room yet, wait for the next acknowledgement
             }
-            outLen = std::min(space, maxPayload);
-        } else if (!_sendContentLength) { // unknown content length
-            outLen = std::min(space, maxPayload);
-        } else { // max. data we have to send
-            outLen = std::min(std::min(space, maxPayload), (_contentLength > _sentLength) ? (_contentLength - _sentLength) : maxPayload);
-        }
-        // The send buffer can be full although the content is not complete (the window is closed
-        // until the receiver acknowledges and consumes the data). Asking the source for 0 bytes
-        // returns 0 and would finish the response right there - the rest of the content is never
-        // sent, the client waits for it and times out, and the connection it abandons keeps the
-        // device busy. Only the acknowledgement of the last chunk ends the response, so the state
-        // has to stay RESPONSE_CONTENT until all of the content was handed to the client
-        if (!outLen) {
-            if (_sentLength >= _contentLength) {
+            if (_sourceDone) {
                 _state = RESPONSE_WAIT_ACK;
+                break;
             }
-            return 0;
-        }
 
-        auto bufPtr = std::unique_ptr<uint8_t[]>(new uint8_t[outLen + headLen]);
-        auto buf = bufPtr.get();
-        if (!buf) {
-            __DBG_printf_E("memory allocation failed");
-            return 0;
-        }
-
-        size_t readLen = 0;
-        if (_chunked) {
-            buf += 6;
-            if ((readLen = _fillBuffer(buf + headLen, outLen - 8)) == RESPONSE_TRY_AGAIN) {
-                return 0;
+            // one frame at a time, see kMaxFrameSize
+            auto payloadMax = kMaxFrameSize - (_chunked ? (kChunkHeaderSize + 2) : 0);
+            if (_sendContentLength) {
+                auto remaining = (_contentLength > _sentLength) ? (_contentLength - _sentLength) : 0;
+                if (remaining < payloadMax) {
+                    payloadMax = remaining;
+                }
+                if (!payloadMax) {
+                    // everything was sent, only the acknowledgement is missing
+                    _sourceDone = true;
+                    _state = RESPONSE_WAIT_ACK;
+                    break;
+                }
             }
-            char headBuf[16];
-            size_t headLength;
-            headLength = snprintf_P(headBuf, sizeof(headBuf), PSTR("%x\r\n"), readLen);
-            buf -= headLength;
-            memcpy(buf + headLen, headBuf, headLength);
-            outLen = readLen + headLen + headLength;
-            buf[outLen++] = '\r';
-            buf[outLen++] = '\n';
-        } else {
-            if ((readLen = _fillBuffer(buf + headLen, outLen)) == RESPONSE_TRY_AGAIN) {
-                return 0;
+            if (!_out.reserve(kMaxFrameSize)) {
+                __DBG_printf_E("memory allocation failed");
+                _state = RESPONSE_FAILED;
+                request->client()->close();
+                return written;
             }
-            outLen = readLen + headLen;
+            // the content is written behind the chunk header and the header is put in front of it,
+            // so the content never has to be moved
+            auto payload = _out.end() + (_chunked ? kChunkHeaderSize : 0);
+            auto readLen = _fillBuffer(payload, payloadMax);
+            if (readLen == RESPONSE_TRY_AGAIN) {
+                break; // the content is not ready yet, nothing was added to the window
+            }
+            if (_chunked) {
+                char hdr[kChunkHeaderSize + 1];
+                auto hdrLength = snprintf_P(hdr, sizeof(hdr), PSTR("%05x\r\n"), readLen);
+                if (hdrLength >= static_cast<int>(kChunkHeaderSize)) {
+                    hdrLength = kChunkHeaderSize;
+                }
+                memcpy(_out.end(), hdr, hdrLength);
+                payload[readLen] = '\r';
+                payload[readLen + 1] = '\n';
+                _out.advance(kChunkHeaderSize + readLen + 2);
+            }
+            else {
+                _out.advance(readLen);
+            }
+            _sentLength += readLen;
+            if (!readLen) {
+                // chunked: the empty chunk terminated the body - unknown content length: end of stream
+                _sourceDone = true;
+            }
+            __LDBG_printf("frame: readLen=%u sent=%u written=%u pending=%u", (unsigned)readLen, (unsigned)_sentLength, (unsigned)_writtenLength, (unsigned)_outPending());
+
+            written += _flushOut(request);
+            // The send buffer can be full although the content is complete. Only the acknowledgement
+            // of the last bytes ends the response, otherwise it would finish although most of it was
+            // never handed to the client
+            if (_sourceDone && !_outPending()) {
+                _state = RESPONSE_WAIT_ACK;
+                break;
+            }
+            if (_outPending()) {
+                break; // the frame did not fit into the send buffer, wait for room
+            }
+            if (_ackedLength >= _writtenLength) {
+                break; // nothing is in flight that would call this method again
+            }
+            if (static_cast<int32_t>(millis() - deadline) >= 0) {
+                break; // keep the network task responsive, the next call continues
+            }
+            continue; // the send buffer has room, hand over another frame
         }
-        _sentLength += readLen;
 
-        if (headLen) {
-            memcpy(buf, _head.c_str(), headLen);
-            _head = String();
-        }
-
-        // the frame (head + chunk header + content) is wire ready, buffer it and send what the
-        // send buffer takes right now (it can be much less than the space that was read before the
-        // content was produced)
-        _pending.write(buf, outLen);
-        size_t written = _flushPending(request);
-        __LDBG_printf("ack: write readLen=%u outLen=%u headLen=%u written=%u pending=%u space=%u", (unsigned)readLen, (unsigned)outLen, (unsigned)headLen, (unsigned)written, (unsigned)_pending.length(), (unsigned)request->client()->space());
-
-        if (!readLen && _pending.length() == 0) {
-            _state = RESPONSE_WAIT_ACK;
-        }
-        return written;
-
-    } else if (_state == RESPONSE_WAIT_ACK) {
-        if ((!_sendContentLength || _ackedLength >= _writtenLength) && _pending.length() == 0) {
-            _state = RESPONSE_END;
-            if (!_chunked && !_sendContentLength) {
-                request->client()->close(true);
+        if (_state == RESPONSE_WAIT_ACK) {
+            // The response is complete when everything was handed to the socket and acknowledged by
+            // the client. The acknowledgement is required before the connection is closed: closing it
+            // while the stack still has data it could not send makes `AsyncClient::_close()` call
+            // `abort()` (`ERR_MEM` from `tcp_close()`), and the RST can drop the tail of the response
+            if (!_outPending() && _ackedLength >= _writtenLength) {
+                _state = RESPONSE_END;
+                // Every response announces "Connection: close" (`HttpConnectionHeader`), so the
+                // connection is closed here instead of waiting for the client to give up - it would
+                // sit in the read until its own socket timeout to see the end of the response, and an
+                // abandoned connection keeps a PCB and buffers of the stack busy. The disconnect
+                // handler deletes the request and this response, nothing of this object may be
+                // touched afterwards
+                request->client()->close();
             }
         }
+        break;
     }
-    return 0;
+    return written;
 }
 
-size_t AsyncBaseResponse::_flushPending(AsyncWebServerRequest *request)
+size_t AsyncBaseResponse::_flushOut(AsyncWebServerRequest *request)
 {
-    if (!_pending.length()) {
+    auto pending = _outPending();
+    if (!pending) {
         return 0;
     }
-    size_t len = std::min(request->client()->space(), _pending.length());
+    auto len = std::min(request->client()->space(), pending);
+    if (len > kMaxFrameSize) {
+        // never hand more than one segment to the network stack, the rest stays in the window
+        len = kMaxFrameSize;
+    }
     if (!len) {
         return 0;
     }
-    len = request->client()->write(reinterpret_cast<const char *>(_pending.begin()), len);
-    _writtenLength += len;
-    _pending.remove(0, len);
-    __LDBG_printf("flush pending len=%u left=%u space=%u", (unsigned)len, (unsigned)_pending.length(), (unsigned)request->client()->space());
-    return len;
+    // ASYNC_WRITE_FLAG_COPY (0x01 on the ESP32 and the ESP8266 stack) makes the stack own a copy of
+    // the bytes: the window is reused for the next frame and, without the flag, the ESP8266 stack
+    // keeps a pointer into it until the data was acknowledged
+    auto written = request->client()->write(reinterpret_cast<const char *>(_out.begin() + _outSent), len, ASYNC_WRITE_FLAG_COPY);
+    _outSent += written;
+    _writtenLength += written;
+    if (_outSent >= _out.length()) {
+        // everything was handed over, the window is reused from the beginning
+        _out.setLength(0);
+        _outSent = 0;
+    }
+    __LDBG_printf("flush: len=%u written=%u left=%u space=%u", (unsigned)len, (unsigned)written, (unsigned)_outPending(), (unsigned)request->client()->space());
+    return written;
 }
 
 AsyncProgmemFileResponse::AsyncProgmemFileResponse(const String &contentType, const File &file, TemplateDataProvider::ResolveCallback callback) :
@@ -254,6 +313,8 @@ AsyncDirResponse::AsyncDirResponse(const String &dirName, bool showHiddenFiles) 
 {
     _code = 200;
     _contentType = FSPGM(mime_application_json);
+    // a directory entry is a few hundred bytes, the reservation keeps the buffer at one allocation
+    _buffer.reserve(256);
     append_slash(_dirName);
     __LDBG_printf("dir=%s hiddenFiles=%u", _dirName.c_str(), _dir.showHiddenFiles());
 }
@@ -263,155 +324,119 @@ bool AsyncDirResponse::_sourceValid() const
     return true;
 }
 
-size_t AsyncDirResponse::_sendBufferPartially(uint8_t *data, uint8_t *dataPtr, size_t len)
-{
-    size_t fill = len - (dataPtr - data);
-    if (fill > _buffer.length()) {
-        fill = _buffer.length();
-    }
-    if (fill) {
-        memcpy(dataPtr, _buffer.c_str(), fill);
-        dataPtr += fill;
-        _buffer.remove(0, fill); // does not change capacity
-    }
-
-    __LDBG_IF(
-        DEBUG_OUTPUT.printf_P(PSTR("sending state=%u send=%u len=%u buffer=%u fill=%u data="), _state, (dataPtr - data), len, _buffer.length(), fill);
-        printable_string(DEBUG_OUTPUT, data, (dataPtr - data), (dataPtr - data));
-        DEBUG_OUTPUT.println();
-    );
-    return (dataPtr - data);
-}
-
 size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 {
     auto dataPtr = data;
-    size_t space = len;
+    auto space = len;
     __LDBG_printf("data=%p capacity=%u buffer=%u state=%u next=%u", data, len, _buffer.length(), _state, _next);
 
-    // do we have something left in _buffer?
-    if (_buffer.length()) {
-        size_t bufferLen = _buffer.length();
-        if (bufferLen >= len) {
-            goto sendBuffer;
-        }
-
-        // we have more space available in the data buffer
-        memcpy(data, _buffer.c_str(), bufferLen);
-        _buffer.remove(0, bufferLen); // does not change capacity
-        dataPtr += bufferLen;
-        space -= bufferLen;
-        __LDBG_printf("state=%u capacity=%u space=%u", _state, len, space);
-    }
-
-    if (_state == StateType::FILL) { // fill _buffer
-        FSInfo info;
-        getFSInfo(info);
-
-        char bufTotalBytes[16];
-        char bufUsedBytes[16];
-        formatBytes(bufTotalBytes, sizeof(bufTotalBytes), info.totalBytes);
-        formatBytes(bufUsedBytes, sizeof(bufUsedBytes), info.usedBytes);
-
-        // if (String_endsWith(_dirName, '/')) {
-        //     _dirName.remove(_dirName.length() - 1, 1);
-        // }
-
-        _buffer.printf_P(PSTR("{\"t\":\"%s\",\"T\":%d,\"u\":\"%s\",\"U\":%d,\"p\":\"%.2f%%\",\"d\":\"%s\",\"f\":["),
-            bufTotalBytes, info.totalBytes,
-            bufUsedBytes, info.usedBytes,
-            (info.usedBytes * 100) / static_cast<float>(info.totalBytes),
-            _dirName.c_str()
-        );
-
-        if (_next) {
-            _state = StateType::READ_DIR;
-            __LDBG_printf("set state=%u", _state);
-        }
-        else {
-            _state = StateType::END;
-            __LDBG_printf("set state=%u", _state);
-            _buffer.print(F("]}")); // empty directory
-        }
-
-        if (_buffer.length() >= space) {
-            goto sendBuffer;
-        }
-    }
-
-    if (_state == StateType::READ_DIR) {
-        auto tmp_dir = sys_get_temp_dir();
-        while (_next) {
-            const String &path = _dir.fileName();
-            const char *name = path.c_str() + _dirName.length();
-            __LDBG_printf("dir=%s dir=%u file=%u name=%s", path.c_str(), _dir.isDirectory(), _dir.isFile(), name);
-
-            size_t nameLength = path.length() - _dirName.length();
-            if (nameLength && name[nameLength - 1] == '/') {
-                nameLength--;
+    while (space) {
+        // send what was generated before (a fragment that did not fit into the previous buffer)
+        if (_buffer.length()) {
+            size_t fill = std::min(space, _buffer.length());
+            memcpy(dataPtr, _buffer.c_str(), fill);
+            _buffer.remove(0, fill); // does not change capacity
+            dataPtr += fill;
+            space -= fill;
+            if (!space) {
+                break;
             }
+        }
+        if (_state == StateType::END) {
+            break;
+        }
+        if (_state == StateType::FILL) { // the beginning of the response
+            FSInfo info;
+            getFSInfo(info);
 
-            if (_dir.isDirectory()) {
-                size_t pathLength = path.length();
-                if (pathLength && name[pathLength - 1] == '/') {
-                    pathLength--;
-                }
+            char bufTotalBytes[16];
+            char bufUsedBytes[16];
+            formatBytes(bufTotalBytes, sizeof(bufTotalBytes), info.totalBytes);
+            formatBytes(bufUsedBytes, sizeof(bufUsedBytes), info.usedBytes);
 
-                _buffer.print(F("{\"f\":\""));
-                appendUrlEncoded(_buffer, path.c_str(), pathLength);
-                _buffer.printf_P(PSTR("\",\"n\":\"%*.*s\",\"m\":%d,\"d\":1"),
-                    nameLength, nameLength, name,
-                    path.startsWith(tmp_dir) ? PathType::TMP_DIR : (_dir.isMapping() ? PathType::MAPPED_DIR : PathType::DIR)
-                );
-            }
-            else if (_dir.isFile()) {
+            _buffer.printf_P(PSTR("{\"t\":\"%s\",\"T\":%d,\"u\":\"%s\",\"U\":%d,\"p\":\"%.2f%%\",\"d\":\"%s\",\"f\":["),
+                bufTotalBytes, info.totalBytes,
+                bufUsedBytes, info.usedBytes,
+                (info.usedBytes * 100) / static_cast<float>(info.totalBytes),
+                _dirName.c_str()
+            );
 
-                char buf[16];
-                formatBytes(buf, sizeof(buf), _dir.fileSize());
-
-                _buffer.print(F("{\"f\":\""));
-                appendUrlEncoded(_buffer, path.c_str(), path.length());
-                _buffer.printf_P(PSTR("\",\"n\":\"%*.*s\",\"s\":\"%s\",\"b\":%d,\"m\":%d,\"d\":0"),
-                    nameLength, nameLength, name,
-                    buf,
-                    _dir.fileSize(),
-                    _dir.isMapping() ? PathType::MAPPED_FILE : PathType::FILE
-                );
-
-            }
-
-            // add file creation time for directories and files, if available
-            if (_dir.isMapping() || _dir.fileTime()) {
-                _buffer.print(F(",\"t\":\""));
-                _buffer.strftime_P(PSTR("%Y-%m-%d %H:%M\""), _dir.fileTime());
-            }
-
-            _next = _dir.next();
             if (_next) {
-                _buffer.print(F("},"));
+                _state = StateType::READ_DIR;
+                __LDBG_printf("set state=%u", _state);
             }
             else {
                 _state = StateType::END;
                 __LDBG_printf("set state=%u", _state);
-                _buffer.print(F("}]}"));
+                _buffer.print(F("]}")); // empty directory
+            }
+            continue;
+        }
+
+        // StateType::READ_DIR, one entry per iteration
+        if (!_next) {
+            _state = StateType::END;
+            __LDBG_printf("set state=%u", _state);
+            continue;
+        }
+
+        const String &path = _dir.fileName();
+        const char *name = path.c_str() + _dirName.length();
+        __LDBG_printf("dir=%s dir=%u file=%u name=%s", path.c_str(), _dir.isDirectory(), _dir.isFile(), name);
+
+        size_t nameLength = path.length() - _dirName.length();
+        if (nameLength && name[nameLength - 1] == '/') {
+            nameLength--;
+        }
+
+        if (_dir.isDirectory()) {
+            size_t pathLength = path.length();
+            if (pathLength && name[pathLength - 1] == '/') {
+                pathLength--;
             }
 
-            size_t bufferLen = _buffer.length();
-            if (bufferLen >= space) {
-                break;
-            }
+            _buffer.print(F("{\"f\":\""));
+            appendUrlEncoded(_buffer, path.c_str(), pathLength);
+            _buffer.printf_P(PSTR("\",\"n\":\"%*.*s\",\"m\":%d,\"d\":1"),
+                nameLength, nameLength, name,
+                path.startsWith(sys_get_temp_dir()) ? PathType::TMP_DIR : (_dir.isMapping() ? PathType::MAPPED_DIR : PathType::DIR)
+            );
+        }
+        else if (_dir.isFile()) {
 
-            // cleanup _buffer for more directories
-            memcpy(dataPtr, _buffer.c_str(), bufferLen);
-            _buffer.remove(0, bufferLen); // does not change capacity
-            dataPtr += bufferLen;
-            space -= bufferLen;
+            char buf[16];
+            formatBytes(buf, sizeof(buf), _dir.fileSize());
+
+            _buffer.print(F("{\"f\":\""));
+            appendUrlEncoded(_buffer, path.c_str(), path.length());
+            _buffer.printf_P(PSTR("\",\"n\":\"%*.*s\",\"s\":\"%s\",\"b\":%d,\"m\":%d,\"d\":0"),
+                nameLength, nameLength, name,
+                buf,
+                _dir.fileSize(),
+                _dir.isMapping() ? PathType::MAPPED_FILE : PathType::FILE
+            );
+
+        }
+
+        // add file creation time for directories and files, if available
+        if (_dir.isMapping() || _dir.fileTime()) {
+            _buffer.print(F(",\"t\":\""));
+            _buffer.strftime_P(PSTR("%Y-%m-%d %H:%M\""), _dir.fileTime());
+        }
+
+        _next = _dir.next();
+        if (_next) {
+            _buffer.print(F("},"));
+        }
+        else {
+            _state = StateType::END;
+            __LDBG_printf("set state=%u", _state);
+            _buffer.print(F("}]}"));
         }
     }
 
-sendBuffer:
-    __LDBG_printf("state=%u capacity=%u space=%u buffer=%u", _state, len, space, _buffer.length());
-    return _sendBufferPartially(data, dataPtr, len); // send what fits in data
+    __LDBG_printf("state=%u capacity=%u space=%u buffer=%u send=%u", _state, len, space, _buffer.length(), (dataPtr - data));
+    return (dataPtr - data); // send what fits in data
 }
 
 #if DEBUG_ASYNC_WEB_RESPONSE_DIR_RESPONSE

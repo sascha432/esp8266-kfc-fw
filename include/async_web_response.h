@@ -15,6 +15,7 @@
 #include <functional>
 #include <ListDir.h>
 #include <Buffer.h>
+#include <PrintBuffer.h>
 #include <PrintHtmlEntities.h>
 #include <TemplateDataProvider.h>
 #include <SSIProxyStream.h>
@@ -27,11 +28,22 @@ class HttpHeaders;
 
 class AsyncBaseResponse : public AsyncWebServerResponse {
 public:
-    // Maximum size of one frame (Content-Length/chunk header + content). A larger write is queued in
-    // the network stack at once and can exhaust its (small) buffer pool - not only the response but
-    // every other connection (MQTT, websocket, syslog, ...) is then unable to transmit, which shows
-    // up as a page that never finishes. One segment per call keeps the buffers of the stack free
+    // Maximum size of one frame (chunk header + content). A larger write is queued in the network
+    // stack at once and can exhaust its (small) buffer pool - not only the response but every other
+    // connection (MQTT, websocket, syslog, ...) is then unable to transmit, which shows up as a page
+    // that never finishes. One segment per call keeps the buffers of the stack free
     static constexpr size_t kMaxFrameSize = 1024;
+
+    // Width of the chunk header ("%05x\r\n"). Leading zeros are valid for the chunk size (1*HEXDIG)
+    // and for the last chunk (1*("0")). The fixed width keeps the content at a known offset inside
+    // the output window, so it can be written there before the header is known
+    static constexpr size_t kChunkHeaderSize = 7;
+
+    // How long one call of _ack() may spend producing frames. The call runs in the task of the
+    // network stack, so a response whose content is slow to produce (a template token, a rendered
+    // form) must not block it. Frames that are ready are still handed over without waiting - the
+    // next acknowledgement or poll of the connection continues where the call stopped
+    static constexpr uint32_t kMaxProduceTime = 25; // ms
 
     AsyncBaseResponse(bool chunked);
 
@@ -44,16 +56,29 @@ public:
     }
 
 protected:
+    // print the response headers into the output window
     virtual void __assembleHead(uint8_t version);
 
-    // Send as much as the send buffer of the connection takes and keep the rest for the next call
-    // (see _ack()). The leftovers are already framed for the wire (chunk header, content, CRLF),
-    // so they are written as they are
-    size_t _flushPending(AsyncWebServerRequest *request);
+    // Hand over as much of the output window as the send buffer of the connection takes and keep the
+    // rest for the next call (see _ack()). The window is reused for every frame, a new frame is only
+    // built after the previous one was handed over completely
+    size_t _flushOut(AsyncWebServerRequest *request);
+
+    // bytes of the output window that were not handed to the connection yet
+    inline size_t _outPending() const {
+        return _out.length() - _outSent;
+    }
 
     HttpHeaders _httpHeaders;
-    String _head;
-    Buffer _pending;
+
+    // Everything a response sends is built in this single window: the head and, one at a time, the
+    // frames of the content (chunk header, data, CRLF). It replaces the head String, the pending
+    // buffer and the per frame allocation of the previous implementation
+    PrintBuffer _out;
+    // bytes of the output window that were handed to the socket
+    size_t _outSent;
+    // the source reached the end of the content (or the content length was reached)
+    bool _sourceDone;
 };
 
 #if MDNS_PLUGIN
@@ -178,9 +203,6 @@ public:
     AsyncDirResponse(const String &dirName, bool showHiddenFiles);
     virtual bool _sourceValid() const override;
     virtual size_t _fillBuffer(uint8_t *data, size_t len) override;
-
-private:
-    size_t _sendBufferPartially(uint8_t *data, uint8_t *dataPtr, size_t len);
 
 private:
     ListDir _dir;

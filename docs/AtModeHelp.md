@@ -509,3 +509,34 @@ Display extra digits (HLW80xx)
 ### `+HLWDUMP=<0=off/1...=seconds/2=cycle>`
 
 Dump sensor data (HLW80xx)
+
+### `+MPU6050=<0=off|50-10000=interval in ms>`
+
+Serial calibration output of the MPU-6050 (rotation/tilt sensor). Without an argument the current state is reported. The output starts with the active configuration, then one line per interval and one line per rotation or tilt event
+
+``` text
++MPU6050=1000
++MPU6050: MPU-6050 serial calibration output on, interval 1000ms
++MPU6050: serial calibration output enabled
++MPU6050: addr=0x68 detected=1 sample=100ms debounce=500ms debug_interval=1000ms
++MPU6050: accel_range=2g gyro_range=250°/s rot_offset=0° tilt_threshold=25° tilt_hysteresis=5°
++MPU6050: invert a=[0,0,0] g=[0,0,0] offset a=[0.000,0.000,0.000]g g=[0.0,0.0,0.0]dps
++MPU6050: a[-0.146,+0.078,+1.316]g u[-0.11,+0.06,+0.99] dev=83.7° rot=0° tilt=tilted settled=1 gyro[+0.4,+0.3,-1.9]dps
++MPU6050: event tilt -> tilted (display callback none)
+```
+
+Columns:
+
+- `a[x,y,z]` acceleration in g with the offsets and the axis inversion applied
+- `u[x,y,z]` unit gravity vector
+- `dev` angle to the nearest display axis, the closer to 0° the better the device is aligned
+- `rot` display rotation in degrees, `tilt` `level`/`tilted`
+- `settled` `1` while the gyroscope is at rest, `0` while the device is moved
+- `gyro[x,y,z]` rotation rate in °/s
+- `event` a rotation or tilt change was latched, `display callback registered`/`none` tells whether a display callback is attached
+
+Calibration:
+
+1. Put the device in the orientation it is mounted in and read `a[...]`: the accelerometer offsets are the values the axes read at rest (bias), the gyroscope offsets are the values the axes read while it does not rotate
+2. The rotation offset aligns a stable device with the display, the tilt threshold is the allowed deviation (`dev`) and the debounce time filters short movements
+3. While `settled=0` the gyroscope still sees movement (above 15°/s). The rotation, the tilt state and the callbacks are only updated once the device has come to rest, so wiggling it does not toggle them

@@ -161,6 +161,9 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
         #if IOT_SENSOR_HAVE_AMBIENT_LIGHT_SENSOR2
             addSensor<Sensor_AmbientLight>(F(IOT_SENSOR_NAMES_ILLUMINANCE_LIGHT_SENSOR), 1);
         #endif
+        #if IOT_SENSOR_HAVE_MPU6050
+            addSensor<Sensor_MPU6050>(F(IOT_SENSOR_NAMES_MPU6050), IOT_SENSOR_HAVE_MPU6050);
+        #endif
         #if IOT_SENSOR_HAVE_SYSTEM_METRICS
             addSensor<Sensor_SystemMetrics>();
         #endif

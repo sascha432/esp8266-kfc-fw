@@ -30,6 +30,16 @@
             <div class="form-help-block">
                 <div data-target="#msto">Delay after the last motion has been detected. If the sensor has its own delay, this adds to the total delay</div>
                 <div data-target="#msao">Delay until the LEDs are turned off without any motion detected</div>
+                <div data-target="#mpu_ar">Full scale range of the accelerometer. A smaller range gives a higher resolution. The serial calibration output is enabled from the serial console with AT+MPU6050=interval-in-ms (for example AT+MPU6050=1000, 0 disables it)</div>
+                <div data-target="#mpu_gr">Full scale range of the gyroscope. A smaller range gives a higher resolution</div>
+                <div data-target="#mpu_axo,#mpu_ayo,#mpu_azo">Bias of the accelerometer axis in g, subtracted before the rotation is calculated</div>
+                <div data-target="#mpu_gxo,#mpu_gyo,#mpu_gzo">Bias of the gyroscope axis in deg/s</div>
+                <div data-target="#mpu_iax,#mpu_iay,#mpu_iaz">Inverts the accelerometer axis to match the mounting of the sensor</div>
+                <div data-target="#mpu_igx,#mpu_igy,#mpu_igz">Inverts the gyroscope axis to match the mounting of the sensor</div>
+                <div data-target="#mpu_ro">Angle added to the detected rotation, use it to align the mounting of the sensor with the display</div>
+                <div data-target="#mpu_tt">Deviation from a stable orientation that is reported as tilted. The state has to leave the threshold by 5 degrees again (hysteresis) and is only updated while the device is at rest</div>
+                <div data-target="#mpu_si">Interval the sensor is sampled at</div>
+                <div data-target="#mpu_dt">Time a new orientation has to be stable before it is applied. The rotation and tilt state (and the display callbacks) only change while the device is at rest, so wiggling it does not toggle them</div>
             </div>
         </form>
         <!--%%FOOT-->

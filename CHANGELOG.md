@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+- Added the MPU-6050 display rotation and tilt sensor
 - Visualizer modes are selectable animations now (Spectrum Rainbow Bars, Spectrum Gradient Bars, Spectrum Single Color Bars, Plasma Reactive, Fire Reactive) through the WebUI, MQTT and select buttons
   - Web server response: fixed truncated responses, stalled connections, and excessive allocations
  - Updated OpenWeatherMap API to OneCall API 3.0

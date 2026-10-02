@@ -128,9 +128,15 @@ in this workspace.
   `ConfigGetterSetter<ConfigType, _H(...)>` (`include/kfc_fw_config/base.h`); bit fields use
   `CREATE_BITFIELD_TYPE_MIN_MAX(...)`.
 - **Changing the layout resets the parameter**: `getConfig()` compares the stored size with
-  `sizeof(ConfigStructType)` and falls back to the constructor defaults on a mismatch. Prefer a
-  **separate parameter** (its own handle) over adding a bit field to a shared struct, and keep each bit
-  field inside its storage unit or `-Wpacked-bitfield-compat` moves it silently.
+  `sizeof(ConfigStructType)` and falls back to the constructor defaults on a mismatch - a new or changed
+  member resets that parameter **once** after flashing. That is the accepted design: put the config into
+  the existing `ConfigStructType`/blob it belongs to and let it resize. Do **not** invent a separate
+  parameter (its own handle + `Plugins::X` alias + `DECLARE/DEFINE_CONFIG_HANDLE_PROGMEM_STR`) or a
+  nested config class just to avoid that one-time reset. Keep each bit field inside its storage unit or
+  `-Wpacked-bitfield-compat` moves it silently.
+- **No layout or version field for a binary config that breaks by size** (`KFCConfigurationClasses::Plugins::*`):
+  the parameter is reset to the defaults (or treated as invalid) anyway, so a layout/version flag only widens
+  the layout it is meant to guard - leave it out.
 - **`getWriteableConfig()` creates an all-zero blob** for a parameter that does not exist yet, so a form
   can show 0 while `getConfig()` shows the constructor defaults. Add a range/default fallback in the
   getter (and note that a legal value of 0 cannot be told apart from "unset").

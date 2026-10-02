@@ -46,6 +46,7 @@ class Sensor_INA219;
 class Sensor_DimmerMetrics;
 class Sensor_Motion;
 class Sensor_SystemMetrics;
+class Sensor_MPU6050;
 
 namespace MQTT {
 
@@ -65,6 +66,7 @@ namespace MQTT {
         MOTION,
         AMBIENT_LIGHT,
         SYSTEM_METRICS,
+        MPU6050,
         MAX
     };
 
@@ -83,7 +85,9 @@ namespace MQTT {
                                                 (_SensorType == SensorType::DIMMER_METRICS), Sensor_DimmerMetrics, std::conditional_t<
                                                     (_SensorType == SensorType::MOTION), Sensor_Motion, std::conditional_t<
                                                         (_SensorType == SensorType::AMBIENT_LIGHT), Sensor_AmbientLight, std::conditional_t<
-                                                            (_SensorType == SensorType::SYSTEM_METRICS), Sensor_SystemMetrics, nullptr_t
+                                                            (_SensorType == SensorType::SYSTEM_METRICS), Sensor_SystemMetrics, std::conditional_t<
+                                                                (_SensorType == SensorType::MPU6050), Sensor_MPU6050, nullptr_t
+                                                            >
                                                         >
                                                     >
                                                 >

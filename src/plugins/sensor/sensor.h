@@ -25,6 +25,7 @@
 #include "Sensor_DimmerMetrics.h"
 #include "Sensor_Motion.h"
 #include "Sensor_AmbientLight.h"
+#include "Sensor_MPU6050.h"
 
 #if DEBUG_IOT_SENSOR
 #    include <debug_helper_enable.h>
@@ -86,6 +87,10 @@
 
 #ifndef IOT_SENSOR_NAMES_DS3231
 #    define IOT_SENSOR_NAMES_DS3231 "DS3231 RTC Clock"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_MPU6050
+#    define IOT_SENSOR_NAMES_MPU6050 "MPU-6050"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_INA219

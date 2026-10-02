@@ -173,6 +173,88 @@ namespace KFCConfigurationClasses {
                 };
             #endif
 
+            #if IOT_SENSOR_HAVE_MPU6050
+
+                enum class MPU6050AccelRange : uint8_t {
+                    RANGE_2G = 0,
+                    RANGE_4G,
+                    RANGE_8G,
+                    RANGE_16G,
+                    MAX
+                };
+
+                enum class MPU6050GyroRange : uint8_t {
+                    RANGE_250 = 0,
+                    RANGE_500,
+                    RANGE_1000,
+                    RANGE_2000,
+                    MAX
+                };
+
+                // MPU-6050 (3 axis accelerometer/gyroscope) used as a display rotation and tilt sensor
+                struct __attribute__packed__ MPU6050ConfigType {
+                    using Type = MPU6050ConfigType;
+
+                    CREATE_FLOAT_FIELD(accel_offset_x, -4, 4, 0);
+                    CREATE_FLOAT_FIELD(accel_offset_y, -4, 4, 0);
+                    CREATE_FLOAT_FIELD(accel_offset_z, -4, 4, 0);
+                    CREATE_FLOAT_FIELD(gyro_offset_x, -500, 500, 0);
+                    CREATE_FLOAT_FIELD(gyro_offset_y, -500, 500, 0);
+                    CREATE_FLOAT_FIELD(gyro_offset_z, -500, 500, 0);
+
+                    uint16_t sample_interval;
+                    uint16_t debounce_time;
+
+                    CREATE_UINT8_BITFIELD_MIN_MAX(invert_accel_x, 1, 0, 1, 0, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(invert_accel_y, 1, 0, 1, 0, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(invert_accel_z, 1, 0, 1, 0, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(invert_gyro_x, 1, 0, 1, 0, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(invert_gyro_y, 1, 0, 1, 0, 1);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(invert_gyro_z, 1, 0, 1, 0, 1);
+
+                    uint8_t : 2;
+
+                    CREATE_ENUM_D_BITFIELD(accel_range, MPU6050AccelRange, MPU6050AccelRange::RANGE_2G);
+                    CREATE_ENUM_D_BITFIELD(gyro_range, MPU6050GyroRange, MPU6050GyroRange::RANGE_250);
+                    CREATE_UINT8_BITFIELD_MIN_MAX(rotation_offset, 2, 0, 3, 0, 1);
+
+                    uint8_t : 2;
+
+                    CREATE_UINT8_BITFIELD_MIN_MAX(tilt_threshold, 8, 5, 45, 25, 1);
+
+                    static constexpr uint16_t kMinValueFor_sample_interval = 20;
+                    static constexpr uint16_t kMaxValueFor_sample_interval = 1000;
+                    static constexpr uint16_t kDefaultValueFor_sample_interval = 100;
+                    static constexpr uint16_t kMinValueFor_debounce_time = 100;
+                    static constexpr uint16_t kMaxValueFor_debounce_time = 5000;
+                    static constexpr uint16_t kDefaultValueFor_debounce_time = 500;
+
+                    MPU6050ConfigType() :
+                        accel_offset_x(kDefaultValueFor_accel_offset_x),
+                        accel_offset_y(kDefaultValueFor_accel_offset_y),
+                        accel_offset_z(kDefaultValueFor_accel_offset_z),
+                        gyro_offset_x(kDefaultValueFor_gyro_offset_x),
+                        gyro_offset_y(kDefaultValueFor_gyro_offset_y),
+                        gyro_offset_z(kDefaultValueFor_gyro_offset_z),
+                        sample_interval(kDefaultValueFor_sample_interval),
+                        debounce_time(kDefaultValueFor_debounce_time),
+                        invert_accel_x(kDefaultValueFor_invert_accel_x),
+                        invert_accel_y(kDefaultValueFor_invert_accel_y),
+                        invert_accel_z(kDefaultValueFor_invert_accel_z),
+                        invert_gyro_x(kDefaultValueFor_invert_gyro_x),
+                        invert_gyro_y(kDefaultValueFor_invert_gyro_y),
+                        invert_gyro_z(kDefaultValueFor_invert_gyro_z),
+                        accel_range(kDefaultValueFor_accel_range),
+                        gyro_range(kDefaultValueFor_gyro_range),
+                        rotation_offset(kDefaultValueFor_rotation_offset),
+                        tilt_threshold(kDefaultValueFor_tilt_threshold)
+                    {
+                    }
+
+                };
+
+            #endif
+
             struct __attribute__packed__ SensorConfigType {
                 #if IOT_SENSOR_HAVE_BATTERY
                     BatteryConfigType battery;
@@ -194,6 +276,9 @@ namespace KFCConfigurationClasses {
                 #endif
                 #if IOT_SENSOR_HAVE_BME680
                     BME680SensorType bme680;
+                #endif
+                #if IOT_SENSOR_HAVE_MPU6050
+                    MPU6050ConfigType mpu6050;
                 #endif
             };
 

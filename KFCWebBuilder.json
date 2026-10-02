@@ -105,10 +105,22 @@
             ],
             "#if !IOT_WEATHER_STATION": [
                 "./Resources/html/weather.html",
-                "./Resources/html/world-clock.html",
                 "./Resources/html/curated-art.html",
-                "./Resources/html/display-screen.html",
+                "./Resources/html/display-screen.html"
+            ],
+            // the world clock page is used by the 1.x and the 2.x weather station plugin.
+            // defined() instead of IOT_WEATHER_STATION*: the evaluator replaces the shorter
+            // macro name inside the longer one (IOT_WEATHER_STATION is a prefix of
+            // IOT_WEATHER_STATION2), which resolves the expression to true
+            "#if !defined(IOT_WEATHER_STATION) && !defined(IOT_WEATHER_STATION2)": [
+                "./Resources/html/world-clock.html",
                 "./Resources/js/forms/world-clock.js"
+            ],
+            "#if !IOT_WEATHER_STATION2": [
+                "./Resources/html/weather2.html",
+                "./Resources/html/weather2-sensors.html",
+                "./Resources/html/weather2-power.html",
+                "./Resources/html/weather2-hass.html"
             ],
             "#if !IOT_REMOTE_CONTROL": [
                 "./Resources/html/remotectrl.html"

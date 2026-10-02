@@ -13,16 +13,16 @@
 
 namespace LVGLTestScreen {
 
-    //! removes all widgets from the screen and creates the test screen
+    // removes all widgets from the screen and creates the test screen
     void create();
 
-    //! removes all widgets from the screen and clears it to black
+    // removes all widgets from the screen and clears it to black
     void clear();
 
-    //! number of touch events received by the test screen
+    // number of touch events received by the test screen
     uint32_t getPressCount();
 
-    //! last touch position, returns false if no touch has been received yet
+    // last touch position, returns false if no touch has been received yet
     bool getLastPoint(int32_t &x, int32_t &y);
 
 }

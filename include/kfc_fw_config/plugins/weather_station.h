@@ -134,6 +134,116 @@ namespace KFCConfigurationClasses {
                 CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, PressureSource, 0, 128);
                 CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, Eco2Source, 0, 128);
 
+                // Power monitor channels of the weather station 2.x plugin. One string per channel,
+                // the parts are separated by '|' (a name may contain spaces, not '|'):
+                //
+                //   none
+                //   local|<name>|<remote channel id>    the local INA219 sensor of the sensor plugin
+                //   remote|<name>|<remote channel id>   one channel of the TCP power monitor server
+                //
+                // The remote host and port are shared by all remote channels
+                // (see getPowerRemoteHost()/getPowerRemotePort() in ws2_data.h)
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, PowerRemoteHost, 0, 64);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, PowerRemotePort, 0, 8);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, PowerChannel0, 0, 128);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, PowerChannel1, 0, 128);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, PowerChannel2, 0, 128);
+                CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, PowerChannel3, 0, 128);
+
+                // Window of the power graph of the weather station 2.x plugin in minutes (1..60),
+                // one sample per second per channel. It is its own 1 byte binary parameter: adding
+                // it as a bitfield to the packed Config_t grows that blob by a byte, and the blob
+                // is read back with a size check - the latitude/longitude, the units and the world
+                // clocks would be reset once
+                static constexpr uint8_t kPowerGraphMinutesMin = 1;
+                static constexpr uint8_t kPowerGraphMinutesMax = 60;
+                static constexpr uint8_t kPowerGraphMinutesDefault = 5;
+                static constexpr ConfigurationHelper::HandleType kPowerGraphMinutesConfigHandle = CONFIG_GET_HANDLE_STR("weatherstation.powerGraphMinutes");
+
+                inline static uint8_t getPowerGraphMinutes() {
+                    REGISTER_HANDLE_NAME("weatherstation.powerGraphMinutes", __DBG__TYPE_GET);
+                    uint16_t length = sizeof(uint8_t);
+                    const auto data = KFCConfigurationClasses::loadBinaryConfig(kPowerGraphMinutesConfigHandle, length);
+                    if (!data || length != sizeof(uint8_t)) {
+                        return kPowerGraphMinutesDefault;
+                    }
+                    const auto value = *static_cast<const uint8_t *>(data);
+                    if (value < kPowerGraphMinutesMin || value > kPowerGraphMinutesMax) {
+                        return kPowerGraphMinutesDefault;
+                    }
+                    return value;
+                }
+                inline static void setPowerGraphMinutes(uint8_t value) {
+                    REGISTER_HANDLE_NAME("weatherstation.powerGraphMinutes", __DBG__TYPE_SET);
+                    if (value < kPowerGraphMinutesMin) {
+                        value = kPowerGraphMinutesMin;
+                    }
+                    else if (value > kPowerGraphMinutesMax) {
+                        value = kPowerGraphMinutesMax;
+                    }
+                    KFCConfigurationClasses::storeBinaryConfig(kPowerGraphMinutesConfigHandle, &value, sizeof(value));
+                }
+
+                // Orientation of the Home Assistant dashboard screen (the other screens of the
+                // weather station 2.x plugin keep the landscape layout). Its own 1 byte binary
+                // parameter for the same reason as the window of the power graph above. The values
+                // are the Rotation values of the display driver (see wt32_sc01.h)
+                enum class HassRotation : uint8_t {
+                    LANDSCAPE = 0,          // 480x320
+                    PORTRAIT = 1,           // 320x480
+                    LANDSCAPE_FLIPPED = 2,  // 480x320, turned 180 degrees
+                    PORTRAIT_FLIPPED = 3,   // 320x480, turned 180 degrees
+                };
+                static constexpr uint8_t kHassRotationMin = static_cast<uint8_t>(HassRotation::LANDSCAPE);
+                static constexpr uint8_t kHassRotationMax = static_cast<uint8_t>(HassRotation::PORTRAIT_FLIPPED);
+                static constexpr uint8_t kHassRotationDefault = static_cast<uint8_t>(HassRotation::LANDSCAPE);
+                static constexpr ConfigurationHelper::HandleType kHassRotationConfigHandle = CONFIG_GET_HANDLE_STR("weatherstation.hassRotation");
+
+                inline static uint8_t getHassRotation() {
+                    REGISTER_HANDLE_NAME("weatherstation.hassRotation", __DBG__TYPE_GET);
+                    uint16_t length = sizeof(uint8_t);
+                    const auto data = KFCConfigurationClasses::loadBinaryConfig(kHassRotationConfigHandle, length);
+                    if (!data || length != sizeof(uint8_t)) {
+                        return kHassRotationDefault;
+                    }
+                    const auto value = *static_cast<const uint8_t *>(data);
+                    if (value < kHassRotationMin || value > kHassRotationMax) {
+                        return kHassRotationDefault;
+                    }
+                    return value;
+                }
+                inline static void setHassRotation(uint8_t value) {
+                    REGISTER_HANDLE_NAME("weatherstation.hassRotation", __DBG__TYPE_SET);
+                    if (value < kHassRotationMin) {
+                        value = kHassRotationMin;
+                    }
+                    else if (value > kHassRotationMax) {
+                        value = kHassRotationMax;
+                    }
+                    KFCConfigurationClasses::storeBinaryConfig(kHassRotationConfigHandle, &value, sizeof(value));
+                }
+
+                // Locks the orientation of the Home Assistant dashboard. The WT32-SC01 has no
+                // motion sensor, so the lock only blocks the manual rotate button of the quick
+                // settings today - a future auto rotation (an accelerometer) honours it as well.
+                // Its own 1 byte parameter for the same reason as the rotation above
+                static constexpr ConfigurationHelper::HandleType kHassRotationLockConfigHandle = CONFIG_GET_HANDLE_STR("weatherstation.hassRotationLock");
+
+                inline static bool getHassRotationLock() {
+                    REGISTER_HANDLE_NAME("weatherstation.hassRotationLock", __DBG__TYPE_GET);
+                    uint16_t length = sizeof(uint8_t);
+                    const auto data = KFCConfigurationClasses::loadBinaryConfig(kHassRotationLockConfigHandle, length);
+                    if (!data || length != sizeof(uint8_t)) {
+                        return false;
+                    }
+                    return *static_cast<const uint8_t *>(data) != 0;
+                }
+                inline static void setHassRotationLock(bool locked) {
+                    REGISTER_HANDLE_NAME("weatherstation.hassRotationLock", __DBG__TYPE_SET);
+                    const uint8_t value = locked ? 1 : 0;
+                    KFCConfigurationClasses::storeBinaryConfig(kHassRotationLockConfigHandle, &value, sizeof(value));
+                }
+
                 #if WEATHER_STATION_MAX_CLOCKS
                     CREATE_STRING_GETTER_SETTER_MIN_MAX(MainConfig().plugins.weatherstation, TZ0, 0, 64);
                 #endif

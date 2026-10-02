@@ -114,7 +114,16 @@ public:
             cfg.i2c_addr = IOT_WT32_SC01_TOUCH_I2C_ADDRESS;
             cfg.pin_sda = IOT_WT32_SC01_PIN_TOUCH_SDA;
             cfg.pin_scl = IOT_WT32_SC01_PIN_TOUCH_SCL;
-            cfg.pin_int = IOT_WT32_SC01_PIN_TOUCH_INT;
+            // GPIO34..39 are input only and have NO internal pull-up/pull-down on the ESP32, and
+            // the WT32-SC01 does not populate a pull-up on the FT6336U INT line either (only the
+            // 0R R18 to SENSOR_VN/IO39). Touch_FT5x06 uses the pin as a release gate:
+            //   if (_flg_released != gpio_in(pin_int)) { ... }
+            //   if (_flg_released) return 0;
+            // With a floating pin that gate latches "released" and getTouch() never reports a
+            // touch, i.e. the touch screen appears dead although the controller answers on I2C.
+            // pin_int < 0 makes the driver poll the controller over I2C instead (one short read
+            // per LVGL input period, 30 ms) which is reliable on this board.
+            cfg.pin_int = -1; // -D IOT_WT32_SC01_PIN_TOUCH_INT is documented but not usable, see above
             cfg.pin_rst = -1;
             cfg.freq = 400000;
             cfg.bus_shared = false;

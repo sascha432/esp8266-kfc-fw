@@ -29,6 +29,9 @@
             %FORM_HTML%
             <div class="form-help-block">
                 <div data-target="#bl">Backlight brightness of the LVGL display in percent, 0 turns it off</div>
+                <div data-target="#pbl">Brightness the display is dimmed to while the power saving mode is active (1-100%, the display is only turned off by the standby timeout)</div>
+                <div data-target="#pto">Seconds without user activity before the display is dimmed to the idle brightness (10-86400, in steps of 10)</div>
+                <div data-target="#sbt">Seconds without user activity before the display is turned off (60-86400, in steps of 10). Touching the display or any other wakeup source turns it back on</div>
             </div>
         </form>
         <!--%%FOOT-->

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <div class="container">
+        <form method="POST" action="%SELF_URI%">
+            %FORM_HTML%
+            <div class="form-help-block">
+                <div data-target="#apk">API key of an OpenWeatherMap account. The screens use the One Call API 3.0, a free key is not enough - the "One Call by Call" subscription of the same account is required</div>
+                <div data-target="#apq">The city is displayed on the main screen, make sure that the latitude and longitude match</div>
+                <div data-target="#api">The screens are updated with every request. The free plan allows 1000 requests per day, 15 minutes need 96</div>
+            </div>
+        </form>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    %FORM_VALIDATOR%
+
+    <script type="text/javascript">
+        // resolve the city name into coordinates with the OpenWeatherMap geocoding API
+        $(function() {
+            var label = $('label[for=apq]');
+            label.html(label.html().replace(/:$/, '') + ' (<a href="#" id="update_coords">Update latitude/longitude</a>):');
+            $('#update_coords').on('click', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'https://api.openweathermap.org/geo/1.0/direct',
+                    data: {
+                        'q': $('#apq').val(),
+                        'limit': 1,
+                        'appid': $('#apk').val()
+                    },
+                    success: function(data) {
+                        if (data.length == 1) {
+                            data = data[0];
+                            $('#aqla').val(data['lat']);
+                            $('#aqlo').val(data['lon']);
+                        }
+                    },
+                    dataType: 'json'
+                });
+            });
+        });
+    </script>
+
+</body>
+
+</html>

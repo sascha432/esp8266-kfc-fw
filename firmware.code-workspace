@@ -193,6 +193,46 @@
             "**/elf": true,
             "**/frameworks": true
         },
+        // PlatformIO writes ~20k files into .pio (libdeps + build). Do not feed them
+        // to the file watcher: extensions get no events for excluded paths, and the
+        // build output changes on every compile/upload.
+        // WITHOUT this, the STM32Cube Build Analyzer (`**/*.elf` watcher) re-parses
+        // .pio/build/<env>/firmware.elf with st-arm-readobj --elf-output-style=JSON
+        // after every build and blocks the extension host for ~40s (whole IDE freezes).
+        "files.watcherExclude": {
+            "**/.git/objects/**": true,
+            "**/.git/subtree-cache/**": true,
+            "**/.pio/**": true,
+            "**/node_modules/**": true,
+            "**/logs/**": true,
+            "**/elf/**": true,
+            "**/frameworks/**": true,
+            "**/include/boost_1_80_0/**": true,
+            "**/data/webui/**": true,
+            "**/data/.pvt/**": true,
+            "**/scripts/audio_analyzer/.venv/**": true,
+            "**/*.lst": true
+        },
+        "search.exclude": {
+            "**/.git/**": true,
+            "**/.pio/build/**": true,
+            "**/node_modules/**": true,
+            "**/logs/**": true,
+            "**/elf/**": true,
+            "**/include/boost_1_80_0/**": true,
+            "**/data/webui/**": true
+        },
+        // keep .pio/libdeps in IntelliSense (LVGL/LovyanGFX/FastLED headers live there),
+        // only drop the generated build tree
+        "C_Cpp.files.exclude": {
+            "**/.vscode": true,
+            "**/.vs": true,
+            "**/.pio/build/**": true,
+            "**/node_modules/**": true,
+            "**/logs/**": true,
+            "**/elf/**": true,
+            "**/data/webui/**": true
+        },
         "files.associations": {
             "*.yaml": "home-assistant",
             "typeinfo": "cpp",
@@ -341,6 +381,7 @@
             "CURRENTMW",
             "DCOS",
             "DEBOUNCER",
+            "DEDUPLICATOR",
             "DEFVAL",
             "DHCPD",
             "dhcpde",
@@ -391,10 +432,12 @@
             "LDBG",
             "LEDMATRIX",
             "LEDS",
+            "LGFX",
             "LIPO",
             "LISTBOX",
             "LITTLEFS",
             "lvgl",
+            "LVGLUI",
             "MDNS",
             "MEMNCPY",
             "MILLIS",

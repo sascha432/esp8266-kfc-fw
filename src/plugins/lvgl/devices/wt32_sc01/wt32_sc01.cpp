@@ -7,14 +7,23 @@
 #include <esp32-hal-psram.h>
 #include <esp_heap_caps.h>
 
+#ifndef LVGL_BUFFER_LINES
+#define LVGL_BUFFER_LINES 0 // 0 = use defaults
+#endif
+
 namespace WT32_SC01 {
 
-// Preferred draw buffers: two in PSRAM (double buffering, 40 lines each). If PSRAM is
-// not available or exhausted, a single smaller buffer in internal RAM is used.
+// Preferred draw buffers: two in PSRAM (double buffering, LVGL_BUFFER_LINES lines each). If PSRAM
+// is not available or exhausted, a single smaller buffer in internal RAM is used.
 // SPI DMA on the ESP32 cannot read from PSRAM, so _flushCb() uses the blocking
 // pushImage(); pushImageDMA() would need an internal RAM buffer.
-static constexpr uint32_t kBufferLinesPsram = 40;
-static constexpr uint32_t kBufferLinesInternal = 16;
+static constexpr uint32_t kBufferLinesPsram = LVGL_BUFFER_LINES ? LVGL_BUFFER_LINES : 40;
+static constexpr uint32_t kBufferLinesInternal = LVGL_BUFFER_LINES ? LVGL_BUFFER_LINES : 16;
+
+// LovyanGFX rotation of every Rotation value. The panel is portrait natively, so the hardware
+// rotation 1 is the landscape orientation the display is used in by default
+static constexpr uint8_t kRotationToHardware[] = { 1, 0, 3, 2 };
+static constexpr bool kRotationIsPortrait[] = { false, true, false, true };
 
 static LGFX_WT32_SC01 _lcd;
 static lv_disp_draw_buf_t _drawBuf;
@@ -29,9 +38,13 @@ static const __FlashStringHelper *_error = nullptr;
 static uint8_t _backlight = 255;    // requested level, applied after the panel init
 static bool _panelReady = false;
 static bool _firstFlush = true;
+static bool _touchReady = false;
 static bool _touchPressed = false;
+static uint32_t _touchCount = 0;
 static int32_t _touchX = -1;
 static int32_t _touchY = -1;
+static bool _inputEnabled = true;
+static Rotation _rotation = Rotation::LANDSCAPE;
 
 // allocates from PSRAM or internal RAM, returns nullptr if not available
 static void *_allocBuffer(size_t size, bool psram)
@@ -75,6 +88,91 @@ uint8_t getBacklight()
     return _backlight;
 }
 
+bool touchReady()
+{
+    return _touchReady;
+}
+
+bool isTouched()
+{
+    return _touchPressed;
+}
+
+uint32_t getTouchCount()
+{
+    return _touchCount;
+}
+
+bool getLastTouch(int32_t &x, int32_t &y)
+{
+    if (_touchX < 0 || _touchY < 0) {
+        return false;
+    }
+    x = _touchX;
+    y = _touchY;
+    return true;
+}
+
+void setInputEnabled(bool enabled)
+{
+    if (_inputEnabled != enabled) {
+        _inputEnabled = enabled;
+        __LDBG_printf("input %s", enabled ? "enabled" : "disabled");
+    }
+}
+
+bool getInputEnabled()
+{
+    return _inputEnabled;
+}
+
+// Panel resolution of an orientation (the display is 480x320 in landscape)
+static inline lv_coord_t _widthOf(Rotation rotation)
+{
+    return kRotationIsPortrait[static_cast<uint8_t>(rotation)] ? IOT_WT32_SC01_TFT_HEIGHT : IOT_WT32_SC01_TFT_WIDTH;
+}
+
+static inline lv_coord_t _heightOf(Rotation rotation)
+{
+    return kRotationIsPortrait[static_cast<uint8_t>(rotation)] ? IOT_WT32_SC01_TFT_WIDTH : IOT_WT32_SC01_TFT_HEIGHT;
+}
+
+Rotation getRotation()
+{
+    return _rotation;
+}
+
+bool isPortrait()
+{
+    return kRotationIsPortrait[static_cast<uint8_t>(_rotation)];
+}
+
+bool setRotation(Rotation rotation)
+{
+    if (!_panelReady) {
+        return false;
+    }
+    if (rotation == _rotation) {
+        return true;
+    }
+    _rotation = rotation;
+    // the touch transform follows the panel rotation (LovyanGFX convertRawXY())
+    _lcd.setRotation(kRotationToHardware[static_cast<uint8_t>(rotation)]);
+
+    if (_disp) {
+        // The draw buffers cover both orientations without a reallocation: the PSRAM buffers hold
+        // kBufferLinesPsram (= the panel height) lines of the 480 px wide screen, which is the
+        // same number of pixels as the 320 px wide screen needs for its full 480 lines. The
+        // resolution of the display is updated in place, LVGL resizes and invalidates the screens
+        _dispDrv.hor_res = _widthOf(rotation);
+        _dispDrv.ver_res = _heightOf(rotation);
+        lv_disp_drv_update(_disp, &_dispDrv);
+        _firstFlush = true;
+    }
+    __LDBG_printf("rotation %u (%ux%u)", (unsigned)kRotationToHardware[static_cast<uint8_t>(rotation)], (unsigned)_widthOf(rotation), (unsigned)_heightOf(rotation));
+    return true;
+}
+
 static void _flushCb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_p)
 {
     const uint32_t width = area->x2 - area->x1 + 1;
@@ -94,24 +192,30 @@ static void _readCb(lv_indev_drv_t *drv, lv_indev_data_t *data)
     int32_t x = 0;
     int32_t y = 0;
     if (panel->getTouch(&x, &y)) {
-        data->point.x = static_cast<lv_coord_t>(x);
-        data->point.y = static_cast<lv_coord_t>(y);
-        data->state = LV_INDEV_STATE_PRESSED;
-        if (!_touchPressed || x != _touchX || y != _touchY) {
-            __LDBG_printf("touch %d,%d%s", (int)x, (int)y, _touchPressed ? "" : " (pressed)");
+        // the state is tracked while the input is disabled as well, so that the touch that wakes
+        // the display up is noticed
+        if (!_touchPressed) {
             _touchPressed = true;
-            _touchX = x;
-            _touchY = y;
+            _touchCount++;
+            __LDBG_printf("touch pressed at %d,%d", static_cast<int>(x), static_cast<int>(y));
         }
+        _touchX = x;
+        _touchY = y;
+    }
+    else {
+        if (_touchPressed) {
+            __LDBG_printf("touch released at %d,%d", static_cast<int>(_touchX), static_cast<int>(_touchY));
+            _touchPressed = false;
+        }
+    }
+    // a touch that is not accepted is reported as released, LVGL and the widgets do not see it
+    if (_inputEnabled && _touchPressed) {
+        data->point.x = static_cast<lv_coord_t>(_touchX);
+        data->point.y = static_cast<lv_coord_t>(_touchY);
+        data->state = LV_INDEV_STATE_PRESSED;
     }
     else {
         data->state = LV_INDEV_STATE_RELEASED;
-        if (_touchPressed) {
-            __LDBG_printf("touch released");
-            _touchPressed = false;
-            _touchX = -1;
-            _touchY = -1;
-        }
     }
     data->continue_reading = false;
 }
@@ -134,12 +238,16 @@ bool begin()
         return false;
     }
     _panelReady = true;
-    _lcd.setRotation(1); // landscape 480x320
+    // landscape 480x320 (the panel is portrait natively)
+    _lcd.setRotation(kRotationToHardware[static_cast<uint8_t>(_rotation)]);
     // LGFXBase::init_impl() applies LGFXBase::_brightness (default 127), the requested level wins
     _lcd.setBrightness(_backlight);
 
-    if (!_lcd.getPanel()->initTouch()) {
+    if (!(_touchReady = _lcd.getPanel()->initTouch())) {
         __LDBG_printf("touch controller init failed (I2C address 0x%02x)", IOT_WT32_SC01_TOUCH_I2C_ADDRESS);
+    }
+    else {
+        __LDBG_printf("touch controller ready (FT6336U, I2C address 0x%02x, I2C polling)", IOT_WT32_SC01_TOUCH_I2C_ADDRESS);
     }
 
     // two buffers in PSRAM (double buffering), or a single smaller one in internal RAM

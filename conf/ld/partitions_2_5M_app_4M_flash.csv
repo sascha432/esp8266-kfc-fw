@@ -1,0 +1,23 @@
+# ESP-IDF Partition Table for the WT32-SC01 (4 MB flash, app + littlefs)
+#
+# The LVGL UI plus the OpenWeatherMap TLS client need more than 2 MB of app, the WebUI files on
+# littlefs need more than 640 KB. The small files of the WebUI are rounded up to the 4 KB blocks
+# of littlefs (~624 KB used by ~250 files), so 640 KB left ~16 KB free and the logger filled the
+# file system within seconds. Writing into a full littlefs panics the ESP32 (lfs_alloc divides by
+# zero, it should return LFS_ERR_NOSPC) -> reboot loop -> factory settings after a few resets.
+#
+# Layout: 2.5 MB app (image ~2.33 MB) + 1152 KB littlefs (~624 KB used by the WebUI, ~528 KB for
+# the log files and uploads).
+#
+# Requires a full re-flash (partition table + firmware) and `-t uploadfs`; nvs2 moves with the
+# table, so the firmware configuration is reset (the WiFi credentials live in the `nvs`
+# partition at the unchanged offset and survive)
+
+nvs, data, nvs, 0x9000, 20K,
+phy_init, data, phy, 0xe000, 4K,
+uf2, app, factory, 0x10000, 2560K,
+eeprom, data, fat, 0x290000, 4K,
+nvs2, data, nvs, 0x291000, 160K,
+coredump, data, coredump, 0x2b9000, 136K,
+savecrash, data, fat, 0x2db000, 16K,
+spiffs, data, spiffs, 0x2df000, 1152K,

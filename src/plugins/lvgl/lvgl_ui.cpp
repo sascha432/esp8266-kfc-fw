@@ -778,6 +778,10 @@ lv_obj_t *createList(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t w,
     return list;
 }
 
+// left and right margin between the label and the item of a list: a name that is shortened with
+// dots keeps that distance to the rounded corners of the card
+static constexpr lv_coord_t kListItemLabelMargin = 6;
+
 lv_obj_t *addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char *text)
 {
     auto item = createButton(list, x, y, w, h, text, kFontNormal);
@@ -786,6 +790,19 @@ lv_obj_t *addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, 
     lv_obj_set_style_radius(item, kCardRadius, LV_PART_MAIN);
     lv_obj_set_style_bg_color(item, lv_color_hex(kColorCard), LV_PART_MAIN);
     lv_obj_set_style_border_width(item, 0, LV_PART_MAIN);
+    // A name that is longer than the item is shortened with dots instead of being cut off. The
+    // label of createButton() is only as wide as its text, so LVGL clips it at the edge of the
+    // item. LV_LABEL_LONG_DOT needs a box of its own to measure against: the label spans the item
+    // with a small margin and is one line tall, so that a name that wraps into a second line is
+    // replaced with dots (a taller box than one line would simply draw the wrapped text)
+    auto label = lv_obj_get_child(item, 0);
+    if (label && lv_obj_check_type(label, &lv_label_class)) {
+        const auto font = lv_obj_get_style_text_font(label, LV_PART_MAIN);
+        lv_obj_set_size(label, static_cast<lv_coord_t>(w - 2 * kListItemLabelMargin),
+                        lv_font_get_line_height(font));
+        lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
+        lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    }
     return item;
 }
 

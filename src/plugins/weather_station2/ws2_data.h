@@ -526,6 +526,13 @@ public:
     void clearDebugHassSettings() {
         _debugHassSettings = 0xff;
     }
+    // control of the panel of an open tile ("hassview"), 0xff = nothing requested
+    uint8_t getDebugHassView() const {
+        return _debugHassView;
+    }
+    void clearDebugHassView() {
+        _debugHassView = 0xff;
+    }
     // The orientation of the dashboard needs a reboot when it is changed in the web form:
     // "hassrot:<0..3>" applies it without one (the value is not stored, see HassScreen)
     uint8_t getDebugHassRotation() const {
@@ -582,6 +589,8 @@ protected:
     uint8_t _debugHassFullscreen{0xff};
     // tile whose panel is opened ("hasspanel"), 0xff = none
     uint8_t _debugHassPanel{0xff};
+    // control of the panel of an open tile ("hassview"), 0xff = none
+    uint8_t _debugHassView{0xff};
     // range of the history graph of the sensor panel ("hassrange", 12, 24 or 48 hours), 0xff = none
     uint8_t _debugHassRange{0xff};
     uint8_t _debugHassSettings{0xff};

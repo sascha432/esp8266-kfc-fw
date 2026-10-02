@@ -784,6 +784,14 @@ bool DataSource::debugSetValue(const String &key, const String &value)
         _debugHassSettings = static_cast<uint8_t>(value.toInt());
         return false;
     }
+    if (key.equalsIgnoreCase(F("hassview"))) {
+        // control the panel of an open tile shows (0 = the level slider of a light, the arc of a
+        // climate, 1..3 = the color wheel, the colour temperature and the effect list / the three
+        // option lists of a climate), the same effect as a tap on the button of that control.
+        // False: the screen applies the value without rebuilding the widget tree
+        _debugHassView = static_cast<uint8_t>(value.toInt());
+        return false;
+    }
     if (key.equalsIgnoreCase(F("hassrot"))) {
         // orientation of the Home Assistant dashboard (0 = landscape, 1 = portrait, 2/3 = both
         // turned 180 degrees). False: the screen applies it without rebuilding the widget tree

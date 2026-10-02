@@ -176,7 +176,9 @@ void WeatherStation2Plugin::setup(SetupModeType mode, const PluginComponents::De
     LVGLDebug::setHelpCallback([]() -> const char * {
         return "temp, feels, min, max, hum, press, wind, rain, uv, city, descr, icon(sun|partly|cloudy|rain|snow|storm|fog), "
                "days(1-5), dayparts(1), itmp, ihum, ipress, igas, phase, illum(0-1), age, freeze(0|1), "
-               "pwrch(0-3), pwrv, pwra, pwrw, pwre, hasspage(page of /hass.yaml), hassfull(tile of a picture tile), hasspanel(tile of a light/dimmer/climate/sensor tile), hassrange(12, 24 or 48 hours of the history graph)";
+               "pwrch(0-3), pwrv, pwra, pwrw, pwre, hasspage(page of /hass.yaml), hassfull(tile of a picture tile), "
+               "hasspanel(tile of a light/dimmer/climate/sensor tile), hassview(0-3, control the open panel shows), "
+               "hassrange(12, 24 or 48 hours of the history graph), hassrot(0-3, orientation), hasssettings(0-4)";
     });
 #endif
     // refresh the values once per second, the data source rate limits the update itself

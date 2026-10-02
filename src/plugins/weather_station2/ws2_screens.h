@@ -698,6 +698,13 @@ private:
         lv_coord_t controlY{0};
         lv_coord_t controlW{0};
         lv_coord_t controlH{0};
+        // the list of the options (climate) and of the effects (light panel) replaces the control.
+        // In landscape it is the control area, in portrait it reaches down to the buttons: a list
+        // does not need the row the steppers of a climate sit in
+        lv_coord_t listX{0};
+        lv_coord_t listY{0};
+        lv_coord_t listW{0};
+        lv_coord_t listH{0};
         lv_coord_t valueY{0};
         lv_coord_t valueH{0};
         lv_coord_t stepsX{0};
@@ -1017,6 +1024,9 @@ private:
     // from inside an LVGL event callback)
     int16_t _pendingPanel{-1};
     bool _pendingPanelClose{false};
+    // control the open panel has to show (0 = the level slider of a light, the arc of a climate,
+    // 1..3 = the controls behind it), set by the debug key "hassview" and applied by update()
+    int8_t _pendingPanelView{-1};
     // Quick settings sheet: the widgets of the view that is built, the view, whether the sheet is
     // open, the swipe that asked for it, the view that has to be built again (the orientation
     // changed under it) and the action that is applied by update()

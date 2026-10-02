@@ -8,13 +8,13 @@ The firmware offers a plugin interface to easily extend its functionality. The p
 
 1M with most features activated, no OTA updates<br>2M with OTA
 
-Running on a modified framework-arduinoespressif8266 v3.1.2
+Running on framework-arduinoespressif8266 v3.1.2 (stock PlatformIO core)
 
 ### ESP32 / ESP32-S3
 
 4M and 8M with OTA
 
-Running on a modified framework-arduinoespressif32 v2.0.9
+Running on framework-arduinoespressif32 v2.0.17 (stock PlatformIO core)
 
 ## ChangeLog
 
@@ -45,16 +45,16 @@ Running on a modified framework-arduinoespressif32 v2.0.9
 ### ESP8266
 
 - GCC 10.x
-- Modified framework-arduinoespressif8266 v3.1.2-mod
+- framework-arduinoespressif8266 v3.1.2 (stock PlatformIO core)
 
 Since this device has not enough memory and CPU power, a SSL webserver is not possible for most environments. To secure a connection, use haproxy with a certificate from https://letsencrypt.org/. Something like *.mydomain.com and redirect all traffic to the devices. Like https://bathroom.mydomain.com to 192.168.0.88, Like https://kitchen.mydomain.com to 192.168.0.77, etc...
 
-The modified version of the core is available on github and used by default
+The stock PlatformIO Arduino core is used (`platform = espressif8266` / `espressif32`); a modified fork of the core is no longer required
 
 | System Info | |
 |---|---|
 | Hardware | ESP8266 4.00MB Flash 80MHz@DIO, 160MHz, Free RAM 19.41KB |
-| Framework | Arduino ESP8266 3.1.2-g1c34ef21-dev |
+| Framework | Arduino ESP8266 3.1.2 |
 | SDK | 2.2.2-dev(38a443e) |
 | Core | 3.0.2-17-g5266f22b=30002017 |
 | lwIP | lwIP:STABLE-2_1_3_RELEASE |
@@ -62,12 +62,12 @@ The modified version of the core is available on github and used by default
 ### ESP32
 
 - GCC 8.4.x with gnu++17
-- Modified framework-arduinoespressif32 v2.0.9-mod
+- framework-arduinoespressif32 v2.0.17 (stock PlatformIO core)
 
 | System Info | |
 |---|---|
 | Hardware | ESP32 4.00MB Flash 80MHz@QIO, 2x240MHz, Free RAM 136.53KB, Temperature 35.6°C |
-| Framework | Arduino ESP32 2.0.9 |
+| Framework | Arduino ESP32 2.0.17 |
 | SDK | ESP-IDF Version v4.4.4  |
 
 ## Libraries

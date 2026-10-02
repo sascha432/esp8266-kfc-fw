@@ -1516,18 +1516,30 @@ HassScreen::PanelLayout HassScreen::_panelLayout() const
             layout.controlW = layout.optionsW;
             layout.controlY = static_cast<lv_coord_t>(headerBottom + kPanelPortraitGap);
             layout.controlH = static_cast<lv_coord_t>(layout.stepsY - kPanelPortraitGap - layout.controlY);
+            // The arc and the steppers are hidden while a list is shown: the list takes the whole
+            // band down to the buttons (the stepper row would be an empty strip above them)
+            layout.listX = layout.controlX;
+            layout.listW = layout.controlW;
+            layout.listY = layout.controlY;
+            layout.listH = static_cast<lv_coord_t>(layout.optionsY - kPanelPortraitGap - layout.listY);
             return layout;
         }
 
         // the light: the readout is a row of its own under the header (as tall as its text, so the
         // gap above and below it is the plain block gap) and the slider fills the band between it
-        // and the options (the steppers of the level are centered on the slider)
+        // and the options (the steppers of the level are centered on the slider). The list of the
+        // effects starts at the readout row: the readout is hidden while the list is shown, so the
+        // list uses that row and there is no empty row between the name and the effects
         layout.valueY = static_cast<lv_coord_t>(headerBottom + kPanelPortraitGap);
         layout.valueH = static_cast<lv_coord_t>(lv_font_get_line_height(_panelValueFont()));
         layout.controlX = kTileMargin;
         layout.controlW = layout.optionsW;
         layout.controlY = static_cast<lv_coord_t>(layout.valueY + layout.valueH + kPanelPortraitGap);
         layout.controlH = static_cast<lv_coord_t>(layout.optionsY - kPanelPortraitGap - layout.controlY);
+        layout.listX = layout.controlX;
+        layout.listW = layout.controlW;
+        layout.listY = layout.valueY;
+        layout.listH = static_cast<lv_coord_t>(layout.optionsY - kPanelPortraitGap - layout.listY);
         return layout;
     }
 
@@ -1546,6 +1558,11 @@ HassScreen::PanelLayout HassScreen::_panelLayout() const
     layout.controlY = static_cast<lv_coord_t>(y + kPanelHeaderHeight);
     layout.controlW = layout.headerW;
     layout.controlH = static_cast<lv_coord_t>(oh + h + kTileGap - kPanelHeaderHeight);
+    // the list replaces the control, it uses the same area of the right column
+    layout.listX = layout.controlX;
+    layout.listY = layout.controlY;
+    layout.listW = layout.controlW;
+    layout.listH = layout.controlH;
     return layout;
 }
 
@@ -1978,18 +1995,23 @@ void HassScreen::_buildPanel()
         refs.tempSlider = createPanelSlider(_grid, _portrait ? sliderX : tempSliderX, sliderY, sliderW, sliderH, 2000, 6500,
                                             _tempSliderCallback, this, kPanelSliderRadius, kPanelSliderFillRadius);
 
-        // the readout of the level (the colour temperature in the other view): on the track of the
-        // slider in landscape, in the row above it in portrait, where the whole width belongs to
-        // the value
+        // The readout of the level and the one of the colour temperature are two labels at the
+        // same place, only the one of the control that is selected is visible (see _updatePanel()):
+        // in portrait the row above the slider, where the whole width belongs to the value, in
+        // landscape on the track of the slider of that control - the colour temperature has none
+        // of the steppers, so its slider is centered in the control area and the readout has to
+        // follow it (it was centered on the level slider and reached out of the track)
         const auto valueFont = _panelValueFont();
         const auto valueHeight = static_cast<lv_coord_t>(lv_font_get_line_height(valueFont));
         const lv_coord_t valueY = _portrait
                                       ? static_cast<lv_coord_t>(layout.valueY + (layout.valueH - valueHeight) / 2)
                                       : static_cast<lv_coord_t>(sliderY + sliderH / 2 - valueHeight / 2);
-        const auto valueWidth = _portrait ? layout.controlW : sliderW;
-        const auto valueX = _portrait ? layout.controlX : sliderX;
-        refsTile.value = LVGLUI::addLabel(_grid, valueX, valueY, "", valueFont, LVGLUI::kColorText, valueWidth, LV_TEXT_ALIGN_CENTER);
-        refs.label = LVGLUI::addLabel(_grid, valueX, valueY, "", valueFont, LVGLUI::kColorText, valueWidth, LV_TEXT_ALIGN_CENTER);
+        const auto levelValueWidth = _portrait ? layout.controlW : sliderW;
+        const auto levelValueX = _portrait ? layout.controlX : sliderX;
+        const auto tempValueWidth = _portrait ? layout.controlW : levelSliderWidth;
+        const auto tempValueX = _portrait ? layout.controlX : tempSliderX;
+        refsTile.value = LVGLUI::addLabel(_grid, levelValueX, valueY, "", valueFont, LVGLUI::kColorText, levelValueWidth, LV_TEXT_ALIGN_CENTER);
+        refs.label = LVGLUI::addLabel(_grid, tempValueX, valueY, "", valueFont, LVGLUI::kColorText, tempValueWidth, LV_TEXT_ALIGN_CENTER);
 
         // the color wheel
         refs.wheel = lv_colorwheel_create(_grid, true);
@@ -2051,7 +2073,7 @@ void HassScreen::_buildPanel()
     // The list of the options (climate) and of the effects (light panel) replaces the control. Its
     // items are buttons on the background of the panel, no card around them (they look like the
     // tiles of the grid, see _buildPanelList()). The right padding keeps the scrollbar off them.
-    refs.list = LVGLUI::createList(_grid, layout.controlX, layout.controlY, layout.controlW, layout.controlH);
+    refs.list = LVGLUI::createList(_grid, layout.listX, layout.listY, layout.listW, layout.listH);
     lv_obj_set_style_bg_opa(refs.list, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_border_width(refs.list, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(refs.list, 0, LV_PART_MAIN);
@@ -2627,6 +2649,8 @@ void HassScreen::_buildPanelList()
 
     uint8_t i = 0;
     int32_t start = 0;
+    lv_obj_t *marked = nullptr;
+    lv_coord_t markedY = 0;
     const auto &text = *items;
     while (start <= static_cast<int32_t>(text.length())) {
         auto end = text.indexOf(',', start);
@@ -2639,11 +2663,25 @@ void HassScreen::_buildPanelList()
             const auto col = static_cast<lv_coord_t>(offsetX + (i % columns) * (itemWidth + kListItemGap));
             const auto row = static_cast<lv_coord_t>(offsetY + (i / columns) * (kListItemHeight + kListItemGap));
             auto obj = LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item.c_str());
-            LVGLUI::setListItemActive(obj, current && detail.valid && !strcasecmp(current, item.c_str()));
+            const auto active = current && detail.valid && !strcasecmp(current, item.c_str());
+            LVGLUI::setListItemActive(obj, active);
+            if (active) {
+                marked = obj;
+                markedY = row;
+            }
             lv_obj_add_event_cb(obj, _panelCallback, LV_EVENT_CLICKED, this);
             i++;
         }
         start = end + 1;
+    }
+    // The list is built again when an item was tapped (the marked one changed) or when the items
+    // arrived: the scroll position jumps back to the top then and the marker can end up below the
+    // rows that fit - the effects of a dimmer panel are more than one screen. The marked item is
+    // scrolled into the middle of the visible rows (LVGL clamps the position to the content, so
+    // the first and the last rows stay reachable)
+    if (marked) {
+        lv_obj_update_layout(refs.list);
+        lv_obj_scroll_to(refs.list, 0, static_cast<lv_coord_t>(markedY - (listHeight - kListItemHeight) / 2), LV_ANIM_OFF);
     }
     _listView = static_cast<int8_t>(_panelView);
     _listContent = content;
@@ -2840,6 +2878,11 @@ void HassScreen::_updatePanel()
     showWidget(refsTile.action, showArc);
     showWidget(refs.label, showArc || showTemp);
     showWidget(refs.headerValue, showArc);
+    // The readout belongs to the control that is selected: the level in percent for the slider of
+    // the level, the colour temperature in kelvin for the one of the temperature - and to neither
+    // of them for the colour wheel or the list of the effects (the readout of the level would sit
+    // in the row the list of the effects starts in, which is the gap between the name and the
+    // effects). The readout of a climate (the setpoint) sits inside the arc
     showWidget(refsTile.value, showArc || showSlider);
     showWidget(refsTile.stepUp, showArc || showSlider);
     showWidget(refsTile.stepDown, showArc || showSlider);
@@ -3106,6 +3149,16 @@ void HassScreen::update()
             _pendingPanel = static_cast<int16_t>(debugPanel);
         }
     }
+    // the control a panel shows is selected with the buttons of the panel, "hassview:<n>" does the
+    // same (0 = the level slider of a light, the arc of a climate, 1..3 = the color wheel, the
+    // colour temperature and the effect list / the option lists of a climate). Applied after the
+    // panel handling below, so a panel that is opened in the same tick already shows it
+    const auto debugView = _data.getDebugHassView();
+    if (debugView != 0xff) {
+        _data.clearDebugHassView();
+        __LDBG_printf("hass> debug view %u requested", static_cast<unsigned>(debugView));
+        _pendingPanelView = static_cast<int8_t>(debugView);
+    }
     // The range of the history graph of the sensor panel is selected with the buttons of the panel,
     // "hassrange:<hours>" does the same (the buttons cannot be reached over the network)
     const auto debugRange = _data.getDebugHassRange();
@@ -3270,6 +3323,22 @@ void HassScreen::update()
             _statsHours = statsRangeHours(range);
             _dashboard.requestStats(static_cast<uint8_t>(_panelTile), _statsHours);
             _rebuild();
+        }
+    }
+
+    // The control a panel shows is selected with the buttons of the panel, "hassview" records the
+    // same request. Applied after the panel was opened above, so a request that opens a panel and
+    // selects a control in one tick ends on that control
+    if (_pendingPanelView >= 0) {
+        const auto requested = static_cast<uint8_t>(_pendingPanelView);
+        _pendingPanelView = -1;
+        if (_panel == Panel::CLIMATE || _panel == Panel::DIMMER) {
+            const auto base = (_panel == Panel::CLIMATE) ? PanelView::ARC : PanelView::LEVEL;
+            if (requested < 4) {
+                _panelView = static_cast<PanelView>(static_cast<uint8_t>(base) + requested);
+                _listView = -1;
+                __LDBG_printf("hass> panel of tile %i shows control %u", static_cast<int>(_panelTile), static_cast<unsigned>(requested));
+            }
         }
     }
 

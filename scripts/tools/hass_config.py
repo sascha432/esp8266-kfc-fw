@@ -246,6 +246,9 @@ class Tile:
         self.page = 0
         self.col = None
         self.row = None
+        # placement in the transposed grid a portrait display shows (see Config.place())
+        self.pcol = None
+        self.prow = None
 
     def __str__(self):
         return '%s %ux%u %s "%s"' % (self.type, self.width, self.height, self.entity, self.name)
@@ -327,54 +330,78 @@ class Config:
                     return (tile.grid.get('cols', self.cols), tile.grid.get('rows', self.rows))
         return (self.cols, self.rows)
 
-    # first fit placement of hass_config.cpp, one grid per page. The first cell of an area page is
-    # used by the back tile that closes it again
+    # first fit placement of hass_config.cpp, one grid per page and one grid per orientation. The
+    # file is written for the landscape layout, a portrait display shows the grid transposed (4x3
+    # becomes 3x4, a cell keeps its shape). The tiles keep the ORDER OF THE FILE in both grids (left
+    # to right, top to down), so a page reads the same way whichever orientation is active; only a
+    # `position:` (which names the cell of the grid that is shown) is taken from the file as it is
     def place(self):
-        def is_free(col, row, width, height):
-            if col + width > cols or row + height > rows:
-                return False
-            for r in range(row, row + height):
-                for c in range(col, col + width):
-                    if used[r][c]:
-                        return False
-            return True
-
-        def mark(col, row, width, height):
-            for r in range(row, row + height):
-                for c in range(col, col + width):
-                    used[r][c] = True
-
-        for page, tiles in enumerate(self.pages):
-            cols, rows = self.get_grid(page)
+        def place_page(tiles, page, cols, rows, portrait):
             used = [[False] * cols for _ in range(rows)]
+
+            def is_free(col, row, width, height):
+                if col + width > cols or row + height > rows:
+                    return False
+                for r in range(row, row + height):
+                    for c in range(col, col + width):
+                        if used[r][c]:
+                            return False
+                return True
+
+            def mark(col, row, width, height):
+                for r in range(row, row + height):
+                    for c in range(col, col + width):
+                        used[r][c] = True
+
+            # the first cell of an area page is used by the back tile that closes it again
             if page:
                 used[0][0] = True
             for tile in tiles:
                 suffix = '' if page == 0 else " of the area '%s'" % self.get_page_name(page)
-                if tile.width > cols or tile.height > rows:
+                # the span is swapped with the cells of the transposed grid: a tile that is two
+                # cells tall in landscape is two cells wide in portrait
+                width, height = (tile.height, tile.width) if portrait else (tile.width, tile.height)
+                if not portrait and (tile.width > cols or tile.height > rows):
                     raise ConfigError('tile %s: a %s tile needs a %ux%u block, the grid is %ux%u'
                                       % (tile.label, tile.type, tile.width, tile.height, cols, rows))
                 if tile.position is not None:
-                    if page and tile.position == (0, 0):
+                    if not portrait and page and tile.position == (0, 0):
                         raise ConfigError('tile %s: the first cell of an area page is used by the back tile' % tile.label)
-                    if not is_free(tile.position[0], tile.position[1], tile.width, tile.height):
+                    if is_free(tile.position[0], tile.position[1], width, height):
+                        col, row = tile.position
+                    elif not portrait:
                         raise ConfigError('tile %s: position is outside the grid or overlaps another tile' % tile.label)
-                    tile.col, tile.row = tile.position
-                    mark(tile.col, tile.row, tile.width, tile.height)
-                    continue
-                placed = False
-                for row in range(0, rows - tile.height + 1):
-                    for col in range(0, cols - tile.width + 1):
-                        if is_free(col, row, tile.width, tile.height):
-                            tile.col, tile.row = col, row
-                            mark(col, row, tile.width, tile.height)
-                            placed = True
+                    else:
+                        # the transposed grid can be narrower than the document grid: the tile falls
+                        # back to the order of the file (the file is written for landscape)
+                        col = row = None
+                else:
+                    col = row = None
+                if col is None:
+                    for r in range(0, rows - height + 1):
+                        for c in range(0, cols - width + 1):
+                            if is_free(c, r, width, height):
+                                col, row = c, r
+                                break
+                        if col is not None:
                             break
-                    if placed:
-                        break
-                if not placed:
-                    raise ConfigError('tile %s: the %s tile does not fit into the %ux%u grid%s'
-                                      % (tile.label, tile.type, cols, rows, suffix))
+                    if col is None:
+                        if not portrait:
+                            raise ConfigError('tile %s: the %s tile does not fit into the %ux%u grid%s'
+                                              % (tile.label, tile.type, cols, rows, suffix))
+                        # a grid of one row is a portrait grid of one column: the tile keeps the
+                        # first cell instead of disappearing
+                        col, row = 0, 0
+                mark(col, row, width, height)
+                if portrait:
+                    tile.pcol, tile.prow = col, row
+                else:
+                    tile.col, tile.row = col, row
+
+        for page, tiles in enumerate(self.pages):
+            cols, rows = self.get_grid(page)
+            place_page(tiles, page, cols, rows, False)
+            place_page(tiles, page, rows, cols, True)
 
         # non fatal notes
         entities = {}
@@ -401,21 +428,31 @@ class Config:
         if self.url.startswith('http://'):
             self.warnings.append('hass.url uses http, the token is sent unencrypted (fine on a local network)')
 
-    def map(self):
+    def map(self, portrait=False):
         symbol = '123456789abcdefghijklmnopqrstuvwxyz'
         lines = []
         for page, tiles in enumerate(self.pages):
             cols, rows = self.get_grid(page)
+            if portrait:
+                cols, rows = rows, cols
             cells = [[' '] * cols for _ in range(rows)]
             if page:
                 cells[0][0] = '<'
             for tile in tiles:
                 mark = symbol[self.tiles.index(tile) % len(symbol)]
-                for r in range(tile.row, tile.row + tile.height):
-                    for c in range(tile.col, tile.col + tile.width):
+                if portrait:
+                    col, row, width, height = tile.pcol, tile.prow, tile.height, tile.width
+                else:
+                    col, row, width, height = tile.col, tile.row, tile.width, tile.height
+                for r in range(row, row + height):
+                    for c in range(col, col + width):
                         cells[r][c] = mark
-            lines.append('  page %u (%s)%s:' % (page, 'main' if page == 0 else self.get_page_name(page),
-                                                '' if (cols, rows) == (self.cols, self.rows) else ' %ux%u' % (cols, rows)))
+            if portrait and (cols, rows) == (self.get_grid(page)):
+                # a square grid (and a 1x1 one) has no transposed map of its own
+                continue
+            lines.append('  page %u (%s)%s %s:' % (page, 'main' if page == 0 else self.get_page_name(page),
+                                                   '' if (cols, rows) == (self.cols, self.rows) else ' %ux%u' % (cols, rows),
+                                                   'portrait' if portrait else 'landscape'))
             lines.extend('  ' + ''.join('[%s]' % cell for cell in row) for row in cells)
         return '\n'.join(lines)
 
@@ -591,10 +628,12 @@ def main():
         # the number in front is the index of the tile in the firmware, 0 based in the order the
         # tiles are placed (the debug keys of the screenshot feature use it, "set=hasspage:<page>"
         # and "set=hassfull:<index>")
-        verbose('  %3u  %6s  page %u%s  (%u,%u)  %s' % (config.tiles.index(tile), tile.label, tile.page,
-                                                         '' if tile.page == 0 else ' (back to %u)' % parent,
-                                                         tile.col + 1, tile.row + 1, tile))
+        verbose('  %3u  %6s  page %u%s  (%u,%u) landscape, (%u,%u) portrait  %s' % (config.tiles.index(tile), tile.label, tile.page,
+                                                                                     '' if tile.page == 0 else ' (back to %u)' % parent,
+                                                                                     tile.col + 1, tile.row + 1, tile.pcol + 1, tile.prow + 1, tile))
     for line in config.map().splitlines():
+        verbose(line)
+    for line in config.map(portrait=True).splitlines():
         verbose(line)
     for warning in config.warnings:
         verbose('warning: %s' % warning)

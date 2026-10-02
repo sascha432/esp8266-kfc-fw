@@ -1056,74 +1056,122 @@ void Config::_markCell(uint8_t col, uint8_t row, uint8_t width, uint8_t height)
     }
 }
 
-bool Config::_placeTiles()
+void Config::_setPosition(Tile &tile, bool portrait, uint8_t col, uint8_t row)
 {
-    // one pass per page, every page has its own grid (the document grid, or the grid of the area
-    // that owns the page). The main page is 0, an area adds one page. The first cell of an area
-    // page is used by the back tile that closes the page
-    for (uint8_t page = 0; page < _pageCount; page++) {
-        const uint8_t cols = getCols(page);
-        const uint8_t rows = getRows(page);
-        memset(_used, 0, sizeof(_used));
-        if (page) {
-            _markCell(0, 0, 1, 1);
+    if (portrait) {
+        tile.portraitCol = col;
+        tile.portraitRow = row;
+        return;
+    }
+    tile.col = col;
+    tile.row = row;
+}
+
+bool Config::_placePage(uint8_t page, bool portrait)
+{
+    // The grid of the page: the document grid, or the grid of the area that owns the page. A
+    // portrait display shows it transposed (4x3 becomes 3x4), so the cells keep their shape
+    const auto gridCols = getCols(page);
+    const auto gridRows = getRows(page);
+    const uint8_t cols = static_cast<uint8_t>(portrait ? gridRows : gridCols);
+    const uint8_t rows = static_cast<uint8_t>(portrait ? gridCols : gridRows);
+    memset(_used, 0, sizeof(_used));
+    if (page) {
+        // the first cell of an area page is the back tile that closes it
+        _markCell(0, 0, 1, 1);
+    }
+    for (uint8_t i = 0; i < _tileCount; i++) {
+        auto &tile = _tiles[i];
+        if (tile.page != page) {
+            continue;
         }
-        for (uint8_t i = 0; i < _tileCount; i++) {
-            auto &tile = _tiles[i];
-            if (tile.page != page) {
+        // the span is swapped with the cells of the transposed grid: a tile that is two cells tall
+        // in landscape is two cells wide in portrait
+        const uint8_t width = static_cast<uint8_t>(portrait ? tile.height : tile.width);
+        const uint8_t height = static_cast<uint8_t>(portrait ? tile.width : tile.height);
+        if (!portrait && (tile.width > cols || tile.height > rows)) {
+            return _fail(tile.line, PrintString(F("a %s tile needs a %ux%u block, the grid is %ux%u"), getTileTypeName(tile.type),
+                                                static_cast<unsigned>(tile.width), static_cast<unsigned>(tile.height),
+                                                static_cast<unsigned>(cols), static_cast<unsigned>(rows)).c_str());
+        }
+        if (tile.hasPosition) {
+            if (!portrait && page && tile.col == 0 && tile.row == 0) {
+                return _fail(tile.line, "the first cell of an area page is used by the back tile");
+            }
+            // A position names a cell of the grid that is shown, so a tile that declares one keeps
+            // its column and its row in both orientations. The transposed grid can be narrower than
+            // the document grid: a position that does not exist in it (or a block that is occupied
+            // there) falls back to the order of the file - the file is written for landscape and
+            // must not fail because of the other orientation
+            if (_isCellFree(tile.col, tile.row, width, height, cols, rows)) {
+                _setPosition(tile, portrait, tile.col, tile.row);
+                _markCell(tile.col, tile.row, width, height);
                 continue;
             }
-            // the size of the file wins over the default of the type (`size: 1x1`), the other
-            // types are always one cell wide and cannot declare a size
-            if (tile.hasSize) {
-                if (!tileTypeHasSize(tile.type)) {
-                    return _fail(tile.line, PrintString(F("only a dimmer, a climate and a picture tile can have a size of their own, a %s tile is %ux%u"),
-                                                        getTileTypeName(tile.type), static_cast<unsigned>(getTileWidth(tile.type)),
-                                                        static_cast<unsigned>(getTileHeight(tile.type))).c_str());
-                }
-                if (tile.width > 1 && tile.type != TileType::PICTURE) {
-                    return _fail(tile.line, "every tile is one column wide, size must start with 1x");
-                }
-                if (tile.type == TileType::PICTURE && (tile.width > kMaxPictureWidth || tile.height > kMaxPictureHeight)) {
-                    return _fail(tile.line, PrintString(F("a picture tile is at most %ux%u cells, for example 2x2, 2x1 or 1x1"),
-                                                        static_cast<unsigned>(kMaxPictureWidth), static_cast<unsigned>(kMaxPictureHeight)).c_str());
+            if (!portrait) {
+                return _fail(tile.line, "position is outside the grid or overlaps another tile");
+            }
+        }
+        bool placed = false;
+        for (uint8_t row = 0; row + height <= rows && !placed; row++) {
+            for (uint8_t col = 0; col + width <= cols && !placed; col++) {
+                if (_isCellFree(col, row, width, height, cols, rows)) {
+                    _setPosition(tile, portrait, col, row);
+                    _markCell(col, row, width, height);
+                    placed = true;
                 }
             }
-            else {
-                tile.width = getTileWidth(tile.type);
-                tile.height = getTileHeight(tile.type);
-            }
-            if (tile.width > cols || tile.height > rows) {
-                return _fail(tile.line, PrintString(F("a %s tile needs a %ux%u block, the grid is %ux%u"), getTileTypeName(tile.type),
-                                                    static_cast<unsigned>(tile.width), static_cast<unsigned>(tile.height),
-                                                    static_cast<unsigned>(cols), static_cast<unsigned>(rows)).c_str());
-            }
-            if (tile.hasPosition) {
-                if (page && tile.col == 0 && tile.row == 0) {
-                    return _fail(tile.line, "the first cell of an area page is used by the back tile");
-                }
-                if (!_isCellFree(tile.col, tile.row, tile.width, tile.height, cols, rows)) {
-                    return _fail(tile.line, "position is outside the grid or overlaps another tile");
-                }
-                _markCell(tile.col, tile.row, tile.width, tile.height);
-                continue;
-            }
-            bool placed = false;
-            for (uint8_t row = 0; row + tile.height <= rows && !placed; row++) {
-                for (uint8_t col = 0; col + tile.width <= cols && !placed; col++) {
-                    if (_isCellFree(col, row, tile.width, tile.height, cols, rows)) {
-                        tile.col = col;
-                        tile.row = row;
-                        _markCell(col, row, tile.width, tile.height);
-                        placed = true;
-                    }
-                }
-            }
-            if (!placed) {
+        }
+        if (!placed) {
+            if (!portrait) {
                 return _fail(tile.line, PrintString(F("the %s tile does not fit into the %ux%u grid%s"), getTileTypeName(tile.type),
                                                     static_cast<unsigned>(cols), static_cast<unsigned>(rows), _pageSuffix(page).c_str()).c_str());
             }
+            // A grid of one row is a portrait grid of one column: a tile that is two cells wide has
+            // no block in it at all. It keeps the first cell instead of disappearing
+            _setPosition(tile, portrait, 0, 0);
         }
+    }
+    return true;
+}
+
+// Validates the tiles and places them in the grid of their page - once for the landscape layout
+// the file is written for and once for the transposed grid of a portrait display.
+//
+// The tiles are placed in the ORDER OF THE FILE in both grids (left to right, top to down), so a
+// page reads the same way whichever orientation is active. Transposing the positions instead would
+// put the tiles of the first row of the file down the left edge of the portrait display (the
+// landscape reading order turns into a column)
+bool Config::_placeTiles()
+{
+    // the size of a tile: the `size` key of the file wins over the default of the type (`size:
+    // 1x1`), the other types are always one cell wide and cannot declare a size
+    for (uint8_t i = 0; i < _tileCount; i++) {
+        auto &tile = _tiles[i];
+        if (!tile.hasSize) {
+            tile.width = getTileWidth(tile.type);
+            tile.height = getTileHeight(tile.type);
+            continue;
+        }
+        if (!tileTypeHasSize(tile.type)) {
+            return _fail(tile.line, PrintString(F("only a dimmer, a climate and a picture tile can have a size of their own, a %s tile is %ux%u"),
+                                                getTileTypeName(tile.type), static_cast<unsigned>(getTileWidth(tile.type)),
+                                                static_cast<unsigned>(getTileHeight(tile.type))).c_str());
+        }
+        if (tile.width > 1 && tile.type != TileType::PICTURE) {
+            return _fail(tile.line, "every tile is one column wide, size must start with 1x");
+        }
+        if (tile.type == TileType::PICTURE && (tile.width > kMaxPictureWidth || tile.height > kMaxPictureHeight)) {
+            return _fail(tile.line, PrintString(F("a picture tile is at most %ux%u cells, for example 2x2, 2x1 or 1x1"),
+                                                static_cast<unsigned>(kMaxPictureWidth), static_cast<unsigned>(kMaxPictureHeight)).c_str());
+        }
+    }
+    // one pass per page, every page has its own grid. The main page is 0, an area adds one page
+    for (uint8_t page = 0; page < _pageCount; page++) {
+        if (!_placePage(page, false)) {
+            return false;
+        }
+        _placePage(page, true);
     }
     // the placed tiles, the size of a dimmer or a climate tile depends on the file (`size: 1x1`)
     for (uint8_t i = 0; i < _tileCount; i++) {
@@ -1136,10 +1184,10 @@ bool Config::_placeTiles()
         else if (tile.gridCols || tile.gridRows) {
             extra.printf_P(PSTR(", grid %ux%u"), static_cast<unsigned>(tile.gridCols), static_cast<unsigned>(tile.gridRows));
         }
-        __LDBG_printf("tile %u: %s '%s' %ux%u at (%u,%u) of page %u%s", static_cast<unsigned>(i), type.c_str(), tile.name,
+        __LDBG_printf("tile %u: %s '%s' %ux%u at (%u,%u) of page %u%s, portrait (%u,%u)", static_cast<unsigned>(i), type.c_str(), tile.name,
                       static_cast<unsigned>(tile.width), static_cast<unsigned>(tile.height),
                       static_cast<unsigned>(tile.col + 1), static_cast<unsigned>(tile.row + 1), static_cast<unsigned>(tile.page),
-                      extra.c_str());
+                      extra.c_str(), static_cast<unsigned>(tile.portraitCol + 1), static_cast<unsigned>(tile.portraitRow + 1));
     }
     return true;
 }

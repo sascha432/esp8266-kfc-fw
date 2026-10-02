@@ -161,9 +161,15 @@ struct Tile {
     uint8_t height{1};
     // the `size` key was set in the file (the size of the type is used otherwise)
     bool hasSize{false};
+    // grid position in the landscape layout of the file, 0 based
     uint8_t col{0};
     uint8_t row{0};
     bool hasPosition{false};
+    // Position in the transposed grid a portrait display shows, 0 based. The tiles are placed in
+    // the order of the file (left to right, top to down) in both grids, so a page reads the same
+    // way whichever orientation is active (see Config::_placeTiles())
+    uint8_t portraitCol{0};
+    uint8_t portraitRow{0};
     // arc range of a dimmer (percent) or a climate (degrees)
     float min{0};
     float max{100};
@@ -280,8 +286,14 @@ private:
     bool _parse(const char *data, size_t length);
     // parses one tile key/value pair
     bool _parseTile(Tile &tile, const char *key, const char *keyEnd, const char *value, const char *valueEnd, uint8_t line);
-    // validates the tiles and places them in the grid
+    // validates the tiles and places them in the grid (both orientations)
     bool _placeTiles();
+    // places the tiles of one page in its grid, `portrait` in the transposed one. Only the
+    // landscape pass reports an error, a tile that cannot be placed in the transposed grid of the
+    // page falls back to the order of the file
+    bool _placePage(uint8_t page, bool portrait);
+    // stores a placement in the field of that orientation
+    static void _setPosition(Tile &tile, bool portrait, uint8_t col, uint8_t row);
     // sets _error to "line N: message"
     bool _fail(uint8_t line, const char *message);
     // "" for the main page, " of the area 'name'" otherwise (error messages)

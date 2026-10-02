@@ -229,9 +229,10 @@ bool lightHasEffects(const HomeAssistant::Detail &detail)
 }
 
 // slider of a light panel, the level and the colour temperature share their look. `radius` is the
-// corner radius of the track and `fillRadius` the one of the fill (the level that is filled in);
-// the landscape sliders are as tall as the column and use the card radius for both, the slider of
-// the portrait panel is narrower and nearly square where it is filled (see the constants below)
+// corner radius of the track and `fillRadius` the one of the fill (the level that is filled in).
+// LVGL masks the fill with the rounding of the *track* (`lv_bar_draw()` builds a radius mask from
+// the main part), so a track with large corners forces the same corners on the fill - the two are
+// one value for a panel slider (see the constants below)
 lv_obj_t *createPanelSlider(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
                             int32_t min, int32_t max, lv_event_cb_t callback, void *userData,
                             lv_coord_t radius = LVGLUI::kCardRadius, lv_coord_t fillRadius = -1)
@@ -365,10 +366,13 @@ constexpr lv_coord_t kPanelButtonHeight = 40;
 constexpr lv_coord_t kPanelButtonGap = 6;
 // width of the level slider of the dimmer panel
 constexpr lv_coord_t kPanelSliderWidth = 113;
-// The level slider of the portrait light panel is narrower than the space between its two steppers
-// (which keep their size at the ends of the row), so the gap on either side of it grows evenly; its
-// track keeps rounded corners (a quarter of the row width, 10 % less of it) while the fill that
-// follows the level is nearly square - a rounded fill looked like a blob inside the rounded track
+// The sliders of a light/dimmer panel (the level and the colour temperature) look the same in both
+// orientations: the track keeps rounded corners, only the edge of the fill that follows the level
+// is nearly square. LVGL masks the fill with the rounding of the *track* (`lv_bar_draw()` builds a
+// radius mask from the main part), so the corners of the fill at the end it starts from are the
+// track's - the moving edge is the fill's own, which is the one that is seen while sliding.
+// A vertical slider is what a panel uses (the band it fills is narrow and tall), so
+// `kPanelSliderNarrow` is only about the width of the portrait row
 constexpr uint8_t kPanelSliderNarrow = 12;                                      // percent
 constexpr lv_coord_t kPanelSliderRadius = 34;                                   // track
 constexpr lv_coord_t kPanelSliderFillRadius = 5;                                // fill
@@ -1434,8 +1438,9 @@ void HassScreen::_rebuild()
 // own, see the `grid:` key of an area tile). The panels are laid out in the grid of the document
 //
 // A portrait display shows the grid of the configuration transposed: the file is written for the
-// landscape layout, so 4x3 columns/rows become 3x4 and a cell keeps its shape. The position and
-// the span of a tile are transposed with it (see _tileGeometry())
+// landscape layout, so 4x3 columns/rows become 3x4 and a cell keeps its shape. The tiles are placed
+// in the transposed grid in the order of the file (see Config::_placeTiles()) and the span of a tile
+// is swapped with the cells (see _tileGeometry())
 void HassScreen::_cellGeometry(uint8_t page, uint8_t col, uint8_t row, uint8_t width, uint8_t height, lv_coord_t &x, lv_coord_t &y, lv_coord_t &w, lv_coord_t &h) const
 {
     const auto gridCols = _dashboard.getConfig().getCols(page);
@@ -1549,9 +1554,10 @@ void HassScreen::_tileGeometry(const Tile &tile, lv_coord_t &x, lv_coord_t &y, l
     // the grid of the page the tile belongs to, which is not the page that is shown while a panel
     // of another page is built
     if (_portrait) {
-        // the position and the span of the tile are transposed with the grid (a tile that is two
-        // cells tall in landscape is two cells wide in portrait)
-        _cellGeometry(tile.page, tile.row, tile.col, tile.height, tile.width, x, y, w, h);
+        // The placement of the portrait grid (the tiles are in the order of the file there as well,
+        // see Config::_placeTiles()) and the span swapped with the cells: a tile that is two cells
+        // tall in landscape is two cells wide in portrait
+        _cellGeometry(tile.page, tile.portraitCol, tile.portraitRow, tile.height, tile.width, x, y, w, h);
     }
     else {
         _cellGeometry(tile.page, tile.col, tile.row, tile.width, tile.height, x, y, w, h);
@@ -1954,25 +1960,23 @@ void HassScreen::_buildPanel()
         // The level slider fills the band between the readout and the options in portrait, the two
         // steppers are centered on it at its ends (the same place a climate puts its steppers). It
         // is 12 % narrower than the space between them and stays centered between them, so the gap
-        // on either side of it is about 21 px instead of 12 - evenly
+        // on either side of it is about 21 px instead of 12 - evenly. The rounding of the track and
+        // of the fill is the same in both orientations (the panel has one look for its sliders)
         lv_coord_t sliderW = levelSliderWidth;
         lv_coord_t sliderX = levelSliderX;
         lv_coord_t sliderY = layout.controlY;
         lv_coord_t sliderH = layout.controlH;
-        lv_coord_t sliderRadius = LVGLUI::kCardRadius;
-        lv_coord_t fillRadius = LVGLUI::kCardRadius;
         if (_portrait) {
             const auto rowW = static_cast<lv_coord_t>(layout.controlW - 2 * (kPanelStepSize + kPanelPortraitGap));
             sliderW = static_cast<lv_coord_t>(rowW * (100 - kPanelSliderNarrow) / 100);
             sliderX = static_cast<lv_coord_t>(layout.controlX + kPanelStepSize +
                                               (layout.controlW - 2 * kPanelStepSize - sliderW) / 2);
-            sliderRadius = kPanelSliderRadius;
-            fillRadius = kPanelSliderFillRadius;
         }
-        refs.slider = createPanelSlider(_grid, sliderX, sliderY, sliderW, sliderH, 0, 100, _sliderCallback, this, sliderRadius, fillRadius);
+        refs.slider = createPanelSlider(_grid, sliderX, sliderY, sliderW, sliderH, 0, 100, _sliderCallback, this,
+                                        kPanelSliderRadius, kPanelSliderFillRadius);
         // the color temperature slider, in kelvin (the range comes from the entity)
         refs.tempSlider = createPanelSlider(_grid, _portrait ? sliderX : tempSliderX, sliderY, sliderW, sliderH, 2000, 6500,
-                                            _tempSliderCallback, this, sliderRadius, fillRadius);
+                                            _tempSliderCallback, this, kPanelSliderRadius, kPanelSliderFillRadius);
 
         // the readout of the level (the colour temperature in the other view): on the track of the
         // slider in landscape, in the row above it in portrait, where the whole width belongs to

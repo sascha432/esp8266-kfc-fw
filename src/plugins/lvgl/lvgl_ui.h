@@ -226,6 +226,10 @@ void setButtonActive(lv_obj_t *button, bool active);
 
 // Level fill of a dimmer tile or of a panel slider: a rounded bar that grows from the bottom of a
 // track (x, y, w, trackHeight). The track itself stays empty, the fill is the visible level
+// level fill of a dashboard tile (the level of a dimmer that is dragged): the height follows the
+// level, so only the edge that moves is seen as a shape of its own - the other end is clipped by the
+// rounded tile (see createLevelFill()). The edge that moves is nearly square
+static constexpr lv_coord_t kLevelFillRadius = 5;
 lv_obj_t *createLevelFill(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
 void setLevelFill(lv_obj_t *fill, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t trackHeight,
                   uint8_t percent, uint32_t color = kColorActive);

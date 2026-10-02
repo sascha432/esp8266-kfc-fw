@@ -732,7 +732,10 @@ void setButtonActive(lv_obj_t *button, bool active)
 lv_obj_t *createLevelFill(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h)
 {
     auto fill = _container(parent, x, y, w, h);
-    lv_obj_set_style_radius(fill, kCardRadius, LV_PART_MAIN);
+    // only the edge that follows the level is a shape of its own: the corners at the other end are
+    // clipped by the rounded tile the fill lives in (the tile sets LV_OBJ_FLAG_CLIP_CORNER), so the
+    // fill stays flush with the tile there
+    lv_obj_set_style_radius(fill, kLevelFillRadius, LV_PART_MAIN);
     lv_obj_set_style_bg_color(fill, lv_color_hex(kColorActive), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(fill, LV_OPA_COVER, LV_PART_MAIN);
     return fill;

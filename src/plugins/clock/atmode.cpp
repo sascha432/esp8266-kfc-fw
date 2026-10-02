@@ -107,11 +107,11 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             else {
                 auto animation = args.toString(1);
-                StrWrapper(animation).replace(' ', '_');
+                StrWrapper(animation).slugify('_');
                 auto blendTime = args.toMillis(2, 0, 30000, 4000);
                 for(uint8_t i = 0; i < static_cast<uint8_t>(AnimationType::LAST); i++) {
                     auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
-                    StrWrapper(name).replace(' ', '_');
+                    StrWrapper(name).slugify('_');
                     if (animation.equalsIgnoreCase(name)) {
                         _syncVisualizerType(static_cast<AnimationType>(i));
                         _setAnimation(static_cast<AnimationType>(i), blendTime);

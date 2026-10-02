@@ -121,8 +121,7 @@ namespace KFCConfigurationClasses {
                 if (endPtr && (name.c_str() != endPtr) && !*endPtr && (typeNum < static_cast<decltype(typeNum)>(AnimationType::LAST))) {
                     return static_cast<AnimationType>(typeNum);
                 }
-                StrWrapper(name).replace(' ', '-');
-                StrWrapper(name).replace('_', '-');
+                StrWrapper(name).slugify();
                 // search slugs first since it just is a stricmp
                 for(int i = 0; i < static_cast<int>(AnimationType::LAST); i++) {
                     // __LDBG_printf("cmp %s==%s", name.c_str(), getAnimationNameSlug(static_cast<AnimationType>(i)));
@@ -133,8 +132,7 @@ namespace KFCConfigurationClasses {
                 String str; // one buffer, reused - StrWrapper needs a named String to write into
                 for(int i = 0; i <static_cast<int>(AnimationType::LAST); i++) {
                     str = getAnimationName(static_cast<AnimationType>(i));
-                    StrWrapper(str).replace(' ', '-');
-                    StrWrapper(str).replace('_', '-');
+                    StrWrapper(str).slugify();
                     // __LDBG_printf("cmp %s==%s", name.c_str(), str.c_str());
                     if (str.equalsIgnoreCase(name)) {
                         return static_cast<AnimationType>(i);
@@ -193,9 +191,7 @@ namespace KFCConfigurationClasses {
 
             String &ClockConfigType::normalizeSlug(String &slug)
             {
-                StrWrapper(slug).replace(' ', '_');
-                StrWrapper(slug).replace('-', '_');
-                StrWrapper(slug).toLowerCase();
+                StrWrapper(slug).slugify('_');
                 return slug;
             }
 

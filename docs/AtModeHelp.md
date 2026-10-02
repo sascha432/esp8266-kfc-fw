@@ -538,5 +538,5 @@ Columns:
 Calibration:
 
 1. Put the device in the orientation it is mounted in and read `a[...]`: the accelerometer offsets are the values the axes read at rest (bias), the gyroscope offsets are the values the axes read while it does not rotate
-2. The rotation offset aligns a stable device with the display, the tilt threshold is the allowed deviation (`dev`) and the debounce time filters short movements
+2. The rotation offset aligns a stable device with the display, the tilt threshold is the allowed deviation (`dev`) and the debounce time filters short movements. `rot` is the orientation of the display: `0` landscape, `90` portrait, `180`/`270` the same turned 180 degrees. The rotation assumes the module is mounted flat on the back of the display (Z pointing away from the screen, Y along the long side with the display upright in portrait); a module mounted rotated in the plane is aligned with the rotation offset, a module mounted on the front needs its accelerometer X axis inverted
 3. While `settled=0` the gyroscope still sees movement (above 15°/s). The rotation, the tilt state and the callbacks are only updated once the device has come to rest, so wiggling it does not toggle them

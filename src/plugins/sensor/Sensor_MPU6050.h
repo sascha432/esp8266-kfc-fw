@@ -45,7 +45,7 @@ public:
         TILT,
     };
 
-    using RotationCallback = std::function<void(uint8_t rotation)>;
+    using RotationCallback = std::function<void(uint16_t rotation)>;
     using TiltCallback = std::function<void(bool tilted)>;
 
 public:
@@ -76,7 +76,7 @@ public:
     }
 
     // display rotation in degrees, one of 0/90/180/270
-    uint8_t getRotation() const {
+    uint16_t getRotation() const {
         return _rotation;
     }
 
@@ -138,8 +138,11 @@ private:
     bool _detected;
     bool _pendingInit;
 
-    uint8_t _rotation;
-    uint8_t _pendingRotation;
+    // Rotation and the pending rotation in degrees (0/90/180/270). uint16_t, not uint8_t: 270 does
+    // not fit into a byte and would wrap to 14, which silently lost the "turned 180 degrees"
+    // orientations
+    uint16_t _rotation;
+    uint16_t _pendingRotation;
     uint32_t _pendingSince;
     bool _tilted;
     bool _pendingTilted;

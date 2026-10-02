@@ -22,8 +22,9 @@ namespace {
     constexpr float kRadToDeg = 57.29577951308232f;
     // minimum length of the gravity vector in g
     constexpr float kMinGravity = 0.1f;
-    // no display orientation for this sample (the rotation is kept)
-    constexpr uint8_t kKeepRotation = 0xff;
+    // no display orientation for this sample (the rotation is kept). Values are degrees, so it has
+    // to differ from 0/90/180/270 (and the rotation itself needs more than 8 bits, 270 > 255)
+    constexpr uint16_t kKeepRotation = 0xffff;
     // the device counts as settled while the gyroscope magnitude is below this value (deg/s).
     // The state (and the callbacks) are only updated while it is settled, otherwise wiggling the
     // device would toggle them all the time
@@ -472,14 +473,21 @@ void Sensor_MPU6050::_update()
             float cosEnter = cosf(kDegToRad * static_cast<float>(_cfg.tilt_threshold));
             float cosLeave = cosf(kDegToRad * (static_cast<float>(_cfg.tilt_threshold) - kTiltHysteresis));
 
-            uint8_t candidate = kKeepRotation;
+            uint16_t candidate = kKeepRotation;
             float axis;
             if (fabsf(uz) >= fmaxf(fabsf(ux), fabsf(uy))) {
                 // lying flat, no display orientation -> not resting in a stable orientation
                 axis = fmaxf(fabsf(ux), fabsf(uy));
             }
             else if (fabsf(ux) >= fabsf(uy)) {
-                candidate = (ux >= 0) ? 0 : 180;
+                // The rotation is the orientation of the display, and the module is normally
+                // mounted flat on the back of it (Z pointing away from the screen). Seen from the
+                // front that mounting mirrors the module's X axis, so the X that points up is the
+                // negative one: the candidates are swapped, otherwise the display would be turned
+                // the wrong way and landscape and landscape turned 180 degrees would trade places.
+                // A module mounted on the front needs the accelerometer X axis inverted, a module
+                // mounted rotated in the plane is aligned with `rotation_offset`
+                candidate = (ux >= 0) ? 180 : 0;
                 axis = fabsf(ux);
             }
             else {
@@ -505,7 +513,7 @@ void Sensor_MPU6050::_update()
             }
 
             if (candidate != kKeepRotation) {
-                uint8_t target = static_cast<uint8_t>((candidate + _cfg.rotation_offset * 90) % 360);
+                uint16_t target = static_cast<uint16_t>((candidate + _cfg.rotation_offset * 90) % 360);
                 if (target != _rotation) {
                     if (target != _pendingRotation) {
                         _pendingRotation = target;

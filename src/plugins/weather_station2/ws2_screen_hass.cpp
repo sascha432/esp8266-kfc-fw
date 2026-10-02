@@ -1179,6 +1179,41 @@ const char *HassScreen::getOrientationName() const
     }
 }
 
+// ------------------------------------------------------------------------------------------
+// motion sensor (MPU-6050 of the sensor plugin)
+// ------------------------------------------------------------------------------------------
+void HassScreen::setSensorRotation(uint16_t rotation)
+{
+    // the sensor reports 0/90/180/270 in 90 degree steps, see _applySensorRotation() for how the
+    // value is turned into an orientation of the display
+    if (rotation > 270 || (rotation % 90) != 0) {
+        return;
+    }
+    if (static_cast<int16_t>(rotation) == _sensorRotation) {
+        return;
+    }
+    _sensorRotation = static_cast<int16_t>(rotation);
+    __LDBG_printf("hass> motion sensor reports %u degrees", static_cast<unsigned>(rotation));
+    _applySensorRotation();
+}
+
+void HassScreen::_applySensorRotation()
+{
+    if (_sensorRotation < 0) {
+        return;
+    }
+    if (Plugins::WeatherStation::getHassRotationLock()) {
+        __LDBG_printf("hass> motion sensor rotation %d degrees ignored (the rotation is locked)", static_cast<int>(_sensorRotation));
+        return;
+    }
+    // The module sits mirrored on the back of the panel, so its steps run opposite to the rotation
+    // of the display driver: 0 and 180 (landscape) agree, 90 and 270 would be 180 degrees off and
+    // the dashboard would be upside down in portrait. Mirroring the value turns the reported step
+    // into the orientation index of the display (`WeatherStation::HassRotation`), so a Rotation
+    // Offset in the sensor form turns the dashboard the other way round
+    setOrientation(static_cast<uint8_t>((360 - _sensorRotation) % 360 / 90));
+}
+
 lv_coord_t HassScreen::_gridBottom() const
 {
     return static_cast<lv_coord_t>(_height - kTileMargin);
@@ -3734,16 +3769,11 @@ void HassScreen::_updateSettings()
     for (uint8_t i = 0; i < kSettingsTiles; i++) {
         const auto tile = static_cast<SettingsTile>(i);
         const auto active = (tile == SettingsTile::ROTATION_LOCK) && rotationLocked;
-        // the rotate tile cannot be used while the rotation is locked, it is drawn muted then
-        const auto muted = (tile == SettingsTile::ROTATE) && rotationLocked;
         auto valueColor = LVGLUI::kColorText;
         auto labelColor = LVGLUI::kColorTextLabel;
         if (active) {
             valueColor = LVGLUI::kColorBackground;
             labelColor = LVGLUI::kColorBackground;
-        }
-        else if (muted) {
-            valueColor = LVGLUI::kColorTextMuted;
         }
         _setTextIfChanged(refs.tileValues[i], _settingsValue(tile), LVGLUI::kFontMedium, valueColor);
         if (refs.tileLabels[i]) {
@@ -3921,19 +3951,23 @@ void HassScreen::_settingsCallback(lv_event_t *event)
         self->_settingsPendingView = static_cast<int8_t>(SettingsView::STANDBY_TIMEOUT);
         break;
     case SettingsTile::ROTATE:
-        if (Plugins::WeatherStation::getHassRotationLock()) {
-            __LDBG_printf("hass> the rotation is locked, the rotate tile does nothing");
-        }
-        else {
-            self->_settingsAction = SettingsAction::ROTATE;
-        }
+        // the lock only stops the motion sensor, the tile rotates the dashboard while it is set too
+        self->_settingsAction = SettingsAction::ROTATE;
         break;
     case SettingsTile::ROTATION_LOCK:
-        Plugins::WeatherStation::setHassRotationLock(!Plugins::WeatherStation::getHassRotationLock());
-        __LDBG_printf("hass> rotation lock %s", Plugins::WeatherStation::getHassRotationLock() ? "set" : "cleared");
-        // the tile and the rotate tile are redrawn by the next refresh
-        self->_settingsUpdate = 0;
-        self->_updateSettings();
+        {
+            const auto locked = !Plugins::WeatherStation::getHassRotationLock();
+            Plugins::WeatherStation::setHassRotationLock(locked);
+            __LDBG_printf("hass> rotation lock %s", locked ? "set" : "cleared");
+            if (!locked) {
+                // the device may have been rotated while the lock was on: the dashboard follows
+                // the motion sensor again right away
+                self->refreshSensorRotation();
+            }
+            // the tile is redrawn (filled) by the next refresh
+            self->_settingsUpdate = 0;
+            self->_updateSettings();
+        }
         break;
     case SettingsTile::SLEEP:
         self->_settingsAction = SettingsAction::SLEEP;

@@ -39,15 +39,17 @@ in this workspace.
 ## Build, flash and verify
 
 - `pio run -e <env> -t upload` builds and flashes in one step (`upload` runs the build first). No separate
-  `pio run` step is needed; the COM port and OTA support per environment are in the environment sections below.
+  `pio run` step is needed.
+- **The serial port is the env's `monitor_port`** (`conf/envs/*.ini`) - never a hardcoded COM port. When testing
+  an env whose `monitor_port` is missing, **ask the user which port to use** before flashing or opening a monitor.
 - **`-t buildfs` does not compile the firmware** - always run a plain `pio run -e <env>` as well.
 - Shared/core changes must be built for **both platforms**, e.g. `pio run -e bme280_serial` (the ESP8266 test
   env) next to the ESP32 env - a change can compile on one and fail on the other.
 - **There are no unit tests** - verification happens on the hardware: a trace line, a log or a screenshot has
   to show what the change did, "it compiles" is not a verification. `logs/check_pages.py` checks pages and
   endpoints in bulk; the environment sections list the panel/debug key recipes.
-- Serial capture/reset:
-  `python logs/serial_capture.py --port <COMx> --seconds 60 --no-reset | Out-File -Encoding utf8 logs/x.txt`
+- Serial capture/reset (pass the env's `monitor_port`):
+  `python logs/serial_capture.py --port <monitor_port> --seconds 60 --no-reset | Out-File -Encoding utf8 logs/x.txt`
   - **not with `>`**, a redirected file becomes UTF-16 and greps find nothing in it.
 - Free the serial port first: a leftover `platformio.exe ... monitor` blocks the upload
   (`Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'platformio.exe.*monitor' }`).
@@ -65,8 +67,8 @@ in this workspace.
 
 ## Environment `wt32_sc01_test1`
 
-- Flashed over **COM9**; **OTA is not available** (the partition table has a single `factory` app partition
-  and no OTA slots).
+- **OTA is not available** (the partition table has a single `factory` app partition and no OTA slots); use the
+  env's `monitor_port` (`conf/envs/wt32_sc01.ini`).
 - **Custom file `/hass.yaml`**: after a firmware/FS upload, upload it with `scripts\tools\hass_config.bat`
   (it posts `include\retracted\custom_config\hass.yaml` and prints "Upload successful"). Validate it offline
   first with `python scripts/tools/hass_config.py --file <file> --validate-only` - it prints the tiles with
@@ -87,14 +89,13 @@ in this workspace.
 
 ## Environment `wled_esp32_controller`
 
-- Flashed over **COM7**; **OTA is not available** (the partition table has a single `factory` app partition
-  and no OTA slots).
+- **OTA is not available** (the partition table has a single `factory` app partition and no OTA slots); use the
+  env's `monitor_port` (`conf/envs/wled_board.ini`).
 
 ## Environment `bme280_serial` (ESP8266 test env)
 
-- Flashed over **COM6**; `board = nodemcuv2` with `upload_protocol = esptool` - **serial only, no OTA**. It
-  extends `debug_esp8266`, so `DEBUG` is on and the serial log is verbose (env definition:
-  `conf/envs/environmental_sensor.ini`).
+- `board = nodemcuv2` with `upload_protocol = esptool` - **serial only, no OTA**; use the env's `monitor_port`
+  (`conf/envs/environmental_sensor.ini`). It extends `debug_esp8266`, so `DEBUG` is on and the serial log is verbose.
 - This is the **ESP8266 verification env** for shared/core changes (see the build section): build it next to
   the ESP32 env, because a change can compile on one platform and fail on the other.
 - Page/endpoint checks against it use the same PC tools as for the panel (`logs/check_pages.py`,

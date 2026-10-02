@@ -39,6 +39,14 @@
 #endif
 
 #include <LovyanGFX.hpp>
+#include <global.h> // KFC_TWOWIRE_SDA/SCL/CLOCK_SPEED, the I2C bus the touch shares with the sensor plugin
+
+// Touch controller I2C clock. It matters while the touch uses the pins of `Wire` (see the
+// validation below): the two sides then have to run at the same clock, because LovyanGFX applies
+// its own configuration per transaction and puts the driver's back afterwards.
+#ifndef IOT_WT32_SC01_TOUCH_I2C_FREQUENCY
+#    define IOT_WT32_SC01_TOUCH_I2C_FREQUENCY 400000
+#endif
 
 // Panel write clock. LovyanGFX' WT32_SC01 detector uses 40MHz, TFT_eSPI's
 // Setup201_WT32_SC01.h uses 27MHz. Too high a clock over the FPC shows up as a
@@ -46,6 +54,26 @@
 // picture is clean, override with -D IOT_WT32_SC01_TFT_SPI_FREQUENCY=...
 #ifndef IOT_WT32_SC01_TFT_SPI_FREQUENCY
 #    define IOT_WT32_SC01_TFT_SPI_FREQUENCY 27000000
+#endif
+
+// The touch controller is configured against the I2C bus of the Arduino `Wire` instance the
+// sensor plugin uses (`KFC_TWOWIRE_SDA`/`KFC_TWOWIRE_SCL`): an ESP32 GPIO output is driven by a
+// single peripheral signal, so both devices are only reachable over the same two pins and at the
+// same clock. Whether the bus is shared is decided here, at compile time, from that
+// configuration:
+//   - pins match and clocks match -> share I2C_NUM_0 with `Wire`. LovyanGFX detects the open port
+//     (`i2cIsInit()`, the `foreign_bus` path), applies its own configuration for a transaction and
+//     puts the driver's back afterwards, the pins stay as `Wire.begin()` configured them
+//   - pins match and clocks differ -> no configuration can use both devices, fail the build
+//   - pins differ -> do not touch the `Wire` bus at all, the touch takes over its own controller
+//     (I2C_NUM_1, the one LovyanGFX' own WT32_SC01 detector uses for the touch)
+#if IOT_WT32_SC01_PIN_TOUCH_SDA == KFC_TWOWIRE_SDA && IOT_WT32_SC01_PIN_TOUCH_SCL == KFC_TWOWIRE_SCL
+#    define IOT_WT32_SC01_TOUCH_I2C_PORT 0 // I2C_NUM_0, shared with `Wire`
+#    if IOT_WT32_SC01_TOUCH_I2C_FREQUENCY != KFC_TWOWIRE_CLOCK_SPEED
+#        error "the touch uses the pins of KFC_TWOWIRE_SDA/SCL, so its clock IOT_WT32_SC01_TOUCH_I2C_FREQUENCY must match KFC_TWOWIRE_CLOCK_SPEED"
+#    endif
+#else
+#    define IOT_WT32_SC01_TOUCH_I2C_PORT 1 // I2C_NUM_1, own controller (I2C_NUM_0 belongs to `Wire`)
 #endif
 
 class LGFX_WT32_SC01 : public lgfx::LGFX_Device
@@ -110,7 +138,19 @@ public:
         // touch, FT6336U
         {
             auto cfg = _touch_instance.config();
-            cfg.i2c_port = 1; // I2C_NUM_1
+            // I2C_NUM_0 while the touch is on the pins of `Wire` (`KFC_TWOWIRE_SDA`/`SCL`), i.e.
+            // the touch and the MPU-6050 of the sensor plugin sit on the one I2C bus the
+            // WT32-SC01 exposes. I2C0 is used on purpose: an ESP32 GPIO output is driven by a
+            // single peripheral signal, so two controllers on the same two pins would fight
+            // over the routing and only the last one configured could talk. LovyanGFX detects
+            // that the port is already open through `Wire` (`i2cIsInit()`, the `foreign_bus`
+            // path) and shares it instead of taking it over - it applies its own configuration
+            // for a transaction and puts the driver's back afterwards, the pins and their
+            // pull-ups stay as `Wire.begin()` configured them. Both sides run in the main loop
+            // task, so no transaction of one can interleave with the other.
+            // A different pin configuration cannot share the bus: the touch then takes over a
+            // controller of its own and this is I2C_NUM_1 (see the top of this file).
+            cfg.i2c_port = IOT_WT32_SC01_TOUCH_I2C_PORT;
             cfg.i2c_addr = IOT_WT32_SC01_TOUCH_I2C_ADDRESS;
             cfg.pin_sda = IOT_WT32_SC01_PIN_TOUCH_SDA;
             cfg.pin_scl = IOT_WT32_SC01_PIN_TOUCH_SCL;
@@ -125,7 +165,11 @@ public:
             // per LVGL input period, 30 ms) which is reliable on this board.
             cfg.pin_int = -1; // -D IOT_WT32_SC01_PIN_TOUCH_INT is documented but not usable, see above
             cfg.pin_rst = -1;
-            cfg.freq = 400000;
+            // while the bus is shared with `Wire` the clock has to be the one Wire.setClock()
+            // uses (KFC_TWOWIRE_CLOCK_SPEED, enforced by the guard at the top of this file)
+            cfg.freq = IOT_WT32_SC01_TOUCH_I2C_FREQUENCY;
+            // `bus_shared` refers to the bus of the PANEL (SPI), not to the I2C bus: the touch
+            // must not make LovyanGFX end/begin a transaction on the panel bus around a read
             cfg.bus_shared = false;
             cfg.offset_rotation = 0;
             cfg.x_min = 0;

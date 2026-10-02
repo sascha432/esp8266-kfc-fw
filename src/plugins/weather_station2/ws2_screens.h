@@ -520,6 +520,25 @@ public:
     // name of the configured orientation, for the status page of the plugin
     const char *getOrientationName() const;
 
+    // Rotation reported by the motion sensor of the sensor plugin (the MPU-6050), in 90 degree
+    // steps (0/90/180/270). The dashboard follows the device while WeatherStation::getHassRotationLock()
+    // is false - the sensor is only registered when the env compiles one (IOT_SENSOR_HAVE_MPU6050).
+    // The value is not stored: a reboot starts at the configured orientation and the sensor
+    // synchronizes it again. The step is mirrored when it is applied, see _applySensorRotation()
+    void setSensorRotation(uint16_t rotation);
+
+    // rotation of the motion sensor, -1 while none reported one (status page and debug)
+    int16_t getSensorRotation() const {
+        return _sensorRotation;
+    }
+
+    // Applies the rotation the motion sensor reported again - the device may have been turned
+    // while the rotation was locked. Does nothing while no rotation was reported or the lock is
+    // still set
+    void refreshSensorRotation() {
+        _applySensorRotation();
+    }
+
     virtual const char *getName() const override {
         return "HASS";
     }
@@ -923,6 +942,10 @@ private:
     // Switches the display to the configured orientation and updates the layout metrics below.
     // Called before the widget tree is built, the display is only touched from the main loop
     void _applyOrientation();
+    // Applies the rotation the motion sensor reported (maps the 90 degree steps to the four
+    // orientations). Ignored while the rotation is locked; called by setSensorRotation() and when
+    // the lock is cleared in the quick settings
+    void _applySensorRotation();
     // Layout metrics of the orientation that is active. The grid of the configuration is written
     // for landscape and transposed for a portrait display (see _cellGeometry()), so a cell keeps
     // its shape. kScreenWidth/kScreenHeight of the panel are the landscape values
@@ -966,6 +989,10 @@ private:
     // widget tree is created by create(), which is also when the rotation is applied
     uint8_t _rotation{0};
     bool _portrait{false};
+    // Rotation of the motion sensor in the same 90 degree steps as _rotation, -1 while no sensor
+    // reported one. The dashboard follows it while the rotation is not locked, see
+    // _applySensorRotation()
+    int16_t _sensorRotation{-1};
     // the orientation that is on screen is not the configured one any more (applied by update())
     bool _orientationPending{false};
     lv_coord_t _width{kScreenWidth};

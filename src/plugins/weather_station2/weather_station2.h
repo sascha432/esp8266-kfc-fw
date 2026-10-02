@@ -120,6 +120,15 @@ private:
     void _registerScreens();
     void _removeScreens();
 
+#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
+    // Registers/unregisters the rotation callback of the MPU-6050 (the sensor plugin), so the
+    // dashboard follows the physical rotation of the device. The sensor invokes the callback from
+    // the main loop task and synchronizes it with the current rotation, the rotation lock is
+    // honoured by HassScreen::_applySensorRotation()
+    void _registerRotationSensor();
+    void _unregisterRotationSensor();
+#endif
+
 #if MQTT_SUPPORT
     // MQTTComponent: the topics belong to the data source, the plugin only subscribes to them
     virtual void onConnect() override;

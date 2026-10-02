@@ -19,6 +19,15 @@
 #    include "lvgl_debug.h"
 #endif
 
+// The rotation sensor of the Home Assistant dashboard is the MPU-6050 of the sensor plugin, when
+// the env compiles it (IOT_SENSOR_HAVE_MPU6050 = I2C address). The sensor plugin is set up before
+// this plugin (its priority is lower, see PluginComponent::PriorityType), so the sensor exists in
+// setup() already
+#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
+#    include "../sensor/sensor.h"
+#    include "../sensor/Sensor_MPU6050.h"
+#endif
+
 #ifndef DEBUG_WEATHER_STATION2
 #    define DEBUG_WEATHER_STATION2 0
 #endif
@@ -75,6 +84,37 @@ void WeatherStation2Plugin::applyHassOrientation()
     // the orientation is its own configuration parameter, the setters of the form stored it before
     // SAVE was called (FormCallbackType::SAVE runs before config.write(), see PluginComponent.h)
     _hassScreen.setOrientation(Plugins::WeatherStation::getHassRotation());
+}
+#endif
+
+#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
+void WeatherStation2Plugin::_registerRotationSensor()
+{
+    auto sensor = SensorPlugin::getSensor<Sensor_MPU6050>(MQTT::SensorType::MPU6050);
+    if (!sensor) {
+        __LDBG_printf("no MPU-6050, the dashboard does not follow a rotation sensor");
+        return;
+    }
+    __LDBG_printf("MPU-6050 @ 0x%02x registered for the dashboard rotation (detected=%u)",
+                  static_cast<unsigned>(sensor->getAddress()), sensor->isDetected() ? 1 : 0);
+    // A captureless lambda, so no heap is used. The sensor invokes it from the main loop task and
+    // calls it once right away with the current rotation (while the sensor is detected), which is
+    // how the dashboard starts in the orientation the device is in.
+    // Picking the device up and turning it is user activity as well: the display leaves the power
+    // saving mode (dimmed or off) and the idle timers restart, the same call the touch screen uses
+    // (see LVGLPlugin::notifyActivity())
+    sensor->setRotationCallback([](uint16_t rotation) {
+        LVGLPlugin::notifyActivity();
+        WeatherStation2Plugin::getInstance()._hassScreen.setSensorRotation(rotation);
+    });
+}
+
+void WeatherStation2Plugin::_unregisterRotationSensor()
+{
+    auto sensor = SensorPlugin::getSensor<Sensor_MPU6050>(MQTT::SensorType::MPU6050);
+    if (sensor) {
+        sensor->setRotationCallback(nullptr);
+    }
 }
 #endif
 
@@ -168,6 +208,10 @@ void WeatherStation2Plugin::setup(SetupModeType mode, const PluginComponents::De
     // display is rotated while the dashboard is shown, see HassScreen::setOrientation()
     _hassScreen.setOrientation(Plugins::WeatherStation::getHassRotation());
 #endif
+#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
+    // the MPU-6050 drives the orientation of the dashboard as well (unless it is locked)
+    _registerRotationSensor();
+#endif
 #if DEBUG_LVGL_SCREENSHOT
     // the debug screenshot feature can push values into the screens, see lvgl_debug.h
     LVGLDebug::setValueCallback([](const String &key, const String &value) {
@@ -218,6 +262,10 @@ void WeatherStation2Plugin::shutdown()
     // stops the request task of the dashboard
     _hass.stop();
 #endif
+#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
+    // the callback captures nothing, but it must not outlive the plugin either
+    _unregisterRotationSensor();
+#endif
 }
 
 void WeatherStation2Plugin::reconfigure(const String &source)
@@ -233,8 +281,15 @@ void WeatherStation2Plugin::reconfigure(const String &source)
     // the clock in the top bar of the screen overview follows the same setting
     LVGLPlugin::screens().setTimeFormat24h(_data.isTimeFormat24h());
 #if IOT_HASS_DASHBOARD
-    // the "Home Assistant" group of the form can change the orientation of the dashboard
+    // the "Home Assistant" group of the form can change the orientation of the dashboard and clear
+    // the rotation lock
     _hassScreen.setOrientation(Plugins::WeatherStation::getHassRotation());
+#if IOT_SENSOR_HAVE_MPU6050
+    // ... and while the rotation is not locked the motion sensor decides, so the last rotation it
+    // reported is applied again (a device that was turned while the lock was on would otherwise
+    // stay in the wrong orientation until it is turned again)
+    _hassScreen.refreshSensorRotation();
+#endif
 #endif
 #if MQTT_SUPPORT
     // the "Sensors" group of the form may have changed the topics
@@ -462,6 +517,17 @@ void WeatherStation2Plugin::getStatus(Print &output)
         screens.isRotationPaused() ? "paused (touch)" : "enabled");
 #if IOT_HASS_DASHBOARD
     output.printf_P(PSTR("Dashboard orientation: %s" HTML_S(br)), _hassScreen.getOrientationName());
+#if IOT_SENSOR_HAVE_MPU6050
+    // the rotation the motion sensor reported and whether the dashboard follows it
+    if (_hassScreen.getSensorRotation() >= 0) {
+        output.printf_P(PSTR("Dashboard rotation sensor: MPU-6050, %d%s, %s" HTML_S(br)),
+            static_cast<int>(_hassScreen.getSensorRotation()), SPGM(UTF8_degree),
+            Plugins::WeatherStation::getHassRotationLock() ? "locked" : "automatic");
+    }
+    else {
+        output.printf_P(PSTR("Dashboard rotation sensor: MPU-6050, no rotation reported yet" HTML_S(br)));
+    }
+#endif
     output.printf_P(PSTR("Dashboard page: %u" HTML_S(br)), static_cast<unsigned>(_hassScreen.getPage()));
 #if DEBUG_LVGL_SCREENSHOT
     output.printf_P(PSTR("Debug sets: %s" HTML_S(br)), _data.getDebugSetInfo().c_str());

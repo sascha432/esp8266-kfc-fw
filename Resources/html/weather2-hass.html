@@ -28,8 +28,8 @@
         <form method="POST" action="%SELF_URI%">
             %FORM_HTML%
             <div class="form-help-block">
-                <div data-target="#hro">Orientation of the Home Assistant dashboard only, the other screens of the weather station stay landscape. The display is rotated while the dashboard is shown and switched back when it is left. The grid of /hass.yaml is written for the landscape layout and transposed for portrait (4x3 becomes 3x4), so the file does not have to change with the orientation. The tiles keep the order of the file in both orientations (left to right, top to down)</div>
-                <div data-target="#hro_lock">Blocks the rotation of the dashboard. The quick settings of the dashboard (a swipe left or right) set the same value: while the lock is on, the Rotate tile is ignored. A motion sensor that would rotate the display automatically has to honour it as well</div>
+                <div data-target="#hro">Orientation of the Home Assistant dashboard only, the other screens of the weather station stay landscape. The display is rotated while the dashboard is shown and switched back when it is left. Without the rotation lock the dashboard follows the MPU-6050 of the sensor plugin (0/90/180/270 degrees, aligned with the rotation offset of the sensor), this setting is the orientation it starts with after a reboot. The grid of /hass.yaml is written for the landscape layout and transposed for portrait (4x3 becomes 3x4), so the file does not have to change with the orientation. The tiles keep the order of the file in both orientations (left to right, top to down)</div>
+                <div data-target="#hro_lock">Blocks the automatic rotation of the dashboard: the MPU-6050 does not rotate the display while it is on, the Rotate tile of the quick settings (a swipe left or right) still does. Clearing the lock applies the rotation the sensor reported last</div>
             </div>
         </form>
         <!--%%FOOT-->

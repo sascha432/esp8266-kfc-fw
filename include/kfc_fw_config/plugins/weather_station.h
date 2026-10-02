@@ -223,10 +223,10 @@ namespace KFCConfigurationClasses {
                     KFCConfigurationClasses::storeBinaryConfig(kHassRotationConfigHandle, &value, sizeof(value));
                 }
 
-                // Locks the orientation of the Home Assistant dashboard. The WT32-SC01 has no
-                // motion sensor, so the lock only blocks the manual rotate button of the quick
-                // settings today - a future auto rotation (an accelerometer) honours it as well.
-                // Its own 1 byte parameter for the same reason as the rotation above
+                // Locks the automatic rotation of the Home Assistant dashboard: while it is set the
+                // motion sensor (the MPU-6050) does not rotate the display, the quick settings of
+                // the dashboard rotate it manually in any case. Its own 1 byte parameter for the
+                // same reason as the rotation above
                 static constexpr ConfigurationHelper::HandleType kHassRotationLockConfigHandle = CONFIG_GET_HANDLE_STR("weatherstation.hassRotationLock");
 
                 inline static bool getHassRotationLock() {

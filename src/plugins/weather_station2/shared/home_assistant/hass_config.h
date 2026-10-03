@@ -355,8 +355,9 @@ private:
     bool _placePage(PageIndex page, bool portrait);
     // stores a placement in the field of that orientation
     static void _setPosition(Tile &tile, bool portrait, uint8_t col, uint8_t row);
-    // sets _error to "line N: message"
-    bool _fail(uint32_t line, const char *message);
+    // sets _error to "line N: message" (the message is a format string with optional arguments,
+    // the prefix is omitted when line is 0) and returns false
+    bool _fail(uint32_t line, const char *message, ...);
     // "" for the main page, " of the area 'name'" otherwise (error messages)
     String _pageSuffix(PageIndex page) const;
     // true while the tile occupies the cell (used by the placement)

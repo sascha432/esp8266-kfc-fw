@@ -4,8 +4,6 @@
 
 #include "hass_config.h"
 
-#include <PrintString.h>
-
 #ifndef DEBUG_WEATHER_STATION2
 #    define DEBUG_WEATHER_STATION2 1
 #endif
@@ -485,14 +483,19 @@ void Config::_reset()
     _fileMissing = false;
 }
 
-bool Config::_fail(uint32_t line, const char *message)
+// sets _error to the message and returns false. The message is a format string, the arguments
+// that follow it are appended to the prefix "line N: " (no prefix when line is 0). The text is
+// written into the String that _reset() cleared before the document was parsed
+bool Config::_fail(uint32_t line, const char *message, ...)
 {
+    StrWrapper wrapper(_error);
     if (line) {
-        _error = PrintString(F("line %u: %s"), static_cast<unsigned>(line), message);
+        wrapper.printf("line %u: ", static_cast<unsigned>(line));
     }
-    else {
-        _error = message;
-    }
+    va_list arg;
+    va_start(arg, message);
+    wrapper.vprintf(message, arg);
+    va_end(arg);
     __LDBG_printf("%s: %s", _path.c_str(), _error.c_str());
     return false;
 }
@@ -525,7 +528,8 @@ bool Config::load(const char *path)
     KFCFS_begin();
     if (!KFCFS.exists(path)) {
         _fileMissing = true;
-        _error = PrintString(F("%s is missing"), path);
+        _error = path;
+        _error += F(" is missing");
         __LDBG_printf("%s", _error.c_str());
         return false;
     }
@@ -533,7 +537,8 @@ bool Config::load(const char *path)
     auto file = KFCFS.open(path, fs::FileOpenMode::read);
     if (!file) {
         _fileMissing = true;
-        _error = PrintString(F("cannot open %s"), path);
+        _error = F("cannot open ");
+        _error += path;
         __LDBG_printf("%s", _error.c_str());
         return false;
     }
@@ -542,7 +547,8 @@ bool Config::load(const char *path)
     _fileSize = size;
     if (size == 0) {
         _fileMissing = true;
-        _error = PrintString(F("%s is empty"), path);
+        _error = path;
+        _error += F(" is empty");
         file.close();
         __LDBG_printf("%s", _error.c_str());
         return false;
@@ -556,7 +562,8 @@ bool Config::load(const char *path)
     }
     catch (const std::bad_alloc &) {
         file.close();
-        _error = PrintString(F("%s: out of memory (%u bytes)"), path, static_cast<unsigned>(size));
+        _error = path;
+        StrWrapper(_error).printf(": out of memory (%u bytes)", static_cast<unsigned>(size));
         __LDBG_printf("%s", _error.c_str());
         return false;
     }
@@ -569,7 +576,8 @@ bool Config::load(const char *path)
         parsed = _parse(data.data(), length);
     }
     catch (const std::bad_alloc &) {
-        _error = PrintString(F("%s: out of memory (%u bytes)"), path, static_cast<unsigned>(size));
+        _error = path;
+        StrWrapper(_error).printf(": out of memory (%u bytes)", static_cast<unsigned>(size));
         __LDBG_printf("%s", _error.c_str());
     }
     if (!parsed) {
@@ -663,7 +671,7 @@ bool Config::_parse(const char *data, size_t length)
             memset(areaStack, kNoTile, sizeof(areaStack));
             const auto colon = _findColon(ptr, lineEnd);
             if (!colon) {
-                return _fail(line, PrintString(F("expected 'key:', got '%.*s'"), static_cast<int>(lineEnd - ptr), ptr).c_str());
+                return _fail(line, "expected 'key:', got '%.*s'", static_cast<int>(lineEnd - ptr), ptr);
             }
             const auto keyEnd = _trimEnd(ptr, colon);
             if (_trimStart(colon + 1, lineEnd) != lineEnd) {
@@ -679,7 +687,7 @@ bool Config::_parse(const char *data, size_t length)
                 section = kSectionTiles;
             }
             else {
-                return _fail(line, PrintString(F("unknown key '%.*s'"), static_cast<int>(keyEnd - ptr), ptr).c_str());
+                return _fail(line, "unknown key '%.*s'", static_cast<int>(keyEnd - ptr), ptr);
             }
             continue;
         }
@@ -712,7 +720,7 @@ bool Config::_parse(const char *data, size_t length)
                 else if (_match(ptr, keyEnd, "poll")) {
                     long number = 0;
                     if (!_toInt(value, lineEnd, number) || number < static_cast<long>(kMinPollInterval) || number > static_cast<long>(kMaxPollInterval)) {
-                        return _fail(line, PrintString(F("hass.poll must be between %u and %u"), static_cast<unsigned>(kMinPollInterval), static_cast<unsigned>(kMaxPollInterval)).c_str());
+                        return _fail(line, "hass.poll must be between %u and %u", static_cast<unsigned>(kMinPollInterval), static_cast<unsigned>(kMaxPollInterval));
                     }
                     _pollInterval = static_cast<uint32_t>(number);
                 }
@@ -729,7 +737,7 @@ bool Config::_parse(const char *data, size_t length)
                     }
                 }
                 else {
-                    return _fail(line, PrintString(F("unknown key '%.*s'"), static_cast<int>(keyEnd - ptr), ptr).c_str());
+                    return _fail(line, "unknown key '%.*s'", static_cast<int>(keyEnd - ptr), ptr);
                 }
             }
             break;
@@ -743,18 +751,18 @@ bool Config::_parse(const char *data, size_t length)
                 long number = 0;
                 if (_match(ptr, keyEnd, "cols")) {
                     if (!_toInt(value, lineEnd, number) || number < 1 || number > kMaxGridCols) {
-                        return _fail(line, PrintString(F("grid.cols must be between 1 and %u"), static_cast<unsigned>(kMaxGridCols)).c_str());
+                        return _fail(line, "grid.cols must be between 1 and %u", static_cast<unsigned>(kMaxGridCols));
                     }
                     _cols = static_cast<uint8_t>(number);
                 }
                 else if (_match(ptr, keyEnd, "rows")) {
                     if (!_toInt(value, lineEnd, number) || number < 1 || number > kMaxGridRows) {
-                        return _fail(line, PrintString(F("grid.rows must be between 1 and %u"), static_cast<unsigned>(kMaxGridRows)).c_str());
+                        return _fail(line, "grid.rows must be between 1 and %u", static_cast<unsigned>(kMaxGridRows));
                     }
                     _rows = static_cast<uint8_t>(number);
                 }
                 else {
-                    return _fail(line, PrintString(F("unknown key '%.*s'"), static_cast<int>(keyEnd - ptr), ptr).c_str());
+                    return _fail(line, "unknown key '%.*s'", static_cast<int>(keyEnd - ptr), ptr);
                 }
             }
             break;
@@ -780,18 +788,18 @@ bool Config::_parse(const char *data, size_t length)
                         long number = 0;
                         if (_match(ptr, gridKeyEnd, "cols")) {
                             if (!_toInt(_trimStart(gridColon + 1, lineEnd), lineEnd, number) || number < 1 || number > kMaxGridCols) {
-                                return _fail(line, PrintString(F("grid.cols must be between 1 and %u"), static_cast<unsigned>(kMaxGridCols)).c_str());
+                                return _fail(line, "grid.cols must be between 1 and %u", static_cast<unsigned>(kMaxGridCols));
                             }
                             gridTile->gridCols = static_cast<uint8_t>(number);
                         }
                         else if (_match(ptr, gridKeyEnd, "rows")) {
                             if (!_toInt(_trimStart(gridColon + 1, lineEnd), lineEnd, number) || number < 1 || number > kMaxGridRows) {
-                                return _fail(line, PrintString(F("grid.rows must be between 1 and %u"), static_cast<unsigned>(kMaxGridRows)).c_str());
+                                return _fail(line, "grid.rows must be between 1 and %u", static_cast<unsigned>(kMaxGridRows));
                             }
                             gridTile->gridRows = static_cast<uint8_t>(number);
                         }
                         else {
-                            return _fail(line, PrintString(F("unknown key '%.*s' in the grid of an area"), static_cast<int>(gridKeyEnd - ptr), ptr).c_str());
+                            return _fail(line, "unknown key '%.*s' in the grid of an area", static_cast<int>(gridKeyEnd - ptr), ptr);
                         }
                         continue;
                     }
@@ -853,13 +861,13 @@ bool Config::_parse(const char *data, size_t length)
                 // the nested list of an area
                 if (!isItem && _match(ptr, itemKeyEnd, "tiles")) {
                     if (tile->type != TileType::AREA) {
-                        return _fail(line, PrintString(F("only an area has tiles, the type is '%s'"), getTileTypeName(tile->type)).c_str());
+                        return _fail(line, "only an area has tiles, the type is '%s'", getTileTypeName(tile->type));
                     }
                     if (_trimStart(itemColon + 1, lineEnd) != lineEnd) {
                         return _fail(line, "tiles: has no value, use a block sequence");
                     }
                     if (level + 1 >= kMaxNesting) {
-                        return _fail(line, PrintString(F("too many levels of areas, the maximum is %u"), static_cast<unsigned>(kMaxNesting - 1)).c_str());
+                        return _fail(line, "too many levels of areas, the maximum is %u", static_cast<unsigned>(kMaxNesting - 1));
                     }
                     if (_pages.size() == _pages.capacity()) {
                         _pages.reserve(_pages.size() + 16);
@@ -877,7 +885,7 @@ bool Config::_parse(const char *data, size_t length)
                 // an area can use a grid of its own for its page, the keys of the block follow
                 if (!isItem && _match(ptr, itemKeyEnd, "grid")) {
                     if (tile->type != TileType::AREA) {
-                        return _fail(line, PrintString(F("only an area has a grid of its own, the type is '%s'"), getTileTypeName(tile->type)).c_str());
+                        return _fail(line, "only an area has a grid of its own, the type is '%s'", getTileTypeName(tile->type));
                     }
                     if (_trimStart(itemColon + 1, lineEnd) != lineEnd) {
                         return _fail(line, "grid: has no value, use a block with cols and rows");
@@ -921,7 +929,7 @@ bool Config::_parse(const char *data, size_t length)
                 return _fail(item.line, "an area needs a name");
             }
             if (!item.areaPage) {
-                return _fail(item.line, PrintString(F("the area '%s' has no tiles"), item.name).c_str());
+                return _fail(item.line, "the area '%s' has no tiles", item.name);
             }
             // the grid of an area page is the grid of the document for the value it does not set
             if (item.gridCols && !item.gridRows) {
@@ -936,7 +944,7 @@ bool Config::_parse(const char *data, size_t length)
                 return _fail(item.line, "tile without an entity");
             }
             if (!_isValidEntityId(item.entity)) {
-                return _fail(item.line, PrintString(F("'%s' is not a valid entity id"), item.entity).c_str());
+                return _fail(item.line, "'%s' is not a valid entity id", item.entity);
             }
             if (item.type == TileType::PICTURE && strncasecmp(item.entity, "camera.", 7)) {
                 return _fail(item.line, "a picture tile needs a camera entity (camera.<name>)");
@@ -968,7 +976,7 @@ bool Config::_parseTile(Tile &tile, const char *key, const char *keyEnd, const c
     if (_match(key, keyEnd, "type")) {
         char buffer[16];
         if (!_toChars(value, valueEnd, buffer, sizeof(buffer)) || !parseTileType(buffer, tile.type)) {
-            return _fail(line, PrintString(F("unknown tile type '%.*s'"), static_cast<int>(valueEnd - value), value).c_str());
+            return _fail(line, "unknown tile type '%.*s'", static_cast<int>(valueEnd - value), value);
         }
     }
     else if (_match(key, keyEnd, "entity")) {
@@ -987,7 +995,7 @@ bool Config::_parseTile(Tile &tile, const char *key, const char *keyEnd, const c
     else if (_match(key, keyEnd, "refresh")) {
         long number = 0;
         if (!_toInt(value, valueEnd, number) || number < static_cast<long>(kMinRefresh) || number > static_cast<long>(kMaxRefresh)) {
-            return _fail(line, PrintString(F("refresh must be between %u and %u seconds"), static_cast<unsigned>(kMinRefresh), static_cast<unsigned>(kMaxRefresh)).c_str());
+            return _fail(line, "refresh must be between %u and %u seconds", static_cast<unsigned>(kMinRefresh), static_cast<unsigned>(kMaxRefresh));
         }
         tile.refresh = static_cast<uint16_t>(number);
         tile.hasRefresh = true;
@@ -1005,7 +1013,7 @@ bool Config::_parseTile(Tile &tile, const char *key, const char *keyEnd, const c
     else if (_match(key, keyEnd, "icon")) {
         char buffer[16];
         if (!_toChars(value, valueEnd, buffer, sizeof(buffer)) || !parseTileIcon(buffer, tile.icon)) {
-            return _fail(line, PrintString(F("unknown icon '%.*s'"), static_cast<int>(valueEnd - value), value).c_str());
+            return _fail(line, "unknown icon '%.*s'", static_cast<int>(valueEnd - value), value);
         }
     }
     else if (_match(key, keyEnd, "position")) {
@@ -1045,7 +1053,7 @@ bool Config::_parseTile(Tile &tile, const char *key, const char *keyEnd, const c
         tile.hasStep = true;
     }
     else {
-        return _fail(line, PrintString(F("unknown tile key '%.*s'"), static_cast<int>(keyEnd - key), key).c_str());
+        return _fail(line, "unknown tile key '%.*s'", static_cast<int>(keyEnd - key), key);
     }
     return true;
 }
@@ -1108,9 +1116,9 @@ bool Config::_placePage(PageIndex page, bool portrait)
         const uint8_t width = static_cast<uint8_t>(portrait ? tile.height : tile.width);
         const uint8_t height = static_cast<uint8_t>(portrait ? tile.width : tile.height);
         if (!portrait && (tile.width > cols || tile.height > rows)) {
-            return _fail(tile.line, PrintString(F("a %s tile needs a %ux%u block, the grid is %ux%u"), getTileTypeName(tile.type),
-                                                static_cast<unsigned>(tile.width), static_cast<unsigned>(tile.height),
-                                                static_cast<unsigned>(cols), static_cast<unsigned>(rows)).c_str());
+            return _fail(tile.line, "a %s tile needs a %ux%u block, the grid is %ux%u", getTileTypeName(tile.type),
+                         static_cast<unsigned>(tile.width), static_cast<unsigned>(tile.height),
+                         static_cast<unsigned>(cols), static_cast<unsigned>(rows));
         }
         if (tile.hasPosition) {
             if (!portrait && page && tile.col == 0 && tile.row == 0) {
@@ -1142,8 +1150,8 @@ bool Config::_placePage(PageIndex page, bool portrait)
         }
         if (!placed) {
             if (!portrait) {
-                return _fail(tile.line, PrintString(F("the %s tile does not fit into the %ux%u grid%s"), getTileTypeName(tile.type),
-                                                    static_cast<unsigned>(cols), static_cast<unsigned>(rows), _pageSuffix(page).c_str()).c_str());
+                return _fail(tile.line, "the %s tile does not fit into the %ux%u grid%s", getTileTypeName(tile.type),
+                             static_cast<unsigned>(cols), static_cast<unsigned>(rows), _pageSuffix(page).c_str());
             }
             // A grid of one row is a portrait grid of one column: a tile that is two cells wide has
             // no block in it at all. It keeps the first cell instead of disappearing
@@ -1172,16 +1180,16 @@ bool Config::_placeTiles()
             continue;
         }
         if (!tileTypeHasSize(tile.type)) {
-            return _fail(tile.line, PrintString(F("only a dimmer, a climate and a picture tile can have a size of their own, a %s tile is %ux%u"),
-                                                getTileTypeName(tile.type), static_cast<unsigned>(getTileWidth(tile.type)),
-                                                static_cast<unsigned>(getTileHeight(tile.type))).c_str());
+            return _fail(tile.line, "only a dimmer, a climate and a picture tile can have a size of their own, a %s tile is %ux%u",
+                         getTileTypeName(tile.type), static_cast<unsigned>(getTileWidth(tile.type)),
+                         static_cast<unsigned>(getTileHeight(tile.type)));
         }
         if (tile.width > 1 && tile.type != TileType::PICTURE) {
             return _fail(tile.line, "every tile is one column wide, size must start with 1x");
         }
         if (tile.type == TileType::PICTURE && (tile.width > kMaxPictureWidth || tile.height > kMaxPictureHeight)) {
-            return _fail(tile.line, PrintString(F("a picture tile is at most %ux%u cells, for example 2x2, 2x1 or 1x1"),
-                                                static_cast<unsigned>(kMaxPictureWidth), static_cast<unsigned>(kMaxPictureHeight)).c_str());
+            return _fail(tile.line, "a picture tile is at most %ux%u cells, for example 2x2, 2x1 or 1x1",
+                         static_cast<unsigned>(kMaxPictureWidth), static_cast<unsigned>(kMaxPictureHeight));
         }
     }
     // one pass per page, every page has its own grid. The main page is 0, an area adds one page
@@ -1195,12 +1203,12 @@ bool Config::_placeTiles()
     for (TileIndex i = 0; i < _tiles.size(); i++) {
         const auto &tile = _tiles[i];
         const String type = getTileTypeName(tile.type);
-        PrintString extra;
+        String extra;
         if (tile.type == TileType::PICTURE) {
-            extra.printf_P(PSTR(", refresh %us"), static_cast<unsigned>(tile.refresh));
+            StrWrapper(extra).printf_P(PSTR(", refresh %us"), static_cast<unsigned>(tile.refresh));
         }
         else if (tile.gridCols || tile.gridRows) {
-            extra.printf_P(PSTR(", grid %ux%u"), static_cast<unsigned>(tile.gridCols), static_cast<unsigned>(tile.gridRows));
+            StrWrapper(extra).printf_P(PSTR(", grid %ux%u"), static_cast<unsigned>(tile.gridCols), static_cast<unsigned>(tile.gridRows));
         }
         __LDBG_printf("tile %u: %s '%s' %ux%u at (%u,%u) of page %u%s, portrait (%u,%u)", static_cast<unsigned>(i), type.c_str(), tile.name,
                       static_cast<unsigned>(tile.width), static_cast<unsigned>(tile.height),
@@ -1249,7 +1257,12 @@ const char *Config::getPageName(PageIndex page) const
 String Config::_pageSuffix(PageIndex page) const
 {
     const auto name = getPageName(page);
-    return name ? PrintString(F(" of the area '%s'"), name) : String();
+    if (!name) {
+        return String();
+    }
+    String suffix;
+    StrWrapper(suffix).printf(" of the area '%s'", name);
+    return suffix;
 }
 
 } // namespace HomeAssistant

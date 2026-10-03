@@ -5,11 +5,16 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15309
-date   = 2026-10-03 09:57:28
+number = 15314
+date   = 2026-10-03 10:54:41
 env    = wt32_sc01_test1
 
 ; history, newest first: <number> <date> <time> <environments>
+15314 2026-10-03 10:54:41 wt32_sc01_test1
+15313 2026-10-03 10:47:09 bme280_serial
+15312 2026-10-03 10:42:57 bme280_serial
+15311 2026-10-03 10:40:53 bme280_serial
+15310 2026-10-03 10:29:51 bme280_serial
 15309 2026-10-03 09:57:28 wt32_sc01_test1
 15308 2026-10-03 09:52:35 wt32_sc01_test1
 15307 2026-10-03 03:53:47 wt32_sc01_test1

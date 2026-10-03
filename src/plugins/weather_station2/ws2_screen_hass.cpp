@@ -834,6 +834,50 @@ uint8_t countListItems(const String &text)
     return count;
 }
 
+// Item of a comma separated panel list by its ordinal (0 based): the empty entries are skipped,
+// exactly like countListItems() counts and _buildPanelList() creates them
+String listItemText(const String &text, uint8_t ordinal)
+{
+    uint8_t index = 0;
+    int32_t start = 0;
+    while (start <= static_cast<int32_t>(text.length())) {
+        auto end = text.indexOf(',', start);
+        if (end < 0) {
+            end = static_cast<int32_t>(text.length());
+        }
+        auto item = text.substring(start, end);
+        item.trim();
+        if (item.length()) {
+            if (index == ordinal) {
+                return item;
+            }
+            index++;
+        }
+        start = end + 1;
+    }
+    return String();
+}
+
+// Ordinal of an item of a panel list, -1 while the object is not one of its children.
+// The name of an item cannot be read back from its label: a name that is longer than the item is
+// shortened with dots and LVGL replaces the characters of the label's text with them
+// (lv_label.c, LV_LABEL_LONG_DOT saves them and only restores them when the text changes). A tap
+// read "...Spectrum Rai" instead of "Spectrum Rainbow Bars" and the entity ignored the effect it
+// does not know - short names like "Solid" or "Fire" fit into the item and worked, which is why
+// only the long ones looked broken. The item is looked up by its ordinal in the text of the list
+int16_t listItemOrdinal(lv_obj_t *list, const lv_obj_t *item)
+{
+    for (uint32_t i = 0;; i++) {
+        auto child = lv_obj_get_child(list, i);
+        if (!child) {
+            return -1;
+        }
+        if (child == item) {
+            return static_cast<int16_t>(i);
+        }
+    }
+}
+
 // ------------------------------------------------------------------------------------------
 // quick settings: geometry, presets and helpers
 //
@@ -2797,6 +2841,30 @@ const char *HassScreen::_expectedItemOf(PanelView view, const char *reported)
     return _expectedItem;
 }
 
+// The items of the option list the open panel shows, nullptr while the view has no list. Only the
+// panel that is open has a list: the effects of a light, the mode, the preset and the fan mode of a
+// climate
+const String *HassScreen::_panelListItems() const
+{
+    const auto &detail = _dashboard.getDetail();
+    if (_panel == Panel::CLIMATE) {
+        switch (_panelView) {
+        case PanelView::OPTION_1:
+            return &detail.modeList;
+        case PanelView::OPTION_2:
+            return &detail.presetList;
+        case PanelView::OPTION_3:
+            return &detail.fanModeList;
+        default:
+            break;
+        }
+    }
+    else if (_panelView == PanelView::EFFECTS) {
+        return &detail.effectList;
+    }
+    return nullptr;
+}
+
 void HassScreen::_buildPanelList()
 {
     auto &refs = _panelRefs;
@@ -2805,25 +2873,26 @@ void HassScreen::_buildPanelList()
     }
     const auto &detail = _dashboard.getDetail();
 
-    const String *items = nullptr;
+    // the list of the view that is shown (the effects of a light, the mode, the preset or the fan
+    // mode of a climate) and the item it marks: the one the user tapped until the detail response
+    // reports it, else the one the entity reports
+    const auto items = _panelListItems();
     const char *current = nullptr;
-    if (_panel == Panel::CLIMATE) {
-        if (_panelView == PanelView::OPTION_1) {
-            items = &detail.modeList;
-            current = _expectedItemOf(PanelView::OPTION_1, detail.mode);
-        }
-        else if (_panelView == PanelView::OPTION_2) {
-            items = &detail.presetList;
-            current = _expectedItemOf(PanelView::OPTION_2, detail.preset);
-        }
-        else if (_panelView == PanelView::OPTION_3) {
-            items = &detail.fanModeList;
-            current = _expectedItemOf(PanelView::OPTION_3, detail.fanMode);
-        }
-    }
-    else if (_panelView == PanelView::EFFECTS) {
-        items = &detail.effectList;
+    switch (_panelView) {
+    case PanelView::OPTION_1:
+        current = _expectedItemOf(PanelView::OPTION_1, detail.mode);
+        break;
+    case PanelView::OPTION_2:
+        current = _expectedItemOf(PanelView::OPTION_2, detail.preset);
+        break;
+    case PanelView::OPTION_3:
+        current = _expectedItemOf(PanelView::OPTION_3, detail.fanMode);
+        break;
+    case PanelView::EFFECTS:
         current = _expectedItemOf(PanelView::EFFECTS, detail.effect);
+        break;
+    default:
+        break;
     }
     if (!items || !items->length()) {
         return;
@@ -4564,31 +4633,38 @@ void HassScreen::_panelCallback(lv_event_t *event)
     }
 
     if (refs.list && lv_obj_get_parent(target) == refs.list) {
-        // an item of the list sets the value and goes back to the control
-        auto label = lv_obj_get_child(target, 0);
-        if (!label) {
+        // An item of the list sets the value and goes back to the control. The name is taken from
+        // the list, never from the label of the item: a name that is longer than the item is
+        // shortened with dots and LVGL replaced the characters of the label with them
+        // (see listItemOrdinal())
+        const auto items = self->_panelListItems();
+        const auto ordinal = listItemOrdinal(refs.list, target);
+        if (!items || ordinal < 0) {
             return;
         }
-        const auto text = lv_label_get_text(label);
+        const auto text = listItemText(*items, static_cast<uint8_t>(ordinal));
+        if (!text.length()) {
+            return;
+        }
         if (self->_panel == Panel::CLIMATE) {
             if (self->_panelView == PanelView::OPTION_1) {
-                self->_expectItem(PanelView::OPTION_1, text);
-                self->_dashboard.setMode(index, text);
+                self->_expectItem(PanelView::OPTION_1, text.c_str());
+                self->_dashboard.setMode(index, text.c_str());
             }
             else if (self->_panelView == PanelView::OPTION_2) {
-                self->_expectItem(PanelView::OPTION_2, text);
-                self->_dashboard.setPreset(index, text);
+                self->_expectItem(PanelView::OPTION_2, text.c_str());
+                self->_dashboard.setPreset(index, text.c_str());
             }
             else if (self->_panelView == PanelView::OPTION_3) {
-                self->_expectItem(PanelView::OPTION_3, text);
-                self->_dashboard.setFanMode(index, text);
+                self->_expectItem(PanelView::OPTION_3, text.c_str());
+                self->_dashboard.setFanMode(index, text.c_str());
             }
             self->_panelView = PanelView::ARC;
         }
         else if (self->_panelView == PanelView::EFFECTS) {
             // the list stays open, the tapped effect is marked until the response reports it
-            self->_expectItem(PanelView::EFFECTS, text);
-            self->_dashboard.setEffect(index, text);
+            self->_expectItem(PanelView::EFFECTS, text.c_str());
+            self->_dashboard.setEffect(index, text.c_str());
         }
         self->_listView = -1;
     }

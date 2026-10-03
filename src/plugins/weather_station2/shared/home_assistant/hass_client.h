@@ -53,9 +53,11 @@ public:
         Type type{Type::NONE};
         TileIndex tile{0};
         float value{0};
-        // second value (SET_COLOR) and the name of a mode/preset/fan/effect
+        // second value (SET_COLOR) and the name of a mode/preset/fan/effect. The buffer is the size
+        // of a name of the model: an effect is longer than one ("Spectrum Single Color Bars" is
+        // 26 characters), the trailing ones were cut off and the entity ignored the effect
         float value2{0};
-        char text[24]{};
+        char text[kNameLength]{};
     };
 
     // stack of the request task (the TLS handshake runs on it)

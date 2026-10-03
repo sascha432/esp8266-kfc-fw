@@ -38,8 +38,9 @@ struct Detail {
     char preset[16]{};
     // climate: fan mode
     char fanMode[16]{};
-    // light: current effect, empty when none is running
-    char effect[24]{};
+    // light: current effect, empty when none is running (an effect name is longer than a mode, the
+    // longest of the LED matrix is "Spectrum Single Color Bars")
+    char effect[kNameLength]{};
     // light: color mode of the entity ("hs", "color_temp", "brightness", ...)
     char colorMode[16]{};
     // light: hue in degrees and saturation in percent (hs_color)

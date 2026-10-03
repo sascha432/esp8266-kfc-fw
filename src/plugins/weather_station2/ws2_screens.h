@@ -922,6 +922,10 @@ private:
     // stacks the buttons of the light panel in the left column and gives the rest of the column to
     // the back tile (an entity without color/effects has fewer buttons)
     void _layoutPanelButtons();
+    // items of the option list the open panel shows (the mode, the preset and the fan mode of a
+    // climate, the effects of a light), nullptr while the view has no list. A tapped item is looked
+    // up in it by its ordinal (see _panelCallback())
+    const String *_panelListItems() const;
     // fills the list of the panel with the items of the current view
     void _buildPanelList();
     // refreshes the header, the pills, the slider and the list of the open panel
@@ -1153,8 +1157,9 @@ private:
     lv_coord_t _sliderPressY{0};
     bool _sliderMoved{false};    // The item of an option list (mode, preset, fan mode, effect) the user tapped: the pill and the
     // list mark it until the detail response reports it (the entity confirms the action) or
-    // kExpectedTimeout reverts it (see _expectedItemOf())
-    char _expectedItem[24]{};
+    // kExpectedTimeout reverts it (see _expectedItemOf()). A name of the model fits, an effect can
+    // be longer than a mode
+    char _expectedItem[HomeAssistant::kNameLength]{};
     uint8_t _expectedItemView{0};
     uint32_t _expectedItemTime{0};
     // sets the item an option list has to mark until the detail response reports it

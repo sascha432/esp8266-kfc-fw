@@ -41,11 +41,12 @@
 
 /* LVGL's own allocator. The pool and the large buffers (draw buffers, canvas, images) come
    from PSRAM (8 MB on the WROVER-B): the ~180 KB of internal DRAM are shared with the WiFi
-   stack, the AsyncWebServer and the panel driver, a static pool of 64 KB does not fit there
+   stack, the AsyncWebServer and the panel driver, a static pool in DRAM does not fit there
    anymore (it overflowed dram0_0_seg as soon as the OpenWeatherMap TLS client was added).
-   Only the pool is moved, LVGL keeps its own TLSF allocator. */
+   Only the pool is moved, LVGL keeps its own TLSF allocator. The pool size is down to 32 KB
+   because the peak usage of this UI is around 23 KB (a 64 KB pool only wasted PSRAM). */
 #define LV_MEM_CUSTOM 0
-#define LV_MEM_SIZE (64U * 1024U) /* [bytes] */
+#define LV_MEM_SIZE (32U * 1024U) /* [bytes] */
 #define LV_MEM_POOL_INCLUDE "lvgl_psram_pool.h"
 #define LV_MEM_POOL_ALLOC lvgl_psram_pool_alloc
 
@@ -63,8 +64,10 @@
  *------------------*/
 
 #define LV_DPI_DEF 130              /* [px/inch] 3.5" @ 480x320 */
+#ifndef LV_DISP_DEF_REFR_PERIOD
 #define LV_DISP_DEF_REFR_PERIOD 30  /* [ms] */
-#define LV_INDEV_DEF_READ_PERIOD 30 /* [ms] */
+#define LV_INDEV_DEF_READ_PERIOD LV_DISP_DEF_REFR_PERIOD /* [ms] */
+#endif
 
 /*------------------
  * RENDERING / ANTI ALIASING

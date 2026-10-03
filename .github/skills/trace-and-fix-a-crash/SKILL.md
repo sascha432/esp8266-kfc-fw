@@ -1,10 +1,9 @@
 ---
-description: "Download the core dump of a crashed KFC device, decode it against the matching build archive and fix the root cause"
-name: "Trace and fix a crash"
+name: trace-and-fix-a-crash
+description: Download the core dump of a crashed KFC device, decode it against the matching build archive and fix the root cause
+disable-model-invocation: true
 argument-hint: "<device address> [environment] (e.g. 192.168.0.196 wled_esp32_controller)"
-agent: "agent"
 ---
-
 Follow the project rules in [`.github/copilot-instructions.md`](../copilot-instructions.md) - above all the
 "Crash dumps and stack traces" and "Build, flash and verify" sections. They own the workflow, the device
 access and the verification; do not restate or second-guess them and do not decode a dump by hand.

@@ -9,6 +9,17 @@ namespace WeatherStation2 {
 static constexpr lv_coord_t kValueCardHeight = 42;
 static constexpr lv_coord_t kValueCardGap = 6;
 
+// Sets the text only when it changed: the screen refreshes once per second and a new pointer
+// reallocates the buffer of the label and restarts the scroll animation of a long value
+static void _setValue(lv_obj_t *label, const char *text, uint32_t color)
+{
+    const auto current = lv_label_get_text(label);
+    if (current && !strcmp(current, text)) {
+        return;
+    }
+    LVGLUI::setText(label, text, LVGLUI::kFontLarge, color);
+}
+
 void IndoorScreen::create(lv_obj_t *parent)
 {
     _page = LVGLUI::createPage(parent, "Indoor Climate");
@@ -60,8 +71,9 @@ void IndoorScreen::update()
             }
         }
 
-        const auto text = _data.formatIndoorValue(metric, value);
-        LVGLUI::setText(_values[i], text.c_str(), LVGLUI::kFontLarge, toIndoorColor(value.getState()));
+        char text[DataSource::kFormatSize];
+        _data.formatIndoorValue(metric, value, text, sizeof(text));
+        _setValue(_values[i], text, toIndoorColor(value.getState()));
     }
 
     if (_sensorLabel) {

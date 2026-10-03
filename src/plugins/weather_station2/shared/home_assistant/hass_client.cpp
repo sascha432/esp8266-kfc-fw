@@ -6,10 +6,9 @@
 
 #include <HTTPClient.h>
 #include <JPEGDEC.h>
-#include <PrintString.h>
+#include <StrView.h>
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
-#include <stdarg.h>
 
 #ifndef DEBUG_WEATHER_STATION2
 #    define DEBUG_WEATHER_STATION2 1
@@ -29,53 +28,58 @@ namespace HomeAssistant {
 // ------------------------------------------------------------------------------------------
 namespace {
 
-// appends "<entity>.<key>":value to a JSON object. The value is a format string with its
-// arguments: the caller does not build a temporary string for it, the formatted value is appended
-// to the output directly. The frame is a plain append - a printf would copy the text twice and
-// parse a format that has nothing to format
-void _appendJsonEntry(PrintString &output, bool &first, const char *entity, const char *key, const char *format, ...)
+// appends "<entity>.<key>":<prefix><entity><suffix> to a JSON object. The entity is the only
+// value of the templates of this module, so the literal parts around it are appended as they are -
+// a printf would parse a format for nothing but one string. The frame of the entry is a plain
+// append for the same reason
+void _appendJsonEntry(String &output, bool &first, const char *entity, const char *key, const char *prefix, const char *suffix)
 {
+    const auto entityLength = strlen(entity);
+    const auto keyLength = strlen(key);
+    const auto prefixLength = strlen(prefix);
+    const auto suffixLength = strlen(suffix);
+    const size_t length = (first ? 0 : 1) + 1 + entityLength + 1 + keyLength + 2 + prefixLength + entityLength + suffixLength;
+    output.reserve(static_cast<unsigned int>(output.length() + length));
     if (!first) {
         output += ',';
     }
     first = false;
     output += '"';
-    output += entity;
+    output.concat(entity, entityLength);
     output += '.';
-    output += key;
-    output += "\":";
-    va_list arg;
-    va_start(arg, format);
-    output.vprintf_P(format, arg);
-    va_end(arg);
+    output.concat(key, keyLength);
+    output.concat("\":", 2);
+    output.concat(prefix, prefixLength);
+    output.concat(entity, entityLength);
+    output.concat(suffix, suffixLength);
 }
 
 // Attributes that describe what an entity offers (which buttons its panel has, the effects). They
 // are part of the subscribed template, so the panel of a tile is complete the moment it is opened
-void _appendCapabilityEntries(PrintString &output, bool &first, const char *entity)
+void _appendCapabilityEntries(String &output, bool &first, const char *entity)
 {
-    _appendJsonEntry(output, first, entity, "color_modes", PSTR("{{ (state_attr('%s','supported_color_modes') or []) | join(',') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "has_level", PSTR("{{ 1 if state_attr('%s','brightness') is not none else 0 }}"), entity);
-    _appendJsonEntry(output, first, entity, "effect_list", PSTR("{{ (state_attr('%s','effect_list') or []) | join(',') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "effect", PSTR("{{ state_attr('%s','effect') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "color_temp", PSTR("{{ state_attr('%s','color_temp_kelvin') | int(0) }}"), entity);
-    _appendJsonEntry(output, first, entity, "min_color_temp", PSTR("{{ state_attr('%s','min_color_temp_kelvin') | int(0) }}"), entity);
-    _appendJsonEntry(output, first, entity, "max_color_temp", PSTR("{{ state_attr('%s','max_color_temp_kelvin') | int(0) }}"), entity);
-    _appendJsonEntry(output, first, entity, "hs_color", PSTR("{{ (state_attr('%s','hs_color') or [0,0]) | join(',') | tojson }}"), entity);
+    _appendJsonEntry(output, first, entity, "color_modes", "{{ (state_attr('", "','supported_color_modes') or []) | join(',') | tojson }}");
+    _appendJsonEntry(output, first, entity, "has_level", "{{ 1 if state_attr('", "','brightness') is not none else 0 }}");
+    _appendJsonEntry(output, first, entity, "effect_list", "{{ (state_attr('", "','effect_list') or []) | join(',') | tojson }}");
+    _appendJsonEntry(output, first, entity, "effect", "{{ state_attr('", "','effect') | tojson }}");
+    _appendJsonEntry(output, first, entity, "color_temp", "{{ state_attr('", "','color_temp_kelvin') | int(0) }}");
+    _appendJsonEntry(output, first, entity, "min_color_temp", "{{ state_attr('", "','min_color_temp_kelvin') | int(0) }}");
+    _appendJsonEntry(output, first, entity, "max_color_temp", "{{ state_attr('", "','max_color_temp_kelvin') | int(0) }}");
+    _appendJsonEntry(output, first, entity, "hs_color", "{{ (state_attr('", "','hs_color') or [0,0]) | join(',') | tojson }}");
 }
 
 // The attributes of the entity of the panel that is open. They are part of the subscribed template
 // while the panel is open, so a change of the entity updates the control of the panel with the
 // same message that carries the values of the tiles (the state is rendered for every tile already)
-void _appendDetailEntries(PrintString &output, bool &first, const char *entity)
+void _appendDetailEntries(String &output, bool &first, const char *entity)
 {
-    _appendJsonEntry(output, first, entity, "preset_mode", PSTR("{{ state_attr('%s','preset_mode') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "preset_modes", PSTR("{{ (state_attr('%s','preset_modes') or []) | join(',') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "fan_mode", PSTR("{{ state_attr('%s','fan_mode') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "fan_modes", PSTR("{{ (state_attr('%s','fan_modes') or []) | join(',') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "hvac_modes", PSTR("{{ (state_attr('%s','hvac_modes') or []) | join(',') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "color_mode", PSTR("{{ state_attr('%s','color_mode') | tojson }}"), entity);
-    _appendJsonEntry(output, first, entity, "brightness", PSTR("{{ state_attr('%s','brightness') | int(0) }}"), entity);
+    _appendJsonEntry(output, first, entity, "preset_mode", "{{ state_attr('", "','preset_mode') | tojson }}");
+    _appendJsonEntry(output, first, entity, "preset_modes", "{{ (state_attr('", "','preset_modes') or []) | join(',') | tojson }}");
+    _appendJsonEntry(output, first, entity, "fan_mode", "{{ state_attr('", "','fan_mode') | tojson }}");
+    _appendJsonEntry(output, first, entity, "fan_modes", "{{ (state_attr('", "','fan_modes') or []) | join(',') | tojson }}");
+    _appendJsonEntry(output, first, entity, "hvac_modes", "{{ (state_attr('", "','hvac_modes') or []) | join(',') | tojson }}");
+    _appendJsonEntry(output, first, entity, "color_mode", "{{ state_attr('", "','color_mode') | tojson }}");
+    _appendJsonEntry(output, first, entity, "brightness", "{{ state_attr('", "','brightness') | int(0) }}");
     _appendCapabilityEntries(output, first, entity);
 }
 
@@ -229,7 +233,7 @@ bool Client::begin(const Config &config)
     stop();
     if (_task) {
         // the previous task is still inside a request, a second one would double the traffic
-        _setError(String("the request task is still running"));
+        _setError("the request task is still running");
         return false;
     }
 
@@ -265,7 +269,7 @@ bool Client::begin(const Config &config)
                       static_cast<unsigned>(_visiblePage), static_cast<unsigned>(templateLength), static_cast<unsigned>(kTaskStack));
         return true;
     }
-    _setError(String("cannot start the request task"));
+    _setError("cannot start the request task");
     return false;
 }
 
@@ -763,7 +767,9 @@ void Client::_takePushedTemplate()
     }
     if (error.length()) {
         __LDBG_printf("hass> the template reported an error: %s", error.c_str());
-        _setError(PrintString(F("template: %s"), error.c_str()));
+        String message("template: ");
+        message += error;
+        _setError(message);
         return;
     }
     if (!text.length()) {
@@ -790,9 +796,9 @@ void Client::_sendAction(const Action &action)
     if (!_config) {
         return;
     }
-    PrintString domain;
-    PrintString service;
-    PrintString data;
+    String domain;
+    String service;
+    String data;
     _buildAction(action, domain, service, data);
     if (!domain.length() || !service.length() || !data.length()) {
         __LDBG_printf("cannot build action %u", static_cast<unsigned>(action.type));
@@ -847,10 +853,10 @@ bool Client::_fetchImage(const ImageRequest &request)
     // The box of the tile is what Home Assistant gets as width/height: it returns the smallest
     // of its scaling factors that still covers the box (and never crops), so asking for exactly
     // the box of the tile is the smallest possible transfer
-    PrintString url = _config->getUrl();
-    url += F("/api/camera_proxy/");
+    String url(_config->getUrl());
+    url += "/api/camera_proxy/";
     url += tile.entity;
-    url.printf_P(PSTR("?width=%u&height=%u"), static_cast<unsigned>(request.width), static_cast<unsigned>(request.height));
+    StrWrapper(url).printf("?width=%u&height=%u", static_cast<unsigned>(request.width), static_cast<unsigned>(request.height));
 
     uint8_t *jpeg = nullptr;
     size_t length = 0;
@@ -862,7 +868,7 @@ bool Client::_fetchImage(const ImageRequest &request)
         return false;
     }
     uint16_t *pixels = nullptr;
-    PrintString info;
+    String info;
     const auto ok = _decodeImage(jpeg, length, request.width, request.height, pixels, info);
     const auto duration = millis() - started;
     free(jpeg);
@@ -889,18 +895,18 @@ bool Client::_fetchImage(const ImageRequest &request)
     return true;
 }
 
-bool Client::_decodeImage(const uint8_t *data, size_t length, uint16_t width, uint16_t height, uint16_t *&pixels, PrintString &info)
+bool Client::_decodeImage(const uint8_t *data, size_t length, uint16_t width, uint16_t height, uint16_t *&pixels, String &info)
 {
     // The decoder state is about 18 KB (the quantization, Huffman and pixel buffers of the
     // library), too much for the stack of the request task - and it is not needed permanent
     auto jpeg = static_cast<JPEGDEC *>(ps_malloc(sizeof(JPEGDEC)));
     if (!jpeg) {
-        info = F("out of memory (decoder)");
+        info = "out of memory (decoder)";
         return false;
     }
     bool ok = false;
     if (!jpeg->openRAM(const_cast<uint8_t *>(data), static_cast<int>(length), _imageDrawCallback)) {
-        info.printf_P(PSTR("not a JPEG (error %d)"), jpeg->getLastError());
+        StrWrapper(info).printf("not a JPEG (error %d)", jpeg->getLastError());
     }
     else {
         const auto sourceWidth = jpeg->getWidth();
@@ -920,7 +926,7 @@ bool Client::_decodeImage(const uint8_t *data, size_t length, uint16_t width, ui
         _imageLayout(scaledWidth, scaledHeight, job);
         job.dest = static_cast<uint16_t *>(ps_malloc(static_cast<size_t>(width) * height * sizeof(uint16_t)));
         if (!job.dest) {
-            info = F("out of memory (image)");
+            info = "out of memory (image)";
         }
         else {
             // RGB565 with the bytes in big endian order: this is what LVGL expects with
@@ -931,7 +937,7 @@ bool Client::_decodeImage(const uint8_t *data, size_t length, uint16_t width, ui
             ok = jpeg->decode(0, 0, scale) != 0;
             const auto decodeTime = millis() - started;
             if (ok) {
-                info.printf_P(PSTR("jpeg %dx%d %u bytes%s, crop %ux%u at (%u,%u) -> %ux%u in %ums"),
+                StrWrapper(info).printf("jpeg %dx%d %u bytes%s, crop %ux%u at (%u,%u) -> %ux%u in %ums",
                                    sourceWidth, sourceHeight, static_cast<unsigned>(length),
                                    progressive ? " progressive (DC only)" : "",
                                    static_cast<unsigned>(job.cropW), static_cast<unsigned>(job.cropH),
@@ -942,7 +948,7 @@ bool Client::_decodeImage(const uint8_t *data, size_t length, uint16_t width, ui
             }
             else {
                 free(job.dest);
-                info.printf_P(PSTR("decode failed (error %d)"), jpeg->getLastError());
+                StrWrapper(info).printf("decode failed (error %d)", jpeg->getLastError());
             }
         }
     }
@@ -956,11 +962,11 @@ bool Client::_get(const String &url, uint8_t *&data, size_t &length, int16_t &st
     length = 0;
     statusCode = 0;
     if (!_config) {
-        _setError(String("not configured"));
+        _setError("not configured");
         return false;
     }
     if (!WiFi.isConnected()) {
-        _setError(String("WiFi is not connected"));
+        _setError("WiFi is not connected");
         return false;
     }
 
@@ -991,7 +997,14 @@ bool Client::_get(const String &url, uint8_t *&data, size_t &length, int16_t &st
         }
     }
     if (!ok && !_error.length()) {
-        _setError((statusCode <= 0) ? String("connection failed") : PrintString(F("HTTP %d"), static_cast<int>(statusCode)));
+        if (statusCode <= 0) {
+            _setError("connection failed");
+        }
+        else {
+            String message;
+            StrWrapper(message).printf("HTTP %d", static_cast<int>(statusCode));
+            _setError(message);
+        }
     }
     return ok;
 }
@@ -1001,7 +1014,7 @@ bool Client::_getBody(HTTPClient &http, uint8_t *&data, size_t &length, int16_t 
     http.setTimeout(timeout);
     http.setConnectTimeout(timeout);
     http.setReuse(false);
-    PrintString authorization = F("Bearer ");
+    String authorization("Bearer ");
     authorization += _config->getToken();
     http.addHeader(F("Authorization"), authorization);
     http.addHeader(F("Accept"), F("image/jpeg"));
@@ -1127,7 +1140,18 @@ void Client::_buildTemplate()
         return;
     }
     _templatePage = _visiblePage;
-    PrintString body;
+    String body;
+    // The template is one JSON entry per value of every tile of the page (an entry is between 60
+    // and 240 bytes, a dimmer has nine of them). The buffer is estimated from the number of tiles:
+    // the String would otherwise reallocate on every append while the template is built
+    size_t tiles = 0;
+    for (TileIndex i = 0; i < _config->getTileCount(); i++) {
+        const auto &tile = _config->getTile(i);
+        if (tile.entity[0] && tile.page == _visiblePage) {
+            tiles++;
+        }
+    }
+    body.reserve(64 + tiles * 384);
     body += '{';
     bool first = true;
     for (TileIndex i = 0; i < _config->getTileCount(); i++) {
@@ -1140,25 +1164,25 @@ void Client::_buildTemplate()
             // the tiles of the other pages are subscribed when they are shown
             continue;
         }
-        _appendJsonEntry(body, first, tile.entity, "state", PSTR("{{ states('%s') | tojson }}"), tile.entity);
+        _appendJsonEntry(body, first, tile.entity, "state", "{{ states('", "') | tojson }}");
         switch (tile.type) {
         case TileType::SENSOR:
-            _appendJsonEntry(body, first, tile.entity, "value", PSTR("{{ states('%s') | float(0) }}"), tile.entity);
-            _appendJsonEntry(body, first, tile.entity, "unit", PSTR("{{ state_attr('%s','unit_of_measurement') | tojson }}"), tile.entity);
-            _appendJsonEntry(body, first, tile.entity, "class", PSTR("{{ state_attr('%s','device_class') | tojson }}"), tile.entity);
+            _appendJsonEntry(body, first, tile.entity, "value", "{{ states('", "') | float(0) }}");
+            _appendJsonEntry(body, first, tile.entity, "unit", "{{ state_attr('", "','unit_of_measurement') | tojson }}");
+            _appendJsonEntry(body, first, tile.entity, "class", "{{ state_attr('", "','device_class') | tojson }}");
             break;
         case TileType::DIMMER:
             // the capabilities of the entity are part of the subscription of the page: the panel
             // of a tile has to be complete the moment it is opened
-            _appendJsonEntry(body, first, tile.entity, "brightness", PSTR("{{ state_attr('%s','brightness') | int(0) }}"), tile.entity);
+            _appendJsonEntry(body, first, tile.entity, "brightness", "{{ state_attr('", "','brightness') | int(0) }}");
             _appendCapabilityEntries(body, first, tile.entity);
             break;
         case TileType::CLIMATE:
-            _appendJsonEntry(body, first, tile.entity, "temperature", PSTR("{{ state_attr('%s','temperature') | float(0) }}"), tile.entity);
-            _appendJsonEntry(body, first, tile.entity, "current", PSTR("{{ state_attr('%s','current_temperature') | float(0) }}"), tile.entity);
-            _appendJsonEntry(body, first, tile.entity, "action", PSTR("{{ state_attr('%s','hvac_action') | tojson }}"), tile.entity);
-            _appendJsonEntry(body, first, tile.entity, "min_temp", PSTR("{{ state_attr('%s','min_temp') | float(0) }}"), tile.entity);
-            _appendJsonEntry(body, first, tile.entity, "max_temp", PSTR("{{ state_attr('%s','max_temp') | float(0) }}"), tile.entity);
+            _appendJsonEntry(body, first, tile.entity, "temperature", "{{ state_attr('", "','temperature') | float(0) }}");
+            _appendJsonEntry(body, first, tile.entity, "current", "{{ state_attr('", "','current_temperature') | float(0) }}");
+            _appendJsonEntry(body, first, tile.entity, "action", "{{ state_attr('", "','hvac_action') | tojson }}");
+            _appendJsonEntry(body, first, tile.entity, "min_temp", "{{ state_attr('", "','min_temp') | float(0) }}");
+            _appendJsonEntry(body, first, tile.entity, "max_temp", "{{ state_attr('", "','max_temp') | float(0) }}");
             _appendCapabilityEntries(body, first, tile.entity);
             break;
         default:
@@ -1199,11 +1223,11 @@ void Client::_entityDomain(const char *entity, char *output, size_t outputSize)
 
 // Domain, service and service data of an action. The connection sends them as one `call_service`
 // command (the service data carries the entity id, which Home Assistant accepts like a target)
-void Client::_buildAction(const Action &action, PrintString &domain, PrintString &service, PrintString &data) const
+void Client::_buildAction(const Action &action, String &domain, String &service, String &data) const
 {
-    domain = String();
-    service = String();
-    data = String();
+    domain.clear();
+    service.clear();
+    data.clear();
     if (!_config || action.tile >= _config->getTileCount()) {
         return;
     }
@@ -1220,59 +1244,79 @@ void Client::_buildAction(const Action &action, PrintString &domain, PrintString
     case Action::Type::TOGGLE:
         domain = F("homeassistant");
         service = F("toggle");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\"}"), tile.entity);
+        data = "{\"entity_id\":\"";
+        data += tile.entity;
+        data += "\"}";
         break;
     case Action::Type::PRESS:
         service = F("press");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\"}"), tile.entity);
+        data = "{\"entity_id\":\"";
+        data += tile.entity;
+        data += "\"}";
         break;
     case Action::Type::SET_LEVEL:
         domain = F("light");
         service = F("turn_on");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\",\"brightness_pct\":%u}"), tile.entity, static_cast<unsigned>(lroundf(action.value)));
+        StrWrapper(data).printf("{\"entity_id\":\"%s\",\"brightness_pct\":%u}", tile.entity, static_cast<unsigned>(lroundf(action.value)));
         break;
     case Action::Type::SET_TEMP:
         domain = F("climate");
         service = F("set_temperature");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\",\"temperature\":%.1f}"), tile.entity, action.value);
+        StrWrapper(data).printf("{\"entity_id\":\"%s\",\"temperature\":%.1f}", tile.entity, action.value);
         break;
     case Action::Type::SET_HVAC_MODE:
         domain = F("climate");
         service = F("set_hvac_mode");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\",\"hvac_mode\":\"%s\"}"), tile.entity, action.text);
+        data = "{\"entity_id\":\"";
+        data += tile.entity;
+        data += "\",\"hvac_mode\":\"";
+        data += action.text;
+        data += "\"}";
         break;
     case Action::Type::SET_PRESET:
         domain = F("climate");
         service = F("set_preset_mode");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\",\"preset_mode\":\"%s\"}"), tile.entity, action.text);
+        data = "{\"entity_id\":\"";
+        data += tile.entity;
+        data += "\",\"preset_mode\":\"";
+        data += action.text;
+        data += "\"}";
         break;
     case Action::Type::SET_FAN_MODE:
         domain = F("climate");
         service = F("set_fan_mode");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\",\"fan_mode\":\"%s\"}"), tile.entity, action.text);
+        data = "{\"entity_id\":\"";
+        data += tile.entity;
+        data += "\",\"fan_mode\":\"";
+        data += action.text;
+        data += "\"}";
         break;
     case Action::Type::SET_EFFECT:
         domain = F("light");
         service = F("turn_on");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\",\"effect\":\"%s\"}"), tile.entity, action.text);
+        data = "{\"entity_id\":\"";
+        data += tile.entity;
+        data += "\",\"effect\":\"";
+        data += action.text;
+        data += "\"}";
         break;
     case Action::Type::SET_COLOR:
         // hs_color instead of color_temp: it works for every color mode that has a hue and the
         // value stays in the level slider
         domain = F("light");
         service = F("turn_on");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\",\"hs_color\":[%.1f,%.1f]}"), tile.entity, action.value, action.value2);
+        StrWrapper(data).printf("{\"entity_id\":\"%s\",\"hs_color\":[%.1f,%.1f]}", tile.entity, action.value, action.value2);
         break;
     case Action::Type::SET_COLOR_TEMP:
         // kelvin: mireds are the old unit, the current one is color_temp_kelvin
         domain = F("light");
         service = F("turn_on");
-        data.printf_P(PSTR("{\"entity_id\":\"%s\",\"color_temp_kelvin\":%d}"), tile.entity, static_cast<int>(lroundf(action.value)));
+        StrWrapper(data).printf("{\"entity_id\":\"%s\",\"color_temp_kelvin\":%d}", tile.entity, static_cast<int>(lroundf(action.value)));
         break;
     default:
-        domain = String();
-        service = String();
-        data = String();
+        domain.clear();
+        service.clear();
+        data.clear();
         break;
     }
 }

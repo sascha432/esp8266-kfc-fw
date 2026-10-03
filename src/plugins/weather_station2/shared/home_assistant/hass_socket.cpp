@@ -4,6 +4,7 @@
 
 #include "hass_socket.h"
 
+#include <StrView.h>
 #include <stdarg.h>
 
 #ifndef DEBUG_WEATHER_STATION2
@@ -193,7 +194,8 @@ bool Socket::_openConnection()
     const auto deadline = millis() + kConnectTimeout;
     _stage("connecting");
     if (!_socket->connect(_host, _port)) {
-        _error = PrintString(F("cannot connect to %s:%u"), _host, static_cast<unsigned>(_port));
+        _error = String();
+        StrWrapper(_error).printf("cannot connect to %s:%u", _host, static_cast<unsigned>(_port));
         return false;
     }
     _stage("handshake");
@@ -206,11 +208,13 @@ bool Socket::_openConnection()
         return false;
     }
     if (!strstr(_message, "\"auth_required\"")) {
-        _error = PrintString(F("the server does not request a token: %s"), _message);
+        _error = "the server does not request a token: ";
+        _error += _message;
         return false;
     }
-    PrintString auth;
-    auth.printf_P(PSTR("{\"type\":\"auth\",\"access_token\":\"%s\"}"), _token.c_str());
+    String auth("{\"type\":\"auth\",\"access_token\":\"");
+    auth += _token;
+    auth += "\"}";
     _stage("auth");
     if (!_sendText(auth.c_str())) {
         return false;
@@ -220,11 +224,13 @@ bool Socket::_openConnection()
         return false;
     }
     if (strstr(_message, "\"auth_invalid\"")) {
-        _error = PrintString(F("Home Assistant rejected the token: %s"), _stringValue("message").c_str());
+        _error = "Home Assistant rejected the token: ";
+        _error += _stringValue("message");
         return false;
     }
     if (!strstr(_message, "\"auth_ok\"")) {
-        _error = PrintString(F("no answer to the authentication: %s"), _message);
+        _error = "no answer to the authentication: ";
+        _error += _message;
         return false;
     }
     _openConnectionDone();
@@ -279,10 +285,10 @@ bool Socket::_handshake(uint32_t deadline)
 {
     char key[32];
     _randomKey(key);
-    PrintString request;
-    request.printf_P(PSTR("GET /api/websocket HTTP/1.1\r\nHost: %s:%u\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
-                          "Sec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n\r\n"),
-                     _host, static_cast<unsigned>(_port), key);
+    String request;
+    StrWrapper(request).printf("GET /api/websocket HTTP/1.1\r\nHost: %s:%u\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                               "Sec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n\r\n",
+                               _host, static_cast<unsigned>(_port), key);
     if (_socket->write(reinterpret_cast<const uint8_t *>(request.c_str()), request.length()) != request.length()) {
         _error = String("cannot send the handshake");
         return false;
@@ -315,11 +321,14 @@ bool Socket::_readHeaders(uint32_t deadline)
     // the reason of a rejected upgrade is in the body (Home Assistant answers a short text, for
     // example "Handshake error: '<key>'")
     _readErrorBody(millis() + 500);
+    _error = "the server did not switch protocols (";
+    _error += status;
     if (_body[0]) {
-        _error = PrintString(F("the server did not switch protocols (%s): %s"), status, _body);
+        _error += "): ";
+        _error += _body;
     }
     else {
-        _error = PrintString(F("the server did not switch protocols (%s)"), status);
+        _error += ")";
     }
     return false;
 }
@@ -547,7 +556,14 @@ void Socket::_dispatch()
                 _templateId = 0;
                 _templatePage = kNoPage;
                 _templateResult = String();
-                _templateError = code.length() ? PrintString(F("%s: %s"), code.c_str(), message.c_str()) : message;
+                if (code.length()) {
+                    _templateError = code;
+                    _templateError += ": ";
+                    _templateError += message;
+                }
+                else {
+                    _templateError = message;
+                }
                 _resultPage = kNoPage;
                 _templateValid = true;
             }
@@ -600,17 +616,24 @@ const char *Socket::_value(const char *key) const
     if (!_message || !_messageLength) {
         return nullptr;
     }
-    PrintString needle;
-    needle.printf_P(PSTR("\"%s\":"), key);
-    const auto found = strstr(_message, needle.c_str());
-    if (!found) {
-        return nullptr;
+    // The member ("key":) is matched in place: the key can have any length, the caller does not
+    // have to know a limit and no needle buffer is needed. keyLength + 3 bytes are needed from the
+    // quote, a match that does not fit into the rest of the message cannot exist
+    const auto keyLength = strlen(key);
+    const auto messageEnd = _message + _messageLength;
+    for (auto ptr = strchr(_message, '"'); ptr; ptr = strchr(ptr + 1, '"')) {
+        if (static_cast<size_t>(messageEnd - ptr) < (keyLength + 3)) {
+            break;
+        }
+        if (ptr[keyLength + 1] == '"' && ptr[keyLength + 2] == ':' && !strncmp(ptr + 1, key, keyLength)) {
+            auto value = ptr + keyLength + 3;
+            while (*value == ' ') {
+                value++;
+            }
+            return value;
+        }
     }
-    auto ptr = found + needle.length();
-    while (*ptr == ' ') {
-        ptr++;
-    }
-    return ptr;
+    return nullptr;
 }
 
 uint16_t Socket::_id() const
@@ -765,9 +788,11 @@ bool Socket::subscribeTemplate(const String &templateText, PageIndex page)
     // the subscription of the page that is left is dropped first, its result is not wanted
     unsubscribeTemplate();
     const auto id = _nextId++;
-    PrintString command;
-    command.printf_P(PSTR("{\"id\":%u,\"type\":\"render_template\",\"strict\":false,\"report_errors\":true,\"template\":\"%s\"}"),
-                     static_cast<unsigned>(id), templateText.c_str());
+    String command;
+    StrWrapper(command).printf("{\"id\":%u,\"type\":\"render_template\",\"strict\":false,\"report_errors\":true,\"template\":\"",
+                               static_cast<unsigned>(id));
+    command += templateText;
+    command += "\"}";
     if (!_sendText(command.c_str())) {
         return false;
     }
@@ -790,10 +815,12 @@ void Socket::unsubscribeTemplate()
     if (!_open) {
         return;
     }
-    PrintString command;
-    command.printf_P(PSTR("{\"id\":%u,\"type\":\"unsubscribe_events\",\"subscription\":%u}"), static_cast<unsigned>(_nextId++),
-                     static_cast<unsigned>(subscription));
-    _sendText(command.c_str());
+    // 61 bytes + NUL: unsubscribe_events with two ids of five digits (max uint16_t), no
+    // String is allocated for the command
+    char command[64];
+    snprintf(command, sizeof(command), "{\"id\":%u,\"type\":\"unsubscribe_events\",\"subscription\":%u}",
+             static_cast<unsigned>(_nextId++), static_cast<unsigned>(subscription));
+    _sendText(command);
 }
 
 bool Socket::callService(TileIndex tile, const char *domain, const char *service, const char *serviceData)
@@ -804,9 +831,11 @@ bool Socket::callService(TileIndex tile, const char *domain, const char *service
         return false;
     }
     const auto id = _nextId++;
-    PrintString command;
-    command.printf_P(PSTR("{\"id\":%u,\"type\":\"call_service\",\"domain\":\"%s\",\"service\":\"%s\",\"service_data\":%s}"),
-                     static_cast<unsigned>(id), domain, service, serviceData);
+    String command;
+    StrWrapper(command).printf("{\"id\":%u,\"type\":\"call_service\",\"domain\":\"%s\",\"service\":\"%s\",\"service_data\":",
+                               static_cast<unsigned>(id), domain, service);
+    command += serviceData;
+    command += '}';
     if (!_sendText(command.c_str())) {
         _failure(tile);
         return false;
@@ -949,10 +978,10 @@ bool Socket::_requestChunk(uint32_t start, uint32_t end, const char *entity, Str
     _formatIso(static_cast<time_t>(start), startTime, sizeof(startTime));
     _formatIso(static_cast<time_t>(end), endTime, sizeof(endTime));
     const auto id = _nextId++;
-    PrintString request;
-    request.printf_P(PSTR("{\"id\":%u,\"type\":\"recorder/statistics_during_period\",\"start_time\":\"%s\",\"end_time\":\"%s\","
-                          "\"statistic_ids\":[\"%s\"],\"period\":\"%s\",\"types\":[\"mean\"]}"),
-                     static_cast<unsigned>(id), startTime, endTime, entity, kPeriod);
+    String request;
+    StrWrapper(request).printf("{\"id\":%u,\"type\":\"recorder/statistics_during_period\",\"start_time\":\"%s\",\"end_time\":\"%s\","
+                               "\"statistic_ids\":[\"%s\"],\"period\":\"%s\",\"types\":[\"mean\"]}",
+                               static_cast<unsigned>(id), startTime, endTime, entity, kPeriod);
     if (!_sendText(request.c_str())) {
         error = _error;
         return false;
@@ -970,7 +999,7 @@ bool Socket::_requestChunk(uint32_t start, uint32_t end, const char *entity, Str
                 return false;
             }
             if (static_cast<int32_t>(millis() - deadline) >= 0) {
-                error = String("timeout while the statistics were read");
+                error = "timeout while the statistics were read";
                 _statsId = 0;
                 return false;
             }
@@ -978,7 +1007,13 @@ bool Socket::_requestChunk(uint32_t start, uint32_t end, const char *entity, Str
     }
     _statsId = 0;
     if (!_statsSuccess) {
-        error = _statsMessage.length() ? PrintString(F("statistics: %s"), _statsMessage.c_str()) : String("the statistics request failed");
+        if (_statsMessage.length()) {
+            error = "statistics: ";
+            error += _statsMessage;
+        }
+        else {
+            error = "the statistics request failed";
+        }
         return false;
     }
     return true;
@@ -1140,7 +1175,7 @@ bool Socket::pump(uint32_t timeout)
     // watchdog only fires when the peer is gone or the connection was dropped silently - a socket
     // like that looks alive for hours and the values it should push never arrive
     if (_lastMessage && static_cast<uint32_t>(millis() - _lastMessage) >= kSilenceTimeout) {
-        _markDead(F("no answer from the server"));
+        _markDead("no answer from the server");
         return false;
     }
     if (static_cast<int32_t>(millis() - _nextPing) >= 0) {
@@ -1163,22 +1198,24 @@ bool Socket::ping()
         return false;
     }
     _nextPing = millis() + kPingInterval;
-    PrintString command;
-    command.printf_P(PSTR("{\"id\":%u,\"type\":\"ping\"}"), static_cast<unsigned>(_nextId++));
-    return _sendText(command.c_str());
+    // 26 bytes + NUL: {"id":65535,"type":"ping"}
+    char command[32];
+    snprintf(command, sizeof(command), "{\"id\":%u,\"type\":\"ping\"}", static_cast<unsigned>(_nextId++));
+    return _sendText(command);
 }
 
 void Socket::_sendPong(uint16_t id)
 {
-    PrintString command;
-    command.printf_P(PSTR("{\"id\":%u,\"type\":\"pong\"}"), static_cast<unsigned>(id));
-    _sendText(command.c_str());
+    // 26 bytes + NUL: {"id":65535,"type":"pong"}
+    char command[32];
+    snprintf(command, sizeof(command), "{\"id\":%u,\"type\":\"pong\"}", static_cast<unsigned>(id));
+    _sendText(command);
 }
 
 bool Socket::_sendControl(uint8_t opcode, const uint8_t *payload, size_t length)
 {
     if (length > 125) {
-        _error = String("control frame too large");
+        _error = "control frame too large";
         return false;
     }
     uint8_t mask[4];
@@ -1194,13 +1231,13 @@ bool Socket::_sendControl(uint8_t opcode, const uint8_t *payload, size_t length)
     }
     const auto size = static_cast<size_t>(6 + length);
     if (_socket->write(frame, size) != size) {
-        _markDead(F("cannot send the frame"));
+        _markDead("cannot send the frame");
         return false;
     }
     return true;
 }
 
-void Socket::_markDead(const __FlashStringHelper *reason)
+void Socket::_markDead(const char *reason)
 {
     if (!_error.length()) {
         _error = String(reason);
@@ -1229,7 +1266,7 @@ bool Socket::_sendText(const char *text)
     }
     else {
         // a request of this client is a few kilobytes at most (the template of a page)
-        _error = String("the request is too large");
+        _error = "the request is too large";
         return false;
     }
     uint8_t mask[4];
@@ -1239,7 +1276,7 @@ bool Socket::_sendText(const char *text)
     headerLength += sizeof(mask);
 
     if (_socket->write(header, headerLength) != headerLength) {
-        _markDead(F("cannot send the request"));
+        _markDead("cannot send the request");
         return false;
     }
     // the payload is masked in chunks: a buffer of the full length would be a copy of the request
@@ -1251,7 +1288,7 @@ bool Socket::_sendText(const char *text)
             buffer[i] = static_cast<uint8_t>(text[offset + i] ^ mask[(offset + i) & 3]);
         }
         if (_socket->write(buffer, chunk) != chunk) {
-            _markDead(F("cannot send the request"));
+            _markDead("cannot send the request");
             return false;
         }
         offset += chunk;
@@ -1286,7 +1323,7 @@ bool Socket::_readExact(void *buffer, size_t length, uint32_t deadline)
         }
         if (!_socket->connected()) {
             if (!_error.length()) {
-                _error = String("the connection was closed");
+                _error = "the connection was closed";
             }
             _open = false;
             return false;
@@ -1297,8 +1334,9 @@ bool Socket::_readExact(void *buffer, size_t length, uint32_t deadline)
             // the payload of a message cannot be repaired: the stream would be read from a wrong
             // offset, so the connection is reported as dead and opened again
             if (received) {
-                _error = PrintString(F("timeout while %s (%u of %u bytes read, %d available)"), _stageName,
-                                     static_cast<unsigned>(received), static_cast<unsigned>(length), _socket->available());
+                _error = String();
+                StrWrapper(_error).printf("timeout while %s (%u of %u bytes read, %d available)", _stageName,
+                                          static_cast<unsigned>(received), static_cast<unsigned>(length), _socket->available());
                 _open = false;
                 _templateId = 0;
                 _templatePage = kNoPage;

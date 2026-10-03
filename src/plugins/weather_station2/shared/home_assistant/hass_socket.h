@@ -31,7 +31,6 @@
 //
 
 #include <Arduino_compat.h>
-#include <PrintString.h>
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include "hass_config.h"
@@ -188,7 +187,7 @@ private:
     // the client opens a new one. A broken socket can look alive for a long time (the reads only
     // report it when their timeout runs out), which is exactly what a network that went away in
     // between leaves behind
-    void _markDead(const __FlashStringHelper *reason);
+    void _markDead(const char *reason);
     // small helpers of the protocol
     void _stage(const char *name) {
         _stageName = name;

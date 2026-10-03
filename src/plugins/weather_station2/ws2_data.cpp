@@ -11,7 +11,7 @@
 #include <time.h>
 #include <WiFi.h>
 #include <Mutex.h>
-#include <PrintString.h>
+#include <StrView.h>
 #include <kfc_fw_config.h>
 #include "shared/moon_phase/moon_phase_model.h"
 #include "shared/open_weather_map/open_weather_map_client.h"
@@ -50,164 +50,294 @@ namespace WeatherStation2 {
 // ------------------------------------------------------------------------------------------
 // formatting
 // ------------------------------------------------------------------------------------------
-static String _formatValue(const char *format, float value)
+// formats one value into the buffer of the caller (the String versions below delegate to it)
+static void _formatValue(const char *format, double value, char *output, size_t size)
 {
-    char buffer[40];
-    snprintf(buffer, sizeof(buffer), format, value);
-    return String(buffer);
+    snprintf(output, size, format, value);
+}
+
+// copies a text into the buffer of the caller, always NUL terminated
+static void _copyText(char *output, size_t size, const char *text)
+{
+    if (!size) {
+        return;
+    }
+    strncpy(output, text, size - 1);
+    output[size - 1] = 0;
+}
+
+void DataSource::formatTemperature(float value, char *output, size_t size) const
+{
+    _formatValue(_metric ? "%.1f \xC2\xB0""C" : "%.1f \xC2\xB0""F",
+                 _metric ? value : (value * 9.0f / 5.0f + 32.0f), output, size);
 }
 
 String DataSource::formatTemperature(float value) const
 {
-    return _formatValue(_metric ? "%.1f \xC2\xB0""C" : "%.1f \xC2\xB0""F",
-                        _metric ? value : (value * 9.0f / 5.0f + 32.0f));
+    char buffer[kFormatSize];
+    formatTemperature(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatHumidity(float value, char *output, size_t size) const
+{
+    _formatValue("%.1f %%", value, output, size);
 }
 
 String DataSource::formatHumidity(float value) const
 {
-    return _formatValue("%.1f %%", value);
+    char buffer[kFormatSize];
+    formatHumidity(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatPressure(float value, char *output, size_t size) const
+{
+    _formatValue(_metric ? "%.1f hPa" : "%.2f inHg", _metric ? value : (value / 33.8639f), output, size);
 }
 
 String DataSource::formatPressure(float value) const
 {
-    return _formatValue(_metric ? "%.1f hPa" : "%.2f inHg", _metric ? value : (value / 33.8639f));
+    char buffer[kFormatSize];
+    formatPressure(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatWind(float value, char *output, size_t size) const
+{
+    _formatValue(_metric ? "%.1f km/h" : "%.1f mph", _metric ? value : (value * 0.621371f), output, size);
 }
 
 String DataSource::formatWind(float value) const
 {
-    return _formatValue(_metric ? "%.1f km/h" : "%.1f mph", _metric ? value : (value * 0.621371f));
+    char buffer[kFormatSize];
+    formatWind(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatRain(float value, char *output, size_t size) const
+{
+    _formatValue(_metric ? "%.1f mm" : "%.2f in", _metric ? value : (value / 25.4f), output, size);
 }
 
 String DataSource::formatRain(float value) const
 {
-    return _formatValue(_metric ? "%.1f mm" : "%.2f in", _metric ? value : (value / 25.4f));
+    char buffer[kFormatSize];
+    formatRain(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatEco2(float value, char *output, size_t size) const
+{
+    _formatValue("%.0f ppm", value, output, size);
 }
 
 String DataSource::formatEco2(float value) const
 {
-    return _formatValue("%.0f ppm", value);
+    char buffer[kFormatSize];
+    formatEco2(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatIllumination(float value, char *output, size_t size) const
+{
+    _formatValue("%.1f %%", value * 100.0f, output, size);
 }
 
 String DataSource::formatIllumination(float value) const
 {
-    return _formatValue("%.1f %%", value * 100.0f);
+    char buffer[kFormatSize];
+    formatIllumination(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatAge(float value, char *output, size_t size) const
+{
+    _formatValue("%.1f days", value, output, size);
 }
 
 String DataSource::formatAge(float value) const
 {
-    return _formatValue("%.1f days", value);
+    char buffer[kFormatSize];
+    formatAge(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatUvIndex(float value, char *output, size_t size) const
+{
+    _formatValue("%.1f", value, output, size);
 }
 
 String DataSource::formatUvIndex(float value) const
 {
-    return _formatValue("%.1f", value);
+    char buffer[kFormatSize];
+    formatUvIndex(value, buffer, sizeof(buffer));
+    return String(buffer);
 }
 
-String DataSource::formatIndoorValue(IndoorValues::Metric metric, const IndoorValue &value) const
+void DataSource::formatIndoorValue(IndoorValues::Metric metric, const IndoorValue &value, char *output, size_t size) const
 {
     switch (value.getState()) {
     case MetricState::HAS_VALUE:
         switch (metric) {
         case IndoorValues::Metric::TEMPERATURE:
-            return formatTemperature(value.value);
+            formatTemperature(value.value, output, size);
+            return;
         case IndoorValues::Metric::HUMIDITY:
-            return formatHumidity(value.value);
+            formatHumidity(value.value, output, size);
+            return;
         case IndoorValues::Metric::PRESSURE:
-            return formatPressure(value.value);
+            formatPressure(value.value, output, size);
+            return;
         default:
-            return formatEco2(value.value);
+            formatEco2(value.value, output, size);
+            return;
         }
     case MetricState::SOURCE_OFFLINE:
         // the source is configured but it does not deliver (no MQTT connection, availability
         // topic says offline or the sensor is not available)
-        return String(F("offline"));
+        _copyText(output, size, "offline");
+        return;
     default:
         // no source configured, or the source is online but sent no value yet
-        return String(F("--"));
+        _copyText(output, size, "--");
+        return;
     }
 }
 
+String DataSource::formatIndoorValue(IndoorValues::Metric metric, const IndoorValue &value) const
+{
+    char buffer[kFormatSize];
+    formatIndoorValue(metric, value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
 // The readout cards of the power screen draw the unit separately, so these return the bare
-// number. The precision matches the sensor resolution (INA219/INA3221 measure mV/mA)
+// number. The precision matches the sensor resolution (INA219/INA3221 measure mV/mA). The buffer
+// version is the one the power screen uses, the String version only the status output
+void DataSource::formatVoltage(float value, char *output, size_t size) const
+{
+    snprintf(output, size, "%.2f", static_cast<double>(value));
+}
+
 String DataSource::formatVoltage(float value) const
 {
-    return _formatValue("%.2f", value);
+    char buffer[24];
+    formatVoltage(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatCurrent(float value, char *output, size_t size) const
+{
+    snprintf(output, size, "%.3f", static_cast<double>(value));
 }
 
 String DataSource::formatCurrent(float value) const
 {
-    return _formatValue("%.3f", value);
+    char buffer[24];
+    formatCurrent(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatPower(float value, char *output, size_t size) const
+{
+    snprintf(output, size, "%.2f", static_cast<double>(value));
 }
 
 String DataSource::formatPower(float value) const
 {
-    return _formatValue("%.2f", value);
+    char buffer[24];
+    formatPower(value, buffer, sizeof(buffer));
+    return String(buffer);
+}
+
+void DataSource::formatEnergy(double value, char *output, size_t size) const
+{
+    // a double on purpose, the total counter of the server can become large
+    snprintf(output, size, "%.4f", value);
 }
 
 String DataSource::formatEnergy(double value) const
 {
-    // a double on purpose, the total counter of the server can become large
     char buffer[40];
-    snprintf(buffer, sizeof(buffer), "%.4f", value);
+    formatEnergy(value, buffer, sizeof(buffer));
     return String(buffer);
 }
 
-String DataSource::getPowerStateText(const PowerValues &value) const
+const char *DataSource::getPowerStateText(const PowerValues &value) const
 {
     switch (value.getState()) {
-    case MetricState::HAS_VALUE:
-        return String();
     case MetricState::SOURCE_OFFLINE:
-        return String(F("offline"));
+        return "offline";
     case MetricState::NO_VALUE:
-        return String(F("no data"));
+        return "no data";
     default:
-        return String();
+        return "";
     }
+}
+
+void DataSource::formatTimeOfDay(int16_t minutes, char *output, size_t size) const
+{
+    if (minutes < 0) {
+        _copyText(output, size, "--:--");
+        return;
+    }
+    snprintf(output, size, "%02u:%02u", static_cast<unsigned>(minutes / 60), static_cast<unsigned>(minutes % 60));
 }
 
 String DataSource::formatTimeOfDay(int16_t minutes) const
 {
-    if (minutes < 0) {
-        return String(F("--:--"));
-    }
-    char buffer[12];
-    snprintf(buffer, sizeof(buffer), "%02u:%02u", static_cast<unsigned>(minutes / 60), static_cast<unsigned>(minutes % 60));
+    char buffer[kFormatSize];
+    formatTimeOfDay(minutes, buffer, sizeof(buffer));
     return String(buffer);
 }
 
-String DataSource::formatUptime(uint32_t uptime)
+void DataSource::formatUptime(uint32_t uptime, char *output, size_t size)
 {
-    char buffer[32];
     auto seconds = uptime % 60;
     auto minutes = (uptime / 60) % 60;
     auto hours = (uptime / 3600) % 24;
     auto days = uptime / 86400;
-    snprintf(buffer, sizeof(buffer), "%ud %02u:%02u:%02u", static_cast<unsigned>(days), static_cast<unsigned>(hours),
+    snprintf(output, size, "%ud %02u:%02u:%02u", static_cast<unsigned>(days), static_cast<unsigned>(hours),
              static_cast<unsigned>(minutes), static_cast<unsigned>(seconds));
+}
+
+String DataSource::formatUptime(uint32_t uptime)
+{
+    char buffer[kFormatSize];
+    formatUptime(uptime, buffer, sizeof(buffer));
     return String(buffer);
 }
 
 String DataSource::getWeatherStatusText() const
 {
+    String text;
+    getWeatherStatusText(text);
+    return text;
+}
+
+void DataSource::getWeatherStatusText(String &output) const
+{
     // The screens show this while getWeatherState() != READY, i.e. instead of values that were
     // never received. The line break keeps the reason separate from the error
     switch (getWeatherState()) {
     case WeatherState::NOT_CONFIGURED:
-        return String(F("Weather station not configured\nthe API key or the location is missing"));
+        output += "Weather station not configured\nthe API key or the location is missing";
+        break;
     case WeatherState::ERROR: {
+        output += "Weather data unavailable";
         const auto error = getWeatherError();
-        if (error.length() == 0) {
-            return String(F("Weather data unavailable"));
+        if (error.length()) {
+            output += "\n";
+            output += error;
         }
-        String text = F("Weather data unavailable\n");
-        text += error;
-        return text;
+        break;
     }
     case WeatherState::WAITING:
-        return String(F("Waiting for weather data"));
+        output += "Waiting for weather data";
+        break;
     default:
-        return String();
+        break;
     }
 }
 
@@ -550,6 +680,34 @@ String getPowerChannelPart(uint8_t index, uint8_t part)
     return parts[part];
 }
 
+void getPowerChannelPart(uint8_t index, uint8_t part, char *output, size_t size)
+{
+    if (size) {
+        output[0] = 0;
+    }
+    if (!size || part > 2) {
+        return;
+    }
+    // the configured string, or the built-in default while it is empty
+    const char *text = _getConfiguredPowerChannel(index);
+    if (!text || !*text) {
+        text = flashStringToCStr(getDefaultPowerChannel(index));
+    }
+    // walk to the requested part (the parts are separated by '|', a missing one is empty)
+    for (uint8_t i = 0; i < part; i++) {
+        const auto separator = strchr(text, '|');
+        if (!separator) {
+            return;
+        }
+        text = separator + 1;
+    }
+    const auto separator = strchr(text, '|');
+    const auto length = separator ? static_cast<size_t>(separator - text) : strlen(text);
+    const auto copyLength = (length < size) ? length : size - 1;
+    memcpy(output, text, copyLength);
+    output[copyLength] = 0;
+}
+
 void setPowerChannelPart(uint8_t index, uint8_t part, const String &value)
 {
     if (part > 2) {
@@ -874,7 +1032,8 @@ bool DataSource::debugSetValue(const String &key, const String &value)
             day.minTemperature = 15.0f + i;
             day.maxTemperature = 24.0f - i;
             day.rain = (i == 2) ? 4.2f : 0.0f;
-            day.day = PrintString(F("Day %u"), static_cast<unsigned>(i + 1));
+            day.day.clear();
+            StrWrapper(day.day).printf("Day %u", static_cast<unsigned>(i + 1));
         }
         return true;
     }
@@ -1334,28 +1493,25 @@ void WeatherDataSource::stopPowerMonitor()
     }
 }
 
-String WeatherDataSource::getPowerRemoteStatus() const
+void WeatherDataSource::appendPowerRemoteStatus(String &output) const
 {
     if (!_powerClient || !_powerClient->isConfigured()) {
-        return String();
+        return;
     }
-    PrintString status;
     if (_powerClient->isConnected()) {
-        status.printf_P(PSTR("connected, %u sample(s)"), static_cast<unsigned>(_powerClient->getSampleCount()));
+        StrWrapper(output).printf("connected, %u sample(s)", static_cast<unsigned>(_powerClient->getSampleCount()));
         const auto age = _powerClient->getLastSampleAge();
         if (age) {
-            status.printf_P(PSTR(", %us ago"), static_cast<unsigned>(age / 1000));
+            StrWrapper(output).printf(", %us ago", static_cast<unsigned>(age / 1000));
         }
+        return;
     }
-    else {
-        status = F("not connected");
-        const auto error = _powerClient->getError();
-        if (error.length()) {
-            status += F(": ");
-            status += error;
-        }
+    output += "not connected";
+    const auto error = _powerClient->getError();
+    if (error.length()) {
+        output += ": ";
+        output += error;
     }
-    return status;
 }
 
 void WeatherDataSource::mqttConnected()

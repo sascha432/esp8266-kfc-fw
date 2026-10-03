@@ -7,7 +7,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <PrintString.h>
+#include <StrView.h>
 
 #include "lvgl_plugin.h"
 
@@ -166,7 +166,7 @@ void PowerScreen::_createChannelChips(lv_obj_t *parent)
         if (!power.values[i].configured) {
             continue;
         }
-        String text = String(static_cast<unsigned>(number + 1));
+        String text(static_cast<unsigned>(number + 1));
         _createChip(parent, _channelChips[_channelChipCount], text.c_str(), x, kTitleChipY, _channelChipCallback, i);
         _channelChipCount++;
         x = static_cast<lv_coord_t>(x + kChipWidth + kChipGap);
@@ -450,19 +450,25 @@ void PowerScreen::_updateChart()
     }
     lv_chart_refresh(_chart);
 
-    LVGLUI::setText(_chartMax, _formatGraphValue(max).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
-    LVGLUI::setText(_chartMin, _formatGraphValue(min).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+    char valueText[24];
+    _formatGraphValue(max, valueText, sizeof(valueText));
+    LVGLUI::setText(_chartMax, valueText, LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+    _formatGraphValue(min, valueText, sizeof(valueText));
+    LVGLUI::setText(_chartMin, valueText, LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
 }
 
-String PowerScreen::_formatGraphValue(float value) const
+void PowerScreen::_formatGraphValue(float value, char *output, size_t size) const
 {
     switch (_graphSource) {
     case GraphSource::VOLTAGE:
-        return _data.formatVoltage(value);
+        _data.formatVoltage(value, output, size);
+        break;
     case GraphSource::CURRENT:
-        return _data.formatCurrent(value);
+        _data.formatCurrent(value, output, size);
+        break;
     default:
-        return _data.formatPower(value);
+        _data.formatPower(value, output, size);
+        break;
     }
 }
 
@@ -495,17 +501,26 @@ void PowerScreen::_updateValues(const PowerValues &value)
     const auto state = value.getState();
     const auto color = toIndoorColor(state);
 
-    String texts[kNumGraphSources];
-    texts[static_cast<uint8_t>(GraphSource::VOLTAGE)] = value.available ? _data.formatVoltage(value.voltage) : String(F("--"));
-    texts[static_cast<uint8_t>(GraphSource::CURRENT)] = value.available ? _data.formatCurrent(value.current) : String(F("--"));
-    texts[static_cast<uint8_t>(GraphSource::POWER)] = value.available ? _data.formatPower(value.power) : String(F("--"));
+    // the readouts are formatted into stack buffers: the screen refreshes at 5 fps and a String
+    // per readout would be one heap allocation per card and tick
+    char texts[kNumGraphSources][24];
+    if (value.available) {
+        _data.formatVoltage(value.voltage, texts[static_cast<uint8_t>(GraphSource::VOLTAGE)], sizeof(texts[0]));
+        _data.formatCurrent(value.current, texts[static_cast<uint8_t>(GraphSource::CURRENT)], sizeof(texts[0]));
+        _data.formatPower(value.power, texts[static_cast<uint8_t>(GraphSource::POWER)], sizeof(texts[0]));
+    }
+    else {
+        for (auto &text : texts) {
+            memcpy(text, "--", 3);
+        }
+    }
 
     for (uint8_t i = 0; i < kNumGraphSources; i++) {
         const bool active = (static_cast<GraphSource>(i) == _graphSource);
         // the font is reset only when the text changed - fitTextDown only shrinks it (a value can
         // become longer while the screen is visible, e.g. after switching the channel)
-        if (_setTextIfChanged(_readoutValues[i], texts[i].c_str(), LVGLUI::kFontHuge, color)) {
-            LVGLUI::fitTextDown(_readoutValues[i], texts[i].c_str(), 0);
+        if (_setTextIfChanged(_readoutValues[i], texts[i], LVGLUI::kFontHuge, color)) {
+            LVGLUI::fitTextDown(_readoutValues[i], texts[i], 0);
         }
         lv_obj_set_style_border_color(_readoutCards[i], lv_color_hex(active ? LVGLUI::kColorAccent : LVGLUI::kColorBorder), LV_PART_MAIN);
         lv_obj_set_style_border_width(_readoutCards[i], active ? 2 : 1, LV_PART_MAIN);
@@ -515,9 +530,10 @@ void PowerScreen::_updateValues(const PowerValues &value)
     // the energy counter of the source (total only). The local INA219 has none and the firmware
     // never accumulates one, so the card says so instead of showing a made up number
     if (value.hasEnergy) {
-        const auto text = _data.formatEnergy(value.energy);
-        if (_setTextIfChanged(_energyValue, text.c_str(), LVGLUI::kFontValue, LVGLUI::kColorText)) {
-            LVGLUI::fitTextDown(_energyValue, text.c_str(), 0);
+        char text[40];
+        _data.formatEnergy(value.energy, text, sizeof(text));
+        if (_setTextIfChanged(_energyValue, text, LVGLUI::kFontValue, LVGLUI::kColorText)) {
+            LVGLUI::fitTextDown(_energyValue, text, 0);
         }
         _setTextIfChanged(_energyState, "total counter", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
     }
@@ -657,31 +673,38 @@ void PowerScreen::update()
     _updateValues(value);
 
     // footer: the selected channel, its source and the state. The text is kept stable (no sample
-    // counter or age), so the labels are only reallocated when something really changed
-    PrintString status;
-    status.printf_P(PSTR("Channel %u/%u  %s"), static_cast<unsigned>(_channelPosition() + 1),
-                    static_cast<unsigned>(_lastChannelCount), getPowerChannelPart(_channel, 1).c_str());
-    status += F("  -  ");
-    status += getPowerSourceTypeName(value.source);
+    // counter or age), so the labels are only reallocated when something really changed. It is
+    // composed into the member of the screen - the String keeps its buffer and the 5 fps tick does
+    // not allocate
+    char channelName[32];
+    getPowerChannelPart(_channel, 1, channelName, sizeof(channelName));
+    auto &statusText = _statusText;
+    statusText.clear();
+    StrWrapper(statusText).printf("Channel %u/%u  %s", static_cast<unsigned>(_channelPosition() + 1),
+                                  static_cast<unsigned>(_lastChannelCount), channelName);
+    statusText += "  -  ";
+    statusText += getPowerSourceTypeName(value.source);
     if (value.source == PowerSourceType::REMOTE) {
-        status.printf_P(PSTR(" #%u"), static_cast<unsigned>(value.remoteChannelId));
+        StrWrapper(statusText).printf(" #%u", static_cast<unsigned>(value.remoteChannelId));
     }
-    const auto stateText = _data.getPowerStateText(value);
-    if (stateText.length()) {
-        status += F("  -  ");
-        status += stateText;
+    const auto *stateText = _data.getPowerStateText(value);
+    if (stateText[0]) {
+        statusText += "  -  ";
+        statusText += stateText;
     }
     // the connection state and the error of the last attempt only while the source is not
-    // delivering - see getPowerRemoteStatus()
+    // delivering - see appendPowerRemoteStatus()
     if (value.source == PowerSourceType::REMOTE && !value.online) {
-        const auto remote = _data.getPowerRemoteStatus();
-        if (remote.length()) {
-            status += F("  -  ");
-            status += remote;
+        const auto length = statusText.length();
+        statusText += "  -  ";
+        _data.appendPowerRemoteStatus(statusText);
+        if (statusText.length() == (length + 5)) {
+            // nothing was appended: drop the separator again
+            statusText.remove(length);
         }
     }
-    if (_setTextIfChanged(_status, status.c_str(), LVGLUI::kFontSmall, stateText.length() ? LVGLUI::kColorError : LVGLUI::kColorTextMuted)) {
-        LVGLUI::fitTextDown(_status, status.c_str(), 0, true);
+    if (_setTextIfChanged(_status, statusText.c_str(), LVGLUI::kFontSmall, stateText[0] ? LVGLUI::kColorError : LVGLUI::kColorTextMuted)) {
+        LVGLUI::fitTextDown(_status, statusText.c_str(), 0, true);
     }
 }
 

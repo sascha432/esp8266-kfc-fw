@@ -71,28 +71,37 @@ void MainScreen::update()
         }
 
         // fixed layout: the labels keep the font size they were created with and only shrink
-        auto text = _data.formatTemperature(current.temperature);
-        LVGLUI::fitTextDown(_temperature, text.c_str(), lv_obj_get_width(_temperature));
+        char text[DataSource::kFormatSize];
+        _data.formatTemperature(current.temperature, text, sizeof(text));
+        LVGLUI::fitTextDown(_temperature, text, lv_obj_get_width(_temperature));
         LVGLUI::fitTextDown(_location, current.location.c_str(), lv_obj_get_width(_location));
         LVGLUI::fitTextDown(_description, current.description.c_str(), lv_obj_get_width(_description));
 
-        text = F("feels like ");
-        text += _data.formatTemperature(current.feelsLike);
-        text += F("   min ");
-        text += _data.formatTemperature(current.minTemperature);
-        text += F("   max ");
-        text += _data.formatTemperature(current.maxTemperature);
-        LVGLUI::fitTextDown(_details, text.c_str(), lv_obj_get_width(_details));
+        // The two lines below concatenate several values. They are composed in stack buffers
+        // instead of a String that every append can reallocate (the screen refreshes at 1 Hz).
+        // The cursor is the length that was really written (strlen of the terminated buffer), so
+        // the appends stay inside the buffer even when a value is truncated
+        char line[160];
+        char value[DataSource::kFormatSize];
+        char second[DataSource::kFormatSize];
+        _data.formatTemperature(current.feelsLike, value, sizeof(value));
+        _data.formatTemperature(current.minTemperature, second, sizeof(second));
+        snprintf(line, sizeof(line), "feels like %s   min %s   max ", value, second);
+        auto used = strlen(line);
+        _data.formatTemperature(current.maxTemperature, value, sizeof(value));
+        snprintf(line + used, sizeof(line) - used, "%s", value);
+        LVGLUI::fitTextDown(_details, line, lv_obj_get_width(_details));
 
-        text = F("sun ");
-        text += _data.formatTimeOfDay(current.sunRise);
-        text += F(" / ");
-        text += _data.formatTimeOfDay(current.sunSet);
-        text += F("     UV ");
-        text += _data.formatUvIndex(current.uvIndex);
-        text += F("     wind ");
-        text += _data.formatWind(current.windSpeed);
-        LVGLUI::fitTextDown(_extra, text.c_str(), lv_obj_get_width(_extra));
+        _data.formatTimeOfDay(current.sunRise, value, sizeof(value));
+        _data.formatTimeOfDay(current.sunSet, second, sizeof(second));
+        snprintf(line, sizeof(line), "sun %s / %s     UV ", value, second);
+        used = strlen(line);
+        _data.formatUvIndex(current.uvIndex, value, sizeof(value));
+        snprintf(line + used, sizeof(line) - used, "%s     wind ", value);
+        used = strlen(line);
+        _data.formatWind(current.windSpeed, value, sizeof(value));
+        snprintf(line + used, sizeof(line) - used, "%s", value);
+        LVGLUI::fitTextDown(_extra, line, lv_obj_get_width(_extra));
     }
     else {
         // hide the weather card and the value labels, the message uses the whole content area
@@ -102,8 +111,10 @@ void MainScreen::update()
         }
         lv_obj_clear_flag(_status, LV_OBJ_FLAG_HIDDEN);
         LVGLUI::setText(_extra, "", LVGLUI::kFontSmall, LVGLUI::kColorTextValue);
-        const auto text = _data.getWeatherStatusText();
-        LVGLUI::setText(_status, text.c_str(), LVGLUI::kFontLarge, LVGLUI::kColorAlert);
+        auto &status = _statusText;
+        status.clear();
+        _data.getWeatherStatusText(status);
+        LVGLUI::setText(_status, status.c_str(), LVGLUI::kFontLarge, LVGLUI::kColorAlert);
     }
 
     // indoor climate in the footer, "offline" or "--" is shown while a source does not deliver
@@ -115,8 +126,9 @@ void MainScreen::update()
     static const uint32_t footerColors[3] = { LVGLUI::kColorText, LVGLUI::kColorAccent, LVGLUI::kColorText };
     for (uint8_t i = 0; i < 3; i++) {
         const auto &value = indoor.get(footerMetrics[i]);
-        const auto footerText = _data.formatIndoorValue(footerMetrics[i], value);
-        LVGLUI::setText(footerLabels[i], footerText.c_str(), LVGLUI::kFontLarge, toIndoorColor(value.getState(), footerColors[i]));
+        char text[DataSource::kFormatSize];
+        _data.formatIndoorValue(footerMetrics[i], value, text, sizeof(text));
+        LVGLUI::setText(footerLabels[i], text, LVGLUI::kFontLarge, toIndoorColor(value.getState(), footerColors[i]));
     }
 }
 

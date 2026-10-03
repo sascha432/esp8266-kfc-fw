@@ -457,27 +457,48 @@ PageRefs createPage(lv_obj_t *parent, const char *title, const char *right)
     return page;
 }
 
-void formatClock(bool format24h, String &date, String &time, String &zone)
+// one part of the clock, written into the buffer of the caller (nothing is written for a nullptr)
+static void _formatClockPart(const char *format, struct tm &tm, char *output, size_t size)
 {
-    date = String();
-    time = String();
-    zone = String();
+    if (!output || !size) {
+        return;
+    }
+    if (strftime(output, size, format, &tm) <= 0) {
+        output[0] = 0;
+    }
+}
+
+void formatClock(bool format24h, char *date, size_t dateSize, char *time, size_t timeSize, char *zone, size_t zoneSize)
+{
+    if (date && dateSize) {
+        date[0] = 0;
+    }
+    if (time && timeSize) {
+        time[0] = 0;
+    }
+    if (zone && zoneSize) {
+        zone[0] = 0;
+    }
     auto now = ::time(nullptr);
     if (now < 1600000000) { // clock not set yet (before 2020)
         return;
     }
     struct tm tm;
     localtime_r(&now, &tm);
-    char buffer[40];
-    if (strftime(buffer, sizeof(buffer), "%a %b %d %Y", &tm) > 0) {
-        date = buffer;
-    }
-    if (strftime(buffer, sizeof(buffer), format24h ? "%H:%M" : "%I:%M %p", &tm) > 0) {
-        time = buffer;
-    }
-    if (strftime(buffer, sizeof(buffer), "%Z", &tm) > 0) {
-        zone = buffer;
-    }
+    _formatClockPart("%a %b %d %Y", tm, date, dateSize);
+    _formatClockPart(format24h ? "%H:%M" : "%I:%M %p", tm, time, timeSize);
+    _formatClockPart("%Z", tm, zone, zoneSize);
+}
+
+void formatClock(bool format24h, String &date, String &time, String &zone)
+{
+    char dateBuffer[40];
+    char timeBuffer[40];
+    char zoneBuffer[40];
+    formatClock(format24h, dateBuffer, sizeof(dateBuffer), timeBuffer, sizeof(timeBuffer), zoneBuffer, sizeof(zoneBuffer));
+    date = dateBuffer;
+    time = timeBuffer;
+    zone = zoneBuffer;
 }
 
 void setClock(const PageRefs &page, bool format24h)

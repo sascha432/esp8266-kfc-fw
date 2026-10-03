@@ -5,7 +5,7 @@
 #include "open_weather_map_client.h"
 
 #include <HTTPClient.h>
-#include <PrintString.h>
+#include <StrView.h>
 #include <WiFiClient.h>
 #if OPEN_WEATHER_MAP_USE_TLS
 #    include <WiFiClientSecure.h>
@@ -133,8 +133,11 @@ bool Client::fetch(Data &data)
             _error = F("incomplete response");
         }
         if (status != HTTP_CODE_OK) {
-            // 401/429 report the reason in the body, keep the status code in front of it
-            _error = PrintString(F("HTTP %d: %s"), status, _error.c_str());
+            // 401/429 report the reason in the body, keep the status code in front of it. The text
+            // is composed in a local String: the assignment must not read the buffer it writes to
+            String error;
+            StrWrapper(error).printf("HTTP %d: %s", status, _error.c_str());
+            _error = error;
         }
         __LDBG_printf("request failed after %ums (status=%d, %u bytes): %s", _duration, status, received, _error.c_str());
 #if ESP32

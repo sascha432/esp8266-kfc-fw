@@ -147,6 +147,10 @@ void setClock(const PageRefs &page, bool format24h);
 // formats the current local time, empty strings if the clock is not set yet
 void formatClock(bool format24h, String &date, String &time, String &zone);
 
+// The clock as text, written into the buffers of the caller (no String is allocated, the screens
+// refresh every second). A nullptr buffer skips that part of the clock
+void formatClock(bool format24h, char *date, size_t dateSize, char *time, size_t timeSize, char *zone, size_t zoneSize);
+
 // creates a footer strip and returns it as the parent for footer content
 lv_obj_t *createFooter(lv_obj_t *parent);
 

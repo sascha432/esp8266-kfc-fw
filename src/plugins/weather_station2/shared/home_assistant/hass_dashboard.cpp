@@ -5,7 +5,7 @@
 #include "hass_dashboard.h"
 
 #include <PrintHtmlEntities.h>
-#include <PrintString.h>
+#include <StrView.h>
 #include <utility>
 
 #ifndef DEBUG_WEATHER_STATION2
@@ -29,23 +29,39 @@ namespace HomeAssistant {
 // ------------------------------------------------------------------------------------------
 namespace {
 
+// notice of the status line while the configuration file is missing. The buffer of
+// getScreenStatus() is sized from it, so the text exists once instead of two copies of it
+constexpr const char kMissingFileStatus[] = "Home Assistant: /hass.yaml is required - upload the configuration "
+                                            "file with the WebUI (File Manager, target /)";
+
 // value of "<entity>.<key>", nullptr when the key is not part of the response
 const char *_valueOf(const char *payload, const char *entity, const char *key)
 {
-    char needle[80];
-    const auto length = snprintf_P(needle, sizeof(needle), PSTR("\"%s.%s\""), entity, key);
-    if (length <= 0 || static_cast<size_t>(length) >= sizeof(needle)) {
-        return nullptr;
+    // The member ("<entity>.<key>":) is matched in place: neither the entity nor the key has a
+    // length limit and no needle buffer is needed. `remaining` keeps every check inside the
+    // payload, a member that does not fit into the rest of it cannot exist
+    const auto entityLength = strlen(entity);
+    const auto keyLength = strlen(key);
+    const auto end = payload + strlen(payload);
+    for (auto ptr = strchr(payload, '"'); ptr; ptr = strchr(ptr + 1, '"')) {
+        const auto remaining = static_cast<size_t>(end - ptr);
+        if (remaining < (entityLength + keyLength + 4)) {
+            break;
+        }
+        if (strncmp(ptr + 1, entity, entityLength) || ptr[entityLength + 1] != '.') {
+            continue;
+        }
+        const auto name = ptr + entityLength + 2;
+        if (strncmp(name, key, keyLength) || name[keyLength] != '"' || name[keyLength + 1] != ':') {
+            continue;
+        }
+        auto value = name + keyLength + 2;
+        while (*value == ' ' || *value == ':') {
+            value++;
+        }
+        return value;
     }
-    const auto ptr = strstr(payload, needle);
-    if (!ptr) {
-        return nullptr;
-    }
-    auto value = ptr + length;
-    while (*value == ' ' || *value == ':') {
-        value++;
-    }
-    return value;
+    return nullptr;
 }
 
 // four hex digits of a \uXXXX escape, 0 when they are not hex digits
@@ -653,7 +669,7 @@ void Dashboard::_applyResponse(const char *payload, PageIndex page)
         if (ownPage) {
             covered++;
         }
-        char state[32];
+        char state[sizeof(value.text)];
         const auto hasState = _parseStringValue(payload, tile.entity, "state", state, sizeof(state));
         if (!hasState || !state[0] || !strcasecmp(state, "unknown") || !strcasecmp(state, "unavailable")) {
             // The entity is in the response (or it should be, this tile belongs to the page the
@@ -1264,22 +1280,38 @@ void Dashboard::_applyDetail(const char *payload, size_t length)
 // ------------------------------------------------------------------------------------------
 // status
 // ------------------------------------------------------------------------------------------
-String Dashboard::getScreenStatus() const
+const String &Dashboard::getScreenStatus() const
 {
+    // The status is read by the screen on every tick (up to twice, 5 Hz). It is composed into a
+    // stack buffer and only copied into the member when it changed: a String built per call is one
+    // heap allocation per tick. The buffer is as large as the longest message (the missing file
+    // notice), a longer error of the configuration file is truncated like the display would clip it
+    char buffer[sizeof(kMissingFileStatus)];
     if (!_config.isLoaded()) {
         if (_fileMissing) {
-            return String(F("Home Assistant: /hass.yaml is required - upload the configuration "
-                            "file with the WebUI (File Manager, target /)"));
+            memcpy(buffer, kMissingFileStatus, sizeof(kMissingFileStatus));
         }
-        return PrintString(F("Home Assistant: %s"), _configError.c_str());
+        else {
+            snprintf(buffer, sizeof(buffer), "Home Assistant: %s", _configError.c_str());
+        }
     }
-    if (_requestError.length()) {
+    else if (_requestError.length()) {
+        // the error of the last request is a member of its own
         return _requestError;
     }
-    if (!_responseTime) {
-        return PrintString(F("waiting for %s"), _config.getUrl());
+    else if (!_responseTime) {
+        snprintf(buffer, sizeof(buffer), "waiting for %s", _config.getUrl());
     }
-    return String();
+    else {
+        buffer[0] = 0;
+    }
+    if (!_screenStatus.length() && !buffer[0]) {
+        return _screenStatus;
+    }
+    if (!_screenStatus.length() || strcmp(_screenStatus.c_str(), buffer)) {
+        _screenStatus = buffer;
+    }
+    return _screenStatus;
 }
 
 void Dashboard::getStatus(Print &output) const
@@ -1297,9 +1329,9 @@ void Dashboard::getStatus(Print &output) const
         const auto &value = tile.value;
         if (tile.type == TileType::SPACER || tile.type == TileType::AREA) {
             // there is no entity behind these tiles, only the page of an area matters
-            PrintString info;
+            String info;
             if (tile.type == TileType::AREA) {
-                info.printf_P(PSTR("page %u"), static_cast<unsigned>(tile.areaPage));
+                StrWrapper(info).printf("page %u", static_cast<unsigned>(tile.areaPage));
             }
             output.printf_P(PSTR("  %s (%s) %s%s" HTML_S(br)), (tile.type == TileType::AREA) ? tile.name : "-",
                 getTileTypeName(tile.type), info.c_str(), "");

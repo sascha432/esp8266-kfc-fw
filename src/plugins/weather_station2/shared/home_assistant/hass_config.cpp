@@ -101,13 +101,21 @@ bool _toChars(const char *begin, const char *end, char *output, size_t outputSiz
 
 bool _toValueString(const char *begin, const char *end, String &output)
 {
-    char buffer[256];
-    if (!_toChars(begin, end, buffer, sizeof(buffer))) {
-        output = String();
+    output = String();
+    if (begin >= end) {
         return false;
     }
-    output = buffer;
-    return true;
+    if ((*begin == '"' || *begin == '\'') && (end - begin) >= 2 && end[-1] == *begin) {
+        begin++;
+        end--;
+    }
+    const auto length = static_cast<unsigned int>(end - begin);
+    if (!length) {
+        return false;
+    }
+    // the value is appended as it is: a buffer of a fixed size would silently cut a long value and
+    // the access token of Home Assistant is 180 characters and more
+    return output.concat(begin, length);
 }
 
 bool _toFloat(const char *begin, const char *end, float &value)
@@ -1205,10 +1213,10 @@ bool Config::_placeTiles()
         const String type = getTileTypeName(tile.type);
         String extra;
         if (tile.type == TileType::PICTURE) {
-            StrWrapper(extra).printf_P(PSTR(", refresh %us"), static_cast<unsigned>(tile.refresh));
+            StrWrapper(extra).printf(", refresh %us", static_cast<unsigned>(tile.refresh));
         }
         else if (tile.gridCols || tile.gridRows) {
-            StrWrapper(extra).printf_P(PSTR(", grid %ux%u"), static_cast<unsigned>(tile.gridCols), static_cast<unsigned>(tile.gridRows));
+            StrWrapper(extra).printf(", grid %ux%u", static_cast<unsigned>(tile.gridCols), static_cast<unsigned>(tile.gridRows));
         }
         __LDBG_printf("tile %u: %s '%s' %ux%u at (%u,%u) of page %u%s, portrait (%u,%u)", static_cast<unsigned>(i), type.c_str(), tile.name,
                       static_cast<unsigned>(tile.width), static_cast<unsigned>(tile.height),
@@ -1260,8 +1268,9 @@ String Config::_pageSuffix(PageIndex page) const
     if (!name) {
         return String();
     }
-    String suffix;
-    StrWrapper(suffix).printf(" of the area '%s'", name);
+    String suffix(" of the area '");
+    suffix += name;
+    suffix += "'";
     return suffix;
 }
 

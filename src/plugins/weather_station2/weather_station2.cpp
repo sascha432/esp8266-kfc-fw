@@ -450,29 +450,43 @@ void WeatherStation2Plugin::getStatus(Print &output)
     {
         const auto &power = _data.getPower();
         output.printf_P(PSTR("Power: %u channel(s) configured" HTML_S(br)), static_cast<unsigned>(power.getCount()));
-        PrintString channelId;
+        String channelId;
         for (uint8_t i = 0; i < PowerChannels::kNumChannels; i++) {
             const auto &value = power.values[i];
             if (!value.configured) {
                 continue;
             }
-            PrintString reading;
+            String reading;
             if (value.available) {
-                reading.printf_P(PSTR("%s V, %s A, %s W"), _data.formatVoltage(value.voltage).c_str(),
-                                 _data.formatCurrent(value.current).c_str(), _data.formatPower(value.power).c_str());
+                // the values are formatted into stack buffers, the String only collects them
+                char voltage[WeatherStation2::DataSource::kFormatSize];
+                char current[WeatherStation2::DataSource::kFormatSize];
+                char powerValue[WeatherStation2::DataSource::kFormatSize];
+                _data.formatVoltage(value.voltage, voltage, sizeof(voltage));
+                _data.formatCurrent(value.current, current, sizeof(current));
+                _data.formatPower(value.power, powerValue, sizeof(powerValue));
+                reading = voltage;
+                reading += " V, ";
+                reading += current;
+                reading += " A, ";
+                reading += powerValue;
+                reading += " W";
             }
             else {
-                reading = F("no data");
+                reading = "no data";
             }
-            channelId = String();
+            channelId.clear();
             if (value.source == PowerSourceType::REMOTE) {
-                channelId.printf_P(PSTR(" #%u"), static_cast<unsigned>(value.remoteChannelId));
+                StrWrapper(channelId).printf(" #%u", static_cast<unsigned>(value.remoteChannelId));
             }
+            char channelName[32];
+            getPowerChannelPart(i, 1, channelName, sizeof(channelName));
             output.printf_P(PSTR("Power %u: %s '%s'%s, %s" HTML_S(br)), static_cast<unsigned>(i + 1),
-                getPowerSourceTypeName(value.source), getPowerChannelPart(i, 1).c_str(), channelId.c_str(),
+                getPowerSourceTypeName(value.source), channelName, channelId.c_str(),
                 reading.c_str());
         }
-        const auto remote = _data.getPowerRemoteStatus();
+        String remote;
+        _data.appendPowerRemoteStatus(remote);
         if (remote.length()) {
             output.printf_P(PSTR("Power monitor: %s" HTML_S(br)), remote.c_str());
         }
@@ -483,20 +497,20 @@ void WeatherStation2Plugin::getStatus(Print &output)
             _data.getForecast()[0].day.c_str(), _data.formatTemperature(_data.getForecast()[0].maxTemperature).c_str());
     }
     else {
-        output.printf_P(PSTR("Forecast: no data yet" HTML_S(br)));
+        output.print(F("Forecast: no data yet" HTML_S(br)));
     }
     if (moon.valid) {
         output.printf_P(PSTR("Moon: %s, %s, %s" HTML_S(br)), moon.phase.c_str(), _data.formatIllumination(moon.illumination).c_str(), _data.formatAge(moon.age).c_str());
     }
     else {
-        output.printf_P(PSTR("Moon: waiting for the clock (NTP)" HTML_S(br)));
+        output.print(F("Moon: waiting for the clock (NTP)" HTML_S(br)));
     }
 
     if (!_data.isConfigured()) {
-        output.printf_P(PSTR("OpenWeatherMap: no API key or location configured (see the Weather Station form)" HTML_S(br)));
+        output.print(F("OpenWeatherMap: no API key or location configured (see the Weather Station form)" HTML_S(br)));
     }
     else if (!_data.isRunning()) {
-        output.printf_P(PSTR("OpenWeatherMap: request task is not running" HTML_S(br)));
+        output.print(F("OpenWeatherMap: request task is not running" HTML_S(br)));
     }
     else {
         const auto error = _data.getLastError();

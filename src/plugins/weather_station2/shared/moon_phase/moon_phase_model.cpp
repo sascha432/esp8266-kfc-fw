@@ -4,8 +4,6 @@
 
 #include "moon_phase_model.h"
 
-#include <PrintString.h>
-
 namespace WeatherStation2 {
 
 namespace MoonPhase {
@@ -28,8 +26,13 @@ void applyTo(MoonInfo &info, time_t utc, int32_t timezoneOffset, const __FlashSt
         auto value = phases[i].utc + offset;
         struct tm tm;
         gmtime_r(&value, &tm);
-        PrintString dateTime;
-        dateTime.strftime(dateFormat, &tm);
+        // the date of the phase, written into a stack buffer (the model only fills the phases when
+        // the clock changed, but no String has to be built for it)
+        char dateTime[32];
+        const auto format = flashStringToCStr(dateFormat);
+        if (!format || !*format || (::strftime(dateTime, sizeof(dateTime), format, &tm) <= 0)) {
+            dateTime[0] = 0;
+        }
         info.phases[i].name = quarterName(phases[i].phase);
         info.phases[i].dateTime = dateTime;
     }

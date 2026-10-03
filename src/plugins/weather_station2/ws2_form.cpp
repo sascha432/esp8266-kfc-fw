@@ -202,7 +202,7 @@ static void _addPowerGroup(FormUI::Form::BaseForm &form)
             return true;
         });
         String label = F("Channel ");
-        label += String(i + 1);
+        label += static_cast<unsigned>(i + 1);
         label += F(" Source");
         form.addFormUI(FormUI::Label(label), FormUI::List(
             static_cast<uint8_t>(PowerSourceType::NONE), F("None"),
@@ -216,7 +216,7 @@ static void _addPowerGroup(FormUI::Form::BaseForm &form)
             setPowerChannelPart(i, 1, value);
         });
         label = F("Channel ");
-        label += String(i + 1);
+        label += static_cast<unsigned>(i + 1);
         label += F(" Name");
         form.addFormUI(FormUI::Label(label), FormUI::PlaceHolder(F("12V Input")));
         form.addValidator(FormUI::Validator::Length(0, WeatherStation::kPowerChannel0MaxSize, true));
@@ -226,7 +226,7 @@ static void _addPowerGroup(FormUI::Form::BaseForm &form)
             setPowerChannelPart(i, 2, value);
         });
         label = F("Channel ");
-        label += String(i + 1);
+        label += static_cast<unsigned>(i + 1);
         label += F(" Remote Channel");
         form.addFormUI(FormUI::Label(label), FormUI::PlaceHolder(F("1")));
         form.addValidator(FormUI::Validator::Length(0, 8, true));

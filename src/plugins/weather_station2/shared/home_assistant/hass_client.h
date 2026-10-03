@@ -22,7 +22,6 @@
 
 #include <Arduino_compat.h>
 #include <Mutex.h>
-#include <PrintString.h>
 
 #include "hass_config.h"
 #include "hass_socket.h"
@@ -209,7 +208,7 @@ private:
     void _fetchStats(TileIndex tile, uint8_t hours);
     // decodes a JPEG into the RGB565 buffer of the tile. `pixels` is in PSRAM and owned by the
     // caller, `info` carries the sizes and times of the trace
-    bool _decodeImage(const uint8_t *data, size_t length, uint16_t width, uint16_t height, uint16_t *&pixels, PrintString &info);
+    bool _decodeImage(const uint8_t *data, size_t length, uint16_t width, uint16_t height, uint16_t *&pixels, String &info);
     // one GET without a body, the response is stored in a PSRAM buffer (up to kMaxImageSize)
     bool _get(const String &url, uint8_t *&data, size_t &length, int16_t &statusCode);
     // headers, GET and the body of a binary request that was begun
@@ -223,7 +222,7 @@ private:
     // builds the subscribed template from the tiles of the visible page and the open panel
     void _buildTemplate();
     // domain, service and service data of an action
-    void _buildAction(const Action &action, PrintString &domain, PrintString &service, PrintString &data) const;
+    void _buildAction(const Action &action, String &domain, String &service, String &data) const;
     // takes the next action of the queue
     bool _popAction(Action &action);
     // sets the error of the last request

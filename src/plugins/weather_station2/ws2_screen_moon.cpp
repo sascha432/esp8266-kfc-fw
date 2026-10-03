@@ -66,16 +66,20 @@ void MoonPhaseScreen::update()
     LVGLUI::setMoonPhase(_moon, moon.illumination, moon.waxing);
     LVGLUI::fitTextDown(_phase, moon.phase.c_str(), lv_obj_get_width(_phase));
 
-    auto text = _data.formatIllumination(moon.illumination);
-    text += F(" - ");
-    text += _data.formatAge(moon.age);
-    LVGLUI::fitTextDown(_details, text.c_str(), lv_obj_get_width(_details));
+    // the illumination and the age are formatted into stack buffers, the two of them are one line
+    char illumination[DataSource::kFormatSize];
+    char age[DataSource::kFormatSize];
+    _data.formatIllumination(moon.illumination, illumination, sizeof(illumination));
+    _data.formatAge(moon.age, age, sizeof(age));
+    char details[2 * DataSource::kFormatSize + 4];
+    snprintf(details, sizeof(details), "%s - %s", illumination, age);
+    LVGLUI::fitTextDown(_details, details, lv_obj_get_width(_details));
 
     for (uint8_t i = 0; i < MoonInfo::kNumPhases; i++) {
-        // the model keeps the name as a flash string, LVGL copies the text into its own buffer
-        // and needs a C string that is readable from RAM
-        const String name = moon.phases[i].name;
-        LVGLUI::layoutCenteredPair(_phaseNames[i], _phaseDates[i], name.c_str(), moon.phases[i].dateTime.c_str(), kPairWidth, kPairGap);
+        // the name lives in flash. On the ESP32 (the only target of this plugin) that is a plain
+        // string pointer, so no String has to be built for it
+        LVGLUI::layoutCenteredPair(_phaseNames[i], _phaseDates[i], flashStringToCStr(moon.phases[i].name),
+                                   moon.phases[i].dateTime.c_str(), kPairWidth, kPairGap);
     }
 }
 

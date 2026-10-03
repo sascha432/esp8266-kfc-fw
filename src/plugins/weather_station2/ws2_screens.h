@@ -139,6 +139,9 @@ private:
     lv_obj_t *_indoorTemperature{nullptr};
     lv_obj_t *_indoorHumidity{nullptr};
     lv_obj_t *_indoorPressure{nullptr};
+    // buffer of the state message (getWeatherStatusText()): it is read once per second and the
+    // String keeps its capacity, so nothing is allocated per tick
+    String _statusText;
 };
 
 class IndoorScreen : public Screen {
@@ -403,8 +406,9 @@ private:
     void _setGraphMinutes(uint8_t minutes);
     // first bucket of one series of one channel inside the PSRAM block (kChartPoints floats)
     float *_historySeries(uint8_t channel, uint8_t source) const;
-    // value of the graph source of one sample, formatted for the chart labels
-    String _formatGraphValue(float value) const;
+    // value of the graph source of one sample, formatted for the chart labels into the buffer of
+    // the caller (the labels are rewritten on every tick of the chart)
+    void _formatGraphValue(float value, char *output, size_t size) const;
     // chart value of one sample, scaled to the resolution of the graph source
     static lv_coord_t _scaleGraphValue(GraphSource source, float value);
     // position of the selected channel among the configured ones ("Channel 2/3")
@@ -449,6 +453,9 @@ private:
     // compact state line in the title row (channel, source, state). The screen has no footer, the
     // cards use the full height
     lv_obj_t *_status{nullptr};
+    // buffer of the state line: it is rebuilt on every tick (5 fps) and keeps its capacity, so the
+    // text is only written to the label when it really changed
+    String _statusText;
     // Per channel history in PSRAM, layout [channel][series][bucket] = the average of the samples of
     // that slice. 4 channels x 3 series x 300 buckets x 4 bytes = 14,400 bytes, independent of the
     // configured window - the window only changes the length of a slice and with it the number of
@@ -922,9 +929,11 @@ private:
     // draws the buckets of the statistics into the graph of the sensor panel
     void _drawSensorChart(const HomeAssistant::Tile &tile);
     // text of the level (maximum/middle/minimum) and of the time labels of the graph. The number of
-    // decimals of a level comes from the step of the axis, so all three labels are formatted alike
-    String _formatStatsValue(float value, uint8_t decimals) const;
-    void _formatStatsTime(uint32_t time, String &output) const;
+    // decimals of a level comes from the step of the axis, so all three labels are formatted alike.
+    // The text goes into the buffer of the caller: the labels are rebuilt while the graph is drawn
+    // and a returned String would be one heap allocation per label
+    void _formatStatsValue(float value, uint8_t decimals, char *output, size_t size) const;
+    void _formatStatsTime(uint32_t time, char *output, size_t size) const;
     // stacks the buttons of the light panel in the left column and gives the rest of the column to
     // the back tile (an entity without color/effects has fewer buttons)
     void _layoutPanelButtons();
@@ -963,7 +972,7 @@ private:
     void _updateTile(HomeAssistant::TileIndex index);
     // Places the icon and the value of a one cell tile: icon, value and name are one centered
     // column (see tileBlockGap()). Returns false while the icon does not fit the cell
-    bool _layoutCenteredColumn(TileRefs &refs, lv_coord_t tileHeight, const String &text);
+    bool _layoutCenteredColumn(TileRefs &refs, lv_coord_t tileHeight, const char *text);
     // Position and size of a block of cells in pixels. `page` selects the grid (a page uses the
     // grid of the document or the grid of the area that owns it, the panels are laid out in the
     // grid of the document)
@@ -1000,8 +1009,9 @@ private:
     uint8_t _settingsTileAt(const lv_obj_t *object) const;
     // the tile of the setting the open editor belongs to
     SettingsTile _settingsTileOfView() const;
-    // the value of a setting as it is shown on its tile and in its editor
-    static String _settingsValue(SettingsTile tile);
+    // the value of a setting as it is shown on its tile and in its editor, written into the buffer
+    // of the caller
+    static void _settingsValue(SettingsTile tile, char *output, size_t size);
     // label of a setting and the icon of its tile
     static const char *_settingsTitle(SettingsTile tile);
     static LVGLUI::IconType _settingsIcon(SettingsTile tile);
@@ -1024,8 +1034,10 @@ private:
     lv_coord_t _sensorCardHeight() const;
     lv_coord_t _sensorGraphWidth() const;
     lv_coord_t _sensorGraphHeight() const;
-    // sets the text only when it changed (a new pointer restarts the scroll animation)
-    static void _setTextIfChanged(lv_obj_t *label, const String &text, const lv_font_t *font, uint32_t color);
+    // sets the text only when it changed (a new pointer restarts the scroll animation). The text is
+    // a plain C string: the callers format into a stack buffer, a String for every label of every
+    // tick was one heap allocation per label (the screen refreshes five times per second)
+    static void _setTextIfChanged(lv_obj_t *label, const char *text, const lv_font_t *font, uint32_t color);
     // index of the tile that owns an object, kNoTile when it does not belong to one
     HomeAssistant::TileIndex _findTile(const lv_obj_t *object) const;
     // widgets of a tile of the page that is built, by its index in the configuration. A tile that
@@ -1123,9 +1135,11 @@ private:
     // range button that was pressed, applied by update() (the tree is not rebuilt from inside an
     // LVGL event callback)
     int8_t _pendingStatsRange{-1};
-    // content the list was built from (items and the marked one): the list is only built again when
-    // it changes, rebuilding it on every response makes it flicker
+    // Content the list was built from (the items and the marked one, kept as two members so that no
+    // String has to be composed to compare them): the list is only built again when it changes,
+    // rebuilding it on every response makes it flicker
     String _listContent;
+    String _listCurrent;
     // generation of the detail data the panel was drawn with
     uint32_t _panelDetail{0};
     // a panel was opened or closed by a tile, applied by update() (the tree must not be rebuilt

@@ -254,8 +254,10 @@ public:
         return _statsPending;
     }
 
-    // text of the status line of the screen, empty while everything is fine
-    String getScreenStatus() const;
+    // text of the status line of the screen, empty while everything is fine. The screen reads it
+    // on every tick (up to twice, 5 Hz), so the text is composed into the member and only rebuilt
+    // when it changed - a String built per call would be one heap allocation per tick
+    const String &getScreenStatus() const;
     // lines of the plugin status output
     void getStatus(Print &output) const;
 
@@ -346,6 +348,8 @@ private:
     String _configError;
     String _response;
     String _requestError;
+    // buffer of getScreenStatus(), keeps its capacity between the ticks of the screen
+    mutable String _screenStatus;
     int16_t _statusCode{0};
     uint32_t _duration{0};
     uint32_t _responseTime{0};

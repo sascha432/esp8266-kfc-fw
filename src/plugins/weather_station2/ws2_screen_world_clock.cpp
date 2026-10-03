@@ -38,9 +38,11 @@ static constexpr lv_coord_t kCompactRowHeight = 40;
 // the data source uses to decide whether the moon can be calculated
 static constexpr time_t kMinValidTime = 1600000000;
 
-// Time and date of one clock. The POSIX time zone is applied to the libc and restored
-// afterwards, so the rest of the firmware keeps the time zone of the device
-static void _formatClock(const String &tz, const String &deviceTz, bool format24h, time_t utc, String &time, String &detail)
+// Time and date of one clock, written into the buffers of the caller (the screen refreshes every
+// second and a String per row is one heap allocation per row and tick). The POSIX time zone is
+// applied to the libc and restored afterwards, so the rest of the firmware keeps the time zone of
+// the device
+static void _formatClock(const String &tz, const char *deviceTz, bool format24h, time_t utc, char *time, size_t timeSize, char *detail, size_t detailSize)
 {
     if (tz.length()) {
         safeSetTZ(tz);
@@ -49,13 +51,12 @@ static void _formatClock(const String &tz, const String &deviceTz, bool format24
     struct tm tm;
     localtime_r(&utc, &tm);
 
-    char buffer[32];
-    if (strftime(buffer, sizeof(buffer), format24h ? "%H:%M:%S" : "%I:%M:%S %p", &tm) > 0) {
-        time = buffer;
+    if (strftime(time, timeSize, format24h ? "%H:%M:%S" : "%I:%M:%S %p", &tm) <= 0) {
+        time[0] = 0;
     }
     // the date and the time zone name/time zone abbreviation of the clock
-    if (strftime(buffer, sizeof(buffer), "%a %b %d %Z", &tm) > 0) {
-        detail = buffer;
+    if (strftime(detail, detailSize, "%a %b %d %Z", &tm) <= 0) {
+        detail[0] = 0;
     }
 
     if (tz.length()) {
@@ -232,22 +233,23 @@ void WorldClockScreen::update()
 
     lv_obj_add_flag(_status, LV_OBJ_FLAG_HIDDEN);
 
-    // the time zone of the device is restored after every clock, capture it once
-    const char *tzEnv = getenv(CStrP(F("TZ")));
-    const String deviceTz = tzEnv ? String(tzEnv) : String();
+    // the time zone of the device is restored after every clock, capture it once. The value of the
+    // environment is used as it is, no String is built from it
+    const char *deviceTz = getenv("TZ");
+    if (!deviceTz) {
+        deviceTz = "";
+    }
 
-    String time;
-    String detail;
+    char time[32];
+    char detail[40];
     for (uint8_t i = 0; i < _count; i++) {
         lv_obj_clear_flag(_rows[i], LV_OBJ_FLAG_HIDDEN);
 
         const auto &clock = _clocks[i];
-        time = String();
-        detail = String();
-        _formatClock(clock.tz, deviceTz, clock.format24h, utc, time, detail);
+        _formatClock(clock.tz, deviceTz, clock.format24h, utc, time, sizeof(time), detail, sizeof(detail));
 
-        _setValue(_times[i], time.length() ? time.c_str() : "--:--:--");
-        _setValue(_details[i], detail.c_str());
+        _setValue(_times[i], time[0] ? time : "--:--:--");
+        _setValue(_details[i], detail);
     }
 }
 

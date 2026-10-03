@@ -44,9 +44,9 @@ static constexpr lv_coord_t kPartRainTop = 162;
 static constexpr lv_coord_t kCardGap = 8;
 
 // probability of precipitation of an hourly entry as "62%"
-static String _popText(float pop)
+static void _popText(float pop, char *output, size_t size)
 {
-    return String(static_cast<int>(pop * 100.0f + 0.5f)) + "%";
+    snprintf(output, size, "%d%%", static_cast<int>(pop * 100.0f + 0.5f));
 }
 
 void ForecastScreen::create(lv_obj_t *parent)
@@ -112,23 +112,24 @@ void ForecastScreen::_createDayCards()
 
         LVGLUI::createIcon(card, toIconType(day.icon), static_cast<lv_coord_t>((width - iconSize) / 2), kIconTop, iconSize);
 
-        auto text = _data.formatTemperature(day.maxTemperature);
-        label = LVGLUI::addLabel(card, 4, kMaxTempTop, text.c_str(), LVGLUI::kFontLarge,
+        char text[DataSource::kFormatSize];
+        _data.formatTemperature(day.maxTemperature, text, sizeof(text));
+        label = LVGLUI::addLabel(card, 4, kMaxTempTop, text, LVGLUI::kFontLarge,
                                  LVGLUI::kColorHighlight, textWidth, LV_TEXT_ALIGN_CENTER);
-        LVGLUI::fitTextDown(label, text.c_str(), textWidth);
+        LVGLUI::fitTextDown(label, text, textWidth);
 
-        text = _data.formatTemperature(day.minTemperature);
-        label = LVGLUI::addLabel(card, 4, kMinTempTop, text.c_str(), LVGLUI::kFontMedium,
+        _data.formatTemperature(day.minTemperature, text, sizeof(text));
+        label = LVGLUI::addLabel(card, 4, kMinTempTop, text, LVGLUI::kFontMedium,
                                  LVGLUI::kColorTextValue, textWidth, LV_TEXT_ALIGN_CENTER);
-        LVGLUI::fitTextDown(label, text.c_str(), textWidth);
+        LVGLUI::fitTextDown(label, text, textWidth);
 
         // the rain row only exists for a day with precipitation, the space below the minimum
         // temperature is always free for it
         if (day.rain > 0) {
-            text = _data.formatRain(day.rain);
-            label = LVGLUI::addLabel(card, 4, kRainTop, text.c_str(), LVGLUI::kFontSmall,
+            _data.formatRain(day.rain, text, sizeof(text));
+            label = LVGLUI::addLabel(card, 4, kRainTop, text, LVGLUI::kFontSmall,
                                      LVGLUI::kColorAccent, textWidth, LV_TEXT_ALIGN_CENTER);
-            LVGLUI::fitTextDown(label, text.c_str(), textWidth);
+            LVGLUI::fitTextDown(label, text, textWidth);
         }
     }
 }
@@ -172,35 +173,53 @@ void ForecastScreen::_createDayPartCards()
 
         // a part of the day without an hourly entry shows "--" like the indoor metrics of the
         // other screens, the values are never made up
-        auto text = part.valid ? _data.formatTemperature(part.temperature) : String(F("--"));
-        label = LVGLUI::addLabel(card, 4, kPartTempTop, text.c_str(), LVGLUI::kFontLarge,
+        char text[48];
+        if (part.valid) {
+            _data.formatTemperature(part.temperature, text, sizeof(text));
+        }
+        else {
+            memcpy(text, "--", 3);
+        }
+        label = LVGLUI::addLabel(card, 4, kPartTempTop, text, LVGLUI::kFontLarge,
                                  LVGLUI::kColorHighlight, textWidth, LV_TEXT_ALIGN_CENTER);
-        LVGLUI::fitTextDown(label, text.c_str(), textWidth);
+        LVGLUI::fitTextDown(label, text, textWidth);
 
         if (!part.valid) {
             continue;
         }
 
-        text = String(F("feels ")) + _data.formatTemperature(part.feelsLike);
-        label = LVGLUI::addLabel(card, 4, kPartFeelsTop, text.c_str(), LVGLUI::kFontSmall,
+        char feels[DataSource::kFormatSize];
+        _data.formatTemperature(part.feelsLike, feels, sizeof(feels));
+        snprintf(text, sizeof(text), "feels %s", feels);
+        label = LVGLUI::addLabel(card, 4, kPartFeelsTop, text, LVGLUI::kFontSmall,
                                  LVGLUI::kColorTextValue, textWidth, LV_TEXT_ALIGN_CENTER);
-        LVGLUI::fitTextDown(label, text.c_str(), textWidth);
+        LVGLUI::fitTextDown(label, text, textWidth);
 
         // the rain of the hour, with the probability of precipitation in front of it when the
         // API expects rain. Without both the row does not exist
+        char rain[DataSource::kFormatSize];
         if (part.rain > 0) {
-            text = (part.pop >= 0.05f) ? (_popText(part.pop) + " " + _data.formatRain(part.rain)) : _data.formatRain(part.rain);
+            _data.formatRain(part.rain, rain, sizeof(rain));
+            if (part.pop >= 0.05f) {
+                char pop[8];
+                _popText(part.pop, pop, sizeof(pop));
+                snprintf(text, sizeof(text), "%s %s", pop, rain);
+            }
+            else {
+                strncpy(text, rain, sizeof(text) - 1);
+                text[sizeof(text) - 1] = 0;
+            }
         }
         else if (part.pop >= 0.05f) {
-            text = _popText(part.pop);
+            _popText(part.pop, text, sizeof(text));
         }
         else {
-            text = String();
+            text[0] = 0;
         }
-        if (text.length()) {
-            label = LVGLUI::addLabel(card, 4, kPartRainTop, text.c_str(), LVGLUI::kFontSmall,
+        if (text[0]) {
+            label = LVGLUI::addLabel(card, 4, kPartRainTop, text, LVGLUI::kFontSmall,
                                      LVGLUI::kColorAccent, textWidth, LV_TEXT_ALIGN_CENTER);
-            LVGLUI::fitTextDown(label, text.c_str(), textWidth);
+            LVGLUI::fitTextDown(label, text, textWidth);
         }
     }
 }

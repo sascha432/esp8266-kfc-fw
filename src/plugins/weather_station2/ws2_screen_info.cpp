@@ -15,23 +15,19 @@ static constexpr lv_coord_t kCardWidth = 228;
 static constexpr lv_coord_t kKeyValueGap = 8;
 
 // heap and PSRAM as kB/MB
-static String _formatBytes(uint32_t value)
+static void _formatBytes(uint32_t value, char *output, size_t size)
 {
-    char buffer[24];
     if (value >= 1024 * 1024) {
-        snprintf(buffer, sizeof(buffer), "%.1f MB", value / (1024.0f * 1024.0f));
+        snprintf(output, size, "%.1f MB", value / (1024.0f * 1024.0f));
     }
     else {
-        snprintf(buffer, sizeof(buffer), "%.0f kB", value / 1024.0f);
+        snprintf(output, size, "%.0f kB", value / 1024.0f);
     }
-    return String(buffer);
 }
 
-static String _formatRssi(int16_t value)
+static void _formatRssi(int16_t value, char *output, size_t size)
 {
-    char buffer[24];
-    snprintf(buffer, sizeof(buffer), "%d dBm", static_cast<int>(value));
-    return String(buffer);
+    snprintf(output, size, "%d dBm", static_cast<int>(value));
 }
 
 // width of the key column of a card: as wide as the longest key so that every value starts at
@@ -90,25 +86,41 @@ void InfoScreen::update()
     const auto &system = _data.getSystem();
     updateClock();
 
-    // the network and system values are real, the weather values come from the data source
-    const String network[kNumNetworkValues] = {
-        system.hostname, system.ssid, system.ip, system.gateway, system.dns1, system.dns2,
+    // The network and system values are read as they are: copying them into arrays of Strings was
+    // a dozen heap allocations per second (the screen refreshes at 1 Hz). The formatted values are
+    // written into stack buffers and the members of the model are read through their c_str()
+    const char *const network[kNumNetworkValues] = {
+        system.hostname.c_str(), system.ssid.c_str(), system.ip.c_str(),
+        system.gateway.c_str(), system.dns1.c_str(), system.dns2.c_str(),
     };
-    const String values[kNumSystemValues] = {
-        String(_data.getName()),
-        system.firmware,
-        DataSource::formatUptime(system.uptime),
-        _formatBytes(system.freeHeap),
-        _formatBytes(system.freePsram),
-        system.rssi ? _formatRssi(system.rssi) : String(F("--")),
+    char uptime[DataSource::kFormatSize];
+    char freeHeap[24];
+    char freePsram[24];
+    char rssi[24];
+    DataSource::formatUptime(system.uptime, uptime, sizeof(uptime));
+    _formatBytes(system.freeHeap, freeHeap, sizeof(freeHeap));
+    _formatBytes(system.freePsram, freePsram, sizeof(freePsram));
+    if (system.rssi) {
+        _formatRssi(system.rssi, rssi, sizeof(rssi));
+    }
+    else {
+        memcpy(rssi, "--", 3);
+    }
+    const char *const values[kNumSystemValues] = {
+        flashStringToCStr(_data.getName()),
+        system.firmware.c_str(),
+        uptime,
+        freeHeap,
+        freePsram,
+        rssi,
     };
     for (uint8_t i = 0; i < kNumNetworkValues; i++) {
         // a host name and an SSID can be up to 32 characters long, those two scroll instead of
         // being cut off, the other values are short enough for the row
-        _setValue(_networkValues[i].value, network[i].c_str(), i <= 1);
+        _setValue(_networkValues[i].value, network[i], i <= 1);
     }
     for (uint8_t i = 0; i < kNumSystemValues; i++) {
-        _setValue(_systemValues[i].value, values[i].c_str(), false);
+        _setValue(_systemValues[i].value, values[i], false);
     }
 }
 

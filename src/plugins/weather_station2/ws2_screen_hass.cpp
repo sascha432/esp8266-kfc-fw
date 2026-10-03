@@ -5,7 +5,6 @@
 #include "ws2_screens.h"
 
 #include <LoopFunctions.h>
-#include <PrintString.h>
 #include "devices/wt32_sc01/wt32_sc01.h"
 #include "lvgl_plugin.h"
 
@@ -685,47 +684,68 @@ LVGLUI::IconType tileIconType(const Tile &tile, const TileValue &value, LVGLUI::
     return type;
 }
 
+// copies a text into the buffer of the caller, always NUL terminated. The value helpers below
+// format into a buffer of the caller instead of returning a String: the screens refresh every
+// 200 ms and a returned String is one heap allocation per label and tick, the buffer is stack of
+// the caller (and only the changed text reaches the label)
+static void copyText(char *output, size_t size, const char *text)
+{
+    if (!size) {
+        return;
+    }
+    strncpy(output, text, size - 1);
+    output[size - 1] = 0;
+}
+
+// buffers of a formatted value: a sensor value is the longest one (the state of a combined sensor,
+// 47 bytes, plus its unit), a readout is a number and a short unit
+static constexpr size_t kTileValueSize = 64;
+static constexpr size_t kReadoutSize = 24;
+
 // value of an entity that does not report a number
-String sensorStateText(const HomeAssistant::TileValue &value)
+static void sensorStateText(const HomeAssistant::TileValue &value, char *output, size_t size)
 {
     if (isOnOffText(value.text)) {
         const auto on = !strcasecmp(value.text, "on");
         const auto *entry = findDeviceClass(value.deviceClass);
         if (entry && entry->on) {
-            return String(on ? entry->on : entry->off);
+            copyText(output, size, on ? entry->on : entry->off);
+            return;
         }
-        return String(on ? "On" : "Off");
+        copyText(output, size, on ? "On" : "Off");
+        return;
     }
     // some integrations report the wording itself ("clear", "detected", "sunny")
-    char text[sizeof(value.text)];
-    strncpy(text, value.text, sizeof(text) - 1);
-    text[sizeof(text) - 1] = 0;
-    text[0] = static_cast<char>(::toupper(text[0]));
-    return String(text);
+    copyText(output, size, value.text);
+    if (size) {
+        output[0] = static_cast<char>(::toupper(output[0]));
+    }
 }
 
-// value of a sensor with its unit
-String formatSensorValue(const Tile &tile, const HomeAssistant::TileValue &value)
+// value of a sensor with its unit. The buffer of the caller must hold the longest value (the state
+// of a combined sensor, 47 bytes) plus the unit
+static void formatSensorValue(const Tile &tile, const HomeAssistant::TileValue &value, char *output, size_t size)
 {
     if (value.state == TileState::UNAVAILABLE) {
-        return String("--");
+        copyText(output, size, "--");
+        return;
     }
     if (value.state == TileState::UNKNOWN) {
-        return String("...");
+        copyText(output, size, "...");
+        return;
     }
     if (!_isNumber(value.text)) {
         // the entity does not report a number (a binary sensor: on/off, motion: detected/clear)
-        return sensorStateText(value);
+        sensorStateText(value, output, size);
+        return;
     }
-    PrintString text;
-    text.printf_P(PSTR("%.*f"), tile.decimals, static_cast<double>(value.value));
     const char *unit = tile.unit[0] ? tile.unit : value.unit;
     if (unit && unit[0]) {
-        // a plain append, no printf: the concat is a capacity check and one memcpy
-        text += ' ';
-        text += unit;
+        snprintf(output, size, "%.*f %s", static_cast<int>(tile.decimals), static_cast<double>(value.value), unit);
     }
-    return text;
+    else {
+        snprintf(output, size, "%.*f", static_cast<int>(tile.decimals), static_cast<double>(value.value));
+    }
 }
 
 const char *stateText(TileState state)
@@ -744,14 +764,18 @@ const char *stateText(TileState state)
 }
 
 // "fan_only" -> "Fan only" (the names the API reports are lowercase)
-String capitalize(const char *text)
+static void capitalize(const char *text, char *output, size_t size)
 {
-    String result(text);
-    result.replace('_', ' ');
-    if (result.length()) {
-        result.setCharAt(0, static_cast<char>(::toupper(result.charAt(0))));
+    copyText(output, size, text);
+    if (!size) {
+        return;
     }
-    return result;
+    for (auto ptr = output; *ptr; ptr++) {
+        if (*ptr == '_') {
+            *ptr = ' ';
+        }
+    }
+    output[0] = static_cast<char>(::toupper(output[0]));
 }
 
 // True while a finger presses the screen. The touch driver of the panel repeats press events and a
@@ -784,32 +808,37 @@ void showWidget(lv_obj_t *obj, bool visible)
 }
 
 // state of a climate tile: the action of the entity ("heating") wins over the name of the mode
-String climateStateText(const TileValue &value)
+static void climateStateText(const TileValue &value, char *output, size_t size)
 {
     if (value.state == TileState::UNAVAILABLE) {
-        return String("--");
+        copyText(output, size, "--");
+        return;
     }
     if (value.state == TileState::UNKNOWN) {
-        return String("...");
+        copyText(output, size, "...");
+        return;
     }
     if (value.action[0]) {
-        char text[sizeof(value.action)];
-        strncpy(text, value.action, sizeof(text) - 1);
-        text[sizeof(text) - 1] = 0;
-        text[0] = static_cast<char>(::toupper(text[0]));
-        return String(text);
+        copyText(output, size, value.action);
+        if (size) {
+            output[0] = static_cast<char>(::toupper(output[0]));
+        }
+        return;
     }
     switch (value.mode) {
     case 0:
-        return String("Off");
+        copyText(output, size, "Off");
+        break;
     case 1:
-        return String("Heat");
+        copyText(output, size, "Heat");
+        break;
     case 2:
-        return String("Cool");
+        copyText(output, size, "Cool");
+        break;
     default:
+        copyText(output, size, stateText(value.state));
         break;
     }
-    return stateText(value.state);
 }
 
 // One item of a comma separated panel list: `begin`/`end` delimit it (the spaces around it are
@@ -1081,20 +1110,23 @@ constexpr uint32_t kTimeoutMinMinutes = 1;
 constexpr uint32_t kTimeoutMaxMinutes = 24 * 60;
 
 // "45 s", "5 min", "1 h 30 min", "24 h"
-String formatTimeout(uint32_t seconds)
+static void formatTimeout(uint32_t seconds, char *output, size_t size)
 {
     if (seconds < 60) {
-        return PrintString(F("%u s"), static_cast<unsigned>(seconds));
+        snprintf(output, size, "%u s", static_cast<unsigned>(seconds));
+        return;
     }
     if (seconds < 3600) {
-        return PrintString(F("%u min"), static_cast<unsigned>(seconds / 60));
+        snprintf(output, size, "%u min", static_cast<unsigned>(seconds / 60));
+        return;
     }
     const auto hours = seconds / 3600;
     const auto minutes = (seconds % 3600) / 60;
     if (minutes) {
-        return PrintString(F("%u h %u min"), static_cast<unsigned>(hours), static_cast<unsigned>(minutes));
+        snprintf(output, size, "%u h %u min", static_cast<unsigned>(hours), static_cast<unsigned>(minutes));
+        return;
     }
-    return PrintString(F("%u h"), static_cast<unsigned>(hours));
+    snprintf(output, size, "%u h", static_cast<unsigned>(hours));
 }
 
 // value of a timeout one step up or down, in seconds. The value is snapped to the nearest minute
@@ -2009,17 +2041,18 @@ void HassScreen::_buildTile(HomeAssistant::TileIndex index)
     lv_label_set_long_mode(refs.name, LV_LABEL_LONG_WRAP);
 }
 
-void HassScreen::_setTextIfChanged(lv_obj_t *label, const String &text, const lv_font_t *font, uint32_t color)
+void HassScreen::_setTextIfChanged(lv_obj_t *label, const char *text, const lv_font_t *font, uint32_t color)
 {
     if (!label) {
         return;
     }
+    const char *value = text ? text : "";
     const auto current = lv_label_get_text(label);
-    if (current && !strcmp(current, text.c_str())) {
+    if (current && !strcmp(current, value)) {
         return;
     }
-    LVGLUI::setText(label, text.c_str(), font, color);
-    LVGLUI::fitTextDown(label, text.c_str());
+    LVGLUI::setText(label, value, font, color);
+    LVGLUI::fitTextDown(label, value);
 }
 
 // chip of the range selector (the channel chips of the power screen have the same look, the round
@@ -2493,7 +2526,9 @@ void HassScreen::_updateSensorPanel()
     if (sensor.icon) {
         LVGLUI::setIcon(sensor.icon, tileIconType(tile, value, iconState), LVGLUI::kIconSizeLarge, stateIconColor(iconState));
     }
-    _setTextIfChanged(refs.headerValue, formatSensorValue(tile, value), LVGLUI::kFontValue, stateColor);
+    char valueText[kTileValueSize];
+    formatSensorValue(tile, value, valueText, sizeof(valueText));
+    _setTextIfChanged(refs.headerValue, valueText, LVGLUI::kFontValue, stateColor);
 
     // the range that is selected is filled, the other two are plain cards
     const auto selected = statsRangeOf(_statsHours);
@@ -2558,9 +2593,9 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
     uint8_t lines = 0;
     uint8_t labels = 0;
     for (auto time = static_cast<uint32_t>(mktime(&tick)); time <= end;) {
-        String text;
-        _formatStatsTime(time, text);
-        const auto width = static_cast<lv_coord_t>(lv_txt_get_width(text.c_str(), text.length(), LVGLUI::kFontSmall, 0, LV_TEXT_FLAG_NONE));
+        char timeText[16];
+        _formatStatsTime(time, timeText, sizeof(timeText));
+        const auto width = static_cast<lv_coord_t>(lv_txt_get_width(timeText, static_cast<uint32_t>(strlen(timeText)), LVGLUI::kFontSmall, 0, LV_TEXT_FLAG_NONE));
         const auto x = static_cast<lv_coord_t>(kSensorGraphX + (static_cast<int64_t>(_sensorGraphWidth()) * (time - start)) / span);
         // A tick whose label does not fit inside the card is dropped (line and label): a label that
         // is moved inside the card sits beside its line instead of under it
@@ -2576,7 +2611,7 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
                 // can never wrap into a second line
                 lv_obj_set_pos(label, static_cast<lv_coord_t>(x - width / 2), timeY);
                 lv_obj_set_width(label, static_cast<lv_coord_t>(width + 2));
-                LVGLUI::setText(label, text.c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+                LVGLUI::setText(label, timeText, LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
                 showWidget(label, true);
                 labels++;
             }
@@ -2604,17 +2639,14 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
         for (auto &level : sensor.levels) {
             LVGLUI::setText(level, "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
         }
-        String message;
+        const char *message = "No history for this entity";
         if (_dashboard.isStatsPending()) {
-            message = String("Loading history...");
+            message = "Loading history...";
         }
         else if (_dashboard.getStatsError().length()) {
-            message = _dashboard.getStatsError();
+            message = _dashboard.getStatsError().c_str();
         }
-        else {
-            message = String("No history for this entity");
-        }
-        LVGLUI::setText(sensor.info, message.c_str(), LVGLUI::kFontMedium, LVGLUI::kColorTextMuted);
+        LVGLUI::setText(sensor.info, message, LVGLUI::kFontMedium, LVGLUI::kColorTextMuted);
         showWidget(sensor.info, true);
         return;
     }
@@ -2678,38 +2710,43 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
     // the levels of the window, all three in the format of the step (mixing "140" and "70.0"
     // looks broken)
     const auto decimals = (step >= 1.0f) ? 0 : ((step >= 0.1f) ? 1 : 2);
-    LVGLUI::setText(sensor.levels[0], _formatStatsValue(high, decimals).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
-    LVGLUI::setText(sensor.levels[1], _formatStatsValue((high + low) / 2, decimals).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
-    LVGLUI::setText(sensor.levels[2], _formatStatsValue(low, decimals).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+    char levelText[kReadoutSize];
+    _formatStatsValue(high, decimals, levelText, sizeof(levelText));
+    LVGLUI::setText(sensor.levels[0], levelText, LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+    _formatStatsValue((high + low) / 2, decimals, levelText, sizeof(levelText));
+    LVGLUI::setText(sensor.levels[1], levelText, LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+    _formatStatsValue(low, decimals, levelText, sizeof(levelText));
+    LVGLUI::setText(sensor.levels[2], levelText, LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
 
     __LDBG_printf("hass> history of tile %u: %u bucket(s) of %u, %.4f..%.4f drawn as %.4f..%.4f", static_cast<unsigned>(_panelTile),
                   static_cast<unsigned>(count), static_cast<unsigned>(sensor.buckets), static_cast<double>(min), static_cast<double>(max),
                   static_cast<double>(low), static_cast<double>(high));
 }
 
-String HassScreen::_formatStatsValue(float value, uint8_t decimals) const
+void HassScreen::_formatStatsValue(float value, uint8_t decimals, char *output, size_t size) const
 {
     // a level of the graph has a column of 40 px, so a large value is drawn without decimals. The
     // number of decimals comes from the step of the axis so all three labels are formatted alike
-    return PrintString(F("%.*f"), decimals, static_cast<double>(value));
+    snprintf(output, size, "%.*f", static_cast<int>(decimals), static_cast<double>(value));
 }
 
-void HassScreen::_formatStatsTime(uint32_t time, String &output) const
+void HassScreen::_formatStatsTime(uint32_t time, char *output, size_t size) const
 {
     struct tm tm;
     const auto value = static_cast<time_t>(time);
     localtime_r(&value, &tm);
-    char buffer[32];
-    const auto format = _data.isTimeFormat24h() ? "%H:%M" : "%I:%M %p";
-    if (!strftime(buffer, sizeof(buffer), format, &tm)) {
-        output = String();
+    if (!strftime(output, size, _data.isTimeFormat24h() ? "%H:%M" : "%I:%M %p", &tm)) {
+        if (size) {
+            output[0] = 0;
+        }
         return;
     }
-    output = buffer;
     // strftime pads the hour of the 12 hour format with a zero ("04:00 PM"), the labels of the
     // layout have none. The hour of the 24 hour format keeps its zero ("00:30" is a valid time)
-    if (!_data.isTimeFormat24h() && output.length() > 1 && output[0] == '0') {
-        output.remove(0, 1);
+    if (!_data.isTimeFormat24h() && output[0] == '0' && output[1]) {
+        for (auto ptr = output; *ptr; ptr++) {
+            *ptr = ptr[1];
+        }
     }
 }
 
@@ -2914,11 +2951,12 @@ void HassScreen::_buildPanelList()
         return;
     }
     // The list is only built again when the items or the marked one changed: the response comes
-    // every poll and rebuilding the items each time makes the list flicker
-    String content(items);
-    content += '|';
-    content += current ? current : "";
-    if (_listView == static_cast<int8_t>(_panelView) && _listContent == content) {
+    // every poll and rebuilding the items each time makes the list flicker. The two texts are
+    // compared as they are - composing them into one String was an allocation on every tick
+    const char *currentText = current ? current : "";
+    const bool sameItems = (_listView == static_cast<int8_t>(_panelView)) && _listContent.length() && !strcmp(_listContent.c_str(), items);
+    const bool sameCurrent = _listCurrent.length() ? !strcmp(_listCurrent.c_str(), currentText) : !*currentText;
+    if (sameItems && sameCurrent) {
         return;
     }
     lv_obj_clean(refs.list);
@@ -2957,11 +2995,17 @@ void HassScreen::_buildPanelList()
     const char *begin = nullptr;
     const char *end = nullptr;
     while (nextListItem(cursor, begin, end)) {
-        const String item(begin, static_cast<unsigned int>(end - begin));
+        // the item is a slice of the comma separated list, copied into a stack buffer - a String for
+        // every item is one heap allocation per item of the list
+        char item[48];
+        const auto itemLength = static_cast<size_t>(end - begin);
+        const auto copyLength = (itemLength < sizeof(item)) ? itemLength : sizeof(item) - 1;
+        memcpy(item, begin, copyLength);
+        item[copyLength] = 0;
         const auto col = static_cast<lv_coord_t>(offsetX + (i % columns) * (itemWidth + kListItemGap));
         const auto row = static_cast<lv_coord_t>(offsetY + (i / columns) * (kListItemHeight + kListItemGap));
-        auto obj = LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item.c_str());
-        const auto active = current && detail.valid && !strcasecmp(current, item.c_str());
+        auto obj = LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item);
+        const auto active = current && detail.valid && !strcasecmp(current, item);
         LVGLUI::setListItemActive(obj, active);
         if (active) {
             marked = obj;
@@ -2980,7 +3024,8 @@ void HassScreen::_buildPanelList()
         lv_obj_scroll_to(refs.list, 0, static_cast<lv_coord_t>(markedY - (listHeight - kListItemHeight) / 2), LV_ANIM_OFF);
     }
     _listView = static_cast<int8_t>(_panelView);
-    _listContent = content;
+    _listContent = items;
+    _listCurrent = currentText;
     _panelDetail = detail.generation;
 }
 
@@ -3005,8 +3050,9 @@ void HassScreen::_updatePanel()
     auto &refsTile = widgets.refs;
 
     if (_panel == Panel::CLIMATE) {
-        _setTextIfChanged(refs.headerValue, PrintString(F("%.1f °C"), static_cast<double>(value.current)),
-                          LVGLUI::kFontMedium, LVGLUI::kColorText);
+        char headerText[kReadoutSize];
+        snprintf(headerText, sizeof(headerText), "%.1f °C", static_cast<double>(value.current));
+        _setTextIfChanged(refs.headerValue, headerText, LVGLUI::kFontMedium, LVGLUI::kColorText);
         // the pills show what the entity reports, "--" until the first detail response. The item
         // the user tapped is shown until the detail response confirms it (see _expectedItemOf())
         for (uint8_t i = 0; i < kNumPills; i++) {
@@ -3023,7 +3069,14 @@ void HassScreen::_updatePanel()
                 text = _expectedItemOf(view, detail.fanMode);
                 break;
             }
-            _setTextIfChanged(refs.pillValue[i], text[0] ? capitalize(text) : String("--"), LVGLUI::kFontNormal, LVGLUI::kColorText);
+            char pillText[kReadoutSize];
+            if (text[0]) {
+                capitalize(text, pillText, sizeof(pillText));
+            }
+            else {
+                copyText(pillText, sizeof(pillText), "--");
+            }
+            _setTextIfChanged(refs.pillValue[i], pillText, LVGLUI::kFontNormal, LVGLUI::kColorText);
         }
         // the arc follows the setpoint while it is not dragged
         if (refsTile.arc) {
@@ -3059,8 +3112,14 @@ void HassScreen::_updatePanel()
                     LVGLUI::setArcValue(refsTile.arc, arcValue, LVGLUI::kColorActive);
                     widgets.arcValue = arcValue;
                 }
-                _setTextIfChanged(refsTile.value, (value.mode == 0) ? String("Off") : PrintString(F("%.1f°"), static_cast<double>(setpoint)),
-                                  LVGLUI::kFontTitle, LVGLUI::kColorText);
+                char valueText[kReadoutSize];
+                if (value.mode == 0) {
+                    copyText(valueText, sizeof(valueText), "Off");
+                }
+                else {
+                    snprintf(valueText, sizeof(valueText), "%.1f°", static_cast<double>(setpoint));
+                }
+                _setTextIfChanged(refsTile.value, valueText, LVGLUI::kFontTitle, LVGLUI::kColorText);
             }
             else {
                 // the arc is held: the polled setpoint is ignored (proof for the log that the value
@@ -3069,7 +3128,9 @@ void HassScreen::_updatePanel()
                               static_cast<unsigned>(widgets.arcPressed), static_cast<unsigned>(touchPressed),
                               static_cast<double>(value.value));
             }
-            _setTextIfChanged(refsTile.action, climateStateText(value), LVGLUI::kFontNormal, LVGLUI::kColorActive);
+            char actionText[kReadoutSize];
+            climateStateText(value, actionText, sizeof(actionText));
+            _setTextIfChanged(refsTile.action, actionText, LVGLUI::kFontNormal, LVGLUI::kColorActive);
         }
     }
     else if (_panel == Panel::DIMMER) {
@@ -3125,7 +3186,9 @@ void HassScreen::_updatePanel()
             if (refs.slider && lv_slider_get_value(refs.slider) != level) {
                 lv_slider_set_value(refs.slider, level, LV_ANIM_OFF);
             }
-            _setTextIfChanged(refsTile.value, PrintString(F("%d %%"), static_cast<int>(level)), _panelValueFont(), LVGLUI::kColorText);
+            char levelText[kReadoutSize];
+            snprintf(levelText, sizeof(levelText), "%d %%", static_cast<int>(level));
+            _setTextIfChanged(refsTile.value, levelText, _panelValueFont(), LVGLUI::kColorText);
         }
         if (!touchPressed && !_controlPressed && !_expects(_expectedColor, "color", detail.hue, detail.saturation, 4.0f)) {
             if (refs.wheel && detail.valid) {
@@ -3153,8 +3216,14 @@ void HassScreen::_updatePanel()
                 if (kelvin >= minTemp && lv_slider_get_value(refs.tempSlider) != kelvin) {
                     lv_slider_set_value(refs.tempSlider, kelvin, LV_ANIM_OFF);
                 }
-                _setTextIfChanged(refs.label, (kelvin > 0) ? PrintString(F("%d K"), kelvin) : String("--"),
-                                  _panelValueFont(), LVGLUI::kColorText);
+                char kelvinText[kReadoutSize];
+                if (kelvin > 0) {
+                    snprintf(kelvinText, sizeof(kelvinText), "%d K", kelvin);
+                }
+                else {
+                    copyText(kelvinText, sizeof(kelvinText), "--");
+                }
+                _setTextIfChanged(refs.label, kelvinText, _panelValueFont(), LVGLUI::kColorText);
             }
         }
     }
@@ -3202,7 +3271,7 @@ constexpr uint8_t kTileValueLadderSize = static_cast<uint8_t>(sizeof(kTileValueL
 // aligned to moves. The icon is the one of the configuration, so a value that leaves no room for it
 // is drawn with a smaller font instead of dropping the icon - only the smallest font of the ladder
 // gives up and returns false, the caller hides the icon then
-bool HassScreen::_layoutCenteredColumn(TileRefs &refs, lv_coord_t tileHeight, const String &text)
+bool HassScreen::_layoutCenteredColumn(TileRefs &refs, lv_coord_t tileHeight, const char *text)
 {
     if (!refs.value) {
         return false;
@@ -3210,7 +3279,7 @@ bool HassScreen::_layoutCenteredColumn(TileRefs &refs, lv_coord_t tileHeight, co
     const auto width = static_cast<lv_coord_t>(lv_obj_get_style_width(refs.value, LV_PART_MAIN));
     const auto iconSize = tileIconSize(tileHeight);
     auto font = lv_obj_get_style_text_font(refs.value, LV_PART_MAIN);
-    auto valueHeight = textBlockHeight(text.c_str(), font, width);
+    auto valueHeight = textBlockHeight(text, font, width);
     auto iconFits = (refs.icon != nullptr) && ((iconSize + valueHeight + kTileNameHeight + 2) <= tileHeight);
     if (refs.icon && !iconFits) {
         uint8_t index = 0;
@@ -3219,7 +3288,7 @@ bool HassScreen::_layoutCenteredColumn(TileRefs &refs, lv_coord_t tileHeight, co
         }
         for (index++; index < kTileValueLadderSize; index++) {
             const auto candidate = kTileValueLadder[index];
-            const auto candidateHeight = textBlockHeight(text.c_str(), candidate, width);
+            const auto candidateHeight = textBlockHeight(text, candidate, width);
             if ((iconSize + candidateHeight + kTileNameHeight + 2) <= tileHeight) {
                 // _setTextIfChanged() set the font of the tile on the text it changed (setText()
                 // takes the largest one that fits the width), this one is smaller to leave the room
@@ -3350,9 +3419,10 @@ void HassScreen::_updateTile(HomeAssistant::TileIndex index)
         {
             // a value with a line break in it (a combined sensor, "25.0 °C\n57.7 %") is drawn on
             // two lines and takes the space below the icon, see setValueLongMode()
-            const auto text = formatSensorValue(tile, value);
+            char text[kTileValueSize];
+            formatSensorValue(tile, value, text, sizeof(text));
             _setTextIfChanged(refs.value, text, tileValueFont(tileHeight), active ? LVGLUI::kColorText : stateColor);
-            setValueLongMode(refs.value, text.c_str());
+            setValueLongMode(refs.value, text);
             // The icon of the configuration is drawn when the tile is built, the device_class of
             // the entity arrives with the first response. A state change is not what a sensor
             // reports (a reading is "off" like every entity that is not switched on), so the
@@ -3381,32 +3451,42 @@ void HassScreen::_updateTile(HomeAssistant::TileIndex index)
             const auto width = static_cast<lv_coord_t>(lv_obj_get_style_width(refs.tile, LV_PART_MAIN));
             const auto height = static_cast<lv_coord_t>(lv_obj_get_style_height(refs.tile, LV_PART_MAIN));
             LVGLUI::setLevelFill(refs.fill, 0, 0, width, height, static_cast<uint8_t>(level), LVGLUI::kColorActive);
-            _setTextIfChanged(refs.value, PrintString(F("%d %%"), level), LVGLUI::kFontValue, LVGLUI::kColorText);
+            char levelText[kReadoutSize];
+            snprintf(levelText, sizeof(levelText), "%d %%", level);
+            _setTextIfChanged(refs.value, levelText, LVGLUI::kFontValue, LVGLUI::kColorText);
         }
         break;
 
     case TileType::CLIMATE:
-        // an entity that is off does not report a setpoint, the tile shows the word instead of
-        // the "0.0 °C" of the missing attribute
-        if (value.mode == 0) {
-            _setTextIfChanged(refs.value, String("Off"), tileValueFont(tileHeight), LVGLUI::kColorText);
+        {
+            // an entity that is off does not report a setpoint, the tile shows the word instead of
+            // the "0.0 °C" of the missing attribute
+            char text[kReadoutSize];
+            if (value.mode == 0) {
+                copyText(text, sizeof(text), "Off");
+            }
+            else {
+                // the setpoint the user stepped is kept until the entity reports it
+                const auto held = _expects(_expectedSetpoint, "setpoint", value.value, -1, kSetpointHoldTolerance);
+                snprintf(text, sizeof(text), "%.1f °C", static_cast<double>(held ? _expectedSetpoint.value : value.value));
+            }
+            _setTextIfChanged(refs.value, text, tileValueFont(tileHeight), LVGLUI::kColorText);
+            climateStateText(value, text, sizeof(text));
+            _setTextIfChanged(refs.action, text, LVGLUI::kFontNormal, LVGLUI::kColorTextValue);
+            snprintf(text, sizeof(text), "%.1f °C", static_cast<double>(value.current));
+            _setTextIfChanged(refs.state, text, LVGLUI::kFontMedium, LVGLUI::kColorTextValue);
         }
-        else {
-            // the setpoint the user stepped is kept until the entity reports it
-            const auto held = _expects(_expectedSetpoint, "setpoint", value.value, -1, kSetpointHoldTolerance);
-            _setTextIfChanged(refs.value, PrintString(F("%.1f °C"), static_cast<double>(held ? _expectedSetpoint.value : value.value)),
-                              tileValueFont(tileHeight), LVGLUI::kColorText);
-        }
-        _setTextIfChanged(refs.action, climateStateText(value), LVGLUI::kFontNormal, LVGLUI::kColorTextValue);
-        _setTextIfChanged(refs.state, PrintString(F("%.1f °C"), static_cast<double>(value.current)), LVGLUI::kFontMedium, LVGLUI::kColorTextValue);
         break;
 
     default:
         // switch, light and button only carry the state
         {
-            const auto text = (tile.type == TileType::BUTTON) ? String() : String(stateText(value.state));
+            char text[kReadoutSize]{};
+            if (tile.type != TileType::BUTTON) {
+                copyText(text, sizeof(text), stateText(value.state));
+            }
             _setTextIfChanged(refs.value, text, tileValueFont(tileHeight), stateColor);
-            setValueLongMode(refs.value, text.c_str());
+            setValueLongMode(refs.value, text);
             setTileIconVisible(refs.icon, _layoutCenteredColumn(refs, tileHeight, text));
         }
         break;
@@ -3703,12 +3783,12 @@ void HassScreen::update()
         _applySettingsAction();
     }
 
-    const auto status = _dashboard.getScreenStatus();
+    const auto &status = _dashboard.getScreenStatus();
     if (status.length() && !_settingsOpen) {
         // a note or an error is drawn over the first row of tiles; the sheet covers the display, so
         // it is hidden while it is open (it would show through the layer below it)
         lv_obj_clear_flag(_status, LV_OBJ_FLAG_HIDDEN);
-        _setTextIfChanged(_status, status, LVGLUI::kFontSmall, LVGLUI::kColorAlert);
+        _setTextIfChanged(_status, status.c_str(), LVGLUI::kFontSmall, LVGLUI::kColorAlert);
     }
     else {
         lv_obj_add_flag(_status, LV_OBJ_FLAG_HIDDEN);
@@ -3716,7 +3796,7 @@ void HassScreen::update()
 
     if (!_configLoaded) {
         // the message may have changed (another error, or the file appeared)
-        _setTextIfChanged(_message, _dashboard.getScreenStatus(), LVGLUI::kFontMedium, LVGLUI::kColorAlert);
+        _setTextIfChanged(_message, status.c_str(), LVGLUI::kFontMedium, LVGLUI::kColorAlert);
         return;
     }
     if (_panel != Panel::NONE) {
@@ -3812,23 +3892,30 @@ LVGLUI::IconType HassScreen::_settingsIcon(SettingsTile tile)
 }
 
 // value of a setting as it is shown on its tile and in its editor
-String HassScreen::_settingsValue(SettingsTile tile)
+void HassScreen::_settingsValue(SettingsTile tile, char *output, size_t size)
 {
     switch (tile) {
     case SettingsTile::IDLE_BRIGHTNESS:
-        return PrintString(F("%u %%"), static_cast<unsigned>(LVGLPlugin::getPowerSavingLevel()));
+        snprintf(output, size, "%u %%", static_cast<unsigned>(LVGLPlugin::getPowerSavingLevel()));
+        break;
     case SettingsTile::IDLE_TIMEOUT:
-        return formatTimeout(LVGLPlugin::getPowerSavingTimeout());
+        formatTimeout(LVGLPlugin::getPowerSavingTimeout(), output, size);
+        break;
     case SettingsTile::STANDBY_TIMEOUT:
-        return formatTimeout(LVGLPlugin::getStandbyTimeout());
+        formatTimeout(LVGLPlugin::getStandbyTimeout(), output, size);
+        break;
     case SettingsTile::ROTATE:
-        return String(rotationName(Plugins::WeatherStation::getHassRotation()));
+        copyText(output, size, rotationName(Plugins::WeatherStation::getHassRotation()));
+        break;
     case SettingsTile::ROTATION_LOCK:
-        return String(Plugins::WeatherStation::getHassRotationLock() ? "On" : "Off");
+        copyText(output, size, Plugins::WeatherStation::getHassRotationLock() ? "On" : "Off");
+        break;
     default:
+        if (size) {
+            output[0] = 0;
+        }
         break;
     }
-    return String();
 }
 
 uint8_t HassScreen::_settingsTileAt(const lv_obj_t *object) const
@@ -4009,13 +4096,14 @@ void HassScreen::_updateSettings()
     auto &refs = _settingsRefs;
 
     // the clock, the date and the WiFi signal of the header
-    String date;
-    String time;
-    String zone;
-    LVGLUI::formatClock(_data.isTimeFormat24h(), date, time, zone);
+    char date[40];
+    char time[40];
+    LVGLUI::formatClock(_data.isTimeFormat24h(), date, sizeof(date), time, sizeof(time), nullptr, 0);
     _setTextIfChanged(refs.time, time, LVGLUI::kFontHuge, LVGLUI::kColorText);
     // the date is drawn in upper case, like the reviewed layout
-    date.toUpperCase();
+    for (auto ptr = date; *ptr; ptr++) {
+        *ptr = static_cast<char>(::toupper(*ptr));
+    }
     _setTextIfChanged(refs.date, date, LVGLUI::kFontSmall, LVGLUI::kColorTextLabel);
     // The glyph tells the state of the WiFi interface, there is no signal strength reading. The
     // state changes rarely, so the icon is only redrawn when the glyph differs
@@ -4027,15 +4115,18 @@ void HassScreen::_updateSettings()
 
     if (_settingsView != SettingsView::MAIN) {
         // the editor shows the value of the setting it edits
-        _setTextIfChanged(refs.editValue, _settingsValue(_settingsTileOfView()), LVGLUI::kFontHuge, LVGLUI::kColorText);
+        char value[kReadoutSize];
+        _settingsValue(_settingsTileOfView(), value, sizeof(value));
+        _setTextIfChanged(refs.editValue, value, LVGLUI::kFontHuge, LVGLUI::kColorText);
         return;
     }
 
     // The readout of the brightness slider. Not while the finger is on the slider: the slider
     // writes the label itself then (the value of the configuration is the one from before the drag)
     if (!isTouchPressed()) {
-        _setTextIfChanged(refs.brightnessValue, PrintString(F("%u %%"), static_cast<unsigned>(LVGLPlugin::getConfiguredBrightness())),
-                          LVGLUI::kFontNormal, LVGLUI::kColorText);
+        char value[kReadoutSize];
+        snprintf(value, sizeof(value), "%u %%", static_cast<unsigned>(LVGLPlugin::getConfiguredBrightness()));
+        _setTextIfChanged(refs.brightnessValue, value, LVGLUI::kFontNormal, LVGLUI::kColorText);
     }
 
     // the values of the tiles, and the fill of the rotation lock while it is set. A filled tile
@@ -4050,7 +4141,9 @@ void HassScreen::_updateSettings()
             valueColor = LVGLUI::kColorBackground;
             labelColor = LVGLUI::kColorBackground;
         }
-        _setTextIfChanged(refs.tileValues[i], _settingsValue(tile), LVGLUI::kFontMedium, valueColor);
+        char value[kReadoutSize];
+        _settingsValue(tile, value, sizeof(value));
+        _setTextIfChanged(refs.tileValues[i], value, LVGLUI::kFontMedium, valueColor);
         if (refs.tileLabels[i]) {
             lv_obj_set_style_text_color(refs.tileLabels[i], lv_color_hex(labelColor), LV_PART_MAIN);
         }
@@ -4185,8 +4278,9 @@ void HassScreen::_settingsCallback(lv_event_t *event)
                 self->_storeSettings();
             }
             if (refs.brightnessValue) {
-                LVGLUI::setText(refs.brightnessValue, PrintString(F("%u %%"), static_cast<unsigned>(percent)).c_str(),
-                                LVGLUI::kFontNormal, LVGLUI::kColorText);
+                char value[kReadoutSize];
+                snprintf(value, sizeof(value), "%u %%", static_cast<unsigned>(percent));
+                LVGLUI::setText(refs.brightnessValue, value, LVGLUI::kFontNormal, LVGLUI::kColorText);
             }
         }
         return;
@@ -4199,8 +4293,9 @@ void HassScreen::_settingsCallback(lv_event_t *event)
                 self->_applySettingsValue();
             }
             if (refs.editValue) {
-                LVGLUI::setText(refs.editValue, PrintString(F("%u %%"), static_cast<unsigned>(percent)).c_str(),
-                                LVGLUI::kFontHuge, LVGLUI::kColorText);
+                char value[kReadoutSize];
+                snprintf(value, sizeof(value), "%u %%", static_cast<unsigned>(percent));
+                LVGLUI::setText(refs.editValue, value, LVGLUI::kFontHuge, LVGLUI::kColorText);
             }
         }
         return;

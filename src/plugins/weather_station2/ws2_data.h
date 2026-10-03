@@ -292,6 +292,14 @@ struct PowerChannels {
 // of the configuration form
 // ------------------------------------------------------------------------------------------
 
+// The flash string as a C string. This plugin is built for the ESP32 only and there F() is a no-op
+// (a plain literal in the read-only data segment), so the pointer is readable as it is - the cast
+// is what F() does on that platform anyway
+inline const char *flashStringToCStr(const __FlashStringHelper *text)
+{
+    return reinterpret_cast<const char *>(text);
+}
+
 // name of a source type ("none", "local INA219", "remote TCP")
 const __FlashStringHelper *getPowerSourceTypeName(PowerSourceType type);
 // built-in default of one power channel, used while the configuration is empty
@@ -302,6 +310,10 @@ const __FlashStringHelper *getDefaultPowerChannel(uint8_t index);
 //   1 = display name of the channel
 //   2 = remote channel id (the wire id of the rpi-power-monitor server)
 String getPowerChannelPart(uint8_t index, uint8_t part);
+// The same part, written into the buffer of the caller. The status line of the power screen needs
+// the name of a channel on every tick (5 fps) and the String version allocates four of them per
+// call (the channel string and the three substrings it is split into)
+void getPowerChannelPart(uint8_t index, uint8_t part, char *output, size_t size);
 // replaces one part of the channel string and stores it (see getPowerChannelPart for the parts)
 void setPowerChannelPart(uint8_t index, uint8_t part, const String &value);
 // remote server of the remote channels, defaults to the reference installation 192.168.0.4:7000
@@ -444,36 +456,60 @@ public:
     }
     // message for the user while getWeatherState() != READY, empty for READY
     String getWeatherStatusText() const;
-    // state of the remote power monitor connection for the status line of the power screen
-    // ("connected, 120 samples" / "not connected: connect failed"), empty without a remote source
-    virtual String getPowerRemoteStatus() const {
-        return String();
+    // the same message appended to the String of the caller: the screen keeps one String for it
+    // and does not build a new one per tick
+    void getWeatherStatusText(String &output) const;
+    // state of the remote power monitor connection appended to the status line of the power screen
+    // ("connected, 120 samples" / "not connected: connect failed"). Nothing is appended while no
+    // remote source is configured. The text goes into the String of the caller, the status line is
+    // rebuilt five times per second and must not allocate
+    virtual void appendPowerRemoteStatus(String &output) const {
     }
 
-    // formatting, the units belong to the source (configuration), not to the screens
+    // Formatting, the units belong to the source (configuration), not to the screens. Every text
+    // comes in two flavors: the String version for the places that hand the text to another String
+    // (the status output of the plugin) and the buffer version the screens use - they refresh up
+    // to five times per second and a returned String is one heap allocation per label and tick
+    static constexpr size_t kFormatSize = 32;
     String formatTemperature(float value) const;
+    void formatTemperature(float value, char *output, size_t size) const;
     String formatHumidity(float value) const;
+    void formatHumidity(float value, char *output, size_t size) const;
     String formatPressure(float value) const;
+    void formatPressure(float value, char *output, size_t size) const;
     String formatWind(float value) const;
+    void formatWind(float value, char *output, size_t size) const;
     String formatRain(float value) const;
+    void formatRain(float value, char *output, size_t size) const;
     String formatEco2(float value) const;
+    void formatEco2(float value, char *output, size_t size) const;
     // text of one indoor metric: the formatted value, "offline" or "--"
     String formatIndoorValue(IndoorValues::Metric metric, const IndoorValue &value) const;
+    void formatIndoorValue(IndoorValues::Metric metric, const IndoorValue &value, char *output, size_t size) const;
     // Power values. The readout cards draw the unit separately, so these return the bare number.
     // A channel without available data returns "--" (the screens show it in a muted color)
     String formatVoltage(float value) const;   // 2 decimals, V
     String formatCurrent(float value) const;   // 3 decimals, A
     String formatPower(float value) const;     // 2 decimals, W
     String formatEnergy(double value) const;   // 4 decimals, kWh
-    // state text of a power channel for the status line ("--", "offline", "no data", "")
-    String getPowerStateText(const PowerValues &value) const;
+    void formatVoltage(float value, char *output, size_t size) const;
+    void formatCurrent(float value, char *output, size_t size) const;
+    void formatPower(float value, char *output, size_t size) const;
+    void formatEnergy(double value, char *output, size_t size) const;
+    // state text of a power channel for the status line ("", "offline", "no data")
+    const char *getPowerStateText(const PowerValues &value) const;
     String formatIllumination(float value) const;
+    void formatIllumination(float value, char *output, size_t size) const;
     String formatAge(float value) const;
+    void formatAge(float value, char *output, size_t size) const;
     // UV index has no unit, one decimal is enough
     String formatUvIndex(float value) const;
+    void formatUvIndex(float value, char *output, size_t size) const;
     // minutes since midnight as HH:MM
     String formatTimeOfDay(int16_t minutes) const;
+    void formatTimeOfDay(int16_t minutes, char *output, size_t size) const;
     static String formatUptime(uint32_t uptime);
+    static void formatUptime(uint32_t uptime, char *output, size_t size);
 
 #if DEBUG_LVGL_SCREENSHOT
     // applies one "key:value" pair of the debug screenshot feature. The model implements the
@@ -630,7 +666,7 @@ public:
     }
     virtual WeatherState getWeatherState() const override;
     virtual String getWeatherError() const override;
-    virtual String getPowerRemoteStatus() const override;
+    virtual void appendPowerRemoteStatus(String &output) const override;
 
     // error of the last request, empty while it succeeded (status output)
     String getLastError() const;

@@ -1012,6 +1012,13 @@ constexpr lv_coord_t kSettingsTimeWidth = 96;
 // gap between the WiFi glyph and the divider of the cell that closes the sheet. The date label
 // stops at the same edge
 constexpr lv_coord_t kSettingsSignalGap = 14;
+// Height of the visible ink of the two header texts, used to center the block in the row: a line box
+// is taller than the digits and capitals drawn in it (the huge clock is 22 px of digits in a 35 px
+// box). The date shares the baseline of the clock in landscape, so the block is the clock there,
+// the portrait header stacks the two lines and centers them together with the gap between them
+constexpr lv_coord_t kSettingsClockInk = 22;
+constexpr lv_coord_t kSettingsDateInk = 9;
+constexpr lv_coord_t kSettingsClockDateGap = 12;
 
 // The baseline of a label that starts at the top of its box: LVGL draws the first line's baseline
 // `line_height - base_line` below it (lv_font_t). The clock and the date of the header are put on
@@ -1043,12 +1050,18 @@ SettingsGeometry settingsGeometry(lv_coord_t width, lv_coord_t height, bool port
     g.closeSize = g.topH;
     g.closeX = static_cast<lv_coord_t>(g.rowW - g.closeSize);
     g.timeX = g.pad;
-    g.timeY = portrait ? 8 : 4;
     g.dateX = portrait ? g.pad : static_cast<lv_coord_t>(g.pad + kSettingsTimeWidth);
-    // The clock and the date are drawn beside each other in landscape: the top of the date is
-    // derived from the two fonts so both baselines (the bottom of the digits) are the same line.
-    // The portrait sheet stacks them, the date keeps its own row there
-    g.dateY = portrait ? 46 : static_cast<lv_coord_t>(g.timeY + labelBaseline(LVGLUI::kFontHuge) - labelBaseline(LVGLUI::kFontSmall));
+    // The clock and the date are one block that is centered vertically in the header row. The ink
+    // is centered, not the line box: the box of the huge font has the empty space above the digits
+    // in it, so the baseline is derived from the ink. It is the clock alone in landscape (the date
+    // is shorter and sits on the same baseline), both lines in the portrait header that stacks them
+    const auto blockInk = static_cast<lv_coord_t>(kSettingsClockInk + (portrait ? (kSettingsClockDateGap + kSettingsDateInk) : 0));
+    const auto baseLine = static_cast<lv_coord_t>((g.topH - blockInk) / 2 + kSettingsClockInk - 1);
+    g.timeY = static_cast<lv_coord_t>(baseLine - labelBaseline(LVGLUI::kFontHuge));
+    // the date shares the baseline of the clock in landscape, the portrait sheet puts it on a
+    // second line below it
+    g.dateY = static_cast<lv_coord_t>(portrait ? (baseLine + kSettingsClockDateGap + kSettingsDateInk - labelBaseline(LVGLUI::kFontSmall))
+                                               : (baseLine - labelBaseline(LVGLUI::kFontSmall)));
     g.signalX = static_cast<lv_coord_t>(g.closeX - kSettingsSignalGap - LVGLUI::kIconSizeSmall);
     g.signalY = static_cast<lv_coord_t>((g.topH - LVGLUI::kIconSizeSmall) / 2);
 
@@ -4099,6 +4112,11 @@ void HassScreen::_updateSettings()
     char date[40];
     char time[40];
     LVGLUI::formatClock(_data.isTimeFormat24h(), date, sizeof(date), time, sizeof(time), nullptr, 0);
+    // without a time (before the first NTP sync) the clock shows "--:--" and the date stays empty,
+    // so the header keeps its shape until the clock is set
+    if (time[0] == 0) {
+        strcpy(time, "--:--");
+    }
     _setTextIfChanged(refs.time, time, LVGLUI::kFontHuge, LVGLUI::kColorText);
     // the date is drawn in upper case, like the reviewed layout
     for (auto ptr = date; *ptr; ptr++) {

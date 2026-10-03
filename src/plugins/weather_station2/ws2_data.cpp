@@ -985,7 +985,7 @@ void DataSource::updateSystemInfo()
 {
     auto &system = _system;
     system.hostname = KFCConfigurationClasses::System::Device::getName();
-    system.firmware = String(F("kfc_fw build ")) + __BUILD_NUMBER;
+    system.firmware = String(F(FIRMWARE_SHORT_VERSION));
     system.uptime = millis() / 1000;
     system.freeHeap = ESP.getFreeHeap();
     system.freePsram = ESP.getFreePsram();

@@ -678,7 +678,7 @@ void Client::_loop()
         }
         // The history graph of an open sensor panel. It is fetched after the actions and the pushed
         // values (a state or an action is more urgent) and one at a time, like a camera image. The
-        // main loop requests it when the panel is opened and every 5 minutes. A result that was not
+        // main loop requests it when the panel is opened and once a minute. A result that was not
         // copied out yet (takeStats()) is not overwritten: the request waits for it
         if (_statsRequest && !_statsUntaken) {
             uint8_t statsTile = kNoStatsTile;

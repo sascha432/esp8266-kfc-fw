@@ -606,6 +606,10 @@ private:
     static uint16_t statsRangeBuckets(uint8_t hours) {
         return static_cast<uint16_t>(hours) * 12 + 1;
     }
+    // Ticks of the X axis of the history graph: one grid line every 4 hours at whole local hours
+    // (see kSensorGridHours). The 48 hour range has 12 intervals and can have a line at both ends of
+    // the window, 13 covers every range (a 24 hour window has 6 or 7)
+    static constexpr uint8_t kSensorTimeTicks = 13;
 
     // sub view of an open panel. Climate: the arc with the steppers, or the list of the mode,
     // the preset and the fan mode. Light/dimmer: the level slider, the color wheel, the color
@@ -826,8 +830,11 @@ private:
         lv_obj_t *chipLabels[kStatsRangeCount]{};
         // maximum, middle and minimum of the window at the left of the graph
         lv_obj_t *levels[3]{};
-        // one time label per divider of the X axis
-        lv_obj_t *times[6]{};
+        // One grid line and one label per tick of the X axis. The lines are drawn by the screen
+        // (lv_chart cannot place its dividers at a time), the labels sit under their line - see
+        // _drawSensorChart()
+        lv_obj_t *grid[kSensorTimeTicks]{};
+        lv_obj_t *times[kSensorTimeTicks]{};
         // the graph and its series (see _buildSensorPanel())
         lv_obj_t *chart{nullptr};
         lv_chart_series_t *series{nullptr};
@@ -860,8 +867,9 @@ private:
     void _updateSensorPanel();
     // draws the buckets of the statistics into the graph of the sensor panel
     void _drawSensorChart(const HomeAssistant::Tile &tile);
-    // text of the level (maximum/middle/minimum) and of the time labels of the graph
-    String _formatStatsValue(const HomeAssistant::Tile &tile, float value) const;
+    // text of the level (maximum/middle/minimum) and of the time labels of the graph. The number of
+    // decimals of a level comes from the step of the axis, so all three labels are formatted alike
+    String _formatStatsValue(float value, uint8_t decimals) const;
     void _formatStatsTime(uint32_t time, String &output) const;
     // stacks the buttons of the light panel in the left column and gives the rest of the column to
     // the back tile (an entity without color/effects has fewer buttons)
@@ -954,9 +962,6 @@ private:
     lv_coord_t _sensorCardHeight() const;
     lv_coord_t _sensorGraphWidth() const;
     lv_coord_t _sensorGraphHeight() const;
-    // number of time labels below the graph: the landscape display fits one under every divider
-    // of the X axis, the narrow graph of a portrait display fits fewer of them
-    uint8_t _timeLabelCount() const;
     // sets the text only when it changed (a new pointer restarts the scroll animation)
     static void _setTextIfChanged(lv_obj_t *label, const String &text, const lv_font_t *font, uint32_t color);
     // index of the tile that owns an object, kMaxTiles when it does not belong to one

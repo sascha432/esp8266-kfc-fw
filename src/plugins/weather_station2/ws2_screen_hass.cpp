@@ -411,22 +411,36 @@ constexpr lv_coord_t kSensorTitleHeight = 30;
 constexpr lv_coord_t kSensorChipWidth = 52;
 constexpr lv_coord_t kSensorChipHeight = 26;
 constexpr lv_coord_t kSensorChipGap = 6;
-// the card of the graph, below the title
+// the card of the graph, below the title. kSensorCardGap keeps the "History" label and the range
+// chips (the title row is kSensorTitleHeight tall) off the card - the 27 px kFontTitle font of the
+// label used to end one pixel above the outline of the card
 constexpr lv_coord_t kSensorCardX = kTileMargin;
-constexpr lv_coord_t kSensorCardY = static_cast<lv_coord_t>(kSensorTitleY + kSensorTitleHeight);
+constexpr lv_coord_t kSensorCardGap = 10;
+constexpr lv_coord_t kSensorCardY = static_cast<lv_coord_t>(kSensorTitleY + kSensorTitleHeight + kSensorCardGap);
 // size of the card and of the graph inside it: HassScreen::_sensorCardWidth() and the other
 // metrics, the display is 480x320 in landscape and 320x480 in portrait
 // inside the card: the column of the level labels (at the left of the graph), the strip of the
 // time labels (below it) and the graph that uses the rest
 constexpr lv_coord_t kSensorLevelWidth = 40;
 constexpr lv_coord_t kSensorLevelHeight = 14;
-constexpr lv_coord_t kSensorTimeHeight = 16;
+// the strip below the graph: the time labels (kFontSmall = montserrat_12, 15 px line height, see
+// lv_font_montserrat_12.c) start kSensorTimeTop below the graph and keep kSensorTimeGap to the
+// bottom edge of the card (with 16 px they sat on the outline)
+constexpr lv_coord_t kSensorTimeTop = 2;
+constexpr lv_coord_t kSensorTimeLineHeight = 15;
+constexpr lv_coord_t kSensorTimeGap = 6;
+constexpr lv_coord_t kSensorTimeHeight = static_cast<lv_coord_t>(kSensorTimeTop + kSensorTimeLineHeight + kSensorTimeGap);
 constexpr lv_coord_t kSensorGraphX = static_cast<lv_coord_t>(kSensorLevelWidth + 8);
 constexpr lv_coord_t kSensorGraphY = static_cast<lv_coord_t>(kSensorLevelHeight + 4);
-// width of one time label below the graph (six of them, one under every divider of the X axis)
-constexpr lv_coord_t kSensorTimeWidth = 60;
-// number of time labels below the graph (the dividers of the X axis)
-constexpr uint8_t kSensorTimeLabels = 6;
+// The chart is clipped to its object: a value on the top or bottom edge loses half of the 2 px
+// line and the divider on that edge is cut off (the lowest divider sat on the bottom edge when the
+// auto scale snapped the minimum of the window to 0). The range is mapped inside this inset and the
+// three value lines and their labels use the same coordinates
+constexpr lv_coord_t kSensorGraphInset = 2;
+// Interval of the grid lines of the X axis, in hours: one line every 4 hours at whole local hours
+// (00:00, 04:00, ...). The lines follow the clock and the label of a line is drawn under it, see
+// _drawSensorChart()
+constexpr uint8_t kSensorGridHours = 4;
 // The chart of LVGL 8.4 stores integers (lv_coord_t, 16 bit) and LV_CHART_POINT_NONE is
 // INT16_MAX, so the span of the window is mapped to 0..kSensorChartScale and the labels show the
 // range that was mapped. A fixed factor per unit (like the power screen uses) is not possible
@@ -434,6 +448,32 @@ constexpr uint8_t kSensorTimeLabels = 6;
 constexpr lv_coord_t kSensorChartScale = 20000;
 // length of one bucket of the statistics (5 minutes, the period of the request)
 constexpr uint32_t kSensorBucketSeconds = 300;
+
+// A step of one significant digit (1..9 x 10^n) for the Y axis of the sensor graph: the three
+// labels of the axis become round numbers (0 / 70 / 140) instead of the raw window plus a margin
+// (-10.4 / 55.7 / 122). `raw` is Inf/NaN safe
+float statsNiceStep(float raw)
+{
+    if (!(raw > 0.0f) || raw > 1e30f) {
+        return 1.0f;
+    }
+    const auto exponent = floorf(log10f(raw));
+    const auto base = powf(10.0f, exponent);
+    auto digits = roundf(raw / base);
+    if (digits < 1.0f) {
+        digits = 1.0f;
+    }
+    return digits * base;
+}
+
+// Interval of the labels below the graph, in hours. The grid lines are one per kSensorGridHours and
+// every line carries its label, only the 48 hour range labels every second one: a "14:00" of the
+// 12 px font needs 32 px while the 12 lines of that range are 34 px apart in landscape and 21 px in
+// portrait, they would overlap
+uint8_t statsLabelStepHours(uint8_t hours)
+{
+    return (hours > 24) ? 8 : kSensorGridHours;
+}
 
 // Tenths of a degree one step of the climate arc is. The range and the value of an LVGL arc are
 // integers, so an arc that is set up in tenths of a degree moves in 0.1 °C while it is dragged -
@@ -795,6 +835,17 @@ constexpr lv_coord_t kSettingsLabelOffset = 46;
 constexpr lv_coord_t kSettingsValueTop = 34;
 // width reserved for the clock in the header (the date follows it, the text is not measured)
 constexpr lv_coord_t kSettingsTimeWidth = 96;
+// gap between the WiFi glyph and the divider of the cell that closes the sheet. The date label
+// stops at the same edge
+constexpr lv_coord_t kSettingsSignalGap = 14;
+
+// The baseline of a label that starts at the top of its box: LVGL draws the first line's baseline
+// `line_height - base_line` below it (lv_font_t). The clock and the date of the header are put on
+// the same baseline with it
+static inline lv_coord_t labelBaseline(const lv_font_t *font)
+{
+    return static_cast<lv_coord_t>(font->line_height - font->base_line);
+}
 
 SettingsGeometry settingsGeometry(lv_coord_t width, lv_coord_t height, bool portrait, uint8_t tiles)
 {
@@ -820,8 +871,11 @@ SettingsGeometry settingsGeometry(lv_coord_t width, lv_coord_t height, bool port
     g.timeX = g.pad;
     g.timeY = portrait ? 8 : 4;
     g.dateX = portrait ? g.pad : static_cast<lv_coord_t>(g.pad + kSettingsTimeWidth);
-    g.dateY = portrait ? 46 : 26;
-    g.signalX = static_cast<lv_coord_t>(g.closeX - 8 - LVGLUI::kIconSizeSmall);
+    // The clock and the date are drawn beside each other in landscape: the top of the date is
+    // derived from the two fonts so both baselines (the bottom of the digits) are the same line.
+    // The portrait sheet stacks them, the date keeps its own row there
+    g.dateY = portrait ? 46 : static_cast<lv_coord_t>(g.timeY + labelBaseline(LVGLUI::kFontHuge) - labelBaseline(LVGLUI::kFontSmall));
+    g.signalX = static_cast<lv_coord_t>(g.closeX - kSettingsSignalGap - LVGLUI::kIconSizeSmall);
     g.signalY = static_cast<lv_coord_t>((g.topH - LVGLUI::kIconSizeSmall) / 2);
 
     // the screen brightness above the tiles. The portrait sheet writes the label of the slider on a
@@ -1237,15 +1291,6 @@ lv_coord_t HassScreen::_sensorGraphWidth() const
 lv_coord_t HassScreen::_sensorGraphHeight() const
 {
     return static_cast<lv_coord_t>(_sensorCardHeight() - kSensorGraphY - kSensorTimeHeight);
-}
-
-// A landscape display has 410 px of graph, the six labels of the dividers of the X axis fit next
-// to each other. The graph of a portrait display is 250 px wide, six labels of 60 px would overlap
-// each other (every label kept its fixed 60 px box until the last one was pushed over the edge of
-// the card), so every second divider is labelled there
-uint8_t HassScreen::_timeLabelCount() const
-{
-    return _portrait ? 4 : kSensorTimeLabels;
 }
 
 const lv_font_t *HassScreen::_panelValueFont() const
@@ -2163,7 +2208,7 @@ void HassScreen::_buildSensorPanel(uint8_t index)
 
     // Header: the glyph of the entity, its name and the live value. The value is polled with the
     // states of the screen (every `hass.poll`), so the panel needs no request of its own for it -
-    // only the graph is a request of its own (every 5 minutes)
+    // only the graph is a request of its own (once a minute)
     const auto iconX = static_cast<lv_coord_t>(kTileMargin + kSensorBackSize + kSensorHeaderGap);
     sensor.icon = LVGLUI::createIcon(_grid, toIconType(tile), iconX, kSensorHeaderY, LVGLUI::kIconSizeLarge);
     const auto nameX = static_cast<lv_coord_t>(iconX + LVGLUI::kIconSizeLarge + kSensorHeaderGap);
@@ -2198,33 +2243,53 @@ void HassScreen::_buildSensorPanel(uint8_t index)
     auto card = LVGLUI::createCard(_grid, kSensorCardX, kSensorCardY, _sensorCardWidth(), _sensorCardHeight());
     sensor.unit = LVGLUI::addLabel(card, 2, 2, "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted,
                                    static_cast<lv_coord_t>(kSensorLevelWidth - 4), LV_TEXT_ALIGN_RIGHT);
-    // the levels of the window: the maximum on the top edge of the graph, the middle and the
-    // minimum on its bottom edge (the labels are right aligned against the graph)
+    // The three value lines are the dividers of the chart (3 divisions put them on the top, the
+    // middle and the bottom of the content area - the object minus the inset the values are mapped
+    // into) and the labels sit on the same lines
+    const auto levelTop = static_cast<lv_coord_t>(kSensorGraphY + kSensorGraphInset);
+    const auto levelHeight = static_cast<lv_coord_t>(_sensorGraphHeight() - 2 * kSensorGraphInset);
     const lv_coord_t levelY[3] = {
-        kSensorGraphY,
-        static_cast<lv_coord_t>(kSensorGraphY + _sensorGraphHeight() / 2 - kSensorLevelHeight / 2),
-        static_cast<lv_coord_t>(kSensorGraphY + _sensorGraphHeight() - kSensorLevelHeight),
+        levelTop,
+        static_cast<lv_coord_t>(levelTop + levelHeight / 2 - kSensorLevelHeight / 2),
+        static_cast<lv_coord_t>(levelTop + levelHeight - kSensorLevelHeight),
     };
     for (uint8_t i = 0; i < 3; i++) {
         sensor.levels[i] = LVGLUI::addLabel(card, 2, levelY[i], "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted,
                                             static_cast<lv_coord_t>(kSensorLevelWidth - 4), LV_TEXT_ALIGN_RIGHT);
     }
 
-    // The graph: a line chart with the dividers of the app layout (4 rows and 5 columns), the same
-    // chart the power screen draws
+    // The vertical grid lines of the X axis: one 1 px line per tick, positioned by
+    // _drawSensorChart(). lv_chart can only place its dividers evenly over the object, which cannot
+    // follow the clock. They are created before the chart, so the curve is drawn over them
+    const auto gridY = static_cast<lv_coord_t>(kSensorGraphY + kSensorGraphInset);
+    const auto gridHeight = static_cast<lv_coord_t>(_sensorGraphHeight() - 2 * kSensorGraphInset);
+    for (auto &line : sensor.grid) {
+        line = LVGLUI::createContainer(card, kSensorGraphX, gridY, 1, gridHeight);
+        lv_obj_set_style_bg_color(line, lv_color_hex(LVGLUI::kColorBorder), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(line, LV_OPA_COVER, LV_PART_MAIN);
+        LVGLUI::clearClickable(line);
+        showWidget(line, false);
+    }
+
+    // The graph: a line chart with the three value lines of the app layout, the curve is drawn over
+    // the grid lines of the X axis
     sensor.chart = lv_chart_create(card);
     lv_obj_set_pos(sensor.chart, kSensorGraphX, kSensorGraphY);
     lv_obj_set_size(sensor.chart, _sensorGraphWidth(), _sensorGraphHeight());
     lv_obj_set_style_bg_opa(sensor.chart, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_border_width(sensor.chart, 0, LV_PART_MAIN);
+    // The chart maps the value range to its content area (object minus padding) and clips the
+    // drawing to the object, see kSensorGraphInset
     lv_obj_set_style_pad_all(sensor.chart, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(sensor.chart, kSensorGraphInset, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(sensor.chart, kSensorGraphInset, LV_PART_MAIN);
     lv_obj_set_style_line_color(sensor.chart, lv_color_hex(LVGLUI::kColorBorder), LV_PART_MAIN);
     lv_obj_set_style_width(sensor.chart, 0, LV_PART_INDICATOR);
     lv_obj_set_style_height(sensor.chart, 0, LV_PART_INDICATOR);
     lv_obj_set_style_line_width(sensor.chart, 2, LV_PART_ITEMS);
     lv_obj_set_style_line_color(sensor.chart, lv_color_hex(LVGLUI::kColorAccent), LV_PART_ITEMS);
     lv_chart_set_type(sensor.chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_div_line_count(sensor.chart, 4, 5);
+    lv_chart_set_div_line_count(sensor.chart, 3, 0);
     lv_chart_set_range(sensor.chart, LV_CHART_AXIS_PRIMARY_Y, 0, kSensorChartScale);
     // one column per bucket of the window, a bucket without data stays empty (LV_CHART_POINT_NONE)
     sensor.buckets = statsRangeBuckets(_statsHours);
@@ -2239,25 +2304,15 @@ void HassScreen::_buildSensorPanel(uint8_t index)
         lv_chart_set_all_value(sensor.chart, sensor.series, LV_CHART_POINT_NONE);
     }
 
-    // The time labels below the graph, one under every divider of the X axis. The box of a label is
-    // as wide as the step between two of them: the fixed 60 px box of the landscape display made
-    // the six labels of the 250 px graph of a portrait display overlap each other. The first and
-    // the last one are centered on the edge of the graph, which would push their box (invisible,
-    // the text is centered in it) over the edge of the card, so they are held inside it
-    const auto labelCount = _timeLabelCount();
-    const auto step = static_cast<lv_coord_t>(_sensorGraphWidth() / (labelCount - 1));
-    const auto labelWidth = minOf(kSensorTimeWidth, step);
-    const auto maxX = static_cast<lv_coord_t>(_sensorCardWidth() - labelWidth - 2);
-    for (uint8_t i = 0; i < labelCount; i++) {
-        auto labelX = static_cast<lv_coord_t>(kSensorGraphX + step * i - labelWidth / 2);
-        if (labelX < 2) {
-            labelX = 2;
-        }
-        else if (labelX > maxX) {
-            labelX = maxX;
-        }
-        sensor.times[i] = LVGLUI::addLabel(card, labelX, static_cast<lv_coord_t>(kSensorGraphY + _sensorGraphHeight() + 2), "",
-                                           LVGLUI::kFontSmall, LVGLUI::kColorTextMuted, labelWidth, LV_TEXT_ALIGN_CENTER);
+    // The labels below the graph, one per grid line of the X axis. They are created hidden: the
+    // position, the width and the text come from the tick in _drawSensorChart(), a tick whose label
+    // does not fit inside the card is not drawn at all
+    const auto timeY = static_cast<lv_coord_t>(kSensorGraphY + _sensorGraphHeight() + kSensorTimeTop);
+    for (auto &label : sensor.times) {
+        label = LVGLUI::addLabel(card, kSensorGraphX, timeY, "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+        // the width is set per tick, the alignment keeps the text centered on its line
+        lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+        showWidget(label, false);
     }
 
     // the message that replaces the graph while it is empty ("loading", "no history", an error)
@@ -2280,7 +2335,7 @@ void HassScreen::_updateSensorPanel()
     auto &sensor = _sensor;
 
     // the live value of the entity, formatted like its tile (the state poll refreshes it, the graph
-    // only every 5 minutes)
+    // only once a minute)
     auto stateColor = LVGLUI::kColorText;
     auto iconState = LVGLUI::TileState::OFF;
     switch (value.state) {
@@ -2316,7 +2371,7 @@ void HassScreen::_updateSensorPanel()
     }
 
     // The graph is only filled again when a new response arrived (or the range changed): the
-    // request runs every 5 minutes, drawing the buckets again on every update would be wasted work
+    // request runs once a minute, drawing the buckets again on every update would be wasted work
     const auto generation = _dashboard.getStatsGeneration();
     if (sensor.drawnHours != _statsHours || sensor.drawnGeneration != generation) {
         sensor.drawnHours = _statsHours;
@@ -2346,17 +2401,61 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
     const char *unit = tile.unit[0] ? tile.unit : _dashboard.getValue(static_cast<uint8_t>(_panelTile)).unit;
     LVGLUI::setText(sensor.unit, unit ? unit : "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
 
-    // one label per divider of the X axis, spread over the window (the count depends on the
-    // orientation, see _timeLabelCount())
-    const auto labelCount = _timeLabelCount();
-    for (uint8_t i = 0; i < labelCount; i++) {
-        if (!sensor.times[i]) {
-            continue;
-        }
-        const auto time = start + static_cast<uint32_t>((static_cast<uint64_t>(end - start) * i) / (labelCount - 1));
+    // The X axis: one grid line every kSensorGridHours at whole local hours (00:00, 04:00, ...) and
+    // the label of the tick under its line. The ticks are stepped in local time (tm_hour += 4 and
+    // mktime() resolve a DST change), so the labels keep reading whole hours wherever the window
+    // sits in the year
+    const auto span = end - start;
+    const auto labelStep = statsLabelStepHours(hours);
+    const auto timeY = static_cast<lv_coord_t>(kSensorGraphY + _sensorGraphHeight() + kSensorTimeTop);
+    struct tm tick;
+    {
+        const auto value = static_cast<time_t>(start);
+        localtime_r(&value, &tick);
+        tick.tm_min = 0;
+        tick.tm_sec = 0;
+        tick.tm_hour = ((tick.tm_hour + kSensorGridHours - 1) / kSensorGridHours) * kSensorGridHours;
+        tick.tm_isdst = -1;
+    }
+    uint8_t lines = 0;
+    uint8_t labels = 0;
+    for (auto time = static_cast<uint32_t>(mktime(&tick)); time <= end;) {
         String text;
         _formatStatsTime(time, text);
-        LVGLUI::setText(sensor.times[i], text.c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+        const auto width = static_cast<lv_coord_t>(lv_txt_get_width(text.c_str(), text.length(), LVGLUI::kFontSmall, 0, LV_TEXT_FLAG_NONE));
+        const auto x = static_cast<lv_coord_t>(kSensorGraphX + (static_cast<int64_t>(_sensorGraphWidth()) * (time - start)) / span);
+        // A tick whose label does not fit inside the card is dropped (line and label): a label that
+        // is moved inside the card sits beside its line instead of under it
+        if (x - width / 2 >= 2 && x + width / 2 <= static_cast<lv_coord_t>(_sensorCardWidth() - 2)) {
+            if (lines < kSensorTimeTicks && sensor.grid[lines]) {
+                lv_obj_set_pos(sensor.grid[lines], x, static_cast<lv_coord_t>(kSensorGraphY + kSensorGraphInset));
+                showWidget(sensor.grid[lines], true);
+                lines++;
+            }
+            if ((tick.tm_hour % labelStep) == 0 && labels < kSensorTimeTicks && sensor.times[labels]) {
+                auto *label = sensor.times[labels];
+                // centered on the line of the tick, the box is 2 px wider than the text so the text
+                // can never wrap into a second line
+                lv_obj_set_pos(label, static_cast<lv_coord_t>(x - width / 2), timeY);
+                lv_obj_set_width(label, static_cast<lv_coord_t>(width + 2));
+                LVGLUI::setText(label, text.c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+                showWidget(label, true);
+                labels++;
+            }
+        }
+        tick.tm_hour += kSensorGridHours;
+        tick.tm_isdst = -1;
+        time = static_cast<uint32_t>(mktime(&tick));
+    }
+    for (uint8_t i = lines; i < kSensorTimeTicks; i++) {
+        if (sensor.grid[i]) {
+            showWidget(sensor.grid[i], false);
+        }
+    }
+    for (uint8_t i = labels; i < kSensorTimeTicks; i++) {
+        if (sensor.times[i]) {
+            showWidget(sensor.times[i], false);
+        }
     }
 
     if (!count) {
@@ -2396,12 +2495,21 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
             max = value;
         }
     }
-    auto margin = (max - min) * 0.1f;
-    if (margin <= 0) {
-        margin = (fabsf(max) > 0.01f) ? fabsf(max) * 0.01f : 0.5f;
+    // Auto scale from the window, snapped to a "nice" step of one significant digit: the three
+    // labels of the axis are round numbers (0 / 70 / 140) instead of the window plus a margin
+    // (-10.4 / 55.7 / 122). A flat line keeps a small span around its value
+    if ((max - min) <= 0.0f) {
+        const auto flat = (fabsf(max) > 0.01f) ? fabsf(max) * 0.1f : 1.0f;
+        min -= flat / 2.0f;
+        max += flat / 2.0f;
     }
-    const auto low = min - margin;
-    const auto high = max + margin;
+    // two intervals between the bottom and the top label, a single significant digit per step
+    const auto step = statsNiceStep((max - min) / 2.0f);
+    auto low = floorf(min / step) * step;
+    auto high = low + 2.0f * step;
+    if (high < max) {
+        high += step * ceilf((max - high) / step);
+    }
     // the span of the window is mapped to the integer range of the chart (see kSensorChartScale)
     const auto factor = (high > low) ? (static_cast<float>(kSensorChartScale) / (high - low)) : 1.0f;
     lv_chart_set_range(sensor.chart, LV_CHART_AXIS_PRIMARY_Y, 0, kSensorChartScale);
@@ -2429,21 +2537,22 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
     }
     lv_chart_refresh(sensor.chart);
 
-    // the levels of the window
-    LVGLUI::setText(sensor.levels[0], _formatStatsValue(tile, high).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
-    LVGLUI::setText(sensor.levels[1], _formatStatsValue(tile, (high + low) / 2).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
-    LVGLUI::setText(sensor.levels[2], _formatStatsValue(tile, low).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+    // the levels of the window, all three in the format of the step (mixing "140" and "70.0"
+    // looks broken)
+    const auto decimals = (step >= 1.0f) ? 0 : ((step >= 0.1f) ? 1 : 2);
+    LVGLUI::setText(sensor.levels[0], _formatStatsValue(high, decimals).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+    LVGLUI::setText(sensor.levels[1], _formatStatsValue((high + low) / 2, decimals).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+    LVGLUI::setText(sensor.levels[2], _formatStatsValue(low, decimals).c_str(), LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
 
     __LDBG_printf("hass> history of tile %u: %u bucket(s) of %u, %.4f..%.4f drawn as %.4f..%.4f", static_cast<unsigned>(_panelTile),
                   static_cast<unsigned>(count), static_cast<unsigned>(sensor.buckets), static_cast<double>(min), static_cast<double>(max),
                   static_cast<double>(low), static_cast<double>(high));
 }
 
-String HassScreen::_formatStatsValue(const HomeAssistant::Tile &tile, float value) const
+String HassScreen::_formatStatsValue(float value, uint8_t decimals) const
 {
-    // a level of the graph has a column of 40 px, so a value in the hundreds is drawn without
-    // decimals (the readout of the tile keeps them)
-    const auto decimals = (fabsf(value) >= 100.0f) ? 0 : tile.decimals;
+    // a level of the graph has a column of 40 px, so a large value is drawn without decimals. The
+    // number of decimals comes from the step of the axis so all three labels are formatted alike
     return PrintString(F("%.*f"), decimals, static_cast<double>(value));
 }
 
@@ -2453,21 +2562,16 @@ void HassScreen::_formatStatsTime(uint32_t time, String &output) const
     const auto value = static_cast<time_t>(time);
     localtime_r(&value, &tm);
     char buffer[32];
-    // a divider that sits on midnight shows the date like the app ("Sep 30"), the others the time
-    const auto midnight = (tm.tm_hour == 0 && tm.tm_min == 0);
-    const auto format = midnight ? "%b %d" : (_data.isTimeFormat24h() ? "%H:%M" : "%I:%M %p");
+    const auto format = _data.isTimeFormat24h() ? "%H:%M" : "%I:%M %p";
     if (!strftime(buffer, sizeof(buffer), format, &tm)) {
         output = String();
         return;
     }
     output = buffer;
-    // strftime pads a single digit field with a zero ("04:00 PM", "Sep 05"), the labels of the
+    // strftime pads the hour of the 12 hour format with a zero ("04:00 PM"), the labels of the
     // layout have none. The hour of the 24 hour format keeps its zero ("00:30" is a valid time)
-    if (!midnight && !_data.isTimeFormat24h() && output.length() > 1 && output[0] == '0') {
+    if (!_data.isTimeFormat24h() && output.length() > 1 && output[0] == '0') {
         output.remove(0, 1);
-    }
-    else if (midnight && output.length() > 5 && output[4] == '0') {
-        output.remove(4, 1);
     }
 }
 
@@ -3619,7 +3723,7 @@ void HassScreen::_buildSettings()
     lv_obj_set_style_border_width(refs.top, 1, LV_PART_MAIN);
     refs.time = LVGLUI::addLabel(refs.top, g.timeX, g.timeY, "", LVGLUI::kFontHuge, LVGLUI::kColorText, kSettingsTimeWidth);
     refs.date = LVGLUI::addLabel(refs.top, g.dateX, g.dateY, "", LVGLUI::kFontSmall, LVGLUI::kColorTextLabel,
-                                 static_cast<lv_coord_t>(g.closeX - 8 - g.dateX));
+                                 static_cast<lv_coord_t>(g.closeX - kSettingsSignalGap - g.dateX));
     // the glyph of the WiFi state, it is redrawn when the state changes (see _updateSettings())
     _settingsSignal = static_cast<uint8_t>(settingsSignalIcon());
     refs.signal = LVGLUI::createIcon(refs.top, static_cast<LVGLUI::IconType>(_settingsSignal), g.signalX, g.signalY,

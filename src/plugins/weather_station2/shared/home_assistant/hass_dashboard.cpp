@@ -373,7 +373,8 @@ void Dashboard::update()
     _requestCount = _client.getRequestCount();
 
     // The history graph of the open sensor panel. The request is repeated while the panel is open:
-    // the buckets of the recorder are 5 minute aggregates, so a new one appears every 5 minutes
+    // the buckets of the recorder are 5 minute aggregates, so the minute keeps the window on the
+    // clock and a new bucket shows up on screen within a minute of it being written
     if (_statsTile != kStatsNone) {
         if (static_cast<int32_t>(now - _statsNextFetch) >= 0) {
             _statsNextFetch = now + kStatsRefreshInterval;

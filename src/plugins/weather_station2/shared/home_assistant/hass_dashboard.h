@@ -206,9 +206,10 @@ public:
     // ------------------------------------------------------------------------------------------
     // value of an index that does not point to a statistic request
     static constexpr uint8_t kStatsNone = HomeAssistant::Client::kNoStatsTile;
-    // the graph of an open sensor panel is refreshed this often. The buckets are 5 minute
-    // aggregates, a shorter interval would request the same data again
-    static constexpr uint32_t kStatsRefreshInterval = 300000;
+    // the graph of an open sensor panel is refreshed this often. The buckets of the recorder are
+    // 5 minute aggregates, so a new one appears every 5 minutes - the minute keeps the window on
+    // the clock and puts the newest bucket on screen within a minute of it being written
+    static constexpr uint32_t kStatsRefreshInterval = 60000;
     static constexpr uint8_t kStatsDefaultHours = HomeAssistant::Client::kDefaultStatsHours;
 
     // The sensor panel is open: the statistics of the entity of the tile are requested (right away

@@ -58,6 +58,21 @@ in this workspace.
 - The library's `SaveCrash::Data::FirmwareVersion::build` bitfield is 16 bit - only the crash log and the
   config-version comparison truncate there.
 
+## Build archive
+
+- `-t upload` / `-t uploadota` add two steps: `erase_core_dump` (ESP32 only) before flashing and `archive_build`
+  after a successful upload, both in `scripts/extra_script.py`. There is no separate archive target.
+- The ESP32 core dump is erased over **serial** (`esptool erase_region <coredump offset> <size>` taken from
+  `$PARTITIONS_TABLE_CSV`) - no WebUI, no credentials, and it works when the device has crashed.
+- A build is archived as `elf/<env>_<build>.tar.gz`: `firmware.elf`, `firmware.bin`, `filesystem.bin` (the
+  `spiffs` partition read back from the device) plus `source/` (project + `lib/KFCLibrary`) and `info.txt`
+  (build, env, git revisions, checksums, restore hints). `elf/archive.log` lists every archive; `elf/` is gitignored.
+- **Only the newest archive of an environment is kept**: the next `-t upload` deletes the previous archive of
+  that environment (after the new one is complete), so test uploads do not pile up ~55 MB archives each and
+  the archive that stays is the firmware the device was flashed with last. Other environments are untouched.
+- The tar is written **straight from the working tree** (no staging copy, no temp directory) with
+  `compresslevel=6`, and the esptool reads use `$UPLOAD_SPEED` with a fallback to esptool's 115200.
+
 ## Build, flash and verify
 
 - `pio run -e <env> -t upload` builds and flashes in one step (`upload` runs the build first). No separate
@@ -86,6 +101,29 @@ in this workspace.
   destroys the `\"` inside `-D` macros).
 - VS Code freezing for ~40 s after a build is the STM32Cube Build Analyzer parsing `firmware.elf`;
   `files.watcherExclude` already hides `**/.pio/**` - do not "fix" that here.
+
+## Crash dumps and stack traces
+
+- `scripts/tools/kfc_coredump.py info|download|trace|erase` is the only way to touch a device crash. It
+  authenticates with the WebUI session id (user = device name = `KFC` + the last 3 bytes of the MAC upper
+  hex, e.g. `arp -a | Select-String <ip>` -> `c4-4f-33-0a-42-71` -> `KFC0A4271`; default password 12345678);
+  the address and environment are in `conf/envs/*.ini`.
+- `trace` is the workflow: download `/coredump.bin`, match it against `elf/<env>_<build>.tar.gz` (the crash
+  summary carries the first 16 hex of the ELF sha256), decode with `esp-coredump` plus the PlatformIO xtensa
+  gdb and resolve the panic addresses with `addr2line`. Artifacts: `logs/coredump_<env>_<build>.{bin,elf}`
+  and `logs/crash_<env>_<build>.{json,txt}`. `--erase` deletes the dump on the device afterwards.
+- The download is a **20 byte flash header plus an ELF core dump** - do not hand `/coredump.bin` to
+  `esp-coredump` as it is and `-t raw` is wrong for these dumps (`-t elf` on the stripped file is correct).
+- Read the `reason:` line: `abort() was called at PC <addr>` names the trigger (`task_wdt_isr` = task
+  watchdog, something starved IDLE0; `esp_core_dump_do_write_elf_pass` = the panic path itself faulted and the
+  dump is incomplete, so the culprit task is missing - `IDLE0` is then only the panic context).
+- The archive of a build is replaced by the next upload of that environment, so a trace needs the archive
+  to still exist - or `--elf` with the exact `firmware.elf` of that build, never a rebuilt one (the addresses
+  would not match).
+- `/trace-crash <ip>` (`.github/prompts/trace-crash.prompt.md`) runs capture, decode, root cause and fix
+  from the chat.
+- PowerShell pipes into a file (`>`, `Tee-Object`) write **UTF-16** - use `Out-File -Encoding ascii` for
+  captured tool output or greps find nothing in it.
 
 ## Environment `wt32_sc01_test1`
 

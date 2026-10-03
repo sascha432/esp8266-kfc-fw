@@ -483,31 +483,31 @@ public:
     // page of the plugin)
     String getDebugSetInfo() const;
     // The debug screen of the lvgl plugin can only switch screens, so the page of the Home
-    // Assistant dashboard is pushed with "set=hasspage:10" (0xff = nothing requested). The
+    // Assistant dashboard is pushed with "set=hasspage:10" (0xffffffff = nothing requested). The
     // dashboard reads the value and clears it
-    uint8_t getDebugHassPage() const {
+    uint32_t getDebugHassPage() const {
         return _debugHassPage;
     }
     void clearDebugHassPage() {
-        _debugHassPage = 0xff;
+        _debugHassPage = 0xffffffff;
     }
     // The fullscreen image of a picture tile is opened by a tap on the tile, which cannot be
     // reached over the network: "set=hassfull:46" opens the image of tile 46 (the same key of a
-    // tile whose image is open closes it again), 0xff = nothing requested
-    uint8_t getDebugHassFullscreen() const {
+    // tile whose image is open closes it again), 0xffffffff = nothing requested
+    uint32_t getDebugHassFullscreen() const {
         return _debugHassFullscreen;
     }
     void clearDebugHassFullscreen() {
-        _debugHassFullscreen = 0xff;
+        _debugHassFullscreen = 0xffffffff;
     }
     // The panel of a light, dimmer or climate tile is opened by a tap on the tile: "hasspanel:3"
     // opens the panel of tile 3 (the same effect as the tap, the same tile closes it again),
-    // 0xff = nothing requested
-    uint8_t getDebugHassPanel() const {
+    // 0xffffffff = nothing requested
+    uint32_t getDebugHassPanel() const {
         return _debugHassPanel;
     }
     void clearDebugHassPanel() {
-        _debugHassPanel = 0xff;
+        _debugHassPanel = 0xffffffff;
     }
     // The range of the history graph is selected with the buttons of the sensor panel:
     // "hassrange:48" does the same, 0xff = nothing requested
@@ -583,12 +583,12 @@ protected:
     bool _debugFrozen{false};
     // channel the debug keys pwrv/pwra/pwrw/pwre write to, "pwrch" selects it
     uint8_t _debugPowerChannel{0};
-    // page the Home Assistant dashboard has to open ("hasspage"), 0xff = none
-    uint8_t _debugHassPage{0xff};
-    // tile whose fullscreen image is opened or closed ("hassfull"), 0xff = none
-    uint8_t _debugHassFullscreen{0xff};
-    // tile whose panel is opened ("hasspanel"), 0xff = none
-    uint8_t _debugHassPanel{0xff};
+    // page the Home Assistant dashboard has to open ("hasspage"), 0xffffffff = none
+    uint32_t _debugHassPage{0xffffffff};
+    // tile whose fullscreen image is opened or closed ("hassfull"), 0xffffffff = none
+    uint32_t _debugHassFullscreen{0xffffffff};
+    // tile whose panel is opened ("hasspanel"), 0xffffffff = none
+    uint32_t _debugHassPanel{0xffffffff};
     // control of the panel of an open tile ("hassview"), 0xff = none
     uint8_t _debugHassView{0xff};
     // range of the history graph of the sensor panel ("hassrange", 12, 24 or 48 hours), 0xff = none

@@ -34,6 +34,7 @@
 #include <PrintString.h>
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
+#include "hass_config.h"
 
 namespace WeatherStation2 {
 namespace HomeAssistant {
@@ -106,14 +107,14 @@ public:
     // the page that is left is not wanted). `templateText` is the escaped JSON string of the
     // template body and `page` the page it was built from: the result is stamped with it, so a
     // response that arrives for an old subscription is not applied to the page that is shown now
-    bool subscribeTemplate(const String &templateText, uint8_t page);
+    bool subscribeTemplate(const String &templateText, PageIndex page);
     void unsubscribeTemplate();
     bool isSubscribed() const {
         return _templateId != 0;
     }
     // Sends a service call. `serviceData` is the JSON object with the service data (it carries the
     // entity id as well). The tile is handed back by takeActionFailure() when the call failed
-    bool callService(uint8_t tile, const char *domain, const char *service, const char *serviceData);
+    bool callService(TileIndex tile, const char *domain, const char *service, const char *serviceData);
 
     // Statistics of an entity over the last `hours` hours, requested in chunks (see kChunkSeconds)
     // over the open connection. `points` has to have room for kMaxPoints buckets. Returns false
@@ -123,9 +124,9 @@ public:
 
     // rendered template that changed since the last call, or the error its render (or the
     // subscription itself) reported. `page` is the page the template was built from
-    bool takeTemplateResult(String &text, String &error, uint8_t &page);
+    bool takeTemplateResult(String &text, String &error, PageIndex &page);
     // one tile whose service call failed
-    bool takeActionFailure(uint8_t &tile);
+    bool takeActionFailure(TileIndex &tile);
 
     const char *getError() const {
         return _error.c_str();
@@ -138,7 +139,7 @@ private:
     // one service call that waits for its answer
     struct PendingAction {
         uint16_t id{0};
-        uint8_t tile{0};
+        TileIndex tile{0};
         bool used{false};
     };
 
@@ -175,9 +176,9 @@ private:
     // one statistics chunk of the window
     bool _requestChunk(uint32_t start, uint32_t end, const char *entity, String &error);
     // remembers a service call and reports the failed ones
-    void _rememberAction(uint16_t id, uint8_t tile);
+    void _rememberAction(uint16_t id, TileIndex tile);
     bool _failAction(uint16_t id);
-    void _failure(uint8_t tile);
+    void _failure(TileIndex tile);
     // sends a text frame (the frames of a client are masked)
     bool _sendText(const char *text);
     // sends a control frame
@@ -221,10 +222,10 @@ private:
     uint16_t _statsId{0};
 
     // the page the subscription of _templateId was built from, and the page of the result that
-    // waits in _templateResult (0xff means "none")
-    static constexpr uint8_t kNoPage = 0xff;
-    uint8_t _templatePage{kNoPage};
-    uint8_t _resultPage{kNoPage};
+    // waits in _templateResult (kNoTile means "none")
+    static constexpr PageIndex kNoPage = kNoTile;
+    PageIndex _templatePage{kNoPage};
+    PageIndex _resultPage{kNoPage};
     // millis() of the last message that arrived (a pong counts): the silence watchdog of pump()
     uint32_t _lastMessage{0};
 
@@ -256,7 +257,7 @@ private:
     PendingAction _actions[kMaxPendingActions];
     // tiles whose service call failed, reported by takeActionFailure(). The value is the tile
     // index + 1, 0 means that the slot is free
-    uint8_t _failed[kMaxPendingActions]{};
+    TileIndex _failed[kMaxPendingActions]{};
 
     // keepalive
     uint32_t _nextPing{0};

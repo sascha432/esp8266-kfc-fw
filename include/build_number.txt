@@ -5,12 +5,22 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15270
-date   = 2026-10-02 18:58:07
-env    = wled_esp32_controller
+number = 15280
+date   = 2026-10-02 21:37:09
+env    = wt32_sc01_test1
 
 ; history, newest first: <number> <date> <time> <environments>
-15270 2026-10-02 18:58:07 wled_esp32_controller
+15280 2026-10-02 21:37:09 wt32_sc01_test1
+15279 2026-10-02 21:08:47 wt32_sc01_test1
+15278 2026-10-02 20:56:43 wt32_sc01_test1
+15277 2026-10-02 20:54:14 wt32_sc01_test1
+15276 2026-10-02 20:30:16 wt32_sc01_test1
+15275 2026-10-02 20:28:19 bme280_serial
+15274 2026-10-02 20:27:20 wt32_sc01_test1
+15273 2026-10-02 19:50:15 wt32_sc01_test1
+15272 2026-10-02 19:49:18 wt32_sc01_test1
+15271 2026-10-02 19:30:11 wt32_sc01_test1
+15270 2026-10-02 19:21:38 wt32_sc01_test1
 15269 2026-10-02 18:55:46 wled_esp32_controller
 15268 2026-10-02 18:54:39 bme280_serial
 15267 2026-10-02 18:49:52 wt32_sc01_test1

@@ -15,26 +15,26 @@
 //
 
 #include <Arduino_compat.h>
+#include <vector>
+
+#include "psram_allocator.h"
 
 namespace WeatherStation2 {
 namespace HomeAssistant {
 
+// Tile and page indices. They are handed around and stored in the model, so the type has to cover
+// every tile a file may define. uint32_t is the native word of the 32-bit MCU (no narrowing, no
+// masking), and there is no hard tile limit any more - a configuration may hold as many tiles as
+// fit into the PSRAM (a single page is bounded by its grid)
+using TileIndex = uint32_t;
+using PageIndex = uint32_t;
+
 // path of the configuration file in the file system
 static constexpr const char *kConfigFile = "/hass.yaml";
-// largest accepted configuration file, a file above this is rejected instead of read (a tile needs
-// about 90 bytes of the file, so this covers the 128 tiles of kMaxTiles with room to spare)
-static constexpr size_t kMaxFileSize = 32768;
-// Tiles a configuration may hold and pages it may use. The index is passed around as uint8_t and
-// int16_t, so 128 tiles are safe with either. Every tile costs a value (TileValue) and a widget
-// reference (TileRefs) plus a few bytes of the request template, and a poll answers them all in
-// one response - that is why the limit is not higher (see kMaxResponseLength of the client)
-static constexpr uint8_t kMaxTiles = 128;
-// maximum number of pages (the main page plus one per area)
-static constexpr uint8_t kMaxPages = kMaxTiles;
 // deepest nesting of areas. Areas can contain areas, the limit only bounds the parser stack
 static constexpr uint8_t kMaxNesting = 6;
 // value of the index fields that do not point to a tile
-static constexpr uint8_t kNoTile = 0xff;
+static constexpr TileIndex kNoTile = 0xffffffff;
 // limits of the configurable grid
 static constexpr uint8_t kMaxGridCols = 8;
 static constexpr uint8_t kMaxGridRows = 8;
@@ -147,7 +147,50 @@ static constexpr uint8_t kMaxPictureWidth = 2;
 static constexpr uint8_t kMaxPictureHeight = 2;
 
 // ------------------------------------------------------------------------------------------
-// one tile of the dashboard
+// state Home Assistant reports for a tile
+// ------------------------------------------------------------------------------------------
+// ON means "active": a switch/light that is on, a sensor that has a value or a climate that is not
+// off
+enum class TileState : uint8_t {
+    UNKNOWN,
+    OFF,
+    ON,
+    UNAVAILABLE,
+};
+
+// The state Home Assistant reported for one tile, filled from the response of the last request. It
+// is part of the tile (see Tile), so the model of a tile is one object - the configuration and what
+// the entity reports. The state of an action that is on its way to the entity (the pending flag and
+// the values needed to confirm it) is not reported data and lives in the DRAM (Dashboard::TileFlags)
+struct TileValue {
+    TileState state{TileState::UNKNOWN};
+    // sensor value, dimmer level in percent or target temperature of a climate
+    float value{0};
+    // climate: current temperature
+    float current{0};
+    float minTemp{15};
+    float maxTemp{30};
+    // climate: 0 off, 1 heat, 2 cool, 0xff unknown
+    uint8_t mode{0xff};
+    // climate: the action of the entity ("idle", "heating", "cooling", ...), empty when the
+    // entity does not report it
+    char action[16]{};
+    // state of the entity as it was reported ("on", "off", "21.4", "home", ...). A sensor
+    // tile shows it when the state is not a number (a binary sensor reports "on"/"off" and
+    // "0" from the float conversion would be wrong). The template of a tile that asks several
+    // entities at once puts the readouts in one string, separated by a line break, so the buffer is
+    // the size of what such a value can be
+    char text[48]{};
+    // device class of the entity ("motion", "door", ...), empty when it has none
+    char deviceClass[20]{};
+    // unit of a sensor, from the configuration or from the entity attributes
+    char unit[kUnitLength]{};
+    // climate: the mode the entity reports as its state ("heat", "auto", "off", ...)
+    char modeName[16]{};
+};
+
+// ------------------------------------------------------------------------------------------
+// one tile of the dashboard: the configuration of the tile and the state of its entity
 // ------------------------------------------------------------------------------------------
 struct Tile {
     TileType type{TileType::SWITCH};
@@ -180,16 +223,18 @@ struct Tile {
     uint16_t refresh{kDefaultRefresh};
     bool hasRefresh{false};
     // line of the file the tile was defined in (error messages)
-    uint8_t line{0};
+    uint32_t line{0};
     // page the tile is drawn on: 0 = main page, 1..n = the page of an area tile
-    uint8_t page{0};
+    PageIndex page{0};
     // area tiles only: the page with the tiles of the area, 0 while it has none
-    uint8_t areaPage{0};
+    PageIndex areaPage{0};
     // area tiles only: grid of the page of the area (the `grid:` block of the tile), 0 = the grid
     // of the document. The tiles of an area page are placed in this grid, the first cell is the
     // back tile of the page like on every other page
     uint8_t gridCols{0};
     uint8_t gridRows{0};
+    // the state of the entity, reported by the last response (see TileValue)
+    TileValue value;
 };
 
 // ------------------------------------------------------------------------------------------
@@ -258,51 +303,67 @@ public:
     // Grid of a page. The main page and the pages of the areas without a `grid:` block use the
     // grid of the document, an area can use a grid of its own (for example a 4x3 grid for a room
     // with many tiles on a dashboard that is 4x2)
-    uint8_t getCols(uint8_t page = 0) const;
-    uint8_t getRows(uint8_t page = 0) const;
+    uint8_t getCols(PageIndex page = 0) const;
+    uint8_t getRows(PageIndex page = 0) const;
 
     // tiles
-    uint8_t getTileCount() const {
-        return _tileCount;
+    TileIndex getTileCount() const {
+        return static_cast<TileIndex>(_tiles.size());
     }
-    const Tile &getTile(uint8_t index) const {
-        return _tiles[(index < _tileCount) ? index : 0];
+    // The tile of an index, a static empty tile while the index is out of range or the model is
+    // empty - the callers do not have to check the range before they read
+    const Tile &getTile(TileIndex index) const {
+        static const Tile empty;
+        return (index < _tiles.size()) ? _tiles[index] : empty;
+    }
+    // the same for the writer of the reported state (the response and the actions of a tile)
+    Tile &getTileMutable(TileIndex index) {
+        static Tile empty;
+        return (index < _tiles.size()) ? _tiles[index] : empty;
     }
 
     // pages: 1 = only the main page, an area adds one page each (0 = the main page)
-    uint8_t getPageCount() const {
-        return _pageCount;
+    PageIndex getPageCount() const {
+        return static_cast<PageIndex>(_pages.size());
     }
     // name of an area page, nullptr for the main page and for an index without an area
-    const char *getPageName(uint8_t page) const;
+    const char *getPageName(PageIndex page) const;
     // page the back tile of that page returns to (0 = the main page)
-    uint8_t getPageParent(uint8_t page) const {
-        return (page < kMaxPages) ? _pageParent[page] : 0;
+    PageIndex getPageParent(PageIndex page) const {
+        return (page < _pages.size()) ? _pages[page].parent : 0;
     }
 
 private:
+    // one page of the dashboard: the area tile that owns it (kNoTile for the main page) and the
+    // page the back tile of the page returns to. _pages[0] is the main page and always exists
+    struct Page {
+        TileIndex areaTile{kNoTile};
+        PageIndex parent{0};
+    };
+
     // resets the model, called by load()
-    void _reset();    // parses the whole file, false on the first error
+    void _reset();
+    // parses the whole file, false on the first error
     bool _parse(const char *data, size_t length);
     // parses one tile key/value pair
-    bool _parseTile(Tile &tile, const char *key, const char *keyEnd, const char *value, const char *valueEnd, uint8_t line);
+    bool _parseTile(Tile &tile, const char *key, const char *keyEnd, const char *value, const char *valueEnd, uint32_t line);
     // validates the tiles and places them in the grid (both orientations)
     bool _placeTiles();
     // places the tiles of one page in its grid, `portrait` in the transposed one. Only the
     // landscape pass reports an error, a tile that cannot be placed in the transposed grid of the
     // page falls back to the order of the file
-    bool _placePage(uint8_t page, bool portrait);
+    bool _placePage(PageIndex page, bool portrait);
     // stores a placement in the field of that orientation
     static void _setPosition(Tile &tile, bool portrait, uint8_t col, uint8_t row);
     // sets _error to "line N: message"
-    bool _fail(uint8_t line, const char *message);
+    bool _fail(uint32_t line, const char *message);
     // "" for the main page, " of the area 'name'" otherwise (error messages)
-    String _pageSuffix(uint8_t page) const;
+    String _pageSuffix(PageIndex page) const;
     // true while the tile occupies the cell (used by the placement)
     bool _isCellFree(uint8_t col, uint8_t row, uint8_t width, uint8_t height, uint8_t cols, uint8_t rows) const;
     void _markCell(uint8_t col, uint8_t row, uint8_t width, uint8_t height);
     // the area tile that owns a page, nullptr while the page uses the grid of the document
-    const Tile *_pageGrid(uint8_t page) const;
+    const Tile *_pageGrid(PageIndex page) const;
 
 private:
     String _path;
@@ -314,14 +375,11 @@ private:
     bool _verify{false};
     uint8_t _cols{kDefaultGridCols};
     uint8_t _rows{kDefaultGridRows};
-    Tile _tiles[kMaxTiles];
-    uint8_t _tileCount{0};
-    // number of pages, 1 while there is no area
-    uint8_t _pageCount{1};
-    // tile index of the area that owns a page (kNoTile for the main page)
-    uint8_t _pageArea[kMaxPages]{};
-    // page the back tile of a page returns to
-    uint8_t _pageParent[kMaxPages]{};
+    // The tiles of the configuration, the configuration and the state Home Assistant reports for
+    // every one of them. The buffer lives in the PSRAM (see PsramAllocator)
+    PsramVector<Tile> _tiles;
+    // one entry per page, _pages[0] is the main page
+    std::vector<Page> _pages;
     // bitmask of the used cells of one row
     uint16_t _used[kMaxGridRows]{};
     // size of the loaded version of the file (see getFileSize() and getFileInfo())

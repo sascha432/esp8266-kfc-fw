@@ -320,6 +320,13 @@ enum class IconType : uint8_t {
     WIFI_REMOVE,
     WIFI_ALERT,
     WIFI_OFF,
+    // state and device_class glyphs of the home assistant tiles (appended, the values above stay
+    // stable): the off state of an icon and the glyphs the `device_class` of an entity maps to
+    POWER_PLUG_OFF,
+    MOTION_SENSOR_OFF,
+    SINE_WAVE,
+    CURRENT_AC,
+    LIGHTNING_BOLT,
 };
 
 // creates an icon container with the icon inside, size x size pixels at x,y. Use kIconSizeSmall or
@@ -329,6 +336,10 @@ lv_obj_t *createIcon(lv_obj_t *parent, IconType type, lv_coord_t x, lv_coord_t y
 
 // redraws an icon container created by createIcon()
 void setIcon(lv_obj_t *icon, IconType type, lv_coord_t size, uint32_t color = kIconColorDefault);
+
+// true when the container already draws the glyph of `type`. setIcon() rebuilds the label, so a
+// caller that redraws an icon on every update skips it while the glyph does not change
+bool isIcon(lv_obj_t *icon, IconType type);
 
 // recolors the glyph of an icon, a filled (active) tile or button draws its icons white
 void setIconColor(lv_obj_t *icon, uint32_t color);

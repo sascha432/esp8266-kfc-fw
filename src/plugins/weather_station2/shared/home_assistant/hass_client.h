@@ -51,7 +51,7 @@ public:
         };
 
         Type type{Type::NONE};
-        uint8_t tile{0};
+        TileIndex tile{0};
         float value{0};
         // second value (SET_COLOR) and the name of a mode/preset/fan/effect
         float value2{0};
@@ -74,9 +74,9 @@ public:
     static constexpr uint32_t kConnectRetryMin = 2000;
     static constexpr uint32_t kConnectRetryMax = 30000;
     // no panel is open
-    static constexpr uint8_t kNoDetailTile = 0xff;
+    static constexpr TileIndex kNoDetailTile = kNoTile;
     // no page: the template is not built (or not subscribed) yet
-    static constexpr uint8_t kNoPage = 0xff;
+    static constexpr TileIndex kNoPage = kNoTile;
 
     // ------------------------------------------------------------------------------------
     // camera image of a picture tile
@@ -105,7 +105,7 @@ public:
     // The graph is drawn from the 5 minute aggregated long term statistics of Home Assistant,
     // which are only available over its websocket API (see Socket). The request task fetches them
     // like a camera image: one at a time, after the pushed values and the actions.
-    static constexpr uint8_t kNoStatsTile = 0xff;
+    static constexpr TileIndex kNoStatsTile = kNoTile;
     // range of the graph in hours, the buttons of the sensor panel
     static constexpr uint8_t kMinStatsHours = 12;
     static constexpr uint8_t kMaxStatsHours = 48;
@@ -113,23 +113,23 @@ public:
 
     // Requests the statistics of the entity of a tile for the last `hours` hours. The request is
     // performed by the task, takeStats() hands the answer over to the main loop
-    void requestStats(uint8_t tile, uint8_t hours);
+    void requestStats(TileIndex tile, uint8_t hours);
     // Copies a new statistics response into the buffers of the caller: false while no response
     // arrived since `generation`. `points` needs room for Socket::kMaxPoints buckets. The error is
     // empty when the window has no statistics at all (the entity has none)
-    bool takeStats(uint32_t &generation, uint8_t &tile, uint8_t &hours, uint32_t &start, uint32_t &end, Socket::Point *points,
+    bool takeStats(uint32_t &generation, TileIndex &tile, uint8_t &hours, uint32_t &start, uint32_t &end, Socket::Point *points,
                    uint16_t &count, String &error);
 
     // Registers a picture tile of the visible page (idempotent, the dashboard calls it on
     // every update). `width`/`height` are the pixel box of the tile on the panel and
     // `interval` the number of seconds between two images
-    void requestImage(uint8_t tile, uint16_t width, uint16_t height, uint16_t interval);
+    void requestImage(TileIndex tile, uint16_t width, uint16_t height, uint16_t interval);
     // No picture tile is visible: the pending requests are dropped. A frame that waits for the
     // LVGL task is kept (the screen collects it and releases the buffer)
     void clearImages();
     // hands the last decoded frame over to the caller, which owns the PSRAM buffer and has to
     // release it with free(). false while no frame is waiting
-    bool takeImage(uint8_t &tile, uint16_t *&data, uint16_t &width, uint16_t &height, uint32_t &stamp);
+    bool takeImage(TileIndex &tile, uint16_t *&data, uint16_t &width, uint16_t &height, uint32_t &stamp);
 
     Client();
     ~Client();
@@ -146,12 +146,12 @@ public:
     // page only: the template grows with the number of tiles and a page that is not shown does not
     // have to be up to date. The request task rebuilds and subscribes the template - the main loop
     // must not touch it while the task sends it
-    void setVisiblePage(uint8_t page);
+    void setVisiblePage(PageIndex page);
     // One tile whose `call_service` failed (the request could not be sent or Home Assistant
     // answered with an error). The dashboard reads them and reverts the tile to the state the
     // entity reports (the screen showed the result of the tap right away, see
     // Dashboard::toggle()): takeActionFailure() hands one tile index out
-    bool takeActionFailure(uint8_t &tile);
+    bool takeActionFailure(TileIndex &tile);
     // subscribes the template of the visible page again (one render on the Home Assistant side,
     // the answer is pushed): the safety net of the subscription and what the screen does when it
     // is opened
@@ -163,10 +163,10 @@ public:
 
     // response of the last pushed template (main loop). `page` is the page the response was built
     // from: the tiles of the other pages are only touched by it where they use one of its entities
-    bool takeResponse(String &response, uint8_t &page);
+    bool takeResponse(String &response, PageIndex &page);
     // opens the panel of a tile: the attributes of its entity (the mode/preset/fan/effect lists,
     // the color and the level) are part of the subscribed template until closeDetail() is called
-    void requestDetail(uint8_t tile);
+    void requestDetail(TileIndex tile);
     void closeDetail();
     // response of the last pushed template, while a panel is open (main loop)
     bool takeDetailResponse(String &response);
@@ -192,7 +192,7 @@ private:
         // millis() the next image is due
         uint32_t next{0};
         bool used{false};
-        uint8_t tile{0};
+        TileIndex tile{0};
     };
 
     static void _taskEntry(void *arg);
@@ -204,7 +204,7 @@ private:
     // one camera image: request, decode and store the frame for the LVGL task
     bool _fetchImage(const ImageRequest &request);
     // statistics of the entity of a tile, stores the buckets for the LVGL task
-    void _fetchStats(uint8_t tile, uint8_t hours);
+    void _fetchStats(TileIndex tile, uint8_t hours);
     // decodes a JPEG into the RGB565 buffer of the tile. `pixels` is in PSRAM and owned by the
     // caller, `info` carries the sizes and times of the trace
     bool _decodeImage(const uint8_t *data, size_t length, uint16_t width, uint16_t height, uint16_t *&pixels, PrintString &info);
@@ -231,17 +231,17 @@ private:
     const Config *_config{nullptr};
     String _template;
     // the page _template was built from (kNoPage while no template is built)
-    uint8_t _templatePage{kNoPage};
+    PageIndex _templatePage{kNoPage};
     // written by the request task, read by the main loop, both under _lock
     String _response;
     // the page the response in _response was built from
-    uint8_t _responsePage{kNoPage};
+    PageIndex _responsePage{kNoPage};
     String _error;
     // The dashboard publishes which tile is open (kNoDetailTile = no panel is open), the task adds
     // the attributes of its entity to the subscribed template
     String _detailResponse;
     volatile bool _detailValid{false};
-    volatile uint8_t _detailTile{kNoDetailTile};
+    volatile TileIndex _detailTile{kNoDetailTile};
     mutable SemaphoreMutex _lock;
     volatile bool _responseValid{false};
     volatile int16_t _statusCode{0};
@@ -255,7 +255,7 @@ private:
     volatile bool _stop{false};
     // page the subscribed template is built from and the flag that it has to be built (and
     // subscribed) again (the task owns _template, the main loop only publishes the page)
-    volatile uint8_t _visiblePage{0};
+    volatile PageIndex _visiblePage{0};
     volatile bool _templateDirty{false};
     // request task
     void *_task{nullptr};
@@ -268,15 +268,16 @@ private:
     Action _queue[kQueueSize];
     uint8_t _queueHead{0};
     uint8_t _queueTail{0};
-    // tiles whose action failed, one bit per tile index (kMaxTiles / 32 words), guarded by _lock
-    uint32_t _actionFailed[(kMaxTiles + 31) / 32]{};
+    // tiles whose action failed, one bit per tile index, guarded by _lock. The bitmap is sized to
+    // the tile count by begin()
+    std::vector<uint32_t> _actionFailed;
     // picture tiles of the visible page, guarded by _lock
     ImageRequest _images[kMaxImageTiles];
     // frame waiting for the LVGL task and its owner, guarded by _lock
     uint16_t *_image{nullptr};
     uint16_t _imageWidth{0};
     uint16_t _imageHeight{0};
-    uint8_t _imageTile{0};
+    TileIndex _imageTile{0};
     uint32_t _imageStamp{0};
     bool _imageValid{false};
     // statistics of the trace
@@ -286,13 +287,13 @@ private:
     // the window and the task performs the request (one at a time, like a camera image). The
     // buckets are written into _statsPoints by the task and the main loop copies them out under
     // _lock
-    volatile uint8_t _statsTile{kNoStatsTile};
+    volatile TileIndex _statsTile{kNoStatsTile};
     volatile uint8_t _statsHours{kDefaultStatsHours};
     volatile bool _statsRequest{false};
     Socket::Point _statsPoints[Socket::kMaxPoints];
     uint16_t _statsCount{0};
     // response of the last request, guarded by _lock
-    uint8_t _statsResultTile{kNoStatsTile};
+    TileIndex _statsResultTile{kNoStatsTile};
     uint8_t _statsResultHours{0};
     uint32_t _statsStart{0};
     uint32_t _statsEnd{0};

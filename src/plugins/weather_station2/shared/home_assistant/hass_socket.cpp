@@ -580,7 +580,7 @@ void Socket::_handleTemplateEvent()
     _templateValid = true;
 }
 
-bool Socket::takeTemplateResult(String &text, String &error, uint8_t &page)
+bool Socket::takeTemplateResult(String &text, String &error, PageIndex &page)
 {
     if (!_templateValid) {
         return false;
@@ -753,7 +753,7 @@ String Socket::_stringValue(const char *key) const
 // ------------------------------------------------------------------------------------------
 // subscription and service calls
 // ------------------------------------------------------------------------------------------
-bool Socket::subscribeTemplate(const String &templateText, uint8_t page)
+bool Socket::subscribeTemplate(const String &templateText, PageIndex page)
 {
     if (!_open) {
         _error = String("not connected");
@@ -796,7 +796,7 @@ void Socket::unsubscribeTemplate()
     _sendText(command.c_str());
 }
 
-bool Socket::callService(uint8_t tile, const char *domain, const char *service, const char *serviceData)
+bool Socket::callService(TileIndex tile, const char *domain, const char *service, const char *serviceData)
 {
     if (!_open) {
         _error = String("not connected");
@@ -815,7 +815,7 @@ bool Socket::callService(uint8_t tile, const char *domain, const char *service, 
     return true;
 }
 
-void Socket::_rememberAction(uint16_t id, uint8_t tile)
+void Socket::_rememberAction(uint16_t id, TileIndex tile)
 {
     for (auto &action : _actions) {
         if (!action.used) {
@@ -841,7 +841,7 @@ bool Socket::_failAction(uint16_t id)
     return false;
 }
 
-void Socket::_failure(uint8_t tile)
+void Socket::_failure(TileIndex tile)
 {
     for (auto &undefined : _failed) {
         if (!undefined) {
@@ -851,11 +851,11 @@ void Socket::_failure(uint8_t tile)
     }
 }
 
-bool Socket::takeActionFailure(uint8_t &tile)
+bool Socket::takeActionFailure(TileIndex &tile)
 {
     for (auto &undefined : _failed) {
         if (undefined) {
-            tile = static_cast<uint8_t>(undefined - 1);
+            tile = undefined - 1;
             undefined = 0;
             return true;
         }

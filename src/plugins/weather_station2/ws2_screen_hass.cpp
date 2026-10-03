@@ -161,12 +161,24 @@ inline lv_coord_t iconCenterTop(lv_coord_t height)
     return static_cast<lv_coord_t>((height - LVGLUI::kIconSizeLarge) / 2);
 }
 
-// The glyph of a state icon: a switch draws the handle on the right while the entity is on and on
-// the left while it is off, so the state is visible without reading the text
+// The glyph of a state icon: an icon that has an off state is replaced while the entity is off,
+// so the state is visible without reading the text (the light bulb goes dark, the plug is pulled
+// out, the motion sensor that does not detect anything). Every other icon keeps its glyph
 LVGLUI::IconType stateIconType(LVGLUI::IconType type, LVGLUI::TileState state)
 {
-    if (type == LVGLUI::IconType::TOGGLE) {
-        return (state == LVGLUI::TileState::ON) ? LVGLUI::IconType::TOGGLE : LVGLUI::IconType::TOGGLE_OFF;
+    if (state == LVGLUI::TileState::OFF) {
+        switch (type) {
+        case LVGLUI::IconType::TOGGLE:
+            return LVGLUI::IconType::TOGGLE_OFF;
+        case LVGLUI::IconType::BULB:
+            return LVGLUI::IconType::LIGHTBULB_OFF;
+        case LVGLUI::IconType::PLUG:
+            return LVGLUI::IconType::POWER_PLUG_OFF;
+        case LVGLUI::IconType::MOTION:
+            return LVGLUI::IconType::MOTION_SENSOR_OFF;
+        default:
+            break;
+        }
     }
     return type;
 }
@@ -545,15 +557,19 @@ LVGLUI::IconType toIconType(const Tile &tile)
     }
     switch (tile.type) {
     case TileType::SWITCH:
-        return LVGLUI::IconType::TOGGLE;
+        // the plug of the entity that is switched on/off, not the handle of a toggle
+        return LVGLUI::IconType::PLUG;
     case TileType::LIGHT:
         return LVGLUI::IconType::BULB;
     case TileType::SENSOR:
+        // a sensor follows the device_class of its entity (see toIconType(tile, value)), the
+        // thermometer is used while the entity has none
         return LVGLUI::IconType::THERMOMETER;
     case TileType::BUTTON:
         return LVGLUI::IconType::BUTTON;
     case TileType::DIMMER:
-        return LVGLUI::IconType::DIMMER;
+        // the same bulb as a light, the dimmer tile is the level fill itself
+        return LVGLUI::IconType::BULB;
     case TileType::AREA:
         return LVGLUI::IconType::AREA;
     case TileType::CLIMATE:
@@ -567,6 +583,74 @@ LVGLUI::IconType toIconType(const Tile &tile)
     return LVGLUI::IconType::UNKNOWN;
 }
 
+// Everything the dashboard knows about the device_class of an entity, in one table with one
+// lookup: the glyph its tile draws and the wording of the two states of a binary sensor. The glyph,
+// the wording and "is this entity switched on and off" are the same fact.
+//   `icon`  UNKNOWN for a class without a glyph of its own (the tile keeps the icon of its type)
+//   `on`    nullptr for a class that is a reading, not a switch
+struct DeviceClass {
+    const char *name;
+    LVGLUI::IconType icon;
+    const char *on;
+    const char *off;
+};
+
+const DeviceClass kDeviceClasses[] = {
+    { "temperature", LVGLUI::IconType::THERMOMETER, nullptr, nullptr },
+    { "humidity", LVGLUI::IconType::HUMIDITY, nullptr, nullptr },
+    { "pressure", LVGLUI::IconType::GAUGE, nullptr, nullptr },
+    { "carbon_dioxide", LVGLUI::IconType::CO2, nullptr, nullptr },
+    { "illuminance", LVGLUI::IconType::BRIGHTNESS, nullptr, nullptr },
+    { "voltage", LVGLUI::IconType::SINE_WAVE, nullptr, nullptr },
+    { "current", LVGLUI::IconType::CURRENT_AC, nullptr, nullptr },
+    { "power", LVGLUI::IconType::POWER, nullptr, nullptr },
+    { "energy", LVGLUI::IconType::LIGHTNING_BOLT, nullptr, nullptr },
+    { "motion", LVGLUI::IconType::MOTION, "Detected", "Clear" },
+    { "occupancy", LVGLUI::IconType::MOTION, "Detected", "Clear" },
+    // binary sensors without a glyph of their own
+    { "presence", LVGLUI::IconType::UNKNOWN, "Detected", "Clear" },
+    { "smoke", LVGLUI::IconType::UNKNOWN, "Detected", "Clear" },
+    { "moisture", LVGLUI::IconType::UNKNOWN, "Wet", "Dry" },
+    { "window", LVGLUI::IconType::UNKNOWN, "Open", "Closed" },
+    { "door", LVGLUI::IconType::UNKNOWN, "Open", "Closed" },
+    { "garage_door", LVGLUI::IconType::UNKNOWN, "Open", "Closed" },
+    { "opening", LVGLUI::IconType::UNKNOWN, "Open", "Closed" },
+};
+
+// entry of a device_class, nullptr when the entity does not report one or the class is not above
+const DeviceClass *findDeviceClass(const char *deviceClass)
+{
+    if (!deviceClass || !deviceClass[0]) {
+        return nullptr;
+    }
+    for (const auto &entry : kDeviceClasses) {
+        if (!strcasecmp(deviceClass, entry.name)) {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
+// true when a state text is the state of a switched entity ("on"/"off")
+bool isOnOffText(const char *text)
+{
+    return !strcasecmp(text, "on") || !strcasecmp(text, "off");
+}
+
+// glyph of a tile with the values of its entity: the `icon:` of the configuration wins, a sensor
+// tile follows the device_class of its entity and falls back to the icon of its type (an entity
+// without the attribute, or a class without a glyph of its own)
+LVGLUI::IconType toIconType(const Tile &tile, const TileValue &value)
+{
+    if (tile.icon == TileIcon::AUTO && tile.type == TileType::SENSOR) {
+        const auto *entry = findDeviceClass(value.deviceClass);
+        if (entry && entry->icon != LVGLUI::IconType::UNKNOWN) {
+            return entry->icon;
+        }
+    }
+    return toIconType(tile);
+}
+
 // true when the state of an entity is a number (a value the tile can format)
 bool _isNumber(const char *text)
 {
@@ -578,37 +662,39 @@ bool _isNumber(const char *text)
     return stop != text && stop && *stop == 0;
 }
 
-// wording of the two states of a binary sensor, Home Assistant shows the same words
-struct BinaryStateText {
-    const char *deviceClass;
-    const char *on;
-    const char *off;
-};
+// True when the entity of a tile is switched on and off, so its tile draws the off glyph of its
+// icon. A switch, a light and a dimmer are switched, a binary sensor reports on/off (or the wording
+// of its device_class). A tile that shows a reading is not: it is "off" in the model because it is
+// not switched on, so `icon: plug` of a power meter stays a plug
+bool hasTwoStates(const Tile &tile, const TileValue &value)
+{
+    if (tile.type == TileType::SENSOR) {
+        const auto *entry = findDeviceClass(value.deviceClass);
+        return isOnOffText(value.text) || (entry && entry->on);
+    }
+    return tile.type == TileType::SWITCH || tile.type == TileType::LIGHT || tile.type == TileType::DIMMER;
+}
 
-const BinaryStateText kBinaryStateText[] = {
-    { "motion", "Detected", "Clear" },
-    { "occupancy", "Detected", "Clear" },
-    { "presence", "Detected", "Clear" },
-    { "smoke", "Detected", "Clear" },
-    { "moisture", "Wet", "Dry" },
-    { "window", "Open", "Closed" },
-    { "door", "Open", "Closed" },
-    { "garage_door", "Open", "Closed" },
-    { "opening", "Open", "Closed" },
-};
+// glyph of a tile with the state of its entity, see hasTwoStates()
+LVGLUI::IconType tileIconType(const Tile &tile, const TileValue &value, LVGLUI::TileState state)
+{
+    const auto type = toIconType(tile, value);
+    if (state != LVGLUI::TileState::OFF || hasTwoStates(tile, value)) {
+        return stateIconType(type, state);
+    }
+    return type;
+}
 
 // value of an entity that does not report a number
 String sensorStateText(const HomeAssistant::TileValue &value)
 {
-    const bool isOn = !strcasecmp(value.text, "on");
-    const bool isOff = !strcasecmp(value.text, "off");
-    if (isOn || isOff) {
-        for (const auto &entry : kBinaryStateText) {
-            if (value.deviceClass[0] && !strcasecmp(value.deviceClass, entry.deviceClass)) {
-                return String(isOn ? entry.on : entry.off);
-            }
+    if (isOnOffText(value.text)) {
+        const auto on = !strcasecmp(value.text, "on");
+        const auto *entry = findDeviceClass(value.deviceClass);
+        if (entry && entry->on) {
+            return String(on ? entry->on : entry->off);
         }
-        return String(isOn ? "On" : "Off");
+        return String(on ? "On" : "Off");
     }
     // some integrations report the wording itself ("clear", "detected", "sunny")
     char text[sizeof(value.text)];
@@ -1064,20 +1150,8 @@ void HassScreen::create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(LVGLUI::kColorBackground), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_pad_all(parent, 0, LV_PART_MAIN);
-    for (auto &refs : _tiles) {
-        refs = TileRefs();
-    }
-    for (uint8_t i = 0; i < kMaxTiles; i++) {
-        _arcValue[i] = 0;
-        _arcState[i] = 0xff;
-        _arcMin[i] = 0;
-        _arcMax[i] = 0;
-        _arcPressed[i] = false;
-        _arcPressValue[i] = 0;
-        _dragLevel[i] = 0;
-        _dragStartY[i] = 0;
-        _dragging[i] = false;
-    }
+    // the widget tree is built by _rebuild() below, it fills _tiles
+    _tiles.clear();
     _configLoaded = false;
     _configGeneration = 0;
     _lastTileClick = 0;
@@ -1132,9 +1206,7 @@ void HassScreen::release()
     _releaseImages();
     _fullRoot = nullptr;
     _fullImage = nullptr;
-    for (auto &refs : _tiles) {
-        refs = TileRefs();
-    }
+    _tiles.clear();
     _back = TileRefs();
     _areaPage = 0;
     _pendingPage = -1;
@@ -1313,7 +1385,7 @@ void HassScreen::_releaseImages()
     }
 }
 
-HassScreen::Picture *HassScreen::_picture(uint8_t index)
+HassScreen::Picture *HassScreen::_picture(HomeAssistant::TileIndex index)
 {
     for (auto &picture : _pictures) {
         if (picture.tile == index) {
@@ -1323,14 +1395,14 @@ HassScreen::Picture *HassScreen::_picture(uint8_t index)
     return nullptr;
 }
 
-HassScreen::Picture *HassScreen::_pictureFor(uint8_t index)
+HassScreen::Picture *HassScreen::_pictureFor(HomeAssistant::TileIndex index)
 {
     auto found = _picture(index);
     if (found) {
         return found;
     }
     for (auto &picture : _pictures) {
-        if (picture.tile == kMaxTiles) {
+        if (picture.tile == kNoTile) {
             picture.tile = index;
             return &picture;
         }
@@ -1342,7 +1414,7 @@ HassScreen::Picture *HassScreen::_pictureFor(uint8_t index)
 // is created once (a child of the screen, so that a rebuild of the grid does not remove it) and
 // only shown and hidden afterwards. The request task fetches the next image in the size of the
 // display while it is open: the tile sized frame that is stored is centered until it arrives
-void HassScreen::_openFullscreen(uint8_t index)
+void HassScreen::_openFullscreen(HomeAssistant::TileIndex index)
 {
     if (_fullTile >= 0 || index >= _dashboard.getTileCount()) {
         return;
@@ -1366,7 +1438,7 @@ void HassScreen::_openFullscreen(uint8_t index)
         lv_obj_center(_fullImage);
         lv_obj_add_flag(_fullRoot, LV_OBJ_FLAG_HIDDEN);
     }
-    _fullTile = static_cast<int16_t>(index);
+    _fullTile = static_cast<int32_t>(index);
     _fullscreenTime = millis();
     auto picture = _picture(index);
     if (picture && picture->buffer) {
@@ -1395,7 +1467,7 @@ void HassScreen::_closeFullscreen()
     if (_fullTile < 0) {
         return;
     }
-    const auto index = static_cast<uint8_t>(_fullTile);
+    const auto index = static_cast<HomeAssistant::TileIndex>(_fullTile);
     _fullTile = -1;
     _fullscreenTime = millis();
     if (_fullRoot) {
@@ -1412,7 +1484,7 @@ void HassScreen::_closeFullscreen()
         lv_img_set_src(picture->image, nullptr);
         lv_obj_add_flag(picture->image, LV_OBJ_FLAG_HIDDEN);
     }
-    showWidget(_tiles[index].value, true);
+    showWidget(_widgets(index).refs.value, true);
     if (index < _dashboard.getTileCount()) {
         const auto &tile = _dashboard.getConfig().getTile(index);
         if (tile.type == TileType::PICTURE) {
@@ -1445,7 +1517,7 @@ void HassScreen::_fullCallback(lv_event_t *event)
     }
 }
 
-void HassScreen::_showPage(uint8_t page)
+void HassScreen::_showPage(HomeAssistant::PageIndex page)
 {
     if (page >= _dashboard.getConfig().getPageCount()) {
         page = 0;
@@ -1479,9 +1551,7 @@ void HassScreen::_rebuild()
     // buffer, which is released right after (the camera images of the page that is left)
     lv_obj_clean(_grid);
     _releaseImages();
-    for (auto &refs : _tiles) {
-        refs = TileRefs();
-    }
+    _tiles.clear();
     _back = TileRefs();
     _panelRefs = PanelRefs();
     if (!_configLoaded) {
@@ -1505,12 +1575,7 @@ void HassScreen::_rebuild()
     else {
         _buildPanel();
     }
-    // the new widgets do not show a value yet
-    for (uint8_t i = 0; i < kMaxTiles; i++) {
-        _arcState[i] = 0xff;
-        _arcMin[i] = 0;
-        _arcMax[i] = 0;
-    }
+    // the new entries of _tiles start with arcState 0xff, the widgets do not show a value yet
 }
 
 // Position and size of a block of cells in pixels. `page` selects the grid: the grid of a page is
@@ -1521,7 +1586,7 @@ void HassScreen::_rebuild()
 // landscape layout, so 4x3 columns/rows become 3x4 and a cell keeps its shape. The tiles are placed
 // in the transposed grid in the order of the file (see Config::_placeTiles()) and the span of a tile
 // is swapped with the cells (see _tileGeometry())
-void HassScreen::_cellGeometry(uint8_t page, uint8_t col, uint8_t row, uint8_t width, uint8_t height, lv_coord_t &x, lv_coord_t &y, lv_coord_t &w, lv_coord_t &h) const
+void HassScreen::_cellGeometry(HomeAssistant::PageIndex page, uint8_t col, uint8_t row, uint8_t width, uint8_t height, lv_coord_t &x, lv_coord_t &y, lv_coord_t &w, lv_coord_t &h) const
 {
     const auto gridCols = _dashboard.getConfig().getCols(page);
     const auto gridRows = _dashboard.getConfig().getRows(page);
@@ -1679,7 +1744,7 @@ void HassScreen::_buildGrid()
     }
 
     const auto &config = _dashboard.getConfig();
-    for (uint8_t i = 0; i < config.getTileCount(); i++) {
+    for (HomeAssistant::TileIndex i = 0; i < config.getTileCount(); i++) {
         const auto &tile = config.getTile(i);
         if (tile.page != _areaPage) {
             // the tile belongs to another page
@@ -1693,7 +1758,7 @@ void HassScreen::_buildGrid()
     }
 }
 
-void HassScreen::_buildTile(uint8_t index)
+void HassScreen::_buildTile(HomeAssistant::TileIndex index)
 {
     const auto &tile = _dashboard.getConfig().getTile(index);
     lv_coord_t x;
@@ -1702,7 +1767,15 @@ void HassScreen::_buildTile(uint8_t index)
     lv_coord_t h;
     _tileGeometry(tile, x, y, w, h);
 
-    auto &refs = _tiles[index];
+    // one entry per tile of the page that is built, it carries the index of the tile in the
+    // configuration (the entry is looked up by it, see _widgets()). Grow the buffer by 16 entries
+    // instead of letting the vector double it (a page has at most 64 tiles)
+    if (_tiles.size() == _tiles.capacity()) {
+        _tiles.reserve(_tiles.size() + 16);
+    }
+    _tiles.emplace_back();
+    auto &refs = _tiles.back().refs;
+    _tiles.back().globalTile = index;
     refs.tile = LVGLUI::createTile(_grid, x, y, w, h);
     lv_obj_add_event_cb(refs.tile, _tileCallback, LV_EVENT_CLICKED, this);
 
@@ -1921,7 +1994,7 @@ void HassScreen::_buildPanel()
     if (_panelTile < 0 || !_grid) {
         return;
     }
-    const auto index = static_cast<uint8_t>(_panelTile);
+    const auto index = static_cast<HomeAssistant::TileIndex>(_panelTile);
 
     // the panel of a sensor is the entity card of the Home Assistant app: a header with the live
     // value, the range buttons and the history graph. It has none of the controls of the other two
@@ -1932,8 +2005,14 @@ void HassScreen::_buildPanel()
     }
 
     const auto &tile = _dashboard.getConfig().getTile(index);
+    // the panel is the only tile that is built, one entry carries its widgets (the grid was
+    // removed by the caller)
+    _tiles.clear();
+    _tiles.emplace_back();
+    _tiles.back().globalTile = index;
     auto &refs = _panelRefs;
-    auto &refsTile = _tiles[index];
+    auto &widgets = _tiles.back();
+    auto &refsTile = widgets.refs;
     const auto layout = _panelLayout();
 
     // The controls of the panel have fixed sizes that fit the landscape column. A portrait panel
@@ -2025,9 +2104,9 @@ void HassScreen::_buildPanel()
                                       LVGLUI::kColorTextLabel, arcSize, LV_TEXT_ALIGN_CENTER);
         refs.headerValue = LVGLUI::addLabel(_grid, arcX, static_cast<lv_coord_t>(arcY + arcSize / 2 + 38), "", LVGLUI::kFontMedium,
                                             LVGLUI::kColorText, arcSize, LV_TEXT_ALIGN_CENTER);
-        _arcMin[index] = 0;
-        _arcMax[index] = 0;
-        _arcValue[index] = -1;
+        widgets.arcMin = 0;
+        widgets.arcMax = 0;
+        widgets.arcValue = -1;
     }
     else {
         // light/dimmer: the buttons of the control bar are stacked in the left column, the control
@@ -2190,7 +2269,7 @@ HassScreen::StatsRange HassScreen::statsRangeOf(uint8_t hours)
     }
 }
 
-void HassScreen::_buildSensorPanel(uint8_t index)
+void HassScreen::_buildSensorPanel(HomeAssistant::TileIndex index)
 {
     const auto &tile = _dashboard.getConfig().getTile(index);
     auto &refs = _panelRefs;
@@ -2328,7 +2407,7 @@ void HassScreen::_updateSensorPanel()
     if (_panelTile < 0) {
         return;
     }
-    const auto index = static_cast<uint8_t>(_panelTile);
+    const auto index = static_cast<HomeAssistant::TileIndex>(_panelTile);
     const auto &tile = _dashboard.getConfig().getTile(index);
     const auto &value = _dashboard.getValue(index);
     auto &refs = _panelRefs;
@@ -2353,7 +2432,7 @@ void HassScreen::_updateSensorPanel()
         break;
     }
     if (sensor.icon) {
-        LVGLUI::setIcon(sensor.icon, stateIconType(toIconType(tile), iconState), LVGLUI::kIconSizeLarge, stateIconColor(iconState));
+        LVGLUI::setIcon(sensor.icon, tileIconType(tile, value, iconState), LVGLUI::kIconSizeLarge, stateIconColor(iconState));
     }
     _setTextIfChanged(refs.headerValue, formatSensorValue(tile, value), LVGLUI::kFontValue, stateColor);
 
@@ -2398,7 +2477,7 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
         start = static_cast<uint32_t>(end - static_cast<uint32_t>(hours) * 3600);
     }
     // the unit of the value, the same one the tile shows
-    const char *unit = tile.unit[0] ? tile.unit : _dashboard.getValue(static_cast<uint8_t>(_panelTile)).unit;
+    const char *unit = tile.unit[0] ? tile.unit : _dashboard.getValue(static_cast<HomeAssistant::TileIndex>(_panelTile)).unit;
     LVGLUI::setText(sensor.unit, unit ? unit : "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
 
     // The X axis: one grid line every kSensorGridHours at whole local hours (00:00, 04:00, ...) and
@@ -2837,14 +2916,15 @@ void HassScreen::_updatePanel()
         _updateSensorPanel();
         return;
     }
-    const auto index = static_cast<uint8_t>(_panelTile);
+    const auto index = static_cast<HomeAssistant::TileIndex>(_panelTile);
     const auto &tile = _dashboard.getConfig().getTile(index);
     const auto &value = _dashboard.getValue(index);
     const auto &detail = _dashboard.getDetail();
     // a control the finger holds owns its value until the finger is up (see isTouchPressed())
     const auto touchPressed = isTouchPressed();
     auto &refs = _panelRefs;
-    auto &refsTile = _tiles[index];
+    auto &widgets = _widgets(index);
+    auto &refsTile = widgets.refs;
 
     if (_panel == Panel::CLIMATE) {
         _setTextIfChanged(refs.headerValue, PrintString(F("%.1f °C"), static_cast<double>(value.current)),
@@ -2879,27 +2959,27 @@ void HassScreen::_updatePanel()
             if (maxValue <= minValue) {
                 maxValue = static_cast<int16_t>(minValue + 1);
             }
-            if (minValue != _arcMin[index] || maxValue != _arcMax[index]) {
+            if (minValue != widgets.arcMin || maxValue != widgets.arcMax) {
                 lv_arc_set_range(refsTile.arc, minValue, maxValue);
-                _arcMin[index] = minValue;
-                _arcMax[index] = maxValue;
-                _arcValue[index] = -1;
+                widgets.arcMin = minValue;
+                widgets.arcMax = maxValue;
+                widgets.arcValue = -1;
             }
             // The finger owns the arc while it is dragged: the polled setpoint is not drawn, the big
             // number is written by _arcCallback() and follows the finger. An else branch here that
             // draws the value of the entity made the number flip back to the setpoint of Home
             // Assistant with every refresh - it looked like the arc was not dragging at all
-            if (!_arcPressed[index] && !touchPressed) {
+            if (!widgets.arcPressed && !touchPressed) {
                 // the setpoint the user stepped or dragged is kept until the entity reports it: the
                 // responses that were already in flight carry the setpoint from before the action
                 const auto held = _expects(_expectedSetpoint, "setpoint", value.value, -1, kSetpointHoldTolerance);
                 const auto setpoint = held ? _expectedSetpoint.value : value.value;
                 const auto arcValue = arcValueOf(static_cast<int32_t>(lroundf(setpoint * 10)), step);
-                if (arcValue != _arcValue[index]) {
+                if (arcValue != widgets.arcValue) {
                     __LDBG_printf("hass> arc %u from the response: %.1f (pressed %u, touch %u)", static_cast<unsigned>(index),
-                                  static_cast<double>(setpoint), static_cast<unsigned>(_arcPressed[index]), static_cast<unsigned>(touchPressed));
+                                  static_cast<double>(setpoint), static_cast<unsigned>(widgets.arcPressed), static_cast<unsigned>(touchPressed));
                     LVGLUI::setArcValue(refsTile.arc, arcValue, LVGLUI::kColorActive);
-                    _arcValue[index] = arcValue;
+                    widgets.arcValue = arcValue;
                 }
                 _setTextIfChanged(refsTile.value, (value.mode == 0) ? String("Off") : PrintString(F("%.1f°"), static_cast<double>(setpoint)),
                                   LVGLUI::kFontTitle, LVGLUI::kColorText);
@@ -2908,7 +2988,7 @@ void HassScreen::_updatePanel()
                 // the arc is held: the polled setpoint is ignored (proof for the log that the value
                 // of the entity does not reach the readout while the finger is on the arc)
                 __LDBG_printf("hass> arc %u held (pressed %u, touch %u), polled %.1f ignored", static_cast<unsigned>(index),
-                              static_cast<unsigned>(_arcPressed[index]), static_cast<unsigned>(touchPressed),
+                              static_cast<unsigned>(widgets.arcPressed), static_cast<unsigned>(touchPressed),
                               static_cast<double>(value.value));
             }
             _setTextIfChanged(refsTile.action, climateStateText(value), LVGLUI::kFontNormal, LVGLUI::kColorActive);
@@ -3090,9 +3170,10 @@ bool HassScreen::_layoutCenteredColumn(TileRefs &refs, lv_coord_t tileHeight, co
     return iconFits;
 }
 
-void HassScreen::_updateTile(uint8_t index)
+void HassScreen::_updateTile(HomeAssistant::TileIndex index)
 {
-    auto &refs = _tiles[index];
+    auto &widgets = _widgets(index);
+    auto &refs = widgets.refs;
     if (!refs.tile) {
         return;
     }
@@ -3148,8 +3229,9 @@ void HassScreen::_updateTile(uint8_t index)
     default:
         break;
     }
+    const auto pending = _dashboard.isPending(index);
     auto tileState = entityState;
-    if (value.pending) {
+    if (pending) {
         // the next response confirms the action, until then the tile is marked
         tileState = LVGLUI::TileState::PENDING;
     }
@@ -3161,21 +3243,21 @@ void HassScreen::_updateTile(uint8_t index)
     // entity that is off is not. Only the reported state as the key lets a tile keep the fill and
     // the glyph of a state it does not have any more (the entity reports off while an action is on
     // its way: the text says off, the tile stays lit)
-    const auto stateKey = static_cast<uint8_t>(entityState) | static_cast<uint8_t>(value.pending ? 0x10 : 0) |
+    const auto stateKey = static_cast<uint8_t>(entityState) | static_cast<uint8_t>(pending ? 0x10 : 0) |
                           static_cast<uint8_t>(active ? 0x20 : 0);
-    if (stateKey != _arcState[index]) {
+    if (stateKey != widgets.arcState) {
         // `active` also selects the fill of a pending tile: the state of an action that is on its
         // way was applied to the model right away (see Dashboard::toggle())
         LVGLUI::setTileState(refs.tile, tileState, active);
-        _arcState[index] = stateKey;
+        widgets.arcState = stateKey;
         // The glyph follows the state of the entity (a switch shows its handle) and the color is
         // white on a filled tile, grey while the entity is off and red while it is unavailable
         __LDBG_printf("hass> draw tile %u '%s': state %u (entity %u, pending %u), active %u", static_cast<unsigned>(index), tile.name,
-                      static_cast<unsigned>(tileState), static_cast<unsigned>(entityState), static_cast<unsigned>(value.pending),
+                      static_cast<unsigned>(tileState), static_cast<unsigned>(entityState), static_cast<unsigned>(pending),
                       static_cast<unsigned>(active));
         if (refs.icon) {
             const auto size = (tile.type == TileType::CLIMATE) ? kTileInlineIcon : tileIconSize(tileHeight);
-            LVGLUI::setIcon(refs.icon, stateIconType(toIconType(tile), entityState), size,
+            LVGLUI::setIcon(refs.icon, tileIconType(tile, value, entityState), size,
                             active ? LVGLUI::kColorText : stateIconColor(entityState));
         }
         // the name of a dimmer sits on the level fill and stays white, the name of a one cell
@@ -3193,6 +3275,16 @@ void HassScreen::_updateTile(uint8_t index)
             const auto text = formatSensorValue(tile, value);
             _setTextIfChanged(refs.value, text, tileValueFont(tileHeight), active ? LVGLUI::kColorText : stateColor);
             setValueLongMode(refs.value, text.c_str());
+            // The icon of the configuration is drawn when the tile is built, the device_class of
+            // the entity arrives with the first response. A state change is not what a sensor
+            // reports (a reading is "off" like every entity that is not switched on), so the
+            // glyph is refreshed here - the block above only follows the states
+            if (refs.icon) {
+                const auto icon = tileIconType(tile, value, entityState);
+                if (!LVGLUI::isIcon(refs.icon, icon)) {
+                    LVGLUI::setIcon(refs.icon, icon, tileIconSize(tileHeight), stateIconColor(entityState));
+                }
+            }
             // The icon is the one of the configuration and the value is shrunk until it fits next to
             // it (see _layoutCenteredColumn()). Only a value that leaves no room even for the
             // smallest font drops the icon, the value and the name use the whole cell then, like
@@ -3261,31 +3353,31 @@ void HassScreen::update()
     // The debug screen of the lvgl plugin can switch screens but not pages, so a page is opened
     // by pushing it (see /lvgl-screen and the setValue callback of the plugin)
     const auto debugPage = _data.getDebugHassPage();
-    if (debugPage != 0xff) {
+    if (debugPage != 0xffffffff) {
         _data.clearDebugHassPage();
         __LDBG_printf("hass> debug page %u requested", static_cast<unsigned>(debugPage));
-        _pendingPage = static_cast<int8_t>(debugPage);
+        _pendingPage = static_cast<int32_t>(debugPage);
     }
     // ... and a tap on a picture tile cannot be reached over the network either: the same key
     // opens the fullscreen image of that tile and closes it again
     const auto debugFullscreen = _data.getDebugHassFullscreen();
-    if (debugFullscreen != 0xff) {
+    if (debugFullscreen != 0xffffffff) {
         _data.clearDebugHassFullscreen();
         __LDBG_printf("hass> debug fullscreen image of tile %u requested", static_cast<unsigned>(debugFullscreen));
-        _pendingFullscreen = static_cast<int16_t>(debugFullscreen);
+        _pendingFullscreen = static_cast<int32_t>(debugFullscreen);
     }
     // a tap on a light/dimmer/climate/sensor tile opens its panel, "hasspanel:<tile>" does the same.
     // The tile whose panel is already open closes it again (like the fullscreen image above)
     const auto debugPanel = _data.getDebugHassPanel();
-    if (debugPanel != 0xff) {
+    if (debugPanel != 0xffffffff) {
         _data.clearDebugHassPanel();
-        if (_panel != Panel::NONE && _panelTile == static_cast<int16_t>(debugPanel)) {
+        if (_panel != Panel::NONE && _panelTile == static_cast<int32_t>(debugPanel)) {
             __LDBG_printf("hass> debug panel of tile %u closes it", static_cast<unsigned>(debugPanel));
             _pendingPanelClose = true;
         }
         else {
             __LDBG_printf("hass> debug panel of tile %u requested", static_cast<unsigned>(debugPanel));
-            _pendingPanel = static_cast<int16_t>(debugPanel);
+            _pendingPanel = static_cast<int32_t>(debugPanel);
         }
     }
     // the control a panel shows is selected with the buttons of the panel, "hassview:<n>" does the
@@ -3344,7 +3436,7 @@ void HassScreen::update()
     // A new camera image of a picture tile (the request task decodes it in the background). The
     // frame is handed over with its PSRAM buffer: the image points at the new one before the
     // buffer of the previous frame is released, an lv_img must never point at freed pixels
-    uint8_t imageTile = 0;
+    HomeAssistant::TileIndex imageTile = 0;
     uint16_t *imageData = nullptr;
     uint16_t imageWidth = 0;
     uint16_t imageHeight = 0;
@@ -3358,7 +3450,7 @@ void HassScreen::update()
         // changed while the request was on its way (the fullscreen image was closed, or the page
         // was built again)
         lv_obj_t *target = nullptr;
-        if (picture && _fullTile == static_cast<int16_t>(imageTile)) {
+        if (picture && _fullTile == static_cast<int32_t>(imageTile)) {
             target = _fullImage;
         }
         else if (picture && picture->image && imageWidth == picture->width && imageHeight == picture->height) {
@@ -3388,7 +3480,7 @@ void HassScreen::update()
         }
         else {
             lv_obj_clear_flag(target, LV_OBJ_FLAG_HIDDEN);
-            showWidget(_tiles[imageTile].value, false);
+            showWidget(_widgets(imageTile).refs.value, false);
         }
         if (previous) {
             free(previous);
@@ -3422,7 +3514,7 @@ void HassScreen::update()
         if (index < _dashboard.getTileCount()) {
             const auto type = _dashboard.getConfig().getTile(index).type;
             _panel = (type == TileType::CLIMATE) ? Panel::CLIMATE : (type == TileType::SENSOR) ? Panel::SENSOR : Panel::DIMMER;
-            _panelTile = static_cast<int16_t>(index);
+            _panelTile = static_cast<int32_t>(index);
             // a light panel starts with the level, the climate panel with the arc, the sensor panel
             // with a 24 hour history
             _panelView = (type == TileType::CLIMATE) ? PanelView::ARC : PanelView::LEVEL;
@@ -3460,7 +3552,7 @@ void HassScreen::update()
         _pendingStatsRange = -1;
         if (_panel == Panel::SENSOR && _panelTile >= 0) {
             _statsHours = statsRangeHours(range);
-            _dashboard.requestStats(static_cast<uint8_t>(_panelTile), _statsHours);
+            _dashboard.requestStats(static_cast<HomeAssistant::TileIndex>(_panelTile), _statsHours);
             _rebuild();
         }
     }
@@ -3497,7 +3589,7 @@ void HassScreen::update()
         _pendingFullscreen = -1;
         // a tap cannot reach the image of a tile that is already open (the overlay covers the
         // grid), so this is the debug key of that tile: it closes the image again
-        if (_fullTile == static_cast<int16_t>(index)) {
+        if (_fullTile == static_cast<int32_t>(index)) {
             _closeFullscreen();
         }
         else {
@@ -3557,8 +3649,9 @@ void HassScreen::update()
     if (_settingsOpen) {
         _updateSettings();
     }
-    for (uint8_t i = 0; i < _dashboard.getTileCount(); i++) {
-        _updateTile(i);
+    // only the tiles of the page that is built have widgets (the model may hold many more)
+    for (auto &entry : _tiles) {
+        _updateTile(entry.globalTile);
     }
 }
 
@@ -4084,19 +4177,19 @@ void HassScreen::_settingsCallback(lv_event_t *event)
 // ------------------------------------------------------------------------------------------
 // touch
 // ------------------------------------------------------------------------------------------
-uint8_t HassScreen::_findTile(const lv_obj_t *object) const
+HomeAssistant::TileIndex HassScreen::_findTile(const lv_obj_t *object) const
 {
     if (_back.tile == object) {
         return kBackTile;
     }
-    for (uint8_t i = 0; i < kMaxTiles; i++) {
-        const auto &refs = _tiles[i];
+    for (const auto &entry : _tiles) {
+        const auto &refs = entry.refs;
         if (refs.tile == object || refs.arc == object || refs.drag == object || refs.fill == object ||
             refs.stepDown == object || refs.stepUp == object) {
-            return i;
+            return entry.globalTile;
         }
     }
-    return kMaxTiles;
+    return kNoTile;
 }
 
 void HassScreen::_tileCallback(lv_event_t *event)
@@ -4114,16 +4207,16 @@ void HassScreen::_tileCallback(lv_event_t *event)
         }
         else {
             // back to the area that contains this one (the main page for a top level area)
-            self->_pendingPage = static_cast<int8_t>(self->_dashboard.getConfig().getPageParent(self->_areaPage));
+            self->_pendingPage = static_cast<int32_t>(self->_dashboard.getConfig().getPageParent(self->_areaPage));
         }
         return;
     }
-    if (index >= kMaxTiles || self->_panel != Panel::NONE) {
+    if (index == kNoTile || self->_panel != Panel::NONE) {
         return;
     }
     // Only the tile itself opens the panel: a tap on one of its widgets (+ / - of a climate,
     // the drag area of a dimmer) has its own callback and must not be treated as a tap on the tile
-    if (lv_event_get_target(event) != self->_tiles[index].tile) {
+    if (lv_event_get_target(event) != self->_widgets(index).refs.tile) {
         return;
     }
     self->_lastTileClick = millis();
@@ -4133,7 +4226,7 @@ void HassScreen::_tileCallback(lv_event_t *event)
     case TileType::AREA:
         // open the page of the area
         if (tile.areaPage) {
-            self->_pendingPage = static_cast<int8_t>(tile.areaPage);
+            self->_pendingPage = static_cast<int32_t>(tile.areaPage);
         }
         break;
 
@@ -4147,13 +4240,13 @@ void HassScreen::_tileCallback(lv_event_t *event)
 
     case TileType::CLIMATE:
         // the panel of the entity (the climate panel)
-        self->_pendingPanel = static_cast<int16_t>(index);
+        self->_pendingPanel = static_cast<int32_t>(index);
         break;
 
     case TileType::SENSOR:
         // the panel of the entity: its live value and the history graph of its long term
         // statistics. There is nothing to operate on a sensor, the panel is a readout
-        self->_pendingPanel = static_cast<int16_t>(index);
+        self->_pendingPanel = static_cast<int32_t>(index);
         break;
 
     case TileType::DIMMER:
@@ -4164,7 +4257,7 @@ void HassScreen::_tileCallback(lv_event_t *event)
 
     case TileType::PICTURE:
         // the image is shown over the whole display (any tap or swipe on it returns)
-        self->_pendingFullscreen = static_cast<int16_t>(index);
+        self->_pendingFullscreen = static_cast<int32_t>(index);
         break;
 
     default:
@@ -4177,10 +4270,10 @@ void HassScreen::_tileCallback(lv_event_t *event)
 // switches the entity (on/off, the same action as the power button of its panel) and the panel
 // only opens when no second tap follows. Without the delay a double tap would open the panel of
 // the first tap and the second tap would land on that panel
-void HassScreen::_tapTile(uint8_t index)
+void HassScreen::_tapTile(HomeAssistant::TileIndex index)
 {
     const auto now = millis();
-    if (_pendingTileTap == static_cast<int16_t>(index) &&
+    if (_pendingTileTap == static_cast<int32_t>(index) &&
         static_cast<uint32_t>(now - _pendingTileTapTime) <= kTileDoubleTapTime) {
         const auto &tile = _dashboard.getConfig().getTile(index);
         _pendingTileTap = -1;
@@ -4190,7 +4283,7 @@ void HassScreen::_tapTile(uint8_t index)
     }
     __LDBG_printf("hass> tap on tile %u: waiting for a second tap (panel in %ums)", static_cast<unsigned>(index),
                   static_cast<unsigned>(kTileDoubleTapTime));
-    _pendingTileTap = static_cast<int16_t>(index);
+    _pendingTileTap = static_cast<int32_t>(index);
     _pendingTileTapTime = now;
 }
 
@@ -4203,20 +4296,21 @@ void HassScreen::_dragCallback(lv_event_t *event)
         return;
     }
     const auto index = self->_findTile(lv_event_get_target(event));
-    if (index >= kMaxTiles || !self->_tiles[index].drag) {
+    if (index >= self->_dashboard.getTileCount() || !self->_widgets(index).refs.drag) {
         return;
     }
     self->_lastTileClick = millis();
+    auto &widgets = self->_widgets(index);
 
     const auto code = lv_event_get_code(event);
-    const auto tileY = static_cast<lv_coord_t>(lv_obj_get_style_y(self->_tiles[index].tile, LV_PART_MAIN));
-    const auto trackHeight = static_cast<lv_coord_t>(lv_obj_get_style_height(self->_tiles[index].tile, LV_PART_MAIN));
+    const auto tileY = static_cast<lv_coord_t>(lv_obj_get_style_y(widgets.refs.tile, LV_PART_MAIN));
+    const auto trackHeight = static_cast<lv_coord_t>(lv_obj_get_style_height(widgets.refs.tile, LV_PART_MAIN));
 
     if (code == LV_EVENT_PRESSED) {
         lv_point_t point;
         lv_indev_get_point(lv_indev_get_act(), &point);
-        self->_dragStartY[index] = point.y;
-        self->_dragLevel[index] = static_cast<uint8_t>(lroundf(self->_dashboard.getValue(index).value));
+        widgets.dragStartY = point.y;
+        widgets.dragLevel = static_cast<uint8_t>(lroundf(self->_dashboard.getValue(index).value));
         return;
     }
 
@@ -4224,7 +4318,7 @@ void HassScreen::_dragCallback(lv_event_t *event)
         lv_point_t point;
         lv_indev_get_point(lv_indev_get_act(), &point);
         // a tap does not move the finger: the level stays where it is and the release opens the panel
-        const auto distance = static_cast<lv_coord_t>(point.y - self->_dragStartY[index]);
+        const auto distance = static_cast<lv_coord_t>(point.y - widgets.dragStartY);
         if (distance < kDimmerDragTolerance && distance > -kDimmerDragTolerance) {
             if (code == LV_EVENT_RELEASED) {
                 self->_tapTile(index);
@@ -4242,11 +4336,11 @@ void HassScreen::_dragCallback(lv_event_t *event)
             level = 100;
         }
         // the fill and the label follow the finger
-        LVGLUI::setLevelFill(self->_tiles[index].fill, 0, 0, static_cast<lv_coord_t>(lv_obj_get_style_width(self->_tiles[index].tile, LV_PART_MAIN)),
+        LVGLUI::setLevelFill(widgets.refs.fill, 0, 0, static_cast<lv_coord_t>(lv_obj_get_style_width(widgets.refs.tile, LV_PART_MAIN)),
                              trackHeight, static_cast<uint8_t>(level), LVGLUI::kColorActive);
         char levelText[16];
         snprintf_P(levelText, sizeof(levelText), PSTR("%d %%"), level);
-        LVGLUI::setText(self->_tiles[index].value, levelText, LVGLUI::kFontValue, LVGLUI::kColorText);
+        LVGLUI::setText(widgets.refs.value, levelText, LVGLUI::kFontValue, LVGLUI::kColorText);
         if (code == LV_EVENT_RELEASED) {
             self->_expect(self->_expectedLevel, "level", level, -1);
             self->_dashboard.setLevel(index, static_cast<uint8_t>(level));
@@ -4263,7 +4357,7 @@ void HassScreen::_stepCallback(lv_event_t *event)
     }
     const auto target = lv_event_get_target(event);
     const auto index = self->_findTile(target);
-    if (index >= kMaxTiles) {
+    if (index >= self->_dashboard.getTileCount()) {
         return;
     }
     self->_lastTileClick = millis();
@@ -4291,7 +4385,7 @@ void HassScreen::_stepCallback(lv_event_t *event)
         }
         const auto held = self->_expects(self->_expectedLevel, "level", value.value, -1, kLevelHoldTolerance);
         auto level = static_cast<int32_t>(lroundf(held ? self->_expectedLevel.value : value.value)) +
-                     (isTapOn(target, self->_tiles[index].stepUp) ? step : -step);
+                     (isTapOn(target, self->_widgets(index).refs.stepUp) ? step : -step);
         if (level < 0) {
             level = 0;
         }
@@ -4332,7 +4426,7 @@ void HassScreen::_stepCallback(lv_event_t *event)
             temperature = (minValue + maxValue) / 2;
         }
     }
-    temperature += (isTapOn(target, self->_tiles[index].stepUp)) ? step : -step;
+    temperature += (isTapOn(target, self->_widgets(index).refs.stepUp)) ? step : -step;
     if (temperature < minValue) {
         temperature = minValue;
     }
@@ -4343,7 +4437,7 @@ void HassScreen::_stepCallback(lv_event_t *event)
         return;
     }
     __LDBG_printf("hass> step tile %u: %s from %.1f to %.1f", static_cast<unsigned>(index),
-                  isTapOn(target, self->_tiles[index].stepUp) ? "up" : "down", static_cast<double>(reported) / 10.0,
+                  isTapOn(target, self->_widgets(index).refs.stepUp) ? "up" : "down", static_cast<double>(reported) / 10.0,
                   static_cast<double>(temperature) / 10.0);
     self->_expect(self->_expectedSetpoint, "setpoint", static_cast<float>(temperature) / 10.0f, -1);
     self->_dashboard.setTemperature(index, static_cast<float>(temperature) / 10.0f);
@@ -4359,19 +4453,20 @@ void HassScreen::_arcCallback(lv_event_t *event)
         return;
     }
     const auto index = self->_findTile(lv_event_get_target(event));
-    if (index >= kMaxTiles || !self->_tiles[index].arc) {
+    if (index >= self->_dashboard.getTileCount() || !self->_widgets(index).refs.arc) {
         return;
     }
     self->_lastTileClick = millis();
+    auto &widgets = self->_widgets(index);
     const auto &tile = self->_dashboard.getConfig().getTile(index);
     const auto step = arcStepTenths(tile);
-    const auto value = static_cast<int16_t>(lv_arc_get_value(self->_tiles[index].arc));
+    const auto value = static_cast<int16_t>(lv_arc_get_value(widgets.refs.arc));
     const auto setpoint = static_cast<float>(value) * step / 10.0f;
 
     switch (lv_event_get_code(event)) {
     case LV_EVENT_PRESSED:
-        self->_arcPressed[index] = true;
-        self->_arcPressValue[index] = value;
+        widgets.arcPressed = true;
+        widgets.arcPressValue = value;
         __LDBG_printf("hass> arc %u pressed at %.1f", static_cast<unsigned>(index), static_cast<double>(setpoint));
         break;
 
@@ -4379,21 +4474,21 @@ void HassScreen::_arcCallback(lv_event_t *event)
         // the setpoint follows the finger
         char setpointText[16];
         snprintf_P(setpointText, sizeof(setpointText), PSTR("%.1f°"), static_cast<double>(setpoint));
-        LVGLUI::setText(self->_tiles[index].value, setpointText, LVGLUI::kFontTitle, LVGLUI::kColorText);
+        LVGLUI::setText(widgets.refs.value, setpointText, LVGLUI::kFontTitle, LVGLUI::kColorText);
         break;
 
     case LV_EVENT_PRESS_LOST:
         // the finger left the arc or the drag was taken over (LVGL ends the drag here too, see
         // lv_arc.c): without this the arc would keep its flag forever and never follow the entity
-        self->_arcPressed[index] = false;
+        widgets.arcPressed = false;
         __LDBG_printf("hass> arc %u press lost at %.1f", static_cast<unsigned>(index), static_cast<double>(setpoint));
         break;
 
     case LV_EVENT_RELEASED:
-        self->_arcPressed[index] = false;
+        widgets.arcPressed = false;
         __LDBG_printf("hass> arc %u released at %.1f (pressed at %.1f)", static_cast<unsigned>(index),
-                      static_cast<double>(setpoint), static_cast<double>(self->_arcPressValue[index]) * step / 10.0f);
-        if (value != self->_arcPressValue[index]) {
+                      static_cast<double>(setpoint), static_cast<double>(widgets.arcPressValue) * step / 10.0f);
+        if (value != widgets.arcPressValue) {
             self->_expect(self->_expectedSetpoint, "setpoint", setpoint, -1);
             self->_dashboard.setTemperature(index, setpoint);
         }
@@ -4413,7 +4508,7 @@ void HassScreen::_panelCallback(lv_event_t *event)
     }
     self->_lastTileClick = millis();
     const auto target = lv_event_get_target(event);
-    const auto index = static_cast<uint8_t>(self->_panelTile);
+    const auto index = static_cast<HomeAssistant::TileIndex>(self->_panelTile);
     auto &refs = self->_panelRefs;
 
     if (self->_panel == Panel::SENSOR) {
@@ -4506,7 +4601,7 @@ void HassScreen::_tempSliderCallback(lv_event_t *event)
     if (!self || self->_panelTile < 0 || !self->_panelRefs.tempSlider) {
         return;
     }
-    const auto index = static_cast<uint8_t>(self->_panelTile);
+    const auto index = static_cast<HomeAssistant::TileIndex>(self->_panelTile);
     const auto code = lv_event_get_code(event);
     self->_lastTileClick = millis();
 
@@ -4539,7 +4634,7 @@ void HassScreen::_sliderCallback(lv_event_t *event)
     if (!self || self->_panelTile < 0) {
         return;
     }
-    const auto index = static_cast<uint8_t>(self->_panelTile);
+    const auto index = static_cast<HomeAssistant::TileIndex>(self->_panelTile);
     const auto code = lv_event_get_code(event);
     self->_lastTileClick = millis();
 
@@ -4581,7 +4676,7 @@ void HassScreen::_sliderCallback(lv_event_t *event)
         const auto level = self->_sliderMoved ? lv_slider_get_value(self->_panelRefs.slider) : self->_sliderLevel;
         char levelText[16];
         snprintf_P(levelText, sizeof(levelText), PSTR("%d %%"), static_cast<int>(level));
-        LVGLUI::setText(self->_tiles[index].value, levelText, LVGLUI::kFontValue, LVGLUI::kColorText);
+        LVGLUI::setText(self->_widgets(index).refs.value, levelText, LVGLUI::kFontValue, LVGLUI::kColorText);
         return;
     }
     if (code == LV_EVENT_RELEASED) {
@@ -4591,7 +4686,7 @@ void HassScreen::_sliderCallback(lv_event_t *event)
             lv_slider_set_value(self->_panelRefs.slider, self->_sliderLevel, LV_ANIM_OFF);
             char levelText[16];
             snprintf_P(levelText, sizeof(levelText), PSTR("%d %%"), static_cast<int>(self->_sliderLevel));
-            LVGLUI::setText(self->_tiles[index].value, levelText, LVGLUI::kFontValue, LVGLUI::kColorText);
+            LVGLUI::setText(self->_widgets(index).refs.value, levelText, LVGLUI::kFontValue, LVGLUI::kColorText);
             const auto &tile = self->_dashboard.getConfig().getTile(index);
             __LDBG_printf("hass> tap on the level slider of tile %u '%s': toggle", static_cast<unsigned>(index), tile.name);
             self->_dashboard.toggle(index);
@@ -4611,7 +4706,7 @@ void HassScreen::_wheelCallback(lv_event_t *event)
     if (!self || self->_panelTile < 0 || !self->_panelRefs.wheel) {
         return;
     }
-    const auto index = static_cast<uint8_t>(self->_panelTile);
+    const auto index = static_cast<HomeAssistant::TileIndex>(self->_panelTile);
     const auto code = lv_event_get_code(event);
     self->_lastTileClick = millis();
 

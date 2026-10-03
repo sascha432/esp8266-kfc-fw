@@ -9,6 +9,10 @@
 // the values of the tiles. update() has to be called from the main loop (request task response,
 // new version of the configuration file), the LVGL screen only reads the values.
 //
+// The state and the reported value of a tile are part of the tile model (TileState/TileValue in
+// hass_config.h), the small per-tile flags the main loop keeps for an action that is on its way
+// are in the DRAM here (TileFlags).
+//
 
 #include <Arduino_compat.h>
 
@@ -18,57 +22,6 @@
 namespace WeatherStation2 {
 namespace HomeAssistant {
 
-// state of one tile. ON means "active": a switch/light that is on, a sensor that has a value or
-// a climate that is not off
-enum class TileState : uint8_t {
-    UNKNOWN,
-    OFF,
-    ON,
-    UNAVAILABLE,
-};
-
-// value of one tile, filled from the response of the last request
-struct TileValue {
-    TileState state{TileState::UNKNOWN};
-    // an action was queued and the entity has not reported the change yet
-    bool pending{false};
-    // The state the user tapped and the entity is expected to report (UNKNOWN while no action is
-    // on its way). The action is applied to the tile right away (optimistic): the screen shows the
-    // result of the tap while the request is on its way and a response that still reports the state
-    // of pendingState - the request was in flight while the action was sent - does not take it back
-    // (see _reconcilePending()/_revertPending())
-    TileState expectedState{TileState::UNKNOWN};
-    // the state and the value the entity had when the action was queued (a response that still
-    // reports them did not confirm the action, the fast polls have to continue)
-    uint8_t pendingState{0};
-    float pendingValue{0};
-    uint32_t pendingSince{0};
-    // sensor value, dimmer level in percent or target temperature of a climate
-    float value{0};
-    // climate: current temperature
-    float current{0};
-    float minTemp{15};
-    float maxTemp{30};
-    // climate: 0 off, 1 heat, 2 cool, 0xff unknown
-    uint8_t mode{0xff};
-    // climate: the action of the entity ("idle", "heating", "cooling", ...), empty when the
-    // entity does not report it
-    char action[16]{};
-    // state of the entity as it was reported ("on", "off", "21.4", "home", ...). A sensor
-    // tile shows it when the state is not a number (a binary sensor reports "on"/"off" and
-    // "0" from the float conversion would be wrong). The template of a tile that asks several
-    // entities at once puts the readouts in one string, separated by a line break ("26.4 °C\n53.1 %"),
-    // so the buffer is the size of what such a value can be - it held 16 bytes before and cut the
-    // last characters of a combined value off (the " %" of "26.38 °C\n53.11 %")
-    char text[48]{};
-    // device class of the entity ("motion", "door", ...), empty when it has none
-    char deviceClass[20]{};
-    // unit of a sensor, from the configuration or from the entity attributes
-    char unit[kUnitLength]{};
-    // climate: the mode the entity reports as its state ("heat", "auto", "off", ...)
-    char modeName[16]{};
-};
-
 // Attributes of the entity a panel shows. They are only polled while a panel is open and stored in
 // one slot - the dashboard shows one panel at a time. The lists are the items the panel offers,
 // comma separated (the panel splits them) and empty when the entity does not have that attribute.
@@ -76,7 +29,7 @@ struct Detail {
     // the values below are valid
     bool valid{false};
     // index of the tile the panel belongs to, kNoTile while no panel is open
-    uint8_t tile{kNoTile};
+    TileIndex tile{kNoTile};
     // increases with every response, the panel rebuilds its lists when it changes
     uint32_t generation{0};
     // climate: hvac mode (the state of the entity)
@@ -143,11 +96,11 @@ public:
     // page are requested - the values of the other pages are polled when they are shown and
     // their camera images would be a constant download. The page that is opened is requested
     // right away
-    void setVisiblePage(uint8_t page);
-    void setPictureBox(uint8_t index, uint16_t width, uint16_t height);
+    void setVisiblePage(PageIndex page);
+    void setPictureBox(TileIndex index, uint16_t width, uint16_t height);
     // hands a decoded camera image over to the screen, which owns the PSRAM buffer and has to
     // release it with free() (see Client::takeImage())
-    bool takeImage(uint8_t &tile, uint16_t *&data, uint16_t &width, uint16_t &height, uint32_t &stamp);
+    bool takeImage(TileIndex &tile, uint16_t *&data, uint16_t &width, uint16_t &height, uint32_t &stamp);
 
     bool isLoaded() const {
         return _config.isLoaded();
@@ -162,15 +115,24 @@ public:
     const Config &getConfig() const {
         return _config;
     }
-    uint8_t getTileCount() const {
+    TileIndex getTileCount() const {
         return _config.isLoaded() ? _config.getTileCount() : 0;
     }
-    const TileValue &getValue(uint8_t index) const {
-        return _values[(index < kMaxTiles) ? index : 0];
+    // the state Home Assistant reported for a tile
+    const TileValue &getValue(TileIndex index) const {
+        return _config.getTile(index).value;
     }
     // capabilities of the panel of a tile (kCapXxx), 0 while the entity was not polled yet
-    uint8_t getCapabilities(uint8_t index) const {
-        return (index < kMaxTiles) ? _capabilities[index] : 0;
+    uint8_t getCapabilities(TileIndex index) const {
+        return (index < _flags.size()) ? _flags[index].capabilities : 0;
+    }
+    // an action of the tile is on its way to the entity (the tile is drawn as pending)
+    bool isPending(TileIndex index) const {
+        return (index < _flags.size()) ? _flags[index].pending : false;
+    }
+    // size of the per-tile flags (boot log / diagnostics)
+    static size_t getTileFlagsSize() {
+        return sizeof(TileFlags);
     }
     // increases with every loaded version of the configuration file. The screen rebuilds its
     // widget tree when it changes (the tiles of the old version do not match the new one)
@@ -179,19 +141,19 @@ public:
     }
 
     // actions of the tiles
-    void toggle(uint8_t index);
-    void setLevel(uint8_t index, uint8_t percent);
-    void setTemperature(uint8_t index, float temperature);
-    void setMode(uint8_t index, const char *mode);
+    void toggle(TileIndex index);
+    void setLevel(TileIndex index, uint8_t percent);
+    void setTemperature(TileIndex index, float temperature);
+    void setMode(TileIndex index, const char *mode);
     // actions of the panels
-    void setPreset(uint8_t index, const char *preset);
-    void setFanMode(uint8_t index, const char *fanMode);
-    void setEffect(uint8_t index, const char *effect);
-    void setColor(uint8_t index, float hue, float saturation);
-    void setColorTemp(uint8_t index, float kelvin);
+    void setPreset(TileIndex index, const char *preset);
+    void setFanMode(TileIndex index, const char *fanMode);
+    void setEffect(TileIndex index, const char *effect);
+    void setColor(TileIndex index, float hue, float saturation);
+    void setColorTemp(TileIndex index, float kelvin);
 
     // the panel of a tile was opened, its detail attributes are polled until closeDetail()
-    void requestDetail(uint8_t index);
+    void requestDetail(TileIndex index);
     void closeDetail();
     const Detail &getDetail() const {
         return _detail;
@@ -205,7 +167,7 @@ public:
     // history graph of the sensor panel
     // ------------------------------------------------------------------------------------------
     // value of an index that does not point to a statistic request
-    static constexpr uint8_t kStatsNone = HomeAssistant::Client::kNoStatsTile;
+    static constexpr TileIndex kStatsNone = HomeAssistant::Client::kNoStatsTile;
     // the graph of an open sensor panel is refreshed this often. The buckets of the recorder are
     // 5 minute aggregates, so a new one appears every 5 minutes - the minute keeps the window on
     // the clock and puts the newest bucket on screen within a minute of it being written
@@ -215,11 +177,11 @@ public:
     // The sensor panel is open: the statistics of the entity of the tile are requested (right away
     // and then every kStatsRefreshInterval) until closeStats() is called. A new range drops the
     // buckets of the previous one
-    void requestStats(uint8_t index, uint8_t hours);
+    void requestStats(TileIndex index, uint8_t hours);
     void closeStats();
     // statistics the graph is drawn from: the tile they belong to (kStatsNone while the panel is
     // closed), the range in hours, the window (epoch seconds) and the buckets
-    uint8_t getStatsTile() const {
+    TileIndex getStatsTile() const {
         return _statsTile;
     }
     uint8_t getStatsHours() const {
@@ -262,22 +224,22 @@ private:
     // tells the client which picture tiles of the visible page need an image
     void _updateImages();
     // maps the response of the request task into the tiles
-    void _applyResponse(const char *payload, uint8_t page);
+    void _applyResponse(const char *payload, PageIndex page);
     // maps the detail response of the open panel into _detail
     void _applyDetail(const char *payload);
     // reads the capabilities of the panel of a tile (kCapXxx) from a state response
-    void _readCapabilities(const char *payload, const Tile &tile, uint8_t index);
-    TileValue &_value(uint8_t index) {
-        return _values[(index < kMaxTiles) ? index : 0];
+    void _readCapabilities(const char *payload, const Tile &tile, TileIndex index);
+    TileValue &_value(TileIndex index) {
+        return _config.getTileMutable(index).value;
     }
-    bool _queue(Client::Action::Type type, uint8_t index, float value = 0, const char *text = nullptr, float value2 = 0);
+    bool _queue(Client::Action::Type type, TileIndex index, float value = 0, const char *text = nullptr, float value2 = 0);
     // marks a tile as waiting for the confirmation of a queued action
-    void _markPending(uint8_t index);
+    void _markPending(TileIndex index);
     // compares what the entity reports with the action that is on its way (see expectedState)
-    void _reconcilePending(uint8_t index, TileValue &value, const char *state);
+    void _reconcilePending(TileIndex index, TileValue &value, const char *state);
     // gives up on an action (it failed or the entity never confirmed it): the tile shows the state
     // of the entity again
-    void _revertPending(uint8_t index, const char *reason);
+    void _revertPending(TileIndex index, const char *reason);
 
 private:
     // pixel box of a picture tile on the panel, 0 while the screen did not build the tile
@@ -286,22 +248,46 @@ private:
         uint16_t height{0};
     };
 
+    // The flags of one tile the main loop has to keep: the capabilities of its panel and the state
+    // of an action that is on its way to the entity (the optimistic update). They are small and
+    // read on every response and every tap, so they live in the internal DRAM - the reported values
+    // are part of the tile model in the PSRAM (see Config::_tiles)
+    struct TileFlags {
+        // panel capabilities (kCapXxx)
+        uint8_t capabilities{0};
+        // an action was queued and the entity has not reported the change yet
+        bool pending{false};
+        // The state the user tapped and the entity is expected to report (UNKNOWN while no action
+        // is on its way). The action is applied to the tile right away (optimistic): the screen
+        // shows the result of the tap while the request is on its way and a response that still
+        // reports the state of pendingState - the request was in flight while the action was sent -
+        // does not take it back (see _reconcilePending()/_revertPending())
+        TileState expectedState{TileState::UNKNOWN};
+        // the state and the value the entity had when the action was queued (a response that still
+        // reports them did not confirm the action, the fast polls have to continue)
+        uint8_t pendingState{0};
+        float pendingValue{0};
+        uint32_t pendingSince{0};
+        // last state a switch/light tile was drawn with (the poll repeats the same state and a
+        // trace per tile and poll buries everything else), 0xff while it was not drawn yet
+        uint8_t lastState{0xff};
+    };
+
     Config _config;
     Client _client;
-    TileValue _values[kMaxTiles];
-    // panel capabilities per tile (kCapXxx)
-    uint8_t _capabilities[kMaxTiles]{};
+    // per-tile flags (capabilities, pending action), in the DRAM (see TileFlags)
+    std::vector<TileFlags> _flags;
     // boxes of the picture tiles, registered by the screen
-    PictureBox _pictureBox[kMaxTiles];
+    PsramVector<PictureBox> _pictureBox;
     // page of the screen that is visible
-    uint8_t _visiblePage{0};
+    PageIndex _visiblePage{0};
     // attributes of the entity of the open panel (one at a time)
     Detail _detail;
-    uint8_t _detailTile{kNoTile};
+    TileIndex _detailTile{kNoTile};
     // statistics of the open sensor panel: the tile and the range the graph was requested for, the
     // buckets of the last response (a copy of the ones of the client, the screen reads them from
     // the main loop) and the window they cover
-    uint8_t _statsTile{kStatsNone};
+    TileIndex _statsTile{kStatsNone};
     uint8_t _statsHours{kStatsDefaultHours};
     Socket::Point _statsPoints[Socket::kMaxPoints];
     uint16_t _statsCount{0};

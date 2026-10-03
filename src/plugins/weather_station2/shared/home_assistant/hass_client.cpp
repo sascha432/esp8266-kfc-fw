@@ -235,6 +235,8 @@ bool Client::begin(const Config &config)
 
     _config = &config;
     _buildTemplate();
+    // one bit per tile, the failures are handed to the dashboard by takeActionFailure()
+    _actionFailed.assign((config.getTileCount() + 31) / 32, 0);
     _response = String();
     _error = String();
     _responseValid = false;
@@ -324,7 +326,7 @@ void Client::setActive(bool active)
 // tiles, and a page that is not shown does not have to be up to date (it is subscribed the moment
 // it is opened, see Dashboard::setVisiblePage()). The template is built by the request task, which
 // is the only writer of _template while it runs.
-void Client::setVisiblePage(uint8_t page)
+void Client::setVisiblePage(PageIndex page)
 {
     if (_visiblePage == page) {
         return;
@@ -341,7 +343,7 @@ void Client::requestRefresh()
     _resubscribe = true;
 }
 
-void Client::requestDetail(uint8_t tile)
+void Client::requestDetail(TileIndex tile)
 {
     if (_detailTile != tile) {
         _detailTile = tile;
@@ -377,17 +379,17 @@ bool Client::queueAction(const Action &action)
     return queued;
 }
 
-bool Client::takeActionFailure(uint8_t &tile)
+bool Client::takeActionFailure(TileIndex &tile)
 {
     MUTEX_LOCK_BLOCK(_lock) {
-        for (uint8_t word = 0; word < (sizeof(_actionFailed) / sizeof(_actionFailed[0])); word++) {
+        for (size_t word = 0; word < _actionFailed.size(); word++) {
             if (!_actionFailed[word]) {
                 continue;
             }
             for (uint8_t bit = 0; bit < 32; bit++) {
                 if (_actionFailed[word] & (1u << bit)) {
                     _actionFailed[word] &= ~(1u << bit);
-                    tile = static_cast<uint8_t>(word * 32 + bit);
+                    tile = static_cast<TileIndex>(word * 32 + bit);
                     return true;
                 }
             }
@@ -407,7 +409,7 @@ bool Client::hasPendingAction()
 // ------------------------------------------------------------------------------------------
 // camera images of the picture tiles
 // ------------------------------------------------------------------------------------------
-void Client::requestImage(uint8_t tile, uint16_t width, uint16_t height, uint16_t interval)
+void Client::requestImage(TileIndex tile, uint16_t width, uint16_t height, uint16_t interval)
 {
     if (!_config || tile >= _config->getTileCount() || !width || !height) {
         return;
@@ -485,7 +487,7 @@ void Client::clearImages()
     }
 }
 
-bool Client::takeImage(uint8_t &tile, uint16_t *&data, uint16_t &width, uint16_t &height, uint32_t &stamp)
+bool Client::takeImage(TileIndex &tile, uint16_t *&data, uint16_t &width, uint16_t &height, uint32_t &stamp)
 {
     bool available = false;
     MUTEX_LOCK_BLOCK(_lock) {
@@ -512,7 +514,7 @@ uint32_t Client::_imageRetryDelay(uint16_t interval)
 // ------------------------------------------------------------------------------------------
 // history graph of a sensor panel
 // ------------------------------------------------------------------------------------------
-void Client::requestStats(uint8_t tile, uint8_t hours)
+void Client::requestStats(TileIndex tile, uint8_t hours)
 {
     if (!_config || tile >= _config->getTileCount()) {
         return;
@@ -528,7 +530,7 @@ void Client::requestStats(uint8_t tile, uint8_t hours)
     __LDBG_printf("hass> statistics of tile %u requested (%u hours)", static_cast<unsigned>(tile), static_cast<unsigned>(hours));
 }
 
-void Client::_fetchStats(uint8_t tile, uint8_t hours)
+void Client::_fetchStats(TileIndex tile, uint8_t hours)
 {
     if (!_config) {
         return;
@@ -557,7 +559,7 @@ void Client::_fetchStats(uint8_t tile, uint8_t hours)
     }
 }
 
-bool Client::takeStats(uint32_t &generation, uint8_t &tile, uint8_t &hours, uint32_t &start, uint32_t &end, Socket::Point *points,
+bool Client::takeStats(uint32_t &generation, TileIndex &tile, uint8_t &hours, uint32_t &start, uint32_t &end, Socket::Point *points,
                        uint16_t &count, String &error)
 {
     bool available = false;
@@ -681,7 +683,7 @@ void Client::_loop()
         // main loop requests it when the panel is opened and once a minute. A result that was not
         // copied out yet (takeStats()) is not overwritten: the request waits for it
         if (_statsRequest && !_statsUntaken) {
-            uint8_t statsTile = kNoStatsTile;
+            TileIndex statsTile = kNoStatsTile;
             uint8_t statsHours = kDefaultStatsHours;
             MUTEX_LOCK_BLOCK(_lock) {
                 if (_statsRequest && !_statsUntaken) {
@@ -738,7 +740,7 @@ void Client::_loop()
         // the values of the visible page
         _takePushedTemplate();
         // a service call that Home Assistant rejected
-        uint8_t failedTile = 0;
+        TileIndex failedTile = 0;
         while (_socket.takeActionFailure(failedTile)) {
             MUTEX_LOCK_BLOCK(_lock) {
                 _actionFailed[failedTile >> 5] |= (1u << (failedTile & 31));
@@ -755,7 +757,7 @@ void Client::_takePushedTemplate()
 {
     String text;
     String error;
-    uint8_t page = kNoPage;
+    PageIndex page = kNoPage;
     if (!_socket.takeTemplateResult(text, error, page)) {
         return;
     }
@@ -1094,7 +1096,7 @@ void Client::takeStatus(int16_t &statusCode, String &error, uint32_t &duration, 
     }
 }
 
-bool Client::takeResponse(String &response, uint8_t &page)
+bool Client::takeResponse(String &response, PageIndex &page)
 {
     bool available = false;
     MUTEX_LOCK_BLOCK(_lock) {
@@ -1128,7 +1130,7 @@ void Client::_buildTemplate()
     PrintString body;
     body += '{';
     bool first = true;
-    for (uint8_t i = 0; i < _config->getTileCount(); i++) {
+    for (TileIndex i = 0; i < _config->getTileCount(); i++) {
         const auto &tile = _config->getTile(i);
         if (!tile.entity[0]) {
             // a spacer or an area has no entity, it is not subscribed

@@ -476,19 +476,16 @@ void Config::_reset()
     _verify = false;
     _cols = kDefaultGridCols;
     _rows = kDefaultGridRows;
-    for (auto &tile : _tiles) {
-        tile = Tile();
-    }
-    _tileCount = 0;
-    _pageCount = 1;
-    memset(_pageArea, kNoTile, sizeof(_pageArea));
-    memset(_pageParent, 0, sizeof(_pageParent));
+    // keep the capacity of the tile buffer, a new version of the file is usually the same size
+    _tiles.clear();
+    // the main page always exists, its area tile is kNoTile
+    _pages.assign(1, Page());
     memset(_used, 0, sizeof(_used));
     _loaded = false;
     _fileMissing = false;
 }
 
-bool Config::_fail(uint8_t line, const char *message)
+bool Config::_fail(uint32_t line, const char *message)
 {
     if (line) {
         _error = PrintString(F("line %u: %s"), static_cast<unsigned>(line), message);
@@ -550,22 +547,37 @@ bool Config::load(const char *path)
         __LDBG_printf("%s", _error.c_str());
         return false;
     }
-    if (size > kMaxFileSize) {
-        _error = PrintString(F("%s is too large (%u bytes, max %u)"), path, static_cast<unsigned>(size), static_cast<unsigned>(kMaxFileSize));
+    // The file is read into a PSRAM buffer. There is no size limit any more and reading the whole
+    // document into a String would put it into the scarce internal RAM; a parse that needs more
+    // memory than the PSRAM and the heap can serve is reported instead of aborting
+    PsramVector<char> data;
+    try {
+        data.resize(size + 1);
+    }
+    catch (const std::bad_alloc &) {
         file.close();
+        _error = PrintString(F("%s: out of memory (%u bytes)"), path, static_cast<unsigned>(size));
         __LDBG_printf("%s", _error.c_str());
         return false;
     }
-
-    String data = file.readString();
+    const auto length = file.read(reinterpret_cast<uint8_t *>(data.data()), size);
     file.close();
+    data[length] = 0;
 
-    if (!_parse(data.c_str(), data.length())) {
+    bool parsed = false;
+    try {
+        parsed = _parse(data.data(), length);
+    }
+    catch (const std::bad_alloc &) {
+        _error = PrintString(F("%s: out of memory (%u bytes)"), path, static_cast<unsigned>(size));
+        __LDBG_printf("%s", _error.c_str());
+    }
+    if (!parsed) {
         return false;
     }
     _loaded = true;
-    __LDBG_printf("%s: %u tile(s) on %u page(s), %ux%u grid, poll=%us, url=%s", path, static_cast<unsigned>(_tileCount),
-                  static_cast<unsigned>(_pageCount), static_cast<unsigned>(_cols), static_cast<unsigned>(_rows),
+    __LDBG_printf("%s: %u tile(s) on %u page(s), %ux%u grid, poll=%us, url=%s", path, static_cast<unsigned>(_tiles.size()),
+                  static_cast<unsigned>(_pages.size()), static_cast<unsigned>(_cols), static_cast<unsigned>(_rows),
                   static_cast<unsigned>(_pollInterval), _url.c_str());
     return true;
 }
@@ -575,16 +587,17 @@ bool Config::_parse(const char *data, size_t length)
     uint8_t section = kSectionNone;
     Tile *tile = nullptr;
     // index of the list item the keys belong to and the level it is at
-    uint8_t tileIndex = kNoTile;
+    TileIndex tileIndex = kNoTile;
     uint8_t tileLevel = 0;
-    // index of the area that owns a nesting level (kNoTile while the level is closed)
-    uint8_t areaStack[kMaxNesting];
-    memset(areaStack, kNoTile, sizeof(areaStack));
+    // index of the area that owns a nesting level (kNoTile while the level is closed). memset(0xff)
+    // fills a TileIndex array with kNoTile (0xffffffff)
+    TileIndex areaStack[kMaxNesting];
+    memset(areaStack, 0xff, sizeof(areaStack));
     // area tile whose `grid:` block is open and the indentation of its keys (the block is closed
     // by the next line that is not indented that far)
     Tile *gridTile = nullptr;
     int gridIndent = 0;
-    uint8_t line = 0;
+    uint32_t line = 0;
 
     // a UTF-8 byte order mark written by an editor is not part of the document
     if (length >= 3 && static_cast<uint8_t>(data[0]) == 0xef && static_cast<uint8_t>(data[1]) == 0xbb && static_cast<uint8_t>(data[2]) == 0xbf) {
@@ -803,11 +816,15 @@ bool Config::_parse(const char *data, size_t length)
                     if (level && areaStack[level - 1] == kNoTile) {
                         return _fail(line, "list item without an area above it");
                     }
-                    if (_tileCount >= kMaxTiles) {
-                        return _fail(line, PrintString(F("too many tiles, the maximum is %u"), static_cast<unsigned>(kMaxTiles)).c_str());
+                    // Grow the tile buffer by 16 entries instead of letting the vector double it: a
+                    // configuration with 129 tiles would otherwise hold 256 entries (about 70 KB of
+                    // the PSRAM instead of 36 KB)
+                    if (_tiles.size() == _tiles.capacity()) {
+                        _tiles.reserve(_tiles.size() + 16);
                     }
-                    tileIndex = _tileCount++;
-                    tile = &_tiles[tileIndex];
+                    tileIndex = static_cast<TileIndex>(_tiles.size());
+                    _tiles.emplace_back();
+                    tile = &_tiles.back();
                     tile->line = line;
                     tile->page = (level == 0) ? 0 : _tiles[areaStack[level - 1]].areaPage;
                     // the lists below this level are finished
@@ -844,13 +861,14 @@ bool Config::_parse(const char *data, size_t length)
                     if (level + 1 >= kMaxNesting) {
                         return _fail(line, PrintString(F("too many levels of areas, the maximum is %u"), static_cast<unsigned>(kMaxNesting - 1)).c_str());
                     }
-                    if (_pageCount >= kMaxPages) {
-                        return _fail(line, PrintString(F("too many areas, the maximum is %u"), static_cast<unsigned>(kMaxPages - 1)).c_str());
+                    if (_pages.size() == _pages.capacity()) {
+                        _pages.reserve(_pages.size() + 16);
                     }
-                    const auto page = _pageCount++;
+                    const auto page = static_cast<PageIndex>(_pages.size());
+                    _pages.push_back(Page());
+                    _pages[page].areaTile = tileIndex;
+                    _pages[page].parent = tile->page;
                     tile->areaPage = page;
-                    _pageArea[page] = tileIndex;
-                    _pageParent[page] = tile->page;
                     areaStack[level] = tileIndex;
                     // the keys of the tiles below follow as their own list items
                     tile = nullptr;
@@ -880,10 +898,10 @@ bool Config::_parse(const char *data, size_t length)
     }
 
     // ---------------------------------------------------------------- validation
-    if (!_tileCount) {
+    if (_tiles.empty()) {
         return _fail(0, "no tiles configured");
     }
-    for (uint8_t i = 0; i < _tileCount; i++) {
+    for (TileIndex i = 0; i < _tiles.size(); i++) {
         auto &item = _tiles[i];
         if (item.hasRefresh && item.type != TileType::PICTURE) {
             return _fail(item.line, "only a picture tile has a refresh interval");
@@ -945,7 +963,7 @@ bool Config::_parse(const char *data, size_t length)
     return _placeTiles();
 }
 
-bool Config::_parseTile(Tile &tile, const char *key, const char *keyEnd, const char *value, const char *valueEnd, uint8_t line)
+bool Config::_parseTile(Tile &tile, const char *key, const char *keyEnd, const char *value, const char *valueEnd, uint32_t line)
 {
     if (_match(key, keyEnd, "type")) {
         char buffer[16];
@@ -1067,7 +1085,7 @@ void Config::_setPosition(Tile &tile, bool portrait, uint8_t col, uint8_t row)
     tile.row = row;
 }
 
-bool Config::_placePage(uint8_t page, bool portrait)
+bool Config::_placePage(PageIndex page, bool portrait)
 {
     // The grid of the page: the document grid, or the grid of the area that owns the page. A
     // portrait display shows it transposed (4x3 becomes 3x4), so the cells keep their shape
@@ -1080,7 +1098,7 @@ bool Config::_placePage(uint8_t page, bool portrait)
         // the first cell of an area page is the back tile that closes it
         _markCell(0, 0, 1, 1);
     }
-    for (uint8_t i = 0; i < _tileCount; i++) {
+    for (TileIndex i = 0; i < _tiles.size(); i++) {
         auto &tile = _tiles[i];
         if (tile.page != page) {
             continue;
@@ -1146,7 +1164,7 @@ bool Config::_placeTiles()
 {
     // the size of a tile: the `size` key of the file wins over the default of the type (`size:
     // 1x1`), the other types are always one cell wide and cannot declare a size
-    for (uint8_t i = 0; i < _tileCount; i++) {
+    for (TileIndex i = 0; i < _tiles.size(); i++) {
         auto &tile = _tiles[i];
         if (!tile.hasSize) {
             tile.width = getTileWidth(tile.type);
@@ -1167,14 +1185,14 @@ bool Config::_placeTiles()
         }
     }
     // one pass per page, every page has its own grid. The main page is 0, an area adds one page
-    for (uint8_t page = 0; page < _pageCount; page++) {
+    for (PageIndex page = 0; page < _pages.size(); page++) {
         if (!_placePage(page, false)) {
             return false;
         }
         _placePage(page, true);
     }
     // the placed tiles, the size of a dimmer or a climate tile depends on the file (`size: 1x1`)
-    for (uint8_t i = 0; i < _tileCount; i++) {
+    for (TileIndex i = 0; i < _tiles.size(); i++) {
         const auto &tile = _tiles[i];
         const String type = getTileTypeName(tile.type);
         PrintString extra;
@@ -1193,34 +1211,34 @@ bool Config::_placeTiles()
 }
 
 // the area tile that owns a page, nullptr while the page uses the grid of the document
-const Tile *Config::_pageGrid(uint8_t page) const
+const Tile *Config::_pageGrid(PageIndex page) const
 {
-    if (page && page < _pageCount) {
-        const auto index = _pageArea[page];
-        if (index < _tileCount && _tiles[index].gridCols && _tiles[index].gridRows) {
+    if (page && page < _pages.size()) {
+        const auto index = _pages[page].areaTile;
+        if (index < _tiles.size() && _tiles[index].gridCols && _tiles[index].gridRows) {
             return &_tiles[index];
         }
     }
     return nullptr;
 }
 
-uint8_t Config::getCols(uint8_t page) const
+uint8_t Config::getCols(PageIndex page) const
 {
     const auto grid = _pageGrid(page);
     return grid ? grid->gridCols : _cols;
 }
 
-uint8_t Config::getRows(uint8_t page) const
+uint8_t Config::getRows(PageIndex page) const
 {
     const auto grid = _pageGrid(page);
     return grid ? grid->gridRows : _rows;
 }
 
-const char *Config::getPageName(uint8_t page) const
+const char *Config::getPageName(PageIndex page) const
 {
-    if (page && page < _pageCount) {
-        const auto index = _pageArea[page];
-        if (index < _tileCount && _tiles[index].type == TileType::AREA) {
+    if (page && page < _pages.size()) {
+        const auto index = _pages[page].areaTile;
+        if (index < _tiles.size() && _tiles[index].type == TileType::AREA) {
             return _tiles[index].name;
         }
     }
@@ -1228,7 +1246,7 @@ const char *Config::getPageName(uint8_t page) const
 }
 
 // "" for the main page, " of the area 'name'" otherwise (error messages)
-String Config::_pageSuffix(uint8_t page) const
+String Config::_pageSuffix(PageIndex page) const
 {
     const auto name = getPageName(page);
     return name ? PrintString(F(" of the area '%s'"), name) : String();

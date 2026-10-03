@@ -751,14 +751,14 @@ bool DataSource::debugSetValue(const String &key, const String &value)
     }
     if (key.equalsIgnoreCase(F("hasspage"))) {
         // page of the Home Assistant dashboard (an area page of /hass.yaml, 0 = the main page)
-        _debugHassPage = static_cast<uint8_t>(value.toInt());
+        _debugHassPage = static_cast<uint32_t>(value.toInt());
         return true;
     }
     if (key.equalsIgnoreCase(F("hassfull"))) {
         // fullscreen image of a picture tile of the Home Assistant dashboard. False: the screen
         // applies the value without rebuilding the widget tree, the image that is open has to
         // stay open (a reload would close it)
-        _debugHassFullscreen = static_cast<uint8_t>(value.toInt());
+        _debugHassFullscreen = static_cast<uint32_t>(value.toInt());
         return false;
     }
     if (key.equalsIgnoreCase(F("hasspanel"))) {
@@ -766,7 +766,7 @@ bool DataSource::debugSetValue(const String &key, const String &value)
         // effect as a tap on that tile). False: the screen applies the value without rebuilding the
         // widget tree, else the reload would close the panel again - the tile whose panel is open
         // closes it with the same key
-        _debugHassPanel = static_cast<uint8_t>(value.toInt());
+        _debugHassPanel = static_cast<uint32_t>(value.toInt());
         return false;
     }
     if (key.equalsIgnoreCase(F("hassrange"))) {

@@ -239,7 +239,7 @@ void Dashboard::setActive(bool active)
     }
 }
 
-void Dashboard::setVisiblePage(uint8_t page)
+void Dashboard::setVisiblePage(PageIndex page)
 {
     if (_visiblePage == page) {
         return;
@@ -259,16 +259,16 @@ void Dashboard::setVisiblePage(uint8_t page)
     _client.clearImages();
 }
 
-void Dashboard::setPictureBox(uint8_t index, uint16_t width, uint16_t height)
+void Dashboard::setPictureBox(TileIndex index, uint16_t width, uint16_t height)
 {
-    if (index >= kMaxTiles) {
+    if (index >= _pictureBox.size()) {
         return;
     }
     _pictureBox[index].width = width;
     _pictureBox[index].height = height;
 }
 
-bool Dashboard::takeImage(uint8_t &tile, uint16_t *&data, uint16_t &width, uint16_t &height, uint32_t &stamp)
+bool Dashboard::takeImage(TileIndex &tile, uint16_t *&data, uint16_t &width, uint16_t &height, uint32_t &stamp)
 {
     return _client.takeImage(tile, data, width, height, stamp);
 }
@@ -282,8 +282,8 @@ void Dashboard::_updateImages()
     if (!_active || !_config.isLoaded()) {
         return;
     }
-    uint8_t count = 0;
-    for (uint8_t i = 0; i < _config.getTileCount(); i++) {
+    TileIndex count = 0;
+    for (TileIndex i = 0; i < _config.getTileCount(); i++) {
         const auto &tile = _config.getTile(i);
         const auto &box = _pictureBox[i];
         if (tile.page != _visiblePage || !box.width || !box.height) {
@@ -324,14 +324,12 @@ void Dashboard::_reload()
     // a new version of the file, the screen has to rebuild its widget tree
     _configGeneration++;
 
-    // the model starts empty, the first response fills it
-    for (auto &value : _values) {
-        value = TileValue();
-    }
-    for (auto &capabilities : _capabilities) {
-        capabilities = 0;
-    }
-    for (uint8_t i = 0; i < _config.getTileCount(); i++) {
+    // the model starts empty, the first response fills it. The flags and the picture boxes are
+    // sized to the tiles of the new version of the file
+    const auto count = _config.getTileCount();
+    _flags.assign(count, TileFlags());
+    _pictureBox.assign(count, PictureBox());
+    for (TileIndex i = 0; i < count; i++) {
         const auto &tile = _config.getTile(i);
         if (tile.unit[0]) {
             strncpy(_value(i).unit, tile.unit, sizeof(_value(i).unit) - 1);
@@ -358,7 +356,7 @@ void Dashboard::update()
     _lastUpdate = now;
 
     // values of the last request
-    uint8_t page = Client::kNoPage;
+    PageIndex page = Client::kNoPage;
     if (_client.takeResponse(_response, page)) {
         _applyResponse(_response.c_str(), page);
     }
@@ -385,7 +383,7 @@ void Dashboard::update()
         // open any more (the panel was closed or another one was opened while the request was on
         // its way) is dropped
         uint32_t generation = _statsGeneration;
-        uint8_t statsTile = Client::kNoStatsTile;
+        TileIndex statsTile = Client::kNoStatsTile;
         uint8_t statsHours = 0;
         uint32_t statsStart = 0;
         uint32_t statsEnd = 0;
@@ -408,7 +406,7 @@ void Dashboard::update()
 
     // An action that could not be sent (or that Home Assistant rejected) is given up: the tiles show
     // the state of the entity again (the screen had shown the result of the tap right away)
-    uint8_t failedTile = 0;
+    TileIndex failedTile = 0;
     while (_client.takeActionFailure(failedTile)) {
         _revertPending(failedTile, "failed");
     }
@@ -445,23 +443,20 @@ void Dashboard::update()
 // unavailable, it is simply not part of this subscription. Only a tile of the page the response was
 // built from is reported as unavailable when Home Assistant left its entity out (the entity was
 // removed, or the answer is empty)
-void Dashboard::_applyResponse(const char *payload, uint8_t page)
+void Dashboard::_applyResponse(const char *payload, PageIndex page)
 {
     if (!_config.isLoaded() || !payload || !*payload) {
         return;
     }
     const auto started = millis();
     const auto count = _config.getTileCount();
-    uint8_t covered = 0;
-    uint8_t updated = 0;
-    // the pending state of every tile before this response (see the end of the function)
-    bool wasPending[kMaxTiles]{};
-    uint8_t beforeState[kMaxTiles]{};
-    float beforeValue[kMaxTiles]{};
+    TileIndex covered = 0;
+    TileIndex updated = 0;
 
-    for (uint8_t i = 0; i < count; i++) {
+    for (TileIndex i = 0; i < count; i++) {
         const auto &tile = _config.getTile(i);
         auto &value = _value(i);
+        auto &flags = _flags[i];
 
         if (!tile.entity[0]) {
             // a spacer or an area tile has no entity, there is nothing to read
@@ -482,8 +477,8 @@ void Dashboard::_applyResponse(const char *payload, uint8_t page)
             }
             // an entity that stopped reporting cannot confirm an action either, the timeout of
             // _markPending() ends the wait
-            if (value.pending && static_cast<uint32_t>(millis() - value.pendingSince) >= kPendingTimeout) {
-                value.pending = false;
+            if (flags.pending && static_cast<uint32_t>(millis() - flags.pendingSince) >= kPendingTimeout) {
+                flags.pending = false;
             }
             continue;
         }
@@ -491,10 +486,6 @@ void Dashboard::_applyResponse(const char *payload, uint8_t page)
         // the raw state, the screen shows it for entities that do not report a number
         strncpy(value.text, state, sizeof(value.text) - 1);
         value.text[sizeof(value.text) - 1] = 0;
-        // the value the entity had when the action was queued, used to notice the confirmation
-        wasPending[i] = value.pending;
-        beforeState[i] = value.pendingState;
-        beforeValue[i] = value.pendingValue;
 
         switch (tile.type) {
         case TileType::SENSOR:
@@ -543,7 +534,7 @@ void Dashboard::_applyResponse(const char *payload, uint8_t page)
                     }
                     value.value = percent;
                 }
-                _readCapabilities(payload, tile, static_cast<uint8_t>(i));
+                _readCapabilities(payload, tile, i);
             }
             break;
 
@@ -588,9 +579,8 @@ void Dashboard::_applyResponse(const char *payload, uint8_t page)
             // a switch or a light: log the transitions, not every response (the poll repeats the
             // same state and a trace per tile and poll buries everything else)
             {
-                static uint8_t lastState[kMaxTiles] = { 0xff };
-                if (lastState[i] != static_cast<uint8_t>(value.state)) {
-                    lastState[i] = static_cast<uint8_t>(value.state);
+                if (flags.lastState != static_cast<uint8_t>(value.state)) {
+                    flags.lastState = static_cast<uint8_t>(value.state);
                     __LDBG_printf("hass> tile %u '%s' %s (%ums after the last action)", static_cast<unsigned>(i), tile.name, state,
                                   static_cast<unsigned>(millis() - _lastAction));
                 }
@@ -605,25 +595,26 @@ void Dashboard::_applyResponse(const char *payload, uint8_t page)
     // entity reports the new state (the value the entity had when the action was sent does not
     // confirm it), the timeout ends the wait at the latest
     bool pending = _client.hasPendingAction();
-    for (uint8_t i = 0; i < count && i < kMaxTiles; i++) {
-        auto &value = _values[i];
-        if (!value.pending) {
+    for (TileIndex i = 0; i < count; i++) {
+        auto &value = _value(i);
+        auto &flags = _flags[i];
+        if (!flags.pending) {
             continue;
         }
         // The optimistic state of a toggle is our own value: only the entity reporting it (or the
         // timeout) ends the wait, see _reconcilePending(). A value the entity reported (a level, a
         // setpoint, a color) confirms an action as well
-        const auto stateChanged = (value.expectedState == TileState::UNKNOWN) && (static_cast<uint8_t>(value.state) != beforeState[i]);
-        const auto valueChanged = fabsf(value.value - beforeValue[i]) > 0.05f;
+        const auto stateChanged = (flags.expectedState == TileState::UNKNOWN) && (static_cast<uint8_t>(value.state) != flags.pendingState);
+        const auto valueChanged = fabsf(value.value - flags.pendingValue) > 0.05f;
         if (stateChanged || valueChanged) {
-            value.pending = false;
+            flags.pending = false;
         }
-        else if (static_cast<uint32_t>(millis() - value.pendingSince) >= kPendingTimeout) {
+        else if (static_cast<uint32_t>(millis() - flags.pendingSince) >= kPendingTimeout) {
             // the entity never reported the change (or the command was ignored): the action is given
             // up and the tile shows the state of the entity again
             _revertPending(i, "was not confirmed by the entity");
         }
-        pending = pending || value.pending;
+        pending = pending || flags.pending;
     }
     __LDBG_printf("hass> response of page %u: %u tile(s) updated, %u of its %u tile(s) covered, pending=%u, queued=%u (%ums)",
                   static_cast<unsigned>(page), static_cast<unsigned>(updated), static_cast<unsigned>(covered),
@@ -654,7 +645,7 @@ static bool _hasListEntry(const char *list, const char *name)
     return false;
 }
 
-void Dashboard::_readCapabilities(const char *payload, const Tile &tile, uint8_t index)
+void Dashboard::_readCapabilities(const char *payload, const Tile &tile, TileIndex index)
 {
     // every light can be switched on and off, the other controls depend on the entity
     uint8_t caps = kCapPower;
@@ -686,10 +677,10 @@ void Dashboard::_readCapabilities(const char *payload, const Tile &tile, uint8_t
     if (_parseNumberValue(payload, tile.entity, "has_level", number) && number > 0) {
         caps |= kCapLevel;
     }
-    _capabilities[index] = caps;
+    _flags[index].capabilities = caps;
 }
 
-bool Dashboard::_queue(Client::Action::Type type, uint8_t index, float value, const char *text, float value2)
+bool Dashboard::_queue(Client::Action::Type type, TileIndex index, float value, const char *text, float value2)
 {
     if (!_config.isLoaded() || index >= _config.getTileCount() || !_client.isRunning()) {
         return false;
@@ -715,13 +706,14 @@ bool Dashboard::_queue(Client::Action::Type type, uint8_t index, float value, co
 // An action that was queued for a tile: the values the entity had when it was sent are stored, so a
 // response can tell whether the entity reported the change (see _applyResponse). The screen shows
 // the mark until then.
-void Dashboard::_markPending(uint8_t index)
+void Dashboard::_markPending(TileIndex index)
 {
     auto &value = _value(index);
-    value.pending = true;
-    value.pendingState = static_cast<uint8_t>(value.state);
-    value.pendingValue = value.value;
-    value.pendingSince = millis();
+    auto &flags = _flags[index];
+    flags.pending = true;
+    flags.pendingState = static_cast<uint8_t>(value.state);
+    flags.pendingValue = value.value;
+    flags.pendingSince = millis();
 }
 
 // The action of a tile was applied to the tile right away (optimistic, see toggle()): the state the
@@ -729,60 +721,63 @@ void Dashboard::_markPending(uint8_t index)
 // a response that reports the state the entity had when the action was sent does not - the request
 // was in flight while the action was applied and the tapped state has to stay on screen. Any other
 // state wins over the optimistic one (the entity is the only source of the state).
-void Dashboard::_reconcilePending(uint8_t index, TileValue &value, const char *state)
+void Dashboard::_reconcilePending(TileIndex index, TileValue &value, const char *state)
 {
-    if (value.expectedState == TileState::UNKNOWN) {
+    auto &flags = _flags[index];
+    if (flags.expectedState == TileState::UNKNOWN) {
         return;
     }
     // "off" is the only state that is not active: a switch/light reports "on"/"off", a climate its
     // mode ("heat", "cool", "auto", ...)
     const auto reported = (!strcasecmp(state, "off")) ? TileState::OFF : TileState::ON;
-    if (reported == value.expectedState) {
-        value.expectedState = TileState::UNKNOWN;
-        value.pending = false;
+    if (reported == flags.expectedState) {
+        flags.expectedState = TileState::UNKNOWN;
+        flags.pending = false;
         __LDBG_printf("hass> tile %u '%s' confirmed the action (state %u)", static_cast<unsigned>(index), _config.getTile(index).name,
                       static_cast<unsigned>(reported));
         return;
     }
-    if (static_cast<uint8_t>(reported) == value.pendingState) {
+    if (static_cast<uint8_t>(reported) == flags.pendingState) {
         // the request was in flight while the action was sent: the tile keeps what the user tapped
-        value.state = value.expectedState;
+        value.state = flags.expectedState;
         return;
     }
     __LDBG_printf("hass> tile %u '%s' reports state %u instead of the tapped %u", static_cast<unsigned>(index),
-                  _config.getTile(index).name, static_cast<unsigned>(reported), static_cast<unsigned>(value.expectedState));
-    value.expectedState = TileState::UNKNOWN;
+                  _config.getTile(index).name, static_cast<unsigned>(reported), static_cast<unsigned>(flags.expectedState));
+    flags.expectedState = TileState::UNKNOWN;
 }
 
 // An action is given up (it failed or the entity never confirmed it): the tile goes back to the
 // state it had when the action was sent, the entity is the only source of the state again
-void Dashboard::_revertPending(uint8_t index, const char *reason)
+void Dashboard::_revertPending(TileIndex index, const char *reason)
 {
     auto &value = _value(index);
-    if (!value.pending) {
+    auto &flags = _flags[index];
+    if (!flags.pending) {
         return;
     }
-    const auto optimistic = (value.expectedState != TileState::UNKNOWN);
+    const auto optimistic = (flags.expectedState != TileState::UNKNOWN);
     __LDBG_printf("hass> action of tile %u '%s' %s: showing the state of the entity (%u)%s", static_cast<unsigned>(index),
-                  _config.getTile(index).name, reason, static_cast<unsigned>(value.pendingState),
+                  _config.getTile(index).name, reason, static_cast<unsigned>(flags.pendingState),
                   optimistic ? ", the tapped state is reverted" : "");
-    value.pending = false;
+    flags.pending = false;
     if (optimistic) {
-        value.state = static_cast<TileState>(value.pendingState);
-        value.expectedState = TileState::UNKNOWN;
+        value.state = static_cast<TileState>(flags.pendingState);
+        flags.expectedState = TileState::UNKNOWN;
     }
 }
 
-void Dashboard::toggle(uint8_t index)
+void Dashboard::toggle(TileIndex index)
 {
     if (index >= _config.getTileCount()) {
         return;
     }
     const auto &tile = _config.getTile(index);
     __LDBG_printf("hass> toggle tile %u '%s' (%s), reported state %u, pending %u", static_cast<unsigned>(index), tile.name, tile.entity,
-                  static_cast<unsigned>(_value(index).state), static_cast<unsigned>(_value(index).pending));
+                  static_cast<unsigned>(_value(index).state), static_cast<unsigned>(_flags[index].pending));
     const auto type = (tile.type == TileType::BUTTON) ? Client::Action::Type::PRESS : Client::Action::Type::TOGGLE;
     auto &value = _value(index);
+    auto &flags = _flags[index];
     // The state of the entity before the action is stored first (the revert target), then the tile
     // shows the result of the tap right away - waiting for the response of the service call feels
     // laggy. It is confirmed when the entity reports that state (the fast polls of the client run
@@ -796,14 +791,14 @@ void Dashboard::toggle(uint8_t index)
     }
     _markPending(index);
     if (tapped != TileState::UNKNOWN) {
-        value.expectedState = tapped;
+        flags.expectedState = tapped;
         value.state = tapped;
         __LDBG_printf("hass> tile %u '%s' shows the tapped state %u until the entity reports it", static_cast<unsigned>(index),
                       tile.name, static_cast<unsigned>(tapped));
     }
 }
 
-void Dashboard::setLevel(uint8_t index, uint8_t percent)
+void Dashboard::setLevel(TileIndex index, uint8_t percent)
 {
     if (index >= _config.getTileCount() || _config.getTile(index).type != TileType::DIMMER) {
         return;
@@ -818,7 +813,7 @@ void Dashboard::setLevel(uint8_t index, uint8_t percent)
     _markPending(index);
 }
 
-void Dashboard::setTemperature(uint8_t index, float temperature)
+void Dashboard::setTemperature(TileIndex index, float temperature)
 {
     if (index >= _config.getTileCount() || _config.getTile(index).type != TileType::CLIMATE) {
         return;
@@ -831,7 +826,7 @@ void Dashboard::setTemperature(uint8_t index, float temperature)
     _markPending(index);
 }
 
-void Dashboard::setMode(uint8_t index, const char *mode)
+void Dashboard::setMode(TileIndex index, const char *mode)
 {
     if (index >= _config.getTileCount() || _config.getTile(index).type != TileType::CLIMATE || !mode || !*mode) {
         return;
@@ -843,11 +838,12 @@ void Dashboard::setMode(uint8_t index, const char *mode)
     // `off` switches the entity off, every other mode turns it on: the tile shows that right away
     // (the mode the entity took is confirmed by the response, see _reconcilePending())
     auto &value = _value(index);
-    value.expectedState = strcasecmp(mode, "off") ? TileState::ON : TileState::OFF;
-    value.state = value.expectedState;
+    auto &flags = _flags[index];
+    flags.expectedState = strcasecmp(mode, "off") ? TileState::ON : TileState::OFF;
+    value.state = flags.expectedState;
 }
 
-void Dashboard::setPreset(uint8_t index, const char *preset)
+void Dashboard::setPreset(TileIndex index, const char *preset)
 {
     if (index >= _config.getTileCount() || _config.getTile(index).type != TileType::CLIMATE || !preset || !*preset) {
         return;
@@ -858,7 +854,7 @@ void Dashboard::setPreset(uint8_t index, const char *preset)
     _markPending(index);
 }
 
-void Dashboard::setFanMode(uint8_t index, const char *fanMode)
+void Dashboard::setFanMode(TileIndex index, const char *fanMode)
 {
     if (index >= _config.getTileCount() || _config.getTile(index).type != TileType::CLIMATE || !fanMode || !*fanMode) {
         return;
@@ -869,7 +865,7 @@ void Dashboard::setFanMode(uint8_t index, const char *fanMode)
     _markPending(index);
 }
 
-void Dashboard::setEffect(uint8_t index, const char *effect)
+void Dashboard::setEffect(TileIndex index, const char *effect)
 {
     if (index >= _config.getTileCount() || !effect) {
         return;
@@ -880,7 +876,7 @@ void Dashboard::setEffect(uint8_t index, const char *effect)
     _markPending(index);
 }
 
-void Dashboard::setColor(uint8_t index, float hue, float saturation)
+void Dashboard::setColor(TileIndex index, float hue, float saturation)
 {
     if (index >= _config.getTileCount() || _config.getTile(index).type != TileType::DIMMER) {
         return;
@@ -891,7 +887,7 @@ void Dashboard::setColor(uint8_t index, float hue, float saturation)
     _markPending(index);
 }
 
-void Dashboard::setColorTemp(uint8_t index, float kelvin)
+void Dashboard::setColorTemp(TileIndex index, float kelvin)
 {
     if (index >= _config.getTileCount() || _config.getTile(index).type != TileType::DIMMER || kelvin <= 0) {
         return;
@@ -905,7 +901,7 @@ void Dashboard::setColorTemp(uint8_t index, float kelvin)
 // ------------------------------------------------------------------------------------------
 // detail attributes of an open panel
 // ------------------------------------------------------------------------------------------
-void Dashboard::requestDetail(uint8_t index)
+void Dashboard::requestDetail(TileIndex index)
 {
     if (index >= _config.getTileCount()) {
         return;
@@ -937,7 +933,7 @@ void Dashboard::closeDetail()
 // ------------------------------------------------------------------------------------------
 // history graph of the sensor panel
 // ------------------------------------------------------------------------------------------
-void Dashboard::requestStats(uint8_t index, uint8_t hours)
+void Dashboard::requestStats(TileIndex index, uint8_t hours)
 {
     if (!_config.isLoaded() || index >= _config.getTileCount()) {
         return;
@@ -1101,9 +1097,9 @@ void Dashboard::getStatus(Print &output) const
         _config.getUrl(), static_cast<unsigned>(_config.getTileCount()), static_cast<unsigned>(_config.getPollInterval()),
         static_cast<unsigned>(_requestCount), getScreenStatus().c_str(), HTML_S(br));
 
-    for (uint8_t i = 0; i < _config.getTileCount(); i++) {
+    for (TileIndex i = 0; i < _config.getTileCount(); i++) {
         const auto &tile = _config.getTile(i);
-        const auto &value = _values[i];
+        const auto &value = tile.value;
         if (tile.type == TileType::SPACER || tile.type == TileType::AREA) {
             // there is no entity behind these tiles, only the page of an area matters
             PrintString info;
@@ -1129,7 +1125,7 @@ void Dashboard::getStatus(Print &output) const
             break;
         }
         output.printf_P(PSTR("  %s (%s) %s%.1f%s%s" HTML_S(br)), tile.entity, getTileTypeName(tile.type), state,
-            static_cast<double>(value.value), tile.unit[0] ? tile.unit : value.unit, value.pending ? " (pending)" : "");
+            static_cast<double>(value.value), tile.unit[0] ? tile.unit : value.unit, _flags[i].pending ? " (pending)" : "");
     }
 }
 

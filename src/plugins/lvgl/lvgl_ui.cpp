@@ -79,6 +79,8 @@ static const char *const kIconGlyph[] = {
     LVGL_MDI_LIGHTBULB_OFF, LVGL_MDI_LIGHTBULB_ON, LVGL_MDI_FLASH_OFF, LVGL_MDI_HOME,
     LVGL_MDI_HOME_ASSISTANT,
     LVGL_MDI_WIFI, LVGL_MDI_WIFI_REMOVE, LVGL_MDI_WIFI_ALERT, LVGL_MDI_WIFI_OFF,
+    LVGL_MDI_POWER_PLUG_OFF, LVGL_MDI_MOTION_SENSOR_OFF, LVGL_MDI_SINE_WAVE,
+    LVGL_MDI_CURRENT_AC, LVGL_MDI_LIGHTNING_BOLT,
 };
 
 // theme color of every icon, in the same order. A filled tile or button redraws them white with
@@ -98,6 +100,7 @@ static const uint32_t kIconColor[] = {
     kColorTextValue, kColorTextValue, kColorHighlight, kColorTextValue,
     kColorTextValue, kColorAccent,
     kColorTextValue, kColorTextMuted, kColorError, kColorTextMuted,
+    kColorTextValue, kColorTextValue, kColorAccent, kColorAccent, kColorHighlight,
 };
 
 static constexpr uint8_t kIconCount = static_cast<uint8_t>(sizeof(kIconGlyph) / sizeof(kIconGlyph[0]));
@@ -851,6 +854,21 @@ void setIcon(lv_obj_t *icon, IconType type, lv_coord_t size, uint32_t color)
     lv_obj_clean(icon);
     lv_obj_set_size(icon, size, size);
     _drawIcon(icon, type, size, color);
+}
+
+bool isIcon(lv_obj_t *icon, IconType type)
+{
+    const auto index = static_cast<uint8_t>(type);
+    if (!icon || index >= kIconCount) {
+        return false;
+    }
+    // the glyph is the only child of an icon container, see _drawIcon()
+    auto label = lv_obj_get_child(icon, 0);
+    if (!label) {
+        return false;
+    }
+    const auto *text = lv_label_get_text(label);
+    return text && strcmp(text, kIconGlyph[index]) == 0;
 }
 
 // the glyph is the only child of an icon container

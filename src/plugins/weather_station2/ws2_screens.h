@@ -496,9 +496,18 @@ private:
 // (or the built-in test configuration, see DEBUG_HASS_TEST_CONFIG)
 class HassScreen : public Screen {
 public:
-    static constexpr uint8_t kMaxTiles = HomeAssistant::kMaxTiles;
-    // index _findTile() returns for the back tile that closes an area page
-    static constexpr uint8_t kBackTile = kMaxTiles;
+    // Sentinels of _findTile(). kBackTile is the back tile that closes an area page, kNoTile means
+    // that the object belongs to no tile (no tile can have either index - the model is a vector and
+    // never gets close to its size)
+    static constexpr HomeAssistant::TileIndex kNoTile = HomeAssistant::kNoTile;
+    static constexpr HomeAssistant::TileIndex kBackTile = 0xfffffffe;
+    // Value of TileWidgets::arcState while the tile was not drawn with a state yet. It is above
+    // every state key (which uses at most 6 bits) and fits the 7 bit field
+    static constexpr uint8_t kArcStateNone = 0x7f;
+    // size of the per-tile render state of the visible page (boot log / diagnostics)
+    static size_t getTileWidgetsSize() {
+        return sizeof(TileWidgets);
+    }
     static constexpr uint32_t kRefreshInterval = 200;
     // A tap that a tile consumed is ignored by the manager for this long (the manager runs its
     // single tap action after the double tap window)
@@ -547,7 +556,7 @@ public:
     }
     // the page that is shown (0 = the main page of the document), for the status page and the
     // debug tool - the screen can only be navigated by tapping an area tile
-    uint8_t getPage() const {
+    HomeAssistant::PageIndex getPage() const {
         return _areaPage;
     }
     virtual LVGLUI::IconType getIcon() const override {
@@ -658,13 +667,52 @@ private:
         lv_obj_t *arc{nullptr};
     };
 
-    // A camera preview of a picture tile. The state is kept outside TileRefs (a table of 128
-    // entries with the buffer and the descriptor of an image would cost kilobytes of RAM for a
-    // handful of previews) and limited to the number of images the client fetches
+    // The per-tile state of the VISIBLE page: the widget pointers (TileRefs) and the state of the
+    // arc/drag of a dimmer or a climate tile. It is one entry per tile of the page that is built,
+    // owned as a DRAM vector (see _tiles) - the widget pointers and the drag state are touched on
+    // every tap and every update and the DRAM use does not grow with the number of pages (a page
+    // has no more tiles than its grid has cells).
+    //
+    // The members are ordered by size and the small fields share two packed bytes: the entry is 60
+    // bytes (a padded layout with the uint8_t members between the int16_t ones was 68)
+    struct TileWidgets {
+        TileWidgets() :
+            arcState(kArcStateNone),
+            arcPressed(0),
+            dragLevel(0),
+            dragging(0)
+        {
+        }
+
+        // tile of the configuration this entry belongs to
+        HomeAssistant::TileIndex globalTile{kNoTile};
+        TileRefs refs;
+        // last value drawn by the arc (0.1 degree steps) and the range of the climate arc (0 = not
+        // set yet), the value the arc had when it was pressed (a tap without a drag toggles it)
+        int16_t arcValue{0};
+        int16_t arcMin{0};
+        int16_t arcMax{0};
+        int16_t arcPressValue{0};
+        // dimmer tile: position the drag started with (a drag without a movement is a tap)
+        lv_coord_t dragStartY{0};
+        // state the tile was drawn with (kArcStateNone while it was not drawn yet)
+        uint8_t arcState : 7;
+        // the arc is being dragged, the polled value must not overwrite it
+        uint8_t arcPressed : 1;
+        // dimmer tile: level the drag started with (a drag without a movement is a tap)
+        uint8_t dragLevel : 7;
+        uint8_t dragging : 1;
+    };
+    // the entry is hand-packed to 60 bytes, the boot log prints it (getTileWidgetsSize())
+    static_assert(sizeof(TileWidgets) == 60, "TileWidgets must stay 60 bytes");
+
+    // A camera preview of a picture tile. The state is kept outside TileRefs (a table with the
+    // buffer and the descriptor of an image would cost kilobytes of RAM for a handful of previews)
+    // and limited to the number of images the client fetches
     static constexpr uint8_t kMaxPictures = HomeAssistant::Client::kMaxImageTiles;
     struct Picture {
-        // tile of the configuration this preview belongs to, kMaxTiles while the slot is free
-        uint8_t tile{kMaxTiles};
+        // tile of the configuration this preview belongs to, kNoTile while the slot is free
+        HomeAssistant::TileIndex tile{kNoTile};
         lv_obj_t *image{nullptr};
         // pixel box of the tile the buffer was fetched for. A frame of another box (the box
         // changed while the request was on its way) is dropped instead of drawn
@@ -858,11 +906,11 @@ private:
     // creates the widget tree of the grid below _grid
     void _buildGrid();
     // creates one tile (the children that show the value are added by _updateTile())
-    void _buildTile(uint8_t index);
+    void _buildTile(HomeAssistant::TileIndex index);
     // creates the widget tree of the open panel
     void _buildPanel();
     // creates the widget tree of the sensor panel (live value, range buttons and history graph)
-    void _buildSensorPanel(uint8_t index);
+    void _buildSensorPanel(HomeAssistant::TileIndex index);
     // refreshes the header of the sensor panel and draws the graph
     void _updateSensorPanel();
     // draws the buckets of the statistics into the graph of the sensor panel
@@ -884,13 +932,13 @@ private:
     // the page change releases the buffers of the tiles that are not visible any more)
     void _releaseImages();
     // preview of a tile, nullptr while it has none (or the tile is not built)
-    Picture *_picture(uint8_t index);
+    Picture *_picture(HomeAssistant::TileIndex index);
     // preview of a tile, a free slot is used when it has none (nullptr while all are in use)
-    Picture *_pictureFor(uint8_t index);
+    Picture *_pictureFor(HomeAssistant::TileIndex index);
     // Shows the image of a picture tile over the whole display. The widgets are created with the
     // first image that is opened and only shown and hidden afterwards. The image is fetched in
     // the size of the display while it is open (a tile sized frame is centered until it arrives)
-    void _openFullscreen(uint8_t index);
+    void _openFullscreen(HomeAssistant::TileIndex index);
     // closes the fullscreen image, the tile asks for its own size again
     void _closeFullscreen();
 #if DEBUG_HASS_ACTION_TEST
@@ -899,16 +947,16 @@ private:
 #endif
     // shows the main page (0) or the page of an area. The widget tree is only rebuilt here,
     // never while an LVGL event is being dispatched
-    void _showPage(uint8_t page);
+    void _showPage(HomeAssistant::PageIndex page);
     // refreshes the values of one tile
-    void _updateTile(uint8_t index);
+    void _updateTile(HomeAssistant::TileIndex index);
     // Places the icon and the value of a one cell tile: icon, value and name are one centered
     // column (see tileBlockGap()). Returns false while the icon does not fit the cell
     bool _layoutCenteredColumn(TileRefs &refs, lv_coord_t tileHeight, const String &text);
     // Position and size of a block of cells in pixels. `page` selects the grid (a page uses the
     // grid of the document or the grid of the area that owns it, the panels are laid out in the
     // grid of the document)
-    void _cellGeometry(uint8_t page, uint8_t col, uint8_t row, uint8_t width, uint8_t height, lv_coord_t &x, lv_coord_t &y, lv_coord_t &w, lv_coord_t &h) const;
+    void _cellGeometry(HomeAssistant::PageIndex page, uint8_t col, uint8_t row, uint8_t width, uint8_t height, lv_coord_t &x, lv_coord_t &y, lv_coord_t &w, lv_coord_t &h) const;
     // font of the big readout of a portrait panel (the level of a light, its colour temperature):
     // the portrait panel gives the value a row of its own, so it is one step of the ladder larger
     // than the value of the landscape panel, which shares the space with the slider
@@ -964,11 +1012,22 @@ private:
     lv_coord_t _sensorGraphHeight() const;
     // sets the text only when it changed (a new pointer restarts the scroll animation)
     static void _setTextIfChanged(lv_obj_t *label, const String &text, const lv_font_t *font, uint32_t color);
-    // index of the tile that owns an object, kMaxTiles when it does not belong to one
-    uint8_t _findTile(const lv_obj_t *object) const;
+    // index of the tile that owns an object, kNoTile when it does not belong to one
+    HomeAssistant::TileIndex _findTile(const lv_obj_t *object) const;
+    // widgets of a tile of the page that is built, by its index in the configuration. A tile that
+    // is not on the page (or before the tree is built) gets a scratch entry that is not connected
+    // to any widget
+    TileWidgets &_widgets(HomeAssistant::TileIndex index) {
+        for (auto &entry : _tiles) {
+            if (entry.globalTile == index) {
+                return entry;
+            }
+        }
+        return _noWidgets;
+    }
     // A tap on a control tile that can be switched as well (a dimmer): the first tap waits for a
     // second one, a double tap switches the entity (on/off) and only a single tap opens the panel
-    void _tapTile(uint8_t index);
+    void _tapTile(HomeAssistant::TileIndex index);
     static void _tileCallback(lv_event_t *event);
     // touch on the fullscreen image: any tap or swipe closes it
     static void _fullCallback(lv_event_t *event);
@@ -1008,18 +1067,22 @@ private:
     lv_obj_t *_status{nullptr};
     // message shown instead of the grid while there is no configuration
     lv_obj_t *_message{nullptr};
-    TileRefs _tiles[kMaxTiles];
+    // The widgets and the arc/drag state of the tiles of the page that is built, one entry per
+    // tile. It is owned as a DRAM vector and only holds the page that is shown (see TileWidgets),
+    // _noWidgets absorbs a write to a tile that is not built
+    std::vector<TileWidgets> _tiles;
+    TileWidgets _noWidgets;
     // camera previews of the picture tiles (at most kMaxPictures at a time)
     Picture _pictures[kMaxPictures];
     // Fullscreen image of a picture tile: the container and the lv_img of it (a child of the
     // screen, created with the first image that is opened, so a rebuild of the grid does not
-    // remove it) and the tile it shows (kMaxTiles while no image is open). A tap sets
+    // remove it) and the tile it shows (kNoTile while no image is open). A tap sets
     // _pendingFullscreen (the widget tree is not touched inside an LVGL callback), a tap or a
     // swipe on the image itself sets _pendingFullscreenClose
     lv_obj_t *_fullRoot{nullptr};
     lv_obj_t *_fullImage{nullptr};
-    int16_t _fullTile{-1};
-    int16_t _pendingFullscreen{-1};
+    int32_t _fullTile{-1};
+    int32_t _pendingFullscreen{-1};
     bool _pendingFullscreenClose{false};
     // time the fullscreen image was opened or closed: the screen manager runs the gesture of the
     // touch that closed it right after, it must not change to another screen
@@ -1030,8 +1093,7 @@ private:
     PanelRefs _panelRefs;
     // panel that is drawn, and the tile it belongs to
     Panel _panel{Panel::NONE};
-    // int16_t and not int8_t: the index of a tile goes up to kMaxTiles - 1
-    int16_t _panelTile{-1};
+    int32_t _panelTile{-1};
     // sub view of the panel
     PanelView _panelView{PanelView::ARC};
     // bitmask of the buttons of the light panel that are visible (LightButton)
@@ -1054,7 +1116,7 @@ private:
     uint32_t _panelDetail{0};
     // a panel was opened or closed by a tile, applied by update() (the tree must not be rebuilt
     // from inside an LVGL event callback)
-    int16_t _pendingPanel{-1};
+    int32_t _pendingPanel{-1};
     bool _pendingPanelClose{false};
     // control the open panel has to show (0 = the level slider of a light, the arc of a climate,
     // 1..3 = the controls behind it), set by the debug key "hassview" and applied by update()
@@ -1074,27 +1136,13 @@ private:
     // once per second, the screen runs at 5 fps)
     uint32_t _settingsUpdate{0};
     // tile that was tapped and waits for a second tap, and when the first tap happened
-    int16_t _pendingTileTap{-1};
+    int32_t _pendingTileTap{-1};
     uint32_t _pendingTileTapTime{0};
     // page that is drawn: 0 = main, 1..n = the page of an area tile
-    uint8_t _areaPage{0};
+    HomeAssistant::PageIndex _areaPage{0};
     // page a tile asked for, applied by update() (an area tile must not rebuild the tree from
     // inside its own event callback)
-    int8_t _pendingPage{-1};
-    // last value drawn by the arc and the state it was drawn with (0xff = not drawn yet)
-    int16_t _arcValue[kMaxTiles]{};
-    uint8_t _arcState[kMaxTiles]{};
-    // range of the climate arc, 0.1 degree steps (0 = not set yet)
-    int16_t _arcMin[kMaxTiles]{};
-    int16_t _arcMax[kMaxTiles]{};
-    // the arc is being dragged, the polled value must not overwrite it
-    bool _arcPressed[kMaxTiles]{};
-    // value the arc had when it was pressed (a tap without a drag toggles the dimmer)
-    int16_t _arcPressValue[kMaxTiles]{};
-    // dimmer tile: value and position the drag started with (a drag without a movement is a tap)
-    uint8_t _dragLevel[kMaxTiles]{};
-    lv_coord_t _dragStartY[kMaxTiles]{};
-    bool _dragging[kMaxTiles]{};
+    int32_t _pendingPage{-1};
     // dimmer panel: the level slider or the color wheel is being dragged
     bool _controlPressed{false};
     // Level slider of the panel: the value it showed before the track was pressed and the position

@@ -195,8 +195,11 @@ void WeatherStation2Plugin::setup(SetupModeType mode, const PluginComponents::De
 #if IOT_HASS_DASHBOARD
     // reads /hass.yaml and starts the request task, a missing file is not an error
     _hass.begin();
-    __LDBG_printf("dashboard at %p (%s), %u bytes", static_cast<const void *>(&_hass),
-                  esp_ptr_external_ram(&_hass) ? "PSRAM" : "internal RAM", static_cast<unsigned>(sizeof(_hass)));
+    __LDBG_printf("dashboard at %p (%s), %u bytes (tile %u, flags %u, widgets %u)", static_cast<const void *>(&_hass),
+                  esp_ptr_external_ram(&_hass) ? "PSRAM" : "internal RAM", static_cast<unsigned>(sizeof(_hass)),
+                  static_cast<unsigned>(sizeof(WeatherStation2::HomeAssistant::Tile)),
+                  static_cast<unsigned>(WeatherStation2::HomeAssistant::Dashboard::getTileFlagsSize()),
+                  static_cast<unsigned>(WeatherStation2::HassScreen::getTileWidgetsSize()));
 #endif
 #if MQTT_SUPPORT
     // the indoor metrics can read MQTT topics, the client calls onConnect()/onMessage()

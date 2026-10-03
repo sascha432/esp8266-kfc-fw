@@ -114,6 +114,13 @@ ICONS = (
     ("WIFI_REMOVE", "wifi-remove"),
     ("WIFI_ALERT", "wifi-alert"),
     ("WIFI_OFF", "wifi-off"),
+    # state and device_class icons of the home assistant tiles (appended, the values above stay
+    # stable). The off state of an icon and the glyphs a `device_class` maps to
+    ("POWER_PLUG_OFF", "power-plug-off"),
+    ("MOTION_SENSOR_OFF", "motion-sensor-off"),
+    ("SINE_WAVE", "sine-wave"),
+    ("CURRENT_AC", "current-ac"),
+    ("LIGHTNING_BOLT", "lightning-bolt"),
 )
 
 # Theme color of every icon (LVGLUI constants, used by the preview and verified against the
@@ -172,6 +179,11 @@ ICON_COLORS = {
     "WIFI_REMOVE": "kColorTextMuted",
     "WIFI_ALERT": "kColorError",
     "WIFI_OFF": "kColorTextMuted",
+    "POWER_PLUG_OFF": "kColorTextValue",
+    "MOTION_SENSOR_OFF": "kColorTextValue",
+    "SINE_WAVE": "kColorAccent",
+    "CURRENT_AC": "kColorAccent",
+    "LIGHTNING_BOLT": "kColorHighlight",
 }
 
 # ---------------------------------------------------------------------------------------------

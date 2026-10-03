@@ -47,9 +47,8 @@ except ImportError:
 # ------------------------------------------------------------------------------------------------
 # limits, they mirror hass_config.h
 # ------------------------------------------------------------------------------------------------
-MAX_FILE_SIZE = 32768
-MAX_TILES = 128               # the whole configuration, all pages together
-MAX_PAGES = 128               # the main page plus one page per area
+# there is no fixed tile or page count and no file size limit any more: the model is a dynamic
+# vector in the PSRAM, a single page is bounded by its grid
 MAX_NESTING = 6               # deepest nesting of areas
 MAX_GRID_COLS = 8
 MAX_GRID_ROWS = 8
@@ -304,13 +303,11 @@ class Config:
     def _addTiles(self, entries, page, depth, prefix=''):
         for index, entry in enumerate(entries, 1):
             label = ('%s.%u' % (prefix, index)) if prefix else ('%u' % index)
-            check(len(self.tiles) < MAX_TILES, 'too many tiles, the maximum is %u' % MAX_TILES)
             tile = Tile(label, entry, depth)
             tile.page = page
             self.tiles.append(tile)
             self.pages[page].append(tile)
             if tile.type == 'area':
-                check(len(self.pages) < MAX_PAGES, 'too many areas, the maximum is %u' % (MAX_PAGES - 1))
                 tile.area_page = len(self.pages)
                 self.pages.append([])
                 self._addTiles(tile.children, tile.area_page, depth + 1, label)
@@ -464,9 +461,6 @@ class Config:
 
 
 def load_config(file_name):
-    size = os.path.getsize(file_name)
-    if size > MAX_FILE_SIZE:
-        raise ConfigError('%s is too large (%u bytes, the maximum is %u)' % (file_name, size, MAX_FILE_SIZE))
     with open(file_name, 'rb') as file:
         raw = file.read()
     try:

@@ -6,6 +6,7 @@
 
 #include <PrintHtmlEntities.h>
 #include <PrintString.h>
+#include <utility>
 
 #ifndef DEBUG_WEATHER_STATION2
 #    define DEBUG_WEATHER_STATION2 1
@@ -71,60 +72,63 @@ uint32_t _hex4(const char *text)
     return value;
 }
 
-// one character into the output buffer, always keeps room for the terminator
-void _appendChar(char *output, size_t &index, size_t outputSize, char chr)
+// one character into the buffer of the parser, always keeps room for the terminator. `write` is the
+// cursor of the buffer (`end` is its end) and is advanced past what was written
+void _appendChar(char *&write, const char *end, char chr)
 {
-    if (index + 1 < outputSize) {
-        output[index++] = chr;
+    if (write + 1 < end) {
+        *write++ = chr;
     }
 }
 
 // code point of a \uXXXX escape as UTF-8 (the unit of a temperature sensor arrives as \u00B0C,
-// see _parseStringValue())
-void _appendCodepoint(char *output, size_t &index, size_t outputSize, uint32_t codepoint)
+// see _decodeStringValue())
+void _appendCodepoint(char *&write, const char *end, uint32_t codepoint)
 {
     if (codepoint < 0x80) {
-        _appendChar(output, index, outputSize, static_cast<char>(codepoint));
+        _appendChar(write, end, static_cast<char>(codepoint));
     }
     else if (codepoint < 0x800) {
-        _appendChar(output, index, outputSize, static_cast<char>(0xc0 | (codepoint >> 6)));
-        _appendChar(output, index, outputSize, static_cast<char>(0x80 | (codepoint & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0xc0 | (codepoint >> 6)));
+        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)));
     }
     else if (codepoint < 0x10000) {
-        _appendChar(output, index, outputSize, static_cast<char>(0xe0 | (codepoint >> 12)));
-        _appendChar(output, index, outputSize, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
-        _appendChar(output, index, outputSize, static_cast<char>(0x80 | (codepoint & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0xe0 | (codepoint >> 12)));
+        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)));
     }
     else {
-        _appendChar(output, index, outputSize, static_cast<char>(0xf0 | (codepoint >> 18)));
-        _appendChar(output, index, outputSize, static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f)));
-        _appendChar(output, index, outputSize, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
-        _appendChar(output, index, outputSize, static_cast<char>(0x80 | (codepoint & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0xf0 | (codepoint >> 18)));
+        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)));
     }
 }
 
-// JSON string of a value, false when the key is missing or the value is null
-bool _parseStringValue(const char *payload, const char *entity, const char *key, char *output, size_t outputSize)
+// The value of `key` is decoded into the buffer at `write`, NUL terminated, and `write` is advanced
+// past it. The function allocates nothing and uses no stack buffer: the escapes are decoded straight
+// into the buffer of the detail slot. Returns the start of the value, nullptr when the key is
+// missing (or null) and when the value does not fit into the buffer any more - a value is never
+// truncated (a shortened effect name would be sent to the entity and ignored)
+const char *_decodeStringValue(const char *payload, const char *entity, const char *key, char *&write, const char *end)
 {
-    if (outputSize == 0) {
-        return false;
-    }
-    output[0] = 0;
     auto value = _valueOf(payload, entity, key);
-    if (!value) {
-        return false;
+    if (!value || !strncmp(value, "null", 4)) {
+        return nullptr;
     }
-    if (!strncmp(value, "null", 4)) {
-        return false;
-    }
-    size_t index = 0;
+    char *const start = write;
     if (*value != '"') {
         // a number or a literal (true/false), copy it as it is
-        while (*value && *value != ',' && *value != '}' && index + 1 < outputSize) {
-            output[index++] = *value++;
+        while (*value && *value != ',' && *value != '}') {
+            _appendChar(write, end, *value++);
         }
-        output[index] = 0;
-        return index != 0;
+        if (write + 1 >= end) {
+            write = start;
+            return nullptr;
+        }
+        *write++ = 0;
+        // an empty literal is no value (the key was directly followed by a comma or a brace)
+        return (write > start + 1) ? start : nullptr;
     }
     // The escapes are decoded (`tojson` of Home Assistant writes every non ASCII character as
     // \uXXXX, a temperature unit arrives as "\u00B0C"): a string that is copied as it is shows the
@@ -132,32 +136,32 @@ bool _parseStringValue(const char *payload, const char *entity, const char *key,
     value++;
     while (*value && *value != '"') {
         if (*value != '\\' || !value[1]) {
-            _appendChar(output, index, outputSize, *value++);
+            _appendChar(write, end, *value++);
             continue;
         }
         const auto escaped = value[1];
         value += 2;
         switch (escaped) {
         case 'n':
-            _appendChar(output, index, outputSize, '\n');
+            _appendChar(write, end, '\n');
             break;
         case 'r':
-            _appendChar(output, index, outputSize, '\r');
+            _appendChar(write, end, '\r');
             break;
         case 't':
-            _appendChar(output, index, outputSize, '\t');
+            _appendChar(write, end, '\t');
             break;
         case 'b':
-            _appendChar(output, index, outputSize, '\b');
+            _appendChar(write, end, '\b');
             break;
         case 'f':
-            _appendChar(output, index, outputSize, '\f');
+            _appendChar(write, end, '\f');
             break;
         case 'u':
             {
                 auto codepoint = _hex4(value);
                 if (!codepoint) {
-                    _appendChar(output, index, outputSize, 'u');
+                    _appendChar(write, end, 'u');
                     break;
                 }
                 value += 4;
@@ -169,17 +173,60 @@ bool _parseStringValue(const char *payload, const char *entity, const char *key,
                         value += 6;
                     }
                 }
-                _appendCodepoint(output, index, outputSize, codepoint);
+                _appendCodepoint(write, end, codepoint);
             }
             break;
         default:
             // \" \\ \/ and an escape the firmware does not know: the character stands for itself
-            _appendChar(output, index, outputSize, escaped);
+            _appendChar(write, end, static_cast<char>(escaped));
             break;
         }
     }
-    output[index] = 0;
-    return true;
+    if (write + 1 >= end) {
+        // the value does not fit into the buffer, it is dropped instead of being truncated
+        write = start;
+        return nullptr;
+    }
+    *write++ = 0;
+    return start;
+}
+
+// value of an attribute the response did not carry (never nullptr, see Detail::kUnset)
+const char *_orUnset(const char *value)
+{
+    return value ? value : Detail::kUnset;
+}
+
+// copies a value of the previous response into the buffer of the current one (the carry over of an
+// attribute the entity stopped reporting). The source is the other slot and must not be pointed at:
+// the next response reuses its buffer
+const char *_copyValue(const char *value, char *&write, const char *end)
+{
+    if (!value || !*value) {
+        return nullptr;
+    }
+    char *const start = write;
+    while (*value) {
+        _appendChar(write, end, *value++);
+    }
+    if (write + 1 >= end) {
+        write = start;
+        return nullptr;
+    }
+    *write++ = 0;
+    return start;
+}
+
+// value of `key` into a fixed size buffer (the tile model of a state response), false when the key
+// is missing, the value is null or an empty literal
+bool _parseStringValue(const char *payload, const char *entity, const char *key, char *output, size_t outputSize)
+{
+    if (outputSize == 0) {
+        return false;
+    }
+    output[0] = 0;
+    char *write = output;
+    return _decodeStringValue(payload, entity, key, write, output + outputSize) != nullptr;
 }
 
 // number of a value, false when the key is missing, null or a string
@@ -198,7 +245,137 @@ bool _parseNumberValue(const char *payload, const char *entity, const char *key,
     return true;
 }
 
+// buffer of a detail slot. It is allocated in the PSRAM (the internal DRAM is the scarce resource of
+// this board, see _ws2PsramObject()) and released with free(), which works for both heaps
+char *_allocateDetailBuffer(size_t size)
+{
+#if ESP32
+    auto ptr = static_cast<char *>(ps_malloc(size));
+    if (ptr) {
+        return ptr;
+    }
+#endif
+    return static_cast<char *>(malloc(size));
+}
+
 } // namespace
+
+// ------------------------------------------------------------------------------------------
+// Detail
+// ------------------------------------------------------------------------------------------
+Detail::~Detail()
+{
+    reset();
+}
+
+void Detail::reset()
+{
+    if (buffer) {
+        free(buffer);
+        buffer = nullptr;
+    }
+    capacity = 0;
+    clear();
+}
+
+void Detail::clear()
+{
+    valid = false;
+    tile = kNoTile;
+    generation = 0;
+    mode = kUnset;
+    preset = kUnset;
+    fanMode = kUnset;
+    effect = kUnset;
+    colorMode = kUnset;
+    colorModes = kUnset;
+    modeList = kUnset;
+    presetList = kUnset;
+    fanModeList = kUnset;
+    effectList = kUnset;
+    hue = 0;
+    saturation = 0;
+    level = 0;
+    colorTemp = 0;
+    minColorTemp = 0;
+    maxColorTemp = 0;
+    used = 0;
+}
+
+void Detail::swap(Detail &other)
+{
+    std::swap(valid, other.valid);
+    std::swap(tile, other.tile);
+    std::swap(generation, other.generation);
+    std::swap(mode, other.mode);
+    std::swap(preset, other.preset);
+    std::swap(fanMode, other.fanMode);
+    std::swap(effect, other.effect);
+    std::swap(colorMode, other.colorMode);
+    std::swap(colorModes, other.colorModes);
+    std::swap(modeList, other.modeList);
+    std::swap(presetList, other.presetList);
+    std::swap(fanModeList, other.fanModeList);
+    std::swap(effectList, other.effectList);
+    std::swap(hue, other.hue);
+    std::swap(saturation, other.saturation);
+    std::swap(level, other.level);
+    std::swap(colorTemp, other.colorTemp);
+    std::swap(minColorTemp, other.minColorTemp);
+    std::swap(maxColorTemp, other.maxColorTemp);
+    std::swap(buffer, other.buffer);
+    std::swap(used, other.used);
+    std::swap(capacity, other.capacity);
+}
+
+bool Detail::reserve(size_t length)
+{
+    // every value is written behind the previous one and NUL terminated, so the payload plus a
+    // terminator per value is the upper bound
+    const auto required = length + 32;
+    if (required <= capacity) {
+        return true;
+    }
+    const auto size = (required > kMaxBuffer) ? kMaxBuffer : required;
+    const auto ptr = _allocateDetailBuffer(size);
+    if (!ptr) {
+        return false;
+    }
+    // the buffer is empty here (clear() ran before), nothing has to be copied
+    if (buffer) {
+        free(buffer);
+    }
+    buffer = ptr;
+    capacity = size;
+    return true;
+}
+
+void Detail::shrink()
+{
+    if (!buffer) {
+        return;
+    }
+    if (!used) {
+        // no value of the response was stored
+        free(buffer);
+        buffer = nullptr;
+        capacity = 0;
+        return;
+    }
+    // The tail is only given back when it is worth another allocation: the buffer is sized from the
+    // payload of a whole page while the panel keeps a handful of values of its own entity
+    if (used + 32 >= capacity) {
+        return;
+    }
+    const auto ptr = _allocateDetailBuffer(used);
+    if (!ptr) {
+        return; // keeping the larger buffer is fine
+    }
+    memcpy(ptr, buffer, used);
+    free(buffer);
+    buffer = ptr;
+    capacity = used;
+}
 
 // ------------------------------------------------------------------------------------------
 // lifecycle
@@ -303,7 +480,8 @@ void Dashboard::_reload()
     _client.stop();
     // the tile indices of the new configuration do not have to match the old ones
     _detailTile = kNoTile;
-    _detail = Detail();
+    _detail.reset();
+    _detailBefore.reset();
     // the graph of the sensor panel belongs to a tile of the previous version
     _statsTile = kStatsNone;
     _statsHours = kStatsDefaultHours;
@@ -364,7 +542,7 @@ void Dashboard::update()
     if (_detailTile != kNoTile) {
         String detail;
         if (_client.takeDetailResponse(detail)) {
-            _applyDetail(detail.c_str());
+            _applyDetail(detail.c_str(), detail.length());
         }
     }
     _client.takeStatus(_statusCode, _requestError, _duration, _responseTime);
@@ -911,7 +1089,7 @@ void Dashboard::requestDetail(TileIndex index)
     }
     // keep the generation so that the screen knows when the new values arrived
     const auto generation = _detail.generation;
-    _detail = Detail();
+    _detail.reset();
     _detail.generation = generation;
     _detail.tile = index;
     _detailTile = index;
@@ -926,7 +1104,7 @@ void Dashboard::closeDetail()
     _detailTile = kNoTile;
     _client.closeDetail();
     const auto generation = _detail.generation;
-    _detail = Detail();
+    _detail.reset();
     _detail.generation = generation;
 }
 
@@ -972,7 +1150,7 @@ void Dashboard::closeStats()
     _statsPending = false;
 }
 
-void Dashboard::_applyDetail(const char *payload)
+void Dashboard::_applyDetail(const char *payload, size_t length)
 {
     if (_detailTile == kNoTile || _detailTile >= _config.getTileCount()) {
         return;
@@ -980,58 +1158,50 @@ void Dashboard::_applyDetail(const char *payload)
     const auto &tile = _config.getTile(_detailTile);
     const auto generation = _detail.generation + 1;
     // A switched off light reports neither the effects nor the color, some integrations drop the
-    // whole attribute. The last known values are kept then, so the panel keeps its buttons, its
-    // effects and the color of the entity instead of falling back to "no effects, white"
-    const Detail previous = (_detail.tile == _detailTile) ? _detail : Detail();
-    _detail = Detail();
+    // whole attribute. The last known values are carried over from the previous response then, so
+    // the panel keeps its effects and the color of the entity instead of falling back to "no
+    // effects, white". The two slots only exchange the pointers and the buffer: nothing is
+    // allocated or copied to keep the previous response
+    _detailBefore.swap(_detail);
+    const bool carryOver = (_detailBefore.tile == _detailTile);
+    _detail.clear();
     _detail.tile = _detailTile;
     _detail.generation = generation;
 
-    // the lists are longer than a name (a light can have a dozen effects)
-    char buffer[256];
-    if (_parseStringValue(payload, tile.entity, "state", buffer, sizeof(buffer))) {
-        // a climate reports its mode as its state ("heat", "auto", "off", ...)
-        strncpy(_detail.mode, buffer, sizeof(_detail.mode) - 1);
+    // One buffer for every value of the response, sized from the payload and capped by
+    // Detail::kMaxBuffer - it is given back to what the values really need when the parse is done
+    if (!_detail.reserve(length)) {
+        __DBG_printf_E("hass> cannot allocate %u bytes for the panel of tile %u", static_cast<unsigned>(length), static_cast<unsigned>(_detailTile));
+        return;
     }
-    if (_parseStringValue(payload, tile.entity, "preset_mode", buffer, sizeof(buffer))) {
-        strncpy(_detail.preset, buffer, sizeof(_detail.preset) - 1);
-    }
-    if (_parseStringValue(payload, tile.entity, "fan_mode", buffer, sizeof(buffer))) {
-        strncpy(_detail.fanMode, buffer, sizeof(_detail.fanMode) - 1);
-    }
-    if (_parseStringValue(payload, tile.entity, "effect", buffer, sizeof(buffer))) {
-        strncpy(_detail.effect, buffer, sizeof(_detail.effect) - 1);
-    }
-    if (_parseStringValue(payload, tile.entity, "color_mode", buffer, sizeof(buffer))) {
-        strncpy(_detail.colorMode, buffer, sizeof(_detail.colorMode) - 1);
-    }
+    char *write = _detail.buffer;
+    const char *const end = _detail.buffer + _detail.capacity;
+
+    // the values are decoded straight into the buffer, the parser neither allocates nor uses a
+    // stack buffer - it gets the write cursor of the buffer
+    _detail.mode = _orUnset(_decodeStringValue(payload, tile.entity, "state", write, end));
+    _detail.preset = _orUnset(_decodeStringValue(payload, tile.entity, "preset_mode", write, end));
+    _detail.fanMode = _orUnset(_decodeStringValue(payload, tile.entity, "fan_mode", write, end));
+    _detail.effect = _orUnset(_decodeStringValue(payload, tile.entity, "effect", write, end));
+    _detail.colorMode = _orUnset(_decodeStringValue(payload, tile.entity, "color_mode", write, end));
+    _detail.colorModes = _orUnset(_decodeStringValue(payload, tile.entity, "color_modes", write, end));
+    _detail.modeList = _orUnset(_decodeStringValue(payload, tile.entity, "hvac_modes", write, end));
+    _detail.presetList = _orUnset(_decodeStringValue(payload, tile.entity, "preset_modes", write, end));
+    _detail.fanModeList = _orUnset(_decodeStringValue(payload, tile.entity, "fan_modes", write, end));
+    _detail.effectList = _orUnset(_decodeStringValue(payload, tile.entity, "effect_list", write, end));
     float number = 0;
     if (_parseNumberValue(payload, tile.entity, "brightness", number)) {
         auto percent = (number * 100.0f) / 255.0f;
         _detail.level = static_cast<uint8_t>((percent < 0) ? 0 : ((percent > 100) ? 100 : percent));
     }
-    if (_parseStringValue(payload, tile.entity, "hs_color", buffer, sizeof(buffer))) {
-        // "30.0,100.0"
+    // the two numbers of "30.0,100.0" are parsed in place, they do not need the buffer
+    const auto hsColor = _valueOf(payload, tile.entity, "hs_color");
+    if (hsColor && *hsColor == '"') {
         char *stop = nullptr;
-        _detail.hue = strtof(buffer, &stop);
+        _detail.hue = strtof(hsColor + 1, &stop);
         if (stop && *stop == ',') {
             _detail.saturation = strtof(stop + 1, nullptr);
         }
-    }
-    if (_parseStringValue(payload, tile.entity, "hvac_modes", buffer, sizeof(buffer))) {
-        _detail.modeList = buffer;
-    }
-    if (_parseStringValue(payload, tile.entity, "preset_modes", buffer, sizeof(buffer))) {
-        _detail.presetList = buffer;
-    }
-    if (_parseStringValue(payload, tile.entity, "fan_modes", buffer, sizeof(buffer))) {
-        _detail.fanModeList = buffer;
-    }
-    if (_parseStringValue(payload, tile.entity, "effect_list", buffer, sizeof(buffer))) {
-        _detail.effectList = buffer;
-    }
-    if (_parseStringValue(payload, tile.entity, "color_modes", buffer, sizeof(buffer))) {
-        strncpy(_detail.colorModes, buffer, sizeof(_detail.colorModes) - 1);
     }
     if (_parseNumberValue(payload, tile.entity, "color_temp", number)) {
         _detail.colorTemp = number;
@@ -1043,27 +1213,34 @@ void Dashboard::_applyDetail(const char *payload)
         _detail.maxColorTemp = number;
     }
     // carry the values of the last response over when the entity stopped reporting them (it is off)
-    if (!_detail.effectList.length()) {
-        _detail.effectList = previous.effectList;
+    if (carryOver) {
+        if (!_detail.effect[0]) {
+            _detail.effect = _orUnset(_copyValue(_detailBefore.effect, write, end));
+        }
+        if (!_detail.colorModes[0]) {
+            _detail.colorModes = _orUnset(_copyValue(_detailBefore.colorModes, write, end));
+        }
+        if (!_detail.effectList[0]) {
+            _detail.effectList = _orUnset(_copyValue(_detailBefore.effectList, write, end));
+        }
+        if (_detail.colorTemp <= 0) {
+            _detail.colorTemp = _detailBefore.colorTemp;
+        }
+        if (_detail.minColorTemp <= 0) {
+            _detail.minColorTemp = _detailBefore.minColorTemp;
+            _detail.maxColorTemp = _detailBefore.maxColorTemp;
+        }
+        if (_detail.hue <= 0 && _detail.saturation <= 0) {
+            _detail.hue = _detailBefore.hue;
+            _detail.saturation = _detailBefore.saturation;
+        }
     }
-    if (!_detail.effect[0]) {
-        strncpy(_detail.effect, previous.effect, sizeof(_detail.effect) - 1);
-    }
-    if (!_detail.colorModes[0]) {
-        strncpy(_detail.colorModes, previous.colorModes, sizeof(_detail.colorModes) - 1);
-    }
-    if (_detail.colorTemp <= 0) {
-        _detail.colorTemp = previous.colorTemp;
-    }
-    if (_detail.minColorTemp <= 0) {
-        _detail.minColorTemp = previous.minColorTemp;
-        _detail.maxColorTemp = previous.maxColorTemp;
-    }
-    if (_detail.hue <= 0 && _detail.saturation <= 0) {
-        _detail.hue = previous.hue;
-        _detail.saturation = previous.saturation;
-    }
+    // the buffer is given back to what the values of this response really need
+    _detail.used = static_cast<size_t>(write - _detail.buffer);
+    _detail.shrink();
     _detail.valid = true;
+    __LDBG_printf("hass> panel of tile %u: %u bytes payload, %u bytes stored", static_cast<unsigned>(_detailTile),
+                  static_cast<unsigned>(length), static_cast<unsigned>(_detail.used));
 }
 
 // ------------------------------------------------------------------------------------------

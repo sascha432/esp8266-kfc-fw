@@ -923,9 +923,10 @@ private:
     // the back tile (an entity without color/effects has fewer buttons)
     void _layoutPanelButtons();
     // items of the option list the open panel shows (the mode, the preset and the fan mode of a
-    // climate, the effects of a light), nullptr while the view has no list. A tapped item is looked
-    // up in it by its ordinal (see _panelCallback())
-    const String *_panelListItems() const;
+    // climate, the effects of a light), nullptr while the view has no list. The list is comma
+    // separated and points into the buffer of the detail slot of the dashboard. A tapped item is
+    // looked up in it by its ordinal (see _panelCallback())
+    const char *_panelListItems() const;
     // fills the list of the panel with the items of the current view
     void _buildPanelList();
     // refreshes the header, the pills, the slider and the list of the open panel

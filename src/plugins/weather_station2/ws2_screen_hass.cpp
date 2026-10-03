@@ -237,7 +237,7 @@ bool lightHasColorTemp(const HomeAssistant::Detail &detail)
 
 bool lightHasEffects(const HomeAssistant::Detail &detail)
 {
-    return detail.effectList.length() > 0;
+    return detail.effectList[0] != 0;
 }
 
 // slider of a light panel, the level and the colour temperature share their look. `radius` is the
@@ -812,48 +812,63 @@ String climateStateText(const TileValue &value)
     return stateText(value.state);
 }
 
+// One item of a comma separated panel list: `begin`/`end` delimit it (the spaces around it are
+// skipped) and `ptr` is the cursor to continue with. Empty entries are skipped - they never become
+// one of the buttons of a list
+static bool nextListItem(const char *&ptr, const char *&begin, const char *&end)
+{
+    for (;;) {
+        if (!*ptr) {
+            return false;
+        }
+        begin = ptr;
+        while (*ptr && *ptr != ',') {
+            ptr++;
+        }
+        end = ptr;
+        if (*ptr == ',') {
+            ptr++;
+        }
+        while (begin < end && (*begin == ' ' || *begin == '\t')) {
+            begin++;
+        }
+        while (end > begin && (end[-1] == ' ' || end[-1] == '\t')) {
+            end--;
+        }
+        if (end > begin) {
+            return true;
+        }
+    }
+}
+
 // Number of items of a comma separated panel list (the options of a climate, the effects of a
 // light): the empty entries are skipped, the counter is what the grid of items of the list is
 // built from (see _buildPanelList())
-uint8_t countListItems(const String &text)
+uint8_t countListItems(const char *text)
 {
     uint8_t count = 0;
-    int32_t start = 0;
-    while (start <= static_cast<int32_t>(text.length())) {
-        auto end = text.indexOf(',', start);
-        if (end < 0) {
-            end = static_cast<int32_t>(text.length());
-        }
-        auto item = text.substring(start, end);
-        item.trim();
-        if (item.length()) {
-            count++;
-        }
-        start = end + 1;
+    const char *ptr = text;
+    const char *begin = nullptr;
+    const char *end = nullptr;
+    while (nextListItem(ptr, begin, end)) {
+        count++;
     }
     return count;
 }
 
 // Item of a comma separated panel list by its ordinal (0 based): the empty entries are skipped,
 // exactly like countListItems() counts and _buildPanelList() creates them
-String listItemText(const String &text, uint8_t ordinal)
+String listItemText(const char *text, uint8_t ordinal)
 {
     uint8_t index = 0;
-    int32_t start = 0;
-    while (start <= static_cast<int32_t>(text.length())) {
-        auto end = text.indexOf(',', start);
-        if (end < 0) {
-            end = static_cast<int32_t>(text.length());
+    const char *ptr = text;
+    const char *begin = nullptr;
+    const char *end = nullptr;
+    while (nextListItem(ptr, begin, end)) {
+        if (index == ordinal) {
+            return String(begin, static_cast<unsigned int>(end - begin));
         }
-        auto item = text.substring(start, end);
-        item.trim();
-        if (item.length()) {
-            if (index == ordinal) {
-                return item;
-            }
-            index++;
-        }
-        start = end + 1;
+        index++;
     }
     return String();
 }
@@ -2843,24 +2858,25 @@ const char *HassScreen::_expectedItemOf(PanelView view, const char *reported)
 
 // The items of the option list the open panel shows, nullptr while the view has no list. Only the
 // panel that is open has a list: the effects of a light, the mode, the preset and the fan mode of a
-// climate
-const String *HassScreen::_panelListItems() const
+// climate. The lists are comma separated and point into the buffer of the detail slot of the
+// dashboard (see Detail)
+const char *HassScreen::_panelListItems() const
 {
     const auto &detail = _dashboard.getDetail();
     if (_panel == Panel::CLIMATE) {
         switch (_panelView) {
         case PanelView::OPTION_1:
-            return &detail.modeList;
+            return detail.modeList;
         case PanelView::OPTION_2:
-            return &detail.presetList;
+            return detail.presetList;
         case PanelView::OPTION_3:
-            return &detail.fanModeList;
+            return detail.fanModeList;
         default:
             break;
         }
     }
     else if (_panelView == PanelView::EFFECTS) {
-        return &detail.effectList;
+        return detail.effectList;
     }
     return nullptr;
 }
@@ -2894,12 +2910,12 @@ void HassScreen::_buildPanelList()
     default:
         break;
     }
-    if (!items || !items->length()) {
+    if (!items || !*items) {
         return;
     }
     // The list is only built again when the items or the marked one changed: the response comes
     // every poll and rebuilding the items each time makes the list flicker
-    String content = *items;
+    String content(items);
     content += '|';
     content += current ? current : "";
     if (_listView == static_cast<int8_t>(_panelView) && _listContent == content) {
@@ -2921,7 +2937,7 @@ void HassScreen::_buildPanelList()
                                                     2 * borderWidth);
     // the rows of items that fit into the list without scrolling (5 on this display)
     const uint8_t rowsFit = static_cast<uint8_t>((listHeight + kListItemGap) / (kListItemHeight + kListItemGap));
-    const auto itemCount = countListItems(*items);
+    const auto itemCount = countListItems(items);
     const uint8_t columns = (itemCount <= rowsFit) ? 1 : 2;
     // an item keeps its width (half of the list, the width of the effects of a dimmer) when the
     // list is a single column, it is only centered then
@@ -2935,31 +2951,24 @@ void HassScreen::_buildPanelList()
     const auto offsetY = static_cast<lv_coord_t>((columns == 1 && gridHeight < listHeight) ? (listHeight - gridHeight) / 2 : 0);
 
     uint8_t i = 0;
-    int32_t start = 0;
     lv_obj_t *marked = nullptr;
     lv_coord_t markedY = 0;
-    const auto &text = *items;
-    while (start <= static_cast<int32_t>(text.length())) {
-        auto end = text.indexOf(',', start);
-        if (end < 0) {
-            end = static_cast<int32_t>(text.length());
+    const char *cursor = items;
+    const char *begin = nullptr;
+    const char *end = nullptr;
+    while (nextListItem(cursor, begin, end)) {
+        const String item(begin, static_cast<unsigned int>(end - begin));
+        const auto col = static_cast<lv_coord_t>(offsetX + (i % columns) * (itemWidth + kListItemGap));
+        const auto row = static_cast<lv_coord_t>(offsetY + (i / columns) * (kListItemHeight + kListItemGap));
+        auto obj = LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item.c_str());
+        const auto active = current && detail.valid && !strcasecmp(current, item.c_str());
+        LVGLUI::setListItemActive(obj, active);
+        if (active) {
+            marked = obj;
+            markedY = row;
         }
-        auto item = text.substring(start, end);
-        item.trim();
-        if (item.length()) {
-            const auto col = static_cast<lv_coord_t>(offsetX + (i % columns) * (itemWidth + kListItemGap));
-            const auto row = static_cast<lv_coord_t>(offsetY + (i / columns) * (kListItemHeight + kListItemGap));
-            auto obj = LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item.c_str());
-            const auto active = current && detail.valid && !strcasecmp(current, item.c_str());
-            LVGLUI::setListItemActive(obj, active);
-            if (active) {
-                marked = obj;
-                markedY = row;
-            }
-            lv_obj_add_event_cb(obj, _panelCallback, LV_EVENT_CLICKED, this);
-            i++;
-        }
-        start = end + 1;
+        lv_obj_add_event_cb(obj, _panelCallback, LV_EVENT_CLICKED, this);
+        i++;
     }
     // The list is built again when an item was tapped (the marked one changed) or when the items
     // arrived: the scroll position jumps back to the top then and the marker can end up below the
@@ -4642,7 +4651,7 @@ void HassScreen::_panelCallback(lv_event_t *event)
         if (!items || ordinal < 0) {
             return;
         }
-        const auto text = listItemText(*items, static_cast<uint8_t>(ordinal));
+        const auto text = listItemText(items, static_cast<uint8_t>(ordinal));
         if (!text.length()) {
             return;
         }

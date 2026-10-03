@@ -23,9 +23,40 @@ namespace WeatherStation2 {
 namespace HomeAssistant {
 
 // Attributes of the entity a panel shows. They are only polled while a panel is open and stored in
-// one slot - the dashboard shows one panel at a time. The lists are the items the panel offers,
-// comma separated (the panel splits them) and empty when the entity does not have that attribute.
+// one slot - the dashboard shows one panel at a time. Every string points into the single buffer of
+// the slot (allocated once per response, see reserve()/shrink()); the lists are the items the panel
+// offers, comma separated, and empty when the entity does not have that attribute. An attribute
+// that was not part of the response points at the empty string instead of nullptr, so neither the
+// parser nor the screen has to check it.
 struct Detail {
+    // The struct is never copied: the pointers belong to the buffer and a copy would duplicate
+    // both. The dashboard keeps two slots and swaps them (see Dashboard::_detailBefore)
+    Detail(const Detail &) = delete;
+    Detail &operator=(const Detail &) = delete;
+
+    // longest buffer a response is parsed into. The payload of a page is a few kilobytes but the
+    // panel only reads the values of its own entity - a handful of names and lists. The largest
+    // value is the effect list of a light (the LED matrix has 169 characters)
+    static constexpr size_t kMaxBuffer = 4096;
+
+    // value of an attribute that was not set
+    static constexpr const char *kUnset = "";
+
+    Detail() = default;
+    ~Detail();
+
+    // drops the values and releases the buffer
+    void reset();
+    // drops the values, the buffer is kept for the next response
+    void clear();
+    // exchanges two slots: the strings and the buffer, nothing is allocated or copied
+    void swap(Detail &other);
+    // makes room for a payload of `length` bytes (never more than kMaxBuffer). The buffer of the
+    // previous response is reused, it is only replaced when it is too small
+    bool reserve(size_t length);
+    // gives the unused tail of the buffer back
+    void shrink();
+
     // the values below are valid
     bool valid{false};
     // index of the tile the panel belongs to, kNoTile while no panel is open
@@ -33,31 +64,40 @@ struct Detail {
     // increases with every response, the panel rebuilds its lists when it changes
     uint32_t generation{0};
     // climate: hvac mode (the state of the entity)
-    char mode[16]{};
+    const char *mode{kUnset};
     // climate: preset mode ("none" when the entity has none)
-    char preset[16]{};
+    const char *preset{kUnset};
     // climate: fan mode
-    char fanMode[16]{};
+    const char *fanMode{kUnset};
     // light: current effect, empty when none is running (an effect name is longer than a mode, the
     // longest of the LED matrix is "Spectrum Single Color Bars")
-    char effect[kNameLength]{};
+    const char *effect{kUnset};
     // light: color mode of the entity ("hs", "color_temp", "brightness", ...)
-    char colorMode[16]{};
+    const char *colorMode{kUnset};
     // light: hue in degrees and saturation in percent (hs_color)
     float hue{0};
     float saturation{0};
     // light: brightness in percent
     uint8_t level{0};
-    // light: the colour modes the entity supports ("hs,rgb,color_temp"), empty when unknown
-    char colorModes[48]{};
-    // light: colour temperature in kelvin, 0 when the entity has none, and the range of the slider
+    // light: the color modes the entity supports ("hs,rgb,color_temp"), empty when unknown
+    const char *colorModes{kUnset};
+    // light: color temperature in kelvin, 0 when the entity has none, and the range of the slider
     float colorTemp{0};
     float minColorTemp{0};
     float maxColorTemp{0};
-    String modeList;
-    String presetList;
-    String fanModeList;
-    String effectList;
+    // the items the panel offers, comma separated, empty when the entity does not have that
+    // attribute
+    const char *modeList{kUnset};
+    const char *presetList{kUnset};
+    const char *fanModeList{kUnset};
+    const char *effectList{kUnset};
+
+    // the buffer every string above points into (PSRAM, allocated on demand and reused)
+    char *buffer{nullptr};
+    // bytes of `buffer` the response used (the write cursor of the parser)
+    size_t used{0};
+    // size of the allocation
+    size_t capacity{0};
 };
 
 // Capabilities of the panel of a tile, one bit per control. The screen maps them to the buttons of
@@ -226,8 +266,9 @@ private:
     void _updateImages();
     // maps the response of the request task into the tiles
     void _applyResponse(const char *payload, PageIndex page);
-    // maps the detail response of the open panel into _detail
-    void _applyDetail(const char *payload);
+    // maps the detail response of the open panel into _detail (`length` is the length of the
+    // payload, the buffer is sized from it)
+    void _applyDetail(const char *payload, size_t length);
     // reads the capabilities of the panel of a tile (kCapXxx) from a state response
     void _readCapabilities(const char *payload, const Tile &tile, TileIndex index);
     TileValue &_value(TileIndex index) {
@@ -282,8 +323,11 @@ private:
     PsramVector<PictureBox> _pictureBox;
     // page of the screen that is visible
     PageIndex _visiblePage{0};
-    // attributes of the entity of the open panel (one at a time)
+    // attributes of the entity of the open panel (one at a time) and the response of the poll
+    // before it. The two slots only exchange pointers (see Detail::swap), the values an entity
+    // stopped reporting are carried over from the older one (see _applyDetail())
     Detail _detail;
+    Detail _detailBefore;
     TileIndex _detailTile{kNoTile};
     // statistics of the open sensor panel: the tile and the range the graph was requested for, the
     // buckets of the last response (a copy of the ones of the client, the screen reads them from

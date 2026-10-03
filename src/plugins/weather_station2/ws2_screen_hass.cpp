@@ -4091,6 +4091,8 @@ void HassScreen::_stepSettingsTimeout(bool up)
     // the readout follows the new value right away
     _settingsUpdate = 0;
     _updateSettings();
+    // the stored parameter changed, the configuration is written (delayed)
+    _storeSettings();
 }
 
 void HassScreen::_applySettingsValue()
@@ -4099,6 +4101,22 @@ void HassScreen::_applySettingsValue()
         return;
     }
     LVGLPlugin::setPowerSavingLevel(static_cast<uint8_t>(lv_slider_get_value(_settingsRefs.editSlider)));
+    _storeSettings();
+}
+
+// The setters of the sheet only change the stored parameter in RAM (and read it back from there),
+// the writeable blob reaches NVS only through config.write(). The web forms call it after a form
+// has been saved, the sheet is the second front end of those parameters and has to do the same -
+// without it a change is live until the next reboot and then gone. The write is delayed, so a
+// slider drag or several steps of a timeout do not write the flash with every change.
+void HassScreen::_storeSettings()
+{
+    _Timer(_settingsWrite).add(kSettingsWriteDelay, false, [](Event::CallbackTimerPtr) {
+        if (config.isDirty()) {
+            __LDBG_printf("hass> quick settings written to the configuration");
+            config.write();
+        }
+    });
 }
 
 void HassScreen::_applySettingsAction()
@@ -4111,6 +4129,7 @@ void HassScreen::_applySettingsAction()
             // the four orientations of the display driver, in a circle
             const auto rotation = static_cast<uint8_t>((Plugins::WeatherStation::getHassRotation() + 1) & 0x03);
             Plugins::WeatherStation::setHassRotation(rotation);
+            _storeSettings();
             __LDBG_printf("hass> rotating the dashboard to %u", static_cast<unsigned>(rotation));
             // applied by the next update(), which also builds the sheet again for the new size
             setOrientation(rotation);
@@ -4163,6 +4182,7 @@ void HassScreen::_settingsCallback(lv_event_t *event)
             else {
                 // stored in the display configuration, the level fades to it
                 LVGLPlugin::setConfiguredBrightness(percent);
+                self->_storeSettings();
             }
             if (refs.brightnessValue) {
                 LVGLUI::setText(refs.brightnessValue, PrintString(F("%u %%"), static_cast<unsigned>(percent)).c_str(),
@@ -4233,6 +4253,7 @@ void HassScreen::_settingsCallback(lv_event_t *event)
         {
             const auto locked = !Plugins::WeatherStation::getHassRotationLock();
             Plugins::WeatherStation::setHassRotationLock(locked);
+            self->_storeSettings();
             __LDBG_printf("hass> rotation lock %s", locked ? "set" : "cleared");
             if (!locked) {
                 // the device may have been rotated while the lock was on: the dashboard follows

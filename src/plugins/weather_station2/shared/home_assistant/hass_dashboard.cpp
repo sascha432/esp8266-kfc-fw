@@ -73,60 +73,63 @@ uint32_t _hex4(const char *text)
 }
 
 // one character into the buffer of the parser, always keeps room for the terminator. `write` is the
-// cursor of the buffer (`end` is its end) and is advanced past what was written
-void _appendChar(char *&write, const char *end, char chr)
+// cursor of the buffer (`end` is its end) and is advanced past what was written. `cut` is set when
+// the buffer is full: the caller decides whether a shortened value is acceptable
+void _appendChar(char *&write, const char *end, char chr, bool &cut)
 {
     if (write + 1 < end) {
         *write++ = chr;
+    }
+    else {
+        cut = true;
     }
 }
 
 // code point of a \uXXXX escape as UTF-8 (the unit of a temperature sensor arrives as \u00B0C,
 // see _decodeStringValue())
-void _appendCodepoint(char *&write, const char *end, uint32_t codepoint)
+void _appendCodepoint(char *&write, const char *end, uint32_t codepoint, bool &cut)
 {
     if (codepoint < 0x80) {
-        _appendChar(write, end, static_cast<char>(codepoint));
+        _appendChar(write, end, static_cast<char>(codepoint), cut);
     }
     else if (codepoint < 0x800) {
-        _appendChar(write, end, static_cast<char>(0xc0 | (codepoint >> 6)));
-        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0xc0 | (codepoint >> 6)), cut);
+        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)), cut);
     }
     else if (codepoint < 0x10000) {
-        _appendChar(write, end, static_cast<char>(0xe0 | (codepoint >> 12)));
-        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
-        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0xe0 | (codepoint >> 12)), cut);
+        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)), cut);
+        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)), cut);
     }
     else {
-        _appendChar(write, end, static_cast<char>(0xf0 | (codepoint >> 18)));
-        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f)));
-        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
-        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)));
+        _appendChar(write, end, static_cast<char>(0xf0 | (codepoint >> 18)), cut);
+        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f)), cut);
+        _appendChar(write, end, static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)), cut);
+        _appendChar(write, end, static_cast<char>(0x80 | (codepoint & 0x3f)), cut);
     }
 }
 
 // The value of `key` is decoded into the buffer at `write`, NUL terminated, and `write` is advanced
 // past it. The function allocates nothing and uses no stack buffer: the escapes are decoded straight
-// into the buffer of the detail slot. Returns the start of the value, nullptr when the key is
-// missing (or null) and when the value does not fit into the buffer any more - a value is never
-// truncated (a shortened effect name would be sent to the entity and ignored)
-const char *_decodeStringValue(const char *payload, const char *entity, const char *key, char *&write, const char *end)
+// into the buffer. Returns the start of the value, nullptr when the key is missing (or null) and for
+// an empty literal. `truncated` (optional) reports that the buffer was too small for the whole value
+const char *_decodeStringValue(const char *payload, const char *entity, const char *key, char *&write, const char *end, bool *truncated = nullptr)
 {
     auto value = _valueOf(payload, entity, key);
     if (!value || !strncmp(value, "null", 4)) {
         return nullptr;
     }
     char *const start = write;
+    bool cut = false;
     if (*value != '"') {
         // a number or a literal (true/false), copy it as it is
         while (*value && *value != ',' && *value != '}') {
-            _appendChar(write, end, *value++);
-        }
-        if (write + 1 >= end) {
-            write = start;
-            return nullptr;
+            _appendChar(write, end, *value++, cut);
         }
         *write++ = 0;
+        if (truncated) {
+            *truncated = cut;
+        }
         // an empty literal is no value (the key was directly followed by a comma or a brace)
         return (write > start + 1) ? start : nullptr;
     }
@@ -136,32 +139,32 @@ const char *_decodeStringValue(const char *payload, const char *entity, const ch
     value++;
     while (*value && *value != '"') {
         if (*value != '\\' || !value[1]) {
-            _appendChar(write, end, *value++);
+            _appendChar(write, end, *value++, cut);
             continue;
         }
         const auto escaped = value[1];
         value += 2;
         switch (escaped) {
         case 'n':
-            _appendChar(write, end, '\n');
+            _appendChar(write, end, '\n', cut);
             break;
         case 'r':
-            _appendChar(write, end, '\r');
+            _appendChar(write, end, '\r', cut);
             break;
         case 't':
-            _appendChar(write, end, '\t');
+            _appendChar(write, end, '\t', cut);
             break;
         case 'b':
-            _appendChar(write, end, '\b');
+            _appendChar(write, end, '\b', cut);
             break;
         case 'f':
-            _appendChar(write, end, '\f');
+            _appendChar(write, end, '\f', cut);
             break;
         case 'u':
             {
                 auto codepoint = _hex4(value);
                 if (!codepoint) {
-                    _appendChar(write, end, 'u');
+                    _appendChar(write, end, 'u', cut);
                     break;
                 }
                 value += 4;
@@ -173,22 +176,30 @@ const char *_decodeStringValue(const char *payload, const char *entity, const ch
                         value += 6;
                     }
                 }
-                _appendCodepoint(write, end, codepoint);
+                _appendCodepoint(write, end, codepoint, cut);
             }
             break;
         default:
             // \" \\ \/ and an escape the firmware does not know: the character stands for itself
-            _appendChar(write, end, static_cast<char>(escaped));
+            _appendChar(write, end, static_cast<char>(escaped), cut);
             break;
         }
     }
-    if (write + 1 >= end) {
-        // the value does not fit into the buffer, it is dropped instead of being truncated
-        write = start;
-        return nullptr;
-    }
+    // the buffer always keeps room for the terminator (see _appendChar)
     *write++ = 0;
+    if (truncated) {
+        *truncated = cut;
+    }
     return start;
+}
+
+// value of a panel attribute: one that does not fit into the buffer is dropped instead of being
+// shortened - a shortened effect name would be sent to the entity and ignored
+const char *_detailValue(const char *payload, const char *entity, const char *key, char *&write, const char *end)
+{
+    bool truncated = false;
+    const auto value = _decodeStringValue(payload, entity, key, write, end, &truncated);
+    return (value && !truncated) ? value : nullptr;
 }
 
 // value of an attribute the response did not carry (never nullptr, see Detail::kUnset)
@@ -206,15 +217,13 @@ const char *_copyValue(const char *value, char *&write, const char *end)
         return nullptr;
     }
     char *const start = write;
+    bool cut = false;
     while (*value) {
-        _appendChar(write, end, *value++);
-    }
-    if (write + 1 >= end) {
-        write = start;
-        return nullptr;
+        _appendChar(write, end, *value++, cut);
     }
     *write++ = 0;
-    return start;
+    // a carried over value that does not fit is dropped as well
+    return cut ? nullptr : start;
 }
 
 // value of `key` into a fixed size buffer (the tile model of a state response), false when the key
@@ -806,18 +815,23 @@ void Dashboard::_applyResponse(const char *payload, PageIndex page)
 // ------------------------------------------------------------------------------------------
 // capabilities of the panel of a tile
 // ------------------------------------------------------------------------------------------
-// true when a comma separated list contains a name
-static bool _hasListEntry(const char *list, const char *name)
+// true when the entries of a comma separated JSON string value contain `name`. The caller passes the
+// first character behind the opening quote. The list is scanned in place, it is never copied: the
+// effect list of a light does not fit into a fixed buffer (169 characters on the LED matrix, 295 on
+// a Hue light) and only the presence of a name matters here
+static bool _hasListEntry(const char *value, const char *name)
 {
     const auto length = strlen(name);
-    const char *ptr = list;
-    while (ptr && *ptr) {
-        if (!strncasecmp(ptr, name, length) && (ptr[length] == 0 || ptr[length] == ',')) {
+    while (*value && *value != '"') {
+        if (!strncasecmp(value, name, length) && (value[length] == ',' || value[length] == '"')) {
             return true;
         }
-        ptr = strchr(ptr, ',');
-        if (ptr) {
-            ptr++;
+        // the next entry of the list
+        while (*value && *value != ',' && *value != '"') {
+            value++;
+        }
+        if (*value == ',') {
+            value++;
         }
     }
     return false;
@@ -827,24 +841,28 @@ void Dashboard::_readCapabilities(const char *payload, const Tile &tile, TileInd
 {
     // every light can be switched on and off, the other controls depend on the entity
     uint8_t caps = kCapPower;
-    char buffer[64];
-    if (_parseStringValue(payload, tile.entity, "color_modes", buffer, sizeof(buffer))) {
-        if (_hasListEntry(buffer, "hs") || _hasListEntry(buffer, "rgb") || _hasListEntry(buffer, "rgbw") ||
-            _hasListEntry(buffer, "rgbww") || _hasListEntry(buffer, "xy")) {
+    const auto colorModes = _valueOf(payload, tile.entity, "color_modes");
+    if (colorModes && *colorModes == '"') {
+        if (_hasListEntry(colorModes + 1, "hs") || _hasListEntry(colorModes + 1, "rgb") ||
+            _hasListEntry(colorModes + 1, "rgbw") || _hasListEntry(colorModes + 1, "rgbww") ||
+            _hasListEntry(colorModes + 1, "xy")) {
             caps |= kCapColor;
         }
-        if (_hasListEntry(buffer, "color_temp")) {
+        if (_hasListEntry(colorModes + 1, "color_temp")) {
             caps |= kCapColorTemp;
         }
         // The level is a capability of the entity, not of its state: a light that is switched off
         // reports no brightness attribute (`has_level` = 0) and the brightness button of the panel
         // disappeared while the entity was off. `brightness` and `white` are dimmable and every
         // color mode carries a level as well
-        if (_hasListEntry(buffer, "brightness") || _hasListEntry(buffer, "white") || (caps & (kCapColor | kCapColorTemp))) {
+        if (_hasListEntry(colorModes + 1, "brightness") || _hasListEntry(colorModes + 1, "white") || (caps & (kCapColor | kCapColorTemp))) {
             caps |= kCapLevel;
         }
     }
-    if (_parseStringValue(payload, tile.entity, "effect_list", buffer, sizeof(buffer)) && buffer[0]) {
+    // an entity with a non empty effect list has the effects button (the list itself is stored by
+    // _applyDetail(), it does not fit into a fixed buffer)
+    const auto effectList = _valueOf(payload, tile.entity, "effect_list");
+    if (effectList && *effectList == '"' && effectList[1] && effectList[1] != '"') {
         caps |= kCapEffects;
     }
     float number = 0;
@@ -1179,16 +1197,16 @@ void Dashboard::_applyDetail(const char *payload, size_t length)
 
     // the values are decoded straight into the buffer, the parser neither allocates nor uses a
     // stack buffer - it gets the write cursor of the buffer
-    _detail.mode = _orUnset(_decodeStringValue(payload, tile.entity, "state", write, end));
-    _detail.preset = _orUnset(_decodeStringValue(payload, tile.entity, "preset_mode", write, end));
-    _detail.fanMode = _orUnset(_decodeStringValue(payload, tile.entity, "fan_mode", write, end));
-    _detail.effect = _orUnset(_decodeStringValue(payload, tile.entity, "effect", write, end));
-    _detail.colorMode = _orUnset(_decodeStringValue(payload, tile.entity, "color_mode", write, end));
-    _detail.colorModes = _orUnset(_decodeStringValue(payload, tile.entity, "color_modes", write, end));
-    _detail.modeList = _orUnset(_decodeStringValue(payload, tile.entity, "hvac_modes", write, end));
-    _detail.presetList = _orUnset(_decodeStringValue(payload, tile.entity, "preset_modes", write, end));
-    _detail.fanModeList = _orUnset(_decodeStringValue(payload, tile.entity, "fan_modes", write, end));
-    _detail.effectList = _orUnset(_decodeStringValue(payload, tile.entity, "effect_list", write, end));
+    _detail.mode = _orUnset(_detailValue(payload, tile.entity, "state", write, end));
+    _detail.preset = _orUnset(_detailValue(payload, tile.entity, "preset_mode", write, end));
+    _detail.fanMode = _orUnset(_detailValue(payload, tile.entity, "fan_mode", write, end));
+    _detail.effect = _orUnset(_detailValue(payload, tile.entity, "effect", write, end));
+    _detail.colorMode = _orUnset(_detailValue(payload, tile.entity, "color_mode", write, end));
+    _detail.colorModes = _orUnset(_detailValue(payload, tile.entity, "color_modes", write, end));
+    _detail.modeList = _orUnset(_detailValue(payload, tile.entity, "hvac_modes", write, end));
+    _detail.presetList = _orUnset(_detailValue(payload, tile.entity, "preset_modes", write, end));
+    _detail.fanModeList = _orUnset(_detailValue(payload, tile.entity, "fan_modes", write, end));
+    _detail.effectList = _orUnset(_detailValue(payload, tile.entity, "effect_list", write, end));
     float number = 0;
     if (_parseNumberValue(payload, tile.entity, "brightness", number)) {
         auto percent = (number * 100.0f) / 255.0f;

@@ -32,6 +32,8 @@
 #include <lvgl.h>
 #include "lvgl_screen.h"
 #include "lvgl_ui.h"
+#include <EventScheduler.h>
+
 #include "ws2_data.h"
 #include "shared/home_assistant/hass_dashboard.h"
 
@@ -509,6 +511,10 @@ public:
         return sizeof(TileWidgets);
     }
     static constexpr uint32_t kRefreshInterval = 200;
+    // Delay before a change of the quick settings sheet is written to the configuration (NVS).
+    // The setters only change the stored parameter in RAM, the write collects a slider drag or
+    // several steps of a timeout instead of writing the flash on every change
+    static constexpr uint32_t kSettingsWriteDelay = 5000;
     // A tap that a tile consumed is ignored by the manager for this long (the manager runs its
     // single tap action after the double tap window)
     static constexpr uint32_t kTileTapWindow = 800;
@@ -987,6 +993,9 @@ private:
     void _applySettingsAction();
     // stores the value of the editor that is open
     void _applySettingsValue();
+    // writes the configuration to NVS after a delay (a change of the sheet only marks the stored
+    // parameter as changed, without config.write() it would be gone after a reboot)
+    void _storeSettings();
     // index of the tile of the sheet an object belongs to, kSettingsTiles when none
     uint8_t _settingsTileAt(const lv_obj_t *object) const;
     // the tile of the setting the open editor belongs to
@@ -1140,6 +1149,8 @@ private:
     // millis() of the last refresh of the sheet (the clock and the signal strength are refreshed
     // once per second, the screen runs at 5 fps)
     uint32_t _settingsUpdate{0};
+    // delayed write of the configuration after a change of the sheet (see _storeSettings())
+    Event::Timer _settingsWrite;
     // tile that was tapped and waits for a second tap, and when the first tap happened
     int32_t _pendingTileTap{-1};
     uint32_t _pendingTileTapTime{0};

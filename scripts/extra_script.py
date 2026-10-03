@@ -110,8 +110,6 @@ ARCHIVE_SOURCE_ITEMS = ['src', 'include', 'conf', 'scripts', 'platformio.ini', '
 ARCHIVE_SOURCE_LIBS = ['lib/KFCLibrary']
 ARCHIVE_IGNORE_DIRS = {'.git', '.pio', '__pycache__', '.venv'}
 ARCHIVE_IGNORE_FILES = ('.pyc', '.o', '.d')
-# <environment>_<build>.tar.gz
-ARCHIVE_NAME = re.compile(r'^(?P<env>.+)_(?P<build>\d+)\.tar\.gz$')
 # esptool talks to the board at 115200 by default, a 1 MB filesystem read takes minutes that way
 ESPTOOL_FAST_BAUD = '460800'
 
@@ -238,23 +236,6 @@ def add_text(archive, name, text):
     archive.addfile(info, io.BytesIO(data))
 
 
-def remove_superseded_archives(output_dir, env_name, keep):
-    """Delete the other archives of this environment: only the newest one is kept.
-
-    Test uploads would otherwise pile up one ~55 MB archive per try, and only the firmware that is
-    flashed last is the one a crash has to be decoded against.
-    """
-    removed = []
-    for name in sorted(os.listdir(output_dir)):
-        if name == keep:
-            continue
-        match = ARCHIVE_NAME.match(name)
-        if match and match.group('env') == env_name:
-            os.remove(os.path.join(output_dir, name))
-            removed.append(name)
-    return removed
-
-
 def read_filesystem(env, output):
     """Byte exact copy of the filesystem partition read from the device."""
     port = env.subst('$UPLOAD_PORT')
@@ -301,7 +282,8 @@ def git_revision(directory, excludes=()):
 
 
 def archive_build(target, source, env):
-    # after a successful upload: ELF, bin, the filesystem read from the device, the sources and a log.
+    # the -t buildarchive step, after a successful upload: ELF, bin, the filesystem read from the device,
+    # the sources and a log.
     # Everything goes straight into the tar.gz, there is no temporary copy of the build (the ELF alone
     # is ~90 MB) and nothing is left behind when this step is interrupted
     project_dir = env.subst('$PROJECT_DIR')
@@ -376,17 +358,11 @@ def archive_build(target, source, env):
                 os.remove(leftover)
 
     click.secho('Archived %s (%u bytes, %u s)' % (name, os.path.getsize(output), time.time() - started), fg='green')
-    # a test upload is only archived until the next one: the previous archive of this environment goes away
-    removed = remove_superseded_archives(output_dir, env_name, name)
+    # archives are kept indefinitely: every buildarchive leaves its own elf/<env>_<build>.tar.gz behind
     with open(os.path.join(output_dir, 'archive.log'), 'at', encoding='utf-8', newline='\n') as file:
         file.write('%s | build %d | %s | %s | %u bytes | %u s | filesystem: %s\n' % (
             datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), number, env_name, name,
             os.path.getsize(output), time.time() - started, filesystem))
-        for old in removed:
-            file.write('%s | build %d | %s | %s | removed, superseded by %s\n' % (
-                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), number, env_name, old, name))
-    if removed:
-        click.secho('Removed %s, only the newest archive of %s is kept' % (', '.join(removed), env_name), fg='yellow')
 
 
 def modify_upload_command(source, target, env, fs=False):
@@ -600,11 +576,13 @@ env.AddPreAction('uploadota', modify_upload_command)
 env.AddPreAction('uploadfs', modify_upload_command_fs)
 env.AddPreAction('uploadfsota', modify_upload_command_fs)
 
-# erase the ESP32 core dump before flashing and archive the build after a successful upload
+# erase the ESP32 core dump before flashing
 env.AddPreAction('upload', erase_core_dump)
 env.AddPreAction('uploadota', erase_core_dump)
-env.AddPostAction('upload', archive_build)
-env.AddPostAction('uploadota', archive_build)
+
+# -t buildarchive: build, upload and archive in one step, the archive is only created after the upload
+# succeeded (a failed build/upload never leaves an archive behind)
+env.AlwaysBuild(env.Alias('buildarchive', 'upload', archive_build))
 
 # env.AddPreAction(env['PIOMAINPROG'], dump_info)
 
@@ -622,3 +600,4 @@ env.AlwaysBuild(env.Alias('upload_file', None, lambda source, target, env: uploa
 env.AddCustomTarget('kfcfw_factory', None, [], title='factory reset', description='KFC firmware OTA factory reset', always_build=False)
 env.AddCustomTarget('kfcfw_auto_discovery', None, [], title='auto discovery', description='KFC firmware OTA publish auto discovery', always_build=False)
 env.AddCustomTarget('upload_file', None, [], title='upload file', description='Upload file to file system', always_build=False)
+env.AddCustomTarget('buildarchive', None, [], title='build archive', description='Build, upload and archive the firmware', always_build=False)

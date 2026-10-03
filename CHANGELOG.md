@@ -2,7 +2,6 @@
 
 ## Version 0.0.9 (master)
 
- - Build archive: a successful upload stores ELF, image, filesystem and sources as one compressed file in `elf/` and replaces the previous archive of that environment
  - New build number generator
  - Added the MPU-6050 display rotation and tilt sensor
  - Visualizer modes are selectable animations now (Spectrum Rainbow Bars, Spectrum Gradient Bars, Spectrum Single Color Bars, Plasma Reactive, Fire Reactive) through the WebUI, MQTT and select buttons

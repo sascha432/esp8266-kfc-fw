@@ -60,16 +60,16 @@ in this workspace.
 
 ## Build archive
 
-- `-t upload` / `-t uploadota` add two steps: `erase_core_dump` (ESP32 only) before flashing and `archive_build`
-  after a successful upload, both in `scripts/extra_script.py`. There is no separate archive target.
+- `-t upload` / `-t uploadota` only add `erase_core_dump` (ESP32 only) before flashing, in `scripts/extra_script.py` -
+  they do **not** archive. `-t buildarchive` builds, uploads and archives in one step and runs the archive step
+  only after a successful upload, so a failed build or upload never leaves an archive behind.
 - The ESP32 core dump is erased over **serial** (`esptool erase_region <coredump offset> <size>` taken from
   `$PARTITIONS_TABLE_CSV`) - no WebUI, no credentials, and it works when the device has crashed.
 - A build is archived as `elf/<env>_<build>.tar.gz`: `firmware.elf`, `firmware.bin`, `filesystem.bin` (the
   `spiffs` partition read back from the device) plus `source/` (project + `lib/KFCLibrary`) and `info.txt`
   (build, env, git revisions, checksums, restore hints). `elf/archive.log` lists every archive; `elf/` is gitignored.
-- **Only the newest archive of an environment is kept**: the next `-t upload` deletes the previous archive of
-  that environment (after the new one is complete), so test uploads do not pile up ~55 MB archives each and
-  the archive that stays is the firmware the device was flashed with last. Other environments are untouched.
+- **Archives are kept indefinitely**: every `-t buildarchive` leaves its own `elf/<env>_<build>.tar.gz` behind and
+  nothing is ever deleted, so a crash can be decoded as long as that build was archived.
 - The tar is written **straight from the working tree** (no staging copy, no temp directory) with
   `compresslevel=6`, and the esptool reads use `$UPLOAD_SPEED` with a fallback to esptool's 115200.
 
@@ -117,9 +117,9 @@ in this workspace.
 - Read the `reason:` line: `abort() was called at PC <addr>` names the trigger (`task_wdt_isr` = task
   watchdog, something starved IDLE0; `esp_core_dump_do_write_elf_pass` = the panic path itself faulted and the
   dump is incomplete, so the culprit task is missing - `IDLE0` is then only the panic context).
-- The archive of a build is replaced by the next upload of that environment, so a trace needs the archive
-  to still exist - or `--elf` with the exact `firmware.elf` of that build, never a rebuilt one (the addresses
-  would not match).
+- Only `-t buildarchive` stores an archive, so a trace needs the crashed build to have been archived (a plain
+  `-t upload` leaves none) - or `--elf` with the exact `firmware.elf` of that build, never a rebuilt one (the
+  addresses would not match).
 - `/trace-crash <ip>` (`.github/prompts/trace-crash.prompt.md`) runs capture, decode, root cause and fix
   from the chat.
 - PowerShell pipes into a file (`>`, `Tee-Object`) write **UTF-16** - use `Out-File -Encoding ascii` for

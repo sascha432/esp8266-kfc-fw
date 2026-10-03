@@ -223,8 +223,7 @@ def trace(args):
             print('       --archive elf/<env>_<build>.tar.gz (see elf/archive.log for the build numbers)')
         else:
             print('ERROR: no archive in elf/ matches the dump (firmware %s)' % coredump['sha256'])
-            print('       the archive of a build is replaced by the next upload of that environment, '
-                  'pass --archive or --elf')
+            print('       only "pio run -t buildarchive" stores an archive, pass --archive or --elf')
         return 1
 
     names = ARCHIVE_NAME.match(os.path.basename(archive)) if archive else None

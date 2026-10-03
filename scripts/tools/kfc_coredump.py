@@ -158,10 +158,29 @@ def symbolize(bin_dir, elf, addresses):
     return symbols
 
 
+def python_with_esp_coredump():
+    """Interpreter that can run `-m esp_coredump`: the PlatformIO penv or the current one, else None."""
+    core = os.environ.get('PLATFORMIO_CORE_DIR') or os.path.join(os.path.expanduser('~'), '.platformio')
+    for candidate in (os.path.join(core, 'penv', 'Scripts', 'python.exe'),
+                      os.path.join(core, 'penv', 'bin', 'python'),
+                      sys.executable):
+        if os.path.isfile(candidate) and not subprocess.run(
+                [candidate, '-c', 'import esp_coredump'], capture_output=True).returncode:
+            return candidate
+    return None
+
+
 def decode(bin_dir, core, elf, chip):
     """Run esp-coredump on the core dump with the ELF of the crashed build."""
     gdb = find_tool(bin_dir, '-gdb')
-    command = [sys.executable, '-m', 'esp_coredump', '--chip', chip, 'info_corefile']
+    python = python_with_esp_coredump()
+    if not python:
+        # a report without the decode output looks like a decoded dump - fail loudly instead
+        return ['esp_coredump'], (
+            'ERROR: no Python with the esp_coredump module found. Run this script with the PlatformIO '
+            'penv Python (e.g. %s) or install the module.\n' %
+            os.path.join(os.path.expanduser('~'), '.platformio', 'penv', 'Scripts', 'python.exe'))
+    command = [python, '-m', 'esp_coredump', '--chip', chip, 'info_corefile']
     if gdb:
         command += ['--gdb', gdb]
     command += ['-t', 'elf', '-c', core, elf]
@@ -244,6 +263,9 @@ def trace(args):
                 tar.extract('firmware.elf', temporary)
             elf = os.path.join(temporary, 'firmware.elf')
         command, output = decode(bin_dir, core_path, elf, args.chip)
+        if 'CORE DUMP START' not in output:
+            print('WARNING: esp-coredump produced no stack trace, the report is incomplete (%s)' %
+                  report_path, file=sys.stderr)
         addresses = set(coredump['backtrace']) | {coredump['pc']} if coredump else set()
         addresses.update(panic_addresses(output))
         symbols = symbolize(bin_dir, elf, addresses - stack_addresses(output))

@@ -1194,19 +1194,32 @@ inline void ClockPlugin::_reset()
 {
     // turn off all LEDs during restart or a crash
     // IOT_LED_MATRIX_FASTLED_ONLY: PixelDisplay::show() keeps using FastLED, so the RMT driver must
-    // not be torn down here - the pixels are blanked by forceClear() below
+    // not be torn down here - the pixels are blanked with FastLED below
     #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S && !IOT_LED_MATRIX_FASTLED_ONLY
         ESP32RMTController::deinit();
     #endif
-    NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
-    #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
-        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN1>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
-    #endif
-    #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
-        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN2>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
-    #endif
-    #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
-        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
+    #if IOT_LED_MATRIX_FASTLED_ONLY
+        // NeoPixelEx::forceClear() must not be used when FastLED owns the RMT peripheral: it
+        // configures its own RMT channel and enables the RMT interrupt for it. FastLED's RMT
+        // interrupt handler only clears the interrupt of a channel it has a controller for, so the
+        // RMT interrupt keeps firing (interrupt watchdog panic on the display core) or the
+        // transfer-done semaphore is never given and FastLED.show() blocks the main loop forever
+        // while holding spi_flash_op_lock.
+        auto &plugin = getInstance();
+        plugin._display.setBrightness(0);
+        plugin._display.clear();
+        plugin._display.show();
+    #else
+        NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
+        #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+            NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN1>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
+        #endif
+        #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+            NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN2>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
+        #endif
+        #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+            NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
+        #endif
     #endif
 }
 

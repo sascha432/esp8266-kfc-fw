@@ -9,7 +9,6 @@
 #include <Arduino_compat.h>
 #include <EventScheduler.h>
 #include <functional>
-#include <build.h>
 #include <kfc_fw_config.h>
 #include <plugins.h>
 #include <plugins_menu.h>

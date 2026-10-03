@@ -36,6 +36,28 @@ in this workspace.
 - Built pages and assets are content-hashed (`data/webui/<hash>`), JS/CSS are gzip-compressed on disk and
   `data/webui/.listings.txt` maps a hash back to its original name - look a file up there, not by grep.
 
+## Build number
+
+- `include/build_number.txt` holds the persistent counter **and** a readable history (build date + environments).
+  It is a plain text file for humans/AI - it is never compiled, never uploaded to the device and the history is
+  never truncated.
+- `src/build_number.cpp` is **generated** by `scripts/build_number.py` and is the only translation unit the
+  number is compiled into (a build recompiles just that file). Never edit it by hand.
+- `scripts/pre_script.py` increments **before compiling** so the new number ends up in the binary. A build that
+  never reaches the link step did not create a firmware - its number is taken back on the next run
+  (`.pio/build_number.pending`), so a failed build does not consume a number.
+- There is no build-command detection: **every environment build advances the counter by one**, so a two-env
+  `pio run` uses two numbers. `pio run -t newbuild` increments once without a build confirming it.
+- Targets that do not compile the firmware (`clean`, `fullclean`, `compiledb`, `buildfs`, `rebuildfs`,
+  `uploadfs`, `uploadfsota`, `envdump`, `monitor`, `nobuild`) do not advance the counter.
+- `KFCFWConfiguration::getBuildNumber()` / `getBuildNumberString()` expose it; the short firmware version is
+  `<major>.<minor>.<revision> Build <number>` and the build string shares that flash string's location
+  (`+ strlen(FIRMWARE_VERSION_STR " Build ")`).
+- `lib/KFCLibrary/scripts/extra_script.py` reads the counter for `data/.pvt/build` (it is a separate git repo -
+  changes there must be committed/pushed separately).
+- The library's `SaveCrash::Data::FirmwareVersion::build` bitfield is 16 bit - only the crash log and the
+  config-version comparison truncate there.
+
 ## Build, flash and verify
 
 - `pio run -e <env> -t upload` builds and flashes in one step (`upload` runs the build first). No separate

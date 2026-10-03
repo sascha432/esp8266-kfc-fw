@@ -28,8 +28,6 @@
 #    include <debug_helper_disable.h>
 #endif
 
-#include "build.h"
-
 using KFCConfigurationClasses::System;
 using Plugins = KFCConfigurationClasses::PluginsType;
 
@@ -221,8 +219,8 @@ void MDNSPlugin::begin()
         _running = true;
         LOOP_FUNCTION_ADD(loop);
         MDNSService::addService(FSPGM(kfcmdns), FSPGM(udp), 5353);
-        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), FIRMWARE_VERSION_STR);
-        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), String(__BUILD_NUMBER_INT));
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('v'), String(F(FIRMWARE_VERSION_STR)));
+        MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('b'), String(KFCFWConfiguration::getBuildNumber()));
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('t'), KFCConfigurationClasses::System::Device::getTitle());
         MDNSService::addServiceTxt(FSPGM(kfcmdns), FSPGM(udp), String('d'), KFCFWConfiguration::getChipModel());
 

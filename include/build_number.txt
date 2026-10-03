@@ -1,0 +1,27 @@
+; -------------------------------------------------------------------------
+; KFC firmware build number
+;
+; maintained by scripts/build_number.py - do not edit manually
+; "number" is the build that is currently being compiled
+; -------------------------------------------------------------------------
+
+number = 15270
+date   = 2026-10-02 18:58:07
+env    = wled_esp32_controller
+
+; history, newest first: <number> <date> <time> <environments>
+15270 2026-10-02 18:58:07 wled_esp32_controller
+15269 2026-10-02 18:55:46 wled_esp32_controller
+15268 2026-10-02 18:54:39 bme280_serial
+15267 2026-10-02 18:49:52 wt32_sc01_test1
+15266 2026-10-02 18:49:34 bme280_serial
+15265 2026-10-02 18:42:10 wt32_sc01_test1
+15264 2026-10-02 18:41:54 bme280_serial
+15263 2026-10-02 18:39:48 bme280_serial
+15262 2026-10-02 18:33:34 bme280_serial, wt32_sc01_test1
+15261 2026-10-02 18:32:44 bme280_serial
+15260 2026-10-02 18:31:29 bme280_serial
+15259 2026-10-02 18:30:11 bme280_serial, wt32_sc01_test1
+15258 2026-10-02 18:24:06 wt32_sc01_test1
+15257 2026-10-02 18:22:28 bme280_serial
+15256 2026-10-02 00:00:00 migrated from include/build.h.current (build.h was out of sync at 14985)

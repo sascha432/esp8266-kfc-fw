@@ -71,16 +71,31 @@ def verbose(msg, color=None):
     else:
         click.echo(msg)
 
+def run_build_number(env, args):
+    # see scripts/build_number.py, the counter is incremented before compiling and the number is
+    # given back if the build never reaches the link step
+    # NOTE: os.path, the module level `path` is shadowed by the PATH environment variable further down
+    project_dir = env.subst('$PROJECT_DIR')
+    scripts_dir = os.path.join(project_dir, 'scripts')
+    sys.path.insert(0, scripts_dir)
+    try:
+        import build_number
+        build_number.main(['--project-dir', project_dir] + list(args))
+    finally:
+        sys.path.remove(scripts_dir)
+
+
 def new_build(source, target, env):
-    args = [ env.subst('$PYTHONEXE'), env.subst('$PROJECT_DIR/scripts/build_number.py'), '-v', env.subst('$PROJECT_DIR/include/build.h.current') ]
-    p = subprocess.Popen(args, text=True)
-    p.wait()
+    # -t newbuild: increment without a build that has to confirm the number
+    run_build_number(env, ['--env', env.subst('$PIOENV'), '--force', '--verbose'])
+
+
+def commit_build_number(source, target, env):
+    # the firmware was linked, the number stays
+    run_build_number(env, ['--commit'])
 
 
 def modify_upload_command(source, target, env, fs=False):
-
-    if fs == False:
-        new_build(source, target, env)
 
     upload_command = env.GetProjectOption('custom_upload_command', '')
     if not upload_command:
@@ -333,6 +348,7 @@ env.AddPreAction('uploadfsota', modify_upload_command_fs)
 env.AlwaysBuild(env.Alias('newbuild', None, new_build))
 
 env.AddPostAction(env['PIOMAINPROG'], mem_analyzer)
+env.AddPostAction(env['PIOMAINPROG'], commit_build_number)
 
 # env.AlwaysBuild(env.Alias('patch_file', None, create_patch_file))
 # env.AlwaysBuild(env.Alias('patch-file', None, create_patch_file))

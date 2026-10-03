@@ -18,7 +18,6 @@
 #include "fs_mapping.h"
 #include "WebUISocket.h"
 #include "web_server.h"
-#include "build.h"
 #include "save_crash.h"
 #include <JsonBaseReader.h>
 #include <Form/Types.h>
@@ -714,37 +713,6 @@ bool KFCFWConfiguration::isConfigDirty() const
     return _dirty;
 }
 
-#define FIRMWARE_SHORT_VERSION FIRMWARE_VERSION_STR " Build " __BUILD_NUMBER
-#if ARDUINO_ESP8266_DEV
-#    define FIRMWARE_DEV_SUFFIX "-dev"
-#else
-#    define FIRMWARE_DEV_SUFFIX ""
-#endif
-
-const __FlashStringHelper *KFCFWConfiguration::getFirmwareVersion()
-{
-    #if ESP32
-        // return getShortFirmwareVersion() + F("-" ARDUINO_ESP32_RELEASE " " ) + FPSTR(__compile_date__);
-        return F(FIRMWARE_SHORT_VERSION "-" ARDUINO_ESP32_RELEASE " " __DATE__ " " __TIME__);
-    #elif ESP8266
-        // return getShortFirmwareVersion() + PrintString(F("-" ARDUINO_ESP8266_RELEASE " "), ARDUINO_ESP8266_GIT_VER) + FPSTR(__compile_date__);
-        return ARRAY_F(stdex::array_concat(
-                stdex::str_to_array(FIRMWARE_SHORT_VERSION "-"),
-                stdex::int_to_array<int, ARDUINO_ESP8266_MAJOR>(), stdex::char_to_array<'.'>(), stdex::int_to_array<int, ARDUINO_ESP8266_MINOR>(), stdex::char_to_array<'.'>(), stdex::int_to_array<int, ARDUINO_ESP8266_REVISION>(),
-                stdex::str_to_array("-g"), stdex::hex_to_array<ARDUINO_ESP8266_GIT_VER>(), stdex::str_to_array(FIRMWARE_DEV_SUFFIX),
-                stdex::str_to_array(" " __DATE__ " " __TIME__)
-        ));
-    #else
-        // return getShortFirmwareVersion() + ' ' + FPSTR(__compile_date__);
-        return F(FIRMWARE_SHORT_VERSION FIRMWARE_DEV_SUFFIX " " __DATE__ " " __TIME__);
-    #endif
-}
-
-const __FlashStringHelper *KFCFWConfiguration::getShortFirmwareVersion()
-{
-    return F(FIRMWARE_SHORT_VERSION);
-}
-
 #if ENABLE_DEEP_SLEEP
 
     void KFCFWConfiguration::storeQuickConnect(const uint8_t *bssid, int8_t channel)
@@ -821,14 +789,12 @@ void KFCFWConfiguration::setup()
     LOOP_FUNCTION_ADD(KFCFWConfiguration::loop);
 }
 
-#include "build.h"
-
 // save_crash.h
 SaveCrash::Data::FirmwareVersion::FirmwareVersion() :
     major(FIRMWARE_VERSION_MAJOR),
     minor(FIRMWARE_VERSION_MINOR),
     revision(FIRMWARE_VERSION_REVISION),
-    build(__BUILD_NUMBER_INT)
+    build(static_cast<uint16_t>(KFCFWConfiguration::getBuildNumber())) // the library field is 16 bit
 {
 }
 
@@ -853,13 +819,8 @@ void KFCFWConfiguration::read(bool wakeup)
     else if (wakeup == false) {
         auto version = System::Device::getConfig().config_version;
         auto currentVersion = SaveCrash::Data::FirmwareVersion().__version;
-        // uint32_t currentVersion = (FIRMWARE_VERSION << 16) | (__BUILD_NUMBER_INT & 0xffff);
         if (currentVersion != version) {
-
-            // auto build = static_cast<uint16_t>(version);
-            // version >>= 16;
-            // Logger_warning(F("Upgrading EEPROM settings from %d.%d.%d.%u to " FIRMWARE_VERSION_STR "." __BUILD_NUMBER), (version >> 11) & 0x1f, (version >> 6) & 0x1f, (version & 0x3f), build);
-            Logger_warning(F("Upgrading EEPROM settings from %s to " FIRMWARE_VERSION_STR "." __BUILD_NUMBER), SaveCrash::Data::FirmwareVersion(version).toString(F(".")).c_str());
+            Logger_warning(F("Upgrading EEPROM settings from %s to %s"), SaveCrash::Data::FirmwareVersion(version).toString(F(".")).c_str(), (PGM_P)KFCFWConfiguration::getShortFirmwareVersion());
             System::Device::getWriteableConfig().config_version = currentVersion;
             config.recoveryMode(false);
             Configuration::write();

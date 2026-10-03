@@ -6,6 +6,46 @@ import platform
 import subprocess
 import click
 from SCons.Node import FS
+from SCons.Script import ARGUMENTS, COMMAND_LINE_TARGETS
+
+# -------------------------------------------------------------------------
+# build number
+#
+# increments include/build_number.txt once per `pio run` invocation (all
+# environments of one command share the same number) and regenerates
+# src/build_number.cpp, see scripts/build_number.py for the file formats
+# -------------------------------------------------------------------------
+
+# these do not compile the firmware and must not advance the counter
+# - `newbuild` is handled by scripts/extra_script.py and increments explicitly (`--force`)
+# - `monitor` does not build anything
+BUILD_NUMBER_SKIP_TARGETS = frozenset([
+    'buildfs', 'compiledb', 'envdump', 'fullclean', 'monitor', 'newbuild', 'nobuild', 'rebuildfs', 'uploadfs', 'uploadfsota',
+])
+
+
+def generate_build_number():
+    # clean runs have no target name, PlatformIO passes FULLCLEAN/--clean instead
+    if ARGUMENTS.get('FULLCLEAN') is not None or '--clean' in sys.argv:
+        return
+    if BUILD_NUMBER_SKIP_TARGETS.intersection(COMMAND_LINE_TARGETS):
+        return
+
+    project_dir = env.subst('$PROJECT_DIR')
+    scripts_dir = path.join(project_dir, 'scripts')
+    sys.path.insert(0, scripts_dir)
+    try:
+        import build_number
+        build_number.main([
+            '--project-dir', project_dir,
+            '--env', env.subst('$PIOENV'),
+            '--verbose',
+        ])
+    finally:
+        sys.path.remove(scripts_dir)
+
+
+generate_build_number()
 
 # def process_node(node: FS.File):
 #     if node:

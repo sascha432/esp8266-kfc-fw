@@ -5,7 +5,6 @@
 #include "../include/templates.h"
 #include "../src/plugins/plugins.h"
 #include "PluginComponent.h"
-#include "build.h"
 #include "kfc_fw_config.h"
 #include "plugins_menu.h"
 #include "save_crash.h"

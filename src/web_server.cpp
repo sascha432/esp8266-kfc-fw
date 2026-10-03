@@ -10,7 +10,6 @@
 #include "async_web_handler.h"
 #include "async_web_response.h"
 #include "blink_led_timer.h"
-#include "build.h"
 #include "failure_counter.h"
 #include "fs_mapping.h"
 #include "kfc_fw_config.h"
@@ -794,7 +793,7 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
 
     auto hostname = System::Device::getName();
 
-    PrintString filename(F("kfcfw_config_%s_b" __BUILD_NUMBER "_"), hostname);
+    PrintString filename(F("kfcfw_config_%s_b%u_"), hostname, KFCFWConfiguration::getBuildNumber());
     filename.strftime_P(PSTR("%Y%m%d_%H%M%S.json"), time(nullptr));
     headers.add<HttpDispositionHeader>(filename);
 

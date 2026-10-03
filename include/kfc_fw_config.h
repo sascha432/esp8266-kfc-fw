@@ -98,6 +98,11 @@ public:
     void customSettings();
     static const __FlashStringHelper *getFirmwareVersion();
     static const __FlashStringHelper *getShortFirmwareVersion();
+    // the build number is defined in the generated src/build_number.cpp
+    // note: SaveCrash::Data::FirmwareVersion::build is limited to 16 bit, this is not
+    static uint32_t getBuildNumber();
+    // pointer to the build number inside the short firmware version flash string
+    static const __FlashStringHelper *getBuildNumberString();
 
     // flag to tell if the device has to be rebooted to apply all configuration changes
     void setConfigDirty(bool dirty);

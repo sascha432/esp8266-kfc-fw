@@ -13,7 +13,6 @@
 #include <Mutex.h>
 #include <PrintString.h>
 #include <kfc_fw_config.h>
-#include "build.h"
 #include "shared/moon_phase/moon_phase_model.h"
 #include "shared/open_weather_map/open_weather_map_client.h"
 #include "shared/power_monitor/power_monitor_client.h"
@@ -985,7 +984,7 @@ void DataSource::updateSystemInfo()
 {
     auto &system = _system;
     system.hostname = KFCConfigurationClasses::System::Device::getName();
-    system.firmware = String(F(FIRMWARE_SHORT_VERSION));
+    system.firmware = String(KFCFWConfiguration::getShortFirmwareVersion());
     system.uptime = millis() / 1000;
     system.freeHeap = ESP.getFreeHeap();
     system.freePsram = ESP.getFreePsram();

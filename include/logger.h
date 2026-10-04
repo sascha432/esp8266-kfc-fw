@@ -21,6 +21,10 @@
 #    define LOGGER_SERIAL_OUTPUT 1
 #endif
 
+#ifndef LOGGER_DISABLE_FILE_LOGGING
+#    define LOGGER_DISABLE_FILE_LOGGING false
+#endif
+
 #if DEBUG_LOGGER
 #    include <debug_helper_enable.h>
 #else

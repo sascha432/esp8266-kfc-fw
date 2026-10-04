@@ -20,10 +20,6 @@
 
 #undef DEBUG
 
-#ifndef LOGGER_DISABLE_FILE_LOGGING
-#define LOGGER_DISABLE_FILE_LOGGING     false
-#endif
-
 using KFCConfigurationClasses::System;
 
 Logger _logger;

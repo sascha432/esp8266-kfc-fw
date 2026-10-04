@@ -67,6 +67,27 @@ void setPressedFeedback(lv_obj_t *obj, uint32_t color = kColorTilePressed, lv_op
     lv_obj_set_style_bg_opa(obj, opacity, LV_PART_MAIN | LV_STATE_PRESSED);
 }
 
+// Width of the ring the knob keeps to the track it sits on (quick-settings sliders)
+constexpr lv_coord_t kSliderKnobRing = 4;
+
+// Round white knob with a ring in the color of the row behind it, the look the quick-settings
+// sliders share. LVGL draws the border inside the knob area, so the knob grows by the ring width -
+// the white circle keeps its diameter. The knob padding is additive (a positive value makes the
+// knob bigger), which also makes LVGL invalidate the ring around it. The knob of the panel sliders
+// stays transparent (the value label in the middle of the track is the readout)
+void setSliderKnob(lv_obj_t *slider)
+{
+    if (!slider) {
+        return;
+    }
+    lv_obj_set_style_radius(slider, LV_RADIUS_CIRCLE, LV_PART_KNOB);
+    lv_obj_set_style_bg_color(slider, lv_color_hex(LVGLUI::kColorText), LV_PART_KNOB);
+    lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_KNOB);
+    lv_obj_set_style_border_width(slider, kSliderKnobRing, LV_PART_KNOB);
+    lv_obj_set_style_border_color(slider, lv_color_hex(LVGLUI::kColorCardAlt), LV_PART_KNOB);
+    lv_obj_set_style_pad_all(slider, kSliderKnobRing, LV_PART_KNOB);
+}
+
 // This screen has no top bar and no footer: the tiles use the whole display, the grid starts and
 // ends at the page margin (the reviewed layout is docs/hass_layout/screen1.html). The bottom edge
 // is HassScreen::_gridBottom(), the display is 480x320 in landscape and 320x480 in portrait
@@ -1057,6 +1078,9 @@ constexpr lv_coord_t kSettingsPad = 10;
 constexpr lv_coord_t kSettingsBlockGap = 14;
 // height of the track of a slider of the sheet
 constexpr lv_coord_t kSettingsSliderHeight = 24;
+// gap a slider of an editor keeps to the left and right of its control area: the knob covers the
+// end of the track, a finger cannot reach it without the gap
+constexpr lv_coord_t kSettingsEditorSliderGap = 12;
 // height of the row at the top and at the bottom in landscape, the portrait sheet stacks the header
 // in two lines and gets taller rows
 constexpr lv_coord_t kSettingsTopHeight = 52;
@@ -4185,10 +4209,7 @@ void HassScreen::_buildSettings()
         refs.brightnessSlider = createPanelSlider(refs.center, g.brightSliderX, g.brightSliderY, g.brightSliderW,
                                                   kSettingsSliderHeight, 1, 100, _settingsCallback, this);
         lv_slider_set_value(refs.brightnessSlider, LVGLPlugin::getConfiguredBrightness(), LV_ANIM_OFF);
-        lv_obj_set_style_radius(refs.brightnessSlider, LV_RADIUS_CIRCLE, LV_PART_KNOB);
-        lv_obj_set_style_bg_color(refs.brightnessSlider, lv_color_hex(LVGLUI::kColorText), LV_PART_KNOB);
-        lv_obj_set_style_bg_opa(refs.brightnessSlider, LV_OPA_COVER, LV_PART_KNOB);
-        lv_obj_set_style_border_width(refs.brightnessSlider, 0, LV_PART_KNOB);
+        setSliderKnob(refs.brightnessSlider);
         // the track is darker than the content row it sits on (the panel slider is built for a card)
         lv_obj_set_style_bg_color(refs.brightnessSlider, lv_color_hex(LVGLUI::kColorBackground), LV_PART_MAIN);
         refs.brightnessValue = LVGLUI::addLabel(refs.center, g.brightValueX, g.brightValueY, "", LVGLUI::kFontNormal,
@@ -4234,9 +4255,12 @@ void HassScreen::_buildSettings()
         if (_settingsView == SettingsView::IDLE_BRIGHTNESS) {
             // a level is set with a slider
             const auto sliderY = static_cast<lv_coord_t>(g.editControlY + (g.editControlH - kSettingsSliderHeight) / 2);
-            refs.editSlider = createPanelSlider(refs.center, g.editControlX, sliderY, g.editControlW, kSettingsSliderHeight,
-                                                1, 100, _settingsCallback, this);
+            refs.editSlider = createPanelSlider(refs.center,
+                                                static_cast<lv_coord_t>(g.editControlX + kSettingsEditorSliderGap), sliderY,
+                                                static_cast<lv_coord_t>(g.editControlW - 2 * kSettingsEditorSliderGap),
+                                                kSettingsSliderHeight, 1, 100, _settingsCallback, this);
             lv_slider_set_value(refs.editSlider, LVGLPlugin::getPowerSavingLevel(), LV_ANIM_OFF);
+            setSliderKnob(refs.editSlider);
             lv_obj_set_style_bg_color(refs.editSlider, lv_color_hex(LVGLUI::kColorBackground), LV_PART_MAIN);
         }
         else {
@@ -4479,10 +4503,15 @@ void HassScreen::_settingsCallback(lv_event_t *event)
     if (code != LV_EVENT_CLICKED) {
         return;
     }
-    // the cell of the header closes the sheet, the row at the bottom leaves the screen or closes
-    // the editor
+    // The cell of the header: on the tiles view it closes the sheet, in an editor it steps back to
+    // the tiles view (the sheet stays open) - like the "DONE" row at the bottom
     if (isTapOn(target, refs.close)) {
-        self->_settingsAction = SettingsAction::CLOSE;
+        if (self->_settingsView == SettingsView::MAIN) {
+            self->_settingsAction = SettingsAction::CLOSE;
+        }
+        else {
+            self->_settingsPendingView = static_cast<int8_t>(SettingsView::MAIN);
+        }
         return;
     }
     if (isTapOn(target, refs.action)) {

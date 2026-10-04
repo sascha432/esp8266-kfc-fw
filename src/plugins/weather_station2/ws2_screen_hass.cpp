@@ -2158,8 +2158,8 @@ void HassScreen::_buildPanel()
 
     if (_panel == Panel::CLIMATE) {
         // the three options of the thermostat card: a column in the left cell of a landscape panel,
-        // a row under the header of a portrait one
-        static const LVGLUI::IconType kPillIcons[kNumPills] = { LVGLUI::IconType::FLAME, LVGLUI::IconType::RECORD, LVGLUI::IconType::FAN };
+        // a row under the header of a portrait one. The glyph shows the value that is set (the mode
+        // per value, a preset a disc, the fan mode the fan glyphs - see climateOptionIcon())
         const auto pillW = _portrait
                                ? static_cast<lv_coord_t>((layout.optionsW - (kNumPills - 1) * kTileGap) / kNumPills)
                                : layout.optionsW;
@@ -2167,12 +2167,16 @@ void HassScreen::_buildPanel()
                                ? layout.optionsH
                                : static_cast<lv_coord_t>((layout.optionsH - (kNumPills - 1) * kTileGap) / kNumPills);
         for (uint8_t i = 0; i < kNumPills; i++) {
+            const auto view = static_cast<PanelView>(static_cast<uint8_t>(PanelView::OPTION_1) + i);
             const auto px = _portrait ? static_cast<lv_coord_t>(layout.optionsX + i * (pillW + kTileGap)) : layout.optionsX;
             const auto py = _portrait ? layout.optionsY : static_cast<lv_coord_t>(layout.optionsY + i * (pillH + kTileGap));
             refs.pills[i] = LVGLUI::createButton(_grid, px, py, pillW, pillH, nullptr);
-            auto icon = LVGLUI::createIcon(refs.pills[i], kPillIcons[i], 6,
-                                           static_cast<lv_coord_t>((pillH - LVGLUI::kIconSizeSmall) / 2), LVGLUI::kIconSizeSmall);
-            LVGLUI::clearClickable(icon);
+            // the glyph draws the color of the value next to it, never the theme color of the icon
+            // (the fan glyph was drawn in the accent color, which looked like a different button)
+            refs.pillIcons[i] = LVGLUI::createIcon(refs.pills[i], _climateOptionIcon(view, nullptr), 6,
+                                                   static_cast<lv_coord_t>((pillH - LVGLUI::kIconSizeSmall) / 2),
+                                                   LVGLUI::kIconSizeSmall, LVGLUI::kColorText);
+            LVGLUI::clearClickable(refs.pillIcons[i]);
             refs.pillValue[i] = LVGLUI::addLabel(refs.pills[i], 30, static_cast<lv_coord_t>(pillH / 2 - 9), "", LVGLUI::kFontNormal,
                                                  LVGLUI::kColorText, static_cast<lv_coord_t>(pillW - 34));
             lv_obj_add_event_cb(refs.pills[i], _panelCallback, LV_EVENT_CLICKED, this);
@@ -2219,7 +2223,7 @@ void HassScreen::_buildPanel()
         // color temperature and the effects depend on the entity and appear when its attributes
         // arrived (see _layoutPanelButtons())
         static const LVGLUI::IconType kButtonIcons[static_cast<uint8_t>(LightButton::COUNT)] = {
-            LVGLUI::IconType::POWER, LVGLUI::IconType::BRIGHTNESS, LVGLUI::IconType::PALETTE,
+            LVGLUI::IconType::POWER_SYMBOL, LVGLUI::IconType::BRIGHTNESS, LVGLUI::IconType::PALETTE,
             LVGLUI::IconType::COLOR_TEMP, LVGLUI::IconType::EFFECT,
         };
         for (uint8_t i = 0; i < static_cast<uint8_t>(LightButton::COUNT); i++) {
@@ -2227,10 +2231,9 @@ void HassScreen::_buildPanel()
                                                        kPanelButtonHeight, kButtonIcons[i], LVGLUI::kIconSizeSmall);
             lv_obj_add_event_cb(refs.buttons[i], _panelCallback, LV_EVENT_CLICKED, this);
         }
-        // the power button is white with a dark glyph, the selectors are cards that show which
-        // control is on screen (setTileState() fills the one of the control that is shown)
-        lv_obj_set_style_bg_color(refs.buttons[static_cast<uint8_t>(LightButton::POWER)], lv_color_hex(LVGLUI::kColorText), LV_PART_MAIN);
-        LVGLUI::setIconColor(lv_obj_get_child(refs.buttons[static_cast<uint8_t>(LightButton::POWER)], 0), LVGLUI::kColorBackground);
+        // Every button is a card, the glyph shows the state of the entity (the power button draws
+        // the power symbol of the state, the selectors which control is on screen) - see
+        // _updatePanel()
         // The buttons the entity offers are known from the state poll (the capabilities of the
         // tile), so the panel is complete when it appears. Only when they are not available yet
         // the detail response refines them (a bit later, the layout changes once then).
@@ -2836,8 +2839,8 @@ void HassScreen::_layoutPanelButtons()
         lv_obj_clear_flag(button, LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_pos(button, layout.backX, buttonY);
         lv_obj_set_size(button, layout.backW, kPanelButtonHeight);
-        // the button is round ended and its glyph is centered again after the resize
-        lv_obj_set_style_radius(button, static_cast<lv_coord_t>(kPanelButtonHeight / 2), LV_PART_MAIN);
+        // The buttons of the landscape panel keep the rounded corners of createButton() (the climate
+        // pills have the same shape); only the portrait row draws them round ended (see above)
         auto icon = lv_obj_get_child(button, 0);
         if (icon) {
             lv_obj_set_pos(icon, static_cast<lv_coord_t>((layout.backW - LVGLUI::kIconSizeSmall) / 2),
@@ -2931,6 +2934,52 @@ const char *HassScreen::_panelListItems() const
     return nullptr;
 }
 
+// Glyph of the value of a climate option. The names are the ones Home Assistant reports (lower
+// case: "heat_cool", "fan_only", "nohold"): the mode has a glyph per value, a fan mode uses the fan
+// glyphs and every preset is the same disc. A value the table does not know keeps the glyph of its
+// option, so the pill and the item of the list never end up without one
+LVGLUI::IconType HassScreen::_climateOptionIcon(PanelView view, const char *value)
+{
+    if (!value) {
+        value = "";
+    }
+    switch (view) {
+    case PanelView::OPTION_1:
+        if (!strcasecmp(value, "off")) {
+            return LVGLUI::IconType::POWER_SYMBOL;
+        }
+        if (!strcasecmp(value, "heat")) {
+            return LVGLUI::IconType::FLAME;
+        }
+        if (!strcasecmp(value, "cool")) {
+            return LVGLUI::IconType::SNOWFLAKE;
+        }
+        if (!strcasecmp(value, "auto") || !strcasecmp(value, "heat_cool")) {
+            return LVGLUI::IconType::AUTORENEW;
+        }
+        if (!strcasecmp(value, "dry")) {
+            return LVGLUI::IconType::WATER;
+        }
+        if (!strcasecmp(value, "fan_only")) {
+            return LVGLUI::IconType::FAN;
+        }
+        return LVGLUI::IconType::POWER_SYMBOL;
+    case PanelView::OPTION_3:
+        if (!strcasecmp(value, "auto")) {
+            return LVGLUI::IconType::FAN_AUTO;
+        }
+        if (!strcasecmp(value, "diffuse")) {
+            return LVGLUI::IconType::WINDY;
+        }
+        // "on" and the fan modes an integration reports on its own ("low", "high", "circulate")
+        return LVGLUI::IconType::FAN;
+    default:
+        break;
+    }
+    // the presets ("none", "hold", "nohold", "eco", ...)
+    return LVGLUI::IconType::RECORD;
+}
+
 void HassScreen::_buildPanelList()
 {
     auto &refs = _panelRefs;
@@ -3017,7 +3066,12 @@ void HassScreen::_buildPanelList()
         item[copyLength] = 0;
         const auto col = static_cast<lv_coord_t>(offsetX + (i % columns) * (itemWidth + kListItemGap));
         const auto row = static_cast<lv_coord_t>(offsetY + (i / columns) * (kListItemHeight + kListItemGap));
-        auto obj = LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item);
+        // the two options of a light are a selector and a list, the three of a climate are lists:
+        // the glyph of an item shows the value it sets (right aligned, see _climateOptionIcon()),
+        // the effects of a light have none
+        auto obj = (_panelView == PanelView::EFFECTS)
+                       ? LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item)
+                       : LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item, _climateOptionIcon(_panelView, item));
         const auto active = current && detail.valid && !strcasecmp(current, item);
         LVGLUI::setListItemActive(obj, active);
         if (active) {
@@ -3090,6 +3144,12 @@ void HassScreen::_updatePanel()
                 copyText(pillText, sizeof(pillText), "--");
             }
             _setTextIfChanged(refs.pillValue[i], pillText, LVGLUI::kFontNormal, LVGLUI::kColorText);
+            // the glyph of the pill follows the value that is set (the item the user tapped is
+            // shown until the entity confirms it, see _expectedItemOf())
+            const auto icon = _climateOptionIcon(view, text);
+            if (refs.pillIcons[i] && !LVGLUI::isIcon(refs.pillIcons[i], icon)) {
+                LVGLUI::setIcon(refs.pillIcons[i], icon, LVGLUI::kIconSizeSmall, LVGLUI::kColorText);
+            }
         }
         // the arc follows the setpoint while it is not dragged
         if (refsTile.arc) {
@@ -3166,8 +3226,7 @@ void HassScreen::_updatePanel()
             _panelButtons = available;
             _layoutPanelButtons();
         }
-        // the button of the control on screen is filled, the others are plain cards (the power
-        // button keeps its white background)
+        // the button of the control on screen is filled, the others are plain cards
         static const PanelView kViewOfButton[static_cast<uint8_t>(LightButton::COUNT)] = {
             PanelView::LEVEL, PanelView::LEVEL, PanelView::COLOR, PanelView::COLOR_TEMP, PanelView::EFFECTS,
         };
@@ -3181,12 +3240,20 @@ void HassScreen::_updatePanel()
             LVGLUI::setIconColor(lv_obj_get_child(button, 0), selected ? LVGLUI::kColorText : LVGLUI::kColorTextValue);
         }
 
-        // The power button shows the state of the entity: white with a dark glyph while it is on,
-        // a card with a light grey glyph while it is off
+        // The power button is a card like the selectors, only its glyph tells the state of the
+        // entity: the power symbol while it is on and the struck through one while it is off. The
+        // color is written on every update - the glyph alone does not change when the state flips
+        // back and the theme color of the icon would stay
         if (auto power = refs.buttons[static_cast<uint8_t>(LightButton::POWER)]) {
             const auto on = (value.state == TileState::ON);
-            lv_obj_set_style_bg_color(power, lv_color_hex(on ? LVGLUI::kColorText : LVGLUI::kColorCardAlt), LV_PART_MAIN);
-            LVGLUI::setIconColor(lv_obj_get_child(power, 0), on ? LVGLUI::kColorBackground : LVGLUI::kColorTextMuted);
+            const auto icon = on ? LVGLUI::IconType::POWER_SYMBOL : LVGLUI::IconType::POWER_OFF;
+            auto glyph = lv_obj_get_child(power, 0);
+            if (glyph) {
+                if (!LVGLUI::isIcon(glyph, icon)) {
+                    LVGLUI::setIcon(glyph, icon, LVGLUI::kIconSizeSmall);
+                }
+                LVGLUI::setIconColor(glyph, on ? LVGLUI::kColorText : LVGLUI::kColorTextValue);
+            }
         }
 
         // Every control follows the entity, but a running drag owns its readout and a control that

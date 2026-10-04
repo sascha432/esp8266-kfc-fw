@@ -241,9 +241,11 @@ void setLevelFill(lv_obj_t *fill, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_c
 // Scrollable list of the panels (option and effect list): a card with a scrollbar on the right,
 // the items are added by the caller with addListItem() and placed in their own coordinates
 lv_obj_t *createList(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
-// one item of a list, a card with a centered label
+// one item of a list, a card with a centered label. A name that is longer than the item is
+// shortened with dots (see addListItem() below for the variant with an icon)
 lv_obj_t *addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char *text);
-// the item that is set is filled like an active tile, the label stays white
+// the item that is set is filled like an active tile, the label and the glyph in front of it draw
+// the color of the item
 void setListItemActive(lv_obj_t *item, bool active);
 
 // removes LV_OBJ_FLAG_CLICKABLE from the object and all children, so that a click reaches the
@@ -331,6 +333,13 @@ enum class IconType : uint8_t {
     SINE_WAVE,
     CURRENT_AC,
     LIGHTNING_BOLT,
+    // glyphs of the climate panel options and of the power button of a light panel (appended, the
+    // values above stay stable): one glyph per mode, preset and fan mode value
+    AUTORENEW,
+    WATER,
+    FAN_AUTO,
+    WINDY,
+    POWER_OFF,
 };
 
 // creates an icon container with the icon inside, size x size pixels at x,y. Use kIconSizeSmall or
@@ -351,6 +360,12 @@ void setIconColor(lv_obj_t *icon, uint32_t color);
 // button with an icon in the middle and no label, used by the climate mode bar
 lv_obj_t *createIconButton(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
                            IconType type, lv_coord_t iconSize);
+
+// The item of a list with a glyph in front of the name, both centered as one block while the name
+// fits next to the icon (the name is shortened with dots when it does not). The overload is
+// declared here because the parameter is an IconType, see addListItem() above
+lv_obj_t *addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char *text,
+                      IconType icon);
 
 // house icon used by the indoor screen
 lv_obj_t *createHouseIcon(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t size);

@@ -121,6 +121,14 @@ ICONS = (
     ("SINE_WAVE", "sine-wave"),
     ("CURRENT_AC", "current-ac"),
     ("LIGHTNING_BOLT", "lightning-bolt"),
+    # glyphs of the climate panel options (appended, the values above stay stable): the mode, the
+    # preset and the fan mode draw one glyph per value, and the power button of a light panel uses
+    # the power symbol of the entity state
+    ("AUTORENEW", "autorenew"),
+    ("WATER", "water"),
+    ("FAN_AUTO", "fan-auto"),
+    ("WINDY", "weather-windy"),
+    ("POWER_OFF", "power-off"),
 )
 
 # Theme color of every icon (LVGLUI constants, used by the preview and verified against the
@@ -184,6 +192,11 @@ ICON_COLORS = {
     "SINE_WAVE": "kColorAccent",
     "CURRENT_AC": "kColorAccent",
     "LIGHTNING_BOLT": "kColorHighlight",
+    "AUTORENEW": "kColorTextValue",
+    "WATER": "kColorAccent",
+    "FAN_AUTO": "kColorTextValue",
+    "WINDY": "kColorTextValue",
+    "POWER_OFF": "kColorTextValue",
 }
 
 # ---------------------------------------------------------------------------------------------

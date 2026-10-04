@@ -33,7 +33,6 @@
 #include "lvgl_screen.h"
 #include "lvgl_ui.h"
 #include <EventScheduler.h>
-
 #include "ws2_data.h"
 #include "shared/home_assistant/hass_dashboard.h"
 
@@ -745,8 +744,10 @@ private:
         // climate header: "Current temperature" and its value
         lv_obj_t *label{nullptr};
         lv_obj_t *headerValue{nullptr};
-        // climate: the three option pills (mode, preset, fan mode)
+        // climate: the three option pills (mode, preset, fan mode), the glyph of the value that is
+        // set (see climateOptionIcon()) and the value itself
         lv_obj_t *pills[3]{nullptr, nullptr, nullptr};
+        lv_obj_t *pillIcons[3]{nullptr, nullptr, nullptr};
         lv_obj_t *pillValue[3]{nullptr, nullptr, nullptr};
         // the list that replaces the arc/slider while an option is open
         lv_obj_t *list{nullptr};
@@ -942,6 +943,10 @@ private:
     // separated and points into the buffer of the detail slot of the dashboard. A tapped item is
     // looked up in it by its ordinal (see _panelCallback())
     const char *_panelListItems() const;
+    // glyph of the value of an option of a climate panel (the mode, the preset and the fan mode of
+    // an entity): the mode has a glyph per value, a fan mode uses the fan glyphs and every preset
+    // is the same small disc (see the implementation)
+    static LVGLUI::IconType _climateOptionIcon(PanelView view, const char *value);
     // fills the list of the panel with the items of the current view
     void _buildPanelList();
     // refreshes the header, the pills, the slider and the list of the open panel

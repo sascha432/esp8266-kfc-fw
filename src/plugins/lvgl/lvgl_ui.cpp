@@ -81,6 +81,8 @@ static const char *const kIconGlyph[] = {
     LVGL_MDI_WIFI, LVGL_MDI_WIFI_REMOVE, LVGL_MDI_WIFI_ALERT, LVGL_MDI_WIFI_OFF,
     LVGL_MDI_POWER_PLUG_OFF, LVGL_MDI_MOTION_SENSOR_OFF, LVGL_MDI_SINE_WAVE,
     LVGL_MDI_CURRENT_AC, LVGL_MDI_LIGHTNING_BOLT,
+    LVGL_MDI_AUTORENEW, LVGL_MDI_WATER,
+    LVGL_MDI_FAN_AUTO, LVGL_MDI_WINDY, LVGL_MDI_POWER_OFF,
 };
 
 // theme color of every icon, in the same order. A filled tile or button redraws them white with
@@ -101,6 +103,8 @@ static const uint32_t kIconColor[] = {
     kColorTextValue, kColorAccent,
     kColorTextValue, kColorTextMuted, kColorError, kColorTextMuted,
     kColorTextValue, kColorTextValue, kColorAccent, kColorAccent, kColorHighlight,
+    kColorTextValue, kColorAccent,
+    kColorTextValue, kColorTextValue, kColorTextValue,
 };
 
 static constexpr uint8_t kIconCount = static_cast<uint8_t>(sizeof(kIconGlyph) / sizeof(kIconGlyph[0]));
@@ -805,8 +809,14 @@ lv_obj_t *createList(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t w,
 // left and right margin between the label and the item of a list: a name that is shortened with
 // dots keeps that distance to the rounded corners of the card
 static constexpr lv_coord_t kListItemLabelMargin = 6;
+// Spaces of the item font the glyph of an item keeps to the left edge of the item and to the name
+// behind it (the spacing of the reviewed option lists, measured with the font so that it scales
+// with it)
+static constexpr uint8_t kListItemIconSpaces = 3;
 
-lv_obj_t *addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char *text)
+// implementation of both addListItem() overloads, `icon` is nullptr while the item has no icon
+static lv_obj_t *_addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h,
+                              const char *text, const IconType *icon)
 {
     auto item = createButton(list, x, y, w, h, text, kFontNormal);
     // an item looks like a tile of the grid, not like a control of a bar: the card color of a tile
@@ -814,20 +824,52 @@ lv_obj_t *addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, 
     lv_obj_set_style_radius(item, kCardRadius, LV_PART_MAIN);
     lv_obj_set_style_bg_color(item, lv_color_hex(kColorCard), LV_PART_MAIN);
     lv_obj_set_style_border_width(item, 0, LV_PART_MAIN);
-    // A name that is longer than the item is shortened with dots instead of being cut off. The
-    // label of createButton() is only as wide as its text, so LVGL clips it at the edge of the
-    // item. LV_LABEL_LONG_DOT needs a box of its own to measure against: the label spans the item
-    // with a small margin and is one line tall, so that a name that wraps into a second line is
-    // replaced with dots (a taller box than one line would simply draw the wrapped text)
+
     auto label = lv_obj_get_child(item, 0);
-    if (label && lv_obj_check_type(label, &lv_label_class)) {
-        const auto font = lv_obj_get_style_text_font(label, LV_PART_MAIN);
-        lv_obj_set_size(label, static_cast<lv_coord_t>(w - 2 * kListItemLabelMargin),
-                        lv_font_get_line_height(font));
-        lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
-        lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    if (!label || !lv_obj_check_type(label, &lv_label_class)) {
+        return item;
     }
+    const auto font = lv_obj_get_style_text_font(label, LV_PART_MAIN);
+    const auto lineHeight = lv_font_get_line_height(font);
+    // An item without a glyph is a centered name. With a glyph the name is left aligned behind it:
+    // the glyph, three spaces of the item font away from the left edge of the item, then the name
+    // three spaces behind the glyph. A name that does not fit into the room right of the glyph is
+    // shortened with dots - LV_LABEL_LONG_DOT needs the box of its own to measure against (the
+    // label of createButton() is only as wide as its text and LVGL would simply clip it at the edge
+    // of the item)
+    auto labelX = kListItemLabelMargin;
+    auto labelW = static_cast<lv_coord_t>(w - 2 * kListItemLabelMargin);
+    auto textAlign = LV_TEXT_ALIGN_CENTER;
+    if (icon) {
+        const auto gap = static_cast<lv_coord_t>(getTextWidth(" ", font) * kListItemIconSpaces);
+        labelX = static_cast<lv_coord_t>(gap + kIconSizeSmall + gap);
+        labelW = static_cast<lv_coord_t>(w - labelX - gap);
+        if (labelW < 8) {
+            labelW = 8;
+        }
+        textAlign = LV_TEXT_ALIGN_LEFT;
+        auto iconObj = createIcon(item, *icon, gap, static_cast<lv_coord_t>((h - kIconSizeSmall) / 2),
+                                  kIconSizeSmall, kColorTextValue);
+        // the glyph is not a control of its own: without this a tap in the middle of the icon hits
+        // the icon and the item never receives its click
+        clearClickable(iconObj);
+    }
+    // The text of a label is aligned to the left by default, which the box of a name that is not
+    // shortened turns into a left aligned item (createButton() centered the text by centering its
+    // auto sized label). LVGL aligns the dots of a shortened name to the alignment as well.
+    // lv_obj_align(LV_ALIGN_DEFAULT) and not lv_obj_set_pos(): createButton() centered the label
+    // with lv_obj_center(), which left the alignment of the object set - a position would be added
+    // to that alignment and the box would land half an item beside the glyph
+    lv_obj_set_style_text_align(label, textAlign, LV_PART_MAIN);
+    lv_obj_set_size(label, labelW, lineHeight);
+    lv_obj_align(label, LV_ALIGN_DEFAULT, labelX, static_cast<lv_coord_t>((h - lineHeight) / 2));
+    lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
     return item;
+}
+
+lv_obj_t *addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char *text)
+{
+    return _addListItem(list, x, y, w, h, text, nullptr);
 }
 
 void setListItemActive(lv_obj_t *item, bool active)
@@ -838,9 +880,15 @@ void setListItemActive(lv_obj_t *item, bool active)
     // a filled (active) item looks like an active tile, the others are plain tiles
     lv_obj_set_style_bg_color(item, lv_color_hex(active ? kColorActive : kColorCard), LV_PART_MAIN);
     lv_obj_set_style_border_color(item, lv_color_hex(active ? kColorActive : kColorCard), LV_PART_MAIN);
-    auto child = lv_obj_get_child(item, 0);
-    if (child && lv_obj_check_type(child, &lv_label_class)) {
-        lv_obj_set_style_text_color(child, lv_color_hex(active ? kColorText : kColorTextValue), LV_PART_MAIN);
+    // the label and the glyph in front of it draw the color of the item
+    for (uint32_t i = 0; i < lv_obj_get_child_cnt(item); i++) {
+        auto child = lv_obj_get_child(item, i);
+        if (lv_obj_check_type(child, &lv_label_class)) {
+            lv_obj_set_style_text_color(child, lv_color_hex(active ? kColorText : kColorTextValue), LV_PART_MAIN);
+        }
+        else {
+            setIconColor(child, active ? kColorText : kColorTextValue);
+        }
     }
 }
 
@@ -913,6 +961,12 @@ lv_obj_t *createIconButton(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coor
     // icon and the button never receives its click
     clearClickable(icon);
     return button;
+}
+
+lv_obj_t *addListItem(lv_obj_t *list, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char *text,
+                      IconType icon)
+{
+    return _addListItem(list, x, y, w, h, text, &icon);
 }
 
 lv_obj_t *createHouseIcon(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coord_t size)

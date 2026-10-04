@@ -519,6 +519,11 @@ public:
             uint8_t _calcPowerFunction(uint8_t scale, uint32_t data);
             float _getPowerLevel() const;
 
+            #if HAVE_NEOPIXELBUS
+                // software power limit, the FastLED power management is not available (and not used)
+                uint8_t _getNeoBusBrightness(uint8_t targetBrightness, uint32_t maxPower_mW);
+            #endif
+
         private:
             static constexpr uint32_t kPowerLevelUpdateRateMultiplier = 500000;
 
@@ -746,6 +751,12 @@ private:
     uint8_t _tempOverride;
     float _tempBrightness;
     float _fps;
+    uint32_t _animMicros;   // average time the loop needs for the animation and the power limit
+    uint32_t _showMicros;   // average time the display transport needs to transmit a frame
+    uint32_t _animSum;      // accumulators for the average of the last second
+    uint32_t _showSum;
+    uint32_t _timingFrames;
+    uint32_t _timingTimer;
     String _overheatedInfo;
 
     ClockConfigType _config;
@@ -965,7 +976,7 @@ inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
         method = Clock::ShowMethodType::FASTLED;
     #endif
     _method = method;
-    #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S
+    #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S && !HAVE_NEOPIXELBUS
         if (_method != Clock::ShowMethodType::FASTLED) {
             ESP32RMTController::deinit();
         }
@@ -1193,6 +1204,13 @@ inline void ClockPlugin::_updateBrightnessSettings()
 inline void ClockPlugin::_reset()
 {
     // turn off all LEDs during restart or a crash
+    #if HAVE_NEOPIXELBUS
+        // NeoPixelBus owns the RMT/I2S peripheral, blank the buffer and transmit it
+        auto &plugin = getInstance();
+        plugin._display.setBrightness(0);
+        plugin._display.clear();
+        plugin._display.show();
+    #else
     // IOT_LED_MATRIX_FASTLED_ONLY: PixelDisplay::show() keeps using FastLED, so the RMT driver must
     // not be torn down here - the pixels are blanked with FastLED below
     #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S && !IOT_LED_MATRIX_FASTLED_ONLY
@@ -1221,6 +1239,7 @@ inline void ClockPlugin::_reset()
             NeoPixelEx::forceClear<IOT_LED_MATRIX_OUTPUT_PIN3>(std::min<uint16_t>(IOT_CLOCK_NUM_PIXELS, 1024));
         #endif
     #endif
+    #endif // HAVE_NEOPIXELBUS
 }
 
 inline void ClockPlugin::loop()
@@ -1257,6 +1276,12 @@ inline const __FlashStringHelper *ClockPlugin::getShowMethodStr(Clock::ShowMetho
         #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
             case Clock::ShowMethodType::AF_NEOPIXEL:
                 return F("Adafruit NeoPixel");
+        #endif
+        #if HAVE_NEOPIXELBUS
+            case Clock::ShowMethodType::NEOBUS_RMT:
+                return F("NeoPixelBus RMT");
+            case Clock::ShowMethodType::NEOBUS_I2S:
+                return F("NeoPixelBus I2S");
         #endif
         default:
             break;

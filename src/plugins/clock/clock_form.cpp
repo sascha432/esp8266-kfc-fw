@@ -796,7 +796,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     ui.setContainerId(F("led-matrix-settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    #if ESP32
+    #if ESP32 && IOT_LED_MATRIX_ENABLE_VISUALIZER == 0 // no combined form for visualizer
         if (F("animations") == formName) {
 
             // --------------------------------------------------------------------
@@ -1106,7 +1106,17 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             cfg.addRangeValidatorFor_blink_colon_speed(form, true);
         #endif
 
-        #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT || IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+        #if HAVE_NEOPIXELBUS
+
+            auto displayMethodItems = FormUI::Container::List(
+                Clock::ShowMethodType::NEOBUS_RMT, F("NeoPixelBus RMT"),
+                Clock::ShowMethodType::NEOBUS_I2S, F("NeoPixelBus I2S")
+            );
+
+            form.addObjectGetterSetter(F("dm"), FormGetterSetter(cfg, method));
+            form.addFormUI(F("Display Method"), displayMethodItems);
+
+        #elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT || IOT_LED_MATRIX_NEOPIXEL_SUPPORT
 
             auto displayMethodItems = FormUI::Container::List(
                 Clock::ShowMethodType::FASTLED, F("FastLED")

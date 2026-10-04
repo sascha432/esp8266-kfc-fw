@@ -156,6 +156,91 @@ in this workspace.
 - **OTA is not available** (the partition table has a single `factory` app partition and no OTA slots); use the
   env's `monitor_port` (`conf/envs/wled_board.ini`).
 
+## Environment `wled_esp32_controller_neopixelbus`
+
+- Same board, partition table and filesystem as `wled_esp32_controller`, but the LED transport is **NeoPixelBus**
+  (`HAVE_NEOPIXELBUS=1`) instead of FastLED. FastLED is still used for `CRGB`/`CHSV` and the animations only -
+  no `addLeds()`/`FastLED.show()`, so no FastLED RMT driver is initialized.
+- FastLED is pinned to the **official 3.9.20**. 3.10.x does not build here: its `platforms/arduino` layer needs a
+  `Serial` with `begin()`/`operator bool()`, while the firmware force-includes `serial_compat.h` with
+  `extern Stream &Serial;` (`NO_GLOBAL_SERIAL`).
+- Show method is a runtime toggle (`+LMC=met,nrmt|ni2s`, Display Method form), default **NeoPixelBus RMT**. All
+  RMT outputs share one channel (see below), so up to 4 output pins work; I2S drives **at most 2** (I2S0/I2S1) and
+  conflicts with the I2S microphone visualizer - further segments are ignored.
+- **All RMT pins are transmitted on ONE channel with all 8 memory blocks.** The RMT channels share the 8 blocks
+  and the ESP-IDF driver refills a channel from its threshold interrupt, which is set to half of its memory: two
+  channels of 4 blocks each only leave **~160 us** per refill, one channel with all 8 blocks has **~320 us**. A
+  late interrupt lets the hardware replay stale memory, the strip latches in the middle of a frame and the rest
+  of the frame is shifted (random colors / "moving start LED"). Measured on the device: 2 channels/4 blocks
+  flickers, 1 channel/8 blocks is stable. `NeoBusRmtMux` therefore transmits the segments one after another on
+  `RMT_CHANNEL_0` and routes the RMT output to the pin of the segment that is transmitted (`rmt_set_gpio`); the
+  previous pin is left as GPIO output low = idle level, so its strip latches. `rmt_wait_tx_done()` between the
+  frames waits for the channel *and* is non-destructive (the driver gives the semaphore back), so it doubles as
+  the frame timer. A frame costs the sum of its segments (128 pixels are ~3.84 ms): 2 segments ~78 fps, 4 ~65 fps.
+- **NeoPixelBus is a git checkout of our own fork inside `lib/NeoPixelBus`** - branch `kfc-rmt-mem-blocks`,
+  tag `kfc-rmt1`, based on upstream `master` `882b804` (the three commits after the `2.8.4` tag: #894/#910/#911).
+  `origin` is `https://github.com/sascha432/NeoPixelBus.git`, `upstream` is Makuna, and the fork's `ReadMe.md`
+  documents issue #921 / PRs #922/#923. The folder has its own `.git` (the firmware ignores it through
+  `lib/NeoPixelBus/*`), so run git for the library **in that folder** and never from `kfc_fw`. Two patches in
+  `src/internal/methods/NeoEsp32RmtMethod.{h,cpp}`:
+  1. `NEOPIXELBUS_RMT_INT_FLAGS` is `ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL3` instead of the upstream
+     `ESP_INTR_FLAG_LOWMED` (not IRAM safe, lowest priority). Same values FastLED's ESP32 RMT driver uses. It
+     keeps its `#ifndef`, so `-D NEOPIXELBUS_RMT_INT_FLAGS=...` still overrides it for A/B tests.
+  2. `mem_block_num` is no longer hardcoded to 1 - it reads `gNeoPixelBusRmtMemBlocks` (defined in the lib,
+     default 1). `NeoBusRmtMux` sets it to all 8 blocks before `Begin()`.
+  `NeoBusStrips::show()` additionally holds `spi_flash_op_lock()` around the transmit (the same mechanism as
+  `FASTLED_ESP32_FLASH_LOCK`). Do not replace the checkout with the registry version; `NeoPixelBus` stays in
+  `conf/common_esp8266.ini` `lib_ignore` - that is what keeps it out of the ESP8266 builds (LDF cannot see
+  `#if HAVE_NEOPIXELBUS`), the fork keeps upstream's `platforms: "*"` manifest.
+- Status page diagnostics for the RMT transport (sticky since boot): `..., NeoPixelBus RMT, <fps>, <n> blocks`,
+  then `, frame +<us>` for the worst frame that took longer than its pixels need (the RMT memory ran empty and
+  stale data was transmitted, i.e. visible flicker), `, <n>% over` for the share of segment transmissions that
+  were late and `, <n> tx timeouts` for frames that never finished.
+- Frame timing on the status page (averages of the last frames, from `ClockPlugin::_loop()`): `wire` is the
+  shortest frame the configured segments allow (sum of the segments at 30 us per pixel), `show` is what the loop
+  really spends on the transport (filling + transmitting + stalls) and `anim` is the rest of the frame
+  (animations, matrix/hexagon mapping, power limit) - the frame time is `anim` + `show`, so `show - wire` is the
+  loss inside the transport and `anim` is the CPU cost of the animation. `write +<us>` is the longest time the
+  driver needed to translate and copy a frame into the RMT memory (that time is part of the frame, not of the
+  transmission). `frame +<us>`/`<n>% over` compare the transmission window (end of the write until the
+  transmit-done interrupt) with the wire time; it contains the task wakeup latency of the done semaphore as well
+  as every replay, so the **maximum** is the value to watch - a high percentage alone is expected, and the
+  maximum grows while the WebUI is used (accepted, see below).
+- **Throughput and restrictions of the transports** (30 us per pixel = 1.25 us per bit is the WS2812 wire time,
+  a segment is limited to `NeoBusRmtMux::kMaxPins`/`kMaxStrips` = 4):
+  - **RMT transmits one wire at a time**, so a frame costs the **sum of all segments**: 512 pixels ~15.4 ms
+    (~65 fps ceiling), 2048 pixels ~61 ms (~16 fps) - measured 48.1 fps (2 segments), 33.8 (3), 6.5 (4 segments
+    of 2048 pixels). Running the pins on separate RMT channels would make them parallel, but then each channel
+    only gets 4 of the 8 memory blocks and flickers (see above) - with RMT there is no parallel operation.
+  - **RMT is sensitive to flash writes**: NVS/LittleFS/WiFi operations mask interrupts on both cores for their
+    whole duration (a 4 KB page program is ~1-3 ms, a sector erase 20-45 ms) and the RMT replays its memory
+    meanwhile, so that frame takes longer *and* shows garbage. `spi_flash_op_lock()` only excludes writers that
+    honor it (the WiFi driver uses it), so it does not prevent this. `SyslogFile` writes `/.logs/messages` with
+    open/append/close per message and rotates it at 16 KB, so a single log line or a WebUI request can stall a
+    frame; measured `frame +5016us` at 512 pixels / 2 segments and `frame +27292us` at 2048 pixels / 4 segments
+    (the "worst case" values, the filesystem being ~97% full makes every write start a garbage collection that
+    erases 4 KB blocks).
+  - **The stutter while the WebUI is used is accepted** (config saves, log writes, filesystem garbage
+    collection): the transport recovers on the next frame and only the `frame +<us>` maximum grows, so this is
+    not a bug to fix. Freeing filesystem space or stopping the log writer only reduces the stutter. A growing
+    `frame +<us>` *without* WebUI or filesystem activity would mean the interrupt latency is above what the RMT
+    can cover - that output then needs a DMA transport (I2S).
+  - **I2S is DMA driven and parallel**: `NeoEsp32I2sMethodBase::Update()` encodes the whole frame into a DMA
+    buffer (`heap_caps_malloc(..., MALLOC_CAP_DMA)`) and starts it, there is no refill interrupt - a delayed
+    interrupt only delays the *next* frame instead of glitching the current one - and up to **2 segments are
+    transmitted in parallel** (`NeoBusChannel` selects the I2S port) at the cost of one. Measured 118 fps at
+    2048 pixels / 2 segments. Restrictions: only 2 ports exist (further segments are ignored,
+    `kMaxI2sStrips`), **port 0 collides with the visualizer's I2S microphone** (NeoPixelBus drives the I2S
+    peripheral with its own `Esp32_i2s.c`, the microphone uses the ESP-IDF driver on
+    `IOT_LED_MATRIX_I2S_PORT` = I2S0 - a segment on that port fails to initialize and stays dark, move the
+    microphone to I2S1 instead), and the DMA buffer of every segment must fit into internal DMA capable RAM
+    (`MALLOC_CAP_DMA`), a long segment can fail to initialize ("NeoPixelBus initialize failed" in the log).
+  - Rule of thumb: 1-2 segments -> RMT, or I2S for 2 segments (twice as fast and stall proof); 3-4 segments ->
+    RMT only (serial, the frame rate drops with the total pixel count). There is no mixed I2S+RMT mode yet.
+- The power limit is a software limiter (`ClockPlugin::_getNeoBusBrightness()`) applied in `ClockPlugin::_loop()`;
+  FastLED's fork-only power management is not compiled in. Temporal dithering is a no-op (NeoPixelBus has none).
+- **OTA is not available** (single `factory` app partition); use the env's `monitor_port`.
+
 ## Environment `bme280_serial` (ESP8266 test env)
 
 - `board = nodemcuv2` with `upload_protocol = esptool` - **serial only, no OTA**; use the env's `monitor_port`

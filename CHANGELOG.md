@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - NeoPixelBus RMT and I2S support added
  - ESP32 SerialHandler: subscribe the main loop task to the task watchdog once instead of on every loop iteration
  - New build number generator
  - Added the MPU-6050 display rotation and tilt sensor

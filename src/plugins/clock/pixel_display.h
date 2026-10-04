@@ -11,6 +11,9 @@
 #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
 #    include <Adafruit_NeoPixelEx.h>
 #endif
+#if HAVE_NEOPIXELBUS
+#    include "pixel_output_neobus.h"
+#endif
 
 #if __GNUG__ < 8
 #    error not supported
@@ -41,6 +44,10 @@ namespace Clock {
         #endif
         #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
             AF_NEOPIXEL,
+        #endif
+        #if HAVE_NEOPIXELBUS
+            NEOBUS_RMT,
+            NEOBUS_I2S,
         #endif
         MAX
     };
@@ -838,10 +845,18 @@ namespace Clock {
 
         // all segments need to be added, the size can be changed later
         PixelDisplay() :
-            _emptyPixel(0),
-            _controller(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN>(&_emptyPixel, 1))
-            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                , _neoPixels{nullptr}
+            #if HAVE_NEOPIXELBUS
+                _brightness(255),
+                _neoBusMethod(NeoBusMethodType::RMT),
+                _segPixels{},
+                _segOffset{},
+                _numSegments(0)
+            #else
+                _emptyPixel(0),
+                _controller(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN>(&_emptyPixel, 1))
+                #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+                    , _neoPixels{nullptr}
+                #endif
             #endif
         {
             setDither(false);
@@ -849,7 +864,7 @@ namespace Clock {
                 auto neoPixelPtr = _neoPixels;
                 *neoPixelPtr++ = new Adafruit_NeoPixelEx(0, nullptr, IOT_LED_MATRIX_OUTPUT_PIN, NEOPIXEL_LED_TYPE);
             #endif
-            #if IOT_LED_MATRIX_MULTI_OUTPUT
+            #if IOT_LED_MATRIX_MULTI_OUTPUT && !HAVE_NEOPIXELBUS
                 #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
                     FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN1>(&_emptyPixel, 1);
                     #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
@@ -887,6 +902,18 @@ namespace Clock {
         {
             fill(0);
             show(0);
+
+            #if HAVE_NEOPIXELBUS
+                // the strips are rebuilt for the new segment layout, they are also rebuilt by show()
+                // when the show method is changed at runtime
+                _segPixels[0] = num0; _segOffset[0] = ofs0;
+                _segPixels[1] = num1; _segOffset[1] = ofs1;
+                _segPixels[2] = num2; _segOffset[2] = ofs2;
+                _segPixels[3] = num3; _segOffset[3] = ofs3;
+                _rebuildStrips();
+            #endif
+
+            #if !HAVE_NEOPIXELBUS
             _numSegments = 0;
 
             #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
@@ -974,12 +1001,18 @@ namespace Clock {
                     break;
                 }
             #endif
+            #endif // !HAVE_NEOPIXELBUS
         }
 
         inline __attribute__((__always_inline__))
         void setDither(bool enable)
         {
-            FastLED.setDither(enable ? BINARY_DITHER : DISABLE_DITHER);
+            #if HAVE_NEOPIXELBUS
+                // NeoPixelBus has no temporal dithering
+                _dither = enable;
+            #else
+                FastLED.setDither(enable ? BINARY_DITHER : DISABLE_DITHER);
+            #endif
         }
 
         void reset()
@@ -991,13 +1024,30 @@ namespace Clock {
         inline __attribute__((__always_inline__))
         void setBrightness(uint8_t brightness)
         {
-            FastLED.setBrightness(brightness);
+            #if HAVE_NEOPIXELBUS
+                _brightness = brightness;
+                // keep FastLED's value in sync, it is only used for the diagnostic dump()
+                FastLED.setBrightness(brightness);
+            #else
+                FastLED.setBrightness(brightness);
+            #endif
+        }
+
+        // current brightness, the NeoPixelBus build keeps it in the display
+        inline __attribute__((__always_inline__))
+        uint8_t getBrightness() const
+        {
+            #if HAVE_NEOPIXELBUS
+                return _brightness;
+            #else
+                return FastLED.getBrightness();
+            #endif
         }
 
         inline __attribute__((__always_inline__))
         void show()
         {
-            show(FastLED.getBrightness());
+            show(getBrightness());
         }
 
         #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
@@ -1042,7 +1092,22 @@ namespace Clock {
 
         void show(uint8_t brightness)
         {
-            #if IOT_LED_MATRIX_FASTLED_ONLY
+            #if HAVE_NEOPIXELBUS
+                auto type = getNeopixelShowMethodType();
+                auto method = (type == ShowMethodType::NEOBUS_I2S) ? NeoBusMethodType::I2S : NeoBusMethodType::RMT;
+                if (method != _neoBusMethod) {
+                    _neoBusMethod = method;
+                    _rebuildStrips();
+                }
+                switch(type) {
+                    case ShowMethodType::NEOBUS_RMT:
+                    case ShowMethodType::NEOBUS_I2S:
+                        _neoBus.show(__pixels.data(), brightness);
+                        break;
+                    default:
+                        break;
+                }
+            #elif IOT_LED_MATRIX_FASTLED_ONLY
                 FastLED.show(brightness);
             #else
                 switch(getNeopixelShowMethodType()) {
@@ -1083,8 +1148,81 @@ namespace Clock {
 
         bool getDither() const
         {
-            return (_controller.getDither() == BINARY_DITHER);
+            #if HAVE_NEOPIXELBUS
+                return _dither;
+            #else
+                return (_controller.getDither() == BINARY_DITHER);
+            #endif
         }
+
+        #if HAVE_NEOPIXELBUS
+            // frames per second of the NeoPixelBus transport, measured over one second
+            inline __attribute__((__always_inline__))
+            float getFps() const
+            {
+                return _neoBus.getFps();
+            }
+
+            // longest frame of the RMT transport that took longer than the pixels need, in micro
+            // seconds. A value above the tolerance means the RMT memory ran empty and data was
+            // transmitted twice - the visible flicker of a delayed refill interrupt
+            uint32_t getMaxOverrunMicros() const
+            {
+                return _neoBus.getMaxOverrunMicros();
+            }
+
+            // frames of the RMT transport that never finished (the refill interrupt stopped)
+            uint32_t getTxTimeouts() const
+            {
+                return _neoBus.getTxTimeouts();
+            }
+
+            // transmitted segments of the RMT transport and how many of them took longer than the
+            // pixels need - a flash write during the transmission masks the refill interrupt
+            uint32_t getTransmissions() const
+            {
+                return _neoBus.getTransmissions();
+            }
+
+            uint32_t getTransmissionsOver() const
+            {
+                return _neoBus.getTransmissionsOver();
+            }
+
+            // longest time the driver needed to translate and copy a frame into the RMT memory
+            uint32_t getMaxWriteMicros() const
+            {
+                return _neoBus.getMaxWriteMicros();
+            }
+
+            // time the pixels of all segments need on the wire, the shortest frame possible
+            uint32_t getWireMicros() const
+            {
+                return _neoBus.getWireMicros();
+            }
+
+            // sum of the channel values and the number of LEDs of all active segments, used by the
+            // software power limit (the power constants are mW per 256 LEDs, see the FastLED fork's
+            // power management)
+            void getPowerSum(uint32_t &red, uint32_t &green, uint32_t &blue, uint32_t &count) const
+            {
+                red = green = blue = count = 0;
+                const uint32_t maxPixels = __pixels.size();
+                for (uint8_t i = 0; i < NeoBusStrips::kMaxStrips; i++) {
+                    if (!_segPixels[i] || _segOffset[i] >= maxPixels) {
+                        continue;
+                    }
+                    const uint32_t num = std::min<uint32_t>(_segPixels[i], maxPixels - _segOffset[i]);
+                    const CRGB *leds = __pixels.data() + _segOffset[i];
+                    for (uint32_t j = 0; j < num; j++) {
+                        red += leds[j].r;
+                        green += leds[j].g;
+                        blue += leds[j].b;
+                    }
+                    count += num;
+                }
+            }
+        #endif
 
         uint32_t getNumSegments() const
         {
@@ -1093,24 +1231,77 @@ namespace Clock {
 
         void delay(unsigned long ms)
         {
-            if (
-            #if IOT_LED_MATRIX_FASTLED_ONLY == 0
-                (getNeopixelShowMethodType() == Clock::ShowMethodType::FASTLED) &&
-            #endif
-                getDither() && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
-                // use FastLED.delay for dithering
-                FastLED.delay(ms);
-            }
-            else {
+            #if HAVE_NEOPIXELBUS
                 ::delay(ms);
-            }
+            #else
+                if (
+                #if IOT_LED_MATRIX_FASTLED_ONLY == 0
+                    (getNeopixelShowMethodType() == Clock::ShowMethodType::FASTLED) &&
+                #endif
+                    getDither() && (FastLED.getBrightness() != 0) && (FastLED.getBrightness() != 255)) {
+                    // use FastLED.delay for dithering
+                    FastLED.delay(ms);
+                }
+                else {
+                    ::delay(ms);
+                }
+            #endif
         }
 
     protected:
-        CRGB _emptyPixel;
-        CLEDController &_controller;
-        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-            Adafruit_NeoPixelEx *_neoPixels[5];
+        #if HAVE_NEOPIXELBUS
+            // create/rebuild one strip per output pin, the pins are compile time constants
+            void _rebuildStrips()
+            {
+                uint8_t pins[NeoBusStrips::kMaxStrips];
+                pins[0] = IOT_LED_MATRIX_OUTPUT_PIN;
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+                    pins[1] = IOT_LED_MATRIX_OUTPUT_PIN1;
+                #else
+                    pins[1] = 0xff;
+                #endif
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+                    pins[2] = IOT_LED_MATRIX_OUTPUT_PIN2;
+                #else
+                    pins[2] = 0xff;
+                #endif
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+                    pins[3] = IOT_LED_MATRIX_OUTPUT_PIN3;
+                #else
+                    pins[3] = 0xff;
+                #endif
+
+                // the configured segments have to stay inside the pixel buffer, a segment that is
+                // larger (or starts behind it) would be read out of bounds - transmit less instead
+                const uint32_t maxPixels = __pixels.size();
+                uint16_t offsets[NeoBusStrips::kMaxStrips];
+                uint16_t counts[NeoBusStrips::kMaxStrips];
+                for (uint8_t i = 0; i < NeoBusStrips::kMaxStrips; i++) {
+                    if (_segOffset[i] >= maxPixels) {
+                        offsets[i] = 0;
+                        counts[i] = 0;
+                        continue;
+                    }
+                    offsets[i] = _segOffset[i];
+                    const uint32_t available = maxPixels - _segOffset[i];
+                    counts[i] = (_segPixels[i] > available) ? static_cast<uint16_t>(available) : _segPixels[i];
+                }
+                _neoBus.update(_neoBusMethod, pins, offsets, counts);
+                _numSegments = _neoBus.getNumStrips();
+            }
+
+            NeoBusStrips _neoBus;
+            uint8_t _brightness;
+            bool _dither;
+            NeoBusMethodType _neoBusMethod;
+            uint16_t _segPixels[NeoBusStrips::kMaxStrips];
+            uint16_t _segOffset[NeoBusStrips::kMaxStrips];
+        #else
+            CRGB _emptyPixel;
+            CLEDController &_controller;
+            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+                Adafruit_NeoPixelEx *_neoPixels[5];
+            #endif
         #endif
         uint32_t _numSegments;
     };

@@ -144,18 +144,59 @@ void ClockPlugin::setValue(const String &id, const String &value, bool hasValue,
         }
     }
 
-    #include <power_mgt.h>
+    #if !HAVE_NEOPIXELBUS
+        #include <power_mgt.h>
+    #endif
+
+    #if HAVE_NEOPIXELBUS
+
+        // software power limit for the NeoPixelBus transport. FastLED is not the output driver and
+        // has no registered controllers, therefore the power is estimated from the pixel buffer and
+        // the configured consumption per channel (mW per 256 LEDs, same model as the fork's power
+        // management)
+        uint8_t ClockPlugin::_getNeoBusBrightness(uint8_t targetBrightness, uint32_t maxPower_mW)
+        {
+            uint32_t red, green, blue, count;
+            _display.getPowerSum(red, green, blue, count);
+
+            // power of the current frame at full brightness
+            const uint32_t total_mW =
+                (((red / 255) * _config.power.red) >> 8) +
+                (((green / 255) * _config.power.green) >> 8) +
+                (((blue / 255) * _config.power.blue) >> 8);
+            const uint32_t idle_mW = (count * _config.power.idle) >> 8;
+
+            const uint32_t requested_mW = ((total_mW * targetBrightness) / Clock::kMaxBrightness) + idle_mW;
+            if (maxPower_mW != ~0U && requested_mW > maxPower_mW) {
+                _powerLevel.current_mW = maxPower_mW;
+                return static_cast<uint8_t>((maxPower_mW * targetBrightness) / requested_mW);
+            }
+            _powerLevel.current_mW = requested_mW;
+            return targetBrightness;
+        }
+
+    #endif
 
     uint8_t ClockPlugin::_calcPowerFunction(uint8_t targetBrightness, uint32_t maxPower_mW)
     {
         if (_isEnabled) {
-            return _calcPowerLevel(_calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, _powerLevel.current_mW));
+            #if HAVE_NEOPIXELBUS
+                return _calcPowerLevel(_getNeoBusBrightness(targetBrightness, maxPower_mW));
+            #else
+                return _calcPowerLevel(_calculate_max_brightness_for_power_mW(targetBrightness, maxPower_mW, _powerLevel.current_mW));
+            #endif
         }
         else {
             _powerLevel.clear();
             #if IOT_LED_MATRIX_STANDBY_PIN == -1
                 // LEDs are always powered
-                _powerLevel.current_mW = calculate_idle_power_mW();
+                #if HAVE_NEOPIXELBUS
+                    uint32_t red, green, blue, count;
+                    _display.getPowerSum(red, green, blue, count);
+                    _powerLevel.current_mW = (count * _config.power.idle) >> 8;
+                #else
+                    _powerLevel.current_mW = calculate_idle_power_mW();
+                #endif
                 _powerLevel.average_mW = _powerLevel.current_mW;
             #endif
             return 0;

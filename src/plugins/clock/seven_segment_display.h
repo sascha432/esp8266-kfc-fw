@@ -246,7 +246,7 @@ namespace SevenSegment {
         void show()
         {
             _applyMask();
-            BaseDisplayType::show(FastLED.getBrightness());
+            BaseDisplayType::show(getBrightness());
         }
 
         void show(uint8_t brightness)
@@ -257,7 +257,7 @@ namespace SevenSegment {
 
         void dump(Print &output)
         {
-            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=clock brightness=%u\n"), __pixels.data(), _pixels, kPixelOffset, kNumPixels, FastLED.getBrightness());
+            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=clock brightness=%u\n"), __pixels.data(), _pixels, kPixelOffset, kNumPixels, getBrightness());
         }
 
     private:

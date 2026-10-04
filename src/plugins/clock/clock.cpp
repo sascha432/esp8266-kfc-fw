@@ -80,6 +80,12 @@ ClockPlugin::ClockPlugin() :
     _tempOverride(0),
     _tempBrightness(1.0),
     _fps(0),
+    _animMicros(0),
+    _showMicros(0),
+    _animSum(0),
+    _showSum(0),
+    _timingFrames(0),
+    _timingTimer(0),
     _timerCounter(0),
     _savedBrightness(0),
     _targetBrightness(0),
@@ -659,6 +665,34 @@ void ClockPlugin::getStatus(Print &output)
                 }
             #endif
             break;
+        #if HAVE_NEOPIXELBUS
+            case Clock::ShowMethodType::NEOBUS_RMT: {
+                    const auto wire = _display.getWireMicros();
+                    output.printf_P(PSTR(", NeoPixelBus RMT, %.1ffps, %u blocks, wire %u.%ums"), _fps, gNeoPixelBusRmtMemBlocks, wire / 1000, (wire % 1000) / 100);
+                    const auto overrun = _display.getMaxOverrunMicros();
+                    if (overrun) {
+                        output.printf_P(PSTR(", frame +%uus"), overrun);
+                    }
+                    const auto transmissions = _display.getTransmissions();
+                    if (transmissions) {
+                        const auto over = _display.getTransmissionsOver();
+                        if (over) {
+                            output.printf_P(PSTR(", %u%% over"), over * 100 / transmissions);
+                        }
+                    }
+                    const auto timeouts = _display.getTxTimeouts();
+                    if (timeouts) {
+                        output.printf_P(PSTR(", %u tx timeouts"), timeouts);
+                    }
+                    const auto write = _display.getMaxWriteMicros();
+                    if (write > 1000) {
+                        output.printf_P(PSTR(", write +%u.%ums"), write / 1000, (write % 1000) / 100);
+                    }
+                } break;
+            case Clock::ShowMethodType::NEOBUS_I2S:
+                output.printf_P(PSTR(", NeoPixelBus I2S, %.1ffps"), _fps);
+                break;
+        #endif
         #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
             case Clock::ShowMethodType::NEOPIXEL_EX: {
                 #if NEOPIXEL_HAVE_STATS
@@ -680,6 +714,12 @@ void ClockPlugin::getStatus(Print &output)
         default:
             break;
     }
+
+    #if HAVE_NEOPIXELBUS
+        // average of the last frames: the frame time is the animation work (anim) plus the transport
+        // (show), the wire time is the shortest frame the pixels allow
+        output.printf_P(PSTR(", anim %u.%ums, show %u.%ums"), _animMicros / 1000, (_animMicros % 1000) / 100, _showMicros / 1000, (_showMicros % 1000) / 100);
+    #endif
 
     #if IOT_LED_MATRIX_NO_BUTTON
         // nothing to see here move along
@@ -883,10 +923,18 @@ void ClockPlugin::_sanitizeConfig()
     #if IOT_LED_MATRIX_FASTLED_ONLY
         _config.method = static_cast<uint8_t>(Clock::ShowMethodType::FASTLED);
     #else
-        if (_config.method > IOT_CLOCK_SHOW_METHOD_MAX) {
-            __DBG_printf("invalid show method %u, using FastLED", _config.method);
-            _config.method = static_cast<uint8_t>(Clock::ShowMethodType::FASTLED);
-        }
+        #if HAVE_NEOPIXELBUS
+            // the NeoPixelBus env has no FastLED transport, the stored FastLED default is remapped
+            if (_config.method == static_cast<uint8_t>(Clock::ShowMethodType::FASTLED) || _config.method > IOT_CLOCK_SHOW_METHOD_MAX) {
+                __DBG_printf("invalid show method %u, using NeoPixelBus RMT", _config.method);
+                _config.method = static_cast<uint8_t>(Clock::ShowMethodType::NEOBUS_RMT);
+            }
+        #else
+            if (_config.method > IOT_CLOCK_SHOW_METHOD_MAX) {
+                __DBG_printf("invalid show method %u, using FastLED", _config.method);
+                _config.method = static_cast<uint8_t>(Clock::ShowMethodType::FASTLED);
+            }
+        #endif
     #endif
 
     auto &matrix = _config.matrix;
@@ -944,22 +992,27 @@ void ClockPlugin::readConfig(bool setup)
             _powerLevel.clear();
         #endif
 
-        #if FASTLED_VERSION >= 3005000
-            if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
-                FastLED.m_pPowerFunc = nullptr; // if this does not compile, make m_pPowerFunc public in FastLED.h
-            }
-            else {
-                FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit));
-                FastLED.m_pPowerFunc = calcPowerFunction;
-            }
+        #if HAVE_NEOPIXELBUS
+            // NeoPixelBus has no power management, the limit is applied by _loop(), see
+            // _getNeoBusBrightness()
         #else
-            if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
-                FastLED.setMaxPowerInMilliWatts(0);
-            }
-            else {
-                FastLED.setPowerConsumptionInMilliWattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
-                FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit), &calcPowerFunction);
-            }
+            #if FASTLED_VERSION >= 3005000
+                if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
+                    FastLED.m_pPowerFunc = nullptr; // if this does not compile, make m_pPowerFunc public in FastLED.h
+                }
+                else {
+                    FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit));
+                    FastLED.m_pPowerFunc = calcPowerFunction;
+                }
+            #else
+                if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
+                    FastLED.setMaxPowerInMilliWatts(0);
+                }
+                else {
+                    FastLED.setPowerConsumptionInMilliWattsPer256(_config.power.red, _config.power.green, _config.power.blue, _config.power.idle);
+                    FastLED.setMaxPowerInMilliWatts(_getPowerLevelLimit(_config.power_limit), &calcPowerFunction);
+                }
+            #endif
         #endif
     #endif
 
@@ -1164,19 +1217,33 @@ void IRAM_ATTR ClockPlugin::_loop()
     // changes requested by other tasks here
     _applyPendingChanges();
 
-    LoopOptionsType options(*this);
-    _display.setBrightness(_getBrightness());
+    const uint32_t start = micros();
 
-    #if IOT_LED_MATRIX_FASTLED_ONLY == 0
-        if (_method == Clock::ShowMethodType::FASTLED)
+    LoopOptionsType options(*this);
+    #if HAVE_NEOPIXELBUS && IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+        // FastLED applied the power limit inside show(), NeoPixelBus has no power management, the
+        // brightness is limited here before the frame is transmitted
+        _display.setBrightness(_calcPowerLevel(_getNeoBusBrightness(_getBrightness(), _getPowerLevelLimit(_config.power_limit))));
+    #else
+        _display.setBrightness(_getBrightness());
     #endif
-    {
-        auto frames = std::clamp<uint32_t>(_fps * 10, 100, 0xffffff);
-        auto fps = FastLED.getFPS();
-        if (fps) {
-            _fps = ((_fps * frames) + fps) / (frames + 1.0);
+
+    #if HAVE_NEOPIXELBUS
+        if (_method == Clock::ShowMethodType::NEOBUS_RMT || _method == Clock::ShowMethodType::NEOBUS_I2S) {
+            _fps = _display.getFps();
         }
-    }
+    #else
+        #if IOT_LED_MATRIX_FASTLED_ONLY == 0
+            if (_method == Clock::ShowMethodType::FASTLED)
+        #endif
+        {
+            auto frames = std::clamp<uint32_t>(_fps * 10, 100, 0xffffff);
+            auto fps = FastLED.getFPS();
+            if (fps) {
+                _fps = ((_fps * frames) + fps) / (frames + 1.0);
+            }
+        }
+    #endif
 
     if (_animation) {
         _animation->loop(options.getMillis());
@@ -1189,7 +1256,24 @@ void IRAM_ATTR ClockPlugin::_loop()
         _loopDoUpdate(options);
     }
 
+    // the frame time is the animation work plus the transport, averaged over the last second (a
+    // single frame is too noisy, the loop is interrupted by higher priority tasks)
+    _animSum += micros() - start;
+
+    const uint32_t showStart = micros();
     _display_show();
+    _showSum += micros() - showStart;
+
+    _timingFrames++;
+    const uint32_t now = millis();
+    if ((now - _timingTimer) >= 1000) {
+        _animMicros = _animSum / _timingFrames;
+        _showMicros = _showSum / _timingFrames;
+        _animSum = 0;
+        _showSum = 0;
+        _timingFrames = 0;
+        _timingTimer = now;
+    }
 }
 
 // use O3 for the show function on ESP8266 and keep all code in IRAM since it is called very frequently

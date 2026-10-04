@@ -27,7 +27,8 @@
 #pragma GCC diagnostic ignored "-Wattributes"
 #define FASTLED_INTERNAL
 #include <FastLED.h>
-#if ESP32
+// the NeoPixelBus build uses the official FastLED without its RMT driver, the header is fork-only
+#if ESP32 && !HAVE_NEOPIXELBUS
 #    ifndef FASTLED_ESP32_I2S
 #        include <platforms/esp/32/clockless_rmt_esp32.h>
 #    endif

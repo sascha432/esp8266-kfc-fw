@@ -1111,12 +1111,14 @@ private:
     // yank the control back, which looks like the control did not work
     struct ExpectedValue {
         ExpectedValue() :
+            tile(HomeAssistant::kNoTile),
             active(false),
             value(0),
             value2(0),
             deadline(0)
         {
         }
+        HomeAssistant::TileIndex tile;
         bool active;
         float value;
         float value2;
@@ -1175,9 +1177,9 @@ private:
     static constexpr uint32_t kExpectedTimeout = 10000;
     // true while the control keeps the value of the user (what = name of the control, only used by
     // the trace of the serial log)
-    bool _expects(ExpectedValue &expected, const char *what, float value, float value2, float tolerance);
+    bool _expects(ExpectedValue &expected, HomeAssistant::TileIndex tile, const char *what, float value, float value2, float tolerance);
     // remembers the value a control was set to
-    static void _expect(ExpectedValue &expected, const char *what, float value, float value2);
+    static void _expect(ExpectedValue &expected, HomeAssistant::TileIndex tile, const char *what, float value, float value2);
 
     // creates the widget tree of the grid below _grid
     void _buildGrid();

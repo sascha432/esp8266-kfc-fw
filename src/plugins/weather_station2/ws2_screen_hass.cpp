@@ -47,6 +47,18 @@ namespace {
 
 constexpr lv_coord_t kTileGap = 8;
 constexpr lv_coord_t kTileMargin = 8;
+constexpr uint32_t kColorTilePressed = 0x05070a;
+constexpr uint32_t kColorTilePressedActive = 0x9c4f00;
+
+void setPressedFeedback(lv_obj_t *obj, uint32_t color = kColorTilePressed, lv_opa_t opacity = LV_OPA_COVER)
+{
+    if (!obj) {
+        return;
+    }
+    lv_obj_set_style_bg_color(obj, lv_color_hex(color), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(obj, opacity, LV_PART_MAIN | LV_STATE_PRESSED);
+}
+
 // This screen has no top bar and no footer: the tiles use the whole display, the grid starts and
 // ends at the page margin (the reviewed layout is docs/hass_layout/screen1.html). The bottom edge
 // is HassScreen::_gridBottom(), the display is 480x320 in landscape and 320x480 in portrait
@@ -269,6 +281,7 @@ lv_obj_t *createPanelSlider(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, lv_coo
     // no knob, the value label in the middle of the track is the readout
     lv_obj_set_style_bg_opa(slider, LV_OPA_TRANSP, LV_PART_KNOB);
     lv_obj_set_style_pad_all(slider, 0, LV_PART_KNOB);
+    setPressedFeedback(slider);
     lv_obj_add_event_cb(slider, callback, LV_EVENT_ALL, userData);
     return slider;
 }
@@ -366,6 +379,7 @@ lv_obj_t *createStepButton(lv_obj_t *parent, lv_coord_t x, lv_coord_t y, LVGLUI:
 {
     auto button = LVGLUI::createIconButton(parent, x, y, kPanelStepSize, kPanelStepSize, type, LVGLUI::kIconSizeLarge);
     lv_obj_set_style_radius(button, static_cast<lv_coord_t>(kPanelStepSize / 2), LV_PART_MAIN);
+    setPressedFeedback(button);
     return button;
 }
 // height of an item of a panel list and the gap between two items (the height of one row of the
@@ -1885,6 +1899,7 @@ void HassScreen::_buildGrid()
     if (_areaPage) {
         _cellGeometry(_areaPage, 0, 0, 1, 1, x, y, w, h);
         _back.tile = LVGLUI::createTile(_grid, x, y, w, h);
+        setPressedFeedback(_back.tile);
         lv_obj_add_event_cb(_back.tile, _tileCallback, LV_EVENT_CLICKED, this);
         _back.icon = LVGLUI::createIcon(_back.tile, LVGLUI::IconType::BACK, static_cast<lv_coord_t>((w - LVGLUI::kIconSizeLarge) / 2), iconCenterTop(h), LVGLUI::kIconSizeLarge);
         LVGLUI::clearClickable(_back.icon);
@@ -1924,6 +1939,7 @@ void HassScreen::_buildTile(HomeAssistant::TileIndex index)
     auto &refs = _tiles.back().refs;
     _tiles.back().globalTile = index;
     refs.tile = LVGLUI::createTile(_grid, x, y, w, h);
+    setPressedFeedback(refs.tile);
     lv_obj_add_event_cb(refs.tile, _tileCallback, LV_EVENT_CLICKED, this);
 
     // the name is the last row of every tile, the value sits above it
@@ -1949,6 +1965,7 @@ void HassScreen::_buildTile(HomeAssistant::TileIndex index)
         refs.value = LVGLUI::addLabel(refs.tile, 6, static_cast<lv_coord_t>(h / 2 - 18), "", LVGLUI::kFontValue,
                                       LVGLUI::kColorText, static_cast<lv_coord_t>(w - 12), LV_TEXT_ALIGN_CENTER);
         refs.drag = LVGLUI::createContainer(refs.tile, 0, 0, w, h);
+        setPressedFeedback(refs.drag, kColorTilePressed, LV_OPA_40);
         lv_obj_add_event_cb(refs.drag, _dragCallback, LV_EVENT_ALL, this);
         return;
     }
@@ -2180,6 +2197,7 @@ void HassScreen::_buildPanel()
 
     // the tile that closes the panel (an arrow, see the back tile of an area page)
     _back.tile = LVGLUI::createTile(_grid, layout.backX, layout.backY, layout.backW, layout.backH);
+    setPressedFeedback(_back.tile);
     lv_obj_add_event_cb(_back.tile, _tileCallback, LV_EVENT_CLICKED, this);
     _back.icon = LVGLUI::createIcon(_back.tile, LVGLUI::IconType::BACK,
                                     static_cast<lv_coord_t>((layout.backW - LVGLUI::kIconSizeLarge) / 2),
@@ -2214,6 +2232,7 @@ void HassScreen::_buildPanel()
             const auto px = _portrait ? static_cast<lv_coord_t>(layout.optionsX + i * (pillW + kTileGap)) : layout.optionsX;
             const auto py = _portrait ? layout.optionsY : static_cast<lv_coord_t>(layout.optionsY + i * (pillH + kTileGap));
             refs.pills[i] = LVGLUI::createButton(_grid, px, py, pillW, pillH, nullptr);
+            setPressedFeedback(refs.pills[i]);
             // the glyph draws the color of the value next to it, never the theme color of the icon
             // (the fan glyph was drawn in the accent color, which looked like a different button)
             refs.pillIcons[i] = LVGLUI::createIcon(refs.pills[i], _climateOptionIcon(view, nullptr), 6,
@@ -2272,6 +2291,7 @@ void HassScreen::_buildPanel()
         for (uint8_t i = 0; i < static_cast<uint8_t>(LightButton::COUNT); i++) {
             refs.buttons[i] = LVGLUI::createIconButton(_grid, layout.optionsX, layout.optionsY, layout.optionsW,
                                                        kPanelButtonHeight, kButtonIcons[i], LVGLUI::kIconSizeSmall);
+            setPressedFeedback(refs.buttons[i]);
             lv_obj_add_event_cb(refs.buttons[i], _panelCallback, LV_EVENT_CLICKED, this);
         }
         // Every button is a card, the glyph shows the state of the entity (the power button draws
@@ -2430,6 +2450,7 @@ void HassScreen::_buildSensorPanel(HomeAssistant::TileIndex index)
     // the tile that closes the panel: a compact one in the upper left corner (the header and the
     // graph use the whole width, the other two panels use the first cell of the grid)
     _back.tile = LVGLUI::createTile(_grid, kTileMargin, kSensorHeaderY, kSensorBackSize, kSensorBackSize);
+    setPressedFeedback(_back.tile);
     lv_obj_add_event_cb(_back.tile, _tileCallback, LV_EVENT_CLICKED, this);
     _back.icon = LVGLUI::createIcon(_back.tile, LVGLUI::IconType::BACK,
                                     static_cast<lv_coord_t>((kSensorBackSize - LVGLUI::kIconSizeSmall) / 2),
@@ -2463,6 +2484,7 @@ void HassScreen::_buildSensorPanel(HomeAssistant::TileIndex index)
     for (uint8_t i = 0; i < kStatsRangeCount; i++) {
         sensor.chips[i] = createStatsChip(_grid, chipX, static_cast<lv_coord_t>(kSensorTitleY + (kSensorTitleHeight - kSensorChipHeight) / 2),
                                           statsRangeHours(static_cast<StatsRange>(i)), &sensor.chipLabels[i]);
+        setPressedFeedback(sensor.chips[i]);
         // PRESSED instead of CLICKED: the chips are small and CLICKED is only sent while the finger
         // did not move (a scroll cancels it), a selection is reliable on the press
         lv_obj_add_event_cb(sensor.chips[i], _panelCallback, LV_EVENT_PRESSED, this);
@@ -2893,9 +2915,10 @@ void HassScreen::_layoutPanelButtons()
     }
 }
 
-bool HassScreen::_expects(ExpectedValue &expected, const char *what, float value, float value2, float tolerance)
+bool HassScreen::_expects(ExpectedValue &expected, HomeAssistant::TileIndex tile, const char *what,
+                          float value, float value2, float tolerance)
 {
-    if (!expected.active) {
+    if (!expected.active || expected.tile != tile) {
         return false;
     }
     const auto confirmed = (fabsf(value - expected.value) <= tolerance) &&
@@ -2909,8 +2932,10 @@ bool HassScreen::_expects(ExpectedValue &expected, const char *what, float value
     return true;
 }
 
-void HassScreen::_expect(ExpectedValue &expected, const char *what, float value, float value2)
+void HassScreen::_expect(ExpectedValue &expected, HomeAssistant::TileIndex tile, const char *what,
+                         float value, float value2)
 {
+    expected.tile = tile;
     expected.active = true;
     expected.value = value;
     expected.value2 = value2;
@@ -3116,6 +3141,7 @@ void HassScreen::_buildPanelList()
                        ? LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item)
                        : LVGLUI::addListItem(refs.list, col, row, itemWidth, kListItemHeight, item, _climateOptionIcon(_panelView, item));
         const auto active = current && detail.valid && !strcasecmp(current, item);
+        setPressedFeedback(obj, active ? kColorTilePressedActive : kColorTilePressed);
         LVGLUI::setListItemActive(obj, active);
         if (active) {
             marked = obj;
@@ -3219,7 +3245,7 @@ void HassScreen::_updatePanel()
             if (!widgets.arcPressed && !touchPressed) {
                 // the setpoint the user stepped or dragged is kept until the entity reports it: the
                 // responses that were already in flight carry the setpoint from before the action
-                const auto held = _expects(_expectedSetpoint, "setpoint", value.value, -1, kSetpointHoldTolerance);
+                const auto held = _expects(_expectedSetpoint, index, "setpoint", value.value, -1, kSetpointHoldTolerance);
                 const auto setpoint = held ? _expectedSetpoint.value : value.value;
                 const auto arcValue = arcValueOf(static_cast<int32_t>(lroundf(setpoint * 10)), step);
                 if (arcValue != widgets.arcValue) {
@@ -3304,7 +3330,7 @@ void HassScreen::_updatePanel()
         // of that control). That value is drawn as well, otherwise the slider, the percentage and
         // the +/- steppers only move when the entity answers (they felt laggy)
         if (!touchPressed && !_controlPressed) {
-            const auto held = _expects(_expectedLevel, "level", value.value, -1, kLevelHoldTolerance);
+            const auto held = _expects(_expectedLevel, index, "level", value.value, -1, kLevelHoldTolerance);
             const auto level = static_cast<int32_t>(lroundf(held ? _expectedLevel.value : value.value));
             if (refs.slider && lv_slider_get_value(refs.slider) != level) {
                 lv_slider_set_value(refs.slider, level, LV_ANIM_OFF);
@@ -3313,7 +3339,7 @@ void HassScreen::_updatePanel()
             snprintf(levelText, sizeof(levelText), "%d %%", static_cast<int>(level));
             _setTextIfChanged(refsTile.value, levelText, _panelValueFont(), LVGLUI::kColorText);
         }
-        if (!touchPressed && !_controlPressed && !_expects(_expectedColor, "color", detail.hue, detail.saturation, 4.0f)) {
+        if (!touchPressed && !_controlPressed && !_expects(_expectedColor, index, "color", detail.hue, detail.saturation, 4.0f)) {
             if (refs.wheel && detail.valid) {
                 lv_color_hsv_t hsv;
                 hsv.h = static_cast<uint16_t>(detail.hue > 0 ? detail.hue : 0);
@@ -3322,7 +3348,7 @@ void HassScreen::_updatePanel()
                 lv_colorwheel_set_hsv(refs.wheel, hsv);
             }
         }
-        if (!touchPressed && !_controlPressed && !_expects(_expectedTemp, "color temp", detail.colorTemp, -1, 50.0f)) {
+        if (!touchPressed && !_controlPressed && !_expects(_expectedTemp, index, "color temp", detail.colorTemp, -1, 50.0f)) {
             if (refs.tempSlider) {
                 auto minTemp = static_cast<int32_t>(detail.minColorTemp);
                 auto maxTemp = static_cast<int32_t>(detail.maxColorTemp);
@@ -3519,6 +3545,7 @@ void HassScreen::_updateTile(HomeAssistant::TileIndex index)
         // `active` also selects the fill of a pending tile: the state of an action that is on its
         // way was applied to the model right away (see Dashboard::toggle())
         LVGLUI::setTileState(refs.tile, tileState, active);
+        setPressedFeedback(refs.tile, active ? kColorTilePressedActive : kColorTilePressed);
         widgets.arcState = stateKey;
         // The glyph follows the state of the entity (a switch shows its handle) and the color is
         // white on a filled tile, grey while the entity is off and red while it is unavailable
@@ -3569,7 +3596,7 @@ void HassScreen::_updateTile(HomeAssistant::TileIndex index)
             // The level the user dragged or stepped is kept until the entity reports it (a response
             // that is in flight carries the level from before the action) and it is drawn right
             // away: waiting for the response of the service call feels laggy
-            const auto held = _expects(_expectedLevel, "level", value.value, -1, kLevelHoldTolerance);
+            const auto held = _expects(_expectedLevel, index, "level", value.value, -1, kLevelHoldTolerance);
             const auto level = static_cast<int>(lroundf(held ? _expectedLevel.value : value.value));
             const auto width = static_cast<lv_coord_t>(lv_obj_get_style_width(refs.tile, LV_PART_MAIN));
             const auto height = static_cast<lv_coord_t>(lv_obj_get_style_height(refs.tile, LV_PART_MAIN));
@@ -3590,7 +3617,7 @@ void HassScreen::_updateTile(HomeAssistant::TileIndex index)
             }
             else {
                 // the setpoint the user stepped is kept until the entity reports it
-                const auto held = _expects(_expectedSetpoint, "setpoint", value.value, -1, kSetpointHoldTolerance);
+                const auto held = _expects(_expectedSetpoint, index, "setpoint", value.value, -1, kSetpointHoldTolerance);
                 snprintf(text, sizeof(text), "%.1f °C", static_cast<double>(held ? _expectedSetpoint.value : value.value));
             }
             _setTextIfChanged(refs.value, text, tileValueFont(tileHeight), LVGLUI::kColorText);
@@ -4112,6 +4139,7 @@ void HassScreen::_buildSettings()
     LVGLUI::clearClickable(refs.signal);
     // the whole cell is the hit area of the close button, the divider is its left border
     refs.close = LVGLUI::createContainer(refs.top, g.closeX, 0, g.closeSize, g.topH);
+    setPressedFeedback(refs.close);
     lv_obj_set_style_border_side(refs.close, LV_BORDER_SIDE_LEFT, LV_PART_MAIN);
     lv_obj_set_style_border_color(refs.close, lv_color_hex(LVGLUI::kColorBorder), LV_PART_MAIN);
     lv_obj_set_style_border_width(refs.close, 1, LV_PART_MAIN);
@@ -4129,6 +4157,7 @@ void HassScreen::_buildSettings()
 
     // the row at the bottom leaves the screen, or closes the editor
     refs.action = LVGLUI::createContainer(refs.panel, 0, g.bottomY, g.rowW, g.bottomH);
+    setPressedFeedback(refs.action);
     lv_obj_add_event_cb(refs.action, _settingsCallback, LV_EVENT_CLICKED, this);
     refs.actionLabel = LVGLUI::addLabel(refs.action, 0, 0, "", LVGLUI::kFontSmall, LVGLUI::kColorText, g.rowW, LV_TEXT_ALIGN_CENTER);
     lv_obj_center(refs.actionLabel);
@@ -4140,8 +4169,12 @@ void HassScreen::_buildSettings()
         LVGLUI::addLabel(refs.center, g.brightLabelX, g.brightLabelY, "Brightness", LVGLUI::kFontSmall,
                          LVGLUI::kColorTextLabel, g.brightLabelW);
         refs.brightnessSlider = createPanelSlider(refs.center, g.brightSliderX, g.brightSliderY, g.brightSliderW,
-                                                  kSettingsSliderHeight, 0, 100, _settingsCallback, this);
+                                                  kSettingsSliderHeight, 1, 100, _settingsCallback, this);
         lv_slider_set_value(refs.brightnessSlider, LVGLPlugin::getConfiguredBrightness(), LV_ANIM_OFF);
+        lv_obj_set_style_radius(refs.brightnessSlider, LV_RADIUS_CIRCLE, LV_PART_KNOB);
+        lv_obj_set_style_bg_color(refs.brightnessSlider, lv_color_hex(LVGLUI::kColorText), LV_PART_KNOB);
+        lv_obj_set_style_bg_opa(refs.brightnessSlider, LV_OPA_COVER, LV_PART_KNOB);
+        lv_obj_set_style_border_width(refs.brightnessSlider, 0, LV_PART_KNOB);
         // the track is darker than the content row it sits on (the panel slider is built for a card)
         lv_obj_set_style_bg_color(refs.brightnessSlider, lv_color_hex(LVGLUI::kColorBackground), LV_PART_MAIN);
         refs.brightnessValue = LVGLUI::addLabel(refs.center, g.brightValueX, g.brightValueY, "", LVGLUI::kFontNormal,
@@ -4161,6 +4194,7 @@ void HassScreen::_buildSettings()
             lv_coord_t labelTop;
             settingsTileTops(g, withValue, iconTop, valueTop, labelTop);
             refs.tiles[i] = LVGLUI::createTile(refs.center, x, y, g.tileW, g.tileH);
+            setPressedFeedback(refs.tiles[i]);
             lv_obj_add_event_cb(refs.tiles[i], _settingsCallback, LV_EVENT_CLICKED, this);
             refs.tileIcons[i] = (tile == SettingsTile::ROTATE)
                                     ? LVGLUI::createRotateIcon(refs.tiles[i], iconX, iconTop, LVGLUI::kIconSizeSmall)
@@ -4664,7 +4698,7 @@ void HassScreen::_dragCallback(lv_event_t *event)
         snprintf_P(levelText, sizeof(levelText), PSTR("%d %%"), level);
         LVGLUI::setText(widgets.refs.value, levelText, LVGLUI::kFontValue, LVGLUI::kColorText);
         if (code == LV_EVENT_RELEASED) {
-            self->_expect(self->_expectedLevel, "level", level, -1);
+            self->_expect(self->_expectedLevel, index, "level", level, -1);
             self->_dashboard.setLevel(index, static_cast<uint8_t>(level));
         }
     }
@@ -4705,7 +4739,7 @@ void HassScreen::_stepCallback(lv_event_t *event)
         if (step < 1) {
             step = 1;
         }
-        const auto held = self->_expects(self->_expectedLevel, "level", value.value, -1, kLevelHoldTolerance);
+        const auto held = self->_expects(self->_expectedLevel, index, "level", value.value, -1, kLevelHoldTolerance);
         auto level = static_cast<int32_t>(lroundf(held ? self->_expectedLevel.value : value.value)) +
                      (isTapOn(target, self->_widgets(index).refs.stepUp) ? step : -step);
         if (level < 0) {
@@ -4714,7 +4748,7 @@ void HassScreen::_stepCallback(lv_event_t *event)
         else if (level > 100) {
             level = 100;
         }
-        self->_expect(self->_expectedLevel, "level", static_cast<float>(level), -1);
+        self->_expect(self->_expectedLevel, index, "level", static_cast<float>(level), -1);
         self->_dashboard.setLevel(index, static_cast<uint8_t>(level));
         redraw();
         return;
@@ -4739,7 +4773,7 @@ void HassScreen::_stepCallback(lv_event_t *event)
     // of the range, so the current temperature (or the middle of the range) is the base then. The
     // base is the setpoint the user set while the entity has not reported it yet (the expected
     // value), so repeated steps add up instead of stepping from a response in flight
-    const auto held = self->_expects(self->_expectedSetpoint, "setpoint", value.value, -1, kSetpointHoldTolerance);
+    const auto held = self->_expects(self->_expectedSetpoint, index, "setpoint", value.value, -1, kSetpointHoldTolerance);
     const auto reported = static_cast<int32_t>(lroundf((held ? self->_expectedSetpoint.value : value.value) * 10.0f));
     auto temperature = reported;
     if (temperature < minValue || temperature > maxValue) {
@@ -4761,7 +4795,7 @@ void HassScreen::_stepCallback(lv_event_t *event)
     __LDBG_printf("hass> step tile %u: %s from %.1f to %.1f", static_cast<unsigned>(index),
                   isTapOn(target, self->_widgets(index).refs.stepUp) ? "up" : "down", static_cast<double>(reported) / 10.0,
                   static_cast<double>(temperature) / 10.0);
-    self->_expect(self->_expectedSetpoint, "setpoint", static_cast<float>(temperature) / 10.0f, -1);
+    self->_expect(self->_expectedSetpoint, index, "setpoint", static_cast<float>(temperature) / 10.0f, -1);
     self->_dashboard.setTemperature(index, static_cast<float>(temperature) / 10.0f);
     redraw();
 }
@@ -4811,7 +4845,7 @@ void HassScreen::_arcCallback(lv_event_t *event)
         __LDBG_printf("hass> arc %u released at %.1f (pressed at %.1f)", static_cast<unsigned>(index),
                       static_cast<double>(setpoint), static_cast<double>(widgets.arcPressValue) * step / 10.0f);
         if (value != widgets.arcPressValue) {
-            self->_expect(self->_expectedSetpoint, "setpoint", setpoint, -1);
+            self->_expect(self->_expectedSetpoint, index, "setpoint", setpoint, -1);
             self->_dashboard.setTemperature(index, setpoint);
         }
         break;
@@ -4945,7 +4979,7 @@ void HassScreen::_tempSliderCallback(lv_event_t *event)
         LVGLUI::setText(self->_panelRefs.label, kelvinText, self->_panelValueFont(), LVGLUI::kColorText);
         if (code == LV_EVENT_RELEASED) {
             self->_controlPressed = false;
-            self->_expect(self->_expectedTemp, "color temp", static_cast<float>(kelvin), -1);
+            self->_expect(self->_expectedTemp, index, "color temp", static_cast<float>(kelvin), -1);
             self->_dashboard.setColorTemp(index, static_cast<float>(kelvin));
         }
     }
@@ -4973,7 +5007,8 @@ void HassScreen::_sliderCallback(lv_event_t *event)
         // the level the panel shows: the one the user set and the entity did not report yet, else
         // the level of the entity
         const auto &value = self->_dashboard.getValue(index);
-        self->_sliderLevel = static_cast<int32_t>(lroundf(self->_expectedLevel.active ? self->_expectedLevel.value : value.value));
+        const auto expectedLevel = self->_expectedLevel.active && self->_expectedLevel.tile == index;
+        self->_sliderLevel = static_cast<int32_t>(lroundf(expectedLevel ? self->_expectedLevel.value : value.value));
         // LVGL animates the value of the track to the pressed position (lv_slider -> lv_bar with
         // LV_ANIM_ON, the default theme animates over ~200 ms). Without LV_ANIM_OFF the fill and the
         // percentage of a tap ran toward the pressed position for a moment until the next PRESSING
@@ -5023,7 +5058,7 @@ void HassScreen::_sliderCallback(lv_event_t *event)
         }
         const auto level = static_cast<uint8_t>(lv_slider_get_value(self->_panelRefs.slider));
         __LDBG_printf("hass> level slider of tile %u released: %u %%", static_cast<unsigned>(index), static_cast<unsigned>(level));
-        self->_expect(self->_expectedLevel, "level", level, -1);
+        self->_expect(self->_expectedLevel, index, "level", level, -1);
         self->_dashboard.setLevel(index, level);
     }
 }
@@ -5046,7 +5081,7 @@ void HassScreen::_wheelCallback(lv_event_t *event)
     if (code == LV_EVENT_RELEASED) {
         self->_controlPressed = false;
         const auto hsv = lv_colorwheel_get_hsv(self->_panelRefs.wheel);
-        self->_expect(self->_expectedColor, "color", hsv.h, (hsv.s * 100.0f) / 255.0f);
+        self->_expect(self->_expectedColor, index, "color", hsv.h, (hsv.s * 100.0f) / 255.0f);
         self->_dashboard.setColor(index, hsv.h, (hsv.s * 100.0f) / 255.0f);
     }
 }
@@ -5076,6 +5111,10 @@ bool HassScreen::onSwipe(SwipeDirection direction)
     // While a panel is open a drag on a control must not leave the screen: the color wheel and the
     // arc are dragged horizontally as well
     if (_panel != Panel::NONE) {
+        return true;
+    }
+    if (_lastTileClick && static_cast<uint32_t>(millis() - _lastTileClick) <= kTileTapWindow) {
+        __LDBG_printf("hass> swipe consumed by recent LVGL control input");
         return true;
     }
     // The dashboard is left with the button of the quick settings, not with a swipe: a swipe to the

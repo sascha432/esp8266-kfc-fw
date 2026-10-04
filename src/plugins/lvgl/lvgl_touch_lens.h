@@ -31,7 +31,7 @@
 
 // 0 turns the touch feedback off (it is used by all screens, so it is switched here)
 #ifndef LVGL_TOUCH_FEEDBACK
-#    define LVGL_TOUCH_FEEDBACK 1
+#    define LVGL_TOUCH_FEEDBACK 0
 #endif
 
 #if LVGL_TOUCH_FEEDBACK

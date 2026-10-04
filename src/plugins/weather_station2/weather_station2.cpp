@@ -375,6 +375,10 @@ void WeatherStation2Plugin::_registerScreens()
         return;
     }
     auto &screens = LVGLPlugin::screens();
+#if IOT_HASS_DASHBOARD
+    // The screen manager shows the first registered screen on its initial tick.
+    screens.add(&_hassScreen);
+#endif
     screens.add(&_mainScreen);
     screens.add(&_indoorScreen);
     screens.add(&_forecastScreen);
@@ -382,9 +386,6 @@ void WeatherStation2Plugin::_registerScreens()
     screens.add(&_moonPhaseScreen);
     screens.add(&_powerScreen);
     screens.add(&_infoScreen);
-#if IOT_HASS_DASHBOARD
-    screens.add(&_hassScreen);
-#endif
     screens.setRotationTime(kRotationTime);
     // the clock in the top bar of the screen overview uses the same format as the screens
     screens.setTimeFormat24h(_data.isTimeFormat24h());

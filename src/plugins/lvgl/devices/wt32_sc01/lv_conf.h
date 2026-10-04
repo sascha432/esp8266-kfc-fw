@@ -66,8 +66,8 @@
 #define LV_DPI_DEF 130              /* [px/inch] 3.5" @ 480x320 */
 #ifndef LV_DISP_DEF_REFR_PERIOD
 #define LV_DISP_DEF_REFR_PERIOD 30  /* [ms] */
-#define LV_INDEV_DEF_READ_PERIOD LV_DISP_DEF_REFR_PERIOD /* [ms] */
 #endif
+#define LV_INDEV_DEF_READ_PERIOD 30 /* [ms] */
 
 /*------------------
  * RENDERING / ANTI ALIASING

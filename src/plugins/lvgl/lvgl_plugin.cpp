@@ -134,7 +134,10 @@ static void _readDisplayConfig()
 {
     const auto cfg = Display::getConfig();
     auto percent = static_cast<uint8_t>(cfg.backlight_level);
-    if (percent > DisplayConfig::kMaxValueFor_backlight_level) {
+    if (percent < DisplayConfig::kMinValueFor_backlight_level) {
+        percent = DisplayConfig::kMinValueFor_backlight_level;
+    }
+    else if (percent > DisplayConfig::kMaxValueFor_backlight_level) {
         percent = DisplayConfig::kMaxValueFor_backlight_level;
     }
     _configuredLevel = _levelFromPercent(percent);
@@ -354,6 +357,12 @@ void LVGLPlugin::notifyActivity()
 
 void LVGLPlugin::setBrightness(uint8_t percent)
 {
+    if (percent < DisplayConfig::kMinValueFor_backlight_level) {
+        percent = DisplayConfig::kMinValueFor_backlight_level;
+    }
+    else if (percent > DisplayConfig::kMaxValueFor_backlight_level) {
+        percent = DisplayConfig::kMaxValueFor_backlight_level;
+    }
     _setBrightnessNow(percent);
     _lastActivity = millis();
 }
@@ -365,8 +374,11 @@ uint8_t LVGLPlugin::getConfiguredBrightness()
 
 void LVGLPlugin::setConfiguredBrightness(uint8_t percent)
 {
-    if (percent > 100) {
-        percent = 100;
+    if (percent < DisplayConfig::kMinValueFor_backlight_level) {
+        percent = DisplayConfig::kMinValueFor_backlight_level;
+    }
+    else if (percent > DisplayConfig::kMaxValueFor_backlight_level) {
+        percent = DisplayConfig::kMaxValueFor_backlight_level;
     }
     auto &cfg = Display::getWriteableConfig();
     cfg.backlight_level = percent;

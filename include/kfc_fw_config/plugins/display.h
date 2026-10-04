@@ -19,8 +19,8 @@ namespace KFCConfigurationClasses {
                 struct __attribute__packed__ Config_t {
                     using Type = Config_t;
 
-                    // backlight level in percent
-                    CREATE_UINT32_BITFIELD_MIN_MAX(backlight_level, 7, 0, 100, 100);
+                    // backlight level in percent; 0 would turn off the display without entering standby
+                    CREATE_UINT32_BITFIELD_MIN_MAX(backlight_level, 7, 1, 100, 100);
                     // backlight level in percent while the power saving mode is active (idle dimming).
                     // 0 is not a valid value - the stored blob of an existing device is zero filled
                     // when it grows to the new length, so 0 means "not initialized" and the default

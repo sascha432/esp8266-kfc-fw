@@ -73,31 +73,55 @@ enum class WeatherState : uint8_t {
 };
 
 struct CurrentWeather {
-    bool valid{false};
-    WeatherIcon icon{WeatherIcon::UNKNOWN};
+    CurrentWeather() :
+        valid(false),
+        icon(WeatherIcon::UNKNOWN),
+        temperature(0),
+        feelsLike(0),
+        minTemperature(0),
+        maxTemperature(0),
+        humidity(0),
+        pressure(0),
+        windSpeed(0),
+        rain(0),
+        uvIndex(0),
+        sunRise(-1),
+        sunSet(-1)
+    {
+    }
+    bool valid;
+    WeatherIcon icon;
     String description;
     String location;
-    float temperature{0};
-    float feelsLike{0};
-    float minTemperature{0};
-    float maxTemperature{0};
-    float humidity{0};
-    float pressure{0};
-    float windSpeed{0};
-    float rain{0};
-    float uvIndex{0};
+    float temperature;
+    float feelsLike;
+    float minTemperature;
+    float maxTemperature;
+    float humidity;
+    float pressure;
+    float windSpeed;
+    float rain;
+    float uvIndex;
     // sunrise/sunset as minutes since midnight, -1 if unknown
-    int16_t sunRise{-1};
-    int16_t sunSet{-1};
+    int16_t sunRise;
+    int16_t sunSet;
 };
 
 struct ForecastDay {
-    bool valid{false};
+    ForecastDay() :
+        valid(false),
+        icon(WeatherIcon::UNKNOWN),
+        minTemperature(0),
+        maxTemperature(0),
+        rain(0)
+    {
+    }
+    bool valid;
     String day;
-    WeatherIcon icon{WeatherIcon::UNKNOWN};
-    float minTemperature{0};
-    float maxTemperature{0};
-    float rain{0};
+    WeatherIcon icon;
+    float minTemperature;
+    float maxTemperature;
+    float rain;
 };
 
 // ------------------------------------------------------------------------------------------
@@ -121,16 +145,25 @@ const __FlashStringHelper *getDayPartName(uint8_t index);
 
 // one part of the day of the "1 day" layout
 struct ForecastSlot {
-    bool valid{false};
+    ForecastSlot() :
+        valid(false),
+        icon(WeatherIcon::UNKNOWN),
+        temperature(0),
+        feelsLike(0),
+        rain(0),
+        pop(0)
+    {
+    }
+    bool valid;
     // local time of the hourly entry the values were taken from, the weekday is added when it is
     // not the day of the current conditions ("09:00" or "Mon 09:00")
     String time;
-    WeatherIcon icon{WeatherIcon::UNKNOWN};
-    float temperature{0};
-    float feelsLike{0};
-    float rain{0};
+    WeatherIcon icon;
+    float temperature;
+    float feelsLike;
+    float rain;
     // probability of precipitation, 0..1
-    float pop{0};
+    float pop;
 };
 
 // ------------------------------------------------------------------------------------------
@@ -160,10 +193,17 @@ enum class MetricState : uint8_t {
 };
 
 struct IndoorValue {
-    bool configured{false};
-    bool online{false};
-    bool available{false};
-    float value{0};
+    IndoorValue() :
+        configured(false),
+        online(false),
+        available(false),
+        value(0)
+    {
+    }
+    bool configured;
+    bool online;
+    bool available;
+    float value;
 
     MetricState getState() const {
         if (!configured) {
@@ -227,17 +267,30 @@ enum class PowerSourceType : uint8_t {
 // latest sample of one power channel. The energy is the total (persistent) counter of the source,
 // the local INA219 has none (hasEnergy stays false)
 struct PowerValues {
-    bool configured{false};
-    bool online{false};     // the source is connected/available
-    bool available{false};  // at least one sample was received
-    PowerSourceType source{PowerSourceType::NONE};
+    PowerValues() :
+        configured(false),
+        online(false),
+        available(false),
+        source(PowerSourceType::NONE),
+        remoteChannelId(0),
+        voltage(0),
+        current(0),
+        power(0),
+        hasEnergy(false),
+        energy(0)
+    {
+    }
+    bool configured;
+    bool online;     // the source is connected/available
+    bool available;  // at least one sample was received
+    PowerSourceType source;
     // remote channel id of the source (PowerSourceType::REMOTE only)
-    uint32_t remoteChannelId{0};
-    float voltage{0};       // V
-    float current{0};       // A
-    float power{0};         // W
-    bool hasEnergy{false};  // the source has an energy counter
-    double energy{0};       // kWh, total counter
+    uint32_t remoteChannelId;
+    float voltage;       // V
+    float current;       // A
+    float power;         // W
+    bool hasEnergy;      // the source has an energy counter
+    double energy;       // kWh, total counter
 
     // same states as an indoor metric, the screens map them to a text and a color
     MetricState getState() const {
@@ -350,24 +403,42 @@ void setSourcePart(IndoorValues::Metric metric, uint8_t part, const String &valu
 
 struct MoonInfo {
     struct Phase {
+        Phase() :
+            name(nullptr)
+        {
+        }
         // the name is stored in flash (PROGMEM), it is not owned by the model. Read it with a
         // flash aware reader or copy it into a String where a C string is required
-        const __FlashStringHelper *name{nullptr};
+        const __FlashStringHelper *name;
         String dateTime;
     };
     static constexpr uint8_t kNumPhases = 4;
 
-    bool valid{false};
+    MoonInfo() :
+        valid(false),
+        illumination(0),
+        waxing(true),
+        age(0)
+    {
+    }
+    bool valid;
     // illumination 0 = new moon, 0.5 = half, 1 = full
-    float illumination{0};
-    bool waxing{true};
+    float illumination;
+    bool waxing;
     // moon age in days (0..29.53)
-    float age{0};
+    float age;
     String phase;
     Phase phases[kNumPhases];
 };
 
 struct SystemInfo {
+    SystemInfo() :
+        uptime(0),
+        freeHeap(0),
+        freePsram(0),
+        rssi(0)
+    {
+    }
     String hostname;
     String ssid;
     String ip;
@@ -376,10 +447,10 @@ struct SystemInfo {
     String dns2;
     String firmware;
     String sensors;
-    uint32_t uptime{0};
-    uint32_t freeHeap{0};
-    uint32_t freePsram{0};
-    int16_t rssi{0};
+    uint32_t uptime;
+    uint32_t freeHeap;
+    uint32_t freePsram;
+    int16_t rssi;
 };
 
 // values for the screens, updated once per second from the main loop
@@ -388,6 +459,28 @@ public:
     // number of forecast days the model can hold
     static constexpr uint8_t kMaxForecastDays = 5;
 
+    DataSource() :
+        _forecastCount(0)
+#if DEBUG_LVGL_SCREENSHOT
+        , _debugSetCount(0)
+#endif
+        , _powerGraphMinutes(kDefaultPowerGraphMinutes)
+        , _timezoneOffset(0)
+        , _metric(true)
+        , _timeFormat24h(true)
+#if DEBUG_LVGL_SCREENSHOT
+        , _debugFrozen(false)
+        , _debugPowerChannel(0)
+        , _debugHassPage(0xffffffff)
+        , _debugHassFullscreen(0xffffffff)
+        , _debugHassPanel(0xffffffff)
+        , _debugHassView(0xff)
+        , _debugHassRange(0xff)
+        , _debugHassSettings(0xff)
+        , _debugHassRotation(0xff)
+#endif
+    {
+    }
     virtual ~DataSource() = default;
 
     // refreshes the values, called once per second
@@ -595,42 +688,42 @@ protected:
 protected:
     CurrentWeather _current;
     ForecastDay _forecast[kMaxForecastDays];
-    uint8_t _forecastCount{0};
+    uint8_t _forecastCount;
     // parts of the day of the "1 day" layout of the forecast screen
     ForecastSlot _dayParts[kNumDayParts];
     IndoorValues _indoor;
 #if DEBUG_LVGL_SCREENSHOT
-    uint16_t _debugSetCount{0};
+    uint16_t _debugSetCount;
     String _debugLastSet;
 #endif
     PowerChannels _power;
     // cached by _readPowerSources(), see getPowerGraphMinutes()
-    uint8_t _powerGraphMinutes{kDefaultPowerGraphMinutes};
+    uint8_t _powerGraphMinutes;
     MoonInfo _moon;
     SystemInfo _system;
     // UTC offset of the location in seconds, used to format the moon phases. It starts with the
     // offset of the device and is replaced by the offset the OpenWeatherMap response reports
     // (that one belongs to the coordinates, not to the device)
-    int32_t _timezoneOffset{0};
-    bool _metric{true};
-    bool _timeFormat24h{true};
+    int32_t _timezoneOffset;
+    bool _metric;
+    bool _timeFormat24h;
 #if DEBUG_LVGL_SCREENSHOT
     // stops the periodic update so pushed values stay on screen while tuning
-    bool _debugFrozen{false};
+    bool _debugFrozen;
     // channel the debug keys pwrv/pwra/pwrw/pwre write to, "pwrch" selects it
-    uint8_t _debugPowerChannel{0};
+    uint8_t _debugPowerChannel;
     // page the Home Assistant dashboard has to open ("hasspage"), 0xffffffff = none
-    uint32_t _debugHassPage{0xffffffff};
+    uint32_t _debugHassPage;
     // tile whose fullscreen image is opened or closed ("hassfull"), 0xffffffff = none
-    uint32_t _debugHassFullscreen{0xffffffff};
+    uint32_t _debugHassFullscreen;
     // tile whose panel is opened ("hasspanel"), 0xffffffff = none
-    uint32_t _debugHassPanel{0xffffffff};
+    uint32_t _debugHassPanel;
     // control of the panel of an open tile ("hassview"), 0xff = none
-    uint8_t _debugHassView{0xff};
+    uint8_t _debugHassView;
     // range of the history graph of the sensor panel ("hassrange", 12, 24 or 48 hours), 0xff = none
-    uint8_t _debugHassRange{0xff};
-    uint8_t _debugHassSettings{0xff};
-    uint8_t _debugHassRotation{0xff};
+    uint8_t _debugHassRange;
+    uint8_t _debugHassSettings;
+    uint8_t _debugHassRotation;
 #endif
 };
 
@@ -738,27 +831,40 @@ private:
 private:
     // one source of an indoor metric
     struct MqttSource {
-        SensorType type{SensorType::NONE};
+        MqttSource() :
+            type(SensorType::NONE),
+            valueType(MqttValueType::VALUE),
+            availability(-1),
+            valueReceived(false),
+            value(0)
+        {
+        }
+        SensorType type;
         String statusTopic;                     // empty = no availability topic
         String valueTopic;
-        MqttValueType valueType{MqttValueType::VALUE};
+        MqttValueType valueType;
         String key;                             // JSON_VALUE only
         // written by the MQTT task, read by the main loop, both under _lock
-        int8_t availability{-1};                // -1 unknown, 0 offline, 1 online
-        bool valueReceived{false};
-        float value{0};
+        int8_t availability;                    // -1 unknown, 0 offline, 1 online
+        bool valueReceived;
+        float value;
     };
     MqttSource _mqtt[IndoorValues::kNumMetrics];
     // topics of all MQTT sources, without duplicates, rebuilt by _readIndoorSources()
     StringVector _mqttTopics;
     // set by mqttConnected()/mqttDisconnected(), read by the main loop
-    volatile bool _mqttConnected{false};
+    volatile bool _mqttConnected;
 
     // one configured power channel, rebuilt by _readPowerSources() (main loop only)
     struct PowerSource {
-        PowerSourceType type{PowerSourceType::NONE};
+        PowerSource() :
+            type(PowerSourceType::NONE),
+            remoteChannelId(0)
+        {
+        }
+        PowerSourceType type;
         String name;
-        uint32_t remoteChannelId{0};
+        uint32_t remoteChannelId;
     };
     PowerSource _powerSources[PowerChannels::kNumChannels];
     // the reader task of the remote channels, created by begin()
@@ -768,24 +874,24 @@ private:
     // written by the request task, applied by the main loop, both under _lock
     std::unique_ptr<OpenWeatherMap::Data> _received;
     mutable SemaphoreMutex _lock;
-    volatile bool _receivedValid{false};
+    volatile bool _receivedValid;
     // set by reconfigure() to request immediately instead of waiting for the poll interval
-    volatile bool _requestNow{false};
+    volatile bool _requestNow;
     // request of the task to end (checked between two requests)
-    volatile bool _stop{false};
-    void *_task{nullptr};
+    volatile bool _stop;
+    void *_task;
     // settings, written by the main loop and read by the request task through _readSettings()
     String _apiKey;
-    float _latitude{0};
-    float _longitude{0};
-    uint32_t _pollInterval{0};
+    float _latitude;
+    float _longitude;
+    uint32_t _pollInterval;
     // updated by the request task, read by getLastError()/getStatus()
     String _lastError;
-    uint32_t _requestCount{0};
+    uint32_t _requestCount;
     // main loop only
-    uint32_t _lastUpdate{0};
-    uint32_t _lastPowerUpdate{0};
-    uint32_t _lastMoonUpdate{0};
+    uint32_t _lastUpdate;
+    uint32_t _lastPowerUpdate;
+    uint32_t _lastMoonUpdate;
 };
 
 } // namespace WeatherStation2

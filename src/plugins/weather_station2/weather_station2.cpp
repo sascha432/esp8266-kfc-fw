@@ -123,6 +123,14 @@ WeatherStation2Plugin::WeatherStation2Plugin() :
 #if MQTT_SUPPORT
     , MQTTComponent(MQTT::ComponentType::SENSOR)
 #endif
+    // every screen reads the model that is declared above it (see the header)
+    , _mainScreen(_data)
+    , _indoorScreen(_data)
+    , _forecastScreen(_data)
+    , _worldClockScreen(_data)
+    , _moonPhaseScreen(_data)
+    , _powerScreen(_data)
+    , _infoScreen(_data)
 #if IOT_HASS_DASHBOARD
     // the dashboard and its screen are the two largest objects of the plugin (~47 KB and ~8 KB) and
     // they are created in the PSRAM (see _ws2PsramObject(), which initializes the PSRAM as well -
@@ -131,6 +139,7 @@ WeatherStation2Plugin::WeatherStation2Plugin() :
     , _hass(_ws2PsramObject<WeatherStation2::HomeAssistant::Dashboard>())
     , _hassScreen(_ws2PsramObject<WeatherStation2::HassScreen>(_data, _hass))
 #endif
+    , _registered(false)
 {
     REGISTER_PLUGIN(this, "WeatherStation2Plugin");
 }

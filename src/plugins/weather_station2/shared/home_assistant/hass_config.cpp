@@ -3,6 +3,7 @@
  */
 
 #include "hass_config.h"
+#include <algorithm>
 
 #ifndef DEBUG_WEATHER_STATION2
 #    define DEBUG_WEATHER_STATION2 1
@@ -467,7 +468,11 @@ bool parseTileIcon(const char *value, TileIcon &icon)
 // ------------------------------------------------------------------------------------------
 // config
 // ------------------------------------------------------------------------------------------
-Config::Config()
+Config::Config() :
+    // _reset() initializes every member with the defaults below, so only the one it does not touch
+    // is listed here - a second write of the same value would not be optimized away (the call to
+    // _reset() can observe the members, so the stores before it are not dead)
+    _fileSize(0)
 {
     _reset();
 }
@@ -605,10 +610,9 @@ bool Config::_parse(const char *data, size_t length)
     // index of the list item the keys belong to and the level it is at
     TileIndex tileIndex = kNoTile;
     uint8_t tileLevel = 0;
-    // index of the area that owns a nesting level (kNoTile while the level is closed). memset(0xff)
-    // fills a TileIndex array with kNoTile (0xffffffff)
+    // index of the area that owns a nesting level (kNoTile while the level is closed)
     TileIndex areaStack[kMaxNesting];
-    memset(areaStack, 0xff, sizeof(areaStack));
+    std::fill(std::begin(areaStack), std::end(areaStack), kNoTile);
     // area tile whose `grid:` block is open and the indentation of its keys (the block is closed
     // by the next line that is not indented that far)
     Tile *gridTile = nullptr;
@@ -676,7 +680,7 @@ bool Config::_parse(const char *data, size_t length)
         if (indent == 0) {
             tile = nullptr;
             tileIndex = kNoTile;
-            memset(areaStack, kNoTile, sizeof(areaStack));
+            std::fill(std::begin(areaStack), std::end(areaStack), kNoTile);
             const auto colon = _findColon(ptr, lineEnd);
             if (!colon) {
                 return _fail(line, "expected 'key:', got '%.*s'", static_cast<int>(lineEnd - ptr), ptr);

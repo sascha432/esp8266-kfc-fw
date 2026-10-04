@@ -935,54 +935,97 @@ int16_t listItemOrdinal(lv_obj_t *list, const lv_obj_t *item)
 // The reviewed layout is docs/hass_layout/quick_settings2.html
 // ------------------------------------------------------------------------------------------
 struct SettingsGeometry {
-    lv_coord_t panelX{0};
-    lv_coord_t panelY{0};
-    lv_coord_t panelW{0};
-    lv_coord_t panelH{0};
+    SettingsGeometry() :
+        panelX(0),
+        panelY(0),
+        panelW(0),
+        panelH(0),
+        rowW(0),
+        topH(0),
+        centerY(0),
+        centerH(0),
+        bottomY(0),
+        bottomH(0),
+        pad(0),
+        closeX(0),
+        closeSize(0),
+        timeX(0),
+        timeY(0),
+        dateX(0),
+        dateY(0),
+        signalX(0),
+        signalY(0),
+        brightLabelX(0),
+        brightLabelY(0),
+        brightLabelW(0),
+        brightSliderX(0),
+        brightSliderY(0),
+        brightSliderW(0),
+        brightValueX(0),
+        brightValueY(0),
+        brightValueW(0),
+        tilesX(0),
+        tilesY(0),
+        tileW(0),
+        tileH(0),
+        tileCols(3),
+        editTitleX(0),
+        editTitleY(0),
+        editValueY(0),
+        editControlX(0),
+        editControlY(0),
+        editControlW(0),
+        editControlH(0)
+    {
+    }
+    lv_coord_t panelX;
+    lv_coord_t panelY;
+    lv_coord_t panelW;
+    lv_coord_t panelH;
     // A row is a child of the panel and drawn inside its 1 px border, so a row is rowW wide and the
     // rows start at y 0 (the header), centerY (the content) and bottomY (the action)
-    lv_coord_t rowW{0};
-    lv_coord_t topH{0};
-    lv_coord_t centerY{0};
-    lv_coord_t centerH{0};
-    lv_coord_t bottomY{0};
-    lv_coord_t bottomH{0};
+    lv_coord_t rowW;
+    lv_coord_t topH;
+    lv_coord_t centerY;
+    lv_coord_t centerH;
+    lv_coord_t bottomY;
+    lv_coord_t bottomH;
     // padding of the center row (the other two rows use it as the inset of their content too)
-    lv_coord_t pad{0};
+    lv_coord_t pad;
     // square cell at the right end of the header with the button that closes the sheet
-    lv_coord_t closeX{0};
-    lv_coord_t closeSize{0};
+    lv_coord_t closeX;
+    lv_coord_t closeSize;
     // header: the clock, the date and the WiFi signal
-    lv_coord_t timeX{0};
-    lv_coord_t timeY{0};
-    lv_coord_t dateX{0};
-    lv_coord_t dateY{0};
-    lv_coord_t signalX{0};
-    lv_coord_t signalY{0};
+    lv_coord_t timeX;
+    lv_coord_t timeY;
+    lv_coord_t dateX;
+    lv_coord_t dateY;
+    lv_coord_t signalX;
+    lv_coord_t signalY;
     // center row: the row of the screen brightness above the tiles (relative to the center row)
-    lv_coord_t brightLabelX{0};
-    lv_coord_t brightLabelY{0};
-    lv_coord_t brightLabelW{0};
-    lv_coord_t brightSliderX{0};
-    lv_coord_t brightSliderY{0};
-    lv_coord_t brightSliderW{0};
-    lv_coord_t brightValueX{0};
-    lv_coord_t brightValueY{0};
-    lv_coord_t brightValueW{0};
+    lv_coord_t brightLabelX;
+    lv_coord_t brightLabelY;
+    lv_coord_t brightLabelW;
+    lv_coord_t brightSliderX;
+    lv_coord_t brightSliderY;
+    lv_coord_t brightSliderW;
+    lv_coord_t brightValueX;
+    lv_coord_t brightValueY;
+    lv_coord_t brightValueW;
     // center row: the grid of the tiles (relative to the center row)
-    lv_coord_t tilesX{0};
-    lv_coord_t tilesY{0};
-    lv_coord_t tileW{0};
-    lv_coord_t tileH{0};
-    lv_coord_t tileCols{3};
+    lv_coord_t tilesX;
+    lv_coord_t tilesY;
+    lv_coord_t tileW;
+    lv_coord_t tileH;
+    lv_coord_t tileCols;
     // center row: the editor of one setting (relative to the center row)
-    lv_coord_t editTitleX{0};
-    lv_coord_t editTitleY{0};
-    lv_coord_t editValueY{0};
-    lv_coord_t editControlX{0};
-    lv_coord_t editControlY{0};
-    lv_coord_t editControlW{0};
-    lv_coord_t editControlH{0};
+    lv_coord_t editTitleX;
+    lv_coord_t editTitleY;
+    lv_coord_t editValueY;
+    lv_coord_t editControlX;
+    lv_coord_t editControlY;
+    lv_coord_t editControlW;
+    lv_coord_t editControlH;
 };
 
 // gap between two tiles of the sheet

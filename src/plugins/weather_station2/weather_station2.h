@@ -146,13 +146,13 @@ private:
 
 private:
     WeatherStation2::WeatherDataSource _data;
-    WeatherStation2::MainScreen _mainScreen{_data};
-    WeatherStation2::IndoorScreen _indoorScreen{_data};
-    WeatherStation2::ForecastScreen _forecastScreen{_data};
-    WeatherStation2::WorldClockScreen _worldClockScreen{_data};
-    WeatherStation2::MoonPhaseScreen _moonPhaseScreen{_data};
-    WeatherStation2::PowerScreen _powerScreen{_data};
-    WeatherStation2::InfoScreen _infoScreen{_data};
+    WeatherStation2::MainScreen _mainScreen;
+    WeatherStation2::IndoorScreen _indoorScreen;
+    WeatherStation2::ForecastScreen _forecastScreen;
+    WeatherStation2::WorldClockScreen _worldClockScreen;
+    WeatherStation2::MoonPhaseScreen _moonPhaseScreen;
+    WeatherStation2::PowerScreen _powerScreen;
+    WeatherStation2::InfoScreen _infoScreen;
 #if IOT_HASS_DASHBOARD
     // dashboard of a Home Assistant instance, configured by /hass.yaml (docs/hass_config.md)
     // and the screen that draws it. Both are large (about 47 KB and 8 KB) and are created in the
@@ -161,5 +161,5 @@ private:
     WeatherStation2::HomeAssistant::Dashboard &_hass;
     WeatherStation2::HassScreen &_hassScreen;
 #endif
-    bool _registered{false};
+    bool _registered;
 };

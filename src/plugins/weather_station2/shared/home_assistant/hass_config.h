@@ -163,76 +163,118 @@ enum class TileState : uint8_t {
 // the entity reports. The state of an action that is on its way to the entity (the pending flag and
 // the values needed to confirm it) is not reported data and lives in the DRAM (Dashboard::TileFlags)
 struct TileValue {
-    TileState state{TileState::UNKNOWN};
+    TileValue() :
+        state(TileState::UNKNOWN),
+        value(0),
+        current(0),
+        minTemp(15),
+        maxTemp(30),
+        mode(0xff),
+        action{},
+        text{},
+        deviceClass{},
+        unit{},
+        modeName{}
+    {
+    }
+    TileState state;
     // sensor value, dimmer level in percent or target temperature of a climate
-    float value{0};
+    float value;
     // climate: current temperature
-    float current{0};
-    float minTemp{15};
-    float maxTemp{30};
+    float current;
+    float minTemp;
+    float maxTemp;
     // climate: 0 off, 1 heat, 2 cool, 0xff unknown
-    uint8_t mode{0xff};
+    uint8_t mode;
     // climate: the action of the entity ("idle", "heating", "cooling", ...), empty when the
     // entity does not report it
-    char action[16]{};
+    char action[16];
     // state of the entity as it was reported ("on", "off", "21.4", "home", ...). A sensor
     // tile shows it when the state is not a number (a binary sensor reports "on"/"off" and
     // "0" from the float conversion would be wrong). The template of a tile that asks several
     // entities at once puts the readouts in one string, separated by a line break, so the buffer is
     // the size of what such a value can be
-    char text[48]{};
+    char text[48];
     // device class of the entity ("motion", "door", ...), empty when it has none
-    char deviceClass[20]{};
+    char deviceClass[20];
     // unit of a sensor, from the configuration or from the entity attributes
-    char unit[kUnitLength]{};
+    char unit[kUnitLength];
     // climate: the mode the entity reports as its state ("heat", "auto", "off", ...)
-    char modeName[16]{};
+    char modeName[16];
 };
 
 // ------------------------------------------------------------------------------------------
 // one tile of the dashboard: the configuration of the tile and the state of its entity
 // ------------------------------------------------------------------------------------------
 struct Tile {
-    TileType type{TileType::SWITCH};
-    TileIcon icon{TileIcon::AUTO};
-    char entity[kEntityLength]{};
-    char name[kNameLength]{};
-    char unit[kUnitLength]{};
-    uint8_t decimals{1};
+    Tile() :
+        type(TileType::SWITCH),
+        icon(TileIcon::AUTO),
+        entity{},
+        name{},
+        unit{},
+        decimals(1),
+        width(1),
+        height(1),
+        hasSize(false),
+        col(0),
+        row(0),
+        hasPosition(false),
+        portraitCol(0),
+        portraitRow(0),
+        min(0),
+        max(100),
+        step(1),
+        hasStep(false),
+        refresh(kDefaultRefresh),
+        hasRefresh(false),
+        line(0),
+        page(0),
+        areaPage(0),
+        gridCols(0),
+        gridRows(0)
+    {
+    }
+    TileType type;
+    TileIcon icon;
+    char entity[kEntityLength];
+    char name[kNameLength];
+    char unit[kUnitLength];
+    uint8_t decimals;
     // grid position, 0 based, width x height cells
-    uint8_t width{1};
-    uint8_t height{1};
+    uint8_t width;
+    uint8_t height;
     // the `size` key was set in the file (the size of the type is used otherwise)
-    bool hasSize{false};
+    bool hasSize;
     // grid position in the landscape layout of the file, 0 based
-    uint8_t col{0};
-    uint8_t row{0};
-    bool hasPosition{false};
+    uint8_t col;
+    uint8_t row;
+    bool hasPosition;
     // Position in the transposed grid a portrait display shows, 0 based. The tiles are placed in
     // the order of the file (left to right, top to down) in both grids, so a page reads the same
     // way whichever orientation is active (see Config::_placeTiles())
-    uint8_t portraitCol{0};
-    uint8_t portraitRow{0};
+    uint8_t portraitCol;
+    uint8_t portraitRow;
     // arc range of a dimmer (percent) or a climate (degrees)
-    float min{0};
-    float max{100};
-    float step{1};
+    float min;
+    float max;
+    float step;
     // true when step was set in the file (the default depends on the type)
-    bool hasStep{false};
+    bool hasStep;
     // picture tiles only: seconds between two images, the `refresh` key of the file
-    uint16_t refresh{kDefaultRefresh};
-    bool hasRefresh{false};
+    uint16_t refresh;
+    bool hasRefresh;
     // line of the file the tile was defined in (error messages)
-    uint32_t line{0};
+    uint32_t line;
     // page the tile is drawn on: 0 = main page, 1..n = the page of an area tile
-    PageIndex page{0};
+    PageIndex page;
     // area tiles only: the page with the tiles of the area, 0 while it has none
-    PageIndex areaPage{0};
+    PageIndex areaPage;
     // area tiles only: grid of the page of the area (the `grid:` block of the tile), 0 = the grid
     // of the document. The tiles of an area page are placed in this grid, the first cell is the
     // back tile of the page like on every other page
-    uint8_t gridCols{0};
-    uint8_t gridRows{0};
+    uint8_t gridCols;
+    uint8_t gridRows;
     // the state of the entity, reported by the last response (see TileValue)
     TileValue value;
 };
@@ -337,8 +379,13 @@ private:
     // one page of the dashboard: the area tile that owns it (kNoTile for the main page) and the
     // page the back tile of the page returns to. _pages[0] is the main page and always exists
     struct Page {
-        TileIndex areaTile{kNoTile};
-        PageIndex parent{0};
+        Page() :
+            areaTile(kNoTile),
+            parent(0)
+        {
+        }
+        TileIndex areaTile;
+        PageIndex parent;
     };
 
     // resets the model, called by load()
@@ -371,22 +418,22 @@ private:
     String _error;
     String _url;
     String _token;
-    uint32_t _pollInterval{kDefaultPollInterval};
-    uint32_t _timeout{kDefaultTimeout};
-    bool _verify{false};
-    uint8_t _cols{kDefaultGridCols};
-    uint8_t _rows{kDefaultGridRows};
+    uint32_t _pollInterval;
+    uint32_t _timeout;
+    bool _verify;
+    uint8_t _cols;
+    uint8_t _rows;
     // The tiles of the configuration, the configuration and the state Home Assistant reports for
     // every one of them. The buffer lives in the PSRAM (see PsramAllocator)
     PsramVector<Tile> _tiles;
     // one entry per page, _pages[0] is the main page
     std::vector<Page> _pages;
     // bitmask of the used cells of one row
-    uint16_t _used[kMaxGridRows]{};
+    uint16_t _used[kMaxGridRows];
     // size of the loaded version of the file (see getFileSize() and getFileInfo())
-    uint32_t _fileSize{0};
-    bool _loaded{false};
-    bool _fileMissing{false};
+    uint32_t _fileSize;
+    bool _loaded;
+    bool _fileMissing;
 };
 
 } // namespace HomeAssistant

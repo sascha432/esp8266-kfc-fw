@@ -42,7 +42,31 @@ struct Detail {
     // value of an attribute that was not set
     static constexpr const char *kUnset = "";
 
-    Detail() = default;
+    Detail() :
+        valid(false),
+        tile(kNoTile),
+        generation(0),
+        mode(kUnset),
+        preset(kUnset),
+        fanMode(kUnset),
+        effect(kUnset),
+        colorMode(kUnset),
+        hue(0),
+        saturation(0),
+        level(0),
+        colorModes(kUnset),
+        colorTemp(0),
+        minColorTemp(0),
+        maxColorTemp(0),
+        modeList(kUnset),
+        presetList(kUnset),
+        fanModeList(kUnset),
+        effectList(kUnset),
+        buffer(nullptr),
+        used(0),
+        capacity(0)
+    {
+    }
     ~Detail();
 
     // drops the values and releases the buffer
@@ -58,46 +82,46 @@ struct Detail {
     void shrink();
 
     // the values below are valid
-    bool valid{false};
+    bool valid;
     // index of the tile the panel belongs to, kNoTile while no panel is open
-    TileIndex tile{kNoTile};
+    TileIndex tile;
     // increases with every response, the panel rebuilds its lists when it changes
-    uint32_t generation{0};
+    uint32_t generation;
     // climate: hvac mode (the state of the entity)
-    const char *mode{kUnset};
+    const char *mode;
     // climate: preset mode ("none" when the entity has none)
-    const char *preset{kUnset};
+    const char *preset;
     // climate: fan mode
-    const char *fanMode{kUnset};
+    const char *fanMode;
     // light: current effect, empty when none is running (an effect name is longer than a mode, the
     // longest of the LED matrix is "Spectrum Single Color Bars")
-    const char *effect{kUnset};
+    const char *effect;
     // light: color mode of the entity ("hs", "color_temp", "brightness", ...)
-    const char *colorMode{kUnset};
+    const char *colorMode;
     // light: hue in degrees and saturation in percent (hs_color)
-    float hue{0};
-    float saturation{0};
+    float hue;
+    float saturation;
     // light: brightness in percent
-    uint8_t level{0};
+    uint8_t level;
     // light: the color modes the entity supports ("hs,rgb,color_temp"), empty when unknown
-    const char *colorModes{kUnset};
+    const char *colorModes;
     // light: color temperature in kelvin, 0 when the entity has none, and the range of the slider
-    float colorTemp{0};
-    float minColorTemp{0};
-    float maxColorTemp{0};
+    float colorTemp;
+    float minColorTemp;
+    float maxColorTemp;
     // the items the panel offers, comma separated, empty when the entity does not have that
     // attribute
-    const char *modeList{kUnset};
-    const char *presetList{kUnset};
-    const char *fanModeList{kUnset};
-    const char *effectList{kUnset};
+    const char *modeList;
+    const char *presetList;
+    const char *fanModeList;
+    const char *effectList;
 
     // the buffer every string above points into (PSRAM, allocated on demand and reused)
-    char *buffer{nullptr};
+    char *buffer;
     // bytes of `buffer` the response used (the write cursor of the parser)
-    size_t used{0};
+    size_t used;
     // size of the allocation
-    size_t capacity{0};
+    size_t capacity;
 };
 
 // Capabilities of the panel of a tile, one bit per control. The screen maps them to the buttons of
@@ -120,6 +144,30 @@ public:
     // that was ignored) stops the fast polls of the client after it
     static constexpr uint32_t kPendingTimeout = 10000;
 
+    Dashboard() :
+        _visiblePage(0),
+        _detailTile(kNoTile),
+        _statsTile(kStatsNone),
+        _statsHours(kStatsDefaultHours),
+        _statsPoints{},
+        _statsCount(0),
+        _statsStart(0),
+        _statsEnd(0),
+        _statsGeneration(0),
+        _statsNextFetch(0),
+        _statsPending(false),
+        _statusCode(0),
+        _duration(0),
+        _responseTime(0),
+        _requestCount(0),
+        _lastUpdate(0),
+        _lastAction(0),
+        _lastConfigCheck(0),
+        _configGeneration(0),
+        _fileMissing(false),
+        _active(false)
+    {
+    }
     void begin();
     void stop();
     // main loop: applies the response of the request task and notices a new configuration
@@ -288,8 +336,13 @@ private:
 private:
     // pixel box of a picture tile on the panel, 0 while the screen did not build the tile
     struct PictureBox {
-        uint16_t width{0};
-        uint16_t height{0};
+        PictureBox() :
+            width(0),
+            height(0)
+        {
+        }
+        uint16_t width;
+        uint16_t height;
     };
 
     // The flags of one tile the main loop has to keep: the capabilities of its panel and the state
@@ -297,24 +350,34 @@ private:
     // read on every response and every tap, so they live in the internal DRAM - the reported values
     // are part of the tile model in the PSRAM (see Config::_tiles)
     struct TileFlags {
+        TileFlags() :
+            capabilities(0),
+            pending(false),
+            expectedState(TileState::UNKNOWN),
+            pendingState(0),
+            pendingValue(0),
+            pendingSince(0),
+            lastState(0xff)
+        {
+        }
         // panel capabilities (kCapXxx)
-        uint8_t capabilities{0};
+        uint8_t capabilities;
         // an action was queued and the entity has not reported the change yet
-        bool pending{false};
+        bool pending;
         // The state the user tapped and the entity is expected to report (UNKNOWN while no action
         // is on its way). The action is applied to the tile right away (optimistic): the screen
         // shows the result of the tap while the request is on its way and a response that still
         // reports the state of pendingState - the request was in flight while the action was sent -
         // does not take it back (see _reconcilePending()/_revertPending())
-        TileState expectedState{TileState::UNKNOWN};
+        TileState expectedState;
         // the state and the value the entity had when the action was queued (a response that still
         // reports them did not confirm the action, the fast polls have to continue)
-        uint8_t pendingState{0};
-        float pendingValue{0};
-        uint32_t pendingSince{0};
+        uint8_t pendingState;
+        float pendingValue;
+        uint32_t pendingSince;
         // last state a switch/light tile was drawn with (the poll repeats the same state and a
         // trace per tile and poll buries everything else), 0xff while it was not drawn yet
-        uint8_t lastState{0xff};
+        uint8_t lastState;
     };
 
     Config _config;
@@ -324,44 +387,44 @@ private:
     // boxes of the picture tiles, registered by the screen
     PsramVector<PictureBox> _pictureBox;
     // page of the screen that is visible
-    PageIndex _visiblePage{0};
+    PageIndex _visiblePage;
     // attributes of the entity of the open panel (one at a time) and the response of the poll
     // before it. The two slots only exchange pointers (see Detail::swap), the values an entity
     // stopped reporting are carried over from the older one (see _applyDetail())
     Detail _detail;
     Detail _detailBefore;
-    TileIndex _detailTile{kNoTile};
+    TileIndex _detailTile;
     // statistics of the open sensor panel: the tile and the range the graph was requested for, the
     // buckets of the last response (a copy of the ones of the client, the screen reads them from
     // the main loop) and the window they cover
-    TileIndex _statsTile{kStatsNone};
-    uint8_t _statsHours{kStatsDefaultHours};
+    TileIndex _statsTile;
+    uint8_t _statsHours;
     Socket::Point _statsPoints[Socket::kMaxPoints];
-    uint16_t _statsCount{0};
-    uint32_t _statsStart{0};
-    uint32_t _statsEnd{0};
+    uint16_t _statsCount;
+    uint32_t _statsStart;
+    uint32_t _statsEnd;
     String _statsError;
-    uint32_t _statsGeneration{0};
+    uint32_t _statsGeneration;
     // when the next refresh of the graph is due
-    uint32_t _statsNextFetch{0};
-    bool _statsPending{false};
+    uint32_t _statsNextFetch;
+    bool _statsPending;
     String _configError;
     String _response;
     String _requestError;
     // buffer of getScreenStatus(), keeps its capacity between the ticks of the screen
     mutable String _screenStatus;
-    int16_t _statusCode{0};
-    uint32_t _duration{0};
-    uint32_t _responseTime{0};
-    uint32_t _requestCount{0};
-    uint32_t _lastUpdate{0};
+    int16_t _statusCode;
+    uint32_t _duration;
+    uint32_t _responseTime;
+    uint32_t _requestCount;
+    uint32_t _lastUpdate;
     // millis() of the last queued action, part of the trace (how long a state change needed)
-    uint32_t _lastAction{0};
-    uint32_t _lastConfigCheck{0};
+    uint32_t _lastAction;
+    uint32_t _lastConfigCheck;
     // incremented by _reload() for every version of the file that was loaded
-    uint32_t _configGeneration{0};
-    bool _fileMissing{false};
-    bool _active{false};
+    uint32_t _configGeneration;
+    bool _fileMissing;
+    bool _active;
 };
 
 } // namespace HomeAssistant

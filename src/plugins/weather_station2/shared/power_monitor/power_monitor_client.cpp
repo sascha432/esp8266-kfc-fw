@@ -21,7 +21,14 @@ namespace WeatherStation2 {
 
 namespace PowerMonitor {
 
-Client::Client()
+Client::Client() :
+    _port(kDefaultPort),
+    _stop(false),
+    _task(nullptr),
+    _connected(false),
+    _sampleCount(0),
+    _lastSampleMillis(0),
+    _entryCount(0)
 {
 }
 

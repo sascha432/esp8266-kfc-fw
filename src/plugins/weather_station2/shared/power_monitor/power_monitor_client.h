@@ -60,12 +60,21 @@ static constexpr uint32_t kControlChannelId = 0x80000000;
 
 // latest sample of one channel
 struct Sample {
-    bool valid{false};
-    float voltage{0};       // V
-    float current{0};       // A
-    float power{0};         // W
-    double energy{0};       // kWh, the total (persistent) counter of the server
-    uint32_t timestamp{0};  // timestamp of the server, ms since it started
+    Sample() :
+        valid(false),
+        voltage(0),
+        current(0),
+        power(0),
+        energy(0),
+        timestamp(0)
+    {
+    }
+    bool valid;
+    float voltage;       // V
+    float current;       // A
+    float power;         // W
+    double energy;       // kWh, the total (persistent) counter of the server
+    uint32_t timestamp;  // timestamp of the server, ms since it started
 };
 
 class Client {
@@ -122,20 +131,24 @@ private:
 private:
     mutable SemaphoreMutex _lock;
     String _host;
-    uint16_t _port{kDefaultPort};
-    volatile bool _stop{false};
-    void *_task{nullptr};
+    uint16_t _port;
+    volatile bool _stop;
+    void *_task;
     // written by the reader task, read by the main loop, both under _lock
-    bool _connected{false};
-    uint32_t _sampleCount{0};
-    uint32_t _lastSampleMillis{0};
+    bool _connected;
+    uint32_t _sampleCount;
+    uint32_t _lastSampleMillis;
     String _error;
     struct Entry {
-        uint32_t channelId{0};
+        Entry() :
+            channelId(0)
+        {
+        }
+        uint32_t channelId;
         Sample sample;
     };
     Entry _entries[kMaxSamples];
-    uint8_t _entryCount{0};
+    uint8_t _entryCount;
 };
 
 } // namespace PowerMonitor

@@ -106,7 +106,40 @@ void _appendUtf8(String &output, uint32_t code)
 // ------------------------------------------------------------------------------------------
 // lifecycle
 // ------------------------------------------------------------------------------------------
-Socket::Socket()
+Socket::Socket() :
+    _socket(nullptr),
+    _host{},
+    _port(8123),
+    _secureUrl(false),
+    _open(false),
+    _message(nullptr),
+    _messageLength(0),
+    _messageCount(0),
+    _inMessage(false),
+    _nextId(1),
+    _templateId(0),
+    _statsId(0),
+    _templatePage(kNoPage),
+    _resultPage(kNoPage),
+    _lastMessage(0),
+    _templateValid(false),
+    _points(nullptr),
+    _count(0),
+    _maxPoints(0),
+    _statsAnswered(false),
+    _statsSuccess(false),
+    _object{},
+    _objectLength(0),
+    _objectDepth(0),
+    _arrayDepth(0),
+    _inObject(false),
+    _inString(false),
+    _escape(false),
+    _overflow(false),
+    _failed{},
+    _nextPing(0),
+    _body{},
+    _stageName("start")
 {
 }
 

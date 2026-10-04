@@ -1595,7 +1595,19 @@ static int32_t _deviceUtcOffset(time_t utc)
 // was applied and the screens show the message of getWeatherStatusText() instead - plausible
 // looking placeholder values are never displayed
 
-WeatherDataSource::WeatherDataSource()
+WeatherDataSource::WeatherDataSource() :
+    _mqttConnected(false),
+    _receivedValid(false),
+    _requestNow(false),
+    _stop(false),
+    _task(nullptr),
+    _latitude(0),
+    _longitude(0),
+    _pollInterval(0),
+    _requestCount(0),
+    _lastUpdate(0),
+    _lastPowerUpdate(0),
+    _lastMoonUpdate(0)
 {
     _client.reset(new OpenWeatherMap::Client());
     _received.reset(new OpenWeatherMap::Data());

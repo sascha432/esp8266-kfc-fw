@@ -42,8 +42,13 @@ class Socket {
 public:
     // one bucket of the statistics: epoch seconds of its start and the mean of the 5 minutes
     struct Point {
-        uint32_t time{0};
-        float mean{0};
+        Point() :
+            time(0),
+            mean(0)
+        {
+        }
+        uint32_t time;
+        float mean;
     };
 
     // 5 minute buckets of a 48 hour window plus the bucket that is running at the moment
@@ -137,9 +142,15 @@ public:
 private:
     // one service call that waits for its answer
     struct PendingAction {
-        uint16_t id{0};
-        TileIndex tile{0};
-        bool used{false};
+        PendingAction() :
+            id(0),
+            tile(0),
+            used(false)
+        {
+        }
+        uint16_t id;
+        TileIndex tile;
+        bool used;
     };
 
     // connect, upgrade and authenticate
@@ -199,72 +210,72 @@ private:
     // only reachable with setInsecure() - the same thing the REST requests do
     WiFiClient _plain;
     WiFiClientSecure _secure;
-    WiFiClient *_socket{nullptr};
+    WiFiClient *_socket;
 
-    char _host[64]{};
-    uint16_t _port{8123};
-    bool _secureUrl{false};
+    char _host[64];
+    uint16_t _port;
+    bool _secureUrl;
     // the URL and the token of the connection, kept for the reconnect of a statistics fetch
     String _url;
     String _token;
-    bool _open{false};
+    bool _open;
 
     // the message that is read and its length (PSRAM, kMaxMessage + 1 bytes)
-    char *_message{nullptr};
-    uint32_t _messageLength{0};
-    uint32_t _messageCount{0};
-    bool _inMessage{false};
+    char *_message;
+    uint32_t _messageLength;
+    uint32_t _messageCount;
+    bool _inMessage;
 
     // ids of the API. 0 is never used, it means "none"
-    uint16_t _nextId{1};
-    uint16_t _templateId{0};
-    uint16_t _statsId{0};
+    uint16_t _nextId;
+    uint16_t _templateId;
+    uint16_t _statsId;
 
     // the page the subscription of _templateId was built from, and the page of the result that
     // waits in _templateResult (kNoTile means "none")
     static constexpr PageIndex kNoPage = kNoTile;
-    PageIndex _templatePage{kNoPage};
-    PageIndex _resultPage{kNoPage};
+    PageIndex _templatePage;
+    PageIndex _resultPage;
     // millis() of the last message that arrived (a pong counts): the silence watchdog of pump()
-    uint32_t _lastMessage{0};
+    uint32_t _lastMessage;
 
     // the rendered template and the error of its render
     String _templateResult;
     String _templateError;
-    bool _templateValid{false};
+    bool _templateValid;
 
     // statistics of the request that is running
-    Point *_points{nullptr};
-    uint16_t _count{0};
-    uint16_t _maxPoints{0};
-    bool _statsAnswered{false};
-    bool _statsSuccess{false};
+    Point *_points;
+    uint16_t _count;
+    uint16_t _maxPoints;
+    bool _statsAnswered;
+    bool _statsSuccess;
     String _statsMessage;
 
     // parser state of the buckets
-    char _object[256]{};
-    uint16_t _objectLength{0};
-    uint8_t _objectDepth{0};
-    uint8_t _arrayDepth{0};
-    bool _inObject{false};
-    bool _inString{false};
-    bool _escape{false};
+    char _object[256];
+    uint16_t _objectLength;
+    uint8_t _objectDepth;
+    uint8_t _arrayDepth;
+    bool _inObject;
+    bool _inString;
+    bool _escape;
     // the object of the bucket does not fit into _object, it is dropped
-    bool _overflow{false};
+    bool _overflow;
 
     // service calls that wait for their answer
     PendingAction _actions[kMaxPendingActions];
     // tiles whose service call failed, reported by takeActionFailure(). The value is the tile
     // index + 1, 0 means that the slot is free
-    TileIndex _failed[kMaxPendingActions]{};
+    TileIndex _failed[kMaxPendingActions];
 
     // keepalive
-    uint32_t _nextPing{0};
+    uint32_t _nextPing;
     // result of a rejected upgrade
-    char _body[192]{};
+    char _body[192];
     // reason of a failure and the phase that is running (part of a timeout message)
     String _error;
-    const char *_stageName{"start"};
+    const char *_stageName;
 };
 
 } // namespace HomeAssistant

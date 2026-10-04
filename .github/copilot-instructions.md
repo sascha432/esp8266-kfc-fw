@@ -17,6 +17,10 @@ in this workspace.
 - **Do not modify the libraries** - other folders under `lib/` are out of bounds and require separate approval.
 - The firmware is **C++17** (`-std=gnu++17` in `conf/common.ini`). Match the surrounding style; the repo's
   `.clang-format` is the reference (WebKit base, 4 spaces, no tabs).
+- **Initialize members in the constructor, not in the class body** - no in-class default member
+  initializers (`uint8_t _x{0};`). Write the constructor **inline in the header** when the type has none in a
+  `.cpp`; a type that already has one in a `.cpp` keeps it there. Keep the initializer list in declaration
+  order, and do not list a member twice
 - Both platforms use the **stock** PlatformIO Arduino cores (`espressif8266`, `espressif32`) again - only
   upstream APIs are available, no fork-only `String` helpers (`rtrim/ltrim`, `*IgnoreCase`, `startsWith(char)`,
   chained `trim()/toLowerCase()`). Use the project's `StrView`/`StrWrapper`

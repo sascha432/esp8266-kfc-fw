@@ -109,18 +109,30 @@ void _appendDetailEntries(String &output, bool &first, const char *entity)
 static uint16_t _imageColMap[Client::kMaxImageWidth];
 static uint16_t _imageRowMap[Client::kMaxImageHeight];
 struct ImageJob {
-    uint16_t *dest{nullptr};
-    uint16_t destWidth{0};
-    uint16_t destHeight{0};
+    ImageJob() :
+        dest(nullptr),
+        destWidth(0),
+        destHeight(0),
+        cropX(0),
+        cropY(0),
+        cropW(0),
+        cropH(0),
+        colMap(_imageColMap),
+        rowMap(_imageRowMap)
+    {
+    }
+    uint16_t *dest;
+    uint16_t destWidth;
+    uint16_t destHeight;
     // first column/row of the scaled source image
-    uint16_t cropX{0};
-    uint16_t cropY{0};
+    uint16_t cropX;
+    uint16_t cropY;
     // size of the crop window inside the scaled source image
-    uint16_t cropW{0};
-    uint16_t cropH{0};
+    uint16_t cropW;
+    uint16_t cropH;
     // scaled source pixel of every destination pixel
-    uint16_t *colMap{_imageColMap};
-    uint16_t *rowMap{_imageRowMap};
+    uint16_t *colMap;
+    uint16_t *rowMap;
 };
 
 // Scale factor of the decoder: the largest down scaling (1/2, 1/4, 1/8) whose result still
@@ -218,9 +230,49 @@ int _imageDrawCallback(JPEGDRAW *draw)
 // ------------------------------------------------------------------------------------------
 // lifecycle
 // ------------------------------------------------------------------------------------------
-Client::Client()
+Client::Client() :
+    _config(nullptr),
+    _templatePage(kNoPage),
+    _responsePage(kNoPage),
+    _detailValid(false),
+    _detailTile(kNoDetailTile),
+    _responseValid(false),
+    _statusCode(0),
+    _duration(0),
+    _responseTime(0),
+    _requestCount(0),
+    _actionCount(0),
+    _active(false),
+    _refreshRequested(false),
+    _stop(false),
+    _visiblePage(0),
+    _templateDirty(false),
+    _task(nullptr),
+    _resubscribe(false),
+    _queue{},
+    _queueHead(0),
+    _queueTail(0),
+    _images{},
+    _image(nullptr),
+    _imageWidth(0),
+    _imageHeight(0),
+    _imageTile(0),
+    _imageStamp(0),
+    _imageValid(false),
+    _imageCount(0),
+    _imageFailureCount(0),
+    _statsTile(kNoStatsTile),
+    _statsHours(kDefaultStatsHours),
+    _statsRequest(false),
+    _statsPoints{},
+    _statsCount(0),
+    _statsResultTile(kNoStatsTile),
+    _statsResultHours(0),
+    _statsStart(0),
+    _statsEnd(0),
+    _statsGeneration(0),
+    _statsUntaken(false)
 {
-    _stop = false;
 }
 
 Client::~Client()

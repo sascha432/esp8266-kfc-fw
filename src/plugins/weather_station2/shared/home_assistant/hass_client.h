@@ -49,14 +49,22 @@ public:
             SET_COLOR_TEMP, // light, value = color temperature in kelvin
         };
 
-        Type type{Type::NONE};
-        TileIndex tile{0};
-        float value{0};
+        Action() :
+            type(Type::NONE),
+            tile(0),
+            value(0),
+            value2(0),
+            text{}
+        {
+        }
+        Type type;
+        TileIndex tile;
+        float value;
         // second value (SET_COLOR) and the name of a mode/preset/fan/effect. The buffer is the size
         // of a name of the model: an effect is longer than one ("Spectrum Single Color Bars" is
         // 26 characters), the trailing ones were cut off and the entity ignored the effect
-        float value2{0};
-        char text[kNameLength]{};
+        float value2;
+        char text[kNameLength];
     };
 
     // stack of the request task (the TLS handshake runs on it)
@@ -187,13 +195,22 @@ public:
 private:
     // one registered picture tile of the visible page
     struct ImageRequest {
-        uint16_t width{0};
-        uint16_t height{0};
-        uint16_t interval{kDefaultRefresh};
+        ImageRequest() :
+            width(0),
+            height(0),
+            interval(kDefaultRefresh),
+            next(0),
+            used(false),
+            tile(0)
+        {
+        }
+        uint16_t width;
+        uint16_t height;
+        uint16_t interval;
         // millis() the next image is due
-        uint32_t next{0};
-        bool used{false};
-        TileIndex tile{0};
+        uint32_t next;
+        bool used;
+        TileIndex tile;
     };
 
     static void _taskEntry(void *arg);
@@ -229,80 +246,80 @@ private:
     void _setError(const String &error);
 
 private:
-    const Config *_config{nullptr};
+    const Config *_config;
     String _template;
     // the page _template was built from (kNoPage while no template is built)
-    PageIndex _templatePage{kNoPage};
+    PageIndex _templatePage;
     // written by the request task, read by the main loop, both under _lock
     String _response;
     // the page the response in _response was built from
-    PageIndex _responsePage{kNoPage};
+    PageIndex _responsePage;
     String _error;
     // The dashboard publishes which tile is open (kNoDetailTile = no panel is open), the task adds
     // the attributes of its entity to the subscribed template
     String _detailResponse;
-    volatile bool _detailValid{false};
-    volatile TileIndex _detailTile{kNoDetailTile};
+    volatile bool _detailValid;
+    volatile TileIndex _detailTile;
     mutable SemaphoreMutex _lock;
-    volatile bool _responseValid{false};
-    volatile int16_t _statusCode{0};
-    volatile uint32_t _duration{0};
-    volatile uint32_t _responseTime{0};
-    volatile uint32_t _requestCount{0};
-    volatile uint32_t _actionCount{0};
+    volatile bool _responseValid;
+    volatile int16_t _statusCode;
+    volatile uint32_t _duration;
+    volatile uint32_t _responseTime;
+    volatile uint32_t _requestCount;
+    volatile uint32_t _actionCount;
     // set by the main loop, read by the task
-    volatile bool _active{false};
-    volatile bool _refreshRequested{false};
-    volatile bool _stop{false};
+    volatile bool _active;
+    volatile bool _refreshRequested;
+    volatile bool _stop;
     // page the subscribed template is built from and the flag that it has to be built (and
     // subscribed) again (the task owns _template, the main loop only publishes the page)
-    volatile PageIndex _visiblePage{0};
-    volatile bool _templateDirty{false};
+    volatile PageIndex _visiblePage;
+    volatile bool _templateDirty;
     // request task
-    void *_task{nullptr};
+    void *_task;
     // the task subscribes the template again (a page change, an open panel, a resync or a
     // connection that was opened again)
-    volatile bool _resubscribe{false};
+    volatile bool _resubscribe;
     // the connection to the websocket API of Home Assistant
     Socket _socket;
     // queued actions, guarded by _lock
     Action _queue[kQueueSize];
-    uint8_t _queueHead{0};
-    uint8_t _queueTail{0};
+    uint8_t _queueHead;
+    uint8_t _queueTail;
     // tiles whose action failed, one bit per tile index, guarded by _lock. The bitmap is sized to
     // the tile count by begin()
     std::vector<uint32_t> _actionFailed;
     // picture tiles of the visible page, guarded by _lock
     ImageRequest _images[kMaxImageTiles];
     // frame waiting for the LVGL task and its owner, guarded by _lock
-    uint16_t *_image{nullptr};
-    uint16_t _imageWidth{0};
-    uint16_t _imageHeight{0};
-    TileIndex _imageTile{0};
-    uint32_t _imageStamp{0};
-    bool _imageValid{false};
+    uint16_t *_image;
+    uint16_t _imageWidth;
+    uint16_t _imageHeight;
+    TileIndex _imageTile;
+    uint32_t _imageStamp;
+    bool _imageValid;
     // statistics of the trace
-    volatile uint32_t _imageCount{0};
-    volatile uint32_t _imageFailureCount{0};
+    volatile uint32_t _imageCount;
+    volatile uint32_t _imageFailureCount;
     // Statistics request of the sensor panel. The main loop publishes the tile and the range of
     // the window and the task performs the request (one at a time, like a camera image). The
     // buckets are written into _statsPoints by the task and the main loop copies them out under
     // _lock
-    volatile TileIndex _statsTile{kNoStatsTile};
-    volatile uint8_t _statsHours{kDefaultStatsHours};
-    volatile bool _statsRequest{false};
+    volatile TileIndex _statsTile;
+    volatile uint8_t _statsHours;
+    volatile bool _statsRequest;
     Socket::Point _statsPoints[Socket::kMaxPoints];
-    uint16_t _statsCount{0};
+    uint16_t _statsCount;
     // response of the last request, guarded by _lock
-    TileIndex _statsResultTile{kNoStatsTile};
-    uint8_t _statsResultHours{0};
-    uint32_t _statsStart{0};
-    uint32_t _statsEnd{0};
+    TileIndex _statsResultTile;
+    uint8_t _statsResultHours;
+    uint32_t _statsStart;
+    uint32_t _statsEnd;
     String _statsError;
-    volatile uint32_t _statsGeneration{0};
+    volatile uint32_t _statsGeneration;
     // a result was stored and not copied out by the main loop yet: the next request waits for it,
     // otherwise the buckets of a window that is still shown would be overwritten
-    volatile bool _statsUntaken{false};
+    volatile bool _statsUntaken;
 };
 
 } // namespace HomeAssistant

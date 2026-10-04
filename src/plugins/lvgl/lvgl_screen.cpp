@@ -405,7 +405,7 @@ void LVGLScreenManager::_handleInput()
     if (LV_ABS(dx) >= kSwipeDistance && LV_ABS(dx) > LV_ABS(dy)) {
         const auto direction = (dx < 0) ? SwipeDirection::LEFT : SwipeDirection::RIGHT;
         __LDBG_printf("swipe %s (%d,%d)", (direction == SwipeDirection::LEFT) ? "left" : "right", static_cast<int>(dx), static_cast<int>(dy));
-        if (screen && screen->onSwipe(direction)) {
+        if (screen && screen->onSwipe(direction, _pressPoint)) {
             return;
         }
         // a swipe to the right goes to the next screen, to the left to the previous one
@@ -423,7 +423,7 @@ void LVGLScreenManager::_handleInput()
         const auto direction = (dy < 0) ? SwipeDirection::UP : SwipeDirection::DOWN;
         const auto name = (direction == SwipeDirection::UP) ? "up" : "down";
         __LDBG_printf("swipe %s (%d,%d)", name, static_cast<int>(dx), static_cast<int>(dy));
-        if (!screen || !screen->onSwipe(direction)) {
+        if (!screen || !screen->onSwipe(direction, _pressPoint)) {
             __LDBG_printf("swipe %s ignored", name);
         }
     }

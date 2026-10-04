@@ -111,6 +111,11 @@ public:
     virtual bool onSwipe(SwipeDirection direction) {
         return false;
     }
+    // Start-point-aware hook; existing screens keep their direction-only handler.
+    virtual bool onSwipe(SwipeDirection direction, const lv_point_t &)
+    {
+        return onSwipe(direction);
+    }
 };
 
 class LVGLScreenManager {

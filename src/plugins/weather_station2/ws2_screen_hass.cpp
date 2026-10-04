@@ -49,6 +49,14 @@ constexpr lv_coord_t kTileGap = 8;
 constexpr lv_coord_t kTileMargin = 8;
 constexpr uint32_t kColorTilePressed = 0x05070a;
 constexpr uint32_t kColorTilePressedActive = 0x9c4f00;
+constexpr lv_coord_t kSettingsSwipeTopBand = 48;
+constexpr lv_coord_t kSettingsSwipeCenterTolerance = 48;
+
+bool isSettingsSwipeStart(const lv_point_t &point, lv_coord_t screenWidth)
+{
+    return point.y >= 0 && point.y <= kSettingsSwipeTopBand &&
+           LV_ABS(point.x - screenWidth / 2) <= kSettingsSwipeCenterTolerance;
+}
 
 void setPressedFeedback(lv_obj_t *obj, uint32_t color = kColorTilePressed, lv_opa_t opacity = LV_OPA_COVER)
 {
@@ -3476,6 +3484,12 @@ void HassScreen::_updateTile(HomeAssistant::TileIndex index)
     const auto &tile = _dashboard.getConfig().getTile(index);
     const auto &value = _dashboard.getValue(index);
 
+    // The finger owns the dimmer level until release; an in-flight response can still carry the
+    // previous level and must not repaint the fill or readout over the drag.
+    if (tile.type == TileType::DIMMER && widgets.dragging) {
+        return;
+    }
+
     if (tile.type == TileType::SPACER || tile.type == TileType::AREA) {
         // nothing to read, the name and the icon of an area are static
         return;
@@ -4665,12 +4679,25 @@ void HassScreen::_dragCallback(lv_event_t *event)
     if (code == LV_EVENT_PRESSED) {
         lv_point_t point;
         lv_indev_get_point(lv_indev_get_act(), &point);
+        // This start zone belongs to the global quick-settings swipe, not the dimmer drag.
+        widgets.dragging = !isSettingsSwipeStart(point, self->_width);
         widgets.dragStartY = point.y;
         widgets.dragLevel = static_cast<uint8_t>(lroundf(self->_dashboard.getValue(index).value));
         return;
     }
 
+    if (code == LV_EVENT_PRESS_LOST) {
+        widgets.dragging = false;
+        return;
+    }
+
     if (code == LV_EVENT_PRESSING || code == LV_EVENT_RELEASED) {
+        if (!widgets.dragging) {
+            return;
+        }
+        if (code == LV_EVENT_RELEASED) {
+            widgets.dragging = false;
+        }
         lv_point_t point;
         lv_indev_get_point(lv_indev_get_act(), &point);
         // a tap does not move the finger: the level stays where it is and the release opens the panel
@@ -5100,7 +5127,7 @@ bool HassScreen::onDoubleTap()
     return true;
 }
 
-bool HassScreen::onSwipe(SwipeDirection direction)
+bool HassScreen::onSwipe(SwipeDirection direction, const lv_point_t &startPoint)
 {
     // A swipe on the fullscreen image returns to the dashboard as well: the image is closed by
     // the touch itself (see _fullCallback()) and the manager runs the swipe of that same touch
@@ -5113,18 +5140,21 @@ bool HassScreen::onSwipe(SwipeDirection direction)
     if (_panel != Panel::NONE) {
         return true;
     }
-    if (_lastTileClick && static_cast<uint32_t>(millis() - _lastTileClick) <= kTileTapWindow) {
-        __LDBG_printf("hass> swipe consumed by recent LVGL control input");
+    if (_settingsOpen) {
         return true;
     }
-    // The dashboard is left with the button of the quick settings, not with a swipe: a swipe to the
-    // left or to the right opens the sheet and the gesture is consumed, so the manager never
-    // switches to the next screen. A swipe while the sheet is open is consumed as well
-    if (!_settingsOpen) {
-        __LDBG_printf("hass> swipe opens the quick settings");
+    if (direction == SwipeDirection::DOWN && isSettingsSwipeStart(startPoint, _width)) {
+        __LDBG_printf("hass> centered top swipe opens quick settings");
         _settingsPending = true;
+        return true;
     }
-    return true;
+    for (const auto &widgets : _tiles) {
+        if (widgets.dragging) {
+            __LDBG_printf("hass> swipe consumed by active LVGL tile drag");
+            return true;
+        }
+    }
+    return false;
 }
 
 #if DEBUG_HASS_ACTION_TEST

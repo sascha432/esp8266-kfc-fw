@@ -738,8 +738,9 @@ public:
     virtual bool onTap() override;
     virtual bool onDoubleTap() override;
     // A panel is a full screen of controls: a drag on one of them (the color wheel, the arc, a
-    // slider) is not a gesture of the screen manager. The grid keeps the swipe to change screens
-    virtual bool onSwipe(SwipeDirection direction) override;
+    // slider) is not a gesture of the screen manager. A centered swipe down from the top opens
+    // quick settings; the start point follows the current display orientation.
+    virtual bool onSwipe(SwipeDirection direction, const lv_point_t &startPoint) override;
 
 private:
     // panel that is drawn instead of the grid. A tap on a light/dimmer tile opens the dimmer

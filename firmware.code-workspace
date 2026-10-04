@@ -436,6 +436,8 @@
             "LIPO",
             "LISTBOX",
             "LITTLEFS",
+            "LV_DISP_DEF_REFR_PERIOD",
+            "LV_USE_FONT_SUBPX",
             "lvgl",
             "LVGLUI",
             "MDNS",

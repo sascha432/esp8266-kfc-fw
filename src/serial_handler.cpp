@@ -251,29 +251,15 @@ namespace SerialHandler {
     void Wrapper::_loop()
     {
         #if ESP32
-            bool deleteWdt = false;
-            esp_err_t err = esp_task_wdt_status(NULL);
-            if (err == ESP_ERR_NOT_FOUND) {
-                if ((err = esp_task_wdt_add(NULL)) != ESP_OK) {
-                    if (err != ESP_ERR_INVALID_ARG) {
-                        __DBG_printf_E("esp_task_wdt_add failed err=%x", err);
-                    }
-                }
-                else {
-                    deleteWdt = true;
-                }
-            }
+            // The task is subscribed once by addLoop() and removed by removeLoop() again. Doing that
+            // here took the task watchdog lock three times per main loop iteration
+            esp_task_wdt_reset();
         #endif
         MUTEX_LOCK_BLOCK(_lock) {
             _pollSerial();
             _transmitClientsRx();
             _transmitClientsTx();
         }
-        #if ESP32
-            if (deleteWdt) {
-                esp_task_wdt_delete(NULL);
-            }
-        #endif
     }
 
 }

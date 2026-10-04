@@ -563,7 +563,9 @@ void loop()
                 return entry.deleteCallback == true;
             }
         ), loopFunctions.end());
-        loopFunctions.shrink_to_fit();
+        #if ESP8266
+            loopFunctions.shrink_to_fit();
+        #endif
     }
     __Scheduler.run(); // check all events
     #if ESP32

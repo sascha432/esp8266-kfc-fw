@@ -206,6 +206,8 @@ public:
     File __openLog(Level logLevel, bool write);
     void __rotate(Level logLevel);
 
+    void setFileLogging(bool enable);
+
 protected:
     void writeLog(Level logLevel, const char *message, va_list arg);
     void writeLog(Level logLevel, const String &message, va_list arg);
@@ -221,6 +223,7 @@ protected:
 private:
     Level _logLevel;
     Level _enabled;
+    bool _isFileLoggingDisabled;
     MemoryQueueTypeList _queue;
     uint32_t _lastFlushTimer;
     Event::Timer _writeTimer;
@@ -410,6 +413,11 @@ inline String Logger::_getBackupFilename(const String &filename, int num)
     }
     str.print(F(".bak"));
     return str;
+}
+
+inline void Logger::setFileLogging(bool enable)
+{
+    _isFileLoggingDisabled = !enable;
 }
 
 #pragma pop_macro("DEBUG")

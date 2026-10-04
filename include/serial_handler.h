@@ -238,6 +238,14 @@ namespace SerialHandler {
 
     inline void Wrapper::addLoop()
     {
+        #if ESP32
+            // Subscribe the loop task to the task watchdog once, here, and feed it from _loop().
+            // It used to be subscribed and removed on every iteration of this loop function -
+            // esp_task_wdt_status/add/delete, three calls into the watchdog driver that take its
+            // lock, for about 45 us per iteration and roughly a fifth of the main loop's CPU time.
+            // The result is ignored: ESP_ERR_INVALID_ARG means the task is subscribed already
+            esp_task_wdt_add(NULL);
+        #endif
         // LOOP_FUNCTION_ADD(pollSerial);
         LOOP_FUNCTION_ADD_ARG([this]() {
             this->_loop();
@@ -248,6 +256,10 @@ namespace SerialHandler {
     {
         // LoopFunctions::remove(pollSerial);
         LoopFunctions::remove(this);
+        #if ESP32
+            // the watchdog subscription belongs to the loop function, see addLoop()
+            esp_task_wdt_delete(NULL);
+        #endif
     }
 
     inline Client &Wrapper::addClient(const Callback &cb, EventType events)

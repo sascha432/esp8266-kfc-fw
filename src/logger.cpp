@@ -20,13 +20,18 @@
 
 #undef DEBUG
 
+#ifndef LOGGER_DISABLE_FILE_LOGGING
+#define LOGGER_DISABLE_FILE_LOGGING     false
+#endif
+
 using KFCConfigurationClasses::System;
 
 Logger _logger;
 
 Logger::Logger() :
     _logLevel(Level::NOTICE),
-    _enabled(LoggerEnum(LoggerEnum::Enum::ERROR)|LoggerEnum(LoggerEnum::Enum::SECURITY))
+    _enabled(LoggerEnum(LoggerEnum::Enum::ERROR)|LoggerEnum(LoggerEnum::Enum::SECURITY)),
+    _isFileLoggingDisabled(LOGGER_DISABLE_FILE_LOGGING)
     #if SYSLOG_SUPPORT
         , _syslog(nullptr)
     #endif
@@ -147,6 +152,10 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
             DebugContext_prefix(DEBUG_OUTPUT.println(DEBUG_OUTPUT.write(item.message(), item.messageSize()) && DEBUG_OUTPUT.println()));
         #endif
 
+        if (_isFileLoggingDisabled) {
+            return;
+        }
+
         // place item in queue
         __LDBG_printf("lvl=%x t=%u s=%u", item.logLevel, item.millis, item.buffer.size());
         QueueSizeType size;
@@ -183,6 +192,10 @@ void Logger::writeLog(Level logLevel, const char *message, va_list arg)
 
 void Logger::_flushQueue()
 {
+    if (_isFileLoggingDisabled) {
+        return;
+    }
+
     #if ESP32
         // log messages are sent from multiple cores
         MUTEX_LOCK_BLOCK(_flushLock)
@@ -192,22 +205,6 @@ void Logger::_flushQueue()
         MUTEX_LOCK_BLOCK(_queueLock) {
             tmp = std::move(_queue);
         }
-
-        #if ESP32
-        // Never write into a file system that is (almost) full: the littlefs of the ESP32 core
-        // divides by zero in lfs_alloc() when there is no free block left instead of returning
-        // LFS_ERR_NOSPC, which panics the device (IntegerDivideByZero) and ends in a reboot loop
-        // that restores the factory settings after a few resets. The messages are dropped, they
-        // were already written to the serial port by writeLog()
-        FSInfo fsInfo;
-        getFSInfo(fsInfo);
-        if (fsInfo.totalBytes && (fsInfo.totalBytes - fsInfo.usedBytes) < kMinFreeSpace) {
-            _lastFlushTimer = millis();
-            __DBG_printf_E("file system is full (%u of %u bytes used), dropping %u queued log message(s)",
-                static_cast<unsigned>(fsInfo.usedBytes), static_cast<unsigned>(fsInfo.totalBytes), static_cast<unsigned>(tmp.size()));
-            return;
-        }
-        #endif
 
         // sort by loglevel and time
         tmp.sort([](const MemoryQueueType &a, const MemoryQueueType &b) {
@@ -263,7 +260,7 @@ void Logger::_flushQueue()
             if (dur > kQueueMaxTimeout) {
                 _closeLog(file);
 
-                __LDBG_printf_E("timeout=%u re-adding=%u", dur, tmp.size());
+                // __LDBG_printf_E("timeout=%u re-adding=%u", dur, tmp.size());
 
                 // re-add all items that are left
                 MUTEX_LOCK_BLOCK(_queueLock) {

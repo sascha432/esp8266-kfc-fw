@@ -1080,7 +1080,7 @@ constexpr lv_coord_t kSettingsBlockGap = 14;
 constexpr lv_coord_t kSettingsSliderHeight = 24;
 // gap a slider of an editor keeps to the left and right of its control area: the knob covers the
 // end of the track, a finger cannot reach it without the gap
-constexpr lv_coord_t kSettingsEditorSliderGap = 12;
+constexpr lv_coord_t kSettingsEditorSliderGap = 24;
 // height of the row at the top and at the bottom in landscape, the portrait sheet stacks the header
 // in two lines and gets taller rows
 constexpr lv_coord_t kSettingsTopHeight = 52;

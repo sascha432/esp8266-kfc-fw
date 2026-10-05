@@ -279,27 +279,28 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             #if DEBUG_TASK_QUEUE
                 args.print(F("deferred tasks: %u queued (%u peak of %u), %u processed, %u dropped"), static_cast<unsigned>(_tasks.size()), static_cast<unsigned>(_tasks.peakSize()), static_cast<unsigned>(_tasks.capacity()), static_cast<unsigned>(_tasks.processed()), static_cast<unsigned>(_tasks.dropped()));
             #endif
-            // compile time switches of the diagnostics, 0 = not compiled in. DEBUG_IOT_CLOCK contains defined(),
-            // which is only valid in #if
+            // compile time switches of the diagnostics, 0 = not compiled in. The macros are only evaluated by
+            // #if: several are defined as (0 || defined(DEBUG_ALL)), defined() is not valid outside #if, and an
+            // undefined macro is 0 there
             #if DEBUG_IOT_CLOCK
                 constexpr int kDebugClock = 1;
             #else
                 constexpr int kDebugClock = 0;
             #endif
-            #ifndef FASTLED_DEBUG_COUNT_FRAME_RETRIES
+            #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
+                constexpr int kFastLedRetries = 1;
+            #else
                 constexpr int kFastLedRetries = 0;
-            #else
-                constexpr int kFastLedRetries = FASTLED_DEBUG_COUNT_FRAME_RETRIES;
             #endif
-            #ifndef NEOPIXEL_HAVE_STATS
+            #if NEOPIXEL_HAVE_STATS
+                constexpr int kNeoPixelStats = 1;
+            #else
                 constexpr int kNeoPixelStats = 0;
-            #else
-                constexpr int kNeoPixelStats = NEOPIXEL_HAVE_STATS;
             #endif
-            #ifndef DEBUG_TASK_QUEUE
-                constexpr int kTaskQueue = 0;
+            #if DEBUG_TASK_QUEUE
+                constexpr int kTaskQueue = 1;
             #else
-                constexpr int kTaskQueue = DEBUG_TASK_QUEUE;
+                constexpr int kTaskQueue = 0;
             #endif
             args.print(F("debug: DEBUG_IOT_CLOCK=%u FASTLED_DEBUG_COUNT_FRAME_RETRIES=%u NEOPIXEL_HAVE_STATS=%u DEBUG_TASK_QUEUE=%u"), kDebugClock, kFastLedRetries, kNeoPixelStats, kTaskQueue);
         }
@@ -324,7 +325,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
         else if (args.equalsIgnoreCase(0, F("get")) || args.equalsIgnoreCase(0, F("set"))) {
             Color color;
             auto &stream = args.getStream();
-            auto range = args.toRange(1, 0, _display.size() - 1, PrintString(F("0,1")));
+            auto range = args.toRange(1, 0, _display.size() - 1, F("0,1"));
 
             if (_display.getRows() > 1) {
                 args.print(F("Matrix %ux%u, segments=%u"), _display.getCols(), _display.getRows(), _display.getNumSegments());

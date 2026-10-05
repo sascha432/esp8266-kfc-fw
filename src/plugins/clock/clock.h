@@ -233,10 +233,8 @@ public:
     virtual void createMenu() override;
 
     enum class TitleType {
-        NONE,
-        ADD_GROUP,                  // surrounds the form with a group/animation title
-        SET_TITLE,                  // set FormUI title to the animation title
-        SET_TITLE_AND_ADD_GROUP     // set title of the form to the animation title
+        SET_TITLE,                  // inline form for the WebUI, the FormUI title is the animation title
+        SET_TITLE_AND_ADD_GROUP     // standalone page, plugin title and a card group named after the animation
     };
 
     void _createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType);

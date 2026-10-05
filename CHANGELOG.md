@@ -2,6 +2,8 @@
 
 ## Version 0.0.9 (master)
 
+ - Removed the combined animations form of the clock plugin, the alarm color and flashing speed moved to the settings form
+ - LED Matrix: unified matrix/segment validation
  - NeoPixelBus RMT and I2S support added
  - ESP32 SerialHandler: subscribe the main loop task to the task watchdog once instead of on every loop iteration
  - New build number generator

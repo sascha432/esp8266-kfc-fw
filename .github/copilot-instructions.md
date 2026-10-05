@@ -165,8 +165,9 @@ in this workspace.
   `Serial` with `begin()`/`operator bool()`, while the firmware force-includes `serial_compat.h` with
   `extern Stream &Serial;` (`NO_GLOBAL_SERIAL`).
 - Show method is a runtime toggle (`+LMC=met,nrmt|ni2s`, Display Method form), default **NeoPixelBus RMT**. All
-  RMT outputs share one channel (see below), so up to 4 output pins work; I2S drives **at most 2** (I2S0/I2S1) and
-  conflicts with the I2S microphone visualizer - further segments are ignored.
+  RMT outputs share one channel (see below), so up to 4 output pins work; I2S drives one port per segment
+  (2 on the ESP32) and the port of the I2S microphone visualizer is reserved for it - the segments that no I2S
+  port is left for are transmitted by RMT in the same frame (mixed mode, `HAVE_NEOPIXELBUS_SUPPORT_MIC`, below).
 - **All RMT pins are transmitted on ONE channel with all 8 memory blocks.** The RMT channels share the 8 blocks
   and the ESP-IDF driver refills a channel from its threshold interrupt, which is set to half of its memory: two
   channels of 4 blocks each only leave **~160 us** per refill, one channel with all 8 blocks has **~320 us**. A
@@ -177,11 +178,10 @@ in this workspace.
   previous pin is left as GPIO output low = idle level, so its strip latches. `rmt_wait_tx_done()` between the
   frames waits for the channel *and* is non-destructive (the driver gives the semaphore back), so it doubles as
   the frame timer. A frame costs the sum of its segments (128 pixels are ~3.84 ms): 2 segments ~78 fps, 4 ~65 fps.
-- **NeoPixelBus is a git checkout of our own fork inside `lib/NeoPixelBus`** - branch `kfc-rmt-mem-blocks`,
-  tag `kfc-rmt1`, based on upstream `master` `882b804` (the three commits after the `2.8.4` tag: #894/#910/#911).
-  `origin` is `https://github.com/sascha432/NeoPixelBus.git`, `upstream` is Makuna, and the fork's `ReadMe.md`
-  documents issue #921 / PRs #922/#923. The folder has its own `.git` (the firmware ignores it through
-  `lib/NeoPixelBus/*`), so run git for the library **in that folder** and never from `kfc_fw`. Two patches in
+- **NeoPixelBus is our fork of Makuna/NeoPixelBus**, pulled in as a `lib_deps` URL (not a local checkout any
+  more) - `https://github.com/sascha432/NeoPixelBus.git#kfc-rmt1` in `conf/envs/wled_board.ini`, branch
+  `kfc-rmt-mem-blocks`, tag `kfc-rmt1`, based on upstream `master` `882b804` (the three commits after the
+  `2.8.4` tag: #894/#910/#911). The fork's `ReadMe.md` documents issue #921 / PRs #922/#923. Two patches in
   `src/internal/methods/NeoEsp32RmtMethod.{h,cpp}`:
   1. `NEOPIXELBUS_RMT_INT_FLAGS` is `ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL3` instead of the upstream
      `ESP_INTR_FLAG_LOWMED` (not IRAM safe, lowest priority). Same values FastLED's ESP32 RMT driver uses. It
@@ -189,9 +189,9 @@ in this workspace.
   2. `mem_block_num` is no longer hardcoded to 1 - it reads `gNeoPixelBusRmtMemBlocks` (defined in the lib,
      default 1). `NeoBusRmtMux` sets it to all 8 blocks before `Begin()`.
   `NeoBusStrips::show()` additionally holds `spi_flash_op_lock()` around the transmit (the same mechanism as
-  `FASTLED_ESP32_FLASH_LOCK`). Do not replace the checkout with the registry version; `NeoPixelBus` stays in
-  `conf/common_esp8266.ini` `lib_ignore` - that is what keeps it out of the ESP8266 builds (LDF cannot see
-  `#if HAVE_NEOPIXELBUS`), the fork keeps upstream's `platforms: "*"` manifest.
+  `FASTLED_ESP32_FLASH_LOCK`). Do not replace the fork URL with the upstream/registry version (the two patches
+  would be lost); `NeoPixelBus` stays in `conf/common_esp8266.ini` `lib_ignore` - that is what keeps it out of
+  the ESP8266 builds (LDF cannot see `#if HAVE_NEOPIXELBUS`), the fork keeps upstream's `platforms: "*"` manifest.
 - Status page diagnostics for the RMT transport (sticky since boot): `..., NeoPixelBus RMT, <fps>, <n> blocks`,
   then `, frame +<us>` for the worst frame that took longer than its pixels need (the RMT memory ran empty and
   stale data was transmitted, i.e. visible flicker), `, <n>% over` for the share of segment transmissions that
@@ -229,14 +229,25 @@ in this workspace.
     buffer (`heap_caps_malloc(..., MALLOC_CAP_DMA)`) and starts it, there is no refill interrupt - a delayed
     interrupt only delays the *next* frame instead of glitching the current one - and up to **2 segments are
     transmitted in parallel** (`NeoBusChannel` selects the I2S port) at the cost of one. Measured 118 fps at
-    2048 pixels / 2 segments. Restrictions: only 2 ports exist (further segments are ignored,
-    `kMaxI2sStrips`), **port 0 collides with the visualizer's I2S microphone** (NeoPixelBus drives the I2S
-    peripheral with its own `Esp32_i2s.c`, the microphone uses the ESP-IDF driver on
-    `IOT_LED_MATRIX_I2S_PORT` = I2S0 - a segment on that port fails to initialize and stays dark, move the
-    microphone to I2S1 instead), and the DMA buffer of every segment must fit into internal DMA capable RAM
-    (`MALLOC_CAP_DMA`), a long segment can fail to initialize ("NeoPixelBus initialize failed" in the log).
-  - Rule of thumb: 1-2 segments -> RMT, or I2S for 2 segments (twice as fast and stall proof); 3-4 segments ->
-    RMT only (serial, the frame rate drops with the total pixel count). There is no mixed I2S+RMT mode yet.
+    2048 pixels / 2 segments. Restrictions: only two ports exist and the visualizer's I2S microphone needs one of
+    them. **Never share a port with the microphone**: NeoPixelBus installs its own I2S driver with the DMA
+    interrupt of the port (`Esp32_i2s.c`, `i2sInit()` cannot report a failure), the microphone installs the
+    ESP-IDF driver on `IOT_LED_MATRIX_I2S_PORT` (I2S0 by default). The IDF install then fails
+    (`i2s_dma_intr_init(): Register I2S Interrupt error`), its cleanup resets the peripheral and the LED driver
+    is left without a DMA interrupt - `NeoEsp32I2sMethodBase::Update()` spins in
+    `while (!IsReadyToUpdate()) yield();` and the task watchdog resets the device in a loop (observed
+    2026-10-04, build 15441: `task_wdt: - loopTask (CPU 1)` -> `abort()`). `HAVE_NEOPIXELBUS_SUPPORT_MIC=1`
+    (set in `conf/envs/wled_board.ini`, default and documentation in `clock_def.h`) reserves
+    `IOT_LED_MATRIX_I2S_PORT` for the microphone - the build errors out if the microphone is compiled in
+    without it. A build that wants both I2S ports for LEDs has to disable
+    `IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE`. The DMA buffer of every segment must fit into internal DMA
+    capable RAM (`MALLOC_CAP_DMA`); a segment that fails to initialize is transmitted by the RMT transport.
+  - **Mixed I2S + RMT**: a segment that no free I2S port is left for is transmitted by the RMT mux in the same
+    frame (`NeoBusStrips::update()`), the I2S segments run in parallel on the DMA while the RMT segments are sent
+    one after another - a mixed frame costs the RMT segments plus the longest I2S segment. The status page shows
+    the split as `<n> I2S + <n> RMT pins`. There is no I2S+FastLED mix.
+  - Rule of thumb: 1 segment -> I2S (stall proof) or RMT; 2 segments -> I2S unless the microphone reserves a
+    port (then 1 I2S + 1 RMT); 3-4 segments -> RMT (serial, the frame rate drops with the total pixel count).
 - The power limit is a software limiter (`ClockPlugin::_getNeoBusBrightness()`) applied in `ClockPlugin::_loop()`;
   FastLED's fork-only power management is not compiled in. Temporal dithering is a no-op (NeoPixelBus has none).
 - **OTA is not available** (single `factory` app partition); use the env's `monitor_port`.

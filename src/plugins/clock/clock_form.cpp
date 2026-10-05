@@ -8,6 +8,7 @@
 #include "../src/plugins/sensor/sensor.h"
 #include "Utility/ProgMemHelper.h"
 #include "animation.h"
+#include "matrix_validation.h"
 #include <HeapSelector.h>
 
 #if DEBUG_IOT_CLOCK
@@ -79,12 +80,11 @@ void ClockPlugin::_setState(bool state, bool autoOff)
 
 void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType)
 {
-    FormUI::Group *group;
+    FormUI::Group *group = nullptr;
     switch(titleType) {
-        case TitleType::SET_TITLE_AND_ADD_GROUP:
-            form.getWebUIConfig().setTitle(F(FORM_TITLE));
-            // fall through
-        case TitleType::ADD_GROUP: {
+        case TitleType::SET_TITLE_AND_ADD_GROUP: {
+                // standalone page: the plugin name is the form title, the animation is the card
+                form.getWebUIConfig().setTitle(F(FORM_TITLE));
                 auto title = _getAnimationTitle(animation);
                 #if IOT_LED_MATRIX_ENABLE_VISUALIZER
                     // every visualizer mode is configured in the same card
@@ -96,10 +96,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
             }
             break;
         case TitleType::SET_TITLE:
+            // inline form for the WebUI: the animation is the form title, no card group
             form.getWebUIConfig().setTitle(_getAnimationTitle(animation));
-            // fall through
-        default:
-            group = nullptr;
             break;
     }
 
@@ -755,6 +753,139 @@ void ClockPlugin::_createConfigureFormIRRemote(FormUI::Form::BaseForm &form, Clo
 
 #endif
 
+// The display/transport selection. It is rendered by the settings form and by the matrix form,
+// which validates the segment layout against the selected transport (see MatrixLayoutValidator and
+// Resources/js/forms/led-matrix.js).
+template<typename _ConfigType>
+static void _createConfigureFormDisplayMethod(FormUI::Form::BaseForm &form, _ConfigType &cfg)
+{
+    #if HAVE_NEOPIXELBUS
+
+        auto displayMethodItems = FormUI::Container::List(
+            Clock::ShowMethodType::NEOBUS_RMT, F("NeoPixelBus RMT"),
+            Clock::ShowMethodType::NEOBUS_I2S, F("NeoPixelBus I2S")
+        );
+
+        form.addObjectGetterSetter(F("dm"), FormGetterSetter(cfg, method));
+        form.addFormUI(F("Display Method"), displayMethodItems);
+
+    #elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT || IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+
+        auto displayMethodItems = FormUI::Container::List(
+            Clock::ShowMethodType::FASTLED, F("FastLED")
+            #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+                , Clock::ShowMethodType::NEOPIXEL_EX, F("NeoPixelEx")
+            #endif
+            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+                , Clock::ShowMethodType::AF_NEOPIXEL, F("Adafruit NeoPixel")
+            #endif
+        );
+
+        form.addObjectGetterSetter(F("dm"), FormGetterSetter(cfg, method));
+        form.addFormUI(F("Display Method"), displayMethodItems);
+
+    #endif
+}
+
+#if IOT_LED_MATRIX_CONFIGURABLE
+
+namespace {
+
+    // The form validates one field at a time and only writes the fields it has reached, so the
+    // matrix values are read from the raw request to keep the result independent of the field order.
+    Clock::MatrixValidation::Result _readMatrixForm(FormUI::Field::BaseField &field)
+    {
+        auto data = field.getForm().getFormData();
+        if (!data) {
+            return Clock::MatrixValidation::Result();
+        }
+        const __FlashStringHelper *const pixelFields[Clock::MatrixValidation::kMaxSegments] = {
+            F("mx_px0"), F("mx_px1"), F("mx_px2"), F("mx_px3")
+        };
+        const __FlashStringHelper *const offsetFields[Clock::MatrixValidation::kMaxSegments] = {
+            F("mx_ofs0"), F("mx_ofs1"), F("mx_ofs2"), F("mx_ofs3")
+        };
+        Clock::MatrixValidation::Segment segments[Clock::MatrixValidation::kMaxSegments] = {};
+        for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
+            segments[i].pixels = data->arg(pixelFields[i]).toInt();
+            segments[i].offset = data->arg(offsetFields[i]).toInt();
+        }
+        return Clock::MatrixValidation::validate(
+            data->arg(F("mx_rows")).toInt(),
+            data->arg(F("mx_cols")).toInt(),
+            segments,
+            IOT_LED_MATRIX_CHANNELS,
+            Clock::MatrixValidation::kMaxPixels
+        );
+    }
+
+    // Checks the whole matrix layout. The form runs only the first validator of a field
+    // (Form::BaseForm::_validatorFindNext() returns nullptr), therefore all checks are combined into
+    // a single validator. It is attached to the read only "Maximum Number Of Pixels" field, which
+    // has no other validator, and names the concrete cause of every problem.
+    class MatrixLayoutValidator : public FormUI::Validator::BaseValidator {
+    public:
+        virtual bool validate() override
+        {
+            const auto result = _readMatrixForm(getField());
+            if (!result.hasErrors()) {
+                return true;
+            }
+            PrintString message;
+            bool first = true;
+            auto addLine = [&message, &first](const String &line) {
+                if (!first) {
+                    message.print(F("<br>"));
+                }
+                first = false;
+                message.print(line);
+            };
+
+            if (!result.rows || !result.cols) {
+                addLine(F("Rows and columns must be at least 1"));
+            }
+            else if (result.sizeExceeded) {
+                addLine(PrintString(F("Rows x columns = %u x %u = %u exceeds the maximum number of pixels (%u)"),
+                    static_cast<unsigned>(result.rows),
+                    static_cast<unsigned>(result.cols),
+                    static_cast<unsigned>(result.matrixPixels),
+                    static_cast<unsigned>(result.maxPixels)
+                ));
+            }
+            for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
+                const auto &segment = result.segments[i];
+                if (segment.pixels && (static_cast<uint32_t>(segment.offset) + segment.pixels) > result.maxPixels) {
+                    addLine(PrintString(F("Segment %u: offset %u + %u pixels = %u exceeds the maximum number of pixels (%u)"),
+                        static_cast<unsigned>(i + 1),
+                        static_cast<unsigned>(segment.offset),
+                        static_cast<unsigned>(segment.pixels),
+                        static_cast<unsigned>(result.segmentEnd(i)),
+                        static_cast<unsigned>(result.maxPixels)
+                    ));
+                }
+            }
+            if (result.overlap) {
+                const auto &firstSegment = result.segments[result.overlapA - 1];
+                const auto &secondSegment = result.segments[result.overlapB - 1];
+                addLine(PrintString(F("Segment %u (pixels %u..%u) overlaps segment %u (pixels %u..%u)"),
+                    static_cast<unsigned>(result.overlapB),
+                    static_cast<unsigned>(secondSegment.offset),
+                    static_cast<unsigned>(result.segmentEnd(result.overlapB - 1)),
+                    static_cast<unsigned>(result.overlapA),
+                    static_cast<unsigned>(firstSegment.offset),
+                    static_cast<unsigned>(result.segmentEnd(result.overlapA - 1))
+                ));
+            }
+
+            setMessage(message);
+            return false;
+        }
+    };
+
+}
+
+#endif
+
 void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     __LDBG_printf("callback_type=%u name=%s", type, formName.c_str());
@@ -796,98 +927,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     ui.setContainerId(F("led-matrix-settings"));
     ui.setStyle(FormUI::WebUI::StyleType::ACCORDION);
 
-    #if ESP32 && IOT_LED_MATRIX_ENABLE_VISUALIZER == 0 // no combined form for visualizer
-        if (F("animations") == formName) {
-
-            // --------------------------------------------------------------------
-            auto &animationGroup = form.addCardGroup(F("anicfg"), FSPGM(Animation), true);
-
-            FormUI::Container::List animationTypeItems;
-            for(int i = 0; i < static_cast<int>(AnimationType::MAX); i++) {
-                animationTypeItems.emplace_back(static_cast<AnimationType>(i), _getAnimationName(static_cast<AnimationType>(i)));
-            }
-
-            form.addObjectGetterSetter(F("ani"), FormGetterSetter(cfg, animation));
-            form.addFormUI(FSPGM(Type), animationTypeItems);
-
-            _createConfigureFormAnimation(AnimationType::SOLID, form, cfg, TitleType::NONE);
-            _createConfigureFormAnimation(AnimationType::FLASHING, form, cfg, TitleType::NONE);
-
-            animationGroup.end();
-
-            // --------------------------------------------------------------------
-            _createConfigureFormAnimation(AnimationType::RAINBOW, form, cfg, TitleType::ADD_GROUP);
-
-            // --------------------------------------------------------------------
-            _createConfigureFormAnimation(AnimationType::RAINBOW_FASTLED, form, cfg, TitleType::ADD_GROUP);
-
-            // --------------------------------------------------------------------
-            #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-                _createConfigureFormAnimation(AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS, form, cfg, TitleType::ADD_GROUP);
-
-                // The animation select and the visualization type are two controls for the same mode.
-                // Mirroring the animation into the type select updates the visible sub groups and
-                // prevents a stale type value from overriding the new animation when the form is
-                // submitted. A value the user picked in the type select is left alone, so the RGB video
-                // modes stay selected until the animation changes.
-                {
-                    PrintString syncMap;
-                    for(uint8_t i = 0; i < 5; i++) {
-                        auto animation = static_cast<AnimationType>(static_cast<uint8_t>(AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS) + i);
-                        if (i) {
-                            syncMap.print(',');
-                        }
-                        // $I input (#ani), $T target (#v_ln), $V value. The dependency group fires
-                        // change once after the page has been loaded, syncPrev detects that first call
-                        syncMap.printf_P(PSTR("'%u':'if($I[0].syncPrev===undefined){$I[0].syncPrev=$V}else if($I[0].syncPrev!=$V){$I[0].syncPrev=$V;$T.val(%u).change()}'"),
-                            static_cast<unsigned>(animation),
-                            static_cast<unsigned>(ClockConfigType::getVisualizerType(animation))
-                        );
-                    }
-                    auto &visualizerSyncGroup = form.addDivGroup(F("v_grp_sync"), PrintString(F("{'i':'#ani','t':'#v_ln','s':{%s}}"), syncMap.c_str()));
-                    visualizerSyncGroup.end();
-                }
-            #endif
-
-            // --------------------------------------------------------------------
-            _createConfigureFormAnimation(AnimationType::FIRE, form, cfg, TitleType::ADD_GROUP);
-
-            // --------------------------------------------------------------------
-            _createConfigureFormAnimation(AnimationType::PLASMA, form, cfg, TitleType::ADD_GROUP);
-
-            // --------------------------------------------------------------------
-            _createConfigureFormAnimation(AnimationType::FADING, form, cfg, TitleType::ADD_GROUP);
-
-            // --------------------------------------------------------------------
-            _createConfigureFormAnimation(AnimationType::GRADIENT, form, cfg, TitleType::ADD_GROUP);
-
-            // --------------------------------------------------------------------
-            _createConfigureFormAnimation(AnimationType::XMAS, form, cfg, TitleType::ADD_GROUP);
-
-            // --------------------------------------------------------------------
-            #if IOT_ALARM_PLUGIN_ENABLED
-
-                auto &alarmGroup = form.addCardGroup(FSPGM(alarm), FSPGM(Alarm), true);
-
-                form.add(F("acl"), Color(cfg.alarm.color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-                    if (store) {
-                        cfg.alarm.color.value = Color::fromString(value);
-                    }
-                    return false;
-                });
-                form.addFormUI(FSPGM(Color));
-
-                form.addObjectGetterSetter(F("asp"), FormGetterSetter(cfg.alarm, speed));
-                form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
-                form.addValidator(FormUI::Validator::Range(50, 0xffff));
-
-                alarmGroup.end();
-
-            #endif
-
-        }
-        else
-    #endif
     if (F("protection") == formName) {
 
         // --------------------------------------------------------------------
@@ -962,6 +1001,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
             auto &mainGroup = form.addCardGroup(F("matrix"));
 
+            // the transport the segments are driven with, the layout is validated against it
+            _createConfigureFormDisplayMethod(form, cfg);
+
             auto &reverseRows = form.addObjectGetterSetter(F("mx_rr"), FormGetterSetter(cfg.matrix, reverse_rows));
             form.addFormUI(FormUI::Type::HIDDEN);
 
@@ -975,18 +1017,6 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addObjectGetterSetter(F("mx_cols"), FormGetterSetter(cfg.matrix, cols));
             form.addFormUI(F("Columns"), FormUI::CheckboxButtonSuffix(reverseCols, F("Reverse Columns")));
             cfg.matrix.addRangeValidatorFor_cols(form);
-
-            FormUI::Validator::CallbackTemplate<uint16_t> *validator;
-            validator = &form.addValidator(FormUI::Validator::CallbackTemplate<uint16_t>([&cfg, &validator, this](uint16_t cols, Field::BaseField &field) {
-                auto rows = field.getForm().getField(F("mx_rows"))->getValue().toInt();
-                if ((rows * cols) != 0 && (rows * cols) <= static_cast<long>(_display.getMaxNumPixels())) {
-                    return true;
-                }
-                validator->setMessage(PrintString(F("rows * cols (%u * %u = %u) exceeds maximum number of pixels (%u)"),
-                    static_cast<unsigned>(rows), static_cast<unsigned>(cols), static_cast<unsigned>(rows * cols), static_cast<unsigned>(_display.getMaxNumPixels()))
-                );
-                return false;
-            }));
 
             form.addObjectGetterSetter(F("mx_rf"), FormGetterSetter(cfg.matrix, rowOfs));
             form.addFormUI(F("Row Offset"));
@@ -1002,8 +1032,23 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             form.addObjectGetterSetter(F("mx_il"), FormGetterSetter(cfg.matrix, interleaved));
             form.addFormUI(F("Interleaved"), FormUI::BoolItems());
 
+            #if HAVE_NEOPIXELBUS
+                constexpr int kMethodRmt = static_cast<int>(Clock::ShowMethodType::NEOBUS_RMT);
+                constexpr int kMethodI2s = static_cast<int>(Clock::ShowMethodType::NEOBUS_I2S);
+            #else
+                constexpr int kMethodRmt = -1;
+                constexpr int kMethodI2s = -1;
+            #endif
             form.add(F("mx_px"), String(IOT_CLOCK_NUM_PIXELS));
-            form.addFormUI(F("Maximum Number Of Pixels"), FormUI::ReadOnlyAttribute());
+            form.addFormUI(F("Maximum Number Of Pixels"), FormUI::ReadOnlyAttribute(),
+                FormUI::IntAttribute(F("data-max-strips"), static_cast<int>(Clock::MatrixValidation::kMaxStrips)),
+                FormUI::IntAttribute(F("data-i2s-strips"), static_cast<int>(Clock::MatrixValidation::kAvailableI2sStrips)),
+                FormUI::IntAttribute(F("data-i2s-port"), static_cast<int>(Clock::MatrixValidation::kMicI2sPort)),
+                FormUI::IntAttribute(F("data-method-rmt"), kMethodRmt),
+                FormUI::IntAttribute(F("data-method-i2s"), kMethodI2s)
+            );
+            // the matrix layout is validated as a whole, see MatrixLayoutValidator
+            form.addValidator(MatrixLayoutValidator());
 
             form.addObjectGetterSetter(F("mx_px0"), FormGetterSetter(cfg.matrix, pixels0));
             form.addFormUI(F("Segment 1 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN)));
@@ -1040,30 +1085,14 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
 
                 form.addObjectGetterSetter(F("mx_px3"), FormGetterSetter(cfg.matrix, pixels3));
-                form.addFormUI(F("Segment 3 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN3)));
+                form.addFormUI(F("Segment 4 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN3)));
                 form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels3, cfg.matrix.kMaxValueFor_pixels3));
 
                 form.addObjectGetterSetter(F("mx_ofs3"), FormGetterSetter(cfg.matrix, offset3));
-                form.addFormUI(F("Segment 3 Offset"));
+                form.addFormUI(F("Segment 4 Offset"));
                 form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset3, cfg.matrix.kMaxValueFor_offset3));
 
             #endif
-
-            // validator = &form.addValidator(FormUI::Validator::CallbackTemplate<uint16_t>([&cfg, &validator, this](uint16_t offset, Field::BaseField &field) {
-            //     auto rows = field.getForm().getField(F("mx_rows"))->getValue().toInt();
-            //     auto cols = field.getForm().getField(F("mx_cols"))->getValue().toInt();
-            //     if ((rows * cols) + offset <= static_cast<long>(_display.getMaxNumPixels())) {
-            //         return true;
-            //     }
-            //     validator->setMessage(PrintString(F("offset + (rows * cols) = %u + (%u * %u) = %u exceeds exceeds maximum number of pixels (%u)"),
-            //         static_cast<unsigned>(offset),
-            //         static_cast<unsigned>(rows),
-            //         static_cast<unsigned>(cols),
-            //         static_cast<unsigned>((rows * cols) + offset),
-            //         static_cast<unsigned>(_display.getMaxNumPixels()))
-            //     );
-            //     return false;
-            // }));
 
             mainGroup.end();
 
@@ -1106,32 +1135,7 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
             cfg.addRangeValidatorFor_blink_colon_speed(form, true);
         #endif
 
-        #if HAVE_NEOPIXELBUS
-
-            auto displayMethodItems = FormUI::Container::List(
-                Clock::ShowMethodType::NEOBUS_RMT, F("NeoPixelBus RMT"),
-                Clock::ShowMethodType::NEOBUS_I2S, F("NeoPixelBus I2S")
-            );
-
-            form.addObjectGetterSetter(F("dm"), FormGetterSetter(cfg, method));
-            form.addFormUI(F("Display Method"), displayMethodItems);
-
-        #elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT || IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-
-            auto displayMethodItems = FormUI::Container::List(
-                Clock::ShowMethodType::FASTLED, F("FastLED")
-                #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
-                    , Clock::ShowMethodType::NEOPIXEL_EX, F("NeoPixelEx")
-                #endif
-                #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                    , Clock::ShowMethodType::AF_NEOPIXEL, F("Adafruit NeoPixel")
-                #endif
-            );
-
-            form.addObjectGetterSetter(F("dm"), FormGetterSetter(cfg, method));
-            form.addFormUI(F("Display Method"), displayMethodItems);
-
-        #endif
+        _createConfigureFormDisplayMethod(form, cfg);
 
         form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
         form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
@@ -1142,6 +1146,27 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
         #endif
 
         mainGroup.end();
+
+        #if IOT_ALARM_PLUGIN_ENABLED
+
+            // color and speed of the alarm animation
+            auto &alarmGroup = form.addCardGroup(FSPGM(alarm), FSPGM(Alarm), true);
+
+            form.add(F("acl"), Color(cfg.alarm.color.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
+                if (store) {
+                    cfg.alarm.color.value = Color::fromString(value);
+                }
+                return false;
+            });
+            form.addFormUI(FSPGM(Color));
+
+            form.addObjectGetterSetter(F("asp"), FormGetterSetter(cfg.alarm, speed));
+            form.addFormUI(F("Flashing Speed"), FormUI::Suffix(FSPGM(milliseconds)));
+            form.addValidator(FormUI::Validator::Range(50, 0xffff));
+
+            alarmGroup.end();
+
+        #endif
 
     }
 

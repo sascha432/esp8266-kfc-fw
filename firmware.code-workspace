@@ -354,6 +354,7 @@
             "ADATE",
             "AOTA",
             "APIP",
+            "APPTRACE",
             "APSSID",
             "ARDUINOESPRESSIF",
             "ASSERTF",

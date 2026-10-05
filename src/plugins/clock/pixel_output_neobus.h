@@ -8,14 +8,17 @@
 //
 // FastLED is still used for the color math and the animations, this backend only transmits the pixel
 // buffer to the LEDs. Both ESP32 methods are supported and can be selected at runtime:
-//   - RMT (default), up to 4 output pins (RMT channels 0-3)
-//   - I2S DMA, up to 2 output pins (I2S0 and I2S1). The ESP32 has only two I2S ports and the I2S
-//     microphone of the visualizer uses one of them, see the environment docs
+//   - RMT (default), up to 4 output pins on one channel with all 8 memory blocks (serial)
+//   - I2S DMA, one output pin per I2S port (the ESP32 has two), transmitted in parallel
+// Both can transmit in the same frame (mixed mode): the port of the visualizer microphone is
+// reserved for it (HAVE_NEOPIXELBUS_SUPPORT_MIC) and the segments that no I2S port is left for are
+// transmitted by the RMT transport.
 //
 // This header requires the FastLED color types (<FastLED.h>) and is included by pixel_display.h
 // after the color/clock headers.
 
 #include <Arduino_compat.h>
+#include "matrix_validation.h"
 
 #if HAVE_NEOPIXELBUS
 
@@ -24,6 +27,24 @@
 #endif
 
 #include <NeoPixelBus.h>
+
+// The I2S LED transport and the I2S microphone of the visualizer would have to share one of the two
+// I2S ports: NeoPixelBus installs its own I2S driver with the DMA interrupt of the port
+// (Esp32_i2s.c), the microphone the ESP-IDF driver on IOT_LED_MATRIX_I2S_PORT. The IDF driver then
+// fails to register the interrupt, its cleanup resets the peripheral and the LED driver is left
+// without a DMA interrupt - the transport waits forever for it (NeoEsp32I2sMethodBase::Update()
+// spins in a while loop, i2sInit() cannot report a failure) and the task watchdog resets the
+// device. HAVE_NEOPIXELBUS_SUPPORT_MIC=1 (clock_def.h) reserves the port of the microphone for it,
+// the LED transport uses the remaining I2S ports and transmits the other segments with RMT.
+#if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE && !HAVE_NEOPIXELBUS_SUPPORT_MIC
+#    error "the I2S microphone of the visualizer and the NeoPixelBus I2S transport share the I2S ports - set HAVE_NEOPIXELBUS_SUPPORT_MIC=1 (the LED transport then uses the free port only) or disable IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE"
+#endif
+#if HAVE_NEOPIXELBUS_SUPPORT_MIC
+#    if !defined(IOT_LED_MATRIX_I2S_PORT)
+#        error "clock_def.h has to be included before pixel_output_neobus.h"
+#    endif
+#    include <driver/i2s.h> // I2S_NUM_0/I2S_NUM_1, the value of IOT_LED_MATRIX_I2S_PORT
+#endif
 
 // The RMT refill interrupt of NeoPixelBus is not IRAM safe - it is installed with
 // ESP_INTR_FLAG_LOWMED (NeoEsp32RmtMethod.h) - therefore a flash operation must not disable the
@@ -54,6 +75,9 @@ namespace Clock {
         virtual ~NeoBusStrip() {}
 
         virtual void show(const CRGB *pixels, uint8_t brightness) = 0;
+
+        // false if the output could not be initialized, the segment is then transmitted by RMT
+        virtual bool isActive() const = 0;
     };
 
     // a single output pin with its own channel (I2S DMA)
@@ -72,6 +96,11 @@ namespace Clock {
                 delete _bus;
                 _bus = nullptr;
             }
+        }
+
+        bool isActive() const override
+        {
+            return _bus != nullptr;
         }
 
         ~NeoBusStripType()
@@ -116,7 +145,7 @@ namespace Clock {
     // is the sum of all segments (128 pixels are ~3.84ms).
     class NeoBusRmtMux {
     public:
-        static constexpr uint8_t kMaxPins = 4;              // matches NeoBusStrips::kMaxStrips
+        static constexpr uint8_t kMaxPins = Clock::MatrixValidation::kMaxStrips; // all output pins on one channel
         static constexpr uint8_t kRmtMemBlocks = 8;         // all RMT memory blocks
         static constexpr rmt_channel_t kChannel = RMT_CHANNEL_0;
         static constexpr uint32_t kTxTimeoutMs = 50;        // a stuck channel must not block the loop
@@ -338,11 +367,19 @@ namespace Clock {
     };
 
     // creates the transport for the configured segments
+    //
+    // The RMT transport transmits all of its segments on one channel with all memory blocks (serial,
+    // see NeoBusRmtMux), the I2S transport uses one I2S port per segment (parallel, DMA). Both run in
+    // the same frame: a segment that no I2S port is left for is transmitted by the RMT transport.
     class NeoBusStrips {
     public:
-        static constexpr uint8_t kMaxStrips = 4;    // at most 4 segments
-        static constexpr uint8_t kMaxI2sStrips = 2; // ESP32 has I2S0 and I2S1
+        static constexpr uint8_t kMaxStrips = Clock::MatrixValidation::kMaxStrips;    // at most 4 segments
+        static constexpr uint8_t kMaxI2sStrips = Clock::MatrixValidation::kMaxI2sStrips; // ESP32 has I2S0 and I2S1
         static constexpr uint8_t kRmtMemBlocks = 8; // all RMT memory blocks, see NeoBusRmtMux
+        // I2S port of the visualizer microphone (IOT_LED_MATRIX_I2S_PORT), 0xff if it does not use
+        // one. The port is reserved for the microphone and never used by the LED transport, see the
+        // file comment
+        static constexpr uint8_t kMicI2sPort = Clock::MatrixValidation::kMicI2sPort;
 
     public:
         NeoBusStrips() :
@@ -369,29 +406,47 @@ namespace Clock {
             clear();
             _method = method;
 
-            if (method == NeoBusMethodType::RMT) {
-                // all outputs share one channel with all memory blocks, see NeoBusRmtMux
-                gNeoPixelBusRmtMemBlocks = kRmtMemBlocks;
-                _rmt = new NeoBusRmtMux(pins, offsets, counts);
-                _numStrips = _rmt->getNumPins();
-                return;
+            // the segments that no I2S port is available for are transmitted by the RMT transport
+            uint8_t rmtPins[kMaxStrips];
+            uint16_t rmtOffsets[kMaxStrips];
+            uint16_t rmtCounts[kMaxStrips];
+            uint8_t numRmt = 0;
+            for (uint8_t i = 0; i < kMaxStrips; i++) {
+                rmtPins[i] = 0xff;
+                rmtOffsets[i] = 0;
+                rmtCounts[i] = 0;
             }
 
-            // I2S DMA uses one channel per output pin, the ESP32 has two I2S ports
+            // I2S DMA uses one port per output pin, the ports that are left after reserving the port
+            // of the visualizer microphone (kMicI2sPort)
             uint8_t stripIndex = 0;
             for (uint8_t i = 0; i < kMaxStrips; i++) {
                 if (pins[i] == 0xff || !counts[i]) {
                     continue;
                 }
-                if (stripIndex >= kMaxI2sStrips) {
-                    __DBG_printf("I2S supports only %u output pins, pin %u is ignored", kMaxI2sStrips, pins[i]);
-                    continue;
-                }
-                _strips[i] = new NeoBusStripType<NeoEsp32I2sNWs2812xMethod>(pins[i], counts[i], stripIndex, offsets[i]);
-                if (_strips[i]) {
+                const uint8_t channel = (method == NeoBusMethodType::I2S) ? _getI2sChannel(stripIndex) : 0xff;
+                auto strip = (channel == 0xff) ? nullptr : new NeoBusStripType<NeoEsp32I2sNWs2812xMethod>(pins[i], counts[i], channel, offsets[i]);
+                if (strip && strip->isActive()) {
+                    _strips[i] = strip;
                     _numStrips++;
                     stripIndex++;
+                    continue;
                 }
+                delete strip;
+                if (method == NeoBusMethodType::I2S) {
+                    __DBG_printf("%s for pin %u, using the RMT transport", channel == 0xff ? "no free I2S port" : "I2S initialization failed", pins[i]);
+                }
+                rmtPins[numRmt] = pins[i];
+                rmtOffsets[numRmt] = offsets[i];
+                rmtCounts[numRmt] = counts[i];
+                numRmt++;
+            }
+
+            if (numRmt) {
+                // all RMT outputs share one channel with all memory blocks, see NeoBusRmtMux
+                gNeoPixelBusRmtMemBlocks = kRmtMemBlocks;
+                _rmt = new NeoBusRmtMux(rmtPins, rmtOffsets, rmtCounts);
+                _numStrips += _rmt->getNumPins();
             }
         }
 
@@ -401,15 +456,15 @@ namespace Clock {
                 return;
             }
             spi_flash_op_lock();
+            // mixed mode: the I2S segments are started first, the DMA transmits them in the
+            // background while the RMT transport sends its segments one after another
+            for (uint8_t i = 0; i < kMaxStrips; i++) {
+                if (_strips[i]) {
+                    _strips[i]->show(pixels, brightness);
+                }
+            }
             if (_rmt) {
                 _rmt->show(pixels, brightness);
-            }
-            else {
-                for (uint8_t i = 0; i < kMaxStrips; i++) {
-                    if (_strips[i]) {
-                        _strips[i]->show(pixels, brightness);
-                    }
-                }
             }
             spi_flash_op_unlock();
             _countFrame();
@@ -433,6 +488,17 @@ namespace Clock {
         uint8_t getNumStrips() const
         {
             return _numStrips;
+        }
+
+        // segments transmitted by the I2S DMA and by the RMT transport (mixed mode)
+        uint8_t getI2sStrips() const
+        {
+            return _numStrips - getRmtStrips();
+        }
+
+        uint8_t getRmtStrips() const
+        {
+            return _rmt ? _rmt->getNumPins() : 0;
         }
 
         bool empty() const
@@ -485,6 +551,22 @@ namespace Clock {
         }
 
     private:
+        // I2S port for the n-th I2S segment, 0xff if no port is left (the microphone's port is never
+        // used, see kMicI2sPort)
+        uint8_t _getI2sChannel(uint8_t index) const
+        {
+            uint8_t seen = 0;
+            for (uint8_t channel = 0; channel < kMaxI2sStrips; channel++) {
+                if (channel == kMicI2sPort) {
+                    continue;
+                }
+                if (seen++ == index) {
+                    return channel;
+                }
+            }
+            return 0xff;
+        }
+
         void _countFrame()
         {
             const uint32_t now = millis();

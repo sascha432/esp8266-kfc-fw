@@ -1163,6 +1163,18 @@ namespace Clock {
                 return _neoBus.getFps();
             }
 
+            // segments of the NeoPixelBus transport that are transmitted by the I2S DMA and by the
+            // RMT transport (mixed mode, see NeoBusStrips)
+            uint8_t getI2sStrips() const
+            {
+                return _neoBus.getI2sStrips();
+            }
+
+            uint8_t getRmtStrips() const
+            {
+                return _neoBus.getRmtStrips();
+            }
+
             // longest frame of the RMT transport that took longer than the pixels need, in micro
             // seconds. A value above the tolerance means the RMT memory ran empty and data was
             // transmitted twice - the visible flicker of a delayed refill interrupt

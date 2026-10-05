@@ -18,6 +18,7 @@
 #include "../src/plugins/sensor/sensor.h"
 #include "../src/plugins/mqtt/mqtt_json.h"
 #include "animation.h"
+#include "matrix_validation.h"
 
 #if DEBUG_IOT_CLOCK
 #    include <debug_helper_enable.h>
@@ -44,7 +45,7 @@ ClockPlugin ClockPlugin_plugin;
 
 #endif
 
-#define PLUGIN_OPTIONS_CONFIG_FORMS      "settings,animations,protection,matrix,irremote,ani-*"
+#define PLUGIN_OPTIONS_CONFIG_FORMS      "settings,protection,matrix,irremote,ani-*"
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     ClockPlugin,
@@ -157,16 +158,13 @@ void ClockPlugin::createMenu()
     auto configMenu = bootstrapMenu.getMenuItem(navMenu.config);
     auto subMenu = configMenu.addSubMenu(getFriendlyName());
     subMenu.addMenuItem(F("Settings"), F(LED_MATRIX_MENU_URI_PREFIX "settings.html"));
-    #if ESP32
-        subMenu.addMenuItem(F("Animations"), F(LED_MATRIX_MENU_URI_PREFIX "animations.html"));
-    #else
-        for(auto i = AnimationType::MIN; i < AnimationType::LAST; i = AnimationType(int(i) + 1)) {
-            auto name = _getAnimationName(i);
-            if (name) {
-                subMenu.addMenuItem(PrintString(F("Animation - %s"), name), PrintString(F(LED_MATRIX_MENU_URI_PREFIX "ani-%s.html"), _getAnimationNameSlug(i)));
-            }
+    // one page per animation, the WebUI uses the same forms inline (ani-<number>.html)
+    for(auto i = AnimationType::MIN; i < AnimationType::LAST; i = AnimationType(int(i) + 1)) {
+        auto name = _getAnimationName(i);
+        if (name) {
+            subMenu.addMenuItem(PrintString(F("Animation - %s"), name), PrintString(F(LED_MATRIX_MENU_URI_PREFIX "ani-%s.html"), _getAnimationNameSlug(i)));
         }
-    #endif
+    }
     #if IOT_LED_MATRIX_CONFIGURABLE
         subMenu.addMenuItem(F("Matrix"), F(LED_MATRIX_MENU_URI_PREFIX "matrix.html"));
     #endif
@@ -691,6 +689,15 @@ void ClockPlugin::getStatus(Print &output)
                 } break;
             case Clock::ShowMethodType::NEOBUS_I2S:
                 output.printf_P(PSTR(", NeoPixelBus I2S, %.1ffps"), _fps);
+                // the I2S transport needs one free I2S port per segment (the visualizer microphone
+                // owns one of the two), the remaining segments are transmitted by the RMT transport
+                if (_display.getRmtStrips()) {
+                    output.printf_P(PSTR(", %u I2S + %u RMT pins"), _display.getI2sStrips(), _display.getRmtStrips());
+                    const auto overrun = _display.getMaxOverrunMicros();
+                    if (overrun) {
+                        output.printf_P(PSTR(", frame +%uus"), overrun);
+                    }
+                }
                 break;
         #endif
         #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
@@ -937,24 +944,38 @@ void ClockPlugin::_sanitizeConfig()
         #endif
     #endif
 
+    // the layout has to stay inside the pixel buffer, updateSegments() does not validate it - the
+    // rules are shared with the matrix form, see matrix_validation.h
     auto &matrix = _config.matrix;
-    // rows/cols = 0 would divide by zero, PixelMapping::setParams() takes rowOfs/colOfs modulo them
-    if (!matrix.rows || !matrix.cols) {
+    constexpr uint32_t kMaxPixels = Clock::MatrixValidation::kMaxPixels;
+    Clock::MatrixValidation::Segment segments[Clock::MatrixValidation::kMaxSegments] = {
+        { static_cast<uint16_t>(matrix.offset0), static_cast<uint16_t>(matrix.pixels0) },
+        { static_cast<uint16_t>(matrix.offset1), static_cast<uint16_t>(matrix.pixels1) },
+        { static_cast<uint16_t>(matrix.offset2), static_cast<uint16_t>(matrix.pixels2) },
+        { static_cast<uint16_t>(matrix.offset3), static_cast<uint16_t>(matrix.pixels3) },
+    };
+
+    // rows/cols = 0 would divide by zero and a mapping that exceeds the buffer would read outside of
+    // it, PixelMapping::setParams() takes rowOfs/colOfs modulo them
+    const auto matrixValidation = Clock::MatrixValidation::validate(matrix.rows, matrix.cols, segments, IOT_LED_MATRIX_CHANNELS, kMaxPixels);
+    if (!matrixValidation.rows || !matrixValidation.cols || matrixValidation.sizeExceeded) {
         __DBG_printf("invalid matrix %ux%u, using defaults", matrix.rows, matrix.cols);
         matrix.rows = IOT_LED_MATRIX_ROWS;
         matrix.cols = IOT_LED_MATRIX_COLS;
     }
 
-    // updateSegments() does not validate the segments, they have to stay inside the pixel buffer
-    constexpr int kMaxSegmentPixels = IOT_CLOCK_NUM_PIXELS;
-    matrix.pixels0 = std::min<int>(matrix.pixels0, kMaxSegmentPixels);
-    matrix.offset0 = std::min<int>(matrix.offset0, kMaxSegmentPixels);
-    matrix.pixels1 = std::min<int>(matrix.pixels1, kMaxSegmentPixels);
-    matrix.offset1 = std::min<int>(matrix.offset1, kMaxSegmentPixels);
-    matrix.pixels2 = std::min<int>(matrix.pixels2, kMaxSegmentPixels);
-    matrix.offset2 = std::min<int>(matrix.offset2, kMaxSegmentPixels);
-    matrix.pixels3 = std::min<int>(matrix.pixels3, kMaxSegmentPixels);
-    matrix.offset3 = std::min<int>(matrix.offset3, kMaxSegmentPixels);
+    // a segment that is larger than the buffer (or starts behind it) would be read out of bounds
+    for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
+        segments[i] = Clock::MatrixValidation::clampSegment(segments[i].offset, segments[i].pixels, kMaxPixels);
+    }
+    matrix.offset0 = segments[0].offset;
+    matrix.pixels0 = segments[0].pixels;
+    matrix.offset1 = segments[1].offset;
+    matrix.pixels1 = segments[1].pixels;
+    matrix.offset2 = segments[2].offset;
+    matrix.pixels2 = segments[2].pixels;
+    matrix.offset3 = segments[3].offset;
+    matrix.pixels3 = segments[3].pixels;
 }
 
 // reads the stored configuration and applies it, loop task only

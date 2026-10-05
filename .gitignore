@@ -74,7 +74,6 @@ lib/KFCWebBuilder/bin/json2php/.idea/
 lib/KFCWebBuilder/bin/json2php/vendor/*
 lib/KFCWebBuilder/bin/json2php/composer.lock
 lib/KFCWebBuilder/bin/json2php/tests/*
-lib/NeoPixelBus/
 src/plugins/weather_station/fonts/fontconvert/fontconvert
 .ipynb_checkpoints/spectrum-checkpoint.ipynb
 spectrum.ipynb
@@ -90,4 +89,4 @@ src/plugins/weather_station2/docs/**
 src/plugins/touch_remote/PROPOSAL.md
 scripts/tools/hass_config.bat
 compile_commands_old.json
-
+lib/NeoPixelBus/

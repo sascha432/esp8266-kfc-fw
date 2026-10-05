@@ -431,6 +431,18 @@
 #    define IOT_LED_MATRIX_I2S_PORT I2S_NUM_0
 #endif
 
+// The NeoPixelBus I2S LED transport and the I2S microphone of the visualizer share the two I2S
+// ports of the ESP32. NeoPixelBus installs its own I2S driver with the DMA interrupt of the port it
+// uses, the microphone installs the ESP-IDF driver on IOT_LED_MATRIX_I2S_PORT - both on the same
+// port is not possible (the microphone fails to register the interrupt and its cleanup takes the
+// running LED driver down, see pixel_output_neobus.h). HAVE_NEOPIXELBUS_SUPPORT_MIC=1 reserves the
+// port of the microphone: the LED transport uses the remaining I2S ports and transmits the segments
+// that no port is left for with the RMT transport (mixed mode). A build that wants both I2S ports
+// for LEDs has to disable IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE as well.
+#ifndef HAVE_NEOPIXELBUS_SUPPORT_MIC
+#    define HAVE_NEOPIXELBUS_SUPPORT_MIC 0
+#endif
+
 #ifndef IOT_SENSOR_HAVE_INA219
 #   define IOT_SENSOR_HAVE_INA219 0
 #endif

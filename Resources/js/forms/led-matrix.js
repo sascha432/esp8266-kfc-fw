@@ -125,4 +125,167 @@ $(function () {
 
     }
 
+    // led-matrix/matrix.html: warn while the matrix settings are edited. The server rejects values
+    // that would read outside the pixel buffer or drive the same pixels twice (hard errors), these
+    // are hints only - gaps are allowed and the segments do not have to cover rows * columns
+    if ($('#mx_px0').length && $('#mx_px').length) {
+        var matrix_max_pixels = parseInt($('#mx_px').val()) || 0;
+        var matrix_form = $('#mx_px0').closest('form');
+        var matrix_fields = ['#dm', '#mx_rows', '#mx_cols', '#mx_px0', '#mx_px1', '#mx_px2', '#mx_px3', '#mx_ofs0', '#mx_ofs1', '#mx_ofs2', '#mx_ofs3'];
+
+        // the transport limits are rendered by the form (see matrix_validation.h). The checks below
+        // are warning/info only, the server blocks only on errors
+        var matrix_attr = function (name, fallback) {
+            var value = parseInt($('#mx_px').attr('data-' + name));
+            return isNaN(value) ? fallback : value;
+        };
+        var matrix_max_strips = matrix_attr('max-strips', 4);
+        var matrix_i2s_strips = matrix_attr('i2s-strips', 0);
+        var matrix_i2s_port = matrix_attr('i2s-port', 255);
+        var matrix_method_rmt = matrix_attr('method-rmt', -1);
+        var matrix_method_i2s = matrix_attr('method-i2s', -1);
+
+        var matrix_field_warning = function (id, message) {
+            var group = $('#' + id).closest('.form-group');
+            group.find('.matrix-field-warning').remove();
+            // the server marks the field with an error, do not repeat the message
+            if (message && !group.find('.is-invalid').length) {
+                $('<div class="matrix-field-warning text-warning small"></div>').text(message).appendTo(group);
+            }
+        };
+
+        var matrix_summary = function (messages) {
+            var box = matrix_form.find('#matrix-layout-warning');
+            // the dismiss button removes the alert, drop the wrapper with it
+            if (box.length && !box.find('.alert').length) {
+                box.remove();
+                box = $();
+            }
+            if (!messages.length) {
+                box.remove();
+                return;
+            }
+            if (!box.length) {
+                // pt-3 keeps the alert below the navigation bar, the accordion below adds its own pt-3
+                box = $('<div class="pt-3" id="matrix-layout-warning">' +
+                    '<div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">' +
+                    '<h4 class="alert-heading">Warning</h4><div class="matrix-warning-list"></div>' +
+                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div></div>');
+                matrix_form.prepend(box);
+            }
+            var list = box.find('.matrix-warning-list').empty();
+            $(messages).each(function (key, message) {
+                $('<div></div>').text(message).appendTo(list);
+            });
+        };
+
+        var matrix_int = function (selector) {
+            var value = parseInt($(selector).val());
+            return isNaN(value) ? 0 : value;
+        };
+
+        var matrix_update = function () {
+            var rows = matrix_int('#mx_rows');
+            var cols = matrix_int('#mx_cols');
+            var matrix_pixels = rows * cols;
+            var messages = [];
+            var segments = [];
+
+            for (var i = 0; i < 4; i++) {
+                if ($('#mx_px' + i).length) {
+                    segments.push({ index: i, offset: matrix_int('#mx_ofs' + i), pixels: matrix_int('#mx_px' + i) });
+                }
+            }
+
+            $(matrix_fields).each(function (key, selector) {
+                matrix_field_warning(selector.substr(1), '');
+            });
+
+            var segment_pixels = 0;
+            var active_segments = 0;
+            $(segments).each(function (key, segment) {
+                segment_pixels += segment.pixels;
+                if (segment.pixels) {
+                    active_segments++;
+                }
+                if (segment.pixels && (segment.offset + segment.pixels) > matrix_max_pixels) {
+                    var message = 'Segment ' + (segment.index + 1) + ': offset ' + segment.offset + ' + ' + segment.pixels + ' pixels = ' +
+                        (segment.offset + segment.pixels) + ' exceeds the maximum number of pixels (' + matrix_max_pixels + ')';
+                    matrix_field_warning('mx_px' + segment.index, message);
+                    messages.push(message);
+                }
+            });
+
+            // overlapping segments, the first pair is reported
+            var overlap = null;
+            for (var i = 1; i < segments.length && overlap === null; i++) {
+                if (!segments[i].pixels) {
+                    continue;
+                }
+                for (var j = 0; j < i; j++) {
+                    if (!segments[j].pixels) {
+                        continue;
+                    }
+                    if (segments[i].offset < (segments[j].offset + segments[j].pixels) && segments[j].offset < (segments[i].offset + segments[i].pixels)) {
+                        overlap = [segments[j], segments[i]];
+                        break;
+                    }
+                }
+            }
+            if (overlap !== null) {
+                var message = 'Segment ' + (overlap[1].index + 1) + ' (pixels ' + overlap[1].offset + '..' + (overlap[1].offset + overlap[1].pixels - 1) +
+                    ') overlaps segment ' + (overlap[0].index + 1) + ' (pixels ' + overlap[0].offset + '..' + (overlap[0].offset + overlap[0].pixels - 1) + ')';
+                matrix_field_warning('mx_ofs' + overlap[1].index, message);
+                messages.push(message);
+            }
+
+            if (rows && cols) {
+                if (matrix_pixels > matrix_max_pixels) {
+                    messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ' exceeds the maximum number of pixels (' + matrix_max_pixels + ')');
+                }
+                if (segment_pixels !== matrix_pixels) {
+                    if (segment_pixels < matrix_pixels) {
+                        messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ', but the segments configure ' + segment_pixels + ' pixel(s): ' + (matrix_pixels - segment_pixels) + ' pixel(s) are not covered');
+                    }
+                    else {
+                        messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ', but the segments configure ' + segment_pixels + ' pixel(s): ' + (segment_pixels - matrix_pixels) + ' pixel(s) are unused');
+                    }
+                }
+            }
+
+            // transport checks, mirror of matrix_validation.h (warning/info, never blocking)
+            var method = matrix_int('#dm');
+            var has_neobus = (matrix_method_rmt >= 0 || matrix_method_i2s >= 0);
+            var i2s_selected = (matrix_method_i2s >= 0 && method === matrix_method_i2s);
+            if (matrix_max_strips && active_segments > matrix_max_strips) {
+                messages.push(active_segments + ' segments are configured but the transport can drive only ' + matrix_max_strips);
+            }
+            if (i2s_selected && !active_segments) {
+                messages.push('NeoPixelBus I2S is selected but no segment is configured: nothing will be transmitted');
+            }
+            if (i2s_selected && matrix_i2s_strips > 0 && active_segments > matrix_i2s_strips) {
+                messages.push(active_segments + ' segments: ' + matrix_i2s_strips + ' on I2S, ' + (active_segments - matrix_i2s_strips) +
+                    ' transmitted by RMT (mixed mode' + (matrix_i2s_port < 255 ? ', the microphone reserves I2S port ' + matrix_i2s_port : '') + ')');
+            }
+            if (!has_neobus && active_segments > 1) {
+                messages.push(active_segments + ' segments are configured but this transport drives only one chain');
+            }
+            if (i2s_selected) {
+                $(segments).each(function (key, segment) {
+                    if (segment.pixels > (matrix_max_pixels >> 1)) {
+                        messages.push('Segment ' + (segment.index + 1) + ' has ' + segment.pixels +
+                            ' pixels, its I2S DMA buffer may not fit into the DMA capable RAM and it is then transmitted by RMT');
+                    }
+                });
+            }
+
+            matrix_summary(messages);
+        };
+
+        $(matrix_fields.join(',')).on('input change', matrix_update);
+        matrix_update();
+        // run again after the validator has marked the fields, the inline warnings are skipped then
+        window.setTimeout(matrix_update, 250);
+    }
+
 });

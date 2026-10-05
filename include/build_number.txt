@@ -5,11 +5,28 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15441
-date   = 2026-10-04 16:48:35
+number = 15458
+date   = 2026-10-04 18:26:21
 env    = wled_esp32_controller_neopixelbus
 
 ; history, newest first: <number> <date> <time> <environments>
+15458 2026-10-04 18:26:21 wled_esp32_controller_neopixelbus
+15457 2026-10-04 18:17:26 clockv2
+15456 2026-10-04 17:44:00 wled_esp32_controller_neopixelbus
+15455 2026-10-04 17:42:04 wled_esp32_controller_neopixelbus
+15454 2026-10-04 17:39:59 wled_esp32_controller
+15453 2026-10-04 17:38:41 ledmatrix_matrix_32x8
+15452 2026-10-04 17:37:48 wled_esp32_controller
+15451 2026-10-04 17:20:14 wled_esp32_controller_neopixelbus
+15450 2026-10-04 17:16:22 wled_esp32_controller
+15449 2026-10-04 17:14:28 ledmatrix_matrix_32x8
+15448 2026-10-04 17:13:34 wled_esp32_controller_neopixelbus
+15447 2026-10-04 17:10:50 wled_esp32_controller
+15446 2026-10-04 17:07:53 wled_esp32_controller_neopixelbus
+15445 2026-10-04 17:05:22 wled_esp32_controller
+15444 2026-10-04 17:04:30 wled_esp32_controller
+15443 2026-10-04 17:00:10 ledmatrix_matrix_32x8
+15442 2026-10-04 16:57:44 wled_esp32_controller
 15441 2026-10-04 16:48:35 wled_esp32_controller_neopixelbus
 15440 2026-10-04 16:42:58 wled_esp32_controller
 15439 2026-10-04 16:32:43 bme280_serial

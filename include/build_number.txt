@@ -5,11 +5,12 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15501
-date   = 2026-10-04 21:43:10
-env    = ws_95
+number = 15502
+date   = 2026-10-04 22:19:38
+env    = wled_esp32_controller_neopixelbus
 
 ; history, newest first: <number> <date> <time> <environments>
+15502 2026-10-04 22:19:38 wled_esp32_controller_neopixelbus
 15501 2026-10-04 21:43:10 ws_95
 15500 2026-10-04 21:32:11 esp32
 15499 2026-10-04 21:26:07 led_strip_candle

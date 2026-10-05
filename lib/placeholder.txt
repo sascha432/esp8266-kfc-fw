@@ -1,20 +1,16 @@
-I am using this directory to work on libraries directly without github.
+The libraries required by this project:
 
-To clone them from github, run
+    https://github.com/sascha432/KFCLibrary.git
+    https://github.com/sascha432/ESPAsyncWebServer.git
 
-git clone https://github.com/sascha432/KFCLibrary.git
-git clone https://github.com/sascha432/ESPAsyncWebServer.git
-git clone https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK.git
+A URL can be cloned in this directory or declared in "lib_deps" in
+conf/common.ini (pulled in by platformio.ini "extra_configs"):
 
-in here. This requires manual updates
+lib_deps =
+    https://github.com/sascha432/KFCLibrary.git
+    https://github.com/sascha432/ESPAsyncWebServer.git
 
-or add
-
-https://github.com/sascha432/KFCLibrary.git
-https://github.com/sascha432/ESPAsyncWebServer.git
-https://github.com/sascha432/ESP8266_NvsFlash_NONOS_SDK.git
-
-in common.ini (lib_deps =)
-
-Unfortunately lib_deps is preferred over this directory. If somebody knows how to solve that, LMK
-Maybe a pre_script checking, but I could not find a way to add something to lib_deps
+"lib_deps" wins: a URL declared there is downloaded into .pio/libdeps/<env>
+once per environment and that downloaded copy is compiled. A copy in this
+directory is used only while the URL is not declared in "lib_deps" - clone it
+in here and comment the declaration out to build from it.

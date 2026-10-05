@@ -128,7 +128,7 @@ bool WorldClockScreen::_readClocks()
     uint8_t row = 0;
     if (local) {
         auto &clock = _clocks[row++];
-        clock.name = F("Local");
+        clock.name = "Local";
         // empty: the format helper keeps the time zone of the device
         clock.tz = String();
         clock.format24h = _data.isTimeFormat24h();

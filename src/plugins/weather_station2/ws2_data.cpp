@@ -105,7 +105,8 @@ String DataSource::formatPressure(float value) const
 
 void DataSource::formatWind(float value, char *output, size_t size) const
 {
-    _formatValue(_metric ? "%.1f km/h" : "%.1f mph", _metric ? value : (value * 0.621371f), output, size);
+    // the model holds m/s (the metric unit of the API)
+    _formatValue(_metric ? "%.1f km/h" : "%.1f mph", value * (_metric ? 3.6f : 2.23694f), output, size);
 }
 
 String DataSource::formatWind(float value) const
@@ -1766,7 +1767,9 @@ void WeatherDataSource::_requestLoop()
         settings.apiKey = apiKey;
         settings.latitude = latitude;
         settings.longitude = longitude;
-        settings.metric = _metric;
+        // always metric (Celsius, m/s, mm): the model holds metric values and the format helpers
+        // convert them to the configured units. Imperial values from the API were converted twice
+        settings.metric = true;
         settings.language = nullptr; // the API default (English), the screens are English too
         _client->setSettings(settings);
 

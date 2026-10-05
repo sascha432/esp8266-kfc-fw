@@ -671,7 +671,10 @@ void Dashboard::_applyResponse(const char *payload, PageIndex page)
         }
         char state[sizeof(value.text)];
         const auto hasState = _parseStringValue(payload, tile.entity, "state", state, sizeof(state));
-        if (!hasState || !state[0] || !strcasecmp(state, "unknown") || !strcasecmp(state, "unavailable")) {
+        // the state of a button is the time of its last press, "unknown" is a button that was never
+        // pressed - it is idle, not unavailable
+        const auto unknown = hasState && !strcasecmp(state, "unknown") && tile.type != TileType::BUTTON;
+        if (!hasState || !state[0] || unknown || !strcasecmp(state, "unavailable")) {
             // The entity is in the response (or it should be, this tile belongs to the page the
             // response was built from) but it does not report a state: the tile is unavailable.
             // A tile of another page is left alone: the response simply does not carry its entity

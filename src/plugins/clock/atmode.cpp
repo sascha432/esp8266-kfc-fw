@@ -63,9 +63,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.printf_P("fading brightness to %.2f%% (%u) in %.3f seconds", brightness / (float)Clock::kMaxBrightness * 100.0, brightness, time / 1000.0);
             }
         }
-        // co[lor],<#RGB|r,b,g>
+        // co[lor],<#RGB|r,g,b>
         else if (args.startsWithIgnoreCase(0, F("co"))) {
-            if (args.size() == 1) {
+            if (args.size() == 2) {
                 setColor(Color::fromString(args.toString(1)));
             }
             else if (args.size() == 4) {
@@ -126,11 +126,14 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
         }
         // dit[her],<on|off>
-        else if (args.startsWithIgnoreCase(0, F("dit"))) {
-            bool state = args.isTrue(1);
-            _display.setDither(state);
-            args.print(F("dithering %s"), state ? PSTR("enabled") : PSTR("disabled"));
-        }
+        // NeoPixelBus has no temporal dithering
+        #if !HAVE_NEOPIXELBUS
+            else if (args.startsWithIgnoreCase(0, F("dit"))) {
+                bool state = args.isTrue(1);
+                _display.setDither(state);
+                args.print(F("dithering %s"), state ? PSTR("enabled") : PSTR("disabled"));
+            }
+        #endif
         // out[put],<on|off>
         else if (args.startsWithIgnoreCase(0, F("out"))) {
             bool state = args.isTrue(1);
@@ -142,7 +145,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.print(F("LED output %s"), state ? PSTR("enabled") : PSTR("disabled"));
         }
-        // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>,<offset>
+        // map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>
         else if (args.startsWithIgnoreCase(0, F("map"))) {
             if (args.size() >= 6) {
                 if (!_display.setParams(
@@ -159,28 +162,45 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("+lmc=map,%u,%u,%u,%u,%u,%u"), _display.getRows(), _display.getCols(), _display.isRowsReversed(), _display.isColsReversed(), _display.isRotated(), _display.isInterleaved());
         }
         // fr[ames][,rst]
+        // transport diagnostics for developers, the status page shows a summary for users. Only the
+        // transports that are compiled in are listed
         else if (args.startsWithIgnoreCase(0, F("fr"))) {
-            auto &stats = NeoPixelEx::getStats();
-            args.print(F("Internal: aborted frames=%u/%u fps=%u"), stats.getAbortedFrames(), stats.getFrames(), stats.getFps());
+            args.print(F("show method=%s (%u) fps=%.1f segments=%u pixels=%u"), getNeopixelShowMethodStr(), getShowMethod(), _fps, _display.getNumSegments(), _display.size());
             #if HAVE_NEOPIXELBUS
-                args.print(F("NeoPixelBus: fps=%.1f"), _display.getFps());
+                // the counters are sticky since boot
+                args.print(F("NeoPixelBus: fps=%.1f rmt blocks=%u rmt pins=%u i2s pins=%u wire=%uus"), _display.getFps(), gNeoPixelBusRmtMemBlocks, _display.getRmtStrips(), _display.getI2sStrips(), _display.getWireMicros());
+                args.print(F("NeoPixelBus: transmissions=%u over=%u max. overrun=%uus max. write=%uus tx timeouts=%u"), _display.getTransmissions(), _display.getTransmissionsOver(), _display.getMaxOverrunMicros(), _display.getMaxWriteMicros(), _display.getTxTimeouts());
+                args.print(F("frame time: anim=%uus show=%uus"), _animMicros, _showMicros);
             #else
-                args.print(F("FastLED: fps=%u _fps=%.1f"), FastLED.getFPS(), _fps);
+                args.print(F("FastLED %u.%u.%u: fps=%u dithering=%u"), FASTLED_VERSION / 1000000, (FASTLED_VERSION / 1000) % 1000, FASTLED_VERSION % 1000, FastLED.getFPS(), _display.getDither());
+                #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
+                    extern uint32_t _frame_cnt;
+                    extern uint32_t _retry_cnt;
+                    args.print(F("FastLED: aborted frames=%u/%u"), _retry_cnt, _frame_cnt);
+                #endif
+                #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
+                    args.print(F("FastLED: power limit scale=%.1f%%"), FastLED.getPowerLimitScale() * 100.0f);
+                #endif
+            #endif
+            #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+                auto &stats = NeoPixelEx::getStats();
+                args.print(F("NeoPixelEx: fps=%u aborted frames=%u/%u"), stats.getFps(), stats.getAbortedFrames(), stats.getFrames());
             #endif
             if (args.size() > 1) {
                 #if !HAVE_NEOPIXELBUS
                     FastLED.countFPS();
                 #endif
-                stats.clear();
-                args.print(F("stats reset"));
+                #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+                    stats.clear();
+                #endif
+                #if HAVE_NEOPIXELBUS
+                    args.print(F("stats reset, the NeoPixelBus counters cannot be reset"));
+                #else
+                    args.print(F("stats reset"));
+                #endif
             }
         }
-        // res[et][,<pixels>]
-        else if (args.startsWithIgnoreCase(0, F("res"))) {
-            _resetDisplay();
-            args.print(F("display reset"));
-        }
-        // cl[ear]
+        // cl[ear], stops the animation loop and blanks the pixels
         else if (args.startsWithIgnoreCase(0, F("cl"))) {
             enableLoop(false);
             _clear();
@@ -235,8 +255,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     break;
             }
             #if IOT_LED_MATRIX_STANDBY_PIN != -1
-                auto state = digitalRead(IOT_LED_MATRIX_STANDBY_PIN) == IOT_LED_MATRIX_STANDBY_PIN_STATE(true);
-                args.print(F("enable pin=%u initial state=%s"), state, initialState);
+                args.print(F("enable pin=%u initial state=%s"), Clock::LedPower::isOn(), initialState);
             #else
                 args.print(F("initial state=%s"), initialState);
             #endif
@@ -246,17 +265,57 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             args.print(F("state: _isEnabled=%u _isRunning=%u _targetBrightness=%u _autoOff=%u temp. protection=%u"), _isEnabled, _isRunning, _targetBrightness, _motionAutoOff, isTempProtectionActive());
             args.print(F("current config: enabled=%u brightness=%u animation=%s"), _config.enabled, _config.brightness, _config.getAnimationName(_config._get_enum_animation()));
             args.print(F("stored config: enabled=%u brightness=%u animation=%s"), config.enabled, config.brightness, config.getAnimationName(config._get_enum_animation()));
+            #if IOT_CLOCK_DISPLAY_POWER_CONSUMPTION
+                args.print(F("power: %.2fW limit=%uW"), _getPowerLevel(), _config.power_limit);
+            #endif
+            #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
+                #if ESP32
+                    auto irReceiver = PSTR("software NEC receiver");
+                #else
+                    auto irReceiver = PSTR("IRremoteESP8266 receiver");
+                #endif
+                args.print(F("IR remote: pin=%u %s last code=%08x frames=%u repeats=%u"), IOT_LED_MATRIX_IR_REMOTE_PIN, irReceiver, _irLastCode, _irFrameCount, _irRepeatCount);
+            #endif
+            #if DEBUG_TASK_QUEUE
+                args.print(F("deferred tasks: %u queued (%u peak of %u), %u processed, %u dropped"), static_cast<unsigned>(_tasks.size()), static_cast<unsigned>(_tasks.peakSize()), static_cast<unsigned>(_tasks.capacity()), static_cast<unsigned>(_tasks.processed()), static_cast<unsigned>(_tasks.dropped()));
+            #endif
+            // compile time switches of the diagnostics, 0 = not compiled in. DEBUG_IOT_CLOCK contains defined(),
+            // which is only valid in #if
+            #if DEBUG_IOT_CLOCK
+                constexpr int kDebugClock = 1;
+            #else
+                constexpr int kDebugClock = 0;
+            #endif
+            #ifndef FASTLED_DEBUG_COUNT_FRAME_RETRIES
+                constexpr int kFastLedRetries = 0;
+            #else
+                constexpr int kFastLedRetries = FASTLED_DEBUG_COUNT_FRAME_RETRIES;
+            #endif
+            #ifndef NEOPIXEL_HAVE_STATS
+                constexpr int kNeoPixelStats = 0;
+            #else
+                constexpr int kNeoPixelStats = NEOPIXEL_HAVE_STATS;
+            #endif
+            #ifndef DEBUG_TASK_QUEUE
+                constexpr int kTaskQueue = 0;
+            #else
+                constexpr int kTaskQueue = DEBUG_TASK_QUEUE;
+            #endif
+            args.print(F("debug: DEBUG_IOT_CLOCK=%u FASTLED_DEBUG_COUNT_FRAME_RETRIES=%u NEOPIXEL_HAVE_STATS=%u DEBUG_TASK_QUEUE=%u"), kDebugClock, kFastLedRetries, kNeoPixelStats, kTaskQueue);
         }
-        // temp,<value>
-        else if (args.startsWithIgnoreCase(0, F("tem"))) {
-            _tempOverride = args.toIntMinMax<uint8_t>(0, kMinimumTemperatureThreshold, 255, 0);
-            if (_tempOverride) {
-                args.printf_P(PSTR("temperature override %u%s"), _tempOverride, SPGM(UTF8_degreeC));
+        // tem[perature][,<value>], 0 or no value disables the override
+        #if IOT_CLOCK_TEMPERATURE_PROTECTION
+            else if (args.startsWithIgnoreCase(0, F("tem"))) {
+                const auto value = args.toIntMinMax<uint8_t>(1, 0, 255, 0);
+                _tempOverride = value ? std::max<uint8_t>(value, kMinimumTemperatureThreshold) : 0;
+                if (_tempOverride) {
+                    args.printf_P(PSTR("temperature override %u%s"), _tempOverride, SPGM(UTF8_degreeC));
+                }
+                else {
+                    args.print(F("temperature override disabled"));
+                }
             }
-            else {
-                args.print(F("temperature override disabled"));
-            }
-        }
+        #endif
         // +lmc=set,0-16,#120000;+lmc=get
         // +lmc=set,0-16,0x23,0,0;+lmc=get
         // +lmc=get

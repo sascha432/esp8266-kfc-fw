@@ -1142,15 +1142,14 @@ bool KFCFWConfiguration::hasZeroConf(const String &hostname) const
 #endif
 
 #if IOT_LED_MATRIX_OUTPUT_PIN
-    extern "C" void ClockPluginClearPixels();
+    extern "C" void ClockPluginShutdownPixels();
 #endif
 
 static void invoke_ESP_restart()
 {
     #if IOT_LED_MATRIX_OUTPUT_PIN
-        #ifndef ESP32
-            ClockPluginClearPixels();
-        #endif
+        // blanks the pixels (ESP8266) and switches the LED power off (standby pin)
+        ClockPluginShutdownPixels();
     #endif
 
     BUILTIN_LED_SET(BlinkLEDTimer::BlinkType::OFF);

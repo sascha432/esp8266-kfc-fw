@@ -37,6 +37,10 @@
 
 extern "C" void preinit(void)
 {
+    #if IOT_CLOCK
+        // LED power off before anything else, also in safe mode. init() has set all pins to INPUT before
+        Clock::LedPower::bootOff();
+    #endif
     reset_detector_setup_global_ctors();
 }
 
@@ -130,6 +134,10 @@ static void delayedSetup()
 void setup()
 {
     #if ESP32
+        #if IOT_CLOCK
+            // LED power off before anything else, also in safe mode (ESP8266: preinit())
+            Clock::LedPower::bootOff();
+        #endif
         resetDetector.armTimer();
     #endif
 

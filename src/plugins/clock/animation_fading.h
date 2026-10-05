@@ -16,10 +16,9 @@ namespace Clock {
         static constexpr uint32_t kNoColorChange = ~0;
 
     public:
-        FadingAnimation(ClockPlugin &clock, Color from, Color to, uint16_t durationMillis = 1000, uint32_t holdTimeMillis = kNoColorChange, Color factor = 0xffffffU) :
+        FadingAnimation(ClockPlugin &clock, Color from, Color to, uint16_t durationMillis = 1000, uint32_t holdTimeMillis = kNoColorChange) :
             Animation(clock, from),
             _to(to),
-            _factor(factor),
             _waitTimer(0),
             _holdTime(holdTimeMillis),
             _duration(durationMillis),
@@ -100,7 +99,6 @@ namespace Clock {
         Color _color;
         Color _from;
         Color _to;
-        Color _factor;
         uint32_t _loopTimer;
         uint32_t _waitTimer;
         uint32_t _holdTime;

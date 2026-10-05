@@ -36,8 +36,9 @@
                 <div data-target="#rb_mul">The multiplier adjusts the color transitions between pixels, affecting the overall gradient</div>
                 <div data-target="#rb_sp">The animation speed determines the movement rate of the rainbow effect across pixels. Higher values result in slower movement</div>
                 <div data-target="#mx_il">Rows begin at the bottom of the current column and proceed to the top of the subsequent column</div>
-                <div data-target="#mx_px">The maximum possible number of LEDs this firmware was compiled for (the pixel buffer size). It is not the number of LEDs the segments below configure</div>
-                <div data-target="#mx_px0,#mx_px1,#mx_px2,#mx_px3">Each segment is a run of LEDs on one output pin (offset + pixels). Segments must not overlap, gaps are allowed and the total configured pixels should match rows x columns</div>
+                <div data-target="#mx_px">Size of the pixel buffer this firmware was compiled for. Every segment has to fit into it (offset + pixels)</div>
+                <div data-target="#mx_px0,#mx_px1,#mx_px2,#mx_px3">Number of LEDs connected to this output pin, 0 if the pin is not used</div>
+                <div data-target="#mx_ofs0,#mx_ofs1,#mx_ofs2,#mx_ofs3">Position of the segment's first LED in the pixel buffer. All pins share one buffer, so each segment starts where the previous one ends: 2 x 64 LEDs are segment 1 at offset 0 and segment 2 at offset 64. Segments must not overlap, gaps are allowed. Together the segments should cover rows x columns</div>
                 <div data-target="#pes">A maximum of two LEDs within the group will be dimmed to 50% brightness simultaneously. This allows for enhanced color variety at lower brightness levels, while requiring additional diffusion for smooth blending</div>
                 <div data-target="#plma1">The angles are causing the different disturbances in the horizontal, vertical, diagonal and circular direction</div>
                 <div data-target="#plmhs">The change of color without without movement</div>

@@ -8,19 +8,6 @@ Other entries name their envs.
 
 ## Open
 
-### CLK-1 Dithering option shown but without effect on NeoPixelBus
-- **Affected envs:** `HAVE_NEOPIXELBUS=1`, currently `wled_esp32_controller_neopixelbus`.
-- **Where:** `src/plugins/clock/clock_form.cpp:1135` (form field), `src/plugins/clock/atmode.cpp:129` (`+lmc=dither`),
-  `src/plugins/clock/pixel_display.h:937` (`setDither()`/`getDither()`/`_dither`)
-- **Symptom:** the "FastLED Temporal Dithering" switch and the AT command can be changed and report the new state,
-  but the output does not change.
-- **Cause:** temporal dithering is done by FastLED inside `show()`; NeoPixelBus has none. `setDither()` only stores
-  `_dither`, and both readers of `getDither()` are FastLED-only (the status line in `clock.cpp:648` sits in
-  `case ShowMethodType::FASTLED`, `PixelDisplay::delay()` is a plain `::delay()` in this build).
-- **Fix:** remove the option from the UI when it is not available: wrap the form field and the AT command in
-  `#if !HAVE_NEOPIXELBUS`, drop `_dither` and let `getDither()` return `false`. Keep the `dithering` config bit so
-  the stored config layout stays the same across envs. The FastLED envs (`HAVE_NEOPIXELBUS=0`) stay unchanged.
-
 ### WS2-6 World clock switches the device's time zone
 - **Where:** `src/plugins/weather_station2/ws2_screen_world_clock.cpp:238` (`WorldClockScreen::update()`, `_formatClock()`)
 - **Symptom:** after the world clock screen was shown, the device runs in the time zone of a configured clock.
@@ -67,6 +54,15 @@ Other entries name their envs.
   its timeout (`hass_client.cpp:344`), while that task can still read the old configuration.
 
 ## Fixed
+
+### CLK-1 Dithering option shown but without effect on NeoPixelBus
+- **Affected envs:** `HAVE_NEOPIXELBUS=1`, currently `wled_esp32_controller_neopixelbus`.
+- **Symptom:** the "FastLED Temporal Dithering" switch and `+LMC=dit` could be changed and reported the new state,
+  but the output did not change (NeoPixelBus has no temporal dithering, `getDither()` had only FastLED-only readers).
+- **Fix:** 2026-10-05, not committed yet. The form field (`clock_form.cpp`) and `+LMC=dit` (`atmode.cpp`) are
+  `#if !HAVE_NEOPIXELBUS`, `PixelDisplay` has no `_dither` there and `getDither()` returns `false`. The help text in
+  `led-matrix.html` needs no change, `forms.js` only attaches it to an existing field. The `dithering` config bit is
+  kept, the stored layout is the same in every env.
 
 ### TLS handshake fails with -30592 (mbedtls allocations in PSRAM)
 - **Where:** `src/plugins/weather_station2/weather_station2.cpp:201` (`_installTlsPsramAllocator()`)

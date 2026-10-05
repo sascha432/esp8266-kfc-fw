@@ -52,10 +52,6 @@ namespace KFCConfigurationClasses {
                     blink_colon_speed(kDefaultValueFor_blink_colon_speed),
                 #endif
                     flashing_speed(kDefaultValueFor_flashing_speed),
-                #if IOT_CLOCK_HAVE_MOTION_SENSOR
-                    motion_auto_off(kDefaultValueFor_motion_auto_off),
-                    motion_trigger_timeout(kDefaultValueFor_motion_trigger_timeout),
-                #endif
                 power()
             {
             }

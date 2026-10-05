@@ -22,6 +22,13 @@ in this workspace.
 
 - **American English** in code, comments, UI labels and docs: `color`, not `colour`.
 - **The build decides, not the IDE squiggles** - verify a change with a real compile.
+- **AT mode is the developer console, the status page is user UI.** AT commands (serial/WebSocket console) may print
+  verbose diagnostics in plain text (counters, timings, internal state); a plugin's `getStatus()` is shown in the WebUI
+  and keeps to a short summary in HTML. Both only list what the build compiles in - no counters of a transport or
+  feature that is not part of the build. Document AT commands in `docs/AtModeHelp.md`.
+- **No option without an effect**: a form field, AT command, MQTT entity or WebUI control must be compiled out
+  (`#if`) in builds that cannot act on it, and a config field needs a reader. Keep the config bit itself when other
+  builds use it, so the stored layout stays the same.
 - **Show a design/icon preview before implementing UI work** and wait for the approval.
 - **Do not modify the libraries** - other folders under `lib/` are out of bounds and require separate approval.
 - The firmware is **C++17** (`-std=gnu++17` in `conf/common.ini`). Match the surrounding style; the repo's
@@ -160,6 +167,20 @@ in this workspace.
 - The Home Assistant side is probed from the PC (`logs/probe_hass_ws.py`, `logs/probe_hass_resub.py`,
   `logs/probe_hass_burst.py`) before a firmware change is blamed for a protocol problem.
 
+## LED power after a crash or reset (clock plugin)
+
+- WS2812 LEDs keep their last frame until they get new data or lose power. Boards with a standby pin
+  (`IOT_LED_MATRIX_STANDBY_PIN`, MOSFET/relay) switch the LED power off where the transport cannot be used:
+  `Clock::LedPower::bootOff()` at boot before the safe mode is selected (ESP8266 `preinit()`, ESP32 start of
+  `setup()`), `Clock::LedPower::crashOff()` in the ESP8266 crash callback (`ClockPluginClearPixels()`, the name is
+  kept for `lib/KFCLibrary`'s `save_crash.cpp`) and in the ESP32 panic handler (`__wrap_esp_panic_handler`, needs
+  `-Wl,--wrap=esp_panic_handler` in the env). `crashOff()` writes registers only - no Arduino, RTOS or flash
+  calls in that path. Boards without a standby pin do nothing; the data lines are left floating.
+- Between the reset and `bootOff()` the pin is an unconfigured input: the MOSFET gate needs a pull resistor to the
+  "off" level on the board.
+- `ClockPlugin::clearPixels()` blanks the pixels with the transport (restart, `ClockPluginShutdownPixels()`);
+  `+LMC=cl` does the same from the console.
+
 ## Environment `wled_esp32_controller`
 
 - **OTA is not available** (the partition table has a single `factory` app partition and no OTA slots); use the
@@ -204,17 +225,19 @@ in this workspace.
   `FASTLED_ESP32_FLASH_LOCK`). Do not replace the fork URL with the upstream/registry version (the two patches
   would be lost); `NeoPixelBus` stays in `conf/common_esp8266.ini` `lib_ignore` - that is what keeps it out of
   the ESP8266 builds (LDF cannot see `#if HAVE_NEOPIXELBUS`), the fork keeps upstream's `platforms: "*"` manifest.
-- Status page diagnostics for the RMT transport (sticky since boot): `..., NeoPixelBus RMT, <fps>, <n> blocks`,
-  then `, frame +<us>` for the worst frame that took longer than its pixels need (the RMT memory ran empty and
-  stale data was transmitted, i.e. visible flicker), `, <n>% over` for the share of segment transmissions that
-  were late and `, <n> tx timeouts` for frames that never finished.
-- Frame timing on the status page (averages of the last frames, from `ClockPlugin::_loop()`): `wire` is the
+- The status page only shows the show method and fps (plus the `<n> I2S + <n> RMT pins` split); the transport
+  diagnostics are printed by `+LMC=fr` (sticky since boot): `rmt blocks`, `max. overrun` for the worst frame that
+  took longer than its pixels need (the RMT memory ran empty and stale data was transmitted, i.e. visible
+  flicker), `transmissions`/`over` for the segment transmissions that were late and `tx timeouts` for frames that
+  never finished. `+LMC=st` prints the state, power level, IR receiver counters, deferred task queue and which
+  diagnostics are compiled in.
+- Frame timing in `+LMC=fr` (averages of the last frames, from `ClockPlugin::_loop()`): `wire` is the
   shortest frame the configured segments allow (sum of the segments at 30 us per pixel), `show` is what the loop
   really spends on the transport (filling + transmitting + stalls) and `anim` is the rest of the frame
   (animations, matrix/hexagon mapping, power limit) - the frame time is `anim` + `show`, so `show - wire` is the
-  loss inside the transport and `anim` is the CPU cost of the animation. `write +<us>` is the longest time the
+  loss inside the transport and `anim` is the CPU cost of the animation. `max. write` is the longest time the
   driver needed to translate and copy a frame into the RMT memory (that time is part of the frame, not of the
-  transmission). `frame +<us>`/`<n>% over` compare the transmission window (end of the write until the
+  transmission). `max. overrun`/`over` compare the transmission window (end of the write until the
   transmit-done interrupt) with the wire time; it contains the task wakeup latency of the done semaphore as well
   as every replay, so the **maximum** is the value to watch - a high percentage alone is expected, and the
   maximum grows while the WebUI is used (accepted, see below).
@@ -233,9 +256,9 @@ in this workspace.
     (the "worst case" values, the filesystem being ~97% full makes every write start a garbage collection that
     erases 4 KB blocks).
   - **The stutter while the WebUI is used is accepted** (config saves, log writes, filesystem garbage
-    collection): the transport recovers on the next frame and only the `frame +<us>` maximum grows, so this is
+    collection): the transport recovers on the next frame and only the `max. overrun` (`+LMC=fr`) maximum grows, so this is
     not a bug to fix. Freeing filesystem space or stopping the log writer only reduces the stutter. A growing
-    `frame +<us>` *without* WebUI or filesystem activity would mean the interrupt latency is above what the RMT
+    `max. overrun` (`+LMC=fr`) *without* WebUI or filesystem activity would mean the interrupt latency is above what the RMT
     can cover - that output then needs a DMA transport (I2S).
   - **I2S is DMA driven and parallel**: `NeoEsp32I2sMethodBase::Update()` encodes the whole frame into a DMA
     buffer (`heap_caps_malloc(..., MALLOC_CAP_DMA)`) and starts it, there is no refill interrupt - a delayed
@@ -261,8 +284,8 @@ in this workspace.
   - Rule of thumb: 1 segment -> I2S (stall proof) or RMT; 2 segments -> I2S unless the microphone reserves a
     port (then 1 I2S + 1 RMT); 3-4 segments -> RMT (serial, the frame rate drops with the total pixel count).
 - The power limit is a software limiter (`ClockPlugin::_getNeoBusBrightness()`) applied in `ClockPlugin::_loop()`;
-  FastLED's fork-only power management is not compiled in. Temporal dithering is a no-op (NeoPixelBus has none),
-  but the form field and `+LMC=dit` are still shown - open as CLK-1 in `docs/bugs.md`.
+  FastLED's fork-only power management is not compiled in. Temporal dithering does not exist (NeoPixelBus has none):
+  the form field and `+LMC=dit` are not compiled in, `getDither()` returns `false`; the `dithering` config bit is kept.
 - **OTA is not available** (single `factory` app partition); use the env's `monitor_port`.
 
 ## Environment `bme280_serial` (ESP8266 test env)

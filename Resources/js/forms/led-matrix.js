@@ -144,6 +144,7 @@ $(function () {
         var matrix_i2s_port = matrix_attr('i2s-port', 255);
         var matrix_method_rmt = matrix_attr('method-rmt', -1);
         var matrix_method_i2s = matrix_attr('method-i2s', -1);
+        var matrix_pixel_offset = matrix_attr('pixel-offset', 0);
 
         var matrix_field_warning = function (id, message) {
             var group = $('#' + id).closest('.form-group');
@@ -201,10 +202,8 @@ $(function () {
                 matrix_field_warning(selector.substr(1), '');
             });
 
-            var segment_pixels = 0;
             var active_segments = 0;
             $(segments).each(function (key, segment) {
-                segment_pixels += segment.pixels;
                 if (segment.pixels) {
                     active_segments++;
                 }
@@ -243,13 +242,46 @@ $(function () {
                 if (matrix_pixels > matrix_max_pixels) {
                     messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ' exceeds the maximum number of pixels (' + matrix_max_pixels + ')');
                 }
-                if (segment_pixels !== matrix_pixels) {
-                    if (segment_pixels < matrix_pixels) {
-                        messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ', but the segments configure ' + segment_pixels + ' pixel(s): ' + (matrix_pixels - segment_pixels) + ' pixel(s) are not covered');
+                // the matrix is drawn into the buffer pixels matrix_start .. matrix_end - 1. The ranges are
+                // compared, not the sums: 128 + 128 pixels at offset 0 and 192 add up to a 256 pixel matrix
+                // but leave 128..191 dark and transmit 256..319 that the matrix never draws
+                var matrix_start = matrix_pixel_offset;
+                var matrix_end = matrix_start + matrix_pixels;
+                var matrix_range = 'pixels ' + matrix_start + '..' + (matrix_end - 1);
+                $(segments).each(function (key, segment) {
+                    if (!segment.pixels) {
+                        return;
                     }
-                    else {
-                        messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ', but the segments configure ' + segment_pixels + ' pixel(s): ' + (segment_pixels - matrix_pixels) + ' pixel(s) are unused');
+                    var end = segment.offset + segment.pixels;
+                    var outside = Math.max(0, Math.min(end, matrix_start) - segment.offset) + Math.max(0, end - Math.max(segment.offset, matrix_end));
+                    if (outside) {
+                        var message = 'Segment ' + (segment.index + 1) + ' (pixels ' + segment.offset + '..' + (end - 1) + ') reaches outside the matrix (' +
+                            matrix_range + '): ' + outside + ' LED(s) are never drawn';
+                        matrix_field_warning('mx_ofs' + segment.index, message);
+                        messages.push(message);
                     }
+                });
+                // matrix pixels that no segment transmits
+                var ranges = $.grep(segments, function (segment) {
+                    return segment.pixels > 0;
+                }).map(function (segment) {
+                    return [segment.offset, segment.offset + segment.pixels];
+                }).sort(function (a, b) {
+                    return a[0] - b[0];
+                });
+                var gaps = [];
+                var position = matrix_start;
+                $(ranges).each(function (key, range) {
+                    if (range[0] > position && position < matrix_end) {
+                        gaps.push(position + '..' + (Math.min(range[0], matrix_end) - 1));
+                    }
+                    position = Math.max(position, range[1]);
+                });
+                if (position < matrix_end) {
+                    gaps.push(position + '..' + (matrix_end - 1));
+                }
+                if (gaps.length) {
+                    messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ' (' + matrix_range + '), no segment transmits pixels ' + gaps.join(', '));
                 }
             }
 

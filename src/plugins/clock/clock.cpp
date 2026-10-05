@@ -241,10 +241,7 @@ void ClockPlugin::_setupTimer()
                         _tempBrightness = -1.0;
                         #if defined(IOT_CLOCK_HAVE_OVERHEATED_PIN) && IOT_CLOCK_HAVE_OVERHEATED_PIN != -1
                             digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, LOW);
-                            #if IOT_LED_MATRIX_STANDBY_PIN != -1
-                                digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
-                                pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
-                            #endif
+                            Clock::LedPower::set(false);
                         #endif
 
                         Logger_error(message);
@@ -302,10 +299,7 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
         _PCF8574.PORT = 0xff;
     #endif
 
-    #if IOT_LED_MATRIX_STANDBY_PIN != -1
-        digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
-        pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
-    #endif
+    Clock::LedPower::set(false);
 
     _disable();
 
@@ -503,10 +497,8 @@ void ClockPlugin::_showUpdateProgressQueued(int progress)
         return;
     }
     if (_updateProgress == -1) {
-        #if IOT_LED_MATRIX_STANDBY_PIN != -1
-            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
-            pinMode(IOT_LED_MATRIX_STANDBY_PIN, OUTPUT);
-        #endif
+        // forced on, the progress is shown even if the standby pin is disabled in the configuration
+        Clock::LedPower::set(true);
         pinMode(IOT_LED_MATRIX_OUTPUT_PIN, OUTPUT);
 
         LoopFunctions::remove(standbyLoop);
@@ -646,7 +638,7 @@ void ClockPlugin::getStatus(Print &output)
     switch(Clock::getNeopixelShowMethodType()) {
         #if !HAVE_NEOPIXELBUS
         case Clock::ShowMethodType::FASTLED:
-            output.printf_P(PSTR(", FastLED %u.%u.%u, %.1ffps, dithering %s"), FASTLED_VERSION / 1000000, (FASTLED_VERSION / 1000) % 1000, FASTLED_VERSION % 1000, _fps, _display.getDither() ? PSTR("on") : PSTR("off"));
+            output.printf_P(PSTR(", FastLED, %.1ffps, dithering %s"), _fps, _display.getDither() ? PSTR("on") : PSTR("off"));
             #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
                 {
                     auto limit = FastLED.getPowerLimitScale();
@@ -655,50 +647,19 @@ void ClockPlugin::getStatus(Print &output)
                     }
                 }
             #endif
-
-            #if FASTLED_DEBUG_COUNT_FRAME_RETRIES
-                extern uint32_t _frame_cnt;
-                extern uint32_t _retry_cnt;
-                if (_retry_cnt) {
-                    output.printf_P(PSTR(", aborted frames %u/%u (%.2f%%)"), _retry_cnt, _frame_cnt, !_frame_cnt ? NAN : (_retry_cnt * 100 / static_cast<float>(_frame_cnt)));
-                }
-            #endif
             break;
         #endif
         #if HAVE_NEOPIXELBUS
-            case Clock::ShowMethodType::NEOBUS_RMT: {
-                    const auto wire = _display.getWireMicros();
-                    output.printf_P(PSTR(", NeoPixelBus RMT, %.1ffps, %u blocks, wire %u.%ums"), _fps, gNeoPixelBusRmtMemBlocks, wire / 1000, (wire % 1000) / 100);
-                    const auto overrun = _display.getMaxOverrunMicros();
-                    if (overrun) {
-                        output.printf_P(PSTR(", frame +%uus"), overrun);
-                    }
-                    const auto transmissions = _display.getTransmissions();
-                    if (transmissions) {
-                        const auto over = _display.getTransmissionsOver();
-                        if (over) {
-                            output.printf_P(PSTR(", %u%% over"), over * 100 / transmissions);
-                        }
-                    }
-                    const auto timeouts = _display.getTxTimeouts();
-                    if (timeouts) {
-                        output.printf_P(PSTR(", %u tx timeouts"), timeouts);
-                    }
-                    const auto write = _display.getMaxWriteMicros();
-                    if (write > 1000) {
-                        output.printf_P(PSTR(", write +%u.%ums"), write / 1000, (write % 1000) / 100);
-                    }
-                } break;
+            // the transport counters and frame timings are developer details, see +LMC=fr
+            case Clock::ShowMethodType::NEOBUS_RMT:
+                output.printf_P(PSTR(", NeoPixelBus RMT, %.1ffps"), _fps);
+                break;
             case Clock::ShowMethodType::NEOBUS_I2S:
                 output.printf_P(PSTR(", NeoPixelBus I2S, %.1ffps"), _fps);
                 // the I2S transport needs one free I2S port per segment (the visualizer microphone
                 // owns one of the two), the remaining segments are transmitted by the RMT transport
                 if (_display.getRmtStrips()) {
                     output.printf_P(PSTR(", %u I2S + %u RMT pins"), _display.getI2sStrips(), _display.getRmtStrips());
-                    const auto overrun = _display.getMaxOverrunMicros();
-                    if (overrun) {
-                        output.printf_P(PSTR(", frame +%uus"), overrun);
-                    }
                 }
                 break;
         #endif
@@ -706,7 +667,7 @@ void ClockPlugin::getStatus(Print &output)
             case Clock::ShowMethodType::NEOPIXEL_EX: {
                 #if NEOPIXEL_HAVE_STATS
                         auto &stats = NeoPixelEx::Context::validate(nullptr).getStats();
-                        output.printf_P(PSTR(", NeoPixelEx %dfps, aborted frames %u/%u (%.2f%%)"), stats.getFps(), stats.getAbortedFrames(), stats.getFrames(), stats.getFrames() ? (stats.getAbortedFrames() * 100.0 / stats.getFrames()) : NAN);
+                        output.printf_P(PSTR(", NeoPixelEx %dfps"), stats.getFps());
                         if (stats.getTime() > 10000) {
                             stats.clear();
                         }
@@ -718,12 +679,6 @@ void ClockPlugin::getStatus(Print &output)
         default:
             break;
     }
-
-    #if HAVE_NEOPIXELBUS
-        // average of the last frames: the frame time is the animation work (anim) plus the transport
-        // (show), the wire time is the shortest frame the pixels allow
-        output.printf_P(PSTR(", anim %u.%ums, show %u.%ums"), _animMicros / 1000, (_animMicros % 1000) / 100, _showMicros / 1000, (_showMicros % 1000) / 100);
-    #endif
 
     #if IOT_LED_MATRIX_NO_BUTTON
         // nothing to see here move along
@@ -746,25 +701,18 @@ void ClockPlugin::getStatus(Print &output)
     #endif
 
     #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
-        #if ESP32
-            output.printf_P(PSTR(HTML_S(br) "IR remote control pin %u, software NEC receiver"), IOT_LED_MATRIX_IR_REMOTE_PIN);
-        #else
-            output.printf_P(PSTR(HTML_S(br) "IR remote control pin %u, IRremoteESP8266 receiver"), IOT_LED_MATRIX_IR_REMOTE_PIN);
-        #endif
+        output.printf_P(PSTR(HTML_S(br) "IR remote control pin %u"), IOT_LED_MATRIX_IR_REMOTE_PIN);
         if (_irFrameCount) {
             output.printf_P(PSTR(HTML_S(br) "Last IR code %08x"), _irLastCode);
         }
         else {
             output.print(F(HTML_S(br) "Last IR code: none received"));
         }
-        if (_irFrameCount || _irRepeatCount) {
-            output.printf_P(PSTR(", %u frames, %u repeats"), _irFrameCount, _irRepeatCount);
-        }
     #endif
 
     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
         if (_config.isVisualizer()) {
-            output.printf_P(PSTR(HTML_S(br)));
+            output.print(F(HTML_S(br)));
             output.print(_getAnimationName(_config.getAnimation()));
             #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
                 if (_config.visualizer.input == uint8_t(Clock::VisualizerType::AudioInputType::MICROPHONE)) {
@@ -870,7 +818,7 @@ void ClockPlugin::_setAnimation(AnimationType animation, uint16_t blendTime)
     _config.animation = static_cast<uint8_t>(animation);
     switch(animation) {
         case AnimationType::FADING:
-            _publishAnimation(new Clock::FadingAnimation(*this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay * 1000, _config.fading.factor.value), blendTime);
+            _publishAnimation(new Clock::FadingAnimation(*this, _getColor(), Color().rnd(), _config.fading.speed, _config.fading.delay * 1000), blendTime);
             break;
         case AnimationType::RAINBOW:
             _publishAnimation(new Clock::RainbowAnimation(*this, _config.rainbow.speed, _config.rainbow.multiplier, _config.rainbow.color), blendTime);
@@ -1015,6 +963,9 @@ void ClockPlugin::readConfig(bool setup)
             // _getNeoBusBrightness()
         #else
             #if FASTLED_VERSION >= 3005000
+                // UNUSED: no env uses the official FastLED as transport, all FastLED envs use the fork (3.4.0, #else).
+                // Kept for the power management of the official library, it does not compile with 3.9.x as is
+                // (m_pPowerFunc is private there)
                 if (_getPowerLevelLimit(_config.power_limit) == ~0U) {
                     FastLED.m_pPowerFunc = nullptr; // if this does not compile, make m_pPowerFunc public in FastLED.h
                 }
@@ -1040,11 +991,9 @@ void ClockPlugin::readConfig(bool setup)
         digitalWrite(IOT_CLOCK_HAVE_OVERHEATED_PIN, HIGH);
     #endif
 
-    #if IOT_LED_MATRIX_STANDBY_PIN != -1
-        if (!_config.standby_led) {
-            pinMode(IOT_LED_MATRIX_STANDBY_PIN, INPUT);
-        }
-    #endif
+    if (!_config.standby_led) {
+        Clock::LedPower::release();
+    }
 
     #if defined(IOT_LED_MATRIX_STANDBY_LED_PIN) && IOT_LED_MATRIX_STANDBY_LED_PIN != -1
         // enable/disable extra LED that is powered by the 5V from the relay/mosfet
@@ -1093,7 +1042,7 @@ void ClockPlugin::_enable()
         return;
     }
     if (_isEnabled) {
-        __LDBG_printf("enable LED pin=%d state=%u (cfg_enable=%u, is_enabled=%u, config=%u) SKIPPED", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true), _config.standby_led, _isEnabled, _config.enabled);
+        __LDBG_printf("enable LED SKIPPED (is_enabled=%u, config=%u)", _isEnabled, _config.enabled);
         return;
     }
     if (isTempProtectionActive()) {
@@ -1101,12 +1050,8 @@ void ClockPlugin::_enable()
         return;
     }
 
-    #if IOT_LED_MATRIX_STANDBY_PIN != -1
-        if (_config.standby_led) {
-            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true));
-        }
-        __LDBG_printf("enable LED pin=%u state=%u (cfg_enable=%u, is_enabled=%u, config=%u)", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(true), _config.standby_led, _isEnabled, _config.enabled);
-    #endif
+    __LDBG_printf("enable LED (is_enabled=%u, config=%u)", _isEnabled, _config.enabled);
+    _setLedPower(true);
 
     enableLoopNoClear(true);
 
@@ -1130,7 +1075,7 @@ void ClockPlugin::_enable()
 
 void ClockPlugin::_disable()
 {
-    __LDBG_printf("disable LED pin=%d state=%u (cfg_enabled=%u, is_enabled=%u, config=%u)", IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false), _config.standby_led, _isEnabled, _config.enabled);
+    __LDBG_printf("disable LED (is_enabled=%u, config=%u)", _isEnabled, _config.enabled);
 
     // turn all leds off and set brightness to 0
     _display.setBrightness(0);
@@ -1144,11 +1089,7 @@ void ClockPlugin::_disable()
         _calcPowerFunction(0, 0);
     #endif
 
-    #if IOT_LED_MATRIX_STANDBY_PIN != -1
-        if (_config.standby_led) {
-            digitalWrite(IOT_LED_MATRIX_STANDBY_PIN, IOT_LED_MATRIX_STANDBY_PIN_STATE(false));
-        }
-    #endif
+    _setLedPower(false);
 
     _removeLoop();
     LOOP_FUNCTION_ADD(standbyLoop);
@@ -1467,7 +1408,19 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
 #    pragma GCC pop_options
 #endif
 
+// crash context: called by the ESP8266 crash callback (KFCLibrary save_crash.cpp, the name is kept for it),
+// switches the LED power off with register writes only, see led_power.h
 void ClockPluginClearPixels()
 {
-    ClockPlugin::getInstance().clear();
+    Clock::LedPower::crashOff();
+}
+
+// restart: blanks the pixels with the transport (ESP8266, the ESP32 RMT transport is not used here) and
+// switches the LED power off
+void ClockPluginShutdownPixels()
+{
+    #if !ESP32
+        ClockPlugin::clearPixels();
+    #endif
+    Clock::LedPower::crashOff();
 }

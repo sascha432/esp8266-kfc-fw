@@ -297,22 +297,21 @@ Run command
 
 - vis[ualizer],<type>
 - br[ightness],<level>
-- co[lor],<#RGB|r,b,g>
+- co[lor],<#RGB|r,g,b> (without a value the current color is printed)
 - pr[int],<display=00:00:00>
-- tem[perature],<value>
+- tem[perature][,<value>] overrides the temperature sensor for the over-temperature protection, 0 or no value disables the override (only with `IOT_CLOCK_TEMPERATURE_PROTECTION`)
 - lo[op],<enable|disable>
+- st[ate] state, configuration, power level, IR receiver counters, deferred task queue and the diagnostics compiled into the build
 - met[hod][,<fast|nrmt|ni2s|neoex|none|tog>] (FastLED|NeoPixelBus RMT|NeoPixelBus I2S|NeoPixelEx|none|toggle)
   - `fast` is not available in NeoPixelBus builds (`HAVE_NEOPIXELBUS=1`), FastLED is mapped to NeoPixelBus RMT
     there and the toggle skips it
   - `nrmt`/`ni2s` only with `HAVE_NEOPIXELBUS=1`, `neoex` only with `IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT=1`
-- fr[ames][,rst] frame statistics, `rst` resets them
+- fr[ames][,rst] transport diagnostics (show method, fps, the counters of the transports that are compiled in), `rst` resets the FastLED/NeoPixelEx statistics - the NeoPixelBus counters are sticky since boot
 - ani[mation][,<solid|gradient|rainbow|rainbow-fastled|flash|color-fade|fire|plasma|spectrum-rainbow-bars|spectrum-gradient-bars|spectrum-single-color-bars|plasma-reactive|fire-reactive|xmas>][,blend_time=4000ms]
 - out[put],<on|off>
-- dit[her],<on|off> (FastLED temporal dithering, no effect in NeoPixelBus builds)
-- co[lor],<#color>
+- dit[her],<on|off> (FastLED temporal dithering, not available in NeoPixelBus builds)
 - map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>
-- cl[ear]
-- res[et][,<pixels=116>]
+- cl[ear] stops the animation loop and blanks the pixels
 - get[,<range>]
 - set,<range(=0-7)>,[#color]
 

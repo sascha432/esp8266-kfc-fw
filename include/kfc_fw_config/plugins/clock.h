@@ -165,10 +165,10 @@ namespace KFCConfigurationClasses {
 
             struct __attribute__packed__ FadingAnimationType {
                 using Type = FadingAnimationType;
-                CREATE_UINT32_BITFIELD_MIN_MAX(speed, 17, 100, 100000, 1000, 100);
+                // FadingAnimation stores the duration in 16 bit
+                CREATE_UINT32_BITFIELD_MIN_MAX(speed, 16, 100, 50000, 1000, 100);
                 CREATE_UINT32_BITFIELD_MIN_MAX(delay, 12, 0, 3600, 3, 1);
-                CREATE_COLOR_FIELD(factor, 0xffffff);
-                FadingAnimationType() : speed(kDefaultValueFor_speed), delay(kDefaultValueFor_delay), factor(kDefaultValueFor_factor) {}
+                FadingAnimationType() : speed(kDefaultValueFor_speed), delay(kDefaultValueFor_delay) {}
             };
 
             #ifndef IOT_CLOCK_GRADIENT_ENTRIES
@@ -686,10 +686,6 @@ namespace KFCConfigurationClasses {
                 #endif
                 CREATE_UINT32_BITFIELD_MIN_MAX(flashing_speed, 13, 50, 8000, 150, 100);
                 CREATE_COLOR_FIELD(flashing_color, 0x00ff00);
-                #if IOT_CLOCK_HAVE_MOTION_SENSOR
-                    CREATE_UINT32_BITFIELD_MIN_MAX(motion_auto_off, 10, 0, 1000, 0, 1);
-                    CREATE_UINT32_BITFIELD_MIN_MAX(motion_trigger_timeout, 8, 1, 240, 15, 1);
-                #endif
 
                 ProtectionConfigType protection;
                 GradientAnimationType gradient;

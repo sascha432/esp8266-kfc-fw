@@ -22,6 +22,8 @@
 //  - offset + pixels must fit into the buffer  -> error, the segment would read outside the buffer
 //  - two segments must not overlap             -> error, the same pixels would be driven twice
 //  - gaps are allowed and the segments do not have to cover rows * cols -> warning only
+//  - a segment outside the matrix area (IOT_LED_MATRIX_PIXEL_OFFSET + rows * cols) -> warning only, the
+//    form compares the ranges, not the sums
 //
 // Transport specific rules (the form shows them while editing, see Resources/js/forms/led-matrix.js):
 //  - I2S with no segment          -> warning, nothing is transmitted

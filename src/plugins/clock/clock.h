@@ -12,6 +12,7 @@
 #include "WebUIComponent.h"
 #include "animation.h"
 #include "clock_button.h"
+#include "led_power.h"
 #include "kfc_fw_config.h"
 #include "plugins.h"
 #include "../src/plugins/plugins.h"
@@ -349,7 +350,6 @@ private:
     // use these instead of touching _display
     void _show();
     void _clear();
-    void _resetDisplay();
 
     // returns AnimationType::MAX if the name is invalid
     // searched for name, name slug or AnimationType as integer
@@ -547,9 +547,10 @@ public:
 // Enable/disable LEDs
 // ------------------------------------------------------------------------
 public:
-    // blank the pixels during a reset, the loop task is not running any more
-    static void clear() {
-        _reset();
+    // blank the pixels with the transport during a restart, the loop task is not running any more. The
+    // crash and boot path switches the LED power off instead, see led_power.h
+    static void clearPixels() {
+        _clearPixels();
     }
 
     // if the system crashed, disable the LEDs before the loop task starts
@@ -561,9 +562,11 @@ public:
     }
 
 private:
-    static void _reset();
+    static void _clearPixels();
     void _enable();
     void _disable();
+    // switches the LED power with the standby pin if it is enabled in the configuration (standby_led)
+    void _setLedPower(bool on);
     bool _getEnabledState() const {
         return _config.enabled && _isEnabled && _targetBrightness && _tempBrightness != -1;
     }
@@ -818,11 +821,6 @@ inline void ClockPlugin::_show()
 inline void ClockPlugin::_clear()
 {
     _display.clear();
-}
-
-inline void ClockPlugin::_resetDisplay()
-{
-    _reset();
 }
 
 inline void ClockPlugin::enableLoop(bool enable)
@@ -1211,9 +1209,17 @@ inline void ClockPlugin::_updateBrightnessSettings()
     }
 }
 
-inline void ClockPlugin::_reset()
+inline void ClockPlugin::_setLedPower(bool on)
 {
-    // turn off all LEDs during restart or a crash
+    __LDBG_printf("LED power=%u pin=%d standby_led=%u", on, IOT_LED_MATRIX_STANDBY_PIN, _config.standby_led);
+    if (_config.standby_led) {
+        Clock::LedPower::set(on);
+    }
+}
+
+inline void ClockPlugin::_clearPixels()
+{
+    // turn off all LEDs with the transport during a restart, not used in a crash (see led_power.h)
     #if HAVE_NEOPIXELBUS
         // NeoPixelBus owns the RMT/I2S peripheral, blank the buffer and transmit it
         auto &plugin = getInstance();
@@ -1304,6 +1310,7 @@ inline const __FlashStringHelper *getNeopixelShowMethodStr()
 }
 
 extern "C" void ClockPluginClearPixels();
+extern "C" void ClockPluginShutdownPixels();
 
 inline Clock::LoopOptionsBase::LoopOptionsBase(ClockPlugin &plugin) :
     // _updateRate(plugin._updateRate),

@@ -38,15 +38,18 @@ void ClockPlugin::getValues(WebUINS::Events &array)
         WebUINS::Values(F("color"), Color(_getColor()).toString(), enabled && _config.hasColorSupport()),
         brightness
     );
-    if (_tempBrightness == -1) {
-        array.append(WebUINS::Values(F("tempp"), _overheatedInfo));
-    } else {
-        if (_tempBrightness == 1.0) {
-            array.append(WebUINS::Values(F("tempp"), F("Off")));
+    // the sensor only exists with temperature protection, see _createWebUI()
+    #if IOT_CLOCK_TEMPERATURE_PROTECTION
+        if (_tempBrightness == -1) {
+            array.append(WebUINS::Values(F("tempp"), _overheatedInfo));
         } else {
-            array.append(WebUINS::Values(F("tempp"), WebUINS::FormattedDouble(100 - _tempBrightness * 100.0, 1)));
+            if (_tempBrightness == 1.0) {
+                array.append(WebUINS::Values(F("tempp"), F("Off")));
+            } else {
+                array.append(WebUINS::Values(F("tempp"), WebUINS::FormattedDouble(100 - _tempBrightness * 100.0, 1)));
+            }
         }
-    }
+    #endif
 
     array.append(WebUINS::Values(F("power"), static_cast<uint8_t>(enabled), true));
 
@@ -280,16 +283,6 @@ void ClockPlugin::_createWebUI(WebUINS::Root &webUI)
                 WebUINS::NamedUint32(J(columns), colspan));
             row.append(power);
 
-        #endif
-
-        #if IOT_CLOCK_HAVE_MOTION_SENSOR
-            {
-                auto motion = WebUINS::Sensor(F("motion"), F("Motion Sensor"), F(""));
-                motion.append(
-                    WebUINS::NamedString(J(height), height),
-                    WebUINS::NamedUint32(J(columns), colspan));
-                row.append(motion);
-            }
         #endif
 
         webUI.addRow(row);

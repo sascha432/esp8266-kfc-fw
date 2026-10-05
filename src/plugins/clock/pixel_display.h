@@ -939,7 +939,7 @@ namespace Clock {
         {
             #if HAVE_NEOPIXELBUS
                 // NeoPixelBus has no temporal dithering
-                _dither = enable;
+                (void)enable;
             #else
                 FastLED.setDither(enable ? BINARY_DITHER : DISABLE_DITHER);
             #endif
@@ -1067,7 +1067,7 @@ namespace Clock {
         bool getDither() const
         {
             #if HAVE_NEOPIXELBUS
-                return _dither;
+                return false;
             #else
                 return (_controller.getDither() == BINARY_DITHER);
             #endif
@@ -1222,7 +1222,6 @@ namespace Clock {
 
             NeoBusStrips _neoBus;
             uint8_t _brightness;
-            bool _dither;
             NeoBusMethodType _neoBusMethod;
             uint16_t _segPixels[NeoBusStrips::kMaxStrips];
             uint16_t _segOffset[NeoBusStrips::kMaxStrips];

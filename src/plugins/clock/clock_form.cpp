@@ -110,14 +110,6 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                 form.addObjectGetterSetter(F("fdy"), cfg.fading, cfg.fading.get_bits_delay, cfg.fading.set_bits_delay);
                 form.addFormUI(F("Delay Before Start Fading To Next Random Color"), FormUI::Suffix(FSPGM(seconds)));
                 cfg.fading.addRangeValidatorFor_delay(form);
-
-                form.add(F("fcf"), Color(cfg.fading.factor.value).toString(), [&cfg](const String &value, FormUI::Field::BaseField &field, bool store) {
-                    if (store) {
-                        cfg.fading.factor.value = Color::fromString(value);
-                    }
-                    return false;
-                });
-                form.addFormUI(F("Random Color Factor"));
             }
             break;
         case AnimationType::FIRE: {
@@ -862,13 +854,14 @@ namespace {
             if (result.overlap) {
                 const auto &firstSegment = result.segments[result.overlapA - 1];
                 const auto &secondSegment = result.segments[result.overlapB - 1];
+                // segmentEnd() is one past the last pixel, the message shows the last pixel (same as led-matrix.js)
                 addLine(PrintString(F("Segment %u (pixels %u..%u) overlaps segment %u (pixels %u..%u)"),
                     static_cast<unsigned>(result.overlapB),
                     static_cast<unsigned>(secondSegment.offset),
-                    static_cast<unsigned>(result.segmentEnd(result.overlapB - 1)),
+                    static_cast<unsigned>(result.segmentEnd(result.overlapB - 1) - 1),
                     static_cast<unsigned>(result.overlapA),
                     static_cast<unsigned>(firstSegment.offset),
-                    static_cast<unsigned>(result.segmentEnd(result.overlapA - 1))
+                    static_cast<unsigned>(result.segmentEnd(result.overlapA - 1) - 1)
                 ));
             }
 
@@ -1040,7 +1033,9 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
                 FormUI::IntAttribute(F("data-i2s-strips"), static_cast<int>(Clock::MatrixValidation::kAvailableI2sStrips)),
                 FormUI::IntAttribute(F("data-i2s-port"), static_cast<int>(Clock::MatrixValidation::kMicI2sPort)),
                 FormUI::IntAttribute(F("data-method-rmt"), kMethodRmt),
-                FormUI::IntAttribute(F("data-method-i2s"), kMethodI2s)
+                FormUI::IntAttribute(F("data-method-i2s"), kMethodI2s),
+                // the matrix is drawn into the buffer pixels offset .. offset + rows * cols - 1
+                FormUI::IntAttribute(F("data-pixel-offset"), IOT_LED_MATRIX_PIXEL_OFFSET)
             );
             // the matrix layout is validated as a whole, see MatrixLayoutValidator
             form.addValidator(MatrixLayoutValidator());
@@ -1132,8 +1127,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
         _createConfigureFormDisplayMethod(form, cfg);
 
-        form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
-        form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
+        // NeoPixelBus has no temporal dithering, the stored value is kept but not shown
+        #if !HAVE_NEOPIXELBUS
+            form.addObjectGetterSetter(F("dt"), FormGetterSetter(cfg, dithering));
+            form.addFormUI(F("FastLED Temporal Dithering"), FormUI::BoolItems(F("Enable"), F("Disable")));
+        #endif
 
         #if IOT_LED_MATRIX_STANDBY_PIN != -1
             form.addObjectGetterSetter(F("sbl"), cfg, cfg.get_bits_standby_led, cfg.set_bits_standby_led);

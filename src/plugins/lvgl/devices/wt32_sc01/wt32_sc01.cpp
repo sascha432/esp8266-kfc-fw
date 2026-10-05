@@ -7,18 +7,12 @@
 #include <esp32-hal-psram.h>
 #include <esp_heap_caps.h>
 
-#ifndef LVGL_BUFFER_LINES
-#define LVGL_BUFFER_LINES 0 // 0 = use defaults
-#endif
-
 namespace WT32_SC01 {
 
-// Preferred draw buffers: two in PSRAM (double buffering, LVGL_BUFFER_LINES lines each). If PSRAM
-// is not available or exhausted, a single smaller buffer in internal RAM is used.
+// Draw buffers: two in PSRAM (double buffering, one full screen each); PSRAM is required.
 // SPI DMA on the ESP32 cannot read from PSRAM, so _flushCb() uses the blocking
 // pushImage(); pushImageDMA() would need an internal RAM buffer.
-static constexpr uint32_t kBufferLinesPsram = LVGL_BUFFER_LINES ? LVGL_BUFFER_LINES : 40;
-static constexpr uint32_t kBufferLinesInternal = LVGL_BUFFER_LINES ? LVGL_BUFFER_LINES : 16;
+static constexpr uint32_t kBufferLinesPsram = IOT_WT32_SC01_TFT_HEIGHT;
 
 // LovyanGFX rotation of every Rotation value. The panel is portrait natively, so the hardware
 // rotation 1 is the landscape orientation the display is used in by default
@@ -46,13 +40,10 @@ static int32_t _touchY = -1;
 static bool _inputEnabled = true;
 static Rotation _rotation = Rotation::LANDSCAPE;
 
-// allocates from PSRAM or internal RAM, returns nullptr if not available
-static void *_allocBuffer(size_t size, bool psram)
+// allocates from PSRAM, returns nullptr if not available
+static void *_allocBuffer(size_t size)
 {
-    if (psram) {
-        return psramFound() ? ps_malloc(size) : nullptr;
-    }
-    return heap_caps_malloc(size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    return psramFound() ? ps_malloc(size) : nullptr;
 }
 
 LGFX_WT32_SC01 &lcd()
@@ -250,24 +241,20 @@ bool begin()
         __LDBG_printf("touch controller ready (FT6336U, I2C address 0x%02x, I2C polling)", IOT_WT32_SC01_TOUCH_I2C_ADDRESS);
     }
 
-    // two buffers in PSRAM (double buffering), or a single smaller one in internal RAM
+    // two buffers in PSRAM (double buffering)
     _bufferPixels = kBufferLinesPsram * IOT_WT32_SC01_TFT_WIDTH;
-    _buf1 = static_cast<lv_color_t *>(_allocBuffer(_bufferPixels * sizeof(lv_color_t), true));
-    _buf2 = static_cast<lv_color_t *>(_allocBuffer(_bufferPixels * sizeof(lv_color_t), true));
+    _buf1 = static_cast<lv_color_t *>(_allocBuffer(_bufferPixels * sizeof(lv_color_t)));
+    _buf2 = static_cast<lv_color_t *>(_allocBuffer(_bufferPixels * sizeof(lv_color_t)));
     if (!_buf1 || !_buf2) {
         free(_buf1);
         free(_buf2);
         _buf1 = nullptr;
         _buf2 = nullptr;
-        _bufferPixels = kBufferLinesInternal * IOT_WT32_SC01_TFT_WIDTH;
-        _buf1 = static_cast<lv_color_t *>(_allocBuffer(_bufferPixels * sizeof(lv_color_t), false));
-        if (!_buf1) {
-            _error = F("no memory for the draw buffer (PSRAM and internal RAM)");
-            __LDBG_printf("draw buffer allocation failed");
-            return false;
-        }
+        _error = F("no PSRAM for the draw buffers");
+        __LDBG_printf("draw buffer allocation failed");
+        return false;
     }
-    __LDBG_printf("draw buffer %u pixels%s", (unsigned)_bufferPixels, _buf2 ? " in PSRAM (double buffered)" : " in internal RAM");
+    __LDBG_printf("draw buffer %u pixels in PSRAM (double buffered)", (unsigned)_bufferPixels);
 
     lv_init();
     lv_disp_draw_buf_init(&_drawBuf, _buf1, _buf2, _bufferPixels);

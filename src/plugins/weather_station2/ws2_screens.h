@@ -1258,7 +1258,8 @@ private:
     // opens the quick settings sheet (a swipe left/right of the dashboard)
     void _openSettings();
     // removes the sheet and its tree
-    void _closeSettings();
+    // animate = slide the sheet up before it is removed (HAVE_ANIMATIONS only)
+    void _closeSettings(bool animate = false);
     // creates the widget tree of the sheet for _settingsView
     void _buildSettings();
     // refreshes the clock, the signal strength and the values of the sheet (once per second)

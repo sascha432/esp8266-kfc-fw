@@ -52,6 +52,62 @@ constexpr uint32_t kColorTilePressedActive = 0x9c4f00;
 constexpr lv_coord_t kSettingsSwipeTopBand = 48;
 constexpr lv_coord_t kSettingsSwipeCenterTolerance = 48;
 
+#ifndef HAVE_ANIMATIONS
+#    define HAVE_ANIMATIONS 1
+#endif
+
+#if HAVE_ANIMATIONS
+// Slide of the quick settings sheet (opening and closing)
+constexpr uint32_t kSettingsSlideTime = 1000;
+
+// The dimmed layer behind the sheet is faded together with the slide. The fade blends the whole
+// display in every frame, which a small MCU (or a slow display path) cannot do at a usable frame
+// rate - without it the layer is dimmed from the start and only the panel moves. Only the ESP32-P4
+// is fast enough, the other ESP32 variants slide without the fade.
+// Build with -D HAVE_ANIMATIONS_FADE=0/1 to override
+#    ifndef HAVE_ANIMATIONS_FADE
+#        ifdef CONFIG_IDF_TARGET_ESP32P4
+#            define HAVE_ANIMATIONS_FADE 1
+#        else
+#            define HAVE_ANIMATIONS_FADE 0
+#        endif
+#    endif
+constexpr bool kSettingsFade = HAVE_ANIMATIONS_FADE;
+
+void settingsPanelYCb(void *obj, int32_t value)
+{
+    lv_obj_set_y(static_cast<lv_obj_t *>(obj), static_cast<lv_coord_t>(value));
+}
+
+void settingsDimCb(void *obj, int32_t value)
+{
+    lv_obj_set_style_bg_opa(static_cast<lv_obj_t *>(obj), static_cast<lv_opa_t>(value), LV_PART_MAIN);
+}
+
+// the animation that moves the sheet out of the display deletes it when it is done
+void settingsDeleteReadyCb(lv_anim_t *anim)
+{
+    auto obj = static_cast<lv_obj_t *>(anim->var);
+    // the panel is a child of the layer that has to go
+    lv_obj_del_async(kSettingsFade ? obj : lv_obj_get_parent(obj));
+}
+
+void startSettingsAnimation(lv_obj_t *obj, int32_t from, int32_t to, lv_anim_exec_xcb_t exec, lv_anim_ready_cb_t ready)
+{
+    lv_anim_t anim;
+    lv_anim_init(&anim);
+    lv_anim_set_var(&anim, obj);
+    lv_anim_set_exec_cb(&anim, exec);
+    lv_anim_set_values(&anim, from, to);
+    lv_anim_set_time(&anim, kSettingsSlideTime);
+    lv_anim_set_path_cb(&anim, lv_anim_path_ease_out);
+    if (ready) {
+        lv_anim_set_ready_cb(&anim, ready);
+    }
+    lv_anim_start(&anim);
+}
+#endif
+
 bool isSettingsSwipeStart(const lv_point_t &point, lv_coord_t screenWidth)
 {
     return point.y >= 0 && point.y <= kSettingsSwipeTopBand &&
@@ -4020,9 +4076,21 @@ void HassScreen::_openSettings()
     _settingsView = SettingsView::MAIN;
     __LDBG_printf("hass> quick settings opened");
     _buildSettings();
+#if HAVE_ANIMATIONS
+    // slide the panel down from above the display and fade in the dimmed layer behind it
+    if (_settingsRefs.root && _settingsRefs.panel) {
+        const auto g = settingsGeometry(_width, _height, _portrait, kSettingsTiles);
+        lv_obj_set_y(_settingsRefs.panel, -(g.panelY + g.panelH));
+        startSettingsAnimation(_settingsRefs.panel, -(g.panelY + g.panelH), g.panelY, settingsPanelYCb, nullptr);
+        if (kSettingsFade) {
+            lv_obj_set_style_bg_opa(_settingsRefs.root, LV_OPA_TRANSP, LV_PART_MAIN);
+            startSettingsAnimation(_settingsRefs.root, LV_OPA_TRANSP, LV_OPA_60, settingsDimCb, nullptr);
+        }
+    }
+#endif
 }
 
-void HassScreen::_closeSettings()
+void HassScreen::_closeSettings(bool animate)
 {
     if (!_settingsOpen) {
         return;
@@ -4031,6 +4099,29 @@ void HassScreen::_closeSettings()
     _settingsPending = false;
     _settingsPendingView = -1;
     _settingsAction = SettingsAction::NONE;
+#if HAVE_ANIMATIONS
+    if (animate && _settingsRefs.root && _settingsRefs.panel) {
+        // The widgets are detached from the state: the sheet is deleted when the animation is done
+        // (or with the tree it belongs to). Taps are no longer taken while it moves
+        auto root = _settingsRefs.root;
+        auto panel = _settingsRefs.panel;
+        _settingsRefs = SettingsRefs();
+        lv_obj_clear_flag(root, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(panel, LV_OBJ_FLAG_CLICKABLE);
+        lv_anim_del(root, nullptr);
+        lv_anim_del(panel, nullptr);
+        const auto g = settingsGeometry(_width, _height, _portrait, kSettingsTiles);
+        // the animation of the layer deletes the sheet when it is done; without the fade the panel does it
+        startSettingsAnimation(panel, g.panelY, -(g.panelY + g.panelH), settingsPanelYCb, kSettingsFade ? nullptr : settingsDeleteReadyCb);
+        if (kSettingsFade) {
+            startSettingsAnimation(root, LV_OPA_60, LV_OPA_TRANSP, settingsDimCb, settingsDeleteReadyCb);
+        }
+        __LDBG_printf("hass> quick settings closed (animated)");
+        return;
+    }
+#else
+    (void)animate;
+#endif
     if (_settingsRefs.root) {
         lv_obj_del(_settingsRefs.root);
     }
@@ -4446,7 +4537,7 @@ void HassScreen::_applySettingsAction()
         });
         break;
     case SettingsAction::CLOSE:
-        _closeSettings();
+        _closeSettings(true);
         break;
     default:
         break;

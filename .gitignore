@@ -86,7 +86,6 @@ Untitled.ipynb
 node_modules/
 compile_commands.json
 src/plugins/weather_station2/docs/**
-src/plugins/touch_remote/PROPOSAL.md
 scripts/tools/hass_config.bat
 compile_commands_old.json
 lib/NeoPixelBus/

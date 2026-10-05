@@ -775,6 +775,17 @@ private:
     // (see kSensorGridHours). The 48 hour range has 12 intervals and can have a line at both ends of
     // the window, 13 covers every range (a 24 hour window has 6 or 7)
     static constexpr uint8_t kSensorTimeTicks = 13;
+    // State of one pixel column of the timeline of an on/off entity (see _drawSensorTimeline()).
+    // A column covers several minutes, the state with the higher value wins: a motion that lasted
+    // a few seconds is still drawn, a short unknown state between two others is not
+    enum class TimelineState : uint8_t {
+        NONE = 0,
+        UNKNOWN,
+        OFF,
+        ON,
+    };
+    // the timeline is narrower than the display, one state per pixel column
+    static constexpr uint16_t kSensorTimelineColumns = 480;
 
     // sub view of an open panel. Climate: the arc with the steppers, or the list of the mode,
     // the preset and the fan mode. Light/dimmer: the level slider, the color wheel, the color
@@ -1141,6 +1152,13 @@ private:
             times{},
             chart(nullptr),
             series(nullptr),
+            stateHistory(false),
+            timeline(nullptr),
+            columns{},
+            columnCount(0),
+            legendDots{},
+            legendLabels{},
+            legendOn(nullptr),
             buckets(0),
             drawnHours(0),
             drawnGeneration(0),
@@ -1165,6 +1183,19 @@ private:
         // the graph and its series (see _buildSensorPanel())
         lv_obj_t *chart;
         lv_chart_series_t *series;
+        // The timeline of an on/off entity, which replaces the chart: the strip draws one state per
+        // pixel column (_timelineCallback()), so it needs no object per state change. stateHistory
+        // is set before the tree is built, the geometry of the graph depends on it
+        bool stateHistory;
+        lv_obj_t *timeline;
+        TimelineState columns[kSensorTimelineColumns];
+        uint16_t columnCount;
+        // Legend of the timeline above the strip: a bullet in the color of the state and its name
+        // (on, off, unknown). The names follow the device_class of the entity, legendOn is the text
+        // of the on state it was laid out with (the class can arrive after the panel was built)
+        lv_obj_t *legendDots[3];
+        lv_obj_t *legendLabels[3];
+        const char *legendOn;
         // columns of the graph (the buckets of the range it was built for), the range it was drawn
         // with and the version of the statistics it shows (the graph is only filled again when one
         // of them changes)
@@ -1194,6 +1225,10 @@ private:
     void _updateSensorPanel();
     // draws the buckets of the statistics into the graph of the sensor panel
     void _drawSensorChart(const HomeAssistant::Tile &tile);
+    // fills the columns of the timeline of an on/off entity from its state changes
+    void _drawSensorTimeline(uint32_t start, uint32_t end);
+    // sets the names of the legend of the timeline and centers it above the strip
+    void _layoutSensorLegend();
     // text of the level (maximum/middle/minimum) and of the time labels of the graph. The number of
     // decimals of a level comes from the step of the axis, so all three labels are formatted alike.
     // The text goes into the buffer of the caller: the labels are rebuilt while the graph is drawn
@@ -1303,6 +1338,9 @@ private:
     lv_coord_t _gridBottom() const;
     lv_coord_t _sensorCardWidth() const;
     lv_coord_t _sensorCardHeight() const;
+    // left edge and width of the graph inside the card: a timeline has no level labels, it keeps
+    // the same gap at both sides
+    lv_coord_t _sensorGraphX() const;
     lv_coord_t _sensorGraphWidth() const;
     lv_coord_t _sensorGraphHeight() const;
     // sets the text only when it changed (a new pointer restarts the scroll animation). The text is
@@ -1338,6 +1376,8 @@ private:
     static void _panelCallback(lv_event_t *event);
     // dimmer panel: the level slider
     static void _sliderCallback(lv_event_t *event);
+    // sensor panel: draws the columns of the timeline (LV_EVENT_DRAW_MAIN)
+    static void _timelineCallback(lv_event_t *event);
     // dimmer panel: the color temperature slider
     static void _tempSliderCallback(lv_event_t *event);
     // dimmer panel: the color wheel

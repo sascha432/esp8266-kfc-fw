@@ -277,6 +277,12 @@ struct Tile {
     uint8_t gridRows;
     // the state of the entity, reported by the last response (see TileValue)
     TileValue value;
+
+    // An on/off entity (motion, door, ...) has no long term statistics: the sensor panel reads the
+    // state changes of its window and draws them as a timeline instead of a graph
+    bool hasStateHistory() const {
+        return !strncmp(entity, "binary_sensor.", 14);
+    }
 };
 
 // ------------------------------------------------------------------------------------------

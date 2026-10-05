@@ -85,7 +85,16 @@ Untitled1.ipynb
 Untitled.ipynb
 node_modules/
 compile_commands.json
-src/plugins/weather_station2/docs/**
 scripts/tools/hass_config.bat
 compile_commands_old.json
 lib/NeoPixelBus/
+src/plugins/weather_station2/docs/screens/
+src/plugins/weather_station2/docs/icons/
+src/plugins/weather_station2/docs/hass_layout/
+src/plugins/weather_station2/docs/temp/
+src/plugins/weather_station2/docs/temp/
+src/plugins/weather_station2/docs/MIGRATION_LVGL.md
+src/plugins/weather_station2/docs/hass_config.md
+src/plugins/weather_station2/docs/generate_icons.py
+
+

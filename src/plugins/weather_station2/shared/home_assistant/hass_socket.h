@@ -21,6 +21,8 @@
 //   * `recorder/statistics_during_period` reads the history graph of the sensor panel, in chunks of
 //     six hours (see kChunkSeconds) - the receive path of the ESP32 stalls in the middle of a
 //     single websocket message larger than about 8 KB.
+//   * `history/history_during_period` reads the state changes of an on/off entity (a binary sensor
+//     has no long term statistics) for the timeline of the sensor panel, in the same chunks.
 //
 // The screen is only subscribed while it is visible (the client drops the subscription when it is
 // left), and the values are refreshed in full every `hass.poll` seconds as a safety net: a
@@ -40,7 +42,9 @@ namespace HomeAssistant {
 
 class Socket {
 public:
-    // one bucket of the statistics: epoch seconds of its start and the mean of the 5 minutes
+    // One bucket of the statistics: epoch seconds of its start and the mean of the 5 minutes. A
+    // point of the state history (fetchStats() with `history`) is one state change instead: the
+    // time it changed and kStateOn, kStateOff or NAN (unknown/unavailable)
     struct Point {
         Point() :
             time(0),
@@ -53,6 +57,9 @@ public:
 
     // 5 minute buckets of a 48 hour window plus the bucket that is running at the moment
     static constexpr uint16_t kMaxPoints = (48 * 60) / 5 + 1; // 577
+    // the state of a point of the state history
+    static constexpr float kStateOff = 0.0f;
+    static constexpr float kStateOn = 1.0f;
 
     // Length of one statistics request. A 48 hour window is about 32 KB of JSON and the receive
     // path of the ESP32 hands over only a part of it before it waits for the server to send more,
@@ -123,8 +130,11 @@ public:
     // Statistics of an entity over the last `hours` hours, requested in chunks (see kChunkSeconds)
     // over the open connection. `points` has to have room for kMaxPoints buckets. Returns false
     // when the window could not be read completely, the buckets that arrived are kept (and the
-    // caller reports the error)
-    bool fetchStats(const char *entity, uint8_t hours, Point *points, uint16_t &count, uint32_t &start, uint32_t &end, String &error);
+    // caller reports the error). `history` reads the state changes of an on/off entity instead
+    // (see Point): a change that repeats the previous state is skipped, and a window with more
+    // changes than kMaxPoints keeps the newest ones
+    bool fetchStats(const char *entity, uint8_t hours, bool history, Point *points, uint16_t &count, uint32_t &start, uint32_t &end,
+                    String &error);
 
     // rendered template that changed since the last call, or the error its render (or the
     // subscription itself) reported. `page` is the page the template was built from
@@ -173,6 +183,9 @@ private:
     void _parseStats(const char *text, size_t length);
     void _append(char chr);
     void _parseObject();
+    // one state change of the history (the object in _object)
+    void _parseState();
+    void _addPoint(uint32_t time, float value);
     // value of a member of the message
     const char *_value(const char *key) const;
     uint16_t _id() const;
@@ -248,6 +261,8 @@ private:
     Point *_points;
     uint16_t _count;
     uint16_t _maxPoints;
+    // the request that is running reads the state history, not the statistics
+    bool _history;
     bool _statsAnswered;
     bool _statsSuccess;
     String _statsMessage;

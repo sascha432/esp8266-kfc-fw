@@ -597,7 +597,8 @@ void Client::_fetchStats(TileIndex tile, uint8_t hours)
     uint32_t end = 0;
     uint16_t count = 0;
     String error;
-    const auto ok = _socket.fetchStats(t.entity, hours, _statsPoints, count, start, end, error);
+    const auto history = t.hasStateHistory();
+    const auto ok = _socket.fetchStats(t.entity, hours, history, _statsPoints, count, start, end, error);
     const auto duration = millis() - started;
     _statsCount = count;
     MUTEX_LOCK_BLOCK(_lock) {
@@ -608,8 +609,9 @@ void Client::_fetchStats(TileIndex tile, uint8_t hours)
         _statsError = error;
         _statsGeneration++;
     }
-    __LDBG_printf("hass> statistics of tile %u (%s, %u hours) -> %u bucket(s) in %ums%s", static_cast<unsigned>(tile), t.entity,
-                  static_cast<unsigned>(hours), static_cast<unsigned>(count), static_cast<unsigned>(duration), ok ? "" : ":");
+    __LDBG_printf("hass> %s of tile %u (%s, %u hours) -> %u %s in %ums%s", history ? "history" : "statistics", static_cast<unsigned>(tile),
+                  t.entity, static_cast<unsigned>(hours), static_cast<unsigned>(count), history ? "change(s)" : "bucket(s)",
+                  static_cast<unsigned>(duration), ok ? "" : ":");
     if (!ok) {
         __LDBG_printf("hass>     %s", error.c_str());
     }

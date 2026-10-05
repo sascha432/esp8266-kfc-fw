@@ -541,6 +541,11 @@ constexpr lv_coord_t kSensorTimeLineHeight = 15;
 constexpr lv_coord_t kSensorTimeGap = 6;
 constexpr lv_coord_t kSensorTimeHeight = static_cast<lv_coord_t>(kSensorTimeTop + kSensorTimeLineHeight + kSensorTimeGap);
 constexpr lv_coord_t kSensorGraphX = static_cast<lv_coord_t>(kSensorLevelWidth + 8);
+// gap between the graph and the right edge of the card
+constexpr lv_coord_t kSensorGraphGap = 6;
+// The timeline of an on/off entity has no level labels: it keeps this gap at both sides of the card
+// (the 6 px of the graph were too tight next to the edge)
+constexpr lv_coord_t kSensorTimelineGap = static_cast<lv_coord_t>(3 * kSensorGraphGap);
 constexpr lv_coord_t kSensorGraphY = static_cast<lv_coord_t>(kSensorLevelHeight + 4);
 // The chart is clipped to its object: a value on the top or bottom edge loses half of the 2 px
 // line and the divider on that edge is cut off (the lowest divider sat on the bottom edge when the
@@ -558,6 +563,22 @@ constexpr uint8_t kSensorGridHours = 4;
 constexpr lv_coord_t kSensorChartScale = 20000;
 // length of one bucket of the statistics (5 minutes, the period of the request)
 constexpr uint32_t kSensorBucketSeconds = 300;
+// The strip of the timeline of an on/off entity, centered in the graph. The colors are the ones of
+// a tile: on = kColorActive (a switched on tile), off = kColorBorder (the outline of an off tile),
+// unknown/unavailable = kColorBackground (a hole in the card). Time without a state (before the
+// entity existed) is not drawn
+constexpr lv_coord_t kSensorTimelineHeight = 40;
+constexpr uint32_t kTimelineColorOn = LVGLUI::kColorActive;
+constexpr uint32_t kTimelineColorOff = LVGLUI::kColorBorder;
+constexpr uint32_t kTimelineColorUnknown = LVGLUI::kColorBackground;
+// The legend above the strip: one bullet per state (in the color of the strip, with an outline -
+// the unknown color is close to the card) and its name. The three items are one row centered over
+// the strip, or stacked (kSensorLegendRowGap apart) when the row is wider than the strip, and the
+// legend is centered vertically between the top of the card and the strip (_layoutSensorLegend())
+constexpr lv_coord_t kSensorLegendDot = 14;
+constexpr lv_coord_t kSensorLegendDotGap = 6;
+constexpr lv_coord_t kSensorLegendItemGap = 24;
+constexpr lv_coord_t kSensorLegendRowGap = 6;
 
 // A step of one significant digit (1..9 x 10^n) for the Y axis of the sensor graph: the three
 // labels of the axis become round numbers (0 / 70 / 140) instead of the raw window plus a margin
@@ -1604,9 +1625,14 @@ lv_coord_t HassScreen::_sensorCardHeight() const
     return static_cast<lv_coord_t>(_height - kTileMargin - kSensorCardY);
 }
 
+lv_coord_t HassScreen::_sensorGraphX() const
+{
+    return _sensor.stateHistory ? kSensorTimelineGap : kSensorGraphX;
+}
+
 lv_coord_t HassScreen::_sensorGraphWidth() const
 {
-    return static_cast<lv_coord_t>(_sensorCardWidth() - kSensorGraphX - 6);
+    return static_cast<lv_coord_t>(_sensorCardWidth() - _sensorGraphX() - (_sensor.stateHistory ? kSensorTimelineGap : kSensorGraphGap));
 }
 
 lv_coord_t HassScreen::_sensorGraphHeight() const
@@ -2534,6 +2560,7 @@ void HassScreen::_buildSensorPanel(HomeAssistant::TileIndex index)
     auto &refs = _panelRefs;
     auto &sensor = _sensor;
     sensor = SensorRefs();
+    sensor.stateHistory = tile.hasStateHistory();
 
     // the tile that closes the panel: a compact one in the upper left corner (the header and the
     // graph use the whole width, the other two panels use the first cell of the grid)
@@ -2551,18 +2578,18 @@ void HassScreen::_buildSensorPanel(HomeAssistant::TileIndex index)
     const auto iconX = static_cast<lv_coord_t>(kTileMargin + kSensorBackSize + kSensorHeaderGap);
     sensor.icon = LVGLUI::createIcon(_grid, toIconType(tile), iconX, kSensorHeaderY, LVGLUI::kIconSizeLarge);
     const auto nameX = static_cast<lv_coord_t>(iconX + LVGLUI::kIconSizeLarge + kSensorHeaderGap);
-    // the value is right aligned at the edge, the name gets what is left of the header. A portrait
-    // display has ~300 px for the header (the back tile and the icon take 110 of them), so the
-    // value column is a third of the width instead of the fixed landscape size
-    const auto valueWidth = minOf(static_cast<lv_coord_t>(150), static_cast<lv_coord_t>(_width / 3));
-    const auto nameWidth = static_cast<lv_coord_t>(_width - kTileMargin - valueWidth - kSensorHeaderGap - nameX);
-    const auto headerCenter = static_cast<lv_coord_t>(kSensorHeaderY + kSensorBackSize / 2);
-    refs.title = LVGLUI::addLabel(_grid, nameX, static_cast<lv_coord_t>(headerCenter - lv_font_get_line_height(LVGLUI::kFontTitle) / 2),
-                                  tile.name, LVGLUI::kFontTitle, LVGLUI::kColorText, nameWidth);
-    LVGLUI::fitTextDown(refs.title, tile.name, nameWidth);
-    refs.headerValue = LVGLUI::addLabel(_grid, static_cast<lv_coord_t>(_width - kTileMargin - valueWidth),
-                                        static_cast<lv_coord_t>(headerCenter - lv_font_get_line_height(LVGLUI::kFontValue) / 2), "",
-                                        LVGLUI::kFontValue, LVGLUI::kColorText, valueWidth, LV_TEXT_ALIGN_RIGHT);
+    // The name (kFontMedium) above the value (kFontValue), both left aligned next to the icon and
+    // using the whole width up to the margin: 18 + 30 px fill the height of the back tile. With the
+    // name and the value side by side a portrait display left ~85 px for the name and the value
+    // overflowed its column ("Detected" over the name), see the mock in docs/scripts
+    const auto textWidth = static_cast<lv_coord_t>(_width - kTileMargin - nameX);
+    const auto nameHeight = static_cast<lv_coord_t>(lv_font_get_line_height(LVGLUI::kFontMedium));
+    const auto headerTop = static_cast<lv_coord_t>(kSensorHeaderY + (kSensorBackSize - nameHeight - lv_font_get_line_height(LVGLUI::kFontValue)) / 2);
+    refs.title = LVGLUI::addLabel(_grid, nameX, headerTop, tile.name, LVGLUI::kFontMedium, LVGLUI::kColorTextValue, textWidth);
+    LVGLUI::fitTextDown(refs.title, tile.name, textWidth);
+    // the value shrinks into the same width when it is long (_setTextIfChanged())
+    refs.headerValue = LVGLUI::addLabel(_grid, nameX, static_cast<lv_coord_t>(headerTop + nameHeight), "", LVGLUI::kFontValue,
+                                        LVGLUI::kColorText, textWidth);
 
     // "History" and the range buttons, the one that is selected is filled (see _updateSensorPanel)
     sensor.title = LVGLUI::addLabel(_grid, kTileMargin, static_cast<lv_coord_t>(kSensorTitleY + 2), "History", LVGLUI::kFontTitle,
@@ -2601,47 +2628,83 @@ void HassScreen::_buildSensorPanel(HomeAssistant::TileIndex index)
     // The vertical grid lines of the X axis: one 1 px line per tick, positioned by
     // _drawSensorChart(). lv_chart can only place its dividers evenly over the object, which cannot
     // follow the clock. They are created before the chart, so the curve is drawn over them
-    const auto gridY = static_cast<lv_coord_t>(kSensorGraphY + kSensorGraphInset);
-    const auto gridHeight = static_cast<lv_coord_t>(_sensorGraphHeight() - 2 * kSensorGraphInset);
+    // the strip of a timeline is centered in the graph (see below)
+    const auto timelineHeight = minOf(kSensorTimelineHeight, static_cast<lv_coord_t>(_sensorGraphHeight() - 2 * kSensorGraphInset));
+    const auto timelineY = static_cast<lv_coord_t>(kSensorGraphY + (_sensorGraphHeight() - timelineHeight) / 2);
+    auto gridY = static_cast<lv_coord_t>(kSensorGraphY + kSensorGraphInset);
+    auto gridHeight = static_cast<lv_coord_t>(_sensorGraphHeight() - 2 * kSensorGraphInset);
+    if (sensor.stateHistory) {
+        // The legend sits above the strip, the lines of a timeline start at the top of the strip
+        // and run down to the time labels (_drawSensorChart() only moves them horizontally)
+        gridHeight = static_cast<lv_coord_t>(gridY + gridHeight - timelineY);
+        gridY = timelineY;
+    }
     for (auto &line : sensor.grid) {
-        line = LVGLUI::createContainer(card, kSensorGraphX, gridY, 1, gridHeight);
+        line = LVGLUI::createContainer(card, _sensorGraphX(), gridY, 1, gridHeight);
         lv_obj_set_style_bg_color(line, lv_color_hex(LVGLUI::kColorBorder), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(line, LV_OPA_COVER, LV_PART_MAIN);
         LVGLUI::clearClickable(line);
         showWidget(line, false);
     }
 
-    // The graph: a line chart with the three value lines of the app layout, the curve is drawn over
-    // the grid lines of the X axis
-    sensor.chart = lv_chart_create(card);
-    lv_obj_set_pos(sensor.chart, kSensorGraphX, kSensorGraphY);
-    lv_obj_set_size(sensor.chart, _sensorGraphWidth(), _sensorGraphHeight());
-    lv_obj_set_style_bg_opa(sensor.chart, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(sensor.chart, 0, LV_PART_MAIN);
-    // The chart maps the value range to its content area (object minus padding) and clips the
-    // drawing to the object, see kSensorGraphInset
-    lv_obj_set_style_pad_all(sensor.chart, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_top(sensor.chart, kSensorGraphInset, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(sensor.chart, kSensorGraphInset, LV_PART_MAIN);
-    lv_obj_set_style_line_color(sensor.chart, lv_color_hex(LVGLUI::kColorBorder), LV_PART_MAIN);
-    lv_obj_set_style_width(sensor.chart, 0, LV_PART_INDICATOR);
-    lv_obj_set_style_height(sensor.chart, 0, LV_PART_INDICATOR);
-    lv_obj_set_style_line_width(sensor.chart, 2, LV_PART_ITEMS);
-    lv_obj_set_style_line_color(sensor.chart, lv_color_hex(LVGLUI::kColorAccent), LV_PART_ITEMS);
-    lv_chart_set_type(sensor.chart, LV_CHART_TYPE_LINE);
-    lv_chart_set_div_line_count(sensor.chart, 3, 0);
-    lv_chart_set_range(sensor.chart, LV_CHART_AXIS_PRIMARY_Y, 0, kSensorChartScale);
-    // one column per bucket of the window, a bucket without data stays empty (LV_CHART_POINT_NONE)
-    sensor.buckets = statsRangeBuckets(_statsHours);
-    lv_chart_set_point_count(sensor.chart, sensor.buckets);
-    sensor.series = lv_chart_add_series(sensor.chart, lv_color_hex(LVGLUI::kColorAccent), LV_CHART_AXIS_PRIMARY_Y);
-    if (sensor.series) {
-        // lv_chart_add_series() leaves the x-pointers of a non scatter series uninitialized and
-        // lv_chart_remove_series() frees them - the same trap the power screen avoids, never remove
-        // a series of a chart (LVGL 8.4, lv_chart.c)
-        sensor.series->x_points = nullptr;
-        sensor.series->x_ext_buf_assigned = 0;
-        lv_chart_set_all_value(sensor.chart, sensor.series, LV_CHART_POINT_NONE);
+    if (sensor.stateHistory) {
+        // An on/off entity has no values for a curve: a strip across the graph shows its state over
+        // the window (the same timeline the History view of the HA app draws). It is created after
+        // the grid lines, so the lines of the X axis pass behind it like they pass behind the curve
+        sensor.timeline = LVGLUI::createContainer(card, _sensorGraphX(), timelineY, _sensorGraphWidth(), timelineHeight);
+        LVGLUI::clearClickable(sensor.timeline);
+        lv_obj_add_event_cb(sensor.timeline, _timelineCallback, LV_EVENT_DRAW_MAIN, this);
+        sensor.columnCount = std::min<uint16_t>(static_cast<uint16_t>(_sensorGraphWidth()), kSensorTimelineColumns);
+
+        // the legend: positioned and named by _layoutSensorLegend()
+        const uint32_t colors[3] = { kTimelineColorOn, kTimelineColorOff, kTimelineColorUnknown };
+        for (uint8_t i = 0; i < 3; i++) {
+            auto dot = LVGLUI::createContainer(card, 0, 0, kSensorLegendDot, kSensorLegendDot);
+            lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+            lv_obj_set_style_bg_color(dot, lv_color_hex(colors[i]), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_border_width(dot, 1, LV_PART_MAIN);
+            lv_obj_set_style_border_color(dot, lv_color_hex(LVGLUI::kColorBorder), LV_PART_MAIN);
+            LVGLUI::clearClickable(dot);
+            sensor.legendDots[i] = dot;
+            sensor.legendLabels[i] = LVGLUI::addLabel(card, 0, 0, "", LVGLUI::kFontMedium, LVGLUI::kColorTextMuted);
+        }
+        _layoutSensorLegend();
+    }
+    else {
+        // The graph: a line chart with the three value lines of the app layout, the curve is drawn
+        // over the grid lines of the X axis
+        sensor.chart = lv_chart_create(card);
+        lv_obj_set_pos(sensor.chart, _sensorGraphX(), kSensorGraphY);
+        lv_obj_set_size(sensor.chart, _sensorGraphWidth(), _sensorGraphHeight());
+        lv_obj_set_style_bg_opa(sensor.chart, LV_OPA_TRANSP, LV_PART_MAIN);
+        lv_obj_set_style_border_width(sensor.chart, 0, LV_PART_MAIN);
+        // The chart maps the value range to its content area (object minus padding) and clips the
+        // drawing to the object, see kSensorGraphInset
+        lv_obj_set_style_pad_all(sensor.chart, 0, LV_PART_MAIN);
+        lv_obj_set_style_pad_top(sensor.chart, kSensorGraphInset, LV_PART_MAIN);
+        lv_obj_set_style_pad_bottom(sensor.chart, kSensorGraphInset, LV_PART_MAIN);
+        lv_obj_set_style_line_color(sensor.chart, lv_color_hex(LVGLUI::kColorBorder), LV_PART_MAIN);
+        lv_obj_set_style_width(sensor.chart, 0, LV_PART_INDICATOR);
+        lv_obj_set_style_height(sensor.chart, 0, LV_PART_INDICATOR);
+        lv_obj_set_style_line_width(sensor.chart, 2, LV_PART_ITEMS);
+        lv_obj_set_style_line_color(sensor.chart, lv_color_hex(LVGLUI::kColorAccent), LV_PART_ITEMS);
+        lv_chart_set_type(sensor.chart, LV_CHART_TYPE_LINE);
+        lv_chart_set_div_line_count(sensor.chart, 3, 0);
+        lv_chart_set_range(sensor.chart, LV_CHART_AXIS_PRIMARY_Y, 0, kSensorChartScale);
+        // one column per bucket of the window, a bucket without data stays empty
+        // (LV_CHART_POINT_NONE)
+        sensor.buckets = statsRangeBuckets(_statsHours);
+        lv_chart_set_point_count(sensor.chart, sensor.buckets);
+        sensor.series = lv_chart_add_series(sensor.chart, lv_color_hex(LVGLUI::kColorAccent), LV_CHART_AXIS_PRIMARY_Y);
+        if (sensor.series) {
+            // lv_chart_add_series() leaves the x-pointers of a non scatter series uninitialized and
+            // lv_chart_remove_series() frees them - the same trap the power screen avoids, never
+            // remove a series of a chart (LVGL 8.4, lv_chart.c)
+            sensor.series->x_points = nullptr;
+            sensor.series->x_ext_buf_assigned = 0;
+            lv_chart_set_all_value(sensor.chart, sensor.series, LV_CHART_POINT_NONE);
+        }
     }
 
     // The labels below the graph, one per grid line of the X axis. They are created hidden: the
@@ -2649,14 +2712,14 @@ void HassScreen::_buildSensorPanel(HomeAssistant::TileIndex index)
     // does not fit inside the card is not drawn at all
     const auto timeY = static_cast<lv_coord_t>(kSensorGraphY + _sensorGraphHeight() + kSensorTimeTop);
     for (auto &label : sensor.times) {
-        label = LVGLUI::addLabel(card, kSensorGraphX, timeY, "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
+        label = LVGLUI::addLabel(card, _sensorGraphX(), timeY, "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
         // the width is set per tick, the alignment keeps the text centered on its line
         lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
         showWidget(label, false);
     }
 
     // the message that replaces the graph while it is empty ("loading", "no history", an error)
-    sensor.info = LVGLUI::addLabel(card, kSensorGraphX, static_cast<lv_coord_t>(kSensorGraphY + _sensorGraphHeight() / 2 - 8), "",
+    sensor.info = LVGLUI::addLabel(card, _sensorGraphX(), static_cast<lv_coord_t>(kSensorGraphY + _sensorGraphHeight() / 2 - 8), "",
                                    LVGLUI::kFontMedium, LVGLUI::kColorTextMuted, _sensorGraphWidth(), LV_TEXT_ALIGN_CENTER);
 
     // the tree is new, the graph has to be filled (and its labels set) with the next update
@@ -2725,7 +2788,7 @@ void HassScreen::_updateSensorPanel()
 void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
 {
     auto &sensor = _sensor;
-    if (!sensor.chart || !sensor.series) {
+    if (!sensor.timeline && (!sensor.chart || !sensor.series)) {
         return;
     }
     const auto hours = _statsHours;
@@ -2765,12 +2828,13 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
         char timeText[16];
         _formatStatsTime(time, timeText, sizeof(timeText));
         const auto width = static_cast<lv_coord_t>(lv_txt_get_width(timeText, static_cast<uint32_t>(strlen(timeText)), LVGLUI::kFontSmall, 0, LV_TEXT_FLAG_NONE));
-        const auto x = static_cast<lv_coord_t>(kSensorGraphX + (static_cast<int64_t>(_sensorGraphWidth()) * (time - start)) / span);
+        const auto x = static_cast<lv_coord_t>(_sensorGraphX() + (static_cast<int64_t>(_sensorGraphWidth()) * (time - start)) / span);
         // A tick whose label does not fit inside the card is dropped (line and label): a label that
         // is moved inside the card sits beside its line instead of under it
         if (x - width / 2 >= 2 && x + width / 2 <= static_cast<lv_coord_t>(_sensorCardWidth() - 2)) {
             if (lines < kSensorTimeTicks && sensor.grid[lines]) {
-                lv_obj_set_pos(sensor.grid[lines], x, static_cast<lv_coord_t>(kSensorGraphY + kSensorGraphInset));
+                // the vertical position and the height were set by _buildSensorPanel()
+                lv_obj_set_x(sensor.grid[lines], x);
                 showWidget(sensor.grid[lines], true);
                 lines++;
             }
@@ -2803,8 +2867,14 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
     if (!count) {
         // no buckets: the request is on its way, it failed, or the entity has no long term
         // statistics at all (a combined template sensor, for example)
-        lv_chart_set_all_value(sensor.chart, sensor.series, LV_CHART_POINT_NONE);
-        lv_chart_refresh(sensor.chart);
+        if (sensor.timeline) {
+            memset(sensor.columns, 0, sizeof(sensor.columns));
+            lv_obj_invalidate(sensor.timeline);
+        }
+        else {
+            lv_chart_set_all_value(sensor.chart, sensor.series, LV_CHART_POINT_NONE);
+            lv_chart_refresh(sensor.chart);
+        }
         for (auto &level : sensor.levels) {
             LVGLUI::setText(level, "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted);
         }
@@ -2820,6 +2890,13 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
         return;
     }
     showWidget(sensor.info, false);
+
+    if (sensor.timeline) {
+        // an on/off entity has no levels, the strip is the whole graph
+        _layoutSensorLegend();
+        _drawSensorTimeline(start, end);
+        return;
+    }
 
     // auto scale from the window plus a margin of 10 %, like the graph of the power screen. A flat
     // line keeps a small span instead of filling the whole graph
@@ -2890,6 +2967,162 @@ void HassScreen::_drawSensorChart(const HomeAssistant::Tile &tile)
     __LDBG_printf("hass> history of tile %u: %u bucket(s) of %u, %.4f..%.4f drawn as %.4f..%.4f", static_cast<unsigned>(_panelTile),
                   static_cast<unsigned>(count), static_cast<unsigned>(sensor.buckets), static_cast<double>(min), static_cast<double>(max),
                   static_cast<double>(low), static_cast<double>(high));
+}
+
+// The names of the legend come from the device_class of the entity ("Detected"/"Clear" for a motion
+// sensor, the same wording the tile and the header use), "On"/"Off" without one. The three items are
+// measured and laid out as one row or stacked (see below); the class is part of the state poll and
+// can arrive after the panel was built, the legend is laid out again when the name of the on state
+// changes
+void HassScreen::_layoutSensorLegend()
+{
+    auto &sensor = _sensor;
+    if (!sensor.timeline || !sensor.legendLabels[0] || _panelTile < 0) {
+        return;
+    }
+    const auto *entry = findDeviceClass(_dashboard.getValue(static_cast<HomeAssistant::TileIndex>(_panelTile)).deviceClass);
+    const char *names[3] = { "On", "Off", "Unknown" };
+    if (entry && entry->on) {
+        names[0] = entry->on;
+        names[1] = entry->off;
+    }
+    if (sensor.legendOn == names[0]) {
+        return;
+    }
+    sensor.legendOn = names[0];
+
+    lv_coord_t widths[3];
+    lv_coord_t total = static_cast<lv_coord_t>(2 * kSensorLegendItemGap);
+    for (uint8_t i = 0; i < 3; i++) {
+        widths[i] = static_cast<lv_coord_t>(lv_txt_get_width(names[i], static_cast<uint32_t>(strlen(names[i])), LVGLUI::kFontMedium, 0, LV_TEXT_FLAG_NONE));
+        total = static_cast<lv_coord_t>(total + kSensorLegendDot + kSensorLegendDotGap + widths[i]);
+    }
+    // One row when it fits over the strip (landscape). A row that is wider than the strip (portrait:
+    // ~308 px for 268 px) stacks the items, the block is centered over the strip and the bullets
+    // form one column. Either way the legend is centered vertically in the space between the top of
+    // the card and the strip - the card has nothing else there. The bullet and the text of an item
+    // are centered on the same line
+    const auto lineHeight = static_cast<lv_coord_t>(lv_font_get_line_height(LVGLUI::kFontMedium));
+    const auto rowHeight = std::max<lv_coord_t>(kSensorLegendDot, lineHeight);
+    const auto stripY = lv_obj_get_style_y(sensor.timeline, LV_PART_MAIN);
+    const auto stacked = (total > _sensorGraphWidth());
+    lv_coord_t blockWidth = total;
+    lv_coord_t blockHeight = rowHeight;
+    if (stacked) {
+        blockWidth = static_cast<lv_coord_t>(kSensorLegendDot + kSensorLegendDotGap + std::max(widths[0], std::max(widths[1], widths[2])));
+        blockHeight = static_cast<lv_coord_t>(3 * rowHeight + 2 * kSensorLegendRowGap);
+    }
+    const auto left = static_cast<lv_coord_t>(_sensorGraphX() + (_sensorGraphWidth() - blockWidth) / 2);
+    auto x = left;
+    auto y = static_cast<lv_coord_t>((stripY - blockHeight) / 2);
+    for (uint8_t i = 0; i < 3; i++) {
+        lv_obj_set_pos(sensor.legendDots[i], x, static_cast<lv_coord_t>(y + (rowHeight - kSensorLegendDot) / 2));
+        auto label = sensor.legendLabels[i];
+        lv_obj_set_pos(label, static_cast<lv_coord_t>(x + kSensorLegendDot + kSensorLegendDotGap), static_cast<lv_coord_t>(y + (rowHeight - lineHeight) / 2));
+        // 2 px wider than the text, so it can never wrap into a second line
+        lv_obj_set_width(label, static_cast<lv_coord_t>(widths[i] + 2));
+        LVGLUI::setText(label, names[i], LVGLUI::kFontMedium, LVGLUI::kColorTextMuted);
+        if (stacked) {
+            y = static_cast<lv_coord_t>(y + rowHeight + kSensorLegendRowGap);
+        }
+        else {
+            x = static_cast<lv_coord_t>(x + kSensorLegendDot + kSensorLegendDotGap + widths[i] + kSensorLegendItemGap);
+        }
+    }
+}
+
+// The state changes of the window become one state per pixel column of the strip. A change lasts
+// until the next one (the last one until the end of the window), the first one is the state at the
+// start of the window. A column that several states share shows the one with the highest
+// TimelineState, and a state that is shorter than a column still gets one: a motion of a few seconds
+// is visible in a 48 hour window
+void HassScreen::_drawSensorTimeline(uint32_t start, uint32_t end)
+{
+    auto &sensor = _sensor;
+    const auto count = _dashboard.getStatsCount();
+    const auto points = _dashboard.getStatsPoints();
+    const auto width = static_cast<uint32_t>(sensor.columnCount);
+    const auto span = static_cast<uint64_t>(end - start);
+    memset(sensor.columns, 0, sizeof(sensor.columns));
+    uint16_t on = 0;
+    for (uint16_t i = 0; i < count && span && width; i++) {
+        const auto from = std::max<uint32_t>(points[i].time, start);
+        const auto to = std::min<uint32_t>((i + 1 < count) ? points[i + 1].time : end, end);
+        if (to < from) {
+            continue;
+        }
+        const auto first = static_cast<uint32_t>((width * static_cast<uint64_t>(from - start)) / span);
+        auto last = static_cast<uint32_t>((width * static_cast<uint64_t>(to - start) + span - 1) / span);
+        if (last <= first) {
+            last = first + 1;
+        }
+        if (last > width) {
+            last = width;
+        }
+        const auto value = points[i].mean;
+        const auto state = isnan(value) ? TimelineState::UNKNOWN
+                                        : ((value == HomeAssistant::Socket::kStateOn) ? TimelineState::ON : TimelineState::OFF);
+        for (auto x = first; x < last; x++) {
+            if (state > sensor.columns[x]) {
+                sensor.columns[x] = state;
+            }
+        }
+    }
+    for (uint16_t x = 0; x < width; x++) {
+        if (sensor.columns[x] == TimelineState::ON) {
+            on++;
+        }
+    }
+    lv_obj_invalidate(sensor.timeline);
+
+    __LDBG_printf("hass> timeline of tile %u: %u change(s), %u of %u column(s) on", static_cast<unsigned>(_panelTile), static_cast<unsigned>(count),
+                  static_cast<unsigned>(on), static_cast<unsigned>(width));
+}
+
+void HassScreen::_timelineCallback(lv_event_t *event)
+{
+    auto self = reinterpret_cast<HassScreen *>(lv_event_get_user_data(event));
+    auto obj = lv_event_get_target(event);
+    auto drawCtx = lv_event_get_draw_ctx(event);
+    if (!self || !obj || !drawCtx) {
+        return;
+    }
+    const auto &sensor = self->_sensor;
+    lv_area_t coords;
+    lv_obj_get_coords(obj, &coords);
+    lv_draw_rect_dsc_t rect;
+    lv_draw_rect_dsc_init(&rect);
+    rect.bg_opa = LV_OPA_COVER;
+    // one rectangle per run of columns with the same state
+    uint16_t x = 0;
+    while (x < sensor.columnCount) {
+        const auto state = sensor.columns[x];
+        auto next = static_cast<uint16_t>(x + 1);
+        while (next < sensor.columnCount && sensor.columns[next] == state) {
+            next++;
+        }
+        if (state != TimelineState::NONE) {
+            switch (state) {
+            case TimelineState::ON:
+                rect.bg_color = lv_color_hex(kTimelineColorOn);
+                break;
+            case TimelineState::OFF:
+                rect.bg_color = lv_color_hex(kTimelineColorOff);
+                break;
+            default:
+                rect.bg_color = lv_color_hex(kTimelineColorUnknown);
+                break;
+            }
+            const lv_area_t area = {
+                static_cast<lv_coord_t>(coords.x1 + x),
+                coords.y1,
+                static_cast<lv_coord_t>(coords.x1 + next - 1),
+                coords.y2,
+            };
+            lv_draw_rect(drawCtx, &rect, &area);
+        }
+        x = next;
+    }
 }
 
 void HassScreen::_formatStatsValue(float value, uint8_t decimals, char *output, size_t size) const

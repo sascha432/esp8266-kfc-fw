@@ -126,6 +126,7 @@ Socket::Socket() :
     _points(nullptr),
     _count(0),
     _maxPoints(0),
+    _history(false),
     _statsAnswered(false),
     _statsSuccess(false),
     _object{},
@@ -928,7 +929,8 @@ bool Socket::takeActionFailure(TileIndex &tile)
 // ------------------------------------------------------------------------------------------
 // history graph of a sensor panel
 // ------------------------------------------------------------------------------------------
-bool Socket::fetchStats(const char *entity, uint8_t hours, Point *points, uint16_t &count, uint32_t &start, uint32_t &end, String &error)
+bool Socket::fetchStats(const char *entity, uint8_t hours, bool history, Point *points, uint16_t &count, uint32_t &start, uint32_t &end,
+                        String &error)
 {
     count = 0;
     error = String();
@@ -955,6 +957,7 @@ bool Socket::fetchStats(const char *entity, uint8_t hours, Point *points, uint16
     _points = points;
     _maxPoints = kMaxPoints;
     _count = 0;
+    _history = history;
     end = static_cast<uint32_t>(now);
     start = static_cast<uint32_t>((now - static_cast<time_t>(hours) * 3600) / kBucketSeconds * kBucketSeconds);
 
@@ -1012,9 +1015,20 @@ bool Socket::_requestChunk(uint32_t start, uint32_t end, const char *entity, Str
     _formatIso(static_cast<time_t>(end), endTime, sizeof(endTime));
     const auto id = _nextId++;
     String request;
-    StrWrapper(request).printf("{\"id\":%u,\"type\":\"recorder/statistics_during_period\",\"start_time\":\"%s\",\"end_time\":\"%s\","
-                               "\"statistic_ids\":[\"%s\"],\"period\":\"%s\",\"types\":[\"mean\"]}",
-                               static_cast<unsigned>(id), startTime, endTime, entity, kPeriod);
+    if (_history) {
+        // The state changes of the window without attributes, each one as {"s":"on","lu":<epoch
+        // seconds>}. The first one is the state at the start of the chunk. A busy motion sensor
+        // answers about 1.1 KB per 2 hours (measured with logs/probe_hass_history.py), so a chunk
+        // stays well below the limit of a message
+        StrWrapper(request).printf("{\"id\":%u,\"type\":\"history/history_during_period\",\"start_time\":\"%s\",\"end_time\":\"%s\","
+                                   "\"entity_ids\":[\"%s\"],\"minimal_response\":true,\"no_attributes\":true,\"significant_changes_only\":true}",
+                                   static_cast<unsigned>(id), startTime, endTime, entity);
+    }
+    else {
+        StrWrapper(request).printf("{\"id\":%u,\"type\":\"recorder/statistics_during_period\",\"start_time\":\"%s\",\"end_time\":\"%s\","
+                                   "\"statistic_ids\":[\"%s\"],\"period\":\"%s\",\"types\":[\"mean\"]}",
+                                   static_cast<unsigned>(id), startTime, endTime, entity, kPeriod);
+    }
     if (!_sendText(request.c_str())) {
         error = _error;
         return false;
@@ -1161,6 +1175,10 @@ void Socket::_append(char chr)
 // window has no data
 void Socket::_parseObject()
 {
+    if (_history) {
+        _parseState();
+        return;
+    }
     if (_overflow || _objectLength < 16 || !_points) {
         return;
     }
@@ -1192,6 +1210,59 @@ void Socket::_parseObject()
         return;
     }
     _points[_count].time = static_cast<uint32_t>(time);
+    _points[_count].mean = value;
+    _count++;
+}
+
+// one state change of the history:
+//   {"s":"on","lu":1791056886.0}
+// `lu` is epoch seconds (a float). The first change of a chunk is the full state at its start and
+// may carry `lc` (the time the state changed) and `a` (no attributes were requested, it is empty)
+void Socket::_parseState()
+{
+    if (_overflow || !_points) {
+        return;
+    }
+    _object[_objectLength] = 0;
+    const auto state = strstr(_object, "\"s\":\"");
+    auto changed = strstr(_object, "\"lc\":");
+    if (!changed) {
+        changed = strstr(_object, "\"lu\":");
+    }
+    if (!state || !changed) {
+        return;
+    }
+    const auto time = static_cast<uint32_t>(strtoul(changed + 5, nullptr, 10));
+    if (!time) {
+        return;
+    }
+    const auto text = state + 5;
+    float value = NAN;
+    if (!strncmp(text, "on\"", 3)) {
+        value = kStateOn;
+    }
+    else if (!strncmp(text, "off\"", 4)) {
+        value = kStateOff;
+    }
+    _addPoint(time, value);
+}
+
+void Socket::_addPoint(uint32_t time, float value)
+{
+    if (_count) {
+        // The first change of every chunk repeats the state at its start, a change to the same
+        // state carries nothing for the timeline (two unknown states are the same state as well)
+        const auto previous = _points[_count - 1].mean;
+        if (previous == value || (isnan(previous) && isnan(value))) {
+            return;
+        }
+    }
+    if (_count >= _maxPoints) {
+        // the oldest change is dropped: the end of the window is what the panel is opened for
+        memmove(_points, _points + 1, (_maxPoints - 1) * sizeof(*_points));
+        _count--;
+    }
+    _points[_count].time = time;
     _points[_count].mean = value;
     _count++;
 }

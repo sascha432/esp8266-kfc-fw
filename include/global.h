@@ -319,7 +319,7 @@
 
 #if defined(IOT_LED_MATRIX_OUTPUT_PIN4)
 #    error more than 4 channels not supported
-#elseif defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+#elif defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
 #    define IOT_LED_MATRIX_CHANNELS 4
 #elif defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
 #    define IOT_LED_MATRIX_CHANNELS 3

@@ -232,6 +232,10 @@ https://github.com/akaJes/AsyncPing
 
 [FastLED](https://github.com/FastLED/FastLED)
 
+### NeoPixelBus
+
+[NeoPixelBus](https://github.com/makuna/neopixelbus)
+
 ### ESP32 SSDP
 
 [ESP32 Simple Service Discovery](https://github.com/luc-github/ESP32SSDP.git)

@@ -12,11 +12,21 @@ The transports themselves (RMT memory blocks, mixed I2S+RMT, measured frame time
 
 | Library | Source / version | Role in this firmware | Built into |
 | --- | --- | --- | --- |
-| FastLED (fork) | `sascha432/FastLED` (reports 3.4.1) | Transport (its own ESP32 RMT driver) + color math + animations + dithering + fork-only frame retry counters | `wled_esp32_controller`, `wled_esp32_controller_rmt`, ESP8266 `ledmatrix_*`, `weather_station*`, `7segment_clock` |
-| FastLED (official) | `FastLED/FastLED` (master in `wled_esp32_s3_controller`, pinned `#3.9.20` in `wled_esp32_controller_neopixelbus`) | Color math + animations + `CRGB`/`CHSV` only - no `addLeds()`/`FastLED.show()`, so no RMT/I2S driver of FastLED is installed | `wled_esp32_controller_neopixelbus`, `wled_esp32_s3_controller` |
+| FastLED (fork) | `sascha432/FastLED` (reports 3.4.1) | Transport (its own ESP32 RMT driver) + color math + animations + dithering + fork-only frame retry counters | `wled_esp32_controller`, `wled_esp32_controller_rmt`, `wled_esp32_s3_controller`, ESP8266 `ledmatrix_*`, `weather_station*`, `7segment_clock` |
+| FastLED (official) | `FastLED/FastLED#3.9.20` | Color math + animations + `CRGB`/`CHSV` only - no `addLeds()`/`FastLED.show()`, so no RMT/I2S driver of FastLED is installed | `wled_esp32_controller_neopixelbus` |
 | NeoPixelBus (fork) | `sascha432/NeoPixelBus`, branch `kfc-rmt-mem-blocks` / tag `kfc-rmt1`, based on upstream `master` `882b804`; `lib_deps` URL dependency (`#kfc-rmt1`, no local checkout) | Transport: RMT mux (`RMT_CHANNEL_0` with all 8 memory blocks, one segment after another) and/or I2S (DMA, up to 2 ports in parallel) | `wled_esp32_controller_neopixelbus` |
 | NeoPixelEspEx | `sascha432/NeoPixelEspEx` (0.0.3), checkout in `lib/NeoPixelEspEx` | Transport (`IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT`) and the built-in WS2812 status LED when `HAVE_FASTLED=0` | ESP8266 `ledmatrix_*`, `weather_station*`, ESP32 `ledmatrix_base_esp32` |
 | FastLED 3.10.x | - | **Does not build here** (its `platforms/arduino` layer needs a `Serial` with `begin()`/`operator bool()`, `serial_compat.h` force-includes `extern Stream &Serial`) - FastLED is therefore pinned | - |
+
+The LED dependencies are declared **once** in `conf/envs/led_matrix.ini` and referenced by the
+environments with `${...lib_deps}`:
+
+| Group | URL | Used by |
+| --- | --- | --- |
+| `[led_lib_neopixelex]` | `sascha432/NeoPixelEspEx` | the ESP8266/ESP32 LED base envs |
+| `[led_lib_fastled]` | `sascha432/FastLED` (fork) | envs where FastLED drives the LEDs (the power limit path needs the fork's `m_pPowerFunc`) |
+| `[led_lib_fastled_official]` | `FastLED/FastLED#3.9.20` | the NeoPixelBus env (color math only) |
+| `[led_lib_neopixelbus]` | `sascha432/NeoPixelBus#kfc-rmt1` | `wled_esp32_controller_neopixelbus` |
 
 `HAVE_NEOPIXELBUS=1` is exclusive with `IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT` - `clock_def.h` raises an
 `#error` if both are set.

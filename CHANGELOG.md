@@ -2,7 +2,6 @@
 
 ## Version 0.0.9 (master)
 
- - Removed the Adafruit NeoPixel transport of the clock/LED matrix plugin (`+LMC=met,neo`), NeoPixelEx is the only NeoPixel transport now
  - Removed the combined animations form of the clock plugin, the alarm color and flashing speed moved to the settings form
  - LED Matrix: unified matrix/segment validation
  - NeoPixelBus RMT and I2S support added

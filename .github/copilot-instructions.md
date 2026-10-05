@@ -6,6 +6,14 @@ in this workspace.
 
 - Main entry point: `src/kfc_firmware.cpp` (`setup()` / `loop()`); plugins under `src/plugins/**`.
 - Build configuration: `platformio.ini` + `conf/**` (one file per env in `conf/envs/`); build scripts in `scripts/`.
+  Shared library URLs are declared **once** and referenced with `${name.lib_deps}` - never repeat a URL in an env:
+  LED libraries in `conf/envs/led_matrix.ini` (`[led_lib_neopixelex]`, `[led_lib_fastled]`, `[led_lib_fastled_official]`,
+  `[led_lib_neopixelbus]`), everything else in `conf/libs.ini` (`[lib_*]`). A `lib_ignore` must start from
+  `${<parent>.lib_ignore}` - `${env.lib_ignore}` resolves to nothing (a no-op, not the inherited list). The one
+  exception that keeps an explicit list is `conf/envs/weather_station.ini` (needs `Adafruit GFX Library`, which the base
+  ignores). FastLED: the fork drives the LEDs,
+  the official `#3.9.20` is only for the NeoPixelBus env - an env with FastLED as the transport and
+  `IOT_CLOCK_HAVE_POWER_LIMIT=1` hits `FastLED.m_pPowerFunc`, which is private in 3.9.x.
 - WebUI sources: `Resources/**`, built by `KFCWebBuilder.json` into `data/webui/**`.
 - Feature overview in [README.md](../README.md), recent changes in [CHANGELOG.md](../CHANGELOG.md).
 
@@ -179,7 +187,7 @@ in this workspace.
   frames waits for the channel *and* is non-destructive (the driver gives the semaphore back), so it doubles as
   the frame timer. A frame costs the sum of its segments (128 pixels are ~3.84 ms): 2 segments ~78 fps, 4 ~65 fps.
 - **NeoPixelBus is our fork of Makuna/NeoPixelBus**, pulled in as a `lib_deps` URL (not a local checkout any
-  more) - `https://github.com/sascha432/NeoPixelBus.git#kfc-rmt1` in `conf/envs/wled_board.ini`, branch
+  more) - `https://github.com/sascha432/NeoPixelBus.git#kfc-rmt1`, branch
   `kfc-rmt-mem-blocks`, tag `kfc-rmt1`, based on upstream `master` `882b804` (the three commits after the
   `2.8.4` tag: #894/#910/#911). The fork's `ReadMe.md` documents issue #921 / PRs #922/#923. Two patches in
   `src/internal/methods/NeoEsp32RmtMethod.{h,cpp}`:

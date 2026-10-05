@@ -5,12 +5,54 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15459
-date   = 2026-10-04 18:54:58
-env    = hexpanel
+number = 15501
+date   = 2026-10-04 21:43:10
+env    = ws_95
 
 ; history, newest first: <number> <date> <time> <environments>
-15459 2026-10-04 18:54:58 hexpanel
+15501 2026-10-04 21:43:10 ws_95
+15500 2026-10-04 21:32:11 esp32
+15499 2026-10-04 21:26:07 led_strip_candle
+15498 2026-10-04 21:24:29 single_hexagon
+15497 2026-10-04 21:22:48 hexpanel_17
+15496 2026-10-04 21:22:18 wled_esp32_controller_neopixelbus
+15495 2026-10-04 21:17:24 ledmatrix_matrix_32x8
+15494 2026-10-04 21:15:41 ws_95
+15493 2026-10-04 21:14:05 weather
+15492 2026-10-04 21:12:02 bme280_serial
+15491 2026-10-04 21:10:26 bme280_48
+15490 2026-10-04 21:05:32 wled_esp32_controller_neopixelbus
+15489 2026-10-04 21:03:20 wled_esp32_controller
+15488 2026-10-04 20:05:01 atomic_sunv2_1_97
+15487 2026-10-04 20:03:45 atomic_sun_98
+15486 2026-10-04 20:02:27 remote_141
+15485 2026-10-04 20:01:14 phone_ctrl
+15484 2026-10-04 20:00:02 rlybrd_85
+15483 2026-10-04 19:58:50 blindsctrl_81r
+15482 2026-10-04 19:57:34 blindsctrl_80l
+15481 2026-10-04 19:56:17 dc_dimmer_76
+15480 2026-10-04 19:55:06 dc_dimmer_75
+15479 2026-10-04 19:53:46 1ch_dim_pm_177
+15478 2026-10-04 19:52:23 1ch_dim_pm_84
+15477 2026-10-04 19:51:03 1ch_dim_pm_91
+15476 2026-10-04 19:49:42 1ch_dim_pm_90
+15475 2026-10-04 19:48:17 led_strip_candle
+15474 2026-10-04 19:46:52 led_strip_xmas
+15473 2026-10-04 19:45:31 led_strip_katana
+15472 2026-10-04 19:44:06 led_strip_frame
+15471 2026-10-04 19:42:38 led_strip_old_7segment
+15470 2026-10-04 19:40:59 single_hexagon
+15469 2026-10-04 19:39:13 hexpanel_17
+15468 2026-10-04 19:37:27 clockv2_100
+15467 2026-10-04 19:35:34 ws_96
+15466 2026-10-04 19:33:46 ws_95
+15465 2026-10-04 19:30:50 bme280_serial
+15464 2026-10-04 19:29:27 bme280_48
+15463 2026-10-04 19:26:16 wt32_sc01_test1
+15462 2026-10-04 19:23:45 wled_esp32_controller_neopixelbus
+15461 2026-10-04 19:21:48 wled_esp32_controller
+15460 2026-10-04 19:10:00 wled_esp32_controller_neopixelbus
+15459 2026-10-04 19:07:54 wled_esp32_controller
 15458 2026-10-04 18:26:21 wled_esp32_controller_neopixelbus
 15457 2026-10-04 18:17:26 clockv2
 15456 2026-10-04 17:44:00 wled_esp32_controller_neopixelbus

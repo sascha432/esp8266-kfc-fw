@@ -71,9 +71,9 @@ For the ESP32, check the documentation for NVS
 
 Control PIN input, output and PWM state. Setting a PIN high or low implicitly sets it to output.
 
-### `+CPU=[<80|160>]`
+### `+CPU`
 
-Set the CPU speed (ESP8266 with core < 3.x) or toggle displaying CPU usage (ESP32). Query with `+CPU?` to display the CPU speed
+Toggle displaying CPU usage (ESP32 only)
 
 ### `+DLY=<milliseconds>`
 

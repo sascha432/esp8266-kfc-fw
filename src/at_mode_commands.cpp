@@ -1276,34 +1276,25 @@ void ATModeCommands::DelayCommand(AtModeArgs &args)
     delay(delayTime);
 }
 
-// +CPU  (ESP32)
+#if ESP32
+
+// +CPU
 // Toggle displaying CPU usage
-// +CPU=[<80|160>]  (ESP8266, core < 3.x)
-// Set CPU speed
-// +CPU?
-// Display CPU speed
 
 void ATModeCommands::CPUCommand(AtModeArgs &args)
 {
-    #if ESP32
-        if (perfmon_start(&const_cast<Stream &>(args.getStream())) == ESP_OK) {
-            args.print(F("started"));
-        }
-        else if (perfmon_stop() == ESP_OK) {
-            args.print(F("stopped"));
-        }
-        else {
-            args.print(F("unknown error"));
-        }
-    #elif defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
-        if (args.size() == 1) {
-            auto speed = (uint8_t)args.toInt(0, ESP.getCpuFreqMHz());
-            auto result = system_update_cpu_freq(speed);
-            args.print(F("Set %d MHz = %d"), speed, result);
-        }
-        args.print(F("%d MHz"), ESP.getCpuFreqMHz());
-    #endif
+    if (perfmon_start(&const_cast<Stream &>(args.getStream())) == ESP_OK) {
+        args.print(F("started"));
+    }
+    else if (perfmon_stop() == ESP_OK) {
+        args.print(F("stopped"));
+    }
+    else {
+        args.print(F("unknown error"));
+    }
 }
+
+#endif
 
 #if RTC_SUPPORT
 
@@ -1712,7 +1703,7 @@ PROGMEM_STRING_DEF(DelayCommandString, "DLY");
     PROGMEM_STRING_DEF(RssiCommandString, "RSSI");
     PROGMEM_STRING_DEF(GpioCommandString, "GPIO");
 #endif
-#if ESP32 || (defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3))
+#if ESP32
     PROGMEM_STRING_DEF(CPUCommandString, "CPU");
 #endif
 #if RTC_SUPPORT
@@ -1783,8 +1774,6 @@ static const ATModeCommands::Item PROGMEM ATModeCommandsTable[] = {
         ATModeCommands::Item(ATModeCommands::GpioCommand, SPGM(GpioCommandString)),
     #endif
     #if ESP32
-        ATModeCommands::Item(ATModeCommands::CPUCommand, SPGM(CPUCommandString)),
-    #elif defined(ESP8266) && (ARDUINO_ESP8266_MAJOR < 3)
         ATModeCommands::Item(ATModeCommands::CPUCommand, SPGM(CPUCommandString)),
     #endif
     #if RTC_SUPPORT

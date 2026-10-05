@@ -139,7 +139,9 @@ public:
 
     // system
     static void DelayCommand(AtModeArgs &args);
-    static void CPUCommand(AtModeArgs &args);
+    #if ESP32
+        static void CPUCommand(AtModeArgs &args);
+    #endif
     #if RTC_SUPPORT
         static void RTCCommand(AtModeArgs &args);
     #endif

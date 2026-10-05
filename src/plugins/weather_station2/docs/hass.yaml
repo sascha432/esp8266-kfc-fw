@@ -1,0 +1,124 @@
+# ---------------------------------------------------------------------------------------------
+# Home Assistant dashboard - /hass.yaml - SAMPLE
+#
+# The sample of hass_config.md (same directory, section 2 shows this file). Every value is a
+# placeholder: replace the URL, the token and the entity ids with the ones of your instance and
+# upload it with the WebUI (File Manager -> into the root directory "/") or with
+# scripts/tools/hass_config.py, which validates it first:
+#
+#   python scripts/tools/hass_config.py --file src/plugins/weather_station2/docs/hass.yaml --validate-only
+#
+# The "Home Assistant" screen reads it there and picks up a new version without a reboot (the file
+# size is checked every 3 seconds, so a new version has to change the size of the file).
+# ---------------------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------------ connection
+hass:
+  url: http://homeassistant.local:8123   # http:// or https://, no trailing slash
+  token: YOUR_LONG_LIVED_ACCESS_TOKEN    # HA: Profile -> Security -> Long-lived access tokens
+  poll: 60                               # seconds between two full updates (5..3600), the changes are pushed
+  timeout: 8                             # seconds of a camera image download
+  verify: false                          # https only: the device has no CA store
+
+# ------------------------------------------------------------------------------- layout (optional)
+# 4x2 is the default: 110x148 px cells on the 480x320 display. Tiles are placed first-fit in the
+# order of the file
+grid:
+  cols: 4
+  rows: 2
+
+# ------------------------------------------------------------------------------------------ tiles
+# The size follows from the type: dimmer and climate 1x2, picture 2x2, every other type 1x1. A
+# dimmer, a climate and a picture tile accept `size:`.
+#
+# `icon:` of a tile (Material Design Icons, see the table in hass_config.md):
+#
+#   auto (or default)  the icon of the type:
+#                        switch -> plug, light/dimmer -> bulb, button -> button,
+#                        climate -> thermometer, area -> area,
+#                        sensor -> the device_class of the entity (thermometer without one)
+#   none               no icon, the value and the name use the whole cell
+#   bulb  plug  toggle  thermometer  button  dimmer  radiator  humidity  fan  motion  area
+#   flash  flash-off  co2  lock  gauge  camera  remote  lightbulb-on  lightbulb-off  home
+#   home-assistant
+tiles:
+  # a dimmer is a level fill (1x2): a vertical drag changes the level, a tap opens the light panel
+  - type: dimmer
+    entity: light.living_room_ceiling
+    name: Ceiling
+
+  # a climate tile (1x2) has + / - bars for the setpoint, a tap opens the climate panel. The arc
+  # range defaults to the min_temp/max_temp of the entity, the step to 0.5
+  - type: climate
+    entity: climate.living_room
+    name: Living Room
+    icon: radiator
+
+  - type: switch
+    entity: switch.living_room_lamp
+    name: Lamp
+
+  # a sensor shows the value with its unit, a tap opens the panel with the history graph
+  - type: sensor
+    entity: sensor.living_room_temperature
+    name: Temperature
+    unit: "°C"
+    decimals: 1
+
+  # an on/off entity (binary_sensor.*) shows its state ("Detected"/"Clear" for a motion sensor),
+  # its panel draws a timeline of the states instead of a graph
+  - type: sensor
+    entity: binary_sensor.living_room_motion
+    name: Motion
+    icon: motion
+
+  # an area opens a page of its own: the nested tiles are only visible while it is open and the
+  # first cell of that page is the back tile. An area can contain another area (up to 5 levels).
+  # The page can use a grid of its own (`grid:` with cols and/or rows, 1..8 each, before `tiles:`),
+  # 4x3 on a 4x2 document makes the cells of that page 110x92 px. `tiles:` is the last key
+  - type: area
+    name: Rooms
+    grid:
+      cols: 4
+      rows: 3
+    tiles:
+      - type: light
+        entity: light.kitchen
+        name: Kitchen
+
+      # a button entity (button.* or input_button.*) is pressed with a tap
+      - type: button
+        entity: button.garage_door
+        name: Garage Door
+        icon: home
+
+      # `size: 1x1` leaves out the + / - bars, the setpoint is stepped in the panel
+      - type: climate
+        entity: climate.bedroom
+        name: Bedroom
+        size: 1x1
+
+      # a camera preview (2x2, `size: 2x1` for a landscape tile, `1x1` for one cell), fetched
+      # every `refresh` seconds (1..3600, default 60) while the page is visible. A tap opens the
+      # image fullscreen, any tap or swipe closes it again
+      - type: picture
+        entity: camera.front_door
+        name: Front Door
+        refresh: 60
+
+      # a spacer reserves a cell without drawing anything, `position:` is 1 based [col, row] and
+      # overrides the automatic placement
+      - type: spacer
+        position: [4, 3]
+
+      - type: area
+        name: Bathroom
+        tiles:
+          - type: switch
+            entity: switch.bathroom_fan
+            name: Fan
+            icon: fan
+          - type: switch
+            entity: switch.bathroom_light
+            name: Light
+            icon: bulb

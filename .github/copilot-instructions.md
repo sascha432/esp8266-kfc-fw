@@ -162,8 +162,20 @@ in this workspace.
   --set "hasspage:23" --set "hassrot:1" -o logs/x.png`
 - **A GUI change reviews and updates the GUI docs in the same step**: `src/plugins/weather_station2/docs/`
   (`hass_config.md`, `MIGRATION_LVGL.md`, `screens/`) is part of the change, not a follow-up.
+- **Review a layout change with the PC mock first** (no compile, no flash):
+  `python src/plugins/weather_station2/docs/scripts/mock_sensor_panel.py` renders the sensor panel (graph and
+  timeline) with random data into `logs/mock_sensor_*.png`; `--portrait` and `--hours 12|24|48` select the
+  variant. Present **landscape and portrait** for the review - an overflow often only shows in portrait. The
+  mock redraws the layout from copied constants with the real Montserrat font (close to the device, icons are
+  placeholders): **a change of the layout code updates the mock in the same step**. The device screenshot
+  (`hass_screenshot.py`) stays the final verification.
 - `include/retracted/custom_config/hass.yaml` holds the real Home Assistant token (gitignored) - never print,
   log or commit its contents.
+- **The sample `src/plugins/weather_station2/docs/hass.yaml` holds placeholders only** (`homeassistant.local`,
+  `YOUR_LONG_LIVED_ACCESS_TOKEN`, made-up entity ids such as `light.kitchen`) - never copy entity ids, hosts,
+  tokens or names from the real configuration into it or into the docs. It is the complete example that
+  `hass_config.md` section 2 points to: a new key, tile type or icon updates the sample and the docs in the same
+  step, and the sample must pass `python scripts/tools/hass_config.py --file <sample> --validate-only`.
 - The Home Assistant side is probed from the PC (`logs/probe_hass_ws.py`, `logs/probe_hass_resub.py`,
   `logs/probe_hass_burst.py`) before a firmware change is blamed for a protocol problem.
 

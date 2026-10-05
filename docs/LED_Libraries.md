@@ -35,7 +35,7 @@ The transports themselves (RMT memory blocks, mixed I2S+RMT, measured frame time
 | `IOT_LED_MATRIX_NEOPIXEL_SUPPORT` | 0 | Adafruit NeoPixel transport, adds `ShowMethodType::AF_NEOPIXEL` |
 | `HAVE_NEOPIXELBUS` | 0 | NeoPixelBus backend, adds `ShowMethodType::NEOBUS_RMT` and `NEOBUS_I2S` |
 | `IOT_LED_MATRIX_FASTLED_ONLY` | derived | 1 when no other transport is compiled in (`HAVE_NEOPIXELBUS` and both NeoPixel switches are 0) |
-| `IOT_CLOCK_SHOW_METHOD_MAX` | derived | Highest selectable `ShowMethodType`; a value above it would call a transport that is not compiled in |
+| `IOT_CLOCK_SHOW_METHOD_MAX` | derived | Highest selectable `ShowMethodType`: 1 with FastLED only, 2 with one NeoPixel transport, 3 with NeoPixelBus or both NeoPixel transports. A stored value above it would call a transport that is not compiled in |
 | `IOT_CLOCK_SHOW_METHOD_DEFAULT` | derived | New config's method: 2 (`NEOBUS_RMT`) with NeoPixelBus, otherwise 1 (`FASTLED`) |
 | `FASTLED_LED_CONTROLLER` | `NEOPIXEL` | FastLED chipset (`pixel_display.h`); `7segment_clock` uses `WS2813_GRB` |
 | `NEOPIXEL_LED_TYPE` | `NEO_GRB + NEO_KHZ800` | Chipset/timing of the Adafruit NeoPixel transport |
@@ -93,7 +93,8 @@ Rules of thumb (ESP32 has exactly two I2S ports and three possible consumers):
 | --- | --- |
 | `NEOPIXEL_ALLOW_INTERRUPTS`, `NEOPIXEL_INTERRUPT_RETRY_COUNT` | Interrupt handling during output |
 | `NEOPIXEL_USE_PRECACHING` | Pre-computed bit patterns (removed by `ledmatrix_base_esp32` via `build_unflags`) |
-| `NEOPIXEL_HAVE_BRIGHTHNESS`, `NEOPIXEL_HAVE_STATS`, `NEOPIXEL_DEBUG`, `NEOPIXEL_DEBUG_TRIGGER_PIN` | Brightness scaling, statistics, debug output/trigger pins |
+| `NEOPIXEL_HAVE_BRIGHTHNESS`, `NEOPIXEL_HAVE_STATS`, `NEOPIXEL_DEBUG` | Brightness scaling, statistics, debug output |
+| `NEOPIXEL_DEBUG_TRIGGER_PIN`, `NEOPIXEL_DEBUG_TRIGGER_PIN2` | 14 / 15 (`ledmatrix_pixels`) - pins toggled by the debug code |
 | `NEOPIXEL_CHIPSET` | Chipset (commented out in `ledmatrix_pixels`) |
 
 ## 4. Numeric and behavior flags
@@ -103,4 +104,36 @@ Rules of thumb (ESP32 has exactly two I2S ports and three possible consumers):
 | `IOT_CLOCK_HAVE_POWER_LIMIT` | 0 | Software power limiter (`ClockPlugin::_getNeoBusBrightness()`), applied in the loop - FastLED's fork-only power management is not compiled in |
 | `IOT_CLOCK_DISPLAY_POWER_CONSUMPTION` | 0 | Power/current display |
 | `IOT_CLOCK_OPTIMIZE_LOOP` | 1 | Shorter loop path, mostly relevant for the ESP8266 FastLED frame rate |
+| `IOT_CLOCK_POWER_CORRECTION_OUTPUT` | `PF(0.01)` | Assumed non-linear loss at high currents, used by the power limiter/display |
 | `IOT_CLOCK_PIXEL_MAPPING_TYPE` | derived from `IOT_LED_MATRIX_CONFIGURABLE` | `DynamicPixelMapping` vs `PixelMapping` |
+
+## 5. Recommended transports
+
+| Platform | Use | Why |
+| --- | --- | --- |
+| ESP8266 | FastLED (fork, `sascha432/FastLED`) | It is the transport the ESP8266 envs are built and tested with and it is the fastest of the compiled ones. NeoPixelBus is not an option on this platform: its ESP8266 sources need a `Serial` with `begin()`/`operator bool()`, while the firmware force-includes `serial_compat.h` with `extern Stream &Serial;` (`NO_GLOBAL_SERIAL`) - that is why `NeoPixelBus` sits in the `lib_ignore` of `conf/common_esp8266.ini` |
+| ESP32 (xtensa core) | NeoPixelBus with the **I2S** transport (`ShowMethodType::NEOBUS_I2S`) | DMA driven: `NeoEsp32I2sMethodBase::Update()` encodes the whole frame into one DMA buffer and starts it, so there is no refill interrupt to miss - a flash write only delays the next frame instead of corrupting the current one - and up to 2 segments are transmitted in parallel (measured 118 fps at 2048 pixels / 2 segments). The RMT path is serial (a frame costs the sum of its segments, 512 pixels are ~15.4 ms) and stall sensitive |
+
+The NeoPixelBus build defaults to the RMT transport (`IOT_CLOCK_SHOW_METHOD_DEFAULT`); select I2S with the
+Display Method form field `dm`, or at runtime with `+LMC=met,ni2s`. With
+`IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE=1` one I2S port is reserved for the microphone, so with 2
+segments the second one is transmitted by RMT in the same frame (mixed mode, see section 3).
+
+### FastLED RMT on the ESP32 (good, but with an open caveat)
+
+FastLED's own RMT driver is a good alternative as well - it transmits at the wire-limited frame rate - but it has
+a rare random crash that is still unfixed:
+
+- `ESP32RMTController::showPixels()` waits `portMAX_DELAY` on the TX-done semaphore. If that interrupt never
+  arrives, the loop task blocks and the task watchdog panics; the panic path then faults while the flash lock is
+  held, so the core dump is incomplete and the culprit task is missing.
+- The suspected cause is the flash lock (`FASTLED_ESP32_FLASH_LOCK` holds `spi_flash_op_lock()` around
+  `FastLED.show()`) meeting a flash write (NVS config save, LittleFS or syslog write): a flash operation masks
+  interrupts on both cores for its whole duration, which can delay the RMT interrupt past what the driver
+  tolerates.
+- Observed twice so far, once ~217 s after boot and once after 1 h 51 m - it is a race, not an uptime or
+  filesystem size problem.
+
+The transports, the measured frame times and the flash-stall behavior are described in
+[`.github/copilot-instructions.md`](../.github/copilot-instructions.md), section
+`Environment wled_esp32_controller_neopixelbus`.

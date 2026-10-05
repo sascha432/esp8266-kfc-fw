@@ -1271,10 +1271,6 @@ inline const __FlashStringHelper *ClockPlugin::getShowMethodStr(Clock::ShowMetho
             case Clock::ShowMethodType::NEOPIXEL_EX:
             return F("NeoPixelEx");
         #endif
-        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-            case Clock::ShowMethodType::AF_NEOPIXEL:
-                return F("Adafruit NeoPixel");
-        #endif
         #if HAVE_NEOPIXELBUS
             case Clock::ShowMethodType::NEOBUS_RMT:
                 return F("NeoPixelBus RMT");

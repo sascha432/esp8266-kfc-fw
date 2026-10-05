@@ -301,7 +301,7 @@ Run command
 - pr[int],<display=00:00:00>
 - tem[perature],<value>
 - lo[op],<enable|disable>
-- met[hod]<fast|neo|neoex> (FastLED|Adafruit NeoPixel|NeoPixelEx)
+- met[hod]<fast|neoex> (FastLED|NeoPixelEx)
 - ani[mation][,<solid|gradient|rainbow|rainbow-fastled|flash|color-fade|fire|plasma|spectrum-rainbow-bars|spectrum-gradient-bars|spectrum-single-color-bars|plasma-reactive|fire-reactive|xmas>][,blend_time=4000ms]
 - out[put],<on|off>
 - dit[her],<on|off>

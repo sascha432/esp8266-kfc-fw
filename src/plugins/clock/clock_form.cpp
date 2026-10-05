@@ -769,16 +769,11 @@ static void _createConfigureFormDisplayMethod(FormUI::Form::BaseForm &form, _Con
         form.addObjectGetterSetter(F("dm"), FormGetterSetter(cfg, method));
         form.addFormUI(F("Display Method"), displayMethodItems);
 
-    #elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT || IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+    #elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
 
         auto displayMethodItems = FormUI::Container::List(
-            Clock::ShowMethodType::FASTLED, F("FastLED")
-            #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
-                , Clock::ShowMethodType::NEOPIXEL_EX, F("NeoPixelEx")
-            #endif
-            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                , Clock::ShowMethodType::AF_NEOPIXEL, F("Adafruit NeoPixel")
-            #endif
+            Clock::ShowMethodType::FASTLED, F("FastLED"),
+            Clock::ShowMethodType::NEOPIXEL_EX, F("NeoPixelEx")
         );
 
         form.addObjectGetterSetter(F("dm"), FormGetterSetter(cfg, method));

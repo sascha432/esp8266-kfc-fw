@@ -253,5 +253,3 @@ https://github.com/akaJes/AsyncPing
 [adafruit/RTClib](https://github.com/adafruit/RTClib)
 
 [Adafruit_MPR121](https://github.com/adafruit/Adafruit_MPR121)
-
-[Adafruit_NeoPixel](https://github.com/adafruit/Adafruit_NeoPixel)

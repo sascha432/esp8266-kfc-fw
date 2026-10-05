@@ -53,23 +53,19 @@
 #   endif
 #endif
 
-#ifndef IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-#    define IOT_LED_MATRIX_NEOPIXEL_SUPPORT 0
-#endif
-
 #ifndef IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
 #    define IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT 1
 #endif
 
 // NeoPixelBus transport backend. FastLED is still used for the color math and the animations,
 // NeoPixelBus only transmits the pixel buffer. Only the env that sets HAVE_NEOPIXELBUS=1 compiles
-// the backend in, every other env keeps the existing FastLED/NeoPixelEx/Adafruit transports.
+// the backend in, every other env keeps the existing FastLED/NeoPixelEx transports.
 #ifndef HAVE_NEOPIXELBUS
 #    define HAVE_NEOPIXELBUS 0
 #endif
 
-#if HAVE_NEOPIXELBUS && (IOT_LED_MATRIX_NEOPIXEL_SUPPORT || IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT)
-#    error HAVE_NEOPIXELBUS cannot be combined with IOT_LED_MATRIX_NEOPIXEL_SUPPORT or IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+#if HAVE_NEOPIXELBUS && IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
+#    error HAVE_NEOPIXELBUS cannot be combined with IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
 #endif
 
 // the frame retry counters are a FastLED fork feature, the NeoPixelBus build does not use them
@@ -79,18 +75,16 @@
 #endif
 
 #ifndef IOT_LED_MATRIX_FASTLED_ONLY
-#    define IOT_LED_MATRIX_FASTLED_ONLY ((HAVE_NEOPIXELBUS == 0) && (IOT_LED_MATRIX_NEOPIXEL_SUPPORT == 0) && (IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT == 0) ? 1 : 0)
+#    define IOT_LED_MATRIX_FASTLED_ONLY ((HAVE_NEOPIXELBUS == 0) && (IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT == 0) ? 1 : 0)
 #endif
 
-// highest Clock::ShowMethodType this build can render (NONE=0, FASTLED=1, [NEOPIXEL_EX], [AF_NEOPIXEL],
+// highest Clock::ShowMethodType this build can render (NONE=0, FASTLED=1, [NEOPIXEL_EX],
 // [NEOBUS_RMT], [NEOBUS_I2S]). a method that is not compiled in would call ESP32RMTController::deinit()
 // while PixelDisplay::show() keeps using FastLED, see ClockPlugin::_setShowMethod()
 #ifndef IOT_CLOCK_SHOW_METHOD_MAX
 #    if HAVE_NEOPIXELBUS
 #        define IOT_CLOCK_SHOW_METHOD_MAX 3
-#    elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT && IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-#        define IOT_CLOCK_SHOW_METHOD_MAX 3
-#    elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT || IOT_LED_MATRIX_NEOPIXEL_SUPPORT
+#    elif IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
 #        define IOT_CLOCK_SHOW_METHOD_MAX 2
 #    else
 #        define IOT_CLOCK_SHOW_METHOD_MAX 1

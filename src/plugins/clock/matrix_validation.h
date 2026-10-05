@@ -28,7 +28,7 @@
 //  - I2S with more segments than free I2S ports -> info, the rest is transmitted by RMT (mixed mode)
 //  - a segment larger than half the buffer -> info, its DMA buffer may not fit into the internal
 //    DMA capable RAM and the segment is then transmitted by RMT
-//  - FastLED/NeoPixelEx/Adafruit NeoPixel with more than one segment -> warning, only one chain is
+//  - FastLED/NeoPixelEx with more than one segment -> warning, only one chain is
 //    driven (these builds have no I2S LED transport)
 //
 // The web form reports the errors to the user, ClockPlugin::_sanitizeConfig() uses clampSegment() to

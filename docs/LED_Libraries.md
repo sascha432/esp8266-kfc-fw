@@ -16,11 +16,14 @@ The transports themselves (RMT memory blocks, mixed I2S+RMT, measured frame time
 | FastLED (official) | `FastLED/FastLED` (master in `wled_esp32_s3_controller`, pinned `#3.9.20` in `wled_esp32_controller_neopixelbus`) | Color math + animations + `CRGB`/`CHSV` only - no `addLeds()`/`FastLED.show()`, so no RMT/I2S driver of FastLED is installed | `wled_esp32_controller_neopixelbus`, `wled_esp32_s3_controller` |
 | NeoPixelBus (fork) | `sascha432/NeoPixelBus`, branch `kfc-rmt-mem-blocks` / tag `kfc-rmt1`, based on upstream `master` `882b804`; `lib_deps` URL dependency (`#kfc-rmt1`, no local checkout) | Transport: RMT mux (`RMT_CHANNEL_0` with all 8 memory blocks, one segment after another) and/or I2S (DMA, up to 2 ports in parallel) | `wled_esp32_controller_neopixelbus` |
 | NeoPixelEspEx | `sascha432/NeoPixelEspEx` (0.0.3), checkout in `lib/NeoPixelEspEx` | Transport (`IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT`) and the built-in WS2812 status LED when `HAVE_FASTLED=0` | ESP8266 `ledmatrix_*`, `weather_station*`, ESP32 `ledmatrix_base_esp32` |
-| Adafruit NeoPixel | `adafruit/Adafruit_NeoPixel` 1.10.7 (ESP8266) / master (ESP32), wrapped by `include/Adafruit_NeoPixelEx.h` | Transport (`IOT_LED_MATRIX_NEOPIXEL_SUPPORT`) | optional in `ledmatrix_*` |
 | FastLED 3.10.x | - | **Does not build here** (its `platforms/arduino` layer needs a `Serial` with `begin()`/`operator bool()`, `serial_compat.h` force-includes `extern Stream &Serial`) - FastLED is therefore pinned | - |
 
-`HAVE_NEOPIXELBUS=1` is exclusive with `IOT_LED_MATRIX_NEOPIXEL_SUPPORT` /
-`IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT` - `clock_def.h` raises an `#error` if both are set.
+`HAVE_NEOPIXELBUS=1` is exclusive with `IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT` - `clock_def.h` raises an
+`#error` if both are set.
+
+Adafruit NeoPixel support was removed (2026-10-04): `IOT_LED_MATRIX_NEOPIXEL_SUPPORT`,
+`ShowMethodType::AF_NEOPIXEL`, the `+LMC=met,neo` command and `include/Adafruit_NeoPixelEx.h` are
+gone, `NeoPixelEx` is the only NeoPixel-style transport (the `NEOPIXEL_*` tuning macros belong to it).
 
 ## 2. Transport selection flags
 
@@ -32,13 +35,11 @@ The transports themselves (RMT memory blocks, mixed I2S+RMT, measured frame time
 | `IOT_CLOCK_NUM_PIXELS` | `cols*rows + offset` | Pixel buffer size = `Clock::MatrixValidation::kMaxPixels` |
 | `IOT_LED_MATRIX_CONFIGURABLE` | 1 | Runtime (`DynamicPixelMapping`) instead of compile-time pixel mapping |
 | `IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT` | 1 | NeoPixelEx transport, adds `ShowMethodType::NEOPIXEL_EX` |
-| `IOT_LED_MATRIX_NEOPIXEL_SUPPORT` | 0 | Adafruit NeoPixel transport, adds `ShowMethodType::AF_NEOPIXEL` |
 | `HAVE_NEOPIXELBUS` | 0 | NeoPixelBus backend, adds `ShowMethodType::NEOBUS_RMT` and `NEOBUS_I2S` |
-| `IOT_LED_MATRIX_FASTLED_ONLY` | derived | 1 when no other transport is compiled in (`HAVE_NEOPIXELBUS` and both NeoPixel switches are 0) |
-| `IOT_CLOCK_SHOW_METHOD_MAX` | derived | Highest selectable `ShowMethodType`: 1 with FastLED only, 2 with one NeoPixel transport, 3 with NeoPixelBus or both NeoPixel transports. A stored value above it would call a transport that is not compiled in |
+| `IOT_LED_MATRIX_FASTLED_ONLY` | derived | 1 when no other transport is compiled in (`HAVE_NEOPIXELBUS` and `IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT` are 0) |
+| `IOT_CLOCK_SHOW_METHOD_MAX` | derived | Highest selectable `ShowMethodType`: 1 with FastLED only, 2 with NeoPixelEx, 3 with NeoPixelBus. A stored value above it would call a transport that is not compiled in |
 | `IOT_CLOCK_SHOW_METHOD_DEFAULT` | derived | New config's method: 2 (`NEOBUS_RMT`) with NeoPixelBus, otherwise 1 (`FASTLED`) |
 | `FASTLED_LED_CONTROLLER` | `NEOPIXEL` | FastLED chipset (`pixel_display.h`); `7segment_clock` uses `WS2813_GRB` |
-| `NEOPIXEL_LED_TYPE` | `NEO_GRB + NEO_KHZ800` | Chipset/timing of the Adafruit NeoPixel transport |
 | `HAVE_FASTLED` | undefined (0) | Selects FastLED instead of NeoPixelEx for the built-in WS2812 status LED (`blink_led_timer.h`) and the weather station; must be set by the env, the firmware defines no default |
 | `HAVE_FASTLED_RMT` | - | Set by `wled_esp32_controller` and `wled_esp32_controller_rmt`; no consumer in the firmware sources nor in the pinned FastLED (3.4.1 fork / 3.9.20) - effectively a no-op |
 | `FASTLED_ESP32_I2S` | - | FastLED drives the LEDs over I2S; conflicts with the visualizer microphone on the same port (see below) |
@@ -87,7 +88,7 @@ Rules of thumb (ESP32 has exactly two I2S ports and three possible consumers):
 | `FASTLED_RMT_MAX_CHANNELS` / `FASTLED_RMT_MEM_BLOCKS` / `FASTLED_RMT_BUILTIN_DRIVER` | 8 / 2 / false | FastLED's own RMT driver (not used by the NeoPixelBus backend) |
 | `FASTLED_ESP8266_RAW_PIN_ORDER` | - | ESP8266 pin numbering (`weather_station`) |
 
-### NeoPixelEx / Adafruit NeoPixel knobs
+### NeoPixelEx knobs
 
 | Flag | Effect |
 | --- | --- |

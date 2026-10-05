@@ -8,9 +8,6 @@
 #include <type_traits>
 #include "color.h"
 #include <NeoPixelEx.h>
-#if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-#    include <Adafruit_NeoPixelEx.h>
-#endif
 #if HAVE_NEOPIXELBUS
 #    include "pixel_output_neobus.h"
 #endif
@@ -41,9 +38,6 @@ namespace Clock {
         FASTLED,
         #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
             NEOPIXEL_EX,
-        #endif
-        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-            AF_NEOPIXEL,
         #endif
         #if HAVE_NEOPIXELBUS
             NEOBUS_RMT,
@@ -790,10 +784,6 @@ namespace Clock {
     #    define FASTLED_LED_CONTROLLER NEOPIXEL
     #endif
 
-    #ifndef NEOPIXEL_LED_TYPE
-    #    define NEOPIXEL_LED_TYPE (NEO_GRB + NEO_KHZ800)
-    #endif
-
     #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) || defined(IOT_LED_MATRIX_OUTPUT_PIN2) || defined(IOT_LED_MATRIX_OUTPUT_PIN3)
     #    define IOT_LED_MATRIX_MULTI_OUTPUT 1
     #    ifndef IOT_LED_MATRIX_OUTPUT_PIN1
@@ -854,46 +844,19 @@ namespace Clock {
             #else
                 _emptyPixel(0),
                 _controller(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN>(&_emptyPixel, 1))
-                #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                    , _neoPixels{nullptr}
-                #endif
             #endif
         {
             setDither(false);
-            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                auto neoPixelPtr = _neoPixels;
-                *neoPixelPtr++ = new Adafruit_NeoPixelEx(0, nullptr, IOT_LED_MATRIX_OUTPUT_PIN, NEOPIXEL_LED_TYPE);
-            #endif
             #if IOT_LED_MATRIX_MULTI_OUTPUT && !HAVE_NEOPIXELBUS
                 #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
                     FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN1>(&_emptyPixel, 1);
-                    #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                        *neoPixelPtr++ = new Adafruit_NeoPixelEx(0, nullptr, IOT_LED_MATRIX_OUTPUT_PIN1, NEOPIXEL_LED_TYPE);
-                    #endif
                 #endif
                 #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
                     FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN2>(&_emptyPixel, 1);
-                    #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                        *neoPixelPtr++ = new Adafruit_NeoPixelEx(0, nullptr, IOT_LED_MATRIX_OUTPUT_PIN2, NEOPIXEL_LED_TYPE);
-                    #endif
                 #endif
                 #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
                     FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN3>(&_emptyPixel, 1);
-                    #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                        *neoPixelPtr++ = new Adafruit_NeoPixelEx(0, nullptr, IOT_LED_MATRIX_OUTPUT_PIN3, NEOPIXEL_LED_TYPE);
-                    #endif
                 #endif
-            #endif
-        }
-
-        ~PixelDisplay()
-        {
-            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                auto neoPixelPtr = _neoPixels;
-                while(*neoPixelPtr) {
-                    delete *neoPixelPtr;
-                    neoPixelPtr++;
-                }
             #endif
         }
 
@@ -916,31 +879,15 @@ namespace Clock {
             #if !HAVE_NEOPIXELBUS
             _numSegments = 0;
 
-            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                auto neoPixelPtr = _neoPixels;
-                while(*neoPixelPtr) {
-                    (*neoPixelPtr++)->updateLength(0, nullptr);
-                }
-            #endif
-
             auto fastLedPtr = &_controller;
-            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                neoPixelPtr = _neoPixels;
-            #endif
             if (num0) {
                 __LDBG_printf("segment 0 pixels=%p ofs=%u num=%u", __pixels.data() + ofs0, ofs0, num0);
                 fastLedPtr->setLeds(__pixels.data() + ofs0, (num0));
-                #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                    (*neoPixelPtr++)->updateLength(num0, reinterpret_cast<uint8_t *>(__pixels.data() + ofs0));
-                #endif
                 _numSegments++;
             }
             else {
                 __LDBG_printf("segment 0 pixels=%p ofs=%u num=%u", _emptyPixel, ofs0, num0);
                 fastLedPtr->setLeds(&_emptyPixel, 1);
-                #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                    (*neoPixelPtr++)->updateLength(0, nullptr);
-                #endif
             }
             #if IOT_LED_MATRIX_MULTI_OUTPUT
                 for(;;) {
@@ -950,17 +897,11 @@ namespace Clock {
                     if (num1 && IOT_LED_MATRIX_OUTPUT_PIN1 != -1) {
                         __LDBG_printf("segment 1 pixels=%p ofs=%u num=%u", __pixels.data() + ofs1, ofs1, num1);
                         fastLedPtr->setLeds(__pixels.data() + ofs1, (num1));
-                        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                            (*neoPixelPtr++)->updateLength(num1, reinterpret_cast<uint8_t *>(__pixels.data() + ofs1));
-                        #endif
                         _numSegments++;
                     }
                     else {
                         __LDBG_printf("segment 1 pixels=%p ofs=%u num=%u", _emptyPixel, ofs1, num1);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
-                        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                            (*neoPixelPtr++)->updateLength(0, nullptr);
-                        #endif
                     }
                     if (!(fastLedPtr = fastLedPtr->next())) {
                         break;
@@ -968,17 +909,11 @@ namespace Clock {
                     if (num2 && IOT_LED_MATRIX_OUTPUT_PIN2 != -1) {
                         __LDBG_printf("segment 2 pixels=%p ofs=%u num=%u", __pixels.data() + ofs2, ofs2, num2);
                         fastLedPtr->setLeds(__pixels.data() + ofs2, (num2));
-                        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                            (*neoPixelPtr++)->updateLength(num2, reinterpret_cast<uint8_t *>(__pixels.data() + ofs2));
-                        #endif
                         _numSegments++;
                     }
                     else {
                         __LDBG_printf("segment 2 pixels=%p ofs=%u num=%u", _emptyPixel, ofs2, num2);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
-                        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                            (*neoPixelPtr++)->updateLength(0, nullptr);
-                        #endif
                     }
                     if (!(fastLedPtr = fastLedPtr->next())) {
                         break;
@@ -986,17 +921,11 @@ namespace Clock {
                     if (num3 && IOT_LED_MATRIX_OUTPUT_PIN3 != -1) {
                         __LDBG_printf("segment 3 pixels=%p ofs=%u num=%u", __pixels.data() + ofs3, ofs3, num3);
                         fastLedPtr->setLeds(__pixels.data() + ofs3, (num3));
-                        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                            (*neoPixelPtr++)->updateLength(num3, reinterpret_cast<uint8_t *>(__pixels.data() + ofs3));
-                        #endif
                         _numSegments++;
                     }
                     else {
                         __LDBG_printf("segment 3 pixels=%p ofs=%u num=%u", _emptyPixel, ofs3, num3);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
-                        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                            (*neoPixelPtr++)->updateLength(0, nullptr);
-                        #endif
                     }
                     break;
                 }
@@ -1118,21 +1047,6 @@ namespace Clock {
                     #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
                         case Clock::ShowMethodType::NEOPIXEL_EX: {
                             _showNeoPixelEx(brightness);
-                            #if ESP32
-                                // release some cpu time
-                                ::delay(1);
-                            #endif
-                        }
-                        break;
-                    #endif
-                    #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                        case Clock::ShowMethodType::AF_NEOPIXEL: {
-                            auto ptr = _neoPixels;
-                            while(*ptr) {
-                                (*ptr)->setBrightness(brightness);
-                                (*ptr)->show();
-                                ptr++;
-                            }
                             #if ESP32
                                 // release some cpu time
                                 ::delay(1);
@@ -1311,9 +1225,6 @@ namespace Clock {
         #else
             CRGB _emptyPixel;
             CLEDController &_controller;
-            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                Adafruit_NeoPixelEx *_neoPixels[5];
-            #endif
         #endif
         uint32_t _numSegments;
     };

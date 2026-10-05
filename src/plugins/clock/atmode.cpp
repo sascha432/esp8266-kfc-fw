@@ -73,7 +73,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
         }
-        // met[hod][,<fastled|neoex|neo|none|toggle>]
+        // met[hod][,<fastled|neoex|none|toggle>]
         // +lmc=method,tog
         else if (args.startsWithIgnoreCase(0, F("met"))) {
             if (args.startsWithIgnoreCase(1, F("fast"))) {
@@ -90,11 +90,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
                 else if (args.startsWithIgnoreCase(1, F("neoex"))) {
                     ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOPIXEL_EX);
-                }
-            #endif
-            #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-                else if (args.startsWithIgnoreCase(1, F("neo"))) {
-                    ClockPlugin::setShowMethod(Clock::ShowMethodType::AF_NEOPIXEL);
                 }
             #endif
             else if (args.startsWithIgnoreCase(1, F("none"))) {

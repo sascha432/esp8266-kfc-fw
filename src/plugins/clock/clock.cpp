@@ -713,11 +713,6 @@ void ClockPlugin::getStatus(Print &output)
                     #endif
                 } break;
         #endif
-        #if IOT_LED_MATRIX_NEOPIXEL_SUPPORT
-            case Clock::ShowMethodType::AF_NEOPIXEL: {
-                    output.print(F(", Adafruit NeoPixel"));
-                } break;
-        #endif
         default:
             break;
     }

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "animation.h"
-#include <FastLED.h>
+#include "pixel_color.h"
 
 namespace Clock {
 
@@ -75,7 +75,7 @@ namespace Clock {
             y3 = sin(angle3) * radius3 + centerY3;
             y4 = sin(angle4) * radius4 + centerY4;
 
-            CHSV color(0, 255, 255);
+            PixelHSV color(0, 255, 255);
 
             for(CoordinateType y = 0; y < output.getRows(); y++) {
                 x1 = sx1;

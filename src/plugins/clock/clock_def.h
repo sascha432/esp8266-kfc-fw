@@ -57,7 +57,7 @@
 #    define IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT 1
 #endif
 
-// NeoPixelBus transport backend. FastLED is still used for the color math and the animations,
+// NeoPixelBus transport backend. The color math and the animations use pixel_color.h (no FastLED),
 // NeoPixelBus only transmits the pixel buffer. Only the env that sets HAVE_NEOPIXELBUS=1 compiles
 // the backend in, every other env keeps the existing FastLED/NeoPixelEx transports.
 #ifndef HAVE_NEOPIXELBUS

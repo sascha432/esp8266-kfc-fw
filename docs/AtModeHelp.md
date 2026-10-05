@@ -301,10 +301,14 @@ Run command
 - pr[int],<display=00:00:00>
 - tem[perature],<value>
 - lo[op],<enable|disable>
-- met[hod]<fast|neoex> (FastLED|NeoPixelEx)
+- met[hod][,<fast|nrmt|ni2s|neoex|none|tog>] (FastLED|NeoPixelBus RMT|NeoPixelBus I2S|NeoPixelEx|none|toggle)
+  - `fast` is not available in NeoPixelBus builds (`HAVE_NEOPIXELBUS=1`), FastLED is mapped to NeoPixelBus RMT
+    there and the toggle skips it
+  - `nrmt`/`ni2s` only with `HAVE_NEOPIXELBUS=1`, `neoex` only with `IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT=1`
+- fr[ames][,rst] frame statistics, `rst` resets them
 - ani[mation][,<solid|gradient|rainbow|rainbow-fastled|flash|color-fade|fire|plasma|spectrum-rainbow-bars|spectrum-gradient-bars|spectrum-single-color-bars|plasma-reactive|fire-reactive|xmas>][,blend_time=4000ms]
 - out[put],<on|off>
-- dit[her],<on|off>
+- dit[her],<on|off> (FastLED temporal dithering, no effect in NeoPixelBus builds)
 - co[lor],<#color>
 - map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>
 - cl[ear]

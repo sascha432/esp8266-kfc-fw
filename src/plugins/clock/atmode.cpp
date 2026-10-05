@@ -73,18 +73,20 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             }
             args.printf_P(PSTR("set color %s"), getColor().toString().c_str());
         }
-        // met[hod][,<fastled|neoex|none|toggle>]
+        // met[hod][,<fastled|nrmt|ni2s|neoex|none|toggle>]
         // +lmc=method,tog
         else if (args.startsWithIgnoreCase(0, F("met"))) {
-            if (args.startsWithIgnoreCase(1, F("fast"))) {
-                ClockPlugin::setShowMethod(Clock::ShowMethodType::FASTLED);
-            }
             #if HAVE_NEOPIXELBUS
-                else if (args.startsWithIgnoreCase(1, F("nrmt"))) {
+                // the NeoPixelBus build has no FastLED transport
+                if (args.startsWithIgnoreCase(1, F("nrmt"))) {
                     ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOBUS_RMT);
                 }
                 else if (args.startsWithIgnoreCase(1, F("ni2s"))) {
                     ClockPlugin::setShowMethod(Clock::ShowMethodType::NEOBUS_I2S);
+                }
+            #else
+                if (args.startsWithIgnoreCase(1, F("fast"))) {
+                    ClockPlugin::setShowMethod(Clock::ShowMethodType::FASTLED);
                 }
             #endif
             #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
@@ -166,7 +168,9 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 args.print(F("FastLED: fps=%u _fps=%.1f"), FastLED.getFPS(), _fps);
             #endif
             if (args.size() > 1) {
-                FastLED.countFPS();
+                #if !HAVE_NEOPIXELBUS
+                    FastLED.countFPS();
+                #endif
                 stats.clear();
                 args.print(F("stats reset"));
             }

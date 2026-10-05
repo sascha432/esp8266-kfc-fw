@@ -97,7 +97,7 @@ bool VisualizerAnimation::VideoType::isValid(const VisualizerAnimation::VideoHea
     // return false;
 }
 
-CRGB VisualizerAnimation::VideoType::getRGB()
+PixelRGB VisualizerAnimation::VideoType::getRGB()
 {
     uint8_t r = 128, g = 0, b = 0;
     switch(_header._format) {
@@ -121,7 +121,7 @@ CRGB VisualizerAnimation::VideoType::getRGB()
         }
         break;
     }
-    return CRGB(r, g, b);
+    return PixelRGB(r, g, b);
 }
 
 void VisualizerAnimation::begin()
@@ -656,13 +656,13 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
         case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
         case VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D:
         case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D: {
-            display.fill(CRGB(0));
-            CHSV hsv;
+            display.fill(PixelRGB(0));
+            PixelHSV hsv;
             hsv.hue = 0;
             hsv.val = 255;
             hsv.sat = 240;
             int16_t oldIndex = -1;
-            CRGB color = _getColor();
+            PixelRGB color = _getColor();
             auto visType = _cfg.get_enum_type(_cfg);
             // horizontal: the spectrum runs from left to right, every column is a bar that grows over the rows
             // vertical: transposed, the spectrum runs from bottom to top, every row is a bar that grows over the columns
@@ -676,10 +676,10 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             const CoordinateType peakLoudnessLeft = std::max<int>(center - ((_peakLoudness.getLeftLevel() * center) >> 8) - 1, 0);
             const CoordinateType peakLoudnessRight = std::min<int>(center + ((_peakLoudness.getRightLevel() * center) >> 8), barCount - 1);
             for (CoordinateType bar = 0; bar < barCount; bar++) {
-                CRGB rgb;
+                PixelRGB rgb;
                 switch(visType) {
                     case VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D:
-                        rgb = CRGB(hsv);
+                        rgb = PixelRGB(hsv);
                         break;
                     case VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D:
                     default:
@@ -701,7 +701,7 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                         // rgb = CRGB(colorPos, std::max(255 - colorPos, 0), 0);
                         int colorPos = ((pos << (8 + 7)) / lastBarPos); // multiply by 128 shifting another 7 bits to the left
                         colorPos = std::min(colorPos / 115, 255); // now we can use 7 bits additional precision: colorPos * (128/115==1.113)
-                        rgb = CRGB(colorPos, 255 - colorPos, 0);
+                        rgb = PixelRGB(colorPos, 255 - colorPos, 0);
                     }
                     // reduce brightness for spectrum pixels
                     // CRGB rgbTmp = rgb;
@@ -725,14 +725,14 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                 if (_cfg.vumeter_rows) {
                     for (CoordinateType pos = lastBarPos; pos < barLength; pos++) {
                         if (_cfg.vumeter_peaks && ((bar == peakLoudnessLeft) || (bar == peakLoudnessRight))) {
-                            display.setPixel(PixelCoordinatesType(transposed ? bar : pos, transposed ? pos : bar), CRGB(255, 0, 0));
+                            display.setPixel(PixelCoordinatesType(transposed ? bar : pos, transposed ? pos : bar), PixelRGB(255, 0, 0));
                         }
                         else if (bar >= loudnessLeft && bar < loudnessRight) {
                             int colorPos = ((center - bar) * 256) / center;
                             if (colorPos < 0) {
                                 colorPos = -colorPos;
                             }
-                            display.setPixel(PixelCoordinatesType(transposed ? bar : pos, transposed ? pos : bar), CRGB(colorPos, std::max(200 - colorPos, 0), 0));
+                            display.setPixel(PixelCoordinatesType(transposed ? bar : pos, transposed ? pos : bar), PixelRGB(colorPos, std::max(200 - colorPos, 0), 0));
                         }
                     }
                 }
@@ -764,7 +764,7 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
             //TODO blink red green to show an error has occurred
             uint8_t r = ((millis() / 500) % 2) ? 32 : 0;
             uint8_t g = r ? 0 : 32;
-            display.fill(CRGB(r, g, 0));
+            display.fill(PixelRGB(r, g, 0));
             break;
     }
 }

@@ -31,7 +31,7 @@ namespace Clock {
         Color(uint8_t *values);
         Color(uint8_t red, uint8_t green, uint8_t blue);
         Color(uint32_t value);
-        Color(CRGB color);
+        Color(PixelRGB color);
 
         static Color fromString(const String &value);
         static Color fromBGR(uint32_t value);
@@ -39,13 +39,13 @@ namespace Clock {
         String toString() const;
         String implode(char sep) const;
 
-        Color &operator=(CRGB value);
+        Color &operator=(PixelRGB value);
         Color &operator=(uint32_t value);
         Color &operator=(ColorType value);
         operator bool() const;
         operator int() const;
         operator uint32_t() const;
-        operator CRGB() const;
+        operator PixelRGB() const;
         operator ColorType() const;
         bool operator==(int value) const;
         bool operator!=(int value) const;
@@ -97,7 +97,7 @@ namespace Clock {
     {
     }
 
-    inline Color::Color(CRGB color) : Color(color.red, color.green, color.blue)
+    inline Color::Color(PixelRGB color) : Color(color.red, color.green, color.blue)
     {
     }
 
@@ -141,7 +141,7 @@ namespace Clock {
         return _value;
     }
 
-    inline Color &Color::operator=(CRGB value)
+    inline Color &Color::operator=(PixelRGB value)
     {
         _blue = value.blue;
         _green = value.green;
@@ -176,9 +176,9 @@ namespace Clock {
         return _value;
     }
 
-    inline Color::operator CRGB() const
+    inline Color::operator PixelRGB() const
     {
-        return CRGB(_red, _green, _blue);
+        return PixelRGB(_red, _green, _blue);
     }
 
     inline Color::operator ColorType() const

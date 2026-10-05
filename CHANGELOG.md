@@ -2,6 +2,8 @@
 
 ## Version 0.0.9 (master)
 
+ - Clock plugin: own pixel type and color math (`pixel_color.h`) instead of FastLED's, the NeoPixelBus build no longer links FastLED
+ - NeoPixelBus: the FastLED show method cannot be selected anymore (blank display), the global FastLED object is no longer used
  - Removed the combined animations form of the clock plugin, the alarm color and flashing speed moved to the settings form
  - LED Matrix: unified matrix/segment validation
  - NeoPixelBus RMT and I2S support added

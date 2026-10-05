@@ -546,7 +546,7 @@ namespace Clock {
         using PixelAddressType = typename PixelMappingType::PixelAddressType;
         using CoordinateType = typename PixelMappingType::CoordinateType;
         using PixelCoordinatesType = typename PixelMappingType::PixelCoordinatesType;
-        using ColorType = CRGB;
+        using ColorType = PixelRGB;
         using PixelBufferPtr = ColorType *;
         using PixelBufferType = std::array<ColorType, kMaxPixelAddress>;
         using NeoPixelDataType = NeoPixelEx::DataWrapper<kMaxPixelAddress, NeoPixelEx::CRGB>;
@@ -739,9 +739,10 @@ namespace Clock {
         {
         }
 
-        void dump(Print &output)
+        // the brightness is owned by the display (FastLED or NeoPixelBus), see PixelDisplay::dump()
+        void dump(Print &output, uint8_t brightness)
         {
-            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix brightness=%u\n"), __pixels.data(), _pixels, getOffset(), size(), FastLED.getBrightness());
+            output.printf_P(PSTR("data=%p pixels=%p offset=%u num=%u mode=led_matrix brightness=%u\n"), __pixels.data(), _pixels, getOffset(), size(), brightness);
         }
 
     protected:
@@ -882,7 +883,7 @@ namespace Clock {
             auto fastLedPtr = &_controller;
             if (num0) {
                 __LDBG_printf("segment 0 pixels=%p ofs=%u num=%u", __pixels.data() + ofs0, ofs0, num0);
-                fastLedPtr->setLeds(__pixels.data() + ofs0, (num0));
+                fastLedPtr->setLeds(reinterpret_cast<CRGB *>(__pixels.data() + ofs0), (num0));
                 _numSegments++;
             }
             else {
@@ -896,7 +897,7 @@ namespace Clock {
                     }
                     if (num1 && IOT_LED_MATRIX_OUTPUT_PIN1 != -1) {
                         __LDBG_printf("segment 1 pixels=%p ofs=%u num=%u", __pixels.data() + ofs1, ofs1, num1);
-                        fastLedPtr->setLeds(__pixels.data() + ofs1, (num1));
+                        fastLedPtr->setLeds(reinterpret_cast<CRGB *>(__pixels.data() + ofs1), (num1));
                         _numSegments++;
                     }
                     else {
@@ -908,7 +909,7 @@ namespace Clock {
                     }
                     if (num2 && IOT_LED_MATRIX_OUTPUT_PIN2 != -1) {
                         __LDBG_printf("segment 2 pixels=%p ofs=%u num=%u", __pixels.data() + ofs2, ofs2, num2);
-                        fastLedPtr->setLeds(__pixels.data() + ofs2, (num2));
+                        fastLedPtr->setLeds(reinterpret_cast<CRGB *>(__pixels.data() + ofs2), (num2));
                         _numSegments++;
                     }
                     else {
@@ -920,7 +921,7 @@ namespace Clock {
                     }
                     if (num3 && IOT_LED_MATRIX_OUTPUT_PIN3 != -1) {
                         __LDBG_printf("segment 3 pixels=%p ofs=%u num=%u", __pixels.data() + ofs3, ofs3, num3);
-                        fastLedPtr->setLeds(__pixels.data() + ofs3, (num3));
+                        fastLedPtr->setLeds(reinterpret_cast<CRGB *>(__pixels.data() + ofs3), (num3));
                         _numSegments++;
                     }
                     else {
@@ -955,8 +956,6 @@ namespace Clock {
         {
             #if HAVE_NEOPIXELBUS
                 _brightness = brightness;
-                // keep FastLED's value in sync, it is only used for the diagnostic dump()
-                FastLED.setBrightness(brightness);
             #else
                 FastLED.setBrightness(brightness);
             #endif
@@ -971,6 +970,11 @@ namespace Clock {
             #else
                 return FastLED.getBrightness();
             #endif
+        }
+
+        void dump(Print &output)
+        {
+            PixelBufferType::dump(output, getBrightness());
         }
 
         inline __attribute__((__always_inline__))
@@ -1139,7 +1143,7 @@ namespace Clock {
                         continue;
                     }
                     const uint32_t num = std::min<uint32_t>(_segPixels[i], maxPixels - _segOffset[i]);
-                    const CRGB *leds = __pixels.data() + _segOffset[i];
+                    const PixelRGB *leds = __pixels.data() + _segOffset[i];
                     for (uint32_t j = 0; j < num; j++) {
                         red += leds[j].r;
                         green += leds[j].g;
@@ -1223,6 +1227,8 @@ namespace Clock {
             uint16_t _segPixels[NeoBusStrips::kMaxStrips];
             uint16_t _segOffset[NeoBusStrips::kMaxStrips];
         #else
+            // the pixel buffer (PixelRGB) is passed to FastLED as CRGB, see updateSegments()
+            static_assert(sizeof(CRGB) == sizeof(PixelRGB), "PixelRGB must have the layout of CRGB");
             CRGB _emptyPixel;
             CLEDController &_controller;
         #endif

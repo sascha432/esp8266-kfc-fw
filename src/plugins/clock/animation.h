@@ -311,7 +311,7 @@ namespace Clock {
             for(uint16_t i = 0; i < display.getNumPixels(); ++i) {
                 CoordinateType col = i / display.getRows();
                 CoordinateType row = i % display.getRows();
-                display.pixels(display.getAddress(row, col)) = ::blend(*src++, *dst++, amount);
+                display.pixels(display.getAddress(row, col)) = Clock::blend(*src++, *dst++, amount);
             }
 
             return true;

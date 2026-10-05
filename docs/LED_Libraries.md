@@ -12,11 +12,10 @@ The transports themselves (RMT memory blocks, mixed I2S+RMT, measured frame time
 
 | Library | Source / version | Role in this firmware | Built into |
 | --- | --- | --- | --- |
-| FastLED (fork) | `sascha432/FastLED` (reports 3.4.1) | Transport (its own ESP32 RMT driver) + color math + animations + dithering + fork-only frame retry counters | `wled_esp32_controller`, `wled_esp32_controller_rmt`, `wled_esp32_s3_controller`, ESP8266 `ledmatrix_*`, `weather_station*`, `7segment_clock` |
-| FastLED (official) | `FastLED/FastLED#3.9.20` | Color math + animations + `CRGB`/`CHSV` only - no `addLeds()`/`FastLED.show()`, so no RMT/I2S driver of FastLED is installed | `wled_esp32_controller_neopixelbus` |
+| FastLED (fork) | `sascha432/FastLED` (reports 3.4.1) | Transport only (its own ESP32 RMT driver) + dithering + fork-only frame retry counters | `wled_esp32_controller`, `wled_esp32_controller_rmt`, `wled_esp32_s3_controller`, ESP8266 `ledmatrix_*`, `weather_station*`, `7segment_clock` |
 | NeoPixelBus (fork) | `sascha432/NeoPixelBus`, branch `kfc-rmt-mem-blocks` / tag `kfc-rmt1`, based on upstream `master` `882b804`; `lib_deps` URL dependency (`#kfc-rmt1`, no local checkout) | Transport: RMT mux (`RMT_CHANNEL_0` with all 8 memory blocks, one segment after another) and/or I2S (DMA, up to 2 ports in parallel) | `wled_esp32_controller_neopixelbus` |
 | NeoPixelEspEx | `sascha432/NeoPixelEspEx` (0.0.3), checkout in `lib/NeoPixelEspEx` | Transport (`IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT`) and the built-in WS2812 status LED when `HAVE_FASTLED=0` | ESP8266 `ledmatrix_*`, `weather_station*`, ESP32 `ledmatrix_base_esp32` |
-| FastLED 3.10.x | - | **Does not build here** (its `platforms/arduino` layer needs a `Serial` with `begin()`/`operator bool()`, `serial_compat.h` force-includes `extern Stream &Serial`) - FastLED is therefore pinned | - |
+| `pixel_color.h` | `src/plugins/clock/pixel_color.{h,cpp}` | Pixel type and color math of the clock plugin in every env: `Clock::PixelRGB`/`PixelHSV` (same layout as `CRGB`/`CHSV`), `hsv2rgb_rainbow()`, `blend()`, `nblend()`, `blend8()`, `scale8()`, `nscale8()`, `fadeToBlackBy()`, `beat8()` - bit-identical to FastLED. ESP32: hue table in DRAM, ESP8266: calculated. `ShowMethodType::FASTLED` is mapped to NeoPixelBus RMT in the NeoPixelBus env, which does not link FastLED at all | all clock/LED matrix envs |
 
 The LED dependencies are declared **once** in `conf/envs/led_matrix.ini` and referenced by the
 environments with `${...lib_deps}`:
@@ -25,7 +24,6 @@ environments with `${...lib_deps}`:
 | --- | --- | --- |
 | `[led_lib_neopixelex]` | `sascha432/NeoPixelEspEx` | the ESP8266/ESP32 LED base envs |
 | `[led_lib_fastled]` | `sascha432/FastLED` (fork) | envs where FastLED drives the LEDs (the power limit path needs the fork's `m_pPowerFunc`) |
-| `[led_lib_fastled_official]` | `FastLED/FastLED#3.9.20` | the NeoPixelBus env (color math only) |
 | `[led_lib_neopixelbus]` | `sascha432/NeoPixelBus#kfc-rmt1` | `wled_esp32_controller_neopixelbus` |
 
 `HAVE_NEOPIXELBUS=1` is exclusive with `IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT` - `clock_def.h` raises an
@@ -50,8 +48,8 @@ gone, `NeoPixelEx` is the only NeoPixel-style transport (the `NEOPIXEL_*` tuning
 | `IOT_CLOCK_SHOW_METHOD_MAX` | derived | Highest selectable `ShowMethodType`: 1 with FastLED only, 2 with NeoPixelEx, 3 with NeoPixelBus. A stored value above it would call a transport that is not compiled in |
 | `IOT_CLOCK_SHOW_METHOD_DEFAULT` | derived | New config's method: 2 (`NEOBUS_RMT`) with NeoPixelBus, otherwise 1 (`FASTLED`) |
 | `FASTLED_LED_CONTROLLER` | `NEOPIXEL` | FastLED chipset (`pixel_display.h`); `7segment_clock` uses `WS2813_GRB` |
-| `HAVE_FASTLED` | undefined (0) | Selects FastLED instead of NeoPixelEx for the built-in WS2812 status LED (`blink_led_timer.h`) and the weather station; must be set by the env, the firmware defines no default |
-| `HAVE_FASTLED_RMT` | - | Set by `wled_esp32_controller` and `wled_esp32_controller_rmt`; no consumer in the firmware sources nor in the pinned FastLED (3.4.1 fork / 3.9.20) - effectively a no-op |
+| `HAVE_FASTLED` | undefined (0) | Selects FastLED instead of NeoPixelEx for the built-in WS2812 status LED (`blink_led_timer.h`) and the weather station; must be set by the env, the firmware defines no default. No env sets it to 1 (`weather_station.ini` keeps `=0` as the documented switch). Unrelated to the clock plugin's transport, which `HAVE_NEOPIXELBUS` selects |
+| `FASTLED_INTERNAL` | - | Suppresses FastLED's version `#pragma message`; defined in the source right before every `<FastLED.h>` include (`clock_base.h`, `blink_led_timer.h`, `weather_station.cpp`), not a build flag |
 | `FASTLED_ESP32_I2S` | - | FastLED drives the LEDs over I2S; conflicts with the visualizer microphone on the same port (see below) |
 
 ## 3. Flags that influence the transports

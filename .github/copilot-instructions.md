@@ -7,13 +7,14 @@ in this workspace.
 - Main entry point: `src/kfc_firmware.cpp` (`setup()` / `loop()`); plugins under `src/plugins/**`.
 - Build configuration: `platformio.ini` + `conf/**` (one file per env in `conf/envs/`); build scripts in `scripts/`.
   Shared library URLs are declared **once** and referenced with `${name.lib_deps}` - never repeat a URL in an env:
-  LED libraries in `conf/envs/led_matrix.ini` (`[led_lib_neopixelex]`, `[led_lib_fastled]`, `[led_lib_fastled_official]`,
-  `[led_lib_neopixelbus]`), everything else in `conf/libs.ini` (`[lib_*]`). A `lib_ignore` must start from
+  LED libraries in `conf/envs/led_matrix.ini` (`[led_lib_neopixelex]`, `[led_lib_fastled]`, `[led_lib_neopixelbus]`),
+  everything else in `conf/libs.ini` (`[lib_*]`). A `lib_ignore` must start from
   `${<parent>.lib_ignore}` - `${env.lib_ignore}` resolves to nothing (a no-op, not the inherited list). The one
   exception that keeps an explicit list is `conf/envs/weather_station.ini` (needs `Adafruit GFX Library`, which the base
-  ignores). FastLED: the fork drives the LEDs,
-  the official `#3.9.20` is only for the NeoPixelBus env - an env with FastLED as the transport and
-  `IOT_CLOCK_HAVE_POWER_LIMIT=1` hits `FastLED.m_pPowerFunc`, which is private in 3.9.x.
+  ignores). FastLED: only the fork is used, and only as LED transport - the clock plugin's pixel type and color math
+  are `src/plugins/clock/pixel_color.h` (`Clock::PixelRGB`/`PixelHSV`, `blend()`, `nscale8()`, ...) in every env.
+  Do not use FastLED's `CRGB`/`CHSV` or lib8tion in the clock plugin; outside the `!HAVE_NEOPIXELBUS` transport
+  code it is not included.
 - WebUI sources: `Resources/**`, built by `KFCWebBuilder.json` into `data/webui/**`.
 - Feature overview in [README.md](../README.md), recent changes in [CHANGELOG.md](../CHANGELOG.md).
 
@@ -167,12 +168,15 @@ in this workspace.
 ## Environment `wled_esp32_controller_neopixelbus`
 
 - Same board, partition table and filesystem as `wled_esp32_controller`, but the LED transport is **NeoPixelBus**
-  (`HAVE_NEOPIXELBUS=1`) instead of FastLED. FastLED is still used for `CRGB`/`CHSV` and the animations only -
-  no `addLeds()`/`FastLED.show()`, so no FastLED RMT driver is initialized.
-- FastLED is pinned to the **official 3.9.20**. 3.10.x does not build here: its `platforms/arduino` layer needs a
-  `Serial` with `begin()`/`operator bool()`, while the firmware force-includes `serial_compat.h` with
-  `extern Stream &Serial;` (`NO_GLOBAL_SERIAL`).
-- Show method is a runtime toggle (`+LMC=met,nrmt|ni2s`, Display Method form), default **NeoPixelBus RMT**. All
+  (`HAVE_NEOPIXELBUS=1`) instead of FastLED. **FastLED is not part of this env** (no `lib_deps` entry): the pixel
+  type and color math come from `pixel_color.h`, `<FastLED.h>` is only included under `!HAVE_NEOPIXELBUS`
+  (`clock_base.h`) and every `FastLED.` call in the clock plugin sits in such a branch. The brightness lives in
+  `PixelDisplay::_brightness` (`dump()` reads `getBrightness()`). Keep it that way - new `FastLED.` calls need the
+  same guard. `HAVE_FASTLED` is unrelated: it only switches the built-in WS2812 LED.
+- Show method is a runtime toggle (`+LMC=met,nrmt|ni2s`, Display Method form), default **NeoPixelBus RMT**.
+  `ShowMethodType::FASTLED` stays in the enum (the value is stored in the config, removing it would renumber
+  NEOBUS_RMT/I2S) but cannot be selected: `_sanitizeConfig()` and `_setShowMethod()` map it to NEOBUS_RMT,
+  `_toggleShowMethod()` skips it and `+LMC=met,fast` is not compiled in. All
   RMT outputs share one channel (see below), so up to 4 output pins work; I2S drives one port per segment
   (2 on the ESP32) and the port of the I2S microphone visualizer is reserved for it - the segments that no I2S
   port is left for are transmitted by RMT in the same frame (mixed mode, `HAVE_NEOPIXELBUS_SUPPORT_MIC`, below).
@@ -257,7 +261,8 @@ in this workspace.
   - Rule of thumb: 1 segment -> I2S (stall proof) or RMT; 2 segments -> I2S unless the microphone reserves a
     port (then 1 I2S + 1 RMT); 3-4 segments -> RMT (serial, the frame rate drops with the total pixel count).
 - The power limit is a software limiter (`ClockPlugin::_getNeoBusBrightness()`) applied in `ClockPlugin::_loop()`;
-  FastLED's fork-only power management is not compiled in. Temporal dithering is a no-op (NeoPixelBus has none).
+  FastLED's fork-only power management is not compiled in. Temporal dithering is a no-op (NeoPixelBus has none),
+  but the form field and `+LMC=dit` are still shown - open as CLK-1 in `docs/bugs.md`.
 - **OTA is not available** (single `factory` app partition); use the env's `monitor_port`.
 
 ## Environment `bme280_serial` (ESP8266 test env)

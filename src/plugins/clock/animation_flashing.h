@@ -5,7 +5,7 @@
 #pragma once
 
 #include "animation.h"
-#include <FastLED.h>
+#include "pixel_color.h"
 
 namespace Clock {
 

@@ -7,7 +7,7 @@
 #include "animation.h"
 #include "animation_plasma.h"
 #include "animation_fire.h"
-#include <FastLED.h>
+#include "pixel_color.h"
 
 // how to create video streaming:
 // ffmpeg -i test.mp4 -vf "fps=10,scale=32:16:flags=lanczos,eq=gamma=0.7" -pix_fmt rgb24 -c:v rawvideo test.rgb -y
@@ -224,20 +224,20 @@ namespace Clock {
                 return _value;
             }
 
-            CRGB getPeakColor(uint32_t color, uint32_t millis) const
+            PixelRGB getPeakColor(uint32_t color, uint32_t millis) const
             {
-                CRGB value;
+                PixelRGB value;
                 switch(_peakType) {
                     case VisualizerPeakType::FADING:
-                        value = CRGB(color);
+                        value = PixelRGB(color);
                         fadeToBlackBy(&value, 1, getFading(millis));
                         break;
                     case VisualizerPeakType::DISABLED:
-                        return CRGB(0);
+                        return PixelRGB(0);
                     case VisualizerPeakType::ENABLED:
                     case VisualizerPeakType::FALLING_DOWN:
                     default:
-                        value = CRGB(color);
+                        value = PixelRGB(color);
                         break;
                 }
                 return value;
@@ -364,7 +364,7 @@ namespace Clock {
                 _position = _data.begin();
             }
 
-            CRGB getRGB();
+            PixelRGB getRGB();
             uint32_t _numPixels;
         };
 

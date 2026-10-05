@@ -6,7 +6,7 @@
 
 // NeoPixelBus output backend for the clock/LED matrix plugin (HAVE_NEOPIXELBUS).
 //
-// FastLED is still used for the color math and the animations, this backend only transmits the pixel
+// The color math and the animations use pixel_color.h, this backend only transmits the pixel
 // buffer to the LEDs. Both ESP32 methods are supported and can be selected at runtime:
 //   - RMT (default), up to 4 output pins on one channel with all 8 memory blocks (serial)
 //   - I2S DMA, one output pin per I2S port (the ESP32 has two), transmitted in parallel
@@ -14,7 +14,7 @@
 // reserved for it (HAVE_NEOPIXELBUS_SUPPORT_MIC) and the segments that no I2S port is left for are
 // transmitted by the RMT transport.
 //
-// This header requires the FastLED color types (<FastLED.h>) and is included by pixel_display.h
+// This header requires the pixel type (pixel_color.h) and is included by pixel_display.h
 // after the color/clock headers.
 
 #include <Arduino_compat.h>
@@ -74,7 +74,7 @@ namespace Clock {
     public:
         virtual ~NeoBusStrip() {}
 
-        virtual void show(const CRGB *pixels, uint8_t brightness) = 0;
+        virtual void show(const PixelRGB *pixels, uint8_t brightness) = 0;
 
         // false if the output could not be initialized, the segment is then transmitted by RMT
         virtual bool isActive() const = 0;
@@ -108,7 +108,7 @@ namespace Clock {
             delete _bus;
         }
 
-        void show(const CRGB *pixels, uint8_t brightness) override
+        void show(const PixelRGB *pixels, uint8_t brightness) override
         {
             if (!_bus) {
                 return;
@@ -117,7 +117,7 @@ namespace Clock {
             const uint16_t count = _bus->PixelCount();
             const uint16_t scale = brightness + 1; // 255 -> 256 -> no scaling
             for (uint16_t i = 0; i < count; i++) {
-                const CRGB &color = pixels[i];
+                const PixelRGB &color = pixels[i];
                 _bus->SetPixelColor(i, RgbColor(
                     static_cast<uint8_t>((color.r * scale) >> 8),
                     static_cast<uint8_t>((color.g * scale) >> 8),
@@ -208,7 +208,7 @@ namespace Clock {
         }
 
         // transmit the frame of every segment, the output pin is switched in between
-        void show(const CRGB *pixels, uint8_t brightness)
+        void show(const PixelRGB *pixels, uint8_t brightness)
         {
             if (!_bus) {
                 return;
@@ -229,7 +229,7 @@ namespace Clock {
 
                 const uint16_t count = (_counts[i] < total) ? _counts[i] : total;
                 for (uint16_t index = 0; index < count; index++) {
-                    const CRGB &color = pixels[_offsets[i] + index];
+                    const PixelRGB &color = pixels[_offsets[i] + index];
                     _bus->SetPixelColor(index, RgbColor(
                         static_cast<uint8_t>((color.r * scale) >> 8),
                         static_cast<uint8_t>((color.g * scale) >> 8),
@@ -450,7 +450,7 @@ namespace Clock {
             }
         }
 
-        void show(const CRGB *pixels, uint8_t brightness)
+        void show(const PixelRGB *pixels, uint8_t brightness)
         {
             if (!_numStrips) {
                 return;

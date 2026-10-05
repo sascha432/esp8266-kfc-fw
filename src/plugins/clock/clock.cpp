@@ -644,6 +644,7 @@ void ClockPlugin::getStatus(Print &output)
     }
 
     switch(Clock::getNeopixelShowMethodType()) {
+        #if !HAVE_NEOPIXELBUS
         case Clock::ShowMethodType::FASTLED:
             output.printf_P(PSTR(", FastLED %u.%u.%u, %.1ffps, dithering %s"), FASTLED_VERSION / 1000000, (FASTLED_VERSION / 1000) % 1000, FASTLED_VERSION % 1000, _fps, _display.getDither() ? PSTR("on") : PSTR("off"));
             #if FASTLED_VERSION == 3004000 && (IOT_CLOCK_HAVE_POWER_LIMIT || IOT_CLOCK_DISPLAY_POWER_CONSUMPTION)
@@ -663,6 +664,7 @@ void ClockPlugin::getStatus(Print &output)
                 }
             #endif
             break;
+        #endif
         #if HAVE_NEOPIXELBUS
             case Clock::ShowMethodType::NEOBUS_RMT: {
                     const auto wire = _display.getWireMicros();
@@ -1439,17 +1441,17 @@ void ICACHE_FLASH_ATTR ClockPlugin::_loopDoUpdate(LoopOptionsType &options)
                     auto color = *pixels;
                     *pixels++ = 0;
                     for (size_t j = 1; j < num && pixels < endPtr; j++) {
-                        nblend(color, *pixels, blendFraction);
+                        Clock::nblend(color, *pixels, blendFraction);
                         *pixels++ = 0;
                     }
                     // pixels is the end pointer for this group
                     if (px < pixels) {
                         // color = 0xff0000;
-                        *px = CRGB(color).nscale8(scale[0]);
+                        *px = Clock::PixelRGB(color).nscale8(scale[0]);
                     }
                     if ((px = px + step) < pixels) {
                         // color = 0x00ff00;
-                        *px = CRGB(color).nscale8(scale[1]);
+                        *px = Clock::PixelRGB(color).nscale8(scale[1]);
                     }
                     if ((px = px + step) < pixels) {
                         // color = 0x0000ff;

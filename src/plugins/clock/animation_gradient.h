@@ -5,7 +5,7 @@
 #pragma once
 
 #include "animation.h"
-#include <FastLED.h>
+#include "pixel_color.h"
 
 namespace Clock {
 
@@ -17,7 +17,7 @@ namespace Clock {
     public:
         struct GradientPixel {
             PixelAddressType _pixel;
-            CRGB _color;
+            PixelRGB _color;
             GradientPixel(uint16_t pixel, uint32_t color) : _pixel(static_cast<PixelAddressType>(pixel)), _color(color) {
             }
         };
@@ -49,12 +49,12 @@ namespace Clock {
 
     private:
         template<typename _Ta>
-        void fill_gradient_RGB(_Ta &display, uint16_t pos, uint16_t startpos, CRGB startcolor, uint16_t endpos, CRGB endcolor)
+        void fill_gradient_RGB(_Ta &display, uint16_t pos, uint16_t startpos, PixelRGB startcolor, uint16_t endpos, PixelRGB endcolor)
         {
             // if the points are in the wrong order, straighten them
             if( endpos < startpos) {
                 uint16_t t = endpos;
-                CRGB tc = endcolor;
+                PixelRGB tc = endcolor;
                 endcolor = startcolor;
                 endpos = startpos;
                 startpos = t;
@@ -88,7 +88,7 @@ namespace Clock {
             for(uint16_t i = startpos; i <= endpos; ++i) {
                 CoordinateType col = i / display.getRows();
                 CoordinateType row = i % display.getRows();
-                display.pixels(display.getAddress(row, col)) = CRGB( r88 >> 8, g88 >> 8, b88 >> 8);;
+                display.pixels(display.getAddress(row, col)) = PixelRGB( r88 >> 8, g88 >> 8, b88 >> 8);;
                 r88 += rdelta87;
                 g88 += gdelta87;
                 b88 += bdelta87;
@@ -96,14 +96,14 @@ namespace Clock {
         }
 
         template<typename _Ta>
-        void fill_gradient_RGB(_Ta &display, uint16_t pos, uint16_t numLeds, const CRGB& c1, const CRGB& c2)
+        void fill_gradient_RGB(_Ta &display, uint16_t pos, uint16_t numLeds, const PixelRGB& c1, const PixelRGB& c2)
         {
             uint16_t last = numLeds - 1;
             fill_gradient_RGB(display, pos, 0, c1, last, c2);
         }
 
         template<typename _Ta>
-        void fill_gradient_RGB(_Ta &display, uint16_t pos, uint16_t numLeds, const CRGB& c1, const CRGB& c2, const CRGB& c3)
+        void fill_gradient_RGB(_Ta &display, uint16_t pos, uint16_t numLeds, const PixelRGB& c1, const PixelRGB& c2, const PixelRGB& c3)
         {
             uint16_t half = (numLeds / 2);
             uint16_t last = numLeds - 1;
@@ -112,7 +112,7 @@ namespace Clock {
         }
 
         template<typename _Ta>
-        void fill_gradient_RGB(_Ta &display, uint16_t pos, uint16_t numLeds, const CRGB& c1, const CRGB& c2, const CRGB& c3, const CRGB& c4)
+        void fill_gradient_RGB(_Ta &display, uint16_t pos, uint16_t numLeds, const PixelRGB& c1, const PixelRGB& c2, const PixelRGB& c3, const PixelRGB& c4)
         {
             uint16_t onethird = (numLeds / 3);
             uint16_t twothirds = ((numLeds * 2) / 3);

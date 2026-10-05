@@ -5,7 +5,7 @@
 #pragma once
 
 #include "animation.h"
-#include <FastLED.h>
+#include "pixel_color.h"
 
 namespace Clock {
 
@@ -40,14 +40,14 @@ namespace Clock {
         template<typename _Ta>
         void _fill_rainbow(_Ta &display, uint8_t initialHue, uint8_t deltaHue)
         {
-            CHSV hsv;
+            PixelHSV hsv;
             hsv.hue = initialHue;
             hsv.val = 255;
             hsv.sat = 240;
             for(uint16_t i = 0; i < display.getNumPixels(); ++i) {
                 CoordinateType col = i / getRows();
                 CoordinateType row = i % getRows();
-                display.pixels(display.getAddress(row, col)) = CRGB(hsv);
+                display.pixels(display.getAddress(row, col)) = PixelRGB(hsv);
                 hsv.hue += deltaHue;
             }
         }

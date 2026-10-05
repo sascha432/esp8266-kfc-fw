@@ -21,20 +21,24 @@
 #    include <rotary_encoder.h>
 #endif
 
-#pragma GCC push_options
-#pragma GCC optimize ("O3")
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wattributes"
-#define FASTLED_INTERNAL
-#include <FastLED.h>
-// the NeoPixelBus build uses the official FastLED without its RMT driver, the header is fork-only
-#if ESP32 && !HAVE_NEOPIXELBUS
-#    ifndef FASTLED_ESP32_I2S
-#        include <platforms/esp/32/clockless_rmt_esp32.h>
+// pixel type and color math, FastLED is only used as transport (see pixel_color.h)
+#include "pixel_color.h"
+
+#if !HAVE_NEOPIXELBUS
+#    pragma GCC push_options
+#    pragma GCC optimize ("O3")
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wattributes"
+#    define FASTLED_INTERNAL
+#    include <FastLED.h>
+#    if ESP32
+#        ifndef FASTLED_ESP32_I2S
+#            include <platforms/esp/32/clockless_rmt_esp32.h>
+#        endif
 #    endif
+#    pragma GCC diagnostic pop
+#    pragma GCC pop_options
 #endif
-#pragma GCC diagnostic pop
-#pragma GCC pop_options
 
 #if IOT_LED_MATRIX
 #    define LED_MATRIX_MENU_URI_PREFIX "led-matrix/"        // uses led-matrix.html

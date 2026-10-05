@@ -972,6 +972,12 @@ inline void ClockPlugin::_setShowMethod(Clock::ShowMethodType method)
         // PixelDisplay::show() calls FastLED.show() for every show method, so the RMT driver has
         // to stay initialised and FastLED is the only method that can be used
         method = Clock::ShowMethodType::FASTLED;
+    #elif HAVE_NEOPIXELBUS
+        // the NeoPixelBus build has no FastLED transport, show() would not output anything. the value is
+        // kept in the enum to keep the stored config numbers, see _sanitizeConfig()
+        if (method == Clock::ShowMethodType::FASTLED) {
+            method = Clock::ShowMethodType::NEOBUS_RMT;
+        }
     #endif
     _method = method;
     #if ESP32 && FASTLED_VERSION == 3004000 && !FASTLED_ESP32_I2S && !HAVE_NEOPIXELBUS
@@ -1003,6 +1009,12 @@ inline void ClockPlugin::_toggleShowMethod()
     else {
         method %= kRange;
     }
+    #if HAVE_NEOPIXELBUS
+        // skip FASTLED, _setShowMethod() maps it back to NEOBUS_RMT and the toggle would get stuck
+        if (method + kFirst == static_cast<int>(Clock::ShowMethodType::FASTLED)) {
+            method = static_cast<int>(Clock::ShowMethodType::NONE) - kFirst;
+        }
+    #endif
     _setShowMethod(static_cast<Clock::ShowMethodType>(method + kFirst));
 }
 

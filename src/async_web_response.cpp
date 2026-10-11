@@ -66,6 +66,11 @@ void AsyncBaseResponse::__assembleHead(uint8_t version)
 {
     // the whole response is built in the output window, the head needs no extra String and the
     // window is only allocated once
+    if (!version && _chunked) {
+        // HTTP/1.0 has no chunked transfer encoding. The response announces "Connection: close",
+        // the closed connection marks the end of the content
+        _chunked = false;
+    }
     if (!_out.reserve(kMaxFrameSize)) {
         __DBG_printf_E("memory allocation failed");
     }
@@ -262,8 +267,15 @@ size_t AsyncBaseResponse::_flushOut(AsyncWebServerRequest *request)
     }
     // ASYNC_WRITE_FLAG_COPY (0x01 on the ESP32 and the ESP8266 stack) makes the stack own a copy of
     // the bytes: the window is reused for the next frame and, without the flag, the ESP8266 stack
-    // keeps a pointer into it until the data was acknowledged
-    auto written = request->client()->write(reinterpret_cast<const char *>(_out.begin() + _outSent), len, ASYNC_WRITE_FLAG_COPY);
+    // keeps a pointer into it until the data was acknowledged.
+    // add() and send() are called separately: write() returns 0 when tcp_output() fails (ERR_MEM
+    // while the WiFi TX queue is full), although add() has already queued the bytes - counting them
+    // as not written would queue them a second time. lwIP retries the output of queued data itself
+    auto client = request->client();
+    auto written = client->add(reinterpret_cast<const char *>(_out.begin() + _outSent), len, ASYNC_WRITE_FLAG_COPY);
+    if (written) {
+        client->send();
+    }
     _outSent += written;
     _writtenLength += written;
     if (_outSent >= _out.length()) {
@@ -391,7 +403,7 @@ size_t AsyncDirResponse::_fillBuffer(uint8_t *data, size_t len)
 
         if (_dir.isDirectory()) {
             size_t pathLength = path.length();
-            if (pathLength && name[pathLength - 1] == '/') {
+            if (pathLength && path[pathLength - 1] == '/') {
                 pathLength--;
             }
 

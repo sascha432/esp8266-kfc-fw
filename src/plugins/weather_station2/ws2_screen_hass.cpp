@@ -2,6 +2,8 @@
  * Author: sascha_lammers@gmx.de
  */
 
+#warning Home Assistant Control discontinued and moved to https://github.com/sascha432/esp32-hassctrl
+
 #include "ws2_screens.h"
 
 #include <LoopFunctions.h>

@@ -16,6 +16,23 @@ Running on framework-arduinoespressif8266 v3.1.2 (stock PlatformIO core)
 
 Running on framework-arduinoespressif32 v2.0.17 (stock PlatformIO core)
 
+## Updating the timezone database
+
+The timezone database is stored in the file system as html (Resources/html/.timezone_list_js.html) and requires to be flashed after rebuilding the littlefs image.
+
+If the update is not possible, the timezone can be forced by posting the posix TZ string directly to the form.
+
+Command for the dev console:
+
+```js
+fetch('/ntp.html', {
+  method: 'POST',
+  credentials: 'same-origin',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: 'ntp_en=1&posix_tz=MST7&tz_name=America%2FVancouver&ntpsvr1=pool.ntp.org&ntpsvr2=time.nist.gov&ntpsvr3=time.windows.com&ntpri=1440'
+}).then(r => r.text().then(t => console.log(r.status, t.slice(0, 300))));
+```
+
 ## ChangeLog
 
 [Version 0.0.9 (master)](./CHANGELOG.md)

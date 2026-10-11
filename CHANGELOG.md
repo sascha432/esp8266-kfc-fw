@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - WebUI builder rewritten in Python (YAML config `KFCWebBuilder.yaml`, PHP is no longer required, zopfli compression ~4% smaller)
  - Home Assistant Control discontinued and moved to https://github.com/sascha432/esp32-hassctrl
  - Clock plugin: own color math instead of FastLED, LED power off at boot and after crashes, fixed `+LMC=tem`/`co`, removed unused options
  - Removed the combined animations form of the clock plugin, the alarm color and flashing speed moved to the settings form

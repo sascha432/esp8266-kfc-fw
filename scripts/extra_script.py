@@ -105,7 +105,7 @@ def commit_build_number(source, target, env):
 #                            + source/ + info.txt, see docs in info.txt
 # -------------------------------------------------------------------------
 
-ARCHIVE_SOURCE_ITEMS = ['src', 'include', 'conf', 'scripts', 'platformio.ini', 'KFCWebBuilder.json']
+ARCHIVE_SOURCE_ITEMS = ['src', 'include', 'conf', 'scripts', 'platformio.ini', 'KFCWebBuilder.yaml']
 # lib/* is on github and committed, only the local KFCLibrary is added
 ARCHIVE_SOURCE_LIBS = ['lib/KFCLibrary']
 ARCHIVE_IGNORE_DIRS = {'.git', '.pio', '__pycache__', '.venv'}

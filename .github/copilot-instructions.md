@@ -15,7 +15,8 @@ in this workspace.
   are `src/plugins/clock/pixel_color.h` (`Clock::PixelRGB`/`PixelHSV`, `blend()`, `nscale8()`, ...) in every env.
   Do not use FastLED's `CRGB`/`CHSV` or lib8tion in the clock plugin; outside the `!HAVE_NEOPIXELBUS` transport
   code it is not included.
-- WebUI sources: `Resources/**`, built by `KFCWebBuilder.json` into `data/webui/**`.
+- WebUI sources: `Resources/**`, built by the Python web builder (`lib/KFCLibrary/KFCWebBuilder/kfc_webbuilder`,
+  config `KFCWebBuilder.yaml`) into `data/webui/**`.
 - Feature overview in [README.md](../README.md), recent changes in [CHANGELOG.md](../CHANGELOG.md).
 
 ## Conventions
@@ -46,8 +47,9 @@ in this workspace.
 
 ## Filesystem and the WebUI
 
-- **The WebUI is a separate image**: help texts and pages need `-t rebuildfs` and `-t uploadfs`, a plain `pio run` does not
-  rebuild them.
+- **The WebUI is a separate image**: help texts and pages need `-t uploadfs` (or `-t buildfs`), a plain `pio run` does not
+  rebuild them. Both build the WebUI into `data/` before the image is packed, skipped if no source changed;
+  `-t rebuildfs` forces the WebUI build (without packing the image).
 - **`-t uploadfs` formats the filesystem.** Everything that was uploaded at runtime, `/hass.yaml`
   included, is gone afterwards.
 - If the user forgot to disconnect their terminal or if the device becomes unresponsive, reset it via
@@ -352,10 +354,16 @@ in this workspace.
 
 ## WebUI and forms
 
-- `Resources/html|js|css/**` are built into `data/webui/<hash>` (+ `.listings.txt`) by the PHP builder
-  driven by `KFCWebBuilder.json`. Its preprocessor is `<!--#if MACRO-->` / `<!--#else-->` /
-  `<!--#endif-->` in HTML and `/*--#if MACRO--*/` in JS/CSS; write `defined(NAME)` when one macro name is
-  a prefix of another, otherwise the condition silently drops files.
+- `Resources/html|js|css/**` are built into `data/webui/<hash>` (+ `.listings.txt`) by the Python web builder
+  (`lib/KFCLibrary/KFCWebBuilder/kfc_webbuilder`, docs in `lib/KFCLibrary/KFCWebBuilder/README.md`) driven by
+  `KFCWebBuilder.yaml`; `-t buildfs`/`rebuildfs` run it with PlatformIO's Python. Its preprocessor in the HTML
+  pages is `<!--#if EXPR-->` / `<!--#else-->` / `<!--#endif-->`, `/*--#if EXPR--*/` inside `<script>`/`<style>`
+  blocks; the expression cannot contain a `-`. Node.js, Java and uglify-js are auto-installed into
+  `~/.platformio/kfc_webbuilder` if missing; gzip compression is zopfli (pip package, results cached by content
+  hash in that directory).
+- `scripts/tools/webui_baseline.py` stores the LittleFS image of every env built from a git export with fixed
+  timestamps (`elf/webui_baseline/<kfc_fw>_<KFCLibrary>/`, with the commits in `baseline.json`) and compares a
+  builder change against it (`compare --baseline <dir> [--direct] --overlay <src>=<dst>`).
 - Page-level help texts live in `Resources/html/<page>.html` as
   `div.form-help-block > div[data-target="#field_id"]`; `Resources/js/forms.js` applies them.
 - Server-rendered forms come from a plugin's `createConfigureForm()` (`FormUI::Form::BaseForm`) and are

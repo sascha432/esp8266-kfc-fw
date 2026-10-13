@@ -46,11 +46,11 @@
 #endif
 
 // one LED panel per output pin (size, placement, rotation, mirror, see segment_panel.h), the panel fields
-// of the matrix form, the test pattern (+LMC=dir/id, "Show All"/"Segment n"). Only a configurable LED matrix
-// has panels, a static display (7 segment clock, IOT_LED_MATRIX_CONFIGURABLE=0) transmits the pixel
-// buffer straight on its output pin and has none of this code
+// of the matrix form, the test pattern (+LMC=dir/id, "Show All"/"Segment n"). Off by default: a single
+// segment build is sized by IOT_LED_MATRIX_ROWS/COLS only. Set IOT_LED_MATRIX_HAVE_PANELS=1 in an env with
+// several output pins (IOT_LED_MATRIX_OUTPUT_PIN1-3), it requires a configurable LED matrix
 #ifndef IOT_LED_MATRIX_HAVE_PANELS
-#   define IOT_LED_MATRIX_HAVE_PANELS (IOT_LED_MATRIX && IOT_LED_MATRIX_CONFIGURABLE)
+#   define IOT_LED_MATRIX_HAVE_PANELS 0
 #endif
 #if IOT_LED_MATRIX_HAVE_PANELS && !IOT_LED_MATRIX_CONFIGURABLE
 #   error IOT_LED_MATRIX_HAVE_PANELS requires IOT_LED_MATRIX_CONFIGURABLE

@@ -5,11 +5,33 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15603
-date   = 2026-10-13 12:56:48
-env    = clockv2
+number = 15625
+date   = 2026-10-13 14:31:17
+env    = hexpanel_195
 
 ; history, newest first: <number> <date> <time> <environments>
+15625 2026-10-13 14:31:17 hexpanel_195
+15624 2026-10-13 14:28:32 led_strip_candle
+15623 2026-10-13 14:24:16 led_strip_candle
+15622 2026-10-13 14:22:48 led_strip_candle
+15621 2026-10-13 14:17:17 hexpanel_17
+15620 2026-10-13 14:14:34 hexpanel_17
+15619 2026-10-13 14:11:21 hexpanel_17
+15618 2026-10-13 13:32:39 wled_esp32_controller_neopixelbus
+15617 2026-10-13 13:30:32 wled_esp32_controller_rmt
+15616 2026-10-13 13:28:26 wled_esp32_controller
+15615 2026-10-13 13:27:00 led_strip_candle
+15614 2026-10-13 13:25:37 led_strip_xmas
+15613 2026-10-13 13:24:13 led_strip_katana
+15612 2026-10-13 13:22:50 led_strip_frame
+15611 2026-10-13 13:21:28 led_strip_old_7segment
+15610 2026-10-13 13:20:06 led_strip_generic
+15609 2026-10-13 13:18:42 led_strip_generic_nodemcu
+15608 2026-10-13 13:17:20 single_hexagon
+15607 2026-10-13 13:13:12 clockv2_100
+15606 2026-10-13 13:11:52 clockv2
+15605 2026-10-13 13:09:16 ledmatrix_matrix_32x16
+15604 2026-10-13 13:07:59 ledmatrix_matrix_32x8
 15603 2026-10-13 12:56:48 clockv2
 15602 2026-10-13 12:52:16 wled_esp32_controller_neopixelbus
 15601 2026-10-13 12:47:26 wled_esp32_controller_neopixelbus

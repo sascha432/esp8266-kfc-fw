@@ -10,6 +10,8 @@
 #include "animation.h"
 #include "matrix_validation.h"
 #include <HeapSelector.h>
+#include "templates.h"
+#include "../src/plugins/mqtt/mqtt_json.h"
 
 #if DEBUG_IOT_CLOCK
 #    include <debug_helper_enable.h>
@@ -786,17 +788,17 @@ namespace {
         if (!data) {
             return Clock::MatrixValidation::Result();
         }
-        const __FlashStringHelper *const pixelFields[Clock::MatrixValidation::kMaxSegments] = {
-            F("mx_px0"), F("mx_px1"), F("mx_px2"), F("mx_px3")
-        };
-        const __FlashStringHelper *const offsetFields[Clock::MatrixValidation::kMaxSegments] = {
-            F("mx_ofs0"), F("mx_ofs1"), F("mx_ofs2"), F("mx_ofs3")
-        };
         Clock::MatrixValidation::Segment segments[Clock::MatrixValidation::kMaxSegments] = {};
-        for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
-            segments[i].pixels = data->arg(pixelFields[i]).toInt();
-            segments[i].offset = data->arg(offsetFields[i]).toInt();
-        }
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
+                // the pins that are not compiled in have no fields, arg() returns an empty string = disabled
+                segments[i].enabled = data->arg(PrintString(F("mx_en%u"), i)).toInt() != 0;
+                segments[i].rows = data->arg(PrintString(F("mx_pr%u"), i)).toInt();
+                segments[i].cols = data->arg(PrintString(F("mx_pc%u"), i)).toInt();
+                segments[i].posRow = data->arg(PrintString(F("mx_prp%u"), i)).toInt();
+                segments[i].posCol = data->arg(PrintString(F("mx_pcp%u"), i)).toInt();
+            }
+        #endif
         return Clock::MatrixValidation::validate(
             data->arg(F("mx_rows")).toInt(),
             data->arg(F("mx_cols")).toInt(),
@@ -839,29 +841,35 @@ namespace {
                     static_cast<unsigned>(result.maxPixels)
                 ));
             }
-            for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
-                const auto &segment = result.segments[i];
-                if (segment.pixels && (static_cast<uint32_t>(segment.offset) + segment.pixels) > result.maxPixels) {
-                    addLine(PrintString(F("Segment %u: offset %u + %u pixels = %u exceeds the maximum number of pixels (%u)"),
-                        static_cast<unsigned>(i + 1),
-                        static_cast<unsigned>(segment.offset),
-                        static_cast<unsigned>(segment.pixels),
-                        static_cast<unsigned>(result.segmentEnd(i)),
-                        static_cast<unsigned>(result.maxPixels)
-                    ));
-                }
+            if (result.panelInvalid) {
+                addLine(PrintString(F("Segment %u: the panel height and width must be at least 1"), static_cast<unsigned>(result.panelInvalidIndex)));
             }
-            if (result.overlap) {
-                const auto &firstSegment = result.segments[result.overlapA - 1];
-                const auto &secondSegment = result.segments[result.overlapB - 1];
-                // segmentEnd() is one past the last pixel, the message shows the last pixel (same as led-matrix.js)
-                addLine(PrintString(F("Segment %u (pixels %u..%u) overlaps segment %u (pixels %u..%u)"),
-                    static_cast<unsigned>(result.overlapB),
-                    static_cast<unsigned>(secondSegment.offset),
-                    static_cast<unsigned>(result.segmentEnd(result.overlapB - 1) - 1),
-                    static_cast<unsigned>(result.overlapA),
-                    static_cast<unsigned>(firstSegment.offset),
-                    static_cast<unsigned>(result.segmentEnd(result.overlapA - 1) - 1)
+            if (result.panelTooLarge) {
+                const auto &segment = result.segments[result.panelTooLargeIndex - 1];
+                addLine(PrintString(F("Segment %u: panel %u x %u = %u LEDs exceeds the maximum number of pixels (%u)"),
+                    static_cast<unsigned>(result.panelTooLargeIndex),
+                    static_cast<unsigned>(segment.rows),
+                    static_cast<unsigned>(segment.cols),
+                    static_cast<unsigned>(segment.pixels()),
+                    static_cast<unsigned>(result.maxPixels)
+                ));
+            }
+            if (result.panelOutside) {
+                const auto &segment = result.segments[result.panelOutsideIndex - 1];
+                addLine(PrintString(F("Segment %u: the panel %u x %u at row %u, column %u reaches outside the matrix (%u x %u)"),
+                    static_cast<unsigned>(result.panelOutsideIndex),
+                    static_cast<unsigned>(segment.rows),
+                    static_cast<unsigned>(segment.cols),
+                    static_cast<unsigned>(segment.posRow),
+                    static_cast<unsigned>(segment.posCol),
+                    static_cast<unsigned>(result.rows),
+                    static_cast<unsigned>(result.cols)
+                ));
+            }
+            if (result.transportExceeded) {
+                addLine(PrintString(F("%u segments are enabled, this build has %u output pins"),
+                    static_cast<unsigned>(result.activeSegments),
+                    static_cast<unsigned>(Clock::MatrixValidation::kMaxStrips)
                 ));
             }
 
@@ -882,7 +890,31 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     if (type == FormCallbackType::SAVE) {
         // a form callback runs in the web server task, the local config copy and the save timer
         // belong to the loop task
-        _enqueue([this] { _syncConfigFromStorageQueued(); });
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            // the test pattern buttons of the matrix form save the form like "Save", the pattern replaces
+            // the animation after the new settings have been applied (see _reconfigureQueued() and _loop()).
+            // mx_tp is "all" (+LMC=dir) or the segment 1-4 to show alone (+LMC=id)
+            bool showTestPattern = false;
+            int8_t testSegment = -1;
+            if (F("matrix") == formName) {
+                auto data = form.getFormData();
+                const String testPattern = data ? data->arg(F("mx_tp")) : String();
+                showTestPattern = testPattern.length() != 0;
+                const int segment = testPattern.toInt();
+                if (segment >= 1 && segment <= Clock::MatrixValidation::kMaxSegments) {
+                    testSegment = segment - 1;
+                }
+            }
+            _enqueue([this, showTestPattern, testSegment] {
+                _syncConfigFromStorageQueued();
+                if (showTestPattern) {
+                    _testPattern = TestPatternType::AFTER_RECONFIGURE;
+                    _testPatternSegment = testSegment;
+                }
+            });
+        #else
+            _enqueue([this] { _syncConfigFromStorageQueued(); });
+        #endif
         return;
     }
 
@@ -987,6 +1019,11 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
     #if IOT_LED_MATRIX_CONFIGURABLE
         else if (F("matrix") == formName) {
 
+            if (type == FormCallbackType::CREATE_GET) {
+                // a device without a stored matrix parameter would show zeros, see _sanitizeMatrixConfig()
+                _sanitizeMatrixConfig(cfg.matrix);
+            }
+
             auto &mainGroup = form.addCardGroup(F("matrix"));
 
             // the transport the segments are driven with, the layout is validated against it
@@ -1033,54 +1070,78 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
                 FormUI::IntAttribute(F("data-i2s-strips"), static_cast<int>(Clock::MatrixValidation::kAvailableI2sStrips)),
                 FormUI::IntAttribute(F("data-i2s-port"), static_cast<int>(Clock::MatrixValidation::kMicI2sPort)),
                 FormUI::IntAttribute(F("data-method-rmt"), kMethodRmt),
-                FormUI::IntAttribute(F("data-method-i2s"), kMethodI2s),
-                // the matrix is drawn into the buffer pixels offset .. offset + rows * cols - 1
-                FormUI::IntAttribute(F("data-pixel-offset"), IOT_LED_MATRIX_PIXEL_OFFSET)
+                FormUI::IntAttribute(F("data-method-i2s"), kMethodI2s)
             );
             // the matrix layout is validated as a whole, see MatrixLayoutValidator
             form.addValidator(MatrixLayoutValidator());
 
-            form.addObjectGetterSetter(F("mx_px0"), FormGetterSetter(cfg.matrix, pixels0));
-            form.addFormUI(F("Segment 1 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN)));
-            form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels0, cfg.matrix.kMaxValueFor_pixels0));
+            #if IOT_LED_MATRIX_HAVE_PANELS
 
-            form.addObjectGetterSetter(F("mx_ofs0"), FormGetterSetter(cfg.matrix, offset0));
-            form.addFormUI(F("Segment 1 Offset"));
-            form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset0, cfg.matrix.kMaxValueFor_offset0));
+                // saves the form like "Save" and shows the test pattern with the new settings: "Show All" draws
+                // the border of every panel (+LMC=dir), "Segment n" only the panel of that pin (+LMC=id,n)
+                static const char testPatternButtons[] PROGMEM =
+                    "<button type=\"submit\" name=\"mx_tp\" value=\"all\" class=\"btn btn-primary\">Show All</button>"
+                    "<button type=\"submit\" name=\"mx_tp\" value=\"1\" class=\"btn btn-secondary\" title=\"Only the panel of segment 1, all other LEDs off\">Segment 1</button>"
+                    #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+                        "<button type=\"submit\" name=\"mx_tp\" value=\"2\" class=\"btn btn-secondary\" title=\"Only the panel of segment 2, all other LEDs off\">Segment 2</button>"
+                    #endif
+                    #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+                        "<button type=\"submit\" name=\"mx_tp\" value=\"3\" class=\"btn btn-secondary\" title=\"Only the panel of segment 3, all other LEDs off\">Segment 3</button>"
+                    #endif
+                    #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+                        "<button type=\"submit\" name=\"mx_tp\" value=\"4\" class=\"btn btn-secondary\" title=\"Only the panel of segment 4, all other LEDs off\">Segment 4</button>"
+                    #endif
+                    ;
+                form.add(F("mx_tpi"), String(F("Saves the settings and draws the border of every panel, or of one segment only")));
+                form.addFormUI(F("Test Pattern"), FormUI::ReadOnlyAttribute(), FormUI::SuffixHtml(FPSTR(testPatternButtons)));
 
-            #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+                // clockwise, the panel height/width are entered as the panel is mounted
+                auto rotationItems = FormUI::List(
+                    0, F("0\xc2\xb0"),
+                    1, F("90\xc2\xb0 clockwise"),
+                    2, F("180\xc2\xb0"),
+                    3, F("270\xc2\xb0 clockwise")
+                );
 
-                form.addObjectGetterSetter(F("mx_px1"), FormGetterSetter(cfg.matrix, pixels1));
-                form.addFormUI(F("Segment 2 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN1)));
-                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels1, cfg.matrix.kMaxValueFor_pixels1));
+                // the fields of the panel of segment n (0 based, shown as segment s), see led-matrix.html for the
+                // help texts and led-matrix.js for the live validation. The size of a disabled segment is not
+                // validated (0 = unset is accepted, MatrixLayoutValidator rejects 0 for an enabled segment)
+                #define ADD_PANEL_FIELDS(n, s, pin) \
+                    { \
+                        auto &enabled = form.addObjectGetterSetter(F("mx_en" _STRINGIFY(n)), FormGetterSetter(cfg.matrix, enabled##n)); \
+                        form.addFormUI(FormUI::Type::HIDDEN); \
+                        form.add(F("mx_seg" _STRINGIFY(n)), String()); \
+                        form.addFormUI(F("Segment " _STRINGIFY(s) " Pin #" _STRINGIFY(pin)), FormUI::ReadOnlyAttribute(), FormUI::CheckboxButtonSuffix(enabled, F("Enabled"))); \
+                        form.addObjectGetterSetter(F("mx_pr" _STRINGIFY(n)), FormGetterSetter(cfg.matrix, panel_rows##n)); \
+                        form.addFormUI(F("Segment " _STRINGIFY(s) " Panel Height (Rows)")); \
+                        cfg.matrix.addRangeValidatorFor_panel_rows##n(form, true); \
+                        form.addObjectGetterSetter(F("mx_pc" _STRINGIFY(n)), FormGetterSetter(cfg.matrix, panel_cols##n)); \
+                        form.addFormUI(F("Segment " _STRINGIFY(s) " Panel Width (Columns)")); \
+                        cfg.matrix.addRangeValidatorFor_panel_cols##n(form, true); \
+                        form.addObjectGetterSetter(F("mx_prp" _STRINGIFY(n)), FormGetterSetter(cfg.matrix, pos_row##n)); \
+                        form.addFormUI(F("Segment " _STRINGIFY(s) " Panel Placement: Top Row")); \
+                        cfg.matrix.addRangeValidatorFor_pos_row##n(form); \
+                        form.addObjectGetterSetter(F("mx_pcp" _STRINGIFY(n)), FormGetterSetter(cfg.matrix, pos_col##n)); \
+                        form.addFormUI(F("Segment " _STRINGIFY(s) " Panel Placement: Left Column")); \
+                        cfg.matrix.addRangeValidatorFor_pos_col##n(form); \
+                        auto &mirror = form.addObjectGetterSetter(F("mx_mi" _STRINGIFY(n)), FormGetterSetter(cfg.matrix, mirror##n)); \
+                        form.addFormUI(FormUI::Type::HIDDEN); \
+                        form.addObjectGetterSetter(F("mx_rot" _STRINGIFY(n)), FormGetterSetter(cfg.matrix, rotation##n)); \
+                        form.addFormUI(F("Segment " _STRINGIFY(s) " Panel Rotation"), FormUI::Type::SELECT, rotationItems, FormUI::CheckboxButtonSuffix(mirror, F("Mirror"))); \
+                    }
 
-                form.addObjectGetterSetter(F("mx_ofs1"), FormGetterSetter(cfg.matrix, offset1));
-                form.addFormUI(F("Segment 2 Offset"));
-                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset1, cfg.matrix.kMaxValueFor_offset1));
-
-            #endif
-
-            #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
-
-                form.addObjectGetterSetter(F("mx_px2"), FormGetterSetter(cfg.matrix, pixels2));
-                form.addFormUI(F("Segment 3 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN2)));
-                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels2, cfg.matrix.kMaxValueFor_pixels2));
-
-                form.addObjectGetterSetter(F("mx_ofs2"), FormGetterSetter(cfg.matrix, offset2));
-                form.addFormUI(F("Segment 3 Offset"));
-                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset2, cfg.matrix.kMaxValueFor_offset2));
-
-            #endif
-
-            #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
-
-                form.addObjectGetterSetter(F("mx_px3"), FormGetterSetter(cfg.matrix, pixels3));
-                form.addFormUI(F("Segment 4 Pixels Pin #" _STRINGIFY(IOT_LED_MATRIX_OUTPUT_PIN3)));
-                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_pixels3, cfg.matrix.kMaxValueFor_pixels3));
-
-                form.addObjectGetterSetter(F("mx_ofs3"), FormGetterSetter(cfg.matrix, offset3));
-                form.addFormUI(F("Segment 4 Offset"));
-                form.addValidator(FormUI::Validator::Range(cfg.matrix.kMinValueFor_offset3, cfg.matrix.kMaxValueFor_offset3));
+                // the read only field shows the LED count and linear offset of the segment, filled in by led-matrix.js
+                ADD_PANEL_FIELDS(0, 1, IOT_LED_MATRIX_OUTPUT_PIN);
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN1) && IOT_LED_MATRIX_OUTPUT_PIN1 != -1
+                    ADD_PANEL_FIELDS(1, 2, IOT_LED_MATRIX_OUTPUT_PIN1);
+                #endif
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN2) && IOT_LED_MATRIX_OUTPUT_PIN2 != -1
+                    ADD_PANEL_FIELDS(2, 3, IOT_LED_MATRIX_OUTPUT_PIN2);
+                #endif
+                #if defined(IOT_LED_MATRIX_OUTPUT_PIN3) && IOT_LED_MATRIX_OUTPUT_PIN3 != -1
+                    ADD_PANEL_FIELDS(3, 4, IOT_LED_MATRIX_OUTPUT_PIN3);
+                #endif
+                #undef ADD_PANEL_FIELDS
 
             #endif
 
@@ -1165,3 +1226,69 @@ void ClockPlugin::createConfigureForm(FormCallbackType type, const String &formN
 
     form.finalize();
 }
+
+#if IOT_LED_MATRIX_HAVE_PANELS
+
+void ClockPlugin::_registerMatrixTestWebHandler()
+{
+    WebServer::Plugin::addHandler(F("/led-matrix-test.json"), [](AsyncWebServerRequest *request) {
+        ClockPlugin::_matrixTestWebHandler(request);
+    });
+}
+
+// test pattern buttons of the matrix form (led-matrix.js): the posted form is validated and saved like
+// the Save button and applied right away (no "applying" page), the pattern replaces the animation
+// once the new settings are active (see _reconfigureQueued()). Answers {"ok":true} or the validation
+// errors {"ok":false,"errors":[{"target":"#field","error":"message"}]} for $.formValidator.addErrors().
+// Runs in the web server task like the regular form POST
+void ClockPlugin::_matrixTestWebHandler(AsyncWebServerRequest *request)
+{
+    if (!WebServer::Plugin::isAuthenticated(request)) {
+        request->send(403);
+        return;
+    }
+    if (request->method() != HTTP_POST) {
+        request->send(405);
+        return;
+    }
+
+    using MQTT::Json::UnnamedObject;
+    using MQTT::Json::NamedArray;
+    using MQTT::Json::NamedBool;
+    using MQTT::Json::NamedString;
+
+    auto &plugin = getInstance();
+    const String formName = F("matrix");
+    std::unique_ptr<FormUI::Form::BaseForm> form(new SettingsForm(request));
+    plugin.createConfigureForm(FormCallbackType::CREATE_POST, formName, *form, request);
+
+    UnnamedObject json;
+    if (form->validate()) {
+        plugin.createConfigureForm(FormCallbackType::SAVE, formName, *form, request);
+        KFCConfigurationClasses::System::Flags::getWriteableConfig().is_factory_settings = false;
+        config.write();
+        plugin.reconfigure(formName);
+        json.append(NamedBool(F("ok"), true));
+    }
+    else {
+        plugin.createConfigureForm(FormCallbackType::DISCARD, formName, *form, request);
+        config.discard();
+        NamedArray errors(F("errors"));
+        for(const auto &error: form->getErrors()) {
+            errors.append(UnnamedObject(
+                NamedString(F("target"), PrintString(F("#%s"), error.getName())),
+                NamedString(F("error"), error.getMessage())
+            ));
+        }
+        json.append(NamedBool(F("ok"), false));
+        json.append(errors);
+    }
+
+    HttpHeaders headers;
+    headers.addNoCache();
+    auto response = request->beginResponse(200, FSPGM(mime_application_json), json.toString());
+    headers.setResponseHeaders(response);
+    request->send(response);
+}
+
+#endif

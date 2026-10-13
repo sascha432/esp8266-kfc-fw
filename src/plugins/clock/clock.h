@@ -189,6 +189,9 @@ public:
         using VisualizerAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::VisualizerType::VisualizerAnimationType;
     #endif
     using FireAnimationType = KFCConfigurationClasses::Plugins::ClockConfigNS::FireAnimationType;
+    #if IOT_LED_MATRIX_CONFIGURABLE
+        using MatrixConfigType = KFCConfigurationClasses::Plugins::ClockConfigNS::MatrixConfigType;
+    #endif
     using RainbowConfigType = KFCConfigurationClasses::Plugins::ClockConfigNS::RainbowAnimationType;
     using RainbowMultiplierType = RainbowConfigType::MultiplierType;
     using RainbowColorType = RainbowConfigType::ColorAnimationType;
@@ -292,8 +295,22 @@ private:
     #endif
     // the body of reconfigure(), loop task only
     void _reconfigureQueued(bool applyConfigOnly);
+    #if IOT_LED_MATRIX_HAVE_PANELS
+        // draws the border of every panel (+LMC=dir, "Show All") or only of one segment, 0 based
+        // (+LMC=id), loop task only
+        void _showTestPattern(uint8_t brightness, const std::function<void(const char *)> &report, int8_t onlySegment = -1);
+        // test pattern buttons of the matrix form without leaving the page, see clock_form.cpp
+        static void _matrixTestWebHandler(AsyncWebServerRequest *request);
+        static void _registerMatrixTestWebHandler();
+    #endif
     // fixes/clamps config values that program the LED driver and the pixel mapping
     void _sanitizeConfig();
+    #if IOT_LED_MATRIX_CONFIGURABLE
+        // the matrix part of _sanitizeConfig(): a zero filled storage (the parameter does not exist yet) gets
+        // the defaults, a layout that does not fit into the pixel buffer is replaced. The matrix form runs
+        // it before it renders, so a fresh device shows the defaults instead of zeros
+        static void _sanitizeMatrixConfig(MatrixConfigType &matrix);
+    #endif
     // adopts the configuration of the form/storage, see createConfigureForm()
     void _syncConfigFromStorageQueued();
     // ---------------------------------------------------------------------------------------------
@@ -742,6 +759,17 @@ private:
     bool _forceUpdate;
     bool _isRunning;
     bool _isLocked;
+    #if IOT_LED_MATRIX_HAVE_PANELS
+        // test pattern buttons of the matrix form: the form save requests it, the reconfigure that
+        // applies the new settings arms it and the next _loop() draws it instead of the animation frame
+        enum class TestPatternType : uint8_t {
+            NONE,
+            AFTER_RECONFIGURE,
+            SHOW,
+        };
+        TestPatternType _testPattern;
+        int8_t _testPatternSegment; // -1 = all panels ("Show All"), 0-3 = one segment ("Segment n")
+    #endif
 
     using Animation = Clock::Animation;
     friend Animation;
@@ -844,6 +872,9 @@ inline void ClockPlugin::enableLoopNoClear(bool enable)
     else {
         _removeLoop();
         _fps = NAN;
+        // the queued requests (form saves, reconfigure, ...) are executed by the standby loop while
+        // the animation loop is disabled (+LMC=cl, dir, lo,0)
+        LOOP_FUNCTION_ADD(standbyLoop);
     }
 }
 

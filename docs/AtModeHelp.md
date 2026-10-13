@@ -312,6 +312,8 @@ Run command
 - dit[her],<on|off> (FastLED temporal dithering, not available in NeoPixelBus builds)
 - map,<rows>,<cols>,<reverse_rows>,<reverse_columns>,<rotate>,<interleaved>
 - cl[ear] stops the animation loop and blanks the pixels
+- dir[ection][,<brightness>] (only with `IOT_LED_MATRIX_HAVE_PANELS`, a configurable LED matrix) stops the animation loop and draws the border of every panel (segment): first row red, last row blue, first column yellow, last column green, corners white. It checks the placement, rotation and Mirror of each panel and prints its LED count, linear offset and whether it is transmitted straight from the buffer (`lut=identity`) or through its lookup table, `lo,1` resumes the animation. Without a brightness the configured brightness is used. The "Show All" button of the matrix form saves the form and shows the same pattern
+- id,<segment>[,<brightness>] (only with `IOT_LED_MATRIX_HAVE_PANELS`, a configurable LED matrix) turns all LEDs off and draws only the border of the panel of one segment (1-4, the order of the output pins) to identify which pin drives which panel, `lo,1` resumes the animation. The "Segment 1-4" buttons of the matrix form save the form and show the same pattern
 - get[,<range>]
 - set,<range(=0-7)>,[#color]
 

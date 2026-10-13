@@ -45,6 +45,17 @@
 #   define IOT_LED_MATRIX_CONFIGURABLE 1
 #endif
 
+// one LED panel per output pin (size, placement, rotation, mirror, see segment_panel.h), the panel fields
+// of the matrix form, the test pattern (+LMC=dir/id, "Show All"/"Segment n"). Only a configurable LED matrix
+// has panels, a static display (7 segment clock, IOT_LED_MATRIX_CONFIGURABLE=0) transmits the pixel
+// buffer straight on its output pin and has none of this code
+#ifndef IOT_LED_MATRIX_HAVE_PANELS
+#   define IOT_LED_MATRIX_HAVE_PANELS (IOT_LED_MATRIX && IOT_LED_MATRIX_CONFIGURABLE)
+#endif
+#if IOT_LED_MATRIX_HAVE_PANELS && !IOT_LED_MATRIX_CONFIGURABLE
+#   error IOT_LED_MATRIX_HAVE_PANELS requires IOT_LED_MATRIX_CONFIGURABLE
+#endif
+
 #ifndef IOT_CLOCK_PIXEL_MAPPING_TYPE
 #   if IOT_LED_MATRIX_CONFIGURABLE
 #       define IOT_CLOCK_PIXEL_MAPPING_TYPE DynamicPixelMapping

@@ -216,7 +216,7 @@ namespace KFCConfigurationClasses {
                 using Type = FireAnimationType;
                 CREATE_UINT8_BITFIELD_MIN_MAX(cooling, 8, 0, 255, 60, 1);
                 CREATE_UINT8_BITFIELD_MIN_MAX(sparking, 8, 0, 255, 95, 1);
-                CREATE_UINT8_BITFIELD_MIN_MAX(speed, 8, 1, 100, 50, 1);
+                CREATE_UINT8_BITFIELD_MIN_MAX(speed, 8, 1, 100, 30, 1);
                 CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::VERTICAL);
                 CREATE_BOOL_BITFIELD(invert_direction);
                 CREATE_COLOR_FIELD(factor, 0x000000);
@@ -481,35 +481,80 @@ namespace KFCConfigurationClasses {
             #if IOT_LED_MATRIX_CONFIGURABLE
             struct __attribute__packed__ MatrixConfigType {
                 using Type = MatrixConfigType;
+
+                #if IOT_LED_MATRIX_HAVE_PANELS
+                    // one LED panel per output pin (segment), see getPanel()
+                    struct Panel {
+                        bool enabled;
+                        uint16_t rows;      // size as the panel is mounted
+                        uint16_t cols;
+                        uint16_t posRow;    // placement in the matrix: top row / left column
+                        uint16_t posCol;
+                        uint8_t rotation;   // quarter turns clockwise (0-3)
+                        bool mirror;
+
+                        Panel(bool _enabled = false, uint16_t _rows = 1, uint16_t _cols = 1, uint16_t _posRow = 0, uint16_t _posCol = 0, uint8_t _rotation = 0, bool _mirror = false) :
+                            enabled(_enabled),
+                            rows(_rows),
+                            cols(_cols),
+                            posRow(_posRow),
+                            posCol(_posCol),
+                            rotation(_rotation),
+                            mirror(_mirror)
+                        {
+                        }
+                    };
+                #endif
+
                 CREATE_UINT32_BITFIELD_MIN_MAX(rows, 16, 1, 0xffff, IOT_LED_MATRIX_ROWS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(cols, 16, 1, 0xffff, IOT_LED_MATRIX_COLS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(rowOfs, 16, 0, 0xffff, IOT_LED_MATRIX_ROW_OFS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(colOfs, 16, 0, 0xffff, IOT_LED_MATRIX_COL_OFS, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(pixels0, 13, 0, 4096, std::min(1024, IOT_LED_MATRIX_ROWS * IOT_LED_MATRIX_COLS), 1); // segment 1
-                CREATE_UINT32_BITFIELD_MIN_MAX(offset0, 13, 0, 4096, IOT_LED_MATRIX_PIXEL_OFFSET, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(pixels1, 13, 0, 4096, 0, 1); // segment 2
-                CREATE_UINT32_BITFIELD_MIN_MAX(offset1, 13, 0, 4096, 0, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(pixels2, 13, 0, 4096, 0, 1); // segment 3
-                CREATE_UINT32_BITFIELD_MIN_MAX(offset2, 13, 0, 4096, 0, 1);
-                CREATE_UINT32_BITFIELD_MIN_MAX(pixels3, 13, 0, 4096, 0, 1); // segment 4
-                CREATE_UINT32_BITFIELD_MIN_MAX(offset3, 13, 0, 4096, 0, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(reverse_rows, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_ROWS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(reverse_cols, 1, false, true, IOT_LED_MATRIX_OPTS_REVERSE_COLS, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(rotate, 1, false, true, IOT_LED_MATRIX_OPTS_ROTATE, 1);
                 CREATE_UINT32_BITFIELD_MIN_MAX(interleaved, 1, false, true, IOT_LED_MATRIX_OPTS_INTERLEAVED, 1);
+                #if IOT_LED_MATRIX_HAVE_PANELS
+                    // Every segment (output pin) is a panel of at least 1x1 LEDs (a strip is a panel with 1 row):
+                    // size as it is mounted, placement in the matrix (top row / left column), rotation in quarter
+                    // turns clockwise and mirror, see Clock::SegmentPanel. The LEDs of a panel are wired like the
+                    // matrix options say (reverse rows/columns, rotation, interleaved). Segment 1 is the whole
+                    // matrix by default, the other segments are disabled
+                    CREATE_UINT32_BITFIELD_MIN_MAX(enabled0, 1, false, true, true, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(panel_rows0, 13, 1, 4096, std::min(4096, IOT_LED_MATRIX_ROWS), 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(panel_cols0, 13, 1, 4096, std::min(4096, IOT_LED_MATRIX_COLS), 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(rotation0, 2, 0, 3, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mirror0, 1, false, true, false, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(pos_row0, 13, 0, 4095, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(pos_col0, 13, 0, 4095, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(enabled1, 1, false, true, false, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(panel_rows1, 13, 1, 4096, std::min(4096, IOT_LED_MATRIX_ROWS), 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(panel_cols1, 13, 1, 4096, std::min(4096, IOT_LED_MATRIX_COLS), 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(rotation1, 2, 0, 3, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mirror1, 1, false, true, false, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(pos_row1, 13, 0, 4095, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(pos_col1, 13, 0, 4095, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(enabled2, 1, false, true, false, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(panel_rows2, 13, 1, 4096, std::min(4096, IOT_LED_MATRIX_ROWS), 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(panel_cols2, 13, 1, 4096, std::min(4096, IOT_LED_MATRIX_COLS), 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(rotation2, 2, 0, 3, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mirror2, 1, false, true, false, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(pos_row2, 13, 0, 4095, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(pos_col2, 13, 0, 4095, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(enabled3, 1, false, true, false, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(panel_rows3, 13, 1, 4096, std::min(4096, IOT_LED_MATRIX_ROWS), 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(panel_cols3, 13, 1, 4096, std::min(4096, IOT_LED_MATRIX_COLS), 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(rotation3, 2, 0, 3, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mirror3, 1, false, true, false, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(pos_row3, 13, 0, 4095, 0, 1);
+                    CREATE_UINT32_BITFIELD_MIN_MAX(pos_col3, 13, 0, 4095, 0, 1);
+                #endif
+
                 MatrixConfigType(
                     uint16_t _rows = kDefaultValueFor_rows,
                     uint16_t _cols = kDefaultValueFor_cols,
                     uint16_t _rowOfs = kDefaultValueFor_rowOfs,
                     uint16_t _colOfs = kDefaultValueFor_colOfs,
-                    uint16_t _pixels0 = kDefaultValueFor_pixels0,
-                    uint16_t _offset0 = kDefaultValueFor_offset0,
-                    uint16_t _pixels1 = kDefaultValueFor_pixels1,
-                    uint16_t _offset1 = kDefaultValueFor_offset1,
-                    uint16_t _pixels2 = kDefaultValueFor_pixels2,
-                    uint16_t _offset2 = kDefaultValueFor_offset2,
-                    uint16_t _pixels3 = kDefaultValueFor_pixels3,
-                    uint16_t _offset3 = kDefaultValueFor_offset3,
                     bool _reverse_rows = kDefaultValueFor_reverse_rows,
                     bool _reverse_cols = kDefaultValueFor_reverse_cols,
                     bool _rotate = kDefaultValueFor_rotate,
@@ -519,20 +564,103 @@ namespace KFCConfigurationClasses {
                     cols(_cols),
                     rowOfs(_rowOfs),
                     colOfs(_colOfs),
-                    pixels0(_pixels0),
-                    offset0(_offset0),
-                    pixels1(_pixels1),
-                    offset1(_offset1),
-                    pixels2(_pixels2),
-                    offset2(_offset2),
-                    pixels3(_pixels3),
-                    offset3(_offset3),
                     reverse_rows(_reverse_rows),
                     reverse_cols(_reverse_cols),
                     rotate(_rotate),
                     interleaved(_interleaved)
+                    #if IOT_LED_MATRIX_HAVE_PANELS
+                        ,
+                        enabled0(kDefaultValueFor_enabled0),
+                        panel_rows0(kDefaultValueFor_panel_rows0),
+                        panel_cols0(kDefaultValueFor_panel_cols0),
+                        rotation0(kDefaultValueFor_rotation0),
+                        mirror0(kDefaultValueFor_mirror0),
+                        pos_row0(kDefaultValueFor_pos_row0),
+                        pos_col0(kDefaultValueFor_pos_col0),
+                        enabled1(kDefaultValueFor_enabled1),
+                        panel_rows1(kDefaultValueFor_panel_rows1),
+                        panel_cols1(kDefaultValueFor_panel_cols1),
+                        rotation1(kDefaultValueFor_rotation1),
+                        mirror1(kDefaultValueFor_mirror1),
+                        pos_row1(kDefaultValueFor_pos_row1),
+                        pos_col1(kDefaultValueFor_pos_col1),
+                        enabled2(kDefaultValueFor_enabled2),
+                        panel_rows2(kDefaultValueFor_panel_rows2),
+                        panel_cols2(kDefaultValueFor_panel_cols2),
+                        rotation2(kDefaultValueFor_rotation2),
+                        mirror2(kDefaultValueFor_mirror2),
+                        pos_row2(kDefaultValueFor_pos_row2),
+                        pos_col2(kDefaultValueFor_pos_col2),
+                        enabled3(kDefaultValueFor_enabled3),
+                        panel_rows3(kDefaultValueFor_panel_rows3),
+                        panel_cols3(kDefaultValueFor_panel_cols3),
+                        rotation3(kDefaultValueFor_rotation3),
+                        mirror3(kDefaultValueFor_mirror3),
+                        pos_row3(kDefaultValueFor_pos_row3),
+                        pos_col3(kDefaultValueFor_pos_col3)
+                    #endif
                 {
                 }
+
+                #if IOT_LED_MATRIX_HAVE_PANELS
+                    // panel of a segment, index 0-3
+                    Panel getPanel(uint8_t segment) const
+                    {
+                        switch(segment) {
+                            case 0:
+                                return Panel(enabled0, panel_rows0, panel_cols0, pos_row0, pos_col0, rotation0, mirror0);
+                            case 1:
+                                return Panel(enabled1, panel_rows1, panel_cols1, pos_row1, pos_col1, rotation1, mirror1);
+                            case 2:
+                                return Panel(enabled2, panel_rows2, panel_cols2, pos_row2, pos_col2, rotation2, mirror2);
+                            case 3:
+                                return Panel(enabled3, panel_rows3, panel_cols3, pos_row3, pos_col3, rotation3, mirror3);
+                        }
+                        return Panel();
+                    }
+
+                    void setPanel(uint8_t segment, const Panel &panel)
+                    {
+                        switch(segment) {
+                            case 0:
+                                enabled0 = panel.enabled;
+                                panel_rows0 = panel.rows;
+                                panel_cols0 = panel.cols;
+                                pos_row0 = panel.posRow;
+                                pos_col0 = panel.posCol;
+                                rotation0 = panel.rotation;
+                                mirror0 = panel.mirror;
+                                break;
+                            case 1:
+                                enabled1 = panel.enabled;
+                                panel_rows1 = panel.rows;
+                                panel_cols1 = panel.cols;
+                                pos_row1 = panel.posRow;
+                                pos_col1 = panel.posCol;
+                                rotation1 = panel.rotation;
+                                mirror1 = panel.mirror;
+                                break;
+                            case 2:
+                                enabled2 = panel.enabled;
+                                panel_rows2 = panel.rows;
+                                panel_cols2 = panel.cols;
+                                pos_row2 = panel.posRow;
+                                pos_col2 = panel.posCol;
+                                rotation2 = panel.rotation;
+                                mirror2 = panel.mirror;
+                                break;
+                            case 3:
+                                enabled3 = panel.enabled;
+                                panel_rows3 = panel.rows;
+                                panel_cols3 = panel.cols;
+                                pos_row3 = panel.posRow;
+                                pos_col3 = panel.posCol;
+                                rotation3 = panel.rotation;
+                                mirror3 = panel.mirror;
+                                break;
+                        }
+                    }
+                #endif
             };
 
             #endif

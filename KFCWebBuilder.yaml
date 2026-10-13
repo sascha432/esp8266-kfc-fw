@@ -63,17 +63,12 @@ web_builder:
       - ./Resources/html/ping-monitor.html
       - ./Resources/js/ping-console.js
       - ./Resources/css/ping-console.css
+    # the config pages of the LED matrix and the 7 segment clock (/led-matrix/<form>.html)
     '#if !IOT_CLOCK && !IOT_LED_MATRIX':
+      - ./Resources/html/led-matrix.html
       - ./Resources/images/light.svg
       - ./Resources/js/forms/led-matrix.js
       - ./Resources/js/webui-led-matrix.js
-    '#if !IOT_CLOCK || IOT_LED_MATRIX':
-      - ./Resources/html/clock.html
-      - ./Resources/css/clock-led-matrix.css
-    '#if !IOT_LED_MATRIX':
-      - ./Resources/html/led-matrix.html
-    '#if !IOT_LED_MATRIX_HEXAGON_PANEL':
-      - ./Resources/css/hexagon-panel.css
     '#if !IOT_ALARM_PLUGIN_ENABLED':
       - ./Resources/html/alarm.html
       - ./Resources/js/forms/alarm.js
@@ -192,8 +187,6 @@ web_builder:
           - ./Resources/css/rangeslider.css
           - ./Resources/css/form-help-block.css
           - ./Resources/css/input-text-range.css
-          - ./Resources/css/clock-led-matrix.css
-          - ./Resources/css/hexagon-panel.css
           - ./lib/KFCLibrary/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.css
       processors:
         # compress css

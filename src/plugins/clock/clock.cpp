@@ -76,6 +76,10 @@ ClockPlugin::ClockPlugin() :
     _forceUpdate(false),
     _isRunning(false),
     _isLocked(false),
+    #if IOT_LED_MATRIX_HAVE_PANELS
+        _testPattern(TestPatternType::NONE),
+        _testPatternSegment(-1),
+    #endif
     _display(),
     _lastUpdateTime(0),
     _tempOverride(0),
@@ -393,6 +397,9 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
     #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
         _registerIRRemoteWebHandler();
     #endif
+    #if IOT_LED_MATRIX_HAVE_PANELS
+        _registerMatrixTestWebHandler();
+    #endif
 
     #if IOT_ALARM_PLUGIN_ENABLED
         AlarmPlugin::setCallback(alarmCallback);
@@ -452,12 +459,15 @@ void ClockPlugin::setup(SetupModeType mode, const PluginComponents::Dependencies
 void ClockPlugin::reconfigure(const String &source)
 {
     __LDBG_printf("source=%s", source.c_str());
-    #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
-        if (F("http") == source) {
-            // the web server has been restarted, the handler is gone
+    if (F("http") == source) {
+        // the web server has been restarted, the handlers are gone
+        #if defined(IOT_LED_MATRIX_IR_REMOTE_PIN) && IOT_LED_MATRIX_IR_REMOTE_PIN != -1
             _registerIRRemoteWebHandler();
-        }
-    #endif
+        #endif
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            _registerMatrixTestWebHandler();
+        #endif
+    }
     const bool applyConfigOnly = source.startsWith(F("ani-"));
     _enqueue([this, applyConfigOnly] { _reconfigureQueued(applyConfigOnly); });
 }
@@ -485,7 +495,108 @@ void ClockPlugin::_reconfigureQueued(bool applyConfigOnly)
         _enable();
     }
     _isRunning = true;
+
+    #if IOT_LED_MATRIX_HAVE_PANELS
+        // test pattern buttons of the matrix form: the new settings are applied, the next _loop() draws
+        // the pattern. This function runs from the task queue at the start of a frame, a pattern drawn
+        // here would be overwritten by the animation frame that follows. LEDs that are off are switched
+        // on for the pattern (_enable() can refuse: temperature protection), without the _loop() the
+        // request would never show up
+        if (_testPattern == TestPatternType::AFTER_RECONFIGURE) {
+            if (!_isEnabled) {
+                _enable();
+            }
+            _testPattern = _isEnabled ? TestPatternType::SHOW : TestPatternType::NONE;
+        }
+    #endif
 }
+
+#if IOT_LED_MATRIX_HAVE_PANELS
+
+// stops the animation loop and draws the border of every panel with one color per edge (top red,
+// bottom blue, left yellow, right green, corners white) to verify the placement, rotation and mirror
+// of each segment. brightness 0 uses the configured brightness (the display brightness is still 0 or
+// fading in right after the LEDs have been enabled). onlySegment (0 based) draws a single
+// segment and leaves all other LEDs off (+LMC=id), -1 draws all. report receives one line per segment
+// (+LMC=dir), it may be nullptr. Loop task only
+void ClockPlugin::_showTestPattern(uint8_t brightness, const std::function<void(const char *)> &report, int8_t onlySegment)
+{
+    constexpr uint32_t kTop = 0xff0000;     // red
+    constexpr uint32_t kRight = 0x00ff00;   // green
+    constexpr uint32_t kBottom = 0x0000ff;  // blue
+    constexpr uint32_t kLeft = 0xffff00;    // yellow
+    constexpr uint32_t kCorner = 0xffffff;  // white
+
+    enableLoop(false);
+    _clear();
+
+    const uint16_t rows = _display.getRows();
+    const uint16_t cols = _display.getCols();
+    uint32_t linearOffset = 0;
+
+    for (uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
+        const auto &panel = _display.getSegmentPanel(i);
+        const uint16_t pixels = _display.getSegmentPixels(i);
+        if (!pixels) {
+            if (panel.isEnabled() && report) {
+                report(PrintString(F("segment %u: panel %ux%u does not fit into the pixel buffer"), i + 1, panel.rows, panel.cols).c_str());
+            }
+            continue;
+        }
+        // the linear offset of a segment counts the LEDs of the segments before it
+        const uint32_t offset = linearOffset;
+        linearOffset += pixels;
+        if (onlySegment >= 0 && i != onlySegment) {
+            continue;
+        }
+        if (panel.posRow >= rows || panel.posCol >= cols) {
+            if (report) {
+                report(PrintString(F("segment %u: panel %ux%u at row=%u col=%u is outside of the matrix"), i + 1, panel.rows, panel.cols, panel.posRow, panel.posCol).c_str());
+            }
+            continue;
+        }
+        // the border of the panel, clipped to the matrix. the corners are drawn last, the left column
+        // wins over the right one in a single column and the top row over the bottom one in a single row
+        const uint16_t minRow = panel.posRow;
+        const uint16_t minCol = panel.posCol;
+        const uint16_t maxRow = std::min<uint32_t>(rows, static_cast<uint32_t>(panel.posRow) + panel.rows) - 1;
+        const uint16_t maxCol = std::min<uint32_t>(cols, static_cast<uint32_t>(panel.posCol) + panel.cols) - 1;
+        for (uint16_t col = minCol; col <= maxCol; col++) {
+            _display.setPixel(maxRow, col, Clock::PixelRGB(kBottom));
+            _display.setPixel(minRow, col, Clock::PixelRGB(kTop));
+        }
+        for (uint16_t row = minRow; row <= maxRow; row++) {
+            _display.setPixel(row, maxCol, Clock::PixelRGB(kRight));
+            _display.setPixel(row, minCol, Clock::PixelRGB(kLeft));
+        }
+        _display.setPixel(minRow, minCol, Clock::PixelRGB(kCorner));
+        _display.setPixel(minRow, maxCol, Clock::PixelRGB(kCorner));
+        _display.setPixel(maxRow, minCol, Clock::PixelRGB(kCorner));
+        _display.setPixel(maxRow, maxCol, Clock::PixelRGB(kCorner));
+
+        if (report) {
+            report(PrintString(F("segment %u: panel %ux%u at row=%u col=%u leds=%u linear offset=%u rotation=%u mirror=%u lut=%s"), i + 1, panel.rows, panel.cols, panel.posRow, panel.posCol, pixels, offset, panel.rotation * 90, panel.mirror, _display.isSegmentIdentity(i) ? PSTR("identity") : PSTR("mapped")).c_str());
+        }
+    }
+
+    // the current brightness, a test pattern at brightness 0 would be invisible: the stored brightness
+    // if the LEDs are fading in or were dimmed to 0, a quarter if that is 0 as well
+    if (!brightness) {
+        brightness = _getBrightness();
+    }
+    if (!brightness) {
+        brightness = _config.brightness;
+    }
+    if (!brightness) {
+        brightness = Clock::kMaxBrightness / 4;
+    }
+    _display.show(brightness);
+    if (report) {
+        report(PrintString(F("first row red, last row blue, first column yellow, last column green, corners white, brightness=%u (+LMC=lo,1 resumes the animation)"), brightness).c_str());
+    }
+}
+
+#endif
 
 #if IOT_LED_MATRIX_SHOW_UPDATE_PROGRESS
 
@@ -889,39 +1000,43 @@ void ClockPlugin::_sanitizeConfig()
         #endif
     #endif
 
-    // the layout has to stay inside the pixel buffer, updateSegments() does not validate it - the
-    // rules are shared with the matrix form, see matrix_validation.h
-    auto &matrix = _config.matrix;
-    constexpr uint32_t kMaxPixels = Clock::MatrixValidation::kMaxPixels;
-    Clock::MatrixValidation::Segment segments[Clock::MatrixValidation::kMaxSegments] = {
-        { static_cast<uint16_t>(matrix.offset0), static_cast<uint16_t>(matrix.pixels0) },
-        { static_cast<uint16_t>(matrix.offset1), static_cast<uint16_t>(matrix.pixels1) },
-        { static_cast<uint16_t>(matrix.offset2), static_cast<uint16_t>(matrix.pixels2) },
-        { static_cast<uint16_t>(matrix.offset3), static_cast<uint16_t>(matrix.pixels3) },
-    };
+    #if IOT_LED_MATRIX_CONFIGURABLE
+        _sanitizeMatrixConfig(_config.matrix);
+    #endif
+}
 
-    // rows/cols = 0 would divide by zero and a mapping that exceeds the buffer would read outside of
-    // it, PixelMapping::setParams() takes rowOfs/colOfs modulo them
-    const auto matrixValidation = Clock::MatrixValidation::validate(matrix.rows, matrix.cols, segments, IOT_LED_MATRIX_CHANNELS, kMaxPixels);
-    if (!matrixValidation.rows || !matrixValidation.cols || matrixValidation.sizeExceeded) {
+#if IOT_LED_MATRIX_CONFIGURABLE
+
+void ClockPlugin::_sanitizeMatrixConfig(MatrixConfigType &matrix)
+{
+    // the layout has to stay inside the pixel buffer, updateSegments() does not validate it - the rules
+    // are shared with the matrix form, see matrix_validation.h. rows/cols = 0 would divide by zero and a
+    // mapping that exceeds the buffer would read outside of it, PixelMapping::setParams() takes
+    // rowOfs/colOfs modulo them
+    if (!matrix.rows || !matrix.cols || static_cast<uint32_t>(matrix.rows) * matrix.cols > Clock::MatrixValidation::kMaxPixels) {
         __DBG_printf("invalid matrix %ux%u, using defaults", matrix.rows, matrix.cols);
         matrix.rows = IOT_LED_MATRIX_ROWS;
         matrix.cols = IOT_LED_MATRIX_COLS;
     }
-
-    // a segment that is larger than the buffer (or starts behind it) would be read out of bounds
-    for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
-        segments[i] = Clock::MatrixValidation::clampSegment(segments[i].offset, segments[i].pixels, kMaxPixels);
-    }
-    matrix.offset0 = segments[0].offset;
-    matrix.pixels0 = segments[0].pixels;
-    matrix.offset1 = segments[1].offset;
-    matrix.pixels1 = segments[1].pixels;
-    matrix.offset2 = segments[2].offset;
-    matrix.pixels2 = segments[2].pixels;
-    matrix.offset3 = segments[3].offset;
-    matrix.pixels3 = segments[3].pixels;
+    #if IOT_LED_MATRIX_HAVE_PANELS
+        // every segment is a panel of at least 1x1 LEDs (a zero filled storage has 0x0), a panel that does
+        // not fit into the pixel buffer is disabled
+        for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
+            auto panel = matrix.getPanel(i);
+            if (!panel.rows || !panel.cols) {
+                panel.rows = MatrixConfigType::kDefaultValueFor_panel_rows0;
+                panel.cols = MatrixConfigType::kDefaultValueFor_panel_cols0;
+            }
+            if (static_cast<uint32_t>(panel.rows) * panel.cols > Clock::MatrixValidation::kMaxPixels) {
+                __DBG_printf("segment %u: panel %ux%u exceeds the pixel buffer, disabled", i + 1, panel.rows, panel.cols);
+                panel.enabled = false;
+            }
+            matrix.setPanel(i, panel);
+        }
+    #endif
 }
+
+#endif
 
 // reads the stored configuration and applies it, loop task only
 void ClockPlugin::readConfig(bool setup)
@@ -943,12 +1058,22 @@ void ClockPlugin::readConfig(bool setup)
 
     _setShowMethod(static_cast<Clock::ShowMethodType>(_config.method));
 
-    // set configured segments
-    _display.updateSegments(_config.matrix.pixels0, _config.matrix.offset0, _config.matrix.pixels1, _config.matrix.offset1, _config.matrix.pixels2, _config.matrix.offset2, _config.matrix.pixels3, _config.matrix.offset3);
-
-    if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved, _config.matrix.rowOfs, _config.matrix.colOfs)) {
-        __DBG_printf("_display.setParams() failed");
-    }
+    #if IOT_LED_MATRIX_CONFIGURABLE
+        // the segments are built with the pixel mapping, it has to be set first
+        if (!_display.setParams(_config.matrix.rows, _config.matrix.cols, _config.matrix.reverse_rows, _config.matrix.reverse_cols, _config.matrix.rotate, _config.matrix.interleaved, _config.matrix.rowOfs, _config.matrix.colOfs)) {
+            __DBG_printf("_display.setParams() failed");
+        }
+    #endif
+    #if IOT_LED_MATRIX_HAVE_PANELS
+        // one panel per segment, see Clock::SegmentPanel
+        Clock::SegmentPanel panels[Clock::MatrixValidation::kMaxSegments];
+        for(uint8_t i = 0; i < Clock::MatrixValidation::kMaxSegments; i++) {
+            const auto panel = _config.matrix.getPanel(i);
+            panels[i] = Clock::SegmentPanel(panel.enabled, panel.rows, panel.cols, panel.posRow, panel.posCol, panel.rotation, panel.mirror);
+        }
+        _display.setSegmentPanels(panels);
+    #endif
+    _display.updateSegments();
 
     _display.setDither(_config.dithering);
 
@@ -1175,6 +1300,15 @@ void IRAM_ATTR ClockPlugin::_loop()
     // the loop task is the only one that may change the display or the config, it applies all
     // changes requested by other tasks here
     _applyPendingChanges();
+
+    #if IOT_LED_MATRIX_HAVE_PANELS
+        // the pattern replaces the animation, _showTestPattern() stops the loop
+        if (_testPattern == TestPatternType::SHOW) {
+            _testPattern = TestPatternType::NONE;
+            _showTestPattern(0, nullptr, _testPatternSegment);
+            return;
+        }
+    #endif
 
     const uint32_t start = micros();
 

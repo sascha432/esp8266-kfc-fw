@@ -158,6 +158,8 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 )) {
                     args.print(F("failed to set parameters"));
                 }
+                // the panel LUTs depend on the mapping
+                _display.updateSegments();
             }
             args.print(F("+lmc=map,%u,%u,%u,%u,%u,%u"), _display.getRows(), _display.getCols(), _display.isRowsReversed(), _display.isColsReversed(), _display.isRotated(), _display.isInterleaved());
         }
@@ -207,6 +209,30 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             _show();
             args.print(F("display cleared"));
         }
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            // dir[ection][,<brightness>], stops the animation loop and draws the border of every panel
+            // with one color per edge to verify the placement, rotation and mirror of each segment
+            else if (args.startsWithIgnoreCase(0, F("dir"))) {
+                const uint8_t brightness = (args.size() > 1) ? args.toIntMinMax<uint8_t>(1, 1, 255, 0) : 0;
+                _showTestPattern(brightness, [&args](const char *line) {
+                    args.print(line);
+                });
+            }
+            // id,<segment>[,<brightness>], turns all LEDs off and draws only the border of the panel of
+            // one segment (1-4) to identify which output pin drives which panel
+            else if (args.equalsIgnoreCase(0, F("id"))) {
+                const int segment = args.toInt(1, 0);
+                if (segment < 1 || segment > Clock::MatrixValidation::kMaxSegments) {
+                    args.print(F("segment must be 1-%u"), Clock::MatrixValidation::kMaxSegments);
+                }
+                else {
+                    const uint8_t brightness = (args.size() > 2) ? args.toIntMinMax<uint8_t>(2, 1, 255, 0) : 0;
+                    _showTestPattern(brightness, [&args](const char *line) {
+                        args.print(line);
+                    }, segment - 1);
+                }
+            }
+        #endif
         // pr[int],<display=00:00:00>
         else if (args.startsWithIgnoreCase(0, F("pr"))) {
             #if IOT_LED_MATRIX == 0

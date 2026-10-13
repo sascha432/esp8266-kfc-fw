@@ -13,17 +13,18 @@
 
 // Single place that validates the LED matrix / LED strip layout.
 //
-// The LED buffer holds IOT_CLOCK_NUM_PIXELS pixels. The matrix mapping translates a logical pixel
-// index (0 .. rows*cols-1) into that buffer and every segment (one per output pin) describes a run
-// of LEDs inside the buffer (offset + pixels).
+// The LED buffer holds IOT_CLOCK_NUM_PIXELS pixels, the matrix mapping translates a logical pixel
+// index (0 .. rows*cols-1) into that buffer. Every segment (one per output pin) is a panel of
+// rows x cols LEDs placed in the matrix (top row / left column), see SegmentPanel.
 //
 // Rules:
-//  - rows * cols must fit into the buffer      -> error, the mapping would read outside the buffer
-//  - offset + pixels must fit into the buffer  -> error, the segment would read outside the buffer
-//  - two segments must not overlap             -> error, the same pixels would be driven twice
-//  - gaps are allowed and the segments do not have to cover rows * cols -> warning only
-//  - a segment outside the matrix area (IOT_LED_MATRIX_PIXEL_OFFSET + rows * cols) -> warning only, the
-//    form compares the ranges, not the sums
+//  - matrix rows * cols must fit into the buffer    -> error, the mapping would read outside the buffer
+//  - a panel needs at least 1x1 LEDs                 -> error
+//  - a panel must fit into the buffer (rows * cols)  -> error, its LUT would not fit
+//  - a panel must not reach outside the matrix       -> error, those LEDs could never be drawn
+//  - more enabled panels than output pins            -> error
+//  - two panels sharing matrix pixels                -> warning only (the same pixels on two pins)
+//  - matrix pixels no panel covers                   -> warning only
 //
 // Transport specific rules (the form shows them while editing, see Resources/js/forms/led-matrix.js):
 //  - I2S with no segment          -> warning, nothing is transmitted
@@ -33,8 +34,8 @@
 //  - FastLED/NeoPixelEx with more than one segment -> warning, only one chain is
 //    driven (these builds have no I2S LED transport)
 //
-// The web form reports the errors to the user, ClockPlugin::_sanitizeConfig() uses clampSegment() to
-// keep values that could read/write outside the buffer from reaching the driver.
+// The web form reports the errors to the user, ClockPlugin::_sanitizeConfig() keeps values that could
+// read/write outside the buffer from reaching the driver.
 namespace Clock {
     namespace MatrixValidation {
 
@@ -62,8 +63,21 @@ namespace Clock {
         static constexpr uint32_t kLargeSegmentPixels = kMaxPixels / 2;
 
         struct Segment {
-            uint16_t offset;
-            uint16_t pixels;
+            bool enabled;
+            uint16_t rows;      // panel size as it is mounted
+            uint16_t cols;
+            uint16_t posRow;    // placement in the matrix: top row / left column
+            uint16_t posCol;
+
+            uint32_t pixels() const {
+                return enabled ? static_cast<uint32_t>(rows) * cols : 0;
+            }
+
+            // the panels overlap if their areas intersect
+            bool intersects(const Segment &other) const {
+                return posRow < static_cast<uint32_t>(other.posRow) + other.rows && other.posRow < static_cast<uint32_t>(posRow) + rows &&
+                    posCol < static_cast<uint32_t>(other.posCol) + other.cols && other.posCol < static_cast<uint32_t>(posCol) + cols;
+            }
         };
 
         struct Result {
@@ -71,31 +85,29 @@ namespace Clock {
             uint16_t rows;
             uint16_t cols;
             uint32_t matrixPixels;      // rows * cols
-            uint32_t segmentPixels;     // sum of the pixels of all segments
+            uint32_t segmentPixels;     // sum of the LEDs of the enabled panels
             uint32_t maxPixels;         // pixel buffer size
-            uint8_t activeSegments;     // segments with pixels != 0
+            uint8_t activeSegments;     // enabled panels
             bool sizeExceeded;          // rows * cols > maxPixels
-            bool segmentExceeded;       // offset + pixels > maxPixels
-            uint8_t segmentExceededIndex;   // 1 based, 0 = none
-
-            bool overlap;               // two segments intersect
+            bool panelInvalid;          // an enabled panel with 0 rows or columns
+            uint8_t panelInvalidIndex;  // 1 based, 0 = none
+            bool panelTooLarge;         // an enabled panel with more LEDs than the buffer
+            uint8_t panelTooLargeIndex;
+            bool panelOutside;          // an enabled panel reaches outside the matrix
+            uint8_t panelOutsideIndex;
+            bool overlap;               // two enabled panels share matrix pixels
             uint8_t overlapA;           // 1 based segment index (the earlier one)
             uint8_t overlapB;           // 1 based segment index (the later one)
             bool transportExceeded;     // activeSegments > kMaxStrips
 
             bool hasErrors() const {
                 // rows/cols = 0 is not a buffer overflow, the mapping cannot be built
-                return rows == 0 || cols == 0 || sizeExceeded || segmentExceeded || overlap || transportExceeded;
+                return rows == 0 || cols == 0 || sizeExceeded || panelInvalid || panelTooLarge || panelOutside || transportExceeded;
             }
 
-            // configured pixels above (+) or below (-) the number the matrix requires
+            // LEDs of the panels above (+) or below (-) the number of matrix pixels
             int32_t coverageDiff() const {
                 return static_cast<int32_t>(segmentPixels) - static_cast<int32_t>(matrixPixels);
-            }
-
-            // one past the last pixel of a segment, index is 0 based
-            uint32_t segmentEnd(uint8_t index) const {
-                return static_cast<uint32_t>(segments[index].offset) + segments[index].pixels;
             }
         };
 
@@ -113,13 +125,22 @@ namespace Clock {
             }
             for (uint8_t i = 0; i < count; i++) {
                 result.segments[i] = segments[i];
-                result.segmentPixels += segments[i].pixels;
-                if (segments[i].pixels) {
-                    result.activeSegments++;
-                    if (static_cast<uint32_t>(segments[i].offset) + segments[i].pixels > maxPixels && !result.segmentExceeded) {
-                        result.segmentExceeded = true;
-                        result.segmentExceededIndex = i + 1;
-                    }
+                if (!segments[i].enabled) {
+                    continue;
+                }
+                result.activeSegments++;
+                result.segmentPixels += segments[i].pixels();
+                if ((!segments[i].rows || !segments[i].cols) && !result.panelInvalid) {
+                    result.panelInvalid = true;
+                    result.panelInvalidIndex = i + 1;
+                }
+                if (segments[i].pixels() > maxPixels && !result.panelTooLarge) {
+                    result.panelTooLarge = true;
+                    result.panelTooLargeIndex = i + 1;
+                }
+                if ((static_cast<uint32_t>(segments[i].posRow) + segments[i].rows > rows || static_cast<uint32_t>(segments[i].posCol) + segments[i].cols > cols) && !result.panelOutside) {
+                    result.panelOutside = true;
+                    result.panelOutsideIndex = i + 1;
                 }
             }
 
@@ -127,15 +148,14 @@ namespace Clock {
 
             // report the first overlapping pair
             for (uint8_t i = 1; i < count && !result.overlap; i++) {
-                if (!result.segments[i].pixels) {
+                if (!result.segments[i].pixels()) {
                     continue;
                 }
-                const uint32_t endI = result.segmentEnd(i);
                 for (uint8_t j = 0; j < i; j++) {
-                    if (!result.segments[j].pixels) {
+                    if (!result.segments[j].pixels()) {
                         continue;
                     }
-                    if (result.segments[i].offset < result.segmentEnd(j) && result.segments[j].offset < endI) {
+                    if (result.segments[i].intersects(result.segments[j])) {
                         result.overlap = true;
                         result.overlapA = j + 1;
                         result.overlapB = i + 1;
@@ -144,24 +164,6 @@ namespace Clock {
                 }
             }
             return result;
-        }
-
-        // Clamp a segment so it stays inside the pixel buffer. A segment that starts behind the
-        // buffer is disabled, a segment that reaches beyond it is shortened. The result is returned
-        // by value because the config stores the segments as bit fields that cannot be referenced.
-        inline Segment clampSegment(uint16_t offset, uint16_t pixels, uint32_t maxPixels)
-        {
-            Segment segment;
-            if (offset >= maxPixels) {
-                segment.offset = 0;
-                segment.pixels = 0;
-            }
-            else {
-                segment.offset = offset;
-                const uint32_t available = maxPixels - offset;
-                segment.pixels = (pixels > available) ? static_cast<uint16_t>(available) : pixels;
-            }
-            return segment;
         }
 
     }

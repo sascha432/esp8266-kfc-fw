@@ -40,11 +40,9 @@
 #    pragma GCC pop_options
 #endif
 
-#if IOT_LED_MATRIX
-#    define LED_MATRIX_MENU_URI_PREFIX "led-matrix/"        // uses led-matrix.html
-#else
-#    define LED_MATRIX_MENU_URI_PREFIX "clock/"             // uses clock.html
-#endif
+// the config pages of the LED matrix and the 7 segment clock share led-matrix.html, the web server maps
+// /led-matrix/<form>.html to that page (clock.html was a duplicate of it)
+#define LED_MATRIX_MENU_URI_PREFIX "led-matrix/"
 
 class ClockPlugin;
 

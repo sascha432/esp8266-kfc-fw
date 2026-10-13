@@ -8,6 +8,12 @@
 #include <type_traits>
 #include "color.h"
 #include <NeoPixelEx.h>
+#include <memory>
+#include <new>
+#include "matrix_validation.h"
+#if IOT_LED_MATRIX_HAVE_PANELS
+#    include "segment_panel.h"
+#endif
 #if HAVE_NEOPIXELBUS
 #    include "pixel_output_neobus.h"
 #endif
@@ -416,6 +422,16 @@ namespace Clock {
             return _interleaved;
         }
 
+        PixelAddressType getRowOfs() const
+        {
+            return _rowOfs;
+        }
+
+        PixelAddressType getColOfs() const
+        {
+            return _colOfs;
+        }
+
         // row offset
         inline __attribute__((__always_inline__))
         void _applyRowOffset(CoordinateType &row) const
@@ -538,6 +554,10 @@ namespace Clock {
         using PixelMappingType::size;
         using PixelMappingType::getRows;
         using PixelMappingType::getCols;
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            using PixelMappingType::getRowOfs;
+            using PixelMappingType::getColOfs;
+        #endif
 
     protected:
         using PixelMappingType::kMaxPixelAddress; // = kPixelOffset + kNumPixels
@@ -827,6 +847,10 @@ namespace Clock {
         using PixelBufferType::isRotated;
         using PixelBufferType::isInterleaved;
         using PixelBufferType::getOffset;
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            using PixelBufferType::getRowOfs;
+            using PixelBufferType::getColOfs;
+        #endif
         using PixelBufferType::setParams;
         using PixelBufferType::getRows;
         using PixelBufferType::getCols;
@@ -839,13 +863,19 @@ namespace Clock {
             #if HAVE_NEOPIXELBUS
                 _brightness(255),
                 _neoBusMethod(NeoBusMethodType::RMT),
-                _segPixels{},
-                _segOffset{},
-                _numSegments(0)
             #else
                 _emptyPixel(0),
-                _controller(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN>(&_emptyPixel, 1))
+                _controller(FastLED.addLeds<FASTLED_LED_CONTROLLER, IOT_LED_MATRIX_OUTPUT_PIN>(&_emptyPixel, 1)),
             #endif
+            _segPixels{},
+            #if IOT_LED_MATRIX_HAVE_PANELS
+                _segPanel{},
+                _segLut{},
+                #if !HAVE_NEOPIXELBUS
+                    _segBuffer{},
+                #endif
+            #endif
+            _numSegments(0)
         {
             setDither(false);
             #if IOT_LED_MATRIX_MULTI_OUTPUT && !HAVE_NEOPIXELBUS
@@ -861,33 +891,71 @@ namespace Clock {
             #endif
         }
 
-        // updates the size of the segments
-        void updateSegments(uint16_t num0, uint16_t ofs0, uint16_t num1, uint16_t ofs1, uint16_t num2, uint16_t ofs2, uint16_t num3, uint16_t ofs3)
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            // panel of each segment (see SegmentPanel), applied by the next updateSegments(). The LUTs are
+            // built with the pixel mapping (rows/cols, reverse, rotation, interleaved), setParams() has to be
+            // called first
+            void setSegmentPanels(const SegmentPanel *panels)
+            {
+                for (uint8_t i = 0; i < MatrixValidation::kMaxSegments; i++) {
+                    _segPanel[i] = panels[i];
+                }
+            }
+
+            const SegmentPanel &getSegmentPanel(uint8_t index) const
+            {
+                return _segPanel[index];
+            }
+
+            // true if the panel is transmitted straight from the pixel buffer (LED i = buffer pixel i)
+            bool isSegmentIdentity(uint8_t index) const
+            {
+                return !_segLut[index];
+            }
+        #endif
+
+        // LEDs the segment transmits, 0 if it is disabled or does not fit into the buffer
+        uint16_t getSegmentPixels(uint8_t index) const
+        {
+            return _segPixels[index];
+        }
+
+        // rebuilds the transport: the panels of the segments (their LUTs depend on the pixel mapping, so
+        // this is required after setParams() as well), or the mapped matrix on the first output pin of a
+        // static display
+        void updateSegments()
         {
             fill(0);
             show(0);
+            #if IOT_LED_MATRIX_HAVE_PANELS
+                _buildLuts();
+            #else
+                // the matrix (rows x columns) starting at the pixel offset, inside the buffer
+                const uint32_t available = __pixels.size() - getOffset();
+                _segPixels[0] = static_cast<uint16_t>(std::min<uint32_t>(size(), available));
+            #endif
 
             #if HAVE_NEOPIXELBUS
                 // the strips are rebuilt for the new segment layout, they are also rebuilt by show()
                 // when the show method is changed at runtime
-                _segPixels[0] = num0; _segOffset[0] = ofs0;
-                _segPixels[1] = num1; _segOffset[1] = ofs1;
-                _segPixels[2] = num2; _segOffset[2] = ofs2;
-                _segPixels[3] = num3; _segOffset[3] = ofs3;
                 _rebuildStrips();
             #endif
 
             #if !HAVE_NEOPIXELBUS
             _numSegments = 0;
+            #if IOT_LED_MATRIX_HAVE_PANELS
+                for (auto &buffer : _segBuffer) {
+                    buffer.reset();
+                }
+            #endif
 
             auto fastLedPtr = &_controller;
-            if (num0) {
-                __LDBG_printf("segment 0 pixels=%p ofs=%u num=%u", __pixels.data() + ofs0, ofs0, num0);
-                fastLedPtr->setLeds(reinterpret_cast<CRGB *>(__pixels.data() + ofs0), (num0));
+            if (_segPixels[0]) {
+                __LDBG_printf("segment 0 num=%u", _segPixels[0]);
+                fastLedPtr->setLeds(_getSegmentLeds(0), _segPixels[0]);
                 _numSegments++;
             }
             else {
-                __LDBG_printf("segment 0 pixels=%p ofs=%u num=%u", _emptyPixel, ofs0, num0);
                 fastLedPtr->setLeds(&_emptyPixel, 1);
             }
             #if IOT_LED_MATRIX_MULTI_OUTPUT
@@ -895,37 +963,34 @@ namespace Clock {
                     if (!(fastLedPtr = fastLedPtr->next())) {
                         break;
                     }
-                    if (num1 && IOT_LED_MATRIX_OUTPUT_PIN1 != -1) {
-                        __LDBG_printf("segment 1 pixels=%p ofs=%u num=%u", __pixels.data() + ofs1, ofs1, num1);
-                        fastLedPtr->setLeds(reinterpret_cast<CRGB *>(__pixels.data() + ofs1), (num1));
+                    if (_segPixels[1] && IOT_LED_MATRIX_OUTPUT_PIN1 != -1) {
+                        __LDBG_printf("segment 1 num=%u", _segPixels[1]);
+                        fastLedPtr->setLeds(_getSegmentLeds(1), _segPixels[1]);
                         _numSegments++;
                     }
                     else {
-                        __LDBG_printf("segment 1 pixels=%p ofs=%u num=%u", _emptyPixel, ofs1, num1);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
                     }
                     if (!(fastLedPtr = fastLedPtr->next())) {
                         break;
                     }
-                    if (num2 && IOT_LED_MATRIX_OUTPUT_PIN2 != -1) {
-                        __LDBG_printf("segment 2 pixels=%p ofs=%u num=%u", __pixels.data() + ofs2, ofs2, num2);
-                        fastLedPtr->setLeds(reinterpret_cast<CRGB *>(__pixels.data() + ofs2), (num2));
+                    if (_segPixels[2] && IOT_LED_MATRIX_OUTPUT_PIN2 != -1) {
+                        __LDBG_printf("segment 2 num=%u", _segPixels[2]);
+                        fastLedPtr->setLeds(_getSegmentLeds(2), _segPixels[2]);
                         _numSegments++;
                     }
                     else {
-                        __LDBG_printf("segment 2 pixels=%p ofs=%u num=%u", _emptyPixel, ofs2, num2);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
                     }
                     if (!(fastLedPtr = fastLedPtr->next())) {
                         break;
                     }
-                    if (num3 && IOT_LED_MATRIX_OUTPUT_PIN3 != -1) {
-                        __LDBG_printf("segment 3 pixels=%p ofs=%u num=%u", __pixels.data() + ofs3, ofs3, num3);
-                        fastLedPtr->setLeds(reinterpret_cast<CRGB *>(__pixels.data() + ofs3), (num3));
+                    if (_segPixels[3] && IOT_LED_MATRIX_OUTPUT_PIN3 != -1) {
+                        __LDBG_printf("segment 3 num=%u", _segPixels[3]);
+                        fastLedPtr->setLeds(_getSegmentLeds(3), _segPixels[3]);
                         _numSegments++;
                     }
                     else {
-                        __LDBG_printf("segment 3 pixels=%p ofs=%u num=%u", _emptyPixel, ofs3, num3);
                         fastLedPtr->setLeds(&_emptyPixel, 1);
                     }
                     break;
@@ -1025,6 +1090,9 @@ namespace Clock {
 
         void show(uint8_t brightness)
         {
+            #if !HAVE_NEOPIXELBUS && IOT_LED_MATRIX_HAVE_PANELS
+                _fillSegmentBuffers();
+            #endif
             #if HAVE_NEOPIXELBUS
                 auto type = getNeopixelShowMethodType();
                 auto method = (type == ShowMethodType::NEOBUS_I2S) ? NeoBusMethodType::I2S : NeoBusMethodType::RMT;
@@ -1137,18 +1205,16 @@ namespace Clock {
             void getPowerSum(uint32_t &red, uint32_t &green, uint32_t &blue, uint32_t &count) const
             {
                 red = green = blue = count = 0;
-                const uint32_t maxPixels = __pixels.size();
-                for (uint8_t i = 0; i < NeoBusStrips::kMaxStrips; i++) {
-                    if (!_segPixels[i] || _segOffset[i] >= maxPixels) {
+                for (uint8_t i = 0; i < MatrixValidation::kMaxSegments; i++) {
+                    const uint16_t num = _segPixels[i];
+                    if (!num) {
                         continue;
                     }
-                    const uint32_t num = std::min<uint32_t>(_segPixels[i], maxPixels - _segOffset[i]);
-                    const PixelRGB *leds = __pixels.data() + _segOffset[i];
-                    for (uint32_t j = 0; j < num; j++) {
-                        red += leds[j].r;
-                        green += leds[j].g;
-                        blue += leds[j].b;
-                    }
+                    forEachSegmentPixel(__pixels.data(), getOffset(), _getSegmentLut(i), num, [&](uint16_t, const PixelRGB &color) {
+                        red += color.r;
+                        green += color.g;
+                        blue += color.b;
+                    });
                     count += num;
                 }
             }
@@ -1179,6 +1245,76 @@ namespace Clock {
         }
 
     protected:
+        // LUT of a segment, nullptr if it is transmitted straight from the buffer
+        const uint16_t *_getSegmentLut(uint8_t index) const
+        {
+            #if IOT_LED_MATRIX_HAVE_PANELS
+                return _segLut[index].get();
+            #else
+                return nullptr;
+            #endif
+        }
+
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            // the LEDs of a panel are wired like the matrix: the matrix mapping applied to the panel's own size
+            using LocalMappingType = DynamicPixelMapping<0, 1, 1, false, false, false, false>;
+
+            // buffer address of every LED of the enabled segments, see SegmentPanel. A panel that is the
+            // identity (LED i = buffer pixel i, the default single panel) gets no LUT and is transmitted
+            // straight from the buffer
+            void _buildLuts()
+            {
+                const uint32_t maxPixels = __pixels.size();
+                const uint16_t rows = getRows();
+                const uint16_t cols = getCols();
+                const uint16_t pixelOffset = getOffset();
+                LocalMappingType local;
+                for (uint8_t i = 0; i < MatrixValidation::kMaxSegments; i++) {
+                    _segLut[i].reset();
+                    _segPixels[i] = 0;
+                    const auto &panel = _segPanel[i];
+                    if (!panel.isEnabled()) {
+                        continue;
+                    }
+                    const uint32_t numPixels = panel.numPixels();
+                    if (!local.setParams(panel.wiredRows(), panel.wiredCols(), isRowsReversed(), isColsReversed(), isRotated(), isInterleaved(), getRowOfs(), getColOfs())) {
+                        __DBG_printf("segment %u: panel %ux%u does not fit into the pixel buffer", i, panel.rows, panel.cols);
+                        continue;
+                    }
+                    std::unique_ptr<uint16_t[]> lut(new (std::nothrow) uint16_t[numPixels]);
+                    if (!lut) {
+                        __DBG_printf("segment %u: out of memory", i);
+                        continue;
+                    }
+                    // the local mapping yields the LED index of every point of the unrotated panel, the LED
+                    // reads the buffer pixel of the matrix point that it covers
+                    std::fill(lut.get(), lut.get() + numPixels, SegmentPanel::kBlack);
+                    for (uint16_t row = 0; row < panel.wiredRows(); row++) {
+                        for (uint16_t col = 0; col < panel.wiredCols(); col++) {
+                            uint16_t matrixRow;
+                            uint16_t matrixCol;
+                            if (!panel.getMatrixPoint(row, col, rows, cols, matrixRow, matrixCol)) {
+                                continue;
+                            }
+                            const uint32_t address = pixelOffset + this->getAddress(matrixRow, matrixCol);
+                            if (address < maxPixels) {
+                                lut[local.getAddress(row, col)] = address;
+                            }
+                        }
+                    }
+                    bool identity = true;
+                    for (uint32_t index = 0; index < numPixels && identity; index++) {
+                        identity = (lut[index] == pixelOffset + index);
+                    }
+                    _segPixels[i] = numPixels;
+                    if (!identity) {
+                        _segLut[i] = std::move(lut);
+                    }
+                    __LDBG_printf("segment %u: panel %ux%u at %u/%u pixels=%u identity=%u", i, panel.rows, panel.cols, panel.posRow, panel.posCol, numPixels, identity);
+                }
+            }
+        #endif
+
         #if HAVE_NEOPIXELBUS
             // create/rebuild one strip per output pin, the pins are compile time constants
             void _rebuildStrips()
@@ -1201,35 +1337,74 @@ namespace Clock {
                     pins[3] = 0xff;
                 #endif
 
-                // the configured segments have to stay inside the pixel buffer, a segment that is
-                // larger (or starts behind it) would be read out of bounds - transmit less instead
-                const uint32_t maxPixels = __pixels.size();
-                uint16_t offsets[NeoBusStrips::kMaxStrips];
+                // _buildLuts() only keeps panels that fit into the pixel buffer, a static display transmits
+                // the matrix on the first pin
                 uint16_t counts[NeoBusStrips::kMaxStrips];
+                const uint16_t *luts[NeoBusStrips::kMaxStrips];
                 for (uint8_t i = 0; i < NeoBusStrips::kMaxStrips; i++) {
-                    if (_segOffset[i] >= maxPixels) {
-                        offsets[i] = 0;
-                        counts[i] = 0;
-                        continue;
-                    }
-                    offsets[i] = _segOffset[i];
-                    const uint32_t available = maxPixels - _segOffset[i];
-                    counts[i] = (_segPixels[i] > available) ? static_cast<uint16_t>(available) : _segPixels[i];
+                    counts[i] = _segPixels[i];
+                    luts[i] = _getSegmentLut(i);
                 }
-                _neoBus.update(_neoBusMethod, pins, offsets, counts);
+                _neoBus.update(_neoBusMethod, pins, counts, luts, getOffset());
                 _numSegments = _neoBus.getNumStrips();
             }
 
             NeoBusStrips _neoBus;
             uint8_t _brightness;
             NeoBusMethodType _neoBusMethod;
-            uint16_t _segPixels[NeoBusStrips::kMaxStrips];
-            uint16_t _segOffset[NeoBusStrips::kMaxStrips];
         #else
+            #if IOT_LED_MATRIX_HAVE_PANELS
+                // pixels of a segment for FastLED/NeoPixelEx: the pixel buffer itself for an identity panel, or
+                // a buffer of the panel's size (filled by show() through its LUT, see _fillSegmentBuffers())
+                CRGB *_getSegmentLeds(uint8_t index)
+                {
+                    if (_segLut[index]) {
+                        _segBuffer[index].reset(new (std::nothrow) PixelRGB[_segPixels[index]]());
+                        if (_segBuffer[index]) {
+                            return reinterpret_cast<CRGB *>(_segBuffer[index].get());
+                        }
+                        __DBG_printf("segment %u: out of memory, transmitting it as identity", index);
+                        _segLut[index].reset();
+                    }
+                    else {
+                        _segBuffer[index].reset();
+                    }
+                    return reinterpret_cast<CRGB *>(__pixels.data() + getOffset());
+                }
+
+                // copy the panels into their buffers before they are transmitted
+                void _fillSegmentBuffers()
+                {
+                    for (uint8_t i = 0; i < MatrixValidation::kMaxSegments; i++) {
+                        if (!_segBuffer[i]) {
+                            continue;
+                        }
+                        PixelRGB *dst = _segBuffer[i].get();
+                        forEachSegmentPixel(__pixels.data(), getOffset(), _segLut[i].get(), _segPixels[i], [dst](uint16_t index, const PixelRGB &color) {
+                            dst[index] = color;
+                        });
+                    }
+                }
+            #else
+                // the matrix of a static display is transmitted straight from the buffer
+                CRGB *_getSegmentLeds(uint8_t index)
+                {
+                    return reinterpret_cast<CRGB *>(__pixels.data() + getOffset());
+                }
+            #endif
+
             // the pixel buffer (PixelRGB) is passed to FastLED as CRGB, see updateSegments()
             static_assert(sizeof(CRGB) == sizeof(PixelRGB), "PixelRGB must have the layout of CRGB");
             CRGB _emptyPixel;
             CLEDController &_controller;
+        #endif
+        uint16_t _segPixels[MatrixValidation::kMaxSegments];
+        #if IOT_LED_MATRIX_HAVE_PANELS
+            SegmentPanel _segPanel[MatrixValidation::kMaxSegments];
+            std::unique_ptr<uint16_t[]> _segLut[MatrixValidation::kMaxSegments];
+            #if !HAVE_NEOPIXELBUS
+                std::unique_ptr<PixelRGB[]> _segBuffer[MatrixValidation::kMaxSegments];
+            #endif
         #endif
         uint32_t _numSegments;
     };

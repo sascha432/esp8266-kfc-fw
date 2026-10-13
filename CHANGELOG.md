@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - LED Matrix: every segment is a panel (size, placement, rotation, mirror), the segment offset is gone, test pattern (`+LMC=dir`, `+LMC=id`, "Show All"/"Segment 1-4" buttons in the matrix form)
  - WebUI builder rewritten in Python (YAML config `KFCWebBuilder.yaml`, PHP is no longer required, zopfli compression ~4% smaller)
  - Home Assistant Control discontinued and moved to https://github.com/sascha432/esp32-hassctrl
  - Clock plugin: own color math instead of FastLED, LED power off at boot and after crashes, fixed `+LMC=tem`/`co`, removed unused options

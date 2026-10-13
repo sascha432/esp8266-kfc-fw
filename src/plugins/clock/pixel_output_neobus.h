@@ -19,6 +19,7 @@
 
 #include <Arduino_compat.h>
 #include "matrix_validation.h"
+#include "segment_panel.h"
 
 #if HAVE_NEOPIXELBUS
 
@@ -87,9 +88,12 @@ namespace Clock {
         using BusType = NeoPixelBus<NeoGrbFeature, _Method>;
 
     public:
-        NeoBusStripType(uint8_t pin, uint16_t numPixels, uint8_t channel, uint16_t offset) :
+        // lut: buffer address of every LED of the panel (SegmentPanel), nullptr if the panel is the identity
+        // (LED i = buffer pixel pixelOffset + i)
+        NeoBusStripType(uint8_t pin, uint16_t numPixels, uint8_t channel, uint16_t pixelOffset, const uint16_t *lut) :
             _bus(new BusType(numPixels, pin, static_cast<NeoBusChannel>(channel))),
-            _offset(offset)
+            _pixelOffset(pixelOffset),
+            _lut(lut)
         {
             if (!_bus->Begin()) {
                 __DBG_printf("NeoPixelBus initialize failed pin=%u pixels=%u channel=%u", pin, numPixels, channel);
@@ -113,23 +117,22 @@ namespace Clock {
             if (!_bus) {
                 return;
             }
-            pixels += _offset;
             const uint16_t count = _bus->PixelCount();
             const uint16_t scale = brightness + 1; // 255 -> 256 -> no scaling
-            for (uint16_t i = 0; i < count; i++) {
-                const PixelRGB &color = pixels[i];
-                _bus->SetPixelColor(i, RgbColor(
+            forEachSegmentPixel(pixels, _pixelOffset, _lut, count, [&](uint16_t index, const PixelRGB &color) {
+                _bus->SetPixelColor(index, RgbColor(
                     static_cast<uint8_t>((color.r * scale) >> 8),
                     static_cast<uint8_t>((color.g * scale) >> 8),
                     static_cast<uint8_t>((color.b * scale) >> 8)
                 ));
-            }
+            });
             _bus->Show();
         }
 
     private:
         BusType *_bus;
-        uint16_t _offset;
+        uint16_t _pixelOffset;
+        const uint16_t *_lut;
     };
 
     // all output pins on one RMT channel using all RMT memory blocks of the ESP32
@@ -156,8 +159,9 @@ namespace Clock {
         using BusType = NeoPixelBus<NeoGrbFeature, NeoEsp32RmtNWs2812xMethod>;
 
     public:
-        NeoBusRmtMux(const uint8_t *pins, const uint16_t *offsets, const uint16_t *counts) :
+        NeoBusRmtMux(const uint8_t *pins, const uint16_t *counts, const uint16_t * const *luts, uint16_t pixelOffset) :
             _bus(nullptr),
+            _pixelOffset(pixelOffset),
             _numPins(0),
             _maxPixels(0),
             _lastPin(0xff),
@@ -169,14 +173,14 @@ namespace Clock {
         {
             for (uint8_t i = 0; i < kMaxPins; i++) {
                 _pins[i] = 0xff;
-                _offsets[i] = 0;
                 _counts[i] = 0;
+                _luts[i] = nullptr;
                 if (pins[i] == 0xff || !counts[i]) {
                     continue;
                 }
                 _pins[_numPins] = pins[i];
-                _offsets[_numPins] = offsets[i];
                 _counts[_numPins] = counts[i];
+                _luts[_numPins] = luts[i];
                 if (counts[i] > _maxPixels) {
                     _maxPixels = counts[i];
                 }
@@ -228,14 +232,13 @@ namespace Clock {
                 _route(_pins[i]);
 
                 const uint16_t count = (_counts[i] < total) ? _counts[i] : total;
-                for (uint16_t index = 0; index < count; index++) {
-                    const PixelRGB &color = pixels[_offsets[i] + index];
+                forEachSegmentPixel(pixels, _pixelOffset, _luts[i], count, [&](uint16_t index, const PixelRGB &color) {
                     _bus->SetPixelColor(index, RgbColor(
                         static_cast<uint8_t>((color.r * scale) >> 8),
                         static_cast<uint8_t>((color.g * scale) >> 8),
                         static_cast<uint8_t>((color.b * scale) >> 8)
                     ));
-                }
+                });
 
                 // only the pixels of this segment are transmitted (the bus buffer is sized for the
                 // largest segment) - rmt_write_sample() translates the data into the RMT memory
@@ -353,9 +356,10 @@ namespace Clock {
 
     private:
         BusType *_bus;
+        uint16_t _pixelOffset;
         uint8_t _pins[kMaxPins];
-        uint16_t _offsets[kMaxPins];
         uint16_t _counts[kMaxPins];
+        const uint16_t *_luts[kMaxPins];
         uint8_t _numPins;
         uint16_t _maxPixels;
         uint8_t _lastPin;
@@ -401,20 +405,20 @@ namespace Clock {
         }
 
         // rebuild the transport, called when the segments or the show method changed
-        void update(NeoBusMethodType method, const uint8_t *pins, const uint16_t *offsets, const uint16_t *counts)
+        void update(NeoBusMethodType method, const uint8_t *pins, const uint16_t *counts, const uint16_t * const *luts, uint16_t pixelOffset)
         {
             clear();
             _method = method;
 
             // the segments that no I2S port is available for are transmitted by the RMT transport
             uint8_t rmtPins[kMaxStrips];
-            uint16_t rmtOffsets[kMaxStrips];
             uint16_t rmtCounts[kMaxStrips];
+            const uint16_t *rmtLuts[kMaxStrips];
             uint8_t numRmt = 0;
             for (uint8_t i = 0; i < kMaxStrips; i++) {
                 rmtPins[i] = 0xff;
-                rmtOffsets[i] = 0;
                 rmtCounts[i] = 0;
+                rmtLuts[i] = nullptr;
             }
 
             // I2S DMA uses one port per output pin, the ports that are left after reserving the port
@@ -425,7 +429,7 @@ namespace Clock {
                     continue;
                 }
                 const uint8_t channel = (method == NeoBusMethodType::I2S) ? _getI2sChannel(stripIndex) : 0xff;
-                auto strip = (channel == 0xff) ? nullptr : new NeoBusStripType<NeoEsp32I2sNWs2812xMethod>(pins[i], counts[i], channel, offsets[i]);
+                auto strip = (channel == 0xff) ? nullptr : new NeoBusStripType<NeoEsp32I2sNWs2812xMethod>(pins[i], counts[i], channel, pixelOffset, luts[i]);
                 if (strip && strip->isActive()) {
                     _strips[i] = strip;
                     _numStrips++;
@@ -437,15 +441,15 @@ namespace Clock {
                     __DBG_printf("%s for pin %u, using the RMT transport", channel == 0xff ? "no free I2S port" : "I2S initialization failed", pins[i]);
                 }
                 rmtPins[numRmt] = pins[i];
-                rmtOffsets[numRmt] = offsets[i];
                 rmtCounts[numRmt] = counts[i];
+                rmtLuts[numRmt] = luts[i];
                 numRmt++;
             }
 
             if (numRmt) {
                 // all RMT outputs share one channel with all memory blocks, see NeoBusRmtMux
                 gNeoPixelBusRmtMemBlocks = kRmtMemBlocks;
-                _rmt = new NeoBusRmtMux(rmtPins, rmtOffsets, rmtCounts);
+                _rmt = new NeoBusRmtMux(rmtPins, rmtCounts, rmtLuts, pixelOffset);
                 _numStrips += _rmt->getNumPins();
             }
         }

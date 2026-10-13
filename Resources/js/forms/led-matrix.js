@@ -125,13 +125,18 @@ $(function () {
 
     }
 
-    // led-matrix/matrix.html: warn while the matrix settings are edited. The server rejects values
-    // that would read outside the pixel buffer or drive the same pixels twice (hard errors), these
-    // are hints only - gaps are allowed and the segments do not have to cover rows * columns
-    if ($('#mx_px0').length && $('#mx_px').length) {
+    // led-matrix/matrix.html: every segment (output pin) is a panel placed in the matrix, see
+    // matrix_validation.h. The server rejects a panel outside the matrix or larger than the pixel buffer
+    // (hard errors), overlapping panels and uncovered matrix pixels are hints only. The read only field of
+    // each segment shows its LED count and linear offset (where its chain starts in the pixel buffer: the
+    // LEDs of the enabled segments before it) while editing
+    if ($('#mx_pr0').length && $('#mx_px').length) {
         var matrix_max_pixels = parseInt($('#mx_px').val()) || 0;
-        var matrix_form = $('#mx_px0').closest('form');
-        var matrix_fields = ['#dm', '#mx_rows', '#mx_cols', '#mx_px0', '#mx_px1', '#mx_px2', '#mx_px3', '#mx_ofs0', '#mx_ofs1', '#mx_ofs2', '#mx_ofs3'];
+        var matrix_form = $('#mx_pr0').closest('form');
+        var matrix_fields = ['#dm', '#mx_rows', '#mx_cols'];
+        for (var n = 0; n < 4; n++) {
+            matrix_fields.push('#mx_en' + n, '#mx_pr' + n, '#mx_pc' + n, '#mx_prp' + n, '#mx_pcp' + n);
+        }
 
         // the transport limits are rendered by the form (see matrix_validation.h). The checks below
         // are warning/info only, the server blocks only on errors
@@ -144,7 +149,6 @@ $(function () {
         var matrix_i2s_port = matrix_attr('i2s-port', 255);
         var matrix_method_rmt = matrix_attr('method-rmt', -1);
         var matrix_method_i2s = matrix_attr('method-i2s', -1);
-        var matrix_pixel_offset = matrix_attr('pixel-offset', 0);
 
         var matrix_field_warning = function (id, message) {
             var group = $('#' + id).closest('.form-group');
@@ -193,48 +197,77 @@ $(function () {
             var segments = [];
 
             for (var i = 0; i < 4; i++) {
-                if ($('#mx_px' + i).length) {
-                    segments.push({ index: i, offset: matrix_int('#mx_ofs' + i), pixels: matrix_int('#mx_px' + i) });
+                if (!$('#mx_pr' + i).length) {
+                    continue;
                 }
+                var enabled = matrix_int('#mx_en' + i) != 0;
+                var panel_rows = matrix_int('#mx_pr' + i);
+                var panel_cols = matrix_int('#mx_pc' + i);
+                segments.push({ index: i, enabled: enabled, rows: panel_rows, cols: panel_cols, pos_row: matrix_int('#mx_prp' + i), pos_col: matrix_int('#mx_pcp' + i),
+                    pixels: enabled ? panel_rows * panel_cols : 0 });
             }
 
             $(matrix_fields).each(function (key, selector) {
                 matrix_field_warning(selector.substr(1), '');
             });
 
+            // LED count and linear offset of every segment, the offset is the number of LEDs of the
+            // enabled segments before it (the order of the output pins)
+            var linear_offset = 0;
             var active_segments = 0;
             $(segments).each(function (key, segment) {
-                if (segment.pixels) {
+                // the panel fields of a disabled segment are hidden, their values are still submitted
+                var n = segment.index;
+                $('#mx_pr' + n + ',#mx_pc' + n + ',#mx_prp' + n + ',#mx_pcp' + n + ',#mx_rot' + n).closest('.form-group').toggle(segment.enabled);
+                var info = 'disabled';
+                if (segment.enabled) {
+                    info = segment.pixels + ' LEDs (' + segment.rows + ' x ' + segment.cols + '), linear offset ' + linear_offset +
+                        ' (pixels ' + linear_offset + '-' + (linear_offset + segment.pixels - 1) + ')';
+                    linear_offset += segment.pixels;
                     active_segments++;
                 }
-                if (segment.pixels && (segment.offset + segment.pixels) > matrix_max_pixels) {
-                    var message = 'Segment ' + (segment.index + 1) + ': offset ' + segment.offset + ' + ' + segment.pixels + ' pixels = ' +
-                        (segment.offset + segment.pixels) + ' exceeds the maximum number of pixels (' + matrix_max_pixels + ')';
-                    matrix_field_warning('mx_px' + segment.index, message);
+                $('#mx_seg' + segment.index).val(info);
+                if (!segment.enabled) {
+                    return;
+                }
+                if (!segment.rows || !segment.cols) {
+                    var message = 'Segment ' + (segment.index + 1) + ': the panel height and width must be at least 1';
+                    matrix_field_warning('mx_pr' + segment.index, message);
+                    messages.push(message);
+                }
+                else if (segment.pixels > matrix_max_pixels) {
+                    var message = 'Segment ' + (segment.index + 1) + ': panel ' + segment.rows + ' x ' + segment.cols + ' = ' + segment.pixels +
+                        ' LEDs exceeds the maximum number of pixels (' + matrix_max_pixels + ')';
+                    matrix_field_warning('mx_pc' + segment.index, message);
+                    messages.push(message);
+                }
+                if (rows && cols && segment.rows && segment.cols && (segment.pos_row + segment.rows > rows || segment.pos_col + segment.cols > cols)) {
+                    var message = 'Segment ' + (segment.index + 1) + ': the panel ' + segment.rows + ' x ' + segment.cols + ' at row ' + segment.pos_row +
+                        ', column ' + segment.pos_col + ' reaches outside the matrix (' + rows + ' x ' + cols + ')';
+                    matrix_field_warning('mx_prp' + segment.index, message);
                     messages.push(message);
                 }
             });
 
-            // overlapping segments, the first pair is reported
+            // overlapping panels, the first pair is reported
+            var panels = $.grep(segments, function (segment) {
+                return segment.pixels > 0;
+            });
+            var intersects = function (a, b) {
+                return a.pos_row < b.pos_row + b.rows && b.pos_row < a.pos_row + a.rows && a.pos_col < b.pos_col + b.cols && b.pos_col < a.pos_col + a.cols;
+            };
             var overlap = null;
-            for (var i = 1; i < segments.length && overlap === null; i++) {
-                if (!segments[i].pixels) {
-                    continue;
-                }
+            for (var i = 1; i < panels.length && overlap === null; i++) {
                 for (var j = 0; j < i; j++) {
-                    if (!segments[j].pixels) {
-                        continue;
-                    }
-                    if (segments[i].offset < (segments[j].offset + segments[j].pixels) && segments[j].offset < (segments[i].offset + segments[i].pixels)) {
-                        overlap = [segments[j], segments[i]];
+                    if (intersects(panels[i], panels[j])) {
+                        overlap = [panels[j], panels[i]];
                         break;
                     }
                 }
             }
             if (overlap !== null) {
-                var message = 'Segment ' + (overlap[1].index + 1) + ' (pixels ' + overlap[1].offset + '..' + (overlap[1].offset + overlap[1].pixels - 1) +
-                    ') overlaps segment ' + (overlap[0].index + 1) + ' (pixels ' + overlap[0].offset + '..' + (overlap[0].offset + overlap[0].pixels - 1) + ')';
-                matrix_field_warning('mx_ofs' + overlap[1].index, message);
+                var message = 'Segment ' + (overlap[1].index + 1) + ' overlaps segment ' + (overlap[0].index + 1) + ', the same matrix pixels are shown on both pins';
+                matrix_field_warning('mx_prp' + overlap[1].index, message);
                 messages.push(message);
             }
 
@@ -242,46 +275,24 @@ $(function () {
                 if (matrix_pixels > matrix_max_pixels) {
                     messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ' exceeds the maximum number of pixels (' + matrix_max_pixels + ')');
                 }
-                // the matrix is drawn into the buffer pixels matrix_start .. matrix_end - 1. The ranges are
-                // compared, not the sums: 128 + 128 pixels at offset 0 and 192 add up to a 256 pixel matrix
-                // but leave 128..191 dark and transmit 256..319 that the matrix never draws
-                var matrix_start = matrix_pixel_offset;
-                var matrix_end = matrix_start + matrix_pixels;
-                var matrix_range = 'pixels ' + matrix_start + '..' + (matrix_end - 1);
-                $(segments).each(function (key, segment) {
-                    if (!segment.pixels) {
-                        return;
+                else {
+                    // matrix pixels that no panel covers stay dark
+                    var uncovered = 0;
+                    for (var row = 0; row < rows; row++) {
+                        for (var col = 0; col < cols; col++) {
+                            var covered = false;
+                            for (var k = 0; k < panels.length && !covered; k++) {
+                                var panel = panels[k];
+                                covered = row >= panel.pos_row && row < panel.pos_row + panel.rows && col >= panel.pos_col && col < panel.pos_col + panel.cols;
+                            }
+                            if (!covered) {
+                                uncovered++;
+                            }
+                        }
                     }
-                    var end = segment.offset + segment.pixels;
-                    var outside = Math.max(0, Math.min(end, matrix_start) - segment.offset) + Math.max(0, end - Math.max(segment.offset, matrix_end));
-                    if (outside) {
-                        var message = 'Segment ' + (segment.index + 1) + ' (pixels ' + segment.offset + '..' + (end - 1) + ') reaches outside the matrix (' +
-                            matrix_range + '): ' + outside + ' LED(s) are never drawn';
-                        matrix_field_warning('mx_ofs' + segment.index, message);
-                        messages.push(message);
+                    if (uncovered) {
+                        messages.push(uncovered + ' of the ' + matrix_pixels + ' matrix pixels (' + rows + ' x ' + cols + ') are not covered by a panel and stay dark');
                     }
-                });
-                // matrix pixels that no segment transmits
-                var ranges = $.grep(segments, function (segment) {
-                    return segment.pixels > 0;
-                }).map(function (segment) {
-                    return [segment.offset, segment.offset + segment.pixels];
-                }).sort(function (a, b) {
-                    return a[0] - b[0];
-                });
-                var gaps = [];
-                var position = matrix_start;
-                $(ranges).each(function (key, range) {
-                    if (range[0] > position && position < matrix_end) {
-                        gaps.push(position + '..' + (Math.min(range[0], matrix_end) - 1));
-                    }
-                    position = Math.max(position, range[1]);
-                });
-                if (position < matrix_end) {
-                    gaps.push(position + '..' + (matrix_end - 1));
-                }
-                if (gaps.length) {
-                    messages.push('Rows x columns = ' + rows + ' x ' + cols + ' = ' + matrix_pixels + ' (' + matrix_range + '), no segment transmits pixels ' + gaps.join(', '));
                 }
             }
 
@@ -290,23 +301,23 @@ $(function () {
             var has_neobus = (matrix_method_rmt >= 0 || matrix_method_i2s >= 0);
             var i2s_selected = (matrix_method_i2s >= 0 && method === matrix_method_i2s);
             if (matrix_max_strips && active_segments > matrix_max_strips) {
-                messages.push(active_segments + ' segments are configured but the transport can drive only ' + matrix_max_strips);
+                messages.push(active_segments + ' segments are enabled but the transport can drive only ' + matrix_max_strips);
             }
             if (i2s_selected && !active_segments) {
-                messages.push('NeoPixelBus I2S is selected but no segment is configured: nothing will be transmitted');
+                messages.push('NeoPixelBus I2S is selected but no segment is enabled: nothing will be transmitted');
             }
             if (i2s_selected && matrix_i2s_strips > 0 && active_segments > matrix_i2s_strips) {
                 messages.push(active_segments + ' segments: ' + matrix_i2s_strips + ' on I2S, ' + (active_segments - matrix_i2s_strips) +
                     ' transmitted by RMT (mixed mode' + (matrix_i2s_port < 255 ? ', the microphone reserves I2S port ' + matrix_i2s_port : '') + ')');
             }
             if (!has_neobus && active_segments > 1) {
-                messages.push(active_segments + ' segments are configured but this transport drives only one chain');
+                messages.push(active_segments + ' segments are enabled but this transport drives only one chain');
             }
             if (i2s_selected) {
-                $(segments).each(function (key, segment) {
+                $(panels).each(function (key, segment) {
                     if (segment.pixels > (matrix_max_pixels >> 1)) {
                         messages.push('Segment ' + (segment.index + 1) + ' has ' + segment.pixels +
-                            ' pixels, its I2S DMA buffer may not fit into the DMA capable RAM and it is then transmitted by RMT');
+                            ' LEDs, its I2S DMA buffer may not fit into the DMA capable RAM and it is then transmitted by RMT');
                     }
                 });
             }
@@ -314,7 +325,51 @@ $(function () {
             matrix_summary(messages);
         };
 
+        // test pattern buttons: the form is saved like Save and applied right away, then the panels show
+        // the test pattern ("Show All", +LMC=dir) or only the panel of one segment ("Segment n", +LMC=id).
+        // The page stays open, the buttons are disabled until the device has answered
+        var matrix_test_buttons = $('button[name="mx_tp"]');
+        var matrix_test_status = function (text, css) {
+            var group = matrix_test_buttons.closest('.form-group');
+            group.find('.matrix-test-status').remove();
+            if (text) {
+                $('<div class="matrix-test-status small"></div>').addClass(css).text(text).appendTo(group);
+            }
+        };
+        matrix_test_buttons.on('click', function (event) {
+            event.preventDefault();
+            var button = $(this);
+            var segment = button.val();
+            var label = button.html();
+            matrix_test_buttons.prop('disabled', true);
+            button.html('<span class="spinner-border spinner-border-sm" role="status"></span> Applying...');
+            matrix_test_status('', '');
+            $.post('/led-matrix-test.json?SID=' + $.getSessionId(), matrix_form.serialize() + '&mx_tp=' + encodeURIComponent(segment)).done(function (data) {
+                if (typeof data === 'string') {
+                    data = JSON.parse(data);
+                }
+                if (data.ok) {
+                    $.formValidator.addErrors([]);
+                    matrix_test_status(segment == 'all' ? 'Saved, the panels show the test pattern' : 'Saved, only the panel of segment ' + segment + ' is shown', 'text-success');
+                }
+                else {
+                    $.formValidator.addErrors(data.errors || []);
+                    matrix_test_status('Not saved, check the marked fields', 'text-danger');
+                }
+            }).fail(function (xhr) {
+                matrix_test_status('Request failed (' + xhr.status + ' ' + xhr.statusText + ')', 'text-danger');
+            }).always(function () {
+                button.html(label);
+                matrix_test_buttons.prop('disabled', false);
+                matrix_update();
+            });
+        });
+
         $(matrix_fields.join(',')).on('input change', matrix_update);
+        // the Enabled buttons write their hidden field without an event
+        $('#_mx_en0,#_mx_en1,#_mx_en2,#_mx_en3').on('click', function () {
+            window.setTimeout(matrix_update, 0);
+        });
         matrix_update();
         // run again after the validator has marked the fields, the inline warnings are skipped then
         window.setTimeout(matrix_update, 250);

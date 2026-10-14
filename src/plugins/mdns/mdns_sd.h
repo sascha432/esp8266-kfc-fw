@@ -20,6 +20,8 @@ public:
         static void enableArduino();
     #endif
     static void announce();
+    // the MDNS plugin owns the responder
+    static bool isRunning();
 };
 
 #endif

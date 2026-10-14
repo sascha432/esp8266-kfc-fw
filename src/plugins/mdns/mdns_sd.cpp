@@ -78,6 +78,11 @@ bool MDNSService::removeServiceTxt(const String &service, const String &proto, c
     #endif
 }
 
+bool MDNSService::isRunning()
+{
+    return MDNSPlugin::getInstance()._isRunning();
+}
+
     #if ENABLE_ARDUINO_OTA
 
         void MDNSService::enableArduino()
@@ -118,8 +123,13 @@ bool MDNSService::removeServiceTxt(const String &service, const String &proto, c
         void MDNSService::enableArduino()
         {
         }
-s
+
     #endif
+
+bool MDNSService::isRunning()
+{
+    return false;
+}
 
 void MDNSService::announce()
 {

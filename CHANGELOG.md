@@ -3,6 +3,10 @@
 ## Version 0.0.9 (master)
 
  - Removed the Python debug tool `scripts/kfcfw_tool` and its firmware support (WebSocket binary packet types, `+CLIENT_ID`)
+ - Fixed ArduinoOTA "No Answer to our Authentication": the ESP8266 FastLED driver returned with the interrupts locked, the loop could not yield after a frame
+ - Fixed crash on restart while a WebSocket client is connected (use after free in AsyncWebSocket::_handleDisconnect())
+ - ArduinoOTA does not restart the responder of the MDNS plugin anymore (heap corruption during uploads)
+ - Fixed crash (null pointer) of `/is-alive` without the `p` argument, a parameterless request rebooted the device
  - LED Matrix: every segment is a panel (size, placement, rotation, mirror), the segment offset is gone, test pattern (`+LMC=dir`, `+LMC=id`, "Show All"/"Segment 1-4" buttons in the matrix form)
  - WebUI builder rewritten in Python (YAML config `KFCWebBuilder.yaml`, PHP is no longer required, zopfli compression ~4% smaller)
  - Home Assistant Control discontinued and moved to https://github.com/sascha432/esp32-hassctrl

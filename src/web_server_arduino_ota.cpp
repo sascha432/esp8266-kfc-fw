@@ -7,6 +7,7 @@
 #include <LoopFunctions.h>
 #include "kfc_fw_config.h"
 #include "web_server.h"
+#include "../src/plugins/plugins.h"
 
 #if DEBUG_WEB_SERVER_ACTION
 #    include <debug_helper_enable.h>
@@ -110,7 +111,13 @@ using namespace WebServer;
             ArduinoOTA.begin();
             ArduinoOTA.setMdnsEnabled(System::Flags::getConfig().is_mdns_enabled);
         #else
-            ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled);
+            // a second MDNS.begin() restarts the responder of the MDNS plugin (new UDP context, from a web
+            // request), which announces the OTA service itself (MDNSService::enableArduino())
+            #if MDNS_PLUGIN
+                ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled && !MDNSService::isRunning());
+            #else
+                ArduinoOTA.begin(System::Flags::getConfig().is_mdns_enabled);
+            #endif
         #endif
         LOOP_FUNCTION_ADD(ArduinoOTALoop);
         _AOTAInfo._runnning = true;

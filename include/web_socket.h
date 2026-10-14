@@ -245,6 +245,7 @@ private:
     friend WsClient;
 
     void _enableAuthentication();
+    void _closeConnections();
 
     WsClientAsyncWebSocket **_ptr;
     uint16_t _authenticatedClients;

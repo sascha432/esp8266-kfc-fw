@@ -232,7 +232,7 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
     #endif
     // --------------------------------------------------------------------
     if (F("/is-alive") == url) {
-        auto content = request->arg(String('p').toInt());
+        auto content = String(request->arg(F("p")).toInt());
         #if DEBUG
             switch(request->arg(F("reset-device")).toInt()) {
                 case 1:

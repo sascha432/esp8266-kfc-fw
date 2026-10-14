@@ -60,6 +60,7 @@ WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncW
 WsClientAsyncWebSocket::~WsClientAsyncWebSocket()
 {
     __LDBG_printf("this=%p _ptr=%p *_ptr=%p clients=%u count=%u", this, _ptr, _ptr ? *_ptr : nullptr, getClients().length(), count());
+    _closeConnections();
     disableSocket();
     if (_ptr) {
         if (*_ptr != this) {
@@ -72,7 +73,25 @@ WsClientAsyncWebSocket::~WsClientAsyncWebSocket()
 void WsClientAsyncWebSocket::shutdown()
 {
     closeAll(503, String(F("Device is rebooting...\n")).c_str());
+    _closeConnections();
     disableSocket();
+}
+
+// a client does not detach from its TCP connection when it is deleted together with the socket. the
+// connection would stay open and call into the deleted client when WiFi goes down before the restart
+// (AsyncWebSocket::_handleDisconnect() use after free). AsyncClient::close(true) removes the lwIP
+// callbacks first and removes the client from the socket via its disconnect callback last
+void WsClientAsyncWebSocket::_closeConnections()
+{
+    std::vector<AsyncClient *> connections;
+    for(const auto client: getClients()) {
+        if (client->client()) {
+            connections.push_back(client->client());
+        }
+    }
+    for(const auto connection: connections) {
+        connection->close(true);
+    }
 }
 
 void WsClientAsyncWebSocket::disableSocket()

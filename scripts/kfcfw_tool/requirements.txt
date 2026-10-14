@@ -1,3 +1,0 @@
-requests           2.27.1
-requests-toolbelt  0.9.1
-pip install websocket-client==1.2.0

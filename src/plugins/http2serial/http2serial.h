@@ -48,12 +48,6 @@ public:
 public:
     static bool hasAuthenticatedClients();
     static WsClientAsyncWebSocket *getServerSocket();
-    // find client by id that is connected and authenticated
-    // client id is sent during authentication: +CLIENT_ID=0x12345678
-    // nullptr will return first client
-    static AsyncWebSocketClient *getClientById(const void *clientId);
-    static AsyncWebSocketClient *getClientById(nullptr_t);
-    static AsyncWebSocketClient *getClientById(AsyncWebSocketClient *clientId);
 
     static void eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 
@@ -185,16 +179,6 @@ inline void WsConsoleClient::onEnd()
 {
     __LDBG_printf("no authenticated clients connected, Http2Serial instance %p", Http2Serial::getInstance());
     Http2Serial::destroyInstance();
-}
-
-inline AsyncWebSocketClient *Http2Serial::getClientById(nullptr_t)
-{
-    return getClientById(reinterpret_cast<void *>(0));
-}
-
-inline AsyncWebSocketClient *Http2Serial::getClientById(AsyncWebSocketClient *clientId)
-{
-    return getClientById(reinterpret_cast<const void *>(clientId));
 }
 
 inline void Http2Serial::eventHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)

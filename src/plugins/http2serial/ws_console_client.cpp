@@ -26,8 +26,6 @@ void WsConsoleClient::onAuthenticated(uint8_t *data, size_t len)
     if (resetDetector.hasCrashDetected()) {
         getClient()->text(PrintString(F("+REM System crash detected: %s\n"), resetDetector.getResetInfo().c_str()));
     }
-
-    getClient()->text(PrintString(F("+CLIENT_ID=%p\r\n"), getClient()));
 }
 
 void WsConsoleClient::onText(uint8_t *data, size_t len)

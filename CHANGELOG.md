@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Removed the Python debug tool `scripts/kfcfw_tool` and its firmware support (WebSocket binary packet types, `+CLIENT_ID`)
  - LED Matrix: every segment is a panel (size, placement, rotation, mirror), the segment offset is gone, test pattern (`+LMC=dir`, `+LMC=id`, "Show All"/"Segment 1-4" buttons in the matrix form)
  - WebUI builder rewritten in Python (YAML config `KFCWebBuilder.yaml`, PHP is no longer required, zopfli compression ~4% smaller)
  - Home Assistant Control discontinued and moved to https://github.com/sascha432/esp32-hassctrl

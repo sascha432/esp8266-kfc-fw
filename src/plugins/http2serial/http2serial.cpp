@@ -108,18 +108,6 @@ void Http2Serial::onData(Stream &client)
     }
 }
 
-AsyncWebSocketClient *Http2Serial::getClientById(const void *clientId)
-{
-    if (wsSerialConsole) {
-        for(auto client: wsSerialConsole->getClients()) {
-            if ((clientId == nullptr || reinterpret_cast<const void *>(client) == clientId) && client->status() && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
-                return client;
-            }
-        }
-    }
-    return nullptr;
-}
-
 class Http2SerialPlugin : public PluginComponent
 {
 public:

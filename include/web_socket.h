@@ -44,12 +44,6 @@ public:
         ERROR_AUTHENTICATION_FAILED,
     };
 
-    enum class BinaryPacketType : uint16_t {
-        HLW8012_PLOT_DATA,
-        TOUCHPAD_DATA,
-        LED_MATRIX_DATA,
-    };
-
     WsClient(AsyncWebSocketClient *client);
     virtual ~WsClient();
 

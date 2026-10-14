@@ -292,8 +292,6 @@ namespace KFCConfigurationClasses {
                         SPECTRUM_RAINBOW_BARS_2D,
                         SPECTRUM_GRADIENT_BARS_2D,
                         SPECTRUM_COLOR_BARS_2D,
-                        RGB565_VIDEO,
-                        RGB24_VIDEO,
                         PLASMA_AUDIO,
                         FIRE_AUDIO,
                         MAX,

@@ -889,13 +889,11 @@ void ClockPlugin::_setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
 void ClockPlugin::setAnimationDeferred(AnimationType animation, uint16_t blendTime)
 {
     _enqueue([this, animation, blendTime] {
-        _syncVisualizerType(animation);
         _setAnimation(animation, blendTime);
     });
 }
 
-// copies the visualizer mode of an animation into VisualizerType::type, the two RGB video modes
-// are not presets and keep whatever the configuration select
+// copies the visualizer mode of an animation into VisualizerType::type
 void ClockPlugin::_syncVisualizerType(AnimationType animation)
 {
     #if IOT_LED_MATRIX_ENABLE_VISUALIZER
@@ -953,16 +951,13 @@ void ClockPlugin::_setAnimation(AnimationType animation, uint16_t blendTime)
             _publishAnimation(new Clock::GradientAnimation(*this, _config.gradient), blendTime);
             break;
         #if IOT_LED_MATRIX_ENABLE_VISUALIZER
-            // The animation is the mode selector and VisualizerType::type mirrors it. The value is
-            // not written here: readConfig()/reconfigure() call this function with the stored
-            // animation, and the two RGB video modes (selected through VisualizerType::type) must
-            // survive that. The selection paths (setAnimationDeferred, nextAnimation, AT mode) keep
-            // the mirror in sync, see _syncVisualizerType().
+            // the animation is the mode selector and VisualizerType::type mirrors it
             case AnimationType::VISUALIZER_SPECTRUM_RAINBOW_BARS:
             case AnimationType::VISUALIZER_SPECTRUM_GRADIENT_BARS:
             case AnimationType::VISUALIZER_SPECTRUM_SINGLE_COLOR_BARS:
             case AnimationType::VISUALIZER_PLASMA_REACTIVE:
             case AnimationType::VISUALIZER_FIRE_REACTIVE:
+                _syncVisualizerType(animation);
                 _publishAnimation(new Clock::VisualizerAnimation(*this, _getColor(), _config.visualizer), blendTime);
                 break;
         #endif

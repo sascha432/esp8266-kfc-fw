@@ -33,7 +33,6 @@
 
 #include <Arduino_compat.h>
 #include <vector>
-#include <new>
 
 #include "global.h"
 
@@ -44,45 +43,6 @@
 #if MQTT_SUPPORT
 #    include "../mqtt/mqtt_client.h"
 #endif
-
-// ==========================================================================================
-// PSRAM objects
-// ==========================================================================================
-// The plugin instance is a static object and the internal DRAM is the scarce resource of this
-// board (8 MB of PSRAM are idle while ~100 KB of DRAM have to carry the network stack, the LVGL
-// buffers, the task stacks and everything else). The big data of the Home Assistant dashboard
-// (the parsed /hass.yaml, the value and history of every tile, the request buffers - about 47 KB)
-// and of its screen (the widget tree of the current page - about 8 KB) are therefore allocated
-// and constructed in the PSRAM once and kept for the lifetime of the firmware, exactly like the
-// draw buffers of the display.
-//
-template<typename T, typename... Args>
-static T &_ws2PsramObject(Args &&...args)
-{
-    constexpr size_t size = sizeof(T);
-    void *ptr = nullptr;
-#if ESP32
-    // The plugin instance is a static object, so this code runs before the Arduino core reaches
-    // initArduino() -> psramInit(), and ps_malloc() returns nullptr until the PSRAM is initialized
-    // (it checks the spiramDetected flag). psramInit() is idempotent, the later call of the core
-    // does nothing, and it runs the same sequence the core would run a few milliseconds later.
-    psramInit();
-    ptr = ps_malloc(size);
-    if (!ptr) {
-        // a failed PSRAM allocation must not break the dashboard - the internal RAM is the
-        // next best thing (that is where these objects lived before they were moved)
-        __DBG_printf_E("cannot allocate %u bytes in the PSRAM", static_cast<unsigned>(size));
-        ptr = malloc(size);
-    }
-#else
-    ptr = malloc(size);
-#endif
-    if (!ptr) {
-        __DBG_printf_E("cannot allocate %u bytes", static_cast<unsigned>(size));
-        abort();
-    }
-    return *new (ptr) T(std::forward<Args>(args)...);
-}
 
 #if MQTT_SUPPORT
 class WeatherStation2Plugin : public PluginComponent, public MQTTComponent {
@@ -107,27 +67,10 @@ public:
     // the single instance of the plugin
     static WeatherStation2Plugin &getInstance();
 
-#if IOT_HASS_DASHBOARD
-    // Applies the configured orientation to the dashboard screen. Only the pending flag of the
-    // screen is set here (the display itself is switched by the main loop), so this is safe to
-    // call from the web task. The form save uses it to apply the change without waiting for the
-    // deferred reconfigure() of the framework
-    void applyHassOrientation();
-#endif
-
 private:
     // registers the screens with the screen manager of the lvgl plugin
     void _registerScreens();
     void _removeScreens();
-
-#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
-    // Registers/unregisters the rotation callback of the MPU-6050 (the sensor plugin), so the
-    // dashboard follows the physical rotation of the device. The sensor invokes the callback from
-    // the main loop task and synchronizes it with the current rotation, the rotation lock is
-    // honoured by HassScreen::_applySensorRotation()
-    void _registerRotationSensor();
-    void _unregisterRotationSensor();
-#endif
 
 #if MQTT_SUPPORT
     // MQTTComponent: the topics belong to the data source, the plugin only subscribes to them
@@ -153,13 +96,5 @@ private:
     WeatherStation2::MoonPhaseScreen _moonPhaseScreen;
     WeatherStation2::PowerScreen _powerScreen;
     WeatherStation2::InfoScreen _infoScreen;
-#if IOT_HASS_DASHBOARD
-    // dashboard of a Home Assistant instance, configured by /hass.yaml (docs/hass_config.md)
-    // and the screen that draws it. Both are large (about 47 KB and 8 KB) and are created in the
-    // PSRAM by the constructor of the plugin - the screen is initialized with the dashboard that
-    // is declared above it
-    WeatherStation2::HomeAssistant::Dashboard &_hass;
-    WeatherStation2::HassScreen &_hassScreen;
-#endif
     bool _registered;
 };

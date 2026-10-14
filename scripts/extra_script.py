@@ -13,6 +13,7 @@ import socket
 from os import path
 import os.path
 import subprocess
+import urllib.request
 from SCons.Script import ARGUMENTS
 from pprint import pprint
 import datetime
@@ -32,7 +33,7 @@ for define in defines:
         (key, val) = define
     else:
         key = define
-        val = 1;
+        val = 1
     if val==1:
         if key == 'ESP32':
             esp32 = True
@@ -365,40 +366,17 @@ def archive_build(target, source, env):
             os.path.getsize(output), time.time() - started, filesystem))
 
 
-def modify_upload_command(source, target, env, fs=False):
-
-    upload_command = env.GetProjectOption('custom_upload_command', '')
-    if not upload_command:
-        click.secho('custom_upload_command is not defined', fg='yellow')
-        return
+def start_arduino_ota(source, target, env):
+    # ArduinoOTA does not start at boot (ENABLE_ARDUINO_OTA_AUTOSTART=0), /start-arduino-ota enables it before espota connects
     if env['UPLOAD_PROTOCOL'] != 'espota':
-        click.echo('protocol is not espota')
         return
-
-    upload_port = env.subst(env.GetProjectOption('upload_port'))
-    m = re.match(r'(?P<username>[^:]+):(?P<password>[^@]+)@(?P<hostname>.+)', upload_port)
-    if not m:
-        click.echo('upload_port must be <username>:<password>@<hostname>')
-        aota = 'http://%s/start-arduino-ota' % upload_port
-        click.echo('running "curl -s %s"' % aota)
-        return_code = subprocess.run(['curl', '-s', aota], shell=(platform.system() == 'Windows')).returncode
-        print();
-        return
-    device = m.groupdict()
-
-    args = ['--user', device['username'], '--pass',
-            device['password'], '--image', str(source[0])]
-    if fs:
-        args.append('uploadfs')
-        args.append(device['hostname'])
-    else:
-        args.append('upload')
-        args.append(device['hostname'])
-
-    env.Replace(UPLOAD_FLAGS=' '.join(args), UPLOAD_COMMAND=upload_command, UPLOADCMD=upload_command)
-
-def modify_upload_command_fs(source, target, env):
-    modify_upload_command(source, target, env, True)
+    url = 'http://%s/start-arduino-ota' % env.subst('$UPLOAD_PORT')
+    click.echo('Starting ArduinoOTA: %s' % url)
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            click.echo(resp.read().decode('utf-8', 'replace'))
+    except Exception as e:
+        click.secho('%s: %s' % (url, e), fg='yellow')
 
 
 # def git_get_head():
@@ -571,10 +549,10 @@ if esp32 and env.GetProjectOption('board_build.filesystem') == 'littlefs':
     environ['PATH'] = path
     env.Replace(MKSPIFFSTOOL='mklittlefs', ENV=environ, ESP32_SPIFFS_IMAGE_NAME='littlefs')
 
-env.AddPreAction('upload', modify_upload_command)
-env.AddPreAction('uploadota', modify_upload_command)
-env.AddPreAction('uploadfs', modify_upload_command_fs)
-env.AddPreAction('uploadfsota', modify_upload_command_fs)
+env.AddPreAction('upload', start_arduino_ota)
+env.AddPreAction('uploadota', start_arduino_ota)
+env.AddPreAction('uploadfs', start_arduino_ota)
+env.AddPreAction('uploadfsota', start_arduino_ota)
 
 # erase the ESP32 core dump before flashing
 env.AddPreAction('upload', erase_core_dump)

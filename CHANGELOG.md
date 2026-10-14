@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Removed the unfinished UDP video streaming of the visualizer (RGB565/RGB24 Video)
  - Removed the Python debug tool `scripts/kfcfw_tool` and its firmware support (WebSocket binary packet types, `+CLIENT_ID`)
  - Fixed ArduinoOTA "No Answer to our Authentication": the ESP8266 FastLED driver returned with the interrupts locked, the loop could not yield after a frame
  - Fixed crash on restart while a WebSocket client is connected (use after free in AsyncWebSocket::_handleDisconnect())

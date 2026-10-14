@@ -391,7 +391,6 @@ public:
     {
         // the animation is published directly, this runs in the loop task
         auto animation = AnimationType((_config.animation + 1) % int(AnimationType::LAST));
-        _syncVisualizerType(animation);
         _setAnimation(animation, 1000);
     }
 

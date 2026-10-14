@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# Author: sascha_lammers@gmx.de
+#
+# print syslog message received on UDP port 514 in the console
+#
 
 import socket
 

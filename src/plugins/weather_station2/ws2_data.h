@@ -461,9 +461,6 @@ public:
 
     DataSource() :
         _forecastCount(0)
-#if DEBUG_LVGL_SCREENSHOT
-        , _debugSetCount(0)
-#endif
         , _powerGraphMinutes(kDefaultPowerGraphMinutes)
         , _timezoneOffset(0)
         , _metric(true)
@@ -471,13 +468,6 @@ public:
 #if DEBUG_LVGL_SCREENSHOT
         , _debugFrozen(false)
         , _debugPowerChannel(0)
-        , _debugHassPage(0xffffffff)
-        , _debugHassFullscreen(0xffffffff)
-        , _debugHassPanel(0xffffffff)
-        , _debugHassView(0xff)
-        , _debugHassRange(0xff)
-        , _debugHassSettings(0xff)
-        , _debugHassRotation(0xff)
 #endif
     {
     }
@@ -608,68 +598,6 @@ public:
     // applies one "key:value" pair of the debug screenshot feature. The model implements the
     // keys, so pushed values work with any source. Returns false for unknown keys
     virtual bool debugSetValue(const String &key, const String &value);
-    // the last "key:value" that arrived and how many arrived at all (diagnostics for the status
-    // page of the plugin)
-    String getDebugSetInfo() const;
-    // The debug screen of the lvgl plugin can only switch screens, so the page of the Home
-    // Assistant dashboard is pushed with "set=hasspage:10" (0xffffffff = nothing requested). The
-    // dashboard reads the value and clears it
-    uint32_t getDebugHassPage() const {
-        return _debugHassPage;
-    }
-    void clearDebugHassPage() {
-        _debugHassPage = 0xffffffff;
-    }
-    // The fullscreen image of a picture tile is opened by a tap on the tile, which cannot be
-    // reached over the network: "set=hassfull:46" opens the image of tile 46 (the same key of a
-    // tile whose image is open closes it again), 0xffffffff = nothing requested
-    uint32_t getDebugHassFullscreen() const {
-        return _debugHassFullscreen;
-    }
-    void clearDebugHassFullscreen() {
-        _debugHassFullscreen = 0xffffffff;
-    }
-    // The panel of a light, dimmer or climate tile is opened by a tap on the tile: "hasspanel:3"
-    // opens the panel of tile 3 (the same effect as the tap, the same tile closes it again),
-    // 0xffffffff = nothing requested
-    uint32_t getDebugHassPanel() const {
-        return _debugHassPanel;
-    }
-    void clearDebugHassPanel() {
-        _debugHassPanel = 0xffffffff;
-    }
-    // The range of the history graph is selected with the buttons of the sensor panel:
-    // "hassrange:48" does the same, 0xff = nothing requested
-    uint8_t getDebugHassRange() const {
-        return _debugHassRange;
-    }
-    void clearDebugHassRange() {
-        _debugHassRange = 0xff;
-    }
-    // The quick settings sheet of the dashboard is opened with a swipe, which cannot be reached
-    // over the network: "hasssettings:1" opens it (0 = close it again, 1 = the tiles and 2..4 = the
-    // editor of a setting), 0xff = nothing requested
-    uint8_t getDebugHassSettings() const {
-        return _debugHassSettings;
-    }
-    void clearDebugHassSettings() {
-        _debugHassSettings = 0xff;
-    }
-    // control of the panel of an open tile ("hassview"), 0xff = nothing requested
-    uint8_t getDebugHassView() const {
-        return _debugHassView;
-    }
-    void clearDebugHassView() {
-        _debugHassView = 0xff;
-    }
-    // The orientation of the dashboard needs a reboot when it is changed in the web form:
-    // "hassrot:<0..3>" applies it without one (the value is not stored, see HassScreen)
-    uint8_t getDebugHassRotation() const {
-        return _debugHassRotation;
-    }
-    void clearDebugHassRotation() {
-        _debugHassRotation = 0xff;
-    }
 #endif
 
 protected:
@@ -692,10 +620,6 @@ protected:
     // parts of the day of the "1 day" layout of the forecast screen
     ForecastSlot _dayParts[kNumDayParts];
     IndoorValues _indoor;
-#if DEBUG_LVGL_SCREENSHOT
-    uint16_t _debugSetCount;
-    String _debugLastSet;
-#endif
     PowerChannels _power;
     // cached by _readPowerSources(), see getPowerGraphMinutes()
     uint8_t _powerGraphMinutes;
@@ -712,18 +636,6 @@ protected:
     bool _debugFrozen;
     // channel the debug keys pwrv/pwra/pwrw/pwre write to, "pwrch" selects it
     uint8_t _debugPowerChannel;
-    // page the Home Assistant dashboard has to open ("hasspage"), 0xffffffff = none
-    uint32_t _debugHassPage;
-    // tile whose fullscreen image is opened or closed ("hassfull"), 0xffffffff = none
-    uint32_t _debugHassFullscreen;
-    // tile whose panel is opened ("hasspanel"), 0xffffffff = none
-    uint32_t _debugHassPanel;
-    // control of the panel of an open tile ("hassview"), 0xff = none
-    uint8_t _debugHassView;
-    // range of the history graph of the sensor panel ("hassrange", 12, 24 or 48 hours), 0xff = none
-    uint8_t _debugHassRange;
-    uint8_t _debugHassSettings;
-    uint8_t _debugHassRotation;
 #endif
 };
 

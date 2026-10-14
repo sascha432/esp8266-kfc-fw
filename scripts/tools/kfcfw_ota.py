@@ -2,13 +2,10 @@
 # Author: sascha_lammers@gmx.de
 #
 
-# requires:
-# pip3 install requests-toolbelt progressbar2 websocket-client
+# requires the packages of requirements.txt (workspace venv .venv)
 
 import sys
 from os import path
-sys.path.insert(0, path.realpath('c:/users/sascha/.platformio/penv/lib/site-packages'))
-
 import os
 import time
 import argparse

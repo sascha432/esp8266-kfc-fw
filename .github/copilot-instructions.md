@@ -107,6 +107,10 @@ in this workspace.
 - **There are no unit tests** - verification happens on the hardware: a trace line, a log or a screenshot has
   to show what the change did, "it compiles" is not a verification. `logs/check_pages.py` checks pages and
   endpoints in bulk; the environment sections list the panel/debug key recipes.
+- **PC tools** (`scripts/tools`, the mocks under `src/plugins/*/docs/scripts`) run in the workspace venv
+  `.venv` (packages in `requirements.txt`, `python -m venv .venv` + `.venv\Scripts\python -m pip install -r
+  requirements.txt`); the build scripts run in PlatformIO's own Python. Never add a hardcoded `sys.path` to a
+  `site-packages` directory - a missing package goes into `requirements.txt`.
 - Serial capture/reset (pass the env's `monitor_port`):
   `python logs/serial_capture.py --port <monitor_port> --seconds 60 --no-reset | Out-File -Encoding utf8 logs/x.txt`
   - **not with `>`**, a redirected file becomes UTF-16 and greps find nothing in it.

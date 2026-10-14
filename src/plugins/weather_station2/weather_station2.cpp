@@ -19,15 +19,6 @@
 #    include "lvgl_debug.h"
 #endif
 
-// The rotation sensor of the Home Assistant dashboard is the MPU-6050 of the sensor plugin, when
-// the env compiles it (IOT_SENSOR_HAVE_MPU6050 = I2C address). The sensor plugin is set up before
-// this plugin (its priority is lower, see PluginComponent::PriorityType), so the sensor exists in
-// setup() already
-#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
-#    include "../sensor/sensor.h"
-#    include "../sensor/Sensor_MPU6050.h"
-#endif
-
 #ifndef DEBUG_WEATHER_STATION2
 #    define DEBUG_WEATHER_STATION2 0
 #endif
@@ -44,7 +35,6 @@ using WeatherStation2::PowerChannels;
 using WeatherStation2::PowerSourceType;
 using WeatherStation2::getPowerSourceTypeName;
 using WeatherStation2::getPowerChannelPart;
-using Plugins = KFCConfigurationClasses::PluginsType;
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     WeatherStation2Plugin,
@@ -53,7 +43,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "",                 // web_templates
     // the weather configuration and the world clock form are shared with the 1.x plugin. The plugin
     // form is split into pages, every page is a form of its own (see ws2_form.cpp)
-    "weather2,weather2-sensors,weather2-power,weather2-hass,world-clock", // config_forms
+    "weather2,weather2-sensors,weather2-power,world-clock", // config_forms
     "",                 // reconfigure_dependencies
     // the screens need the display, so the plugin is set up after the lvgl plugin
     PluginComponent::PriorityType::MIN,
@@ -78,46 +68,6 @@ WeatherStation2Plugin &WeatherStation2Plugin::getInstance()
     return plugin;
 }
 
-#if IOT_HASS_DASHBOARD
-void WeatherStation2Plugin::applyHassOrientation()
-{
-    // the orientation is its own configuration parameter, the setters of the form stored it before
-    // SAVE was called (FormCallbackType::SAVE runs before config.write(), see PluginComponent.h)
-    _hassScreen.setOrientation(Plugins::WeatherStation::getHassRotation());
-}
-#endif
-
-#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
-void WeatherStation2Plugin::_registerRotationSensor()
-{
-    auto sensor = SensorPlugin::getSensor<Sensor_MPU6050>(MQTT::SensorType::MPU6050);
-    if (!sensor) {
-        __LDBG_printf("no MPU-6050, the dashboard does not follow a rotation sensor");
-        return;
-    }
-    __LDBG_printf("MPU-6050 @ 0x%02x registered for the dashboard rotation (detected=%u)",
-                  static_cast<unsigned>(sensor->getAddress()), sensor->isDetected() ? 1 : 0);
-    // A captureless lambda, so no heap is used. The sensor invokes it from the main loop task and
-    // calls it once right away with the current rotation (while the sensor is detected), which is
-    // how the dashboard starts in the orientation the device is in.
-    // Picking the device up and turning it is user activity as well: the display leaves the power
-    // saving mode (dimmed or off) and the idle timers restart, the same call the touch screen uses
-    // (see LVGLPlugin::notifyActivity())
-    sensor->setRotationCallback([](uint16_t rotation) {
-        LVGLPlugin::notifyActivity();
-        WeatherStation2Plugin::getInstance()._hassScreen.setSensorRotation(rotation);
-    });
-}
-
-void WeatherStation2Plugin::_unregisterRotationSensor()
-{
-    auto sensor = SensorPlugin::getSensor<Sensor_MPU6050>(MQTT::SensorType::MPU6050);
-    if (sensor) {
-        sensor->setRotationCallback(nullptr);
-    }
-}
-#endif
-
 WeatherStation2Plugin::WeatherStation2Plugin() :
     PluginComponent(PROGMEM_GET_PLUGIN_OPTIONS(WeatherStation2Plugin))
 #if MQTT_SUPPORT
@@ -131,14 +81,6 @@ WeatherStation2Plugin::WeatherStation2Plugin() :
     , _moonPhaseScreen(_data)
     , _powerScreen(_data)
     , _infoScreen(_data)
-#if IOT_HASS_DASHBOARD
-    // the dashboard and its screen are the two largest objects of the plugin (~47 KB and ~8 KB) and
-    // they are created in the PSRAM (see _ws2PsramObject(), which initializes the PSRAM as well -
-    // the instance is a static object and its constructor runs before initArduino()). The display
-    // is only used by the screen methods, never from the constructor
-    , _hass(_ws2PsramObject<WeatherStation2::HomeAssistant::Dashboard>())
-    , _hassScreen(_ws2PsramObject<WeatherStation2::HassScreen>(_data, _hass))
-#endif
     , _registered(false)
 {
     REGISTER_PLUGIN(this, "WeatherStation2Plugin");
@@ -147,7 +89,7 @@ WeatherStation2Plugin::WeatherStation2Plugin() :
 // ------------------------------------------------------------------------------------------
 // mbedtls allocator (TLS)
 // ------------------------------------------------------------------------------------------
-// The TLS handshake of the weather/Home Assistant clients needs about 40 KB of heap and the small
+// The TLS handshake of the weather client needs about 40 KB of heap and the small
 // X.509 allocations are the first thing that fails when the internal DRAM runs out (the handshake
 // reports "(-10368) X509 - Allocation of memory failed"). mbedtls is built with
 // MBEDTLS_PLATFORM_MEMORY (mbedtls/esp_config.h) and its default allocator is the plain
@@ -201,29 +143,11 @@ void WeatherStation2Plugin::setup(SetupModeType mode, const PluginComponents::De
     _installTlsPsramAllocator();
     // reads the configuration and the system/WiFi values, cannot run in the constructor
     _data.begin();
-#if IOT_HASS_DASHBOARD
-    // reads /hass.yaml and starts the request task, a missing file is not an error
-    _hass.begin();
-    __LDBG_printf("dashboard at %p (%s), %u bytes (tile %u, flags %u, widgets %u)", static_cast<const void *>(&_hass),
-                  esp_ptr_external_ram(&_hass) ? "PSRAM" : "internal RAM", static_cast<unsigned>(sizeof(_hass)),
-                  static_cast<unsigned>(sizeof(WeatherStation2::HomeAssistant::Tile)),
-                  static_cast<unsigned>(WeatherStation2::HomeAssistant::Dashboard::getTileFlagsSize()),
-                  static_cast<unsigned>(WeatherStation2::HassScreen::getTileWidgetsSize()));
-#endif
 #if MQTT_SUPPORT
     // the indoor metrics can read MQTT topics, the client calls onConnect()/onMessage()
     MQTT::Client::registerComponent(this);
 #endif
     _registerScreens();
-#if IOT_HASS_DASHBOARD
-    // Orientation of the dashboard screen (the other screens keep the landscape layout). The
-    // display is rotated while the dashboard is shown, see HassScreen::setOrientation()
-    _hassScreen.setOrientation(Plugins::WeatherStation::getHassRotation());
-#endif
-#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
-    // the MPU-6050 drives the orientation of the dashboard as well (unless it is locked)
-    _registerRotationSensor();
-#endif
 #if DEBUG_LVGL_SCREENSHOT
     // the debug screenshot feature can push values into the screens, see lvgl_debug.h
     LVGLDebug::setValueCallback([](const String &key, const String &value) {
@@ -232,18 +156,12 @@ void WeatherStation2Plugin::setup(SetupModeType mode, const PluginComponents::De
     LVGLDebug::setHelpCallback([]() -> const char * {
         return "temp, feels, min, max, hum, press, wind, rain, uv, city, descr, icon(sun|partly|cloudy|rain|snow|storm|fog), "
                "days(1-5), dayparts(1), itmp, ihum, ipress, igas, phase, illum(0-1), age, freeze(0|1), "
-               "pwrch(0-3), pwrv, pwra, pwrw, pwre, hasspage(page of /hass.yaml), hassfull(tile of a picture tile), "
-               "hasspanel(tile of a light/dimmer/climate/sensor tile), hassview(0-3, control the open panel shows), "
-               "hassrange(12, 24 or 48 hours of the history graph), hassrot(0-3, orientation), hasssettings(0-4)";
+               "pwrch(0-3), pwrv, pwra, pwrw, pwre";
     });
 #endif
     // refresh the values once per second, the data source rate limits the update itself
     LOOP_FUNCTION_ADD_ARG([this]() {
         _data.update();
-#if IOT_HASS_DASHBOARD
-        // applies the response of the request task and notices a new /hass.yaml
-        _hass.update();
-#endif
     }, this);
 }
 
@@ -256,7 +174,6 @@ void WeatherStation2Plugin::createMenu()
     subMenu.addMenuItem(getFriendlyName(), F("weather2.html"));
     subMenu.addMenuItem(F("Sensors"), F("weather2-sensors.html"));
     subMenu.addMenuItem(F("Power Monitor"), F("weather2-power.html"));
-    subMenu.addMenuItem(F("Home Assistant"), F("weather2-hass.html"));
     subMenu.addMenuItem(F("World Clock"), F("world-clock.html"));
 }
 
@@ -270,14 +187,6 @@ void WeatherStation2Plugin::shutdown()
     _removeScreens();
     // the reader task of the remote power monitor is not needed after the shutdown
     _data.stopPowerMonitor();
-#if IOT_HASS_DASHBOARD
-    // stops the request task of the dashboard
-    _hass.stop();
-#endif
-#if IOT_HASS_DASHBOARD && IOT_SENSOR_HAVE_MPU6050
-    // the callback captures nothing, but it must not outlive the plugin either
-    _unregisterRotationSensor();
-#endif
 }
 
 void WeatherStation2Plugin::reconfigure(const String &source)
@@ -286,23 +195,8 @@ void WeatherStation2Plugin::reconfigure(const String &source)
     // the data source re-reads the configuration and requests immediately
     __LDBG_printf("source=%s", source.c_str());
     _data.reconfigure();
-#if IOT_HASS_DASHBOARD
-    // re-reads /hass.yaml
-    _hass.reconfigure();
-#endif
     // the clock in the top bar of the screen overview follows the same setting
     LVGLPlugin::screens().setTimeFormat24h(_data.isTimeFormat24h());
-#if IOT_HASS_DASHBOARD
-    // the "Home Assistant" group of the form can change the orientation of the dashboard and clear
-    // the rotation lock
-    _hassScreen.setOrientation(Plugins::WeatherStation::getHassRotation());
-#if IOT_SENSOR_HAVE_MPU6050
-    // ... and while the rotation is not locked the motion sensor decides, so the last rotation it
-    // reported is applied again (a device that was turned while the lock was on would otherwise
-    // stay in the wrong orientation until it is turned again)
-    _hassScreen.refreshSensorRotation();
-#endif
-#endif
 #if MQTT_SUPPORT
     // the "Sensors" group of the form may have changed the topics
     _updateMqttSubscriptions();
@@ -375,10 +269,6 @@ void WeatherStation2Plugin::_registerScreens()
         return;
     }
     auto &screens = LVGLPlugin::screens();
-#if IOT_HASS_DASHBOARD
-    // The screen manager shows the first registered screen on its initial tick.
-    screens.add(&_hassScreen);
-#endif
     screens.add(&_mainScreen);
     screens.add(&_indoorScreen);
     screens.add(&_forecastScreen);
@@ -406,9 +296,6 @@ void WeatherStation2Plugin::_removeScreens()
     screens.remove(&_moonPhaseScreen);
     screens.remove(&_powerScreen);
     screens.remove(&_infoScreen);
-#if IOT_HASS_DASHBOARD
-    screens.remove(&_hassScreen);
-#endif
     _registered = false;
 }
 
@@ -542,25 +429,6 @@ void WeatherStation2Plugin::getStatus(Print &output)
     output.printf_P(PSTR("Screens: %u registered, active: %s, auto rotation: %s" HTML_S(br)), static_cast<unsigned>(screens.count()),
         screens.getActiveScreen() ? screens.getActiveScreen()->getName() : "none",
         screens.isRotationPaused() ? "paused (touch)" : "enabled");
-#if IOT_HASS_DASHBOARD
-    output.printf_P(PSTR("Dashboard orientation: %s" HTML_S(br)), _hassScreen.getOrientationName());
-#if IOT_SENSOR_HAVE_MPU6050
-    // the rotation the motion sensor reported and whether the dashboard follows it
-    if (_hassScreen.getSensorRotation() >= 0) {
-        output.printf_P(PSTR("Dashboard rotation sensor: MPU-6050, %d%s, %s" HTML_S(br)),
-            static_cast<int>(_hassScreen.getSensorRotation()), SPGM(UTF8_degree),
-            Plugins::WeatherStation::getHassRotationLock() ? "locked" : "automatic");
-    }
-    else {
-        output.printf_P(PSTR("Dashboard rotation sensor: MPU-6050, no rotation reported yet" HTML_S(br)));
-    }
-#endif
-    output.printf_P(PSTR("Dashboard page: %u" HTML_S(br)), static_cast<unsigned>(_hassScreen.getPage()));
-#if DEBUG_LVGL_SCREENSHOT
-    output.printf_P(PSTR("Debug sets: %s" HTML_S(br)), _data.getDebugSetInfo().c_str());
-#endif
-    _hass.getStatus(output);
-#endif
 }
 
 #if DEBUG_WEATHER_STATION2

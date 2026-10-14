@@ -185,8 +185,6 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D, F("Spectrum Rainbow Bars 2D"),
                         VisualizerAnimationType::SPECTRUM_GRADIENT_BARS_2D, F("Spectrum Gradient 2D"),
                         VisualizerAnimationType::SPECTRUM_COLOR_BARS_2D, F("Spectrum Single Color Bars 2D"),
-                        VisualizerAnimationType::RGB565_VIDEO, F("RGB565 Video"),
-                        VisualizerAnimationType::RGB24_VIDEO, F("RGB24 Video"),
                         VisualizerAnimationType::PLASMA_AUDIO, F("Plasma Audio Reactive"),
                         VisualizerAnimationType::FIRE_AUDIO, F("Fire Audio Reactive")
                     );

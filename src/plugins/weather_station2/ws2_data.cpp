@@ -883,79 +883,11 @@ static void _setDebugIndoorValue(IndoorValues &indoor, IndoorValues::Metric metr
     metricValue.value = value;
 }
 
-#if DEBUG_LVGL_SCREENSHOT
-String DataSource::getDebugSetInfo() const
-{
-    if (!_debugSetCount) {
-        return String(F("none"));
-    }
-    char count[8];
-    snprintf_P(count, sizeof(count), PSTR("%u"), static_cast<unsigned>(_debugSetCount));
-    String info(count);
-    info += F(": ");
-    info += _debugLastSet;
-    return info;
-}
-#endif
-
 bool DataSource::debugSetValue(const String &key, const String &value)
 {
-#if DEBUG_LVGL_SCREENSHOT
-    _debugSetCount++;
-    _debugLastSet = key + '=' + value;
-#endif
     if (key.equalsIgnoreCase(F("freeze"))) {
         _debugFrozen = (value.toInt() != 0) && !value.equalsIgnoreCase(F("false"));
         return true;
-    }
-    if (key.equalsIgnoreCase(F("hasspage"))) {
-        // page of the Home Assistant dashboard (an area page of /hass.yaml, 0 = the main page)
-        _debugHassPage = static_cast<uint32_t>(value.toInt());
-        return true;
-    }
-    if (key.equalsIgnoreCase(F("hassfull"))) {
-        // fullscreen image of a picture tile of the Home Assistant dashboard. False: the screen
-        // applies the value without rebuilding the widget tree, the image that is open has to
-        // stay open (a reload would close it)
-        _debugHassFullscreen = static_cast<uint32_t>(value.toInt());
-        return false;
-    }
-    if (key.equalsIgnoreCase(F("hasspanel"))) {
-        // panel of a light, dimmer, climate or sensor tile of the Home Assistant dashboard (the same
-        // effect as a tap on that tile). False: the screen applies the value without rebuilding the
-        // widget tree, else the reload would close the panel again - the tile whose panel is open
-        // closes it with the same key
-        _debugHassPanel = static_cast<uint32_t>(value.toInt());
-        return false;
-    }
-    if (key.equalsIgnoreCase(F("hassrange"))) {
-        // range of the history graph of the sensor panel (12, 24 or 48 hours), the same effect as
-        // a tap on one of the three buttons of the panel. False: the screen applies the value
-        // without rebuilding the widget tree
-        _debugHassRange = static_cast<uint8_t>(value.toInt());
-        return false;
-    }
-    if (key.equalsIgnoreCase(F("hasssettings"))) {
-        // quick settings sheet of the Home Assistant dashboard (0 = close it, 1 = the tiles,
-        // 2..4 = the editor of the idle brightness, the idle timeout and the standby timeout).
-        // False: the screen builds the sheet itself, a reload would close it again
-        _debugHassSettings = static_cast<uint8_t>(value.toInt());
-        return false;
-    }
-    if (key.equalsIgnoreCase(F("hassview"))) {
-        // control the panel of an open tile shows (0 = the level slider of a light, the arc of a
-        // climate, 1..3 = the color wheel, the colour temperature and the effect list / the three
-        // option lists of a climate), the same effect as a tap on the button of that control.
-        // False: the screen applies the value without rebuilding the widget tree
-        _debugHassView = static_cast<uint8_t>(value.toInt());
-        return false;
-    }
-    if (key.equalsIgnoreCase(F("hassrot"))) {
-        // orientation of the Home Assistant dashboard (0 = landscape, 1 = portrait, 2/3 = both
-        // turned 180 degrees). False: the screen applies it without rebuilding the widget tree
-        // (it rebuilds the grid and the quick settings itself)
-        _debugHassRotation = static_cast<uint8_t>(value.toInt());
-        return false;
     }
     // pushing a value marks the current weather as valid, the screens only show real (or here:
     // pushed) values instead of the "no data" message

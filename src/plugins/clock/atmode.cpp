@@ -50,7 +50,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
             else {
                 newType = static_cast<Clock::AnimationType>(visTxtType);
             }
-            _syncVisualizerType(newType);
             _setAnimation(newType, 0);
             args.printf_P(PSTR("Visualizer=%u (%s)"), _config.animation, _getAnimationName(static_cast<Clock::AnimationType>(_config.animation)));
         }
@@ -118,7 +117,6 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                     auto name = String(_config.getAnimationName(static_cast<AnimationType>(i)));
                     StrWrapper(name).slugify('_');
                     if (animation.equalsIgnoreCase(name)) {
-                        _syncVisualizerType(static_cast<AnimationType>(i));
                         _setAnimation(static_cast<AnimationType>(i), blendTime);
                         break;
                     }

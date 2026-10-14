@@ -9,11 +9,6 @@
 #include "animation_fire.h"
 #include "pixel_color.h"
 
-// how to create video streaming:
-// ffmpeg -i test.mp4 -vf "fps=10,scale=32:16:flags=lanczos,eq=gamma=0.7" -pix_fmt rgb24 -c:v rawvideo test.rgb -y
-// then use python udp_send_packet.py to broadcast this to one or more devices. 512LEDs 32x16 was not impressive.
-// a lot issues with gamma correction and that LEDs do not seem to work well with RGB conversion from videos.
-
 #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
     class I2SMicrophone;
 #endif
@@ -86,7 +81,6 @@ namespace Clock {
             _peakLoudnessTime(0),
             _storedData(),
             _storedPeaks(),
-            _video(getNumPixels()),
             _timeout(5),
             _lastPacketTime(0),
             _cfg(cfg),
@@ -258,122 +252,11 @@ namespace Clock {
             uint16_t _peakSinkRate; // milliseconds
         };
 
-        enum ColorFormatType : uint8_t {
-            RGB565,
-            RGB24,
-            BGR24,
-        };
-
-        using VideoStorageType = std::vector<uint8_t>;
-
-        class VideoHeaderType
-        {
-        public:
-            uint32_t _frameId;
-            uint16_t _position;
-            ColorFormatType _format;
-            uint8_t _reserved;
-
-            VideoHeaderType() :
-                _frameId(0),
-                _position(0),
-                _format(ColorFormatType::RGB565)
-            {
-            }
-
-            void invalidate()
-            {
-                _position = 0;
-                _frameId++;
-            }
-
-            uint8_t getBytesPerPixel() const
-            {
-                switch(_format) {
-                    case ColorFormatType::RGB565:
-                        return 2;
-                    case ColorFormatType::RGB24:
-                    case ColorFormatType::BGR24:
-                        return 3;
-                }
-                return 1;
-            }
-
-            size_t getPosition() const
-            {
-                return _position * getBytesPerPixel();
-            }
-
-            operator uint8_t *() {
-                return reinterpret_cast<uint8_t *>(this);
-            }
-
-            constexpr size_t size() const {
-                return sizeof(*this);
-            }
-
-        };
-
-        class VideoType
-        {
-        public:
-            VideoHeaderType _header;
-            VideoStorageType _data;
-            VideoStorageType::iterator _position;
-
-            VideoType(uint32_t pixels) : _header(), _numPixels(pixels)
-            {
-            }
-
-            void invalidate()
-            {
-                _header.invalidate();
-                _data.clear();
-            }
-
-            void clear()
-            {
-                _header.invalidate();
-                _data.clear();
-            }
-
-            bool isValid(const VideoHeaderType &header);
-
-            uint8_t *allocateItemBuffer(size_t addSize)
-            {
-                auto size = _data.size();
-                _data.resize(_data.size() + addSize);
-                if (_data.size() == size + addSize) {
-                    return _data.data() + size;
-                }
-                return nullptr;
-            }
-
-            bool isReady() const
-            {
-                return _data.size() >= getTotalDataSize();
-            }
-
-            size_t getTotalDataSize() const
-            {
-                return _numPixels * _header.getBytesPerPixel();
-            }
-
-            void begin()
-            {
-                _position = _data.begin();
-            }
-
-            PixelRGB getRGB();
-            uint32_t _numPixels;
-        };
-
         VisualizerLoudnessLevel _storedLoudness;
         VisualizerLoudnessLevel _peakLoudness;
         uint32_t _peakLoudnessTime;
         std::array<uint8_t, kVisualizerPacketSize> _storedData;
         std::array<PeakType, kVisualizerPacketSize> _storedPeaks;
-        VideoType _video;
         uint32_t _timeout;
         uint32_t _lastPacketTime;
         VisualizerAnimationConfig &_cfg;

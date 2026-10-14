@@ -235,51 +235,6 @@ static void _addPowerGroup(FormUI::Form::BaseForm &form)
     group.end();
 }
 
-// Orientation of the Home Assistant dashboard screen. Only the dashboard is rotated, the other
-// screens of the plugin keep the landscape layout (the screen rotates the display back when it is
-// left). It is its own binary parameter, so the weather configuration is not touched by the change
-// (see WeatherStation::getHassRotation())
-#if IOT_HASS_DASHBOARD
-static void _addHassGroup(FormUI::Form::BaseForm &form)
-{
-    auto &group = form.addCardGroup(F("ws2_hass"), F("Home Assistant"), false);
-
-    form.addCallbackGetterSetter<uint8_t>(F("hro"), [](uint8_t &value, FormUI::Field::BaseField &field, bool store) {
-        if (store) {
-            WeatherStation::setHassRotation(value);
-        }
-        else {
-            value = WeatherStation::getHassRotation();
-        }
-        return true;
-    });
-    form.addFormUI(F("Dashboard Orientation"), FormUI::List(
-        static_cast<uint8_t>(WeatherStation::HassRotation::LANDSCAPE), F("Landscape (480x320)"),
-        static_cast<uint8_t>(WeatherStation::HassRotation::PORTRAIT), F("Portrait (320x480)"),
-        static_cast<uint8_t>(WeatherStation::HassRotation::LANDSCAPE_FLIPPED), F("Landscape, turned 180 degrees"),
-        static_cast<uint8_t>(WeatherStation::HassRotation::PORTRAIT_FLIPPED), F("Portrait, turned 180 degrees")
-    ));
-
-    // The rotation is also cycled and locked with the quick settings of the dashboard (a swipe left
-    // or right on the dashboard), this is the same parameter
-    form.addCallbackGetterSetter<uint8_t>(F("hro_lock"), [](uint8_t &value, FormUI::Field::BaseField &field, bool store) {
-        if (store) {
-            WeatherStation::setHassRotationLock(value != 0);
-        }
-        else {
-            value = WeatherStation::getHassRotationLock() ? 1 : 0;
-        }
-        return true;
-    });
-    form.addFormUI(F("Rotation Lock"), FormUI::List(
-        static_cast<uint8_t>(0), F("Off"),
-        static_cast<uint8_t>(1), F("On")
-    ));
-
-    group.end();
-}
-#endif
-
 // title, container id and style of one page of the plugin form (see createConfigureForm())
 static void _setPage(FormUI::WebUI::Config &ui, const __FlashStringHelper *title, const __FlashStringHelper *containerId)
 {
@@ -291,15 +246,6 @@ static void _setPage(FormUI::WebUI::Config &ui, const __FlashStringHelper *title
 void WeatherStation2Plugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
     if (!isCreateFormCallbackType(type)) {
-#if IOT_HASS_DASHBOARD
-        // The dashboard orientation is applied right away instead of waiting for the deferred
-        // reconfigure() of the framework (the config write is delayed, the user would save the
-        // form and nothing would happen for a few seconds). The setters of the form stored the
-        // value before SAVE was called
-        if (type == FormCallbackType::SAVE && F("weather2-hass") == formName) {
-            WeatherStation2Plugin::getInstance().applyHassOrientation();
-        }
-#endif
         // the configuration is written by the framework and re-read by reconfigure()
         return;
     }
@@ -375,14 +321,6 @@ void WeatherStation2Plugin::createConfigureForm(FormCallbackType type, const Str
     if (F("weather2-power") == formName) {
         _setPage(ui, F("Power Monitor Configuration"), F("weather2_power"));
         _addPowerGroup(form);
-        form.finalize();
-        return;
-    }
-    if (F("weather2-hass") == formName) {
-        _setPage(ui, F("Home Assistant Configuration"), F("weather2_hass"));
-#if IOT_HASS_DASHBOARD
-        _addHassGroup(form);
-#endif
         form.finalize();
         return;
     }

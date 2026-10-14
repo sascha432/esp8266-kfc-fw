@@ -29,20 +29,6 @@
 //
 // thanks for the great software :)
 
-static inline void convertRGB565ToRGB(uint32_t color, uint8_t& r, uint8_t& g, uint8_t& b)
-{
-    r = ((color >> 11) * 527 + 23) >> 6;
-    g = (((color >> 5) & 0x3f) * 259 + 33) >> 6;
-    b = ((color & 0x1f) * 527 + 23) >> 6;
-}
-
-static inline uint32_t convertRGB565ToRGB(uint32_t color)
-{
-    uint8_t r, g, b;
-    convertRGB565ToRGB(color, r, g, b);
-    return (r << 16) | (g << 8) | b;
-}
-
 using namespace Clock;
 
 WiFiUDP Clock::VisualizerAnimation::_udp;
@@ -65,63 +51,6 @@ VisualizerAnimation::~VisualizerAnimation()
             }
         #endif
     }
-}
-
-bool VisualizerAnimation::VideoType::isValid(const VisualizerAnimation::VideoHeaderType &header)
-{
-    // __DBG_printf("frame %d,%d data %d=%d pxpb=%d tsz=%d", _header._frameId, header._frameId, _data.size(), header.getPosition(), header.getBytesPerPixel(), kNumPixels * header.getBytesPerPixel());
-    _header = header;
-    return true;
-    // if (_header._frameId == header._frameId) {
-    //     if (_data.size() == header.getPosition()) {
-    //         return true;
-    //     }
-    //     clear();
-    //     __DBG_printf("1");
-    //     return false;
-    // }
-    // else if (_data.empty() && header._position == 0) {
-    //     if (header._frameId <= _header._frameId) {
-    //         clear();
-    //         return false;
-    //     }
-    //     _header._frameId = header._frameId;
-    //     __DBG_printf("2");
-    //     return true;
-    // }
-    // else {
-    //     __DBG_printf("3");
-    //     clear();
-    // }
-    // __DBG_printf("4");
-    // return false;
-}
-
-PixelRGB VisualizerAnimation::VideoType::getRGB()
-{
-    uint8_t r = 128, g = 0, b = 0;
-    switch(_header._format) {
-        case ColorFormatType::RGB565: {
-            uint16_t color;
-            color = *_position++ << 8;
-            color = *_position++;
-            convertRGB565ToRGB(color, r, g, b);
-        }
-        break;
-        case ColorFormatType::RGB24: {
-            r = *_position++;
-            g = *_position++;
-            b = *_position++;
-        }
-        break;
-        case ColorFormatType::BGR24: {
-            b = *_position++;
-            g = *_position++;
-            r = *_position++;
-        }
-        break;
-    }
-    return PixelRGB(r, g, b);
 }
 
 void VisualizerAnimation::begin()
@@ -197,7 +126,6 @@ void VisualizerAnimation::_clear()
     _peakLoudnessTime = 0;
     _storedData.fill(0);
     _storedPeaks.fill(PeakType());
-    _video.clear();
     _lastPacketTime = millis();
     _timeout = kUDPInfiniteTimeout;
     // the plasma phase and the fire keep running, only the audio reactions are reset
@@ -325,55 +253,6 @@ void VisualizerAnimation::_parseUdp()
                 }
                 VisualizerAnimation *_parent;
             } exitScope(this);
-
-            if (size >= 128) {
-                // video data is sent in big chunks
-                VideoHeaderType header;
-
-                if (_udp.readBytes(header, header.size()) != header.size()) {
-                    _video.clear();
-                    __LDBG_printf("read error=%u", header.size());
-                    continue;
-                }
-                if (!_video.isValid(header)) {
-                    // invalid video id or position (lost UDP packet, wrong order)
-                    __DBG_printf("invalid header");
-                    continue;
-                }
-                if (_video.isReady()) {
-                    // skip this frame, the old one is not processed yet
-                    // _video._header.invalidate();
-                    __LDBG_printf("skipping frame");
-                    return;
-                }
-
-                size -= header.size();
-                auto ptr = _video.allocateItemBuffer(size);
-                if (!ptr) {
-                    // out of ram
-                    _video.clear();
-                    __LDBG_printf("malloc failed=%u", size);
-                    continue;
-                }
-
-                if (_udp.readBytes(ptr, size) != size) {
-                    _video.clear();
-                    __LDBG_printf("read error=%u", size);
-                    continue;
-                }
-
-                if (_video.isReady()) {
-                    __LDBG_printf("frame ready size=%u", _video.getTotalDataSize());
-                    _lastPacketTime = millis();
-                    exitScope.release();
-                    return;
-                }
-
-                // try next one
-                __LDBG_printf("unknown state");
-                exitScope.release();
-                continue;
-            }
 
             int firstByte = _udp.peek();
             switch(static_cast<UdpProtocolType>(firstByte)) {
@@ -736,19 +615,6 @@ void VisualizerAnimation::_copyTo(_Ta &display, uint32_t millisValue)
                         }
                     }
                 }
-            }
-        }
-        break;
-        case VisualizerAnimationType::RGB24_VIDEO:
-        case VisualizerAnimationType::RGB565_VIDEO: {
-            if (_video.isReady()) {
-                _video.begin();
-                for (int row = display.getRows() - 1; row >= 0; row--) {
-                    for (int col = 0; col < display.getCols(); col++) {
-                        display.setPixel(row, col, _video.getRGB());
-                    }
-                }
-                _video.clear();
             }
         }
         break;

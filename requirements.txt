@@ -1,0 +1,12 @@
+# Python packages of the PC tools (scripts/tools, scripts/libs, src/plugins/*/docs/scripts)
+# for the workspace venv:
+#   python -m venv .venv
+#   .venv\Scripts\python -m pip install -r requirements.txt
+# The build scripts (scripts/*.py, KFCWebBuilder) run in PlatformIO's own Python and do not use it.
+# scripts/audio_analyzer has its own venv and requirements.txt.
+
+requests
+requests-toolbelt
+websocket-client
+Pillow
+zeroconf

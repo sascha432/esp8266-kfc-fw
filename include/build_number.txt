@@ -5,11 +5,41 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15649
-date   = 2026-10-13 19:07:11
+number = 15679
+date   = 2026-10-14 17:22:27
 env    = wled_esp32_controller_neopixelbus
 
 ; history, newest first: <number> <date> <time> <environments>
+15679 2026-10-14 17:22:27 wled_esp32_controller_neopixelbus
+15678 2026-10-13 20:37:51 bme280_48
+15677 2026-10-13 20:34:35 wled_esp32_controller_neopixelbus
+15676 2026-10-13 20:21:18 wt32_sc01_test1
+15675 2026-10-13 20:15:53 led_strip_candle
+15674 2026-10-13 20:09:51 led_strip_xmas
+15673 2026-10-13 20:01:25 led_strip_frame
+15672 2026-10-13 20:01:09 led_strip_old_7segment
+15671 2026-10-13 19:55:18 led_strip_old_7segment
+15670 2026-10-13 19:51:16 led_strip_old_7segment
+15669 2026-10-13 19:47:14 led_strip_katana
+15668 2026-10-13 19:45:20 led_strip_katana
+15667 2026-10-13 19:44:55 led_strip_frame
+15666 2026-10-13 19:41:26 single_hexagon
+15665 2026-10-13 19:40:27 led_strip_old_7segment
+15664 2026-10-13 19:38:55 single_hexagon
+15663 2026-10-13 19:37:49 led_strip_old_7segment
+15662 2026-10-13 19:36:27 hexpanel_17
+15661 2026-10-13 19:35:32 hexpanel_17
+15660 2026-10-13 19:33:10 clockv2_100
+15659 2026-10-13 19:30:06 wled_esp32_controller_neopixelbus
+15658 2026-10-13 19:28:46 led_strip_candle
+15657 2026-10-13 19:27:21 led_strip_xmas
+15656 2026-10-13 19:25:55 led_strip_katana
+15655 2026-10-13 19:24:30 led_strip_frame
+15654 2026-10-13 19:24:18 wled_esp32_controller_neopixelbus
+15653 2026-10-13 19:21:32 single_hexagon
+15652 2026-10-13 19:20:47 wled_esp32_controller_neopixelbus
+15651 2026-10-13 19:19:50 wled_esp32_controller_neopixelbus
+15650 2026-10-13 19:15:26 wt32_sc01_test1
 15649 2026-10-13 19:07:11 wled_esp32_controller_neopixelbus
 15648 2026-10-13 19:03:58 wled_esp32_controller_neopixelbus
 15647 2026-10-13 18:56:19 wled_esp32_controller_neopixelbus

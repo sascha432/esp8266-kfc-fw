@@ -276,30 +276,40 @@ namespace KFCConfigurationClasses {
                 });
             }
 
+            // priority of the stations with priority 0 (auto), set by KFCFWConfiguration::scanWifiStrength()
+            // kAutoPriorityNotScanned = no scan yet, kAutoPriorityNotFound = not found by the last scan, otherwise -RSSI
+            static constexpr uint8_t kAutoPriorityNotScanned = 0;
+            static constexpr uint8_t kAutoPriorityNotFound = 0xff;
+
+            static uint8_t *getAutoPriorities()
+            {
+                static uint8_t priorities[kNumStations];
+                return priorities;
+            }
+
+            // the order must be the same on every call, the active network is stored as index into this list
             static StationVector getStations(const ScanCallback &scanCallback)
             {
                 StationVector stations;
                 bool scan = false;
                 auto cfg = Network::Settings::getConfig();
+                auto autoPriorities = getAutoPriorities();
                 for(int i = 0; i < kNumStations; i++) {
                     auto &config = cfg.stations[i];
                     if (config.isEnabled()) {
-                        stations.emplace_back(static_cast<StationConfigType>(i), getFPStrSSID(i), config._get_priority());
-                    if (config._get_priority() == 0) {
+                        auto priority = config._get_priority();
+                        if (priority == 0) {
+                            priority = autoPriorities[i];
                             scan = true;
                         }
+                        stations.emplace_back(static_cast<StationConfigType>(i), getFPStrSSID(i), priority);
                     }
                 }
                 if (scan && scanCallback) {
                     scanCallback(stations);
                 }
-                srand(micros() / 300);
-                std::sort(stations.begin(), stations.end(), [](const StationConfig &a, const StationConfig &b) -> bool {
-                    if (a._priority == b._priority) {
-                        return rand() % 2;
-                    }
-                    return a._priority < b._priority;
-                });
+                // equal priorities keep the order of the configuration
+                std::stable_sort(stations.begin(), stations.end());
                 #if DEBUG_CONFIG_CLASS
                     int n = 0;
                     for(const auto &station: stations) {

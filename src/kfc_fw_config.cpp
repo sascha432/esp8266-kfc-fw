@@ -237,7 +237,10 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
         });
 
         if (event.reason == WIFI_DISCONNECT_REASON_AUTH_EXPIRE) {
-            config.reconfigureWiFi(F("Authentication expired, reconfiguring WiFi adapter"));
+            // call outside of the event handler, reconfigureWiFi() may run a blocking scan
+            LoopFunctions::callOnce([]() {
+                config.reconfigureWiFi(F("Authentication expired, reconfiguring WiFi adapter"));
+            });
         }
 
     }
@@ -1381,11 +1384,11 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
 
         // wifi connection result
         bool result;
-        // scan for WiFi networks to get the signal strength
-        auto wifiId = scanWifiStrength(getWiFiConfigurationId());
-        // get wifi config for the selected network
+        // scan for WiFi networks to get the signal strength, the result changes the order of getStations()
+        auto wifiNum = scanWifiStrength(getWiFiConfigurationNum());
+        // get wifi config for the selected network (index into the ordered list, not the station id)
         size_t wifiIndex;
-        auto network = Network::WiFi::getNetworkConfigOrdered(wifiId, wifiIndex);
+        auto network = Network::WiFi::getNetworkConfigOrdered(wifiNum, wifiIndex);
         if (network.isDHCPEnabled()) {
             result = WiFi.config(0U, 0U, 0U, 0U, 0U);
         }
@@ -1741,13 +1744,16 @@ void KFCFWConfiguration::printRTCStatus(Print &output, const RtcStatus &status, 
 
 KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(StationConfigType configNum)
 {
-    auto stations = getStations();
-
     // check if there is any station with priority 0 / auto detect strength
-    auto iter = std::find_if(stations.begin(), stations.end(), [](const auto &station) {
-        return station._SSID.length() && (station._priority == 0);
-    });
-    if (iter == stations.end()) {
+    const auto cfg = Network::Settings::getConfig();
+    bool haveAuto = false;
+    for(int i = 0; i < Network::WiFi::kNumStations; i++) {
+        if (cfg.stations[i].isEnabled() && cfg.stations[i].getPriority() == 0) {
+            haveAuto = true;
+            break;
+        }
+    }
+    if (!haveAuto) {
         __LDBG_printf("no stations in auto mode");
         return configNum;
     }
@@ -1755,8 +1761,8 @@ KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(Stati
     // scan wifi networks and display wifi strength
     __LDBG_printf("scan wifi");
     auto num = WiFi.scanNetworks(false, true);
-    __LDBG_printf("num=%u", num);
-    if (num > 0) {
+    __LDBG_printf("num=%d", num);
+    if (num >= 0) {
         #if DEBUG_KFC_CONFIG
             // display all scanned wifi networks
             for(uint8_t i = 0; i < num; i++) {
@@ -1780,41 +1786,24 @@ KFCFWConfiguration::StationConfigType KFCFWConfiguration::scanWifiStrength(Stati
             }
             __DBG_printf("---");
         #endif
-        for(auto &station: stations) {
-            for(uint8_t i = 0; i < num; i++) {
-                if (station._SSID.length()) {
-                    auto ssid = WiFi.SSID(i);
-                    if (ssid.length()) {
-                        #if !defined(REAL_DEVICE)
-                            // display all scanned wifi networks and mark connected network (green) and configured networks (yellow)
-                            auto type = PSTR("");
-                            if (ssid == station._SSID) {
-                                type = PSTR(_VT100(bold_green));
-                            } else {
-                                for(const auto &station: stations) {
-                                    if (ssid == station._SSID) {
-                                        type = PSTR(_VT100(yellow));
-                                        break;
-                                    }
-                                }
-                            }
-                            __DBG_printf("ssid=%s%s" _VT100(reset) " prio=%d bssid=%s rssi=%d", type, ssid.c_str(), station._priority, mac2String(WiFi.BSSID(i)).c_str(), WiFi.RSSI(i));
-                        #endif
-                        if (ssid == station._SSID) {
-                            if (station._priority == 0) {
-                                // use RSSI as priority to connect to the strongest network
-                                station._priority = -WiFi.RSSI(i);
-                                if (WiFi.BSSID(i)) {
-                                    // update BSSID for network
-                                    memmove(station._bssid, WiFi.BSSID(i), sizeof(station._bssid));
-                                }
-                            }
-                            break;
-                        }
-                    }
+        // store -RSSI of the strongest access point as priority, getStations() sorts the stations with it
+        auto autoPriorities = Network::WiFi::getAutoPriorities();
+        for(int n = 0; n < Network::WiFi::kNumStations; n++) {
+            if (!cfg.stations[n].isEnabled() || cfg.stations[n].getPriority() != 0) {
+                continue;
+            }
+            const auto stationSSID = Network::WiFi::getSSID(static_cast<uint8_t>(n));
+            int32_t maxRssi = INT32_MIN;
+            for(int i = 0; i < num; i++) {
+                if (WiFi.SSID(i).equals(stationSSID)) {
+                    maxRssi = std::max<int32_t>(maxRssi, WiFi.RSSI(i));
                 }
             }
+            // a lower value is a higher priority, the configured priorities are 1-63
+            autoPriorities[n] = (maxRssi == INT32_MIN) ? Network::WiFi::kAutoPriorityNotFound : std::clamp<int32_t>(-maxRssi, 1, Network::WiFi::kAutoPriorityNotFound - 1);
+            __LDBG_printf("station=%u ssid=%s rssi=%d priority=%u", n, __S(stationSSID), (maxRssi == INT32_MIN) ? 0 : maxRssi, autoPriorities[n]);
         }
+        WiFi.scanDelete();
     }
     __LDBG_printf("scan wifi done");
     return configNum;

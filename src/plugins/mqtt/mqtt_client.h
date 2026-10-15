@@ -670,6 +670,8 @@ public:
         void _zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type);
         void _setupClient();
         void autoReconnect(AutoReconnectType timeout);
+        // called if the connection was not established within kConnectTimeout + keepalive
+        void _connectTimeout();
 
         NameType _reasonToString(AsyncMqttClientDisconnectReason reason) const;
         StringVector _createAutoDiscoveryTopics() const;
@@ -726,6 +728,7 @@ public:
         MqttConfigType _config;
         AsyncMqttClient *_client;
         Event::Timer _reconnectTimer;
+        Event::Timer _connectTimer;
         uint16_t _port;
         String _lastWillTopic;
         AutoReconnectType _autoReconnectTimeout;

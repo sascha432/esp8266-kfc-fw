@@ -122,6 +122,7 @@ namespace MQTT {
         WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, MQTT::Client::handleWiFiEvents);
         _resetClient();
         _Timer(_reconnectTimer).remove();
+        _Timer(_connectTimer).remove();
 
         _autoReconnectTimeout = kAutoReconnectDisabled;
         auto state = setConnState(ConnectionState::DISCONNECTED);
@@ -530,6 +531,32 @@ namespace MQTT {
 
         _connState = ConnectionState::CONNECTING;
         _client->connect();
+
+        // AsyncMqttClient ignores the result of AsyncClient::connect(). if it fails without calling
+        // the disconnect callback, the client would stay in CONNECTING until the next WiFi event
+        _Timer(_connectTimer).add(Event::seconds(kConnectTimeout + _config.keepalive), false, [](Event::CallbackTimerPtr timer) {
+            // call outside of the timer callback, onDisconnect() rearms the reconnect timer
+            LoopFunctions::callOnce([]() {
+                auto client = MQTT::Client::getClient();
+                if (client) {
+                    client->_connectTimeout();
+                }
+            });
+        });
+    }
+
+    void MQTT::Client::_connectTimeout()
+    {
+        __LDBG_printf("conn=%s", _connection());
+        if (_connState != ConnectionState::PRE_CONNECT && _connState != ConnectionState::CONNECTING) {
+            return;
+        }
+        Logger_notice(F("Connection to MQTT server %s timed out"), connectionDetailsString(false).c_str());
+        _client->disconnect(true);
+        // the disconnect callback was not called, the TCP client has no connection to close
+        if (_connState == ConnectionState::PRE_CONNECT || _connState == ConnectionState::CONNECTING) {
+            onDisconnect(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
+        }
     }
 
     void MQTT::Client::disconnect(bool forceDisconnect)
@@ -556,11 +583,18 @@ namespace MQTT {
             _connState = ConnectionState::AUTO_RECONNECT_DELAY;
             timeout = std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max);
             Logger_notice(F("Reconnecting to MQTT server %s in %.1f seconds"), connectionDetailsString(false).c_str(), timeout / 1000.0);
-            _Timer(_reconnectTimer).add(Event::milliseconds(timeout), false, [this](Event::CallbackTimerPtr timer) {
-                __LDBG_printf("timer lambda: conn=%s", _connection());
-                if (!this->isConnected()) {
-                    this->connect();
-                }
+            _Timer(_reconnectTimer).add(Event::milliseconds(timeout), false, [](Event::CallbackTimerPtr timer) {
+                // call outside of the timer callback, a reconnect timer added inside its own callback
+                // is removed by the scheduler when the callback returns (no repeat)
+                LoopFunctions::callOnce([]() {
+                    auto client = MQTT::Client::getClient();
+                    if (client) {
+                        __LDBG_printf("reconnect: conn=%s", client->_connection());
+                        if (!client->isConnected()) {
+                            client->connect();
+                        }
+                    }
+                });
             });
             // increase timeout on each reconnect attempt
             setAutoReconnect(timeout + ((uint32_t(timeout) * _config.auto_reconnect_incr) / 100U));
@@ -577,6 +611,7 @@ namespace MQTT {
         __LDBG_printf("session=%d conn=%s", sessionPresent, _connection());
         Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString(false).c_str());
         _connState = ConnectionState::CONNECTED;
+        _Timer(_connectTimer).remove();
 
         _resetClient();
 
@@ -612,6 +647,7 @@ namespace MQTT {
     void MQTT::Client::onDisconnect(AsyncMqttClientDisconnectReason reason)
     {
         __LDBG_printf("reason=%d auto_reconnect=%d conn=%s", (int)reason, _autoReconnectTimeout, _connection());
+        _Timer(_connectTimer).remove();
 
         // onDisconnect() sets _startAutoDiscovery
         // _startAutoDiscovery = _startAutoDiscovery || isAutoDiscoveryRunning();

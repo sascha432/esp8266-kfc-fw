@@ -138,6 +138,8 @@ namespace MQTT {
     // using PacketQueueList = std::vector<PacketQueue>;
 
     static constexpr AutoReconnectType kAutoReconnectDisabled = 0;
+    // maximum time to establish the connection, the keepalive is added
+    static constexpr uint32_t kConnectTimeout = 30; // seconds
 
     // reduce timeouts if the queue requires too much RAM
 

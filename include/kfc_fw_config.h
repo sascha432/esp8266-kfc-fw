@@ -188,8 +188,8 @@ public:
     // returns false if the network is not configured/enabled
     bool setWiFiConfigurationId(StationConfigType id);
 
-    // return the active wifi configuration
-    // if multiple wifi networks are configured without priority, the active network is selected depending on the wifi signal strength
+    // scan the networks with priority 0 (auto) and store -RSSI as their priority (Network::WiFi::getAutoPriorities())
+    // getStations() sorts by that priority, the strongest network comes first. returns configNum
     StationConfigType scanWifiStrength(StationConfigType configNum);
 
     // return list of configured wifi networks

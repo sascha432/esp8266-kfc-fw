@@ -75,14 +75,13 @@ static void delayedSetup()
         if (System::Flags::getConfig().is_station_mode_enabled) {
             __LDBG_printf("wifi=%u timer=%u err=%u msg=%s", config.getWiFiUp(), resetTimer, config.getWiFiErrors(), __S(config.getLastError()));
             if (!config.getWiFiUp()) {
-                // register wifi error
+                // register wifi error, selects the next network after WIFI_MAX_ERRORS
                 config.registerWiFiError();
-                // reset AP mode the first time only
-                bool resetApMode = !timer->updateInterval(Event::seconds(resetTimer));
+                timer->updateInterval(Event::seconds(resetTimer));
                 // increase reset timer in case connecting takes longer than kWiFiErrorIntervalIncrease seconds
                 resetTimer = std::min<uint32_t>(resetTimer + kWiFiErrorIntervalIncrease, kCheckWiFiConnectionMaxIntervalSeconds);
-                // restart entire wifi subsystem
-                config.reconfigureWiFi(F("Reconfiguring WiFi adapter"), resetApMode);
+                // restart entire wifi subsystem and keep the network selected by registerWiFiError()
+                config.reconfigureWiFi(F("Reconfiguring WiFi adapter"));
             }
             else {
                 // reset timer interval once wifi is connected successfully

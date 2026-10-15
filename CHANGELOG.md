@@ -2,6 +2,10 @@
 
 ## Version 0.0.9 (master)
 
+ - Fixed MQTT client stuck in "connecting..." until the next WiFi reconnect: connect timeout (30 s + keepalive), the reconnect timer is not lost anymore when it is rearmed inside its own callback
+ - Fixed WiFi reconfiguration after "authentication expired" running inside the WiFi event handler (blocking scan in the event task/SDK context), it is called from the loop now
+ - Fixed WiFi network selection: the order of the networks is stable (no random order for equal priorities), the RSSI of the scan is used for networks with priority 0 (auto) and the station id is not used as list index anymore
+ - Fixed WiFi watchdog forcing network #1/#2 on every reconnect, the network selected after `WIFI_MAX_ERRORS` errors is kept now
  - Removed the unfinished UDP video streaming of the visualizer (RGB565/RGB24 Video)
  - Removed the Python debug tool `scripts/kfcfw_tool` and its firmware support (WebSocket binary packet types, `+CLIENT_ID`)
  - Fixed ArduinoOTA "No Answer to our Authentication": the ESP8266 FastLED driver returned with the interrupts locked, the loop could not yield after a frame

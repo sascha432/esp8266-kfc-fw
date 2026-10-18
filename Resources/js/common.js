@@ -14,6 +14,7 @@ $.__global_templates = window.__global_templates = {
 // ---------------------------------------------------------------------------------
 // browser-side UI state in localStorage instead of cookies, so it is not sent with
 // every request. the session id (SID) stays a cookie
+// a cookie with the same name is migrated once and removed
 // ---------------------------------------------------------------------------------
 $.storage = window.kfcStorage = {
     getJSON: function(name, defaultValue) {
@@ -22,6 +23,11 @@ $.storage = window.kfcStorage = {
             var data = window.localStorage.getItem(name);
             if (data !== null) {
                 value = JSON.parse(data);
+            }
+            else if (Cookies.get(name) !== undefined) {
+                value = Cookies.getJSON(name);
+                Cookies.remove(name);
+                window.localStorage.setItem(name, JSON.stringify(value));
             }
         } catch(e) {
             value = null;

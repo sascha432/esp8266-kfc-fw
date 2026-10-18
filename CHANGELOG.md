@@ -2,6 +2,8 @@
 
 ## Version 0.0.9 (master)
 
+ - WebSocket: move String/JSON into the message buffer instead of copying
+ - Fixed use after free on the ESP32 when a firmware or file manager upload was rejected
  - WebUI: browser-side UI state (debug console, serial console history/filter, menu, card states, file manager) moved from cookies to localStorage, the Cookie header only carries the SID
  - Fixed MQTT client stuck in "connecting..." until the next WiFi reconnect: connect timeout (30 s + keepalive), the reconnect timer is not lost anymore when it is rearmed inside its own callback
  - Fixed WiFi reconfiguration after "authentication expired" running inside the WiFi event handler (blocking scan in the event task/SDK context), it is called from the loop now

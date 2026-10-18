@@ -411,9 +411,7 @@ AsyncWebSocketMessageBuffer *WsClient::utf8ToBuffer(AsyncWebSocket *server, cons
 
 AsyncWebSocketMessageBuffer *WsClient::moveStringToBuffer(AsyncWebSocket *server, String &&str)
 {
-    auto buffer = server->makeBuffer(reinterpret_cast<uint8_t *>(const_cast<char *>(str.c_str())), str.length());
-    str.clear();
-    return buffer;
+    return server->makeBuffer(std::move(str));
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const uint8_t *str, size_t length)
@@ -446,6 +444,14 @@ void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, const MQTT::J
     }
     auto jsonStr = json.toString();
     broadcast(server, sender, std::move(jsonStr));
+}
+
+void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, MQTT::Json::UnnamedObject &&json)
+{
+    if (!__get_server(server, sender)) {
+        return;
+    }
+    broadcast(server, sender, std::move(json.toString()));
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, String &&str)

@@ -18,4 +18,6 @@ public:
 private:
     void _cleanUp(AsyncWebServerRequest *request);
     void _handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final);
+    static void _setError(AsyncWebServerRequest *request, uint16_t httpCode);
+    static uint16_t _getError(AsyncWebServerRequest *request);
 };

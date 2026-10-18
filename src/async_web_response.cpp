@@ -179,7 +179,11 @@ size_t AsyncBaseResponse::_ack(AsyncWebServerRequest* request, size_t len, uint3
             if (!_out.reserve(kMaxFrameSize)) {
                 __DBG_printf_E("memory allocation failed");
                 _state = RESPONSE_FAILED;
-                request->client()->close();
+                // This can be the first call from `_respond()` inside the handler that called `send()`:
+                // closing here deletes the request on the ESP32 (AsyncTCP closes synchronously) while
+                // the request parser still uses it. The RX timeout lets the next poll close the
+                // connection, the response is finished and does not get another `_ack()`
+                request->client()->setRxTimeout(1);
                 return written;
             }
             // the content is written behind the chunk header and the header is put in front of it,

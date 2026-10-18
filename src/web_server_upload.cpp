@@ -49,7 +49,11 @@ bool AsyncUpdateWebHandler::canHandle(AsyncWebServerRequest *request)
     return true;
 }
 
-UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *request, int index)
+// The upload callback only rejects the data, the error is sent by handleRequest() after the body was
+// received. Closing the connection from the upload callback deletes the request on the ESP32 (AsyncTCP
+// closes synchronously) while the multipart parser still uses it, and sending a response from there
+// sends a second one from handleRequest()
+UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *request, bool sendError)
 {
     auto status = reinterpret_cast<UploadStatus *>(request->_tempObject);
     if (status && status->authenticated) {
@@ -57,20 +61,16 @@ UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *req
     }
     if (!status) {
         __LDBG_printf("upload status=nullptr");
-        if (index != 0) {
-            request->client()->close();
-            return nullptr;
+        if (sendError) {
+            Plugin::send(500, request);
         }
-        Plugin::send(500, request);
         return nullptr;
     }
     if (!Plugin::getInstance().isAuthenticated(request)) {
         __LDBG_printf("authentication failed");
-        if (index != 0) {
-            request->client()->close();
-            return nullptr;
+        if (sendError) {
+            Plugin::send(403, request);
         }
-        Plugin::send(403, request);
         return nullptr;
     }
     status->authenticated = true;
@@ -79,7 +79,7 @@ UploadStatus *AsyncUpdateWebHandler::_validateSession(AsyncWebServerRequest *req
 
 void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
 {
-    auto status = _validateSession(request, 0);
+    auto status = _validateSession(request, true);
     if (!status) {
         return;
     }
@@ -149,16 +149,13 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
 
 void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final)
 {
-    auto status = _validateSession(request, index);
+    auto status = _validateSession(request, false);
     if (!status) {
         return;
     }
 
     if (!(request->method() & WebRequestMethod::HTTP_POST)) {
-        if (index != 0) {
-            request->client()->close();
-        }
-        return;
+        return; // handleRequest() sends 405
     }
 
     if (index == 0) {

@@ -194,7 +194,7 @@ namespace WebServer {
             }
 
         private:
-            UploadStatus *_validateSession(AsyncWebServerRequest *request, int index);
+            UploadStatus *_validateSession(AsyncWebServerRequest *request, bool sendError);
         };
 
     #endif

@@ -8,12 +8,12 @@
         var currentDirectory = "/";
         var url = $.getHttpLocation("/file_manager/");
         var defaultParams = '?SID=' + $.getSessionId();
-        var cookie = Cookies.getJSON('filemgr', {
+        var cookie = $.storage.getJSON('filemgr', {
             show_hidden: false
         });
 
         function save_cookie() {
-            Cookies.set('filemgr', cookie);
+            $.storage.set('filemgr', cookie);
         }
 
         function replace_vars(prototype, attrib, link, fullname, name, modified, size) {

@@ -9,7 +9,7 @@
     sendButton: $('#sendbutton'),
 
     commands: [],
-    history_limit: 100,
+    history_limit: 1000,
     history_input: null,
     history: {
         'data': [],
@@ -65,7 +65,7 @@
 
         }
         $.http2serialPlugin.console.debug('history save', this.history);
-        Cookies.set('http2serial_history', this.history);
+        $.storage.set('http2serial_history', this.history);
     },
 
     historyAdd: function(command) {
@@ -271,7 +271,7 @@
     setFilter: function(filter) {
         $.http2serialPlugin.console.log('set filter', filter);
         this.filter = filter;
-        Cookies.set('http2serial_filter', { value: filter, enabled: true });
+        $.storage.set('http2serial_filter', { value: filter, enabled: true });
         // this.filterModal.find('.filter-set').removeClass('btn-primary').addClass('btn-secondary');
         this.filterModal.find('.filter-remove').removeClass('btn-secondary').addClass('btn-primary').removeAttr('disabled');
     },
@@ -279,7 +279,7 @@
     removeFilter: function(filter) {
         $.http2serialPlugin.console.log('remove filter');
         this.filter = null;
-        Cookies.set('http2serial_filter', { value: filter, enabled: false });
+        $.storage.set('http2serial_filter', { value: filter, enabled: false });
         this.filterModal.find('.filter-remove').removeClass('btn-primary').addClass('btn-secondary').attr('disabled', 'disabled');
         // this.filterModal.find('.filter-set').removeClass('btn-secondary').addClass('btn-primary');
     },
@@ -430,8 +430,8 @@
             self.setLinkCursor(false);
         });
 
-        this.history = Cookies.getJSON('http2serial_history', this.history);
-        var filter = Cookies.getJSON('http2serial_filter', this.filterDefault);
+        this.history = $.storage.getJSON('http2serial_history', this.history);
+        var filter = $.storage.getJSON('http2serial_filter', this.filterDefault);
         $.http2serialPlugin.console.debug('filter cookie', filter, 'history cookie', this.history)
 
         this.filterInput.val(filter.value);

@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - WebUI: browser-side UI state (debug console, serial console history/filter, menu, card states, file manager) moved from cookies to localStorage, the Cookie header only carries the SID
  - Fixed MQTT client stuck in "connecting..." until the next WiFi reconnect: connect timeout (30 s + keepalive), the reconnect timer is not lost anymore when it is rearmed inside its own callback
  - Fixed WiFi reconfiguration after "authentication expired" running inside the WiFi event handler (blocking scan in the event task/SDK context), it is called from the loop now
  - Fixed WiFi network selection: the order of the networks is stable (no random order for equal priorities), the RSSI of the scan is used for networks with priority 0 (auto) and the station id is not used as list index anymore

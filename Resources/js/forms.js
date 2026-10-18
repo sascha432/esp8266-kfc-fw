@@ -243,7 +243,7 @@ $.formInitFunc = function(element) {
                 if (name.length == 2) {
                     var cookie_name = 'card_state_' + parent.attr('id');
                     if (cookies[cookie_name] === undefined) {
-                        cookies[cookie_name] = Cookies.getJSON(cookie_name, {});
+                        cookies[cookie_name] = $.storage.getJSON(cookie_name, {});
                     }
                     name = name[1];
                     if (cookies[cookie_name][name] === undefined) {
@@ -254,7 +254,7 @@ $.formInitFunc = function(element) {
 
                     function save() {
                         // console.debug('set_cookie', cookie_name, JSON.stringify(cookies[cookie_name]));
-                        Cookies.set(cookie_name, cookies[cookie_name]);
+                        $.storage.set(cookie_name, cookies[cookie_name]);
                     }
                     card.on('hide.bs.collapse', function() {
                         cookies[cookie_name][name] = false;

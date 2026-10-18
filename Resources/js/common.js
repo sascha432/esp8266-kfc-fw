@@ -11,6 +11,34 @@ $.__global_templates = window.__global_templates = {
     filemanager_upload_progress: '<p class="text-center">Uploading <span id="upload_percent"></span>...</p><div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated text-center" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10000" style="width:0%;" id="upload_progress"></div></div>',
 };
 
+// ---------------------------------------------------------------------------------
+// browser-side UI state in localStorage instead of cookies, so it is not sent with
+// every request. the session id (SID) stays a cookie
+// ---------------------------------------------------------------------------------
+$.storage = window.kfcStorage = {
+    getJSON: function(name, defaultValue) {
+        var value = null;
+        try {
+            var data = window.localStorage.getItem(name);
+            if (data !== null) {
+                value = JSON.parse(data);
+            }
+        } catch(e) {
+            value = null;
+        }
+        if (value === null || value === undefined || (typeof defaultValue === 'object' && typeof value !== 'object')) {
+            return defaultValue;
+        }
+        return value;
+    },
+    set: function(name, value) {
+        try {
+            window.localStorage.setItem(name, JSON.stringify(value));
+        } catch(e) {
+        }
+    }
+};
+
 (function() {
     return {
         cookie_name: 'dbg_console',
@@ -138,7 +166,7 @@ $.__global_templates = window.__global_templates = {
             return null;
         },
         get_cookie: function() {
-            var cookie = Cookies.getJSON(this.cookie_name, {});
+            var cookie = $.storage.getJSON(this.cookie_name, {});
             if (typeof cookie !== 'object') {
                 cookie = {};
             }
@@ -152,7 +180,7 @@ $.__global_templates = window.__global_templates = {
             return cookie;
         },
         set_cookie: function(cookie) {
-            Cookies.set(this.cookie_name, cookie);
+            $.storage.set(this.cookie_name, cookie);
             // window.console.debug('set', this.cookie_name, cookie);
         },
         ready: function() {
@@ -586,7 +614,7 @@ $(function() {
             e.preventDefault();
         },
         load: function() {
-            var menu = Cookies.getJSON(this.cookie_name, {});
+            var menu = $.storage.getJSON(this.cookie_name, {});
             if (typeof menu === 'object' && Object.prototype.hasOwnProperty.call(menu, 'items')) {
                 $('.list-group').find('a').each(function() {
                     var item = $(this);
@@ -612,7 +640,7 @@ $(function() {
                     items.push({'text': item.find('h5').text(), 'link': item.attr('href')});
                 }
             });
-            Cookies.set(this.cookie_name, {'items': items});
+            $.storage.set(this.cookie_name, {'items': items});
         },
         update_menu: function() {
             console.log(this.toggle);

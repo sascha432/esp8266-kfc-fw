@@ -84,6 +84,31 @@ def before_clean(source, target, env):
     os.makedirs(pvt_dir, exist_ok=True)
 
 
+# the stock ESP8266 core's tools/elf2bin.py uses '\s+' in a plain string, which Python 3.12+ reports as
+# "SyntaxWarning: invalid escape sequence" on every firmware.bin. Patch it to a raw string in place, the
+# package is restored on an update and patched again by the next build
+def patch_esp8266_elf2bin():
+    platform = env.PioPlatform()
+    if platform.name != 'espressif8266':
+        return
+    framework_dir = platform.get_package_dir('framework-arduinoespressif8266')
+    if not framework_dir:
+        return
+    filename = path.join(framework_dir, 'tools', 'elf2bin.py')
+    try:
+        with open(filename, 'rt', encoding='utf-8') as file:
+            content = file.read()
+        patched = content.replace("re.split('\\s+', line)", "re.split(r'\\s+', line)")
+        if patched != content:
+            with open(filename, 'wt', encoding='utf-8') as file:
+                file.write(patched)
+            click.secho('patched invalid escape sequence in %s' % filename, fg='yellow')
+    except OSError as e:
+        click.secho('cannot patch %s: %s' % (filename, e), fg='red')
+
+patch_esp8266_elf2bin()
+
+
 # addPreAction or addPostAction does not work
 fullclean = ARGUMENTS.get("FULLCLEAN", None)
 if fullclean!=None:

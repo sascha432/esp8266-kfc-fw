@@ -134,7 +134,7 @@ MQTT::Json::UnnamedObject ClockPlugin::getWLEDJson()
             NamedString(F("ver"), config.getShortFirmwareVersion()),
             NamedStoredString(F("name"), System::Device::getName()),
             #if ESP8266
-                NamedString(F("arch"), F("ESP8622")),
+                NamedString(F("arch"), F("ESP8266")),
             #elif ESP32
                 NamedString(F("arch"), F("ESP32")),
             #endif

@@ -40,16 +40,16 @@ for define in defines:
         if key == 'ESP8266':
             esp8266 = True
 if esp32 and esp8266:
-    click.secho('ESP32 and ESP866 set to 1', fg='red')
+    click.secho('ESP32 and ESP8266 set to 1', fg='red')
     exit(1)
 elif not esp32 and not esp8266:
-    click.secho('Neither ESP32 nor ESP866 set to 1', fg='red')
+    click.secho('Neither ESP32 nor ESP8266 set to 1', fg='red')
     exit(1)
 
 if esp32:
     click.secho('ESP32 detected', fg='green')
 elif esp8266:
-    click.secho('ESP866 detected', fg='green')
+    click.secho('ESP8266 detected', fg='green')
 
 # add extra dirs for modules
 sys.path.insert(0, path.abspath(path.join(env.subst("$PROJECT_DIR"), 'scripts', 'libs')))

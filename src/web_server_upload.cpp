@@ -37,14 +37,8 @@ bool AsyncUpdateWebHandler::canHandle(AsyncWebServerRequest *request)
     if (!request->url().equals(getURI())) {
         return false;
     }
-    // emulate AsyncWebServerRequest dtor using onDisconnect callback
-    request->_tempObject = new UploadStatus();
-    request->onDisconnect([this, request]() {
-        if (request->_tempObject) {
-            delete reinterpret_cast<UploadStatus *>(request->_tempObject);
-            request->_tempObject = nullptr;
-        }
-    });
+    // the request deletes it, an onDisconnect() callback can be replaced (executeDelayed())
+    request->setTempObject(new UploadStatus());
     request->addInterestingHeader(FSPGM(Cookie));
     return true;
 }
@@ -136,8 +130,7 @@ void AsyncUpdateWebHandler::handleRequest(AsyncWebServerRequest *request)
                 case WebServer::ResetOptionsType::NONE:
                     break;
             }
-            delete status;
-            request->_tempObject = nullptr;
+            request->clearTempObject();
             status = nullptr;
         }
 

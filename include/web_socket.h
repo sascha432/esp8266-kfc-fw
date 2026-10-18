@@ -126,11 +126,12 @@ public:
     static void foreach(AsyncWebSocket *server, WsClient *sender, std::function<void(AsyncWebSocketClient *)> func)
     {
         MUTEX_LOCK_BLOCK(_lock) {
-            for(auto client: server->getClients()) {
+            server->forEachClient([&](AsyncWebSocketClient *client) {
                 if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject != sender && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
                     func(client);
                 }
-            }
+                return true;
+            });
         }
     }
 
@@ -139,12 +140,13 @@ public:
     static void forclient(AsyncWebSocket *server, WsClient *forClient, std::function<void(AsyncWebSocketClient *)> func)
     {
         MUTEX_LOCK_BLOCK(_lock) {
-            for(auto client: server->getClients()) {
+            server->forEachClient([&](AsyncWebSocketClient *client) {
                 if (client->status() == WS_CONNECTED && client->_tempObject && client->_tempObject == forClient && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
                     func(client);
-                    return;
+                    return false;
                 }
-            }
+                return true;
+            });
         }
     }
 
@@ -152,12 +154,13 @@ public:
     static void forsocket(AsyncWebSocket *server, AsyncWebSocketClient *socket, std::function<void(AsyncWebSocketClient *)> func)
     {
         MUTEX_LOCK_BLOCK(_lock) {
-            for(auto client: server->getClients()) {
+            server->forEachClient([&](AsyncWebSocketClient *client) {
                 if (socket == client && client->status() == WS_CONNECTED && client->_tempObject && reinterpret_cast<WsClient *>(client->_tempObject)->isAuthenticated()) {
                     func(socket);
-                    return;
+                    return false;
                 }
-            }
+                return true;
+            });
         }
     }
 
@@ -246,7 +249,6 @@ public:
 private:
     friend WsClient;
 
-    void _enableAuthentication();
     void _closeConnections();
 
     WsClientAsyncWebSocket **_ptr;

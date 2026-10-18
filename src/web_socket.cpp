@@ -53,8 +53,6 @@ WsClientAsyncWebSocket::WsClientAsyncWebSocket(const String &url, WsClientAsyncW
         }
         *_ptr = this;
     }
-    // the web socket is sharing the password with the web site
-    // _enableAuthentication();
 }
 
 WsClientAsyncWebSocket::~WsClientAsyncWebSocket()
@@ -84,11 +82,12 @@ void WsClientAsyncWebSocket::shutdown()
 void WsClientAsyncWebSocket::_closeConnections()
 {
     std::vector<AsyncClient *> connections;
-    for(const auto client: getClients()) {
+    forEachClient([&](AsyncWebSocketClient *client) {
         if (client->client()) {
             connections.push_back(client->client());
         }
-    }
+        return true;
+    });
     for(const auto connection: connections) {
         connection->close(true);
     }
@@ -106,21 +105,6 @@ void WsClientAsyncWebSocket::addWebSocketPtr(WsClientAsyncWebSocket **ptr)
     __LDBG_printf("this=%p ptr=%u *ptr=%p _ptr=%p *_ptr=%p", this, ptr, ptr ? *ptr : nullptr, _ptr, _ptr ? *_ptr : nullptr);
     _ptr = ptr;
     *_ptr = this;
-}
-
-void WsClientAsyncWebSocket::_enableAuthentication()
-{
-    uint8_t buf[32];
-    String password = String('\xff');
-    getRandom(buf, sizeof(buf));
-    const char *ptr = (const char *)buf;
-    for(uint8_t i = 0; i < (uint8_t)sizeof(buf); i++) {
-        if (*ptr) {
-            password += *ptr;
-        }
-        ptr++;
-    }
-    setAuthentication(String('\xff').c_str(), password.c_str());
 }
 
 void WsClient::onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, int type, uint8_t *data, size_t len, void *arg, WsGetInstance getInstance)
@@ -494,6 +478,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
             auto buffer = utf8ToBuffer(server, msg.c_str(), msg.length()); //TODO change to __FlashStringHelper
             if (buffer) {
                 socket->text(buffer);
+                buffer->unlock(); // makeBuffer() returns it locked
                 #if ESP32
                     esp_task_wdt_reset();
                 #elif ESP8266
@@ -525,6 +510,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
             auto buffer = utf8ToBuffer(server, message.c_str(), message.length());
             if (buffer) {
                 socket->text(buffer);
+                buffer->unlock(); // makeBuffer() returns it locked
                 #if ESP32
                     esp_task_wdt_reset();
                 #elif ESP8266

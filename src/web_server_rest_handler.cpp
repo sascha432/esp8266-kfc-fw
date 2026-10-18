@@ -98,14 +98,8 @@ bool AsyncRestWebHandler::canHandle(AsyncWebServerRequest *request)
         if (FPSTR(handler.getURL()) == url) {
             request->addInterestingHeader(FSPGM(Authorization));
 
-            // emulate AsyncWebServerRequest dtor using onDisconnect callback
-            request->_tempObject = new RestRequest(request, handler, Plugin::getInstance().getAuthenticated(request));
-            request->onDisconnect([this, request]() {
-                if (request->_tempObject) {
-                    delete reinterpret_cast<RestRequest *>(request->_tempObject);
-                    request->_tempObject = nullptr;
-                }
-            });
+            // the request deletes it, an onDisconnect() callback can be replaced (executeDelayed())
+            request->setTempObject(new RestRequest(request, handler, Plugin::getInstance().getAuthenticated(request)));
             return true;
         }
     }

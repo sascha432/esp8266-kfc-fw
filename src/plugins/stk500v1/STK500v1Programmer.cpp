@@ -763,7 +763,7 @@ void STK500v1Programmer::_status(const String &message)
 {
     #if HTTP2SERIAL_SUPPORT
         auto http2server = Http2Serial::getServerSocket();
-        if (http2server && http2server->getClients().length()) {
+        if (http2server && http2server->count()) {
             WsClient::broadcast(http2server, nullptr, message.c_str(), message.length());
         }
     #endif

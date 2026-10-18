@@ -166,7 +166,7 @@ void Plugin::executeDelayed(AsyncWebServerRequest *request, std::function<void()
 
 bool Plugin::_isPublic(const String &pathString) const
 {
-    if (pathString.indexOf(F(".."))) {
+    if (pathString.indexOf(F("..")) != -1) {
         return false;
     }
     auto path = pathString.c_str();

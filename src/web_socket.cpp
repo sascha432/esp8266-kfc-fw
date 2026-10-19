@@ -115,7 +115,7 @@ void WsClientAsyncWebSocket::_closeConnections()
         return true;
     });
     for(const auto connection: connections) {
-        connection->close(true);
+        asyncClientCloseNow(connection);
     }
 }
 

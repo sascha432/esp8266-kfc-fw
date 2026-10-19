@@ -35,10 +35,10 @@ Groups (default: all except newlib and slow):
     slow        speed test download
 
 Usage (workspace venv, see requirements.txt):
-    .venv\\Scripts\\python scripts/tools/webui_test.py --env wled_esp32_controller_neopixelbus --env bme280_serial
+    .venv\\Scripts\\python scripts/tools/webui_test.py --env wled_esp32_controller_neopixelbus --env led_strip_xmas_serial
     .venv\\Scripts\\python scripts/tools/webui_test.py --host 192.168.0.195 -u KFC43946D -p 12345678 --repeat 12
-    .venv\\Scripts\\python scripts/tools/webui_test.py --env bme280_serial --groups forms --max-form-size 8192
-    .venv\\Scripts\\python scripts/tools/webui_test.py --env bme280_serial --newlib --json logs/webui_test.json
+    .venv\\Scripts\\python scripts/tools/webui_test.py --env led_strip_xmas_serial --groups forms --max-form-size 8192
+    .venv\\Scripts\\python scripts/tools/webui_test.py --env led_strip_xmas_serial --newlib --json logs/webui_test.json
 
 The exit code is 1 if a test failed, 2 if the device was not reachable.
 """
@@ -63,7 +63,7 @@ import requests
 # test devices of the environments (the WebUI user name is the device name, KFC + the last 3 MAC bytes)
 ENV_PRESETS = {
     'wled_esp32_controller_neopixelbus': {'host': '192.168.0.196', 'user': 'KFC0A4271'},
-    'bme280_serial': {'host': '192.168.0.195', 'user': 'KFC43946D'},
+    'led_strip_xmas_serial': {'host': '192.168.0.195', 'user': 'KFC43946D'},  # ESP8266 test device (COM6)
 }
 DEFAULT_PASSWORD = '12345678'
 
@@ -98,6 +98,7 @@ APPLYING_MARKER = 'Applying Changes'
 MISSING_MARKER = 'This field is missing'
 VALIDATOR_MARKER = '$.formValidator.addErrors('
 LOGIN_MARKER = 'name="keep"'  # the "keep me logged in" checkbox only exists on the login page
+SAFE_MODE_MARKER = 'SAFE MODE'  # the status page shows "<host> - Running in SAFE MODE" next to the host name
 TEMPLATE_VAR = re.compile(r'%[A-Z][A-Z0-9_]{2,}%')
 FREE_RAM = re.compile(r'Free RAM ([\d.]+)(B|KB|MB)')
 UPTIME = re.compile(r'(?:(\d+) days? )?(\d\d)h:(\d\d)m:(\d\d)s')
@@ -255,15 +256,20 @@ class WebSocket:
             head += key
         return head + payload
 
-    def send(self, opcode, payload, mask=True, piece=0, delay=0.0):
+    def send(self, opcode, payload, mask=True, split_header=False, delay=0.05):
         data = self.frame(opcode, payload, mask)
-        if not piece:
+        if not split_header:
             self.sock.sendall(data)
             return
-        # one TCP segment per piece (TCP_NODELAY), the device sees the frame header in several parts
-        for pos in range(0, len(data), piece):
-            self.sock.sendall(data[pos:pos + piece])
+        # one TCP segment per header byte (TCP_NODELAY), the payload follows in one segment: the device
+        # sees the frame header in several parts (a payload split into parts reaches the application in
+        # pieces, see AwsFrameInfo index/len)
+        length = data[1] & 0x7F
+        header = 2 + (2 if length == 126 else 8 if length == 127 else 0) + (4 if mask else 0)
+        for pos in range(header):
+            self.sock.sendall(data[pos:pos + 1])
             time.sleep(delay)
+        self.sock.sendall(data[header:])
 
     def recv(self, timeout):
         """next frame (opcode, payload) or None on timeout"""
@@ -349,6 +355,7 @@ class Device:
         self.uptime_base = None
         self.heap_base = None
         self.forms_stopped = False
+        self.safe_mode = False  # the device booted in safe mode (plugins off), set by read_health()
 
     # ---------------------------------------------------------------------------------------- helpers
 
@@ -400,6 +407,7 @@ class Device:
             uptime = int(m.group(1) or 0) * 86400 + int(m.group(2)) * 3600 + int(m.group(3)) * 60 + int(m.group(4))
         m = FREE_RAM.search(r.text)
         heap = size_from(m.group(1), m.group(2)) if m else None
+        self.safe_mode = SAFE_MODE_MARKER in r.text
         return uptime, heap
 
     def health_check(self, label):
@@ -412,7 +420,8 @@ class Device:
                 self.results.add('health', 'reboot detected ' + label, 'FAIL', 'uptime %us -> %us' % (prev[0], uptime))
                 raise Abort('the device rebooted during %s' % label)
             detail = 'uptime %ss, free heap %s' % (uptime, heap)
-            if heap and self.heap_base and heap < self.heap_base - self.args.heap_tolerance:
+            tolerance = self.args.heap_tolerance or max(4096, (self.heap_base or 0) // 10)
+            if heap and self.heap_base and heap < self.heap_base - tolerance:
                 return 'WARN', detail + ' (%d bytes below the start)' % (self.heap_base - heap)
             return 'PASS', detail
         self.check('health', 'after ' + label, run)
@@ -437,7 +446,12 @@ class Device:
             self.login()
             self.health = self.read_health()
             self.uptime_base, self.heap_base = self.health
-            self.results.add('health', 'start', 'PASS', 'uptime %ss, free heap %s' % self.health)
+            if self.safe_mode:
+                # the device booted in safe mode (several resets in a row): the plugins are off, so their
+                # pages, endpoints and forms are missing. One more reset clears it (see the instructions)
+                self.results.add('health', 'start', 'WARN', 'device is in SAFE MODE (plugins off), reset it once more - uptime %ss, free heap %s' % self.health)
+            else:
+                self.results.add('health', 'start', 'PASS', 'uptime %ss, free heap %s' % self.health)
             for group in ['auth', 'pages', 'assets', 'api', 'forms', 'websocket', 'robustness', 'newlib', 'slow']:
                 if group not in groups:
                     continue
@@ -468,6 +482,10 @@ class Device:
         for path in ('/savecrash.json', '/export-settings', '/webui-handler', '/sync-time', '/file_manager/list?dir=/'):
             def forbidden(path=path):
                 r = self.get(path, session=anon)
+                # a plugin endpoint that is not registered answers 404 before the auth check: in safe mode the
+                # plugins are off, so 404 is expected there and not an auth failure
+                if r.status_code == 404 and self.safe_mode:
+                    return 'SKIP', 'HTTP 404 (safe mode, endpoint not registered)'
                 assert r.status_code in (401, 403), 'HTTP %u' % r.status_code
                 return 'PASS', 'HTTP %u' % r.status_code
             self.check('auth', 'no session: ' + path, forbidden)
@@ -515,6 +533,12 @@ class Device:
             def page(path=path):
                 start = time.time()
                 r = self.get(path)
+                if r.status_code == 503:
+                    # a form page refused for lack of heap (low-memory guard): retry once, the heap fluctuates
+                    time.sleep(1)
+                    r = self.get(path)
+                    if r.status_code == 503:
+                        return 'WARN', 'HTTP 503 (not enough heap to render the form)'
                 assert r.status_code == 200, 'HTTP %u' % r.status_code
                 ctype = r.headers.get('Content-Type', '')
                 assert 'text/html' in ctype, 'Content-Type %s' % ctype
@@ -595,7 +619,11 @@ class Device:
                 if r.status_code in allow:
                     return 'SKIP', 'HTTP %u' % r.status_code
                 assert r.status_code == 200, 'HTTP %u' % r.status_code
-                data = json.loads(r.text)  # raises on invalid JSON
+                try:
+                    data = json.loads(r.text)
+                except ValueError as e:
+                    # e.g. an empty answer of /export-settings when the device is short of heap
+                    raise AssertionError('invalid JSON (%u bytes): %s' % (len(r.content), e))
                 return 'PASS', '%u bytes, %s' % (len(r.content), type(data).__name__)
             return run
         self.check('api', '/webui-handler', json_endpoint('/webui-handler', allow=(503,)))
@@ -692,7 +720,7 @@ class Device:
         heap = self.health[1] or 0
         # the request keeps the body several times (parser buffer, decoded parameter, form rendering) and
         # the largest free block is smaller than the free heap: 16 KB crashed the ESP32 with 95 KB free
-        limit = min(self.args.max_form_size, heap // 8) if heap else self.args.max_form_size
+        limit = min(self.args.max_form_size, heap // self.args.form_heap_share) if heap else self.args.max_form_size
         sizes = [s for s in (1024, 4096, 16384, 32768, 65536) if s <= limit]
         return sizes or [512], limit
 
@@ -718,6 +746,8 @@ class Device:
 
     def snapshot(self, path):
         r = self.get(path)
+        if r.status_code == 503:
+            return None  # not enough heap to render the form (low-memory guard)
         assert r.status_code == 200, 'HTTP %u' % r.status_code
         forms = settings_forms(parse_page(r.text))
         assert forms, 'the form is gone'
@@ -739,6 +769,10 @@ class Device:
         if APPLYING_MARKER in r.text:
             self.forms_stopped = True
             raise AssertionError('the form was SAVED (Applying Changes) - no further form is posted')
+        if r.status_code == 413:
+            return elapsed  # the device has no memory for the body and rejects it, nothing is saved
+        if r.status_code == 503:
+            return elapsed  # not enough heap to render the form, the request is refused and nothing is saved
         assert r.status_code == 200, 'HTTP %u' % r.status_code
         assert VALIDATOR_MARKER in r.text and MISSING_MARKER in r.text, 'no validation errors in the response'
         return elapsed
@@ -750,6 +784,11 @@ class Device:
             before = self.snapshot(path)
         except (AssertionError, requests.RequestException) as e:
             self.results.add('forms', path, 'FAIL', 'snapshot: %s' % e)
+            return
+        if before is None:
+            # the device refuses the form for lack of heap (503, Retry-After): the form does not fit next to the
+            # rest of the firmware, e.g. the 44 field visualizer forms on an ESP8266 with 1024 pixels
+            self.results.add('forms', path, 'WARN', 'HTTP 503 (not enough heap to render the form), skipped')
             return
         pad = lambda i: '__webui_test_pad_%u' % i
         # every parameter costs ~160 byte heap on the device (name, value, list node), more than its body size
@@ -771,6 +810,7 @@ class Device:
 
         def unchanged():
             after = self.snapshot(path)
+            assert after is not None, 'HTTP 503 (not enough heap to render the form)'
             changed = [n for n, v in set(before) ^ set(after)]
             assert not changed, 'values changed: %s' % ', '.join(sorted(set(changed))[:8])
             return 'PASS', '%u fields' % len(before)
@@ -919,6 +959,8 @@ class Device:
             head = ('POST %s HTTP/1.1\r\nHost: %s\r\n%sContent-Type: application/x-www-form-urlencoded\r\n'
                     'Content-Length: 20\r\nConnection: close\r\n\r\n' % (path, self.host, self.cookie()))
             status = self.raw(head.encode() + body)
+            if status == 503:
+                return 'WARN', 'HTTP 503 (not enough heap to render the form)'
             assert status == 200, 'HTTP %s' % status
             return 'PASS', ''
         self.check('robustness', 'body beyond Content-Length', body_beyond_length)
@@ -957,9 +999,9 @@ class Device:
             if ws is None:
                 return 'SKIP', 'no /webui-ws'
             try:
-                ws.send(1, '+iPING 3', piece=1, delay=0.05)  # one byte per TCP segment
+                ws.send(1, '+iPING 3', split_header=True)
                 pong = ws.recv_text(lambda t: t.startswith('+iPONG'), 5)
-                assert pong, 'no +iPONG for a frame split into 1 byte segments'
+                assert pong, 'no +iPONG for a frame whose header was split into 1 byte segments'
             finally:
                 ws.close()
             return 'PASS', ''
@@ -998,8 +1040,11 @@ def main():
     parser.add_argument('--slow', action='store_true', help='add the slow group')
     parser.add_argument('--repeat', type=int, default=1, help='runs of the whole suite (intermittent failures)')
     parser.add_argument('--max-form-size', type=int, default=8192,
-                        help='largest form body in bytes (also limited to 1/8 of the free heap)')
-    parser.add_argument('--heap-tolerance', type=int, default=4096, help='free heap drop that is reported')
+                        help='largest form body in bytes (also limited by --form-heap-share)')
+    parser.add_argument('--form-heap-share', type=int, default=8,
+                        help='a form body is at most free heap / N (lower values can crash old builds)')
+    parser.add_argument('--heap-tolerance', type=int, default=0,
+                        help='free heap drop that is reported (default 10%% of the free heap at the start, min. 4 KB)')
     parser.add_argument('--max-pages', type=int, default=120)
     parser.add_argument('--parallel', type=int, default=3, help='parallel requests of the robustness group')
     parser.add_argument('--timeout', type=float, default=20)

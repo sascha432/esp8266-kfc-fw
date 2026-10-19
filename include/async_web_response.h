@@ -93,6 +93,7 @@ public:
         _request(nullptr),
         _inAck(false)
     {
+        _code = 200;
         _contentLength = 0;
     }
     // src/plugins/mdns/mdns_resolver.cpp

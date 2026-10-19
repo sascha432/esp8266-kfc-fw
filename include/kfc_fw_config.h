@@ -112,7 +112,7 @@ public:
     bool reconfigureWiFi(const __FlashStringHelper *msg = nullptr, uint8_t configNum = kKeepWiFiNetwork);
     bool connectWiFi(uint8_t configNum = kKeepWiFiNetwork, bool ignoreSoftAP = false);
     void read(bool wakeup = false);
-    void write();
+    Configuration::WriteResultType write(); // logs a failure, the caller decides what to do with it
     #if defined(HAVE_NVS_FLASH)
         void formatNVS();
     #endif

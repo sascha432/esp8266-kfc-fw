@@ -16,6 +16,57 @@
 #    define WEBSERVER_LOG_SERIAL 1
 #endif
 
+// adds the free heap and the largest free block to the serial access log (diagnostic)
+#ifndef WEBSERVER_LOG_HEAP
+#    define WEBSERVER_LOG_HEAP 0
+#endif
+
+// free heap and largest free block that have to be left after a template page (a settings form, the status
+// page, ...) and its response were created, otherwise the page is not rendered and the request is answered
+// with 503 (Retry-After). Measured on
+// led_strip_xmas_serial (WEBSERVER_LOG_HEAP + UMM_STATS_FULL, docs/webui_crash_report.md OPEN-3): rendering a
+// form page costs 3.1-3.6 KB on top of the form (GET) and up to 4.7 KB with the validation errors of a POST
+// (1 KB frame buffer, the TCP send buffer, PrintArgs), and the ESP8266 SDK crashes in the WiFi code when a
+// beacon arrives while it cannot allocate (seen with 1.4 KB free and with 5.9 KB free but a 648 byte largest
+// block). 8 KB free keeps 3.3+ KB for the SDK, the block limit catches the fragmented heap. The form object
+// is the variable part: ~325 byte per field, a 44 field form takes 14 KB and does not fit next to 1024 pixels
+// (~20 KB free) - such a form has to be split into pages, the guard only keeps the device alive
+#ifndef WEBSERVER_FORM_MIN_FREE_HEAP
+#    if ESP8266
+#        define WEBSERVER_FORM_MIN_FREE_HEAP 8192
+#    else
+#        define WEBSERVER_FORM_MIN_FREE_HEAP 32768
+#    endif
+#endif
+#ifndef WEBSERVER_FORM_MIN_FREE_BLOCK
+#    if ESP8266
+#        define WEBSERVER_FORM_MIN_FREE_BLOCK 4096
+#    else
+#        define WEBSERVER_FORM_MIN_FREE_BLOCK 16384
+#    endif
+#endif
+// free heap that is required to handle a file request at all. The ESP8266 core aborts on any `new` that fails,
+// and with 2-3 KB free (a page rendered next to another one, the SDK's own buffers) the request path itself
+// fails (seen: `HttpHeaders::addNoCache()` of a status page next to a refused form POST). A 503 costs ~300 byte
+#ifndef WEBSERVER_REQUEST_MIN_FREE_HEAP
+#    if ESP8266
+#        define WEBSERVER_REQUEST_MIN_FREE_HEAP 4096
+#    else
+#        define WEBSERVER_REQUEST_MIN_FREE_HEAP 16384
+#    endif
+#endif
+// free heap that is required before a settings form is created. Creating a form costs ~325 byte per field, the
+// biggest forms of the firmware (network, 44 field visualizer) take 14 KB, and a `new` that fails while the
+// form is built aborts the device (the core has no exceptions, docs/webui_crash_report.md OPEN-3: 3 reboots in
+// 12 runs with 13-15 KB free). A form bigger than this limit has to be split into pages
+#ifndef WEBSERVER_FORM_CREATE_MIN_FREE_HEAP
+#    if ESP8266
+#        define WEBSERVER_FORM_CREATE_MIN_FREE_HEAP 16384
+#    else
+#        define WEBSERVER_FORM_CREATE_MIN_FREE_HEAP 49152
+#    endif
+#endif
+
 #if !ENABLE_ARDUINO_OTA && !WEBSERVER_KFC_OTA
 #    error OTA not enabled
 #endif
@@ -38,6 +89,13 @@
 #endif
 
 class FileMapping;
+
+#if WEBSERVER_LOG_HEAP
+    // free heap low water mark since the previous call, printed in the access log. ESP8266 with
+    // -D UMM_STATS_FULL only (umm_malloc keeps the minimum of the free blocks), 0 otherwise
+    uint32_t webServerHeapLowWaterMark();
+#endif
+
 #if SECURITY_LOGIN_ATTEMPTS
     class FailureCounterContainer;
 #endif
@@ -379,6 +437,16 @@ namespace WebServer {
         bool _handleFileRead(const String &path, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &httpHeaders);
         bool _sendFile(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
         AsyncWebServerResponse *_beginFileResponse(const FileMapping &mapping, const String &formName, HttpHeaders &httpHeaders, bool client_accepts_gzip, bool isAuthenticated, AsyncWebServerRequest *request, WebTemplate *webTemplate = nullptr);
+        // true if there is enough heap to create a settings form (WEBSERVER_FORM_CREATE_MIN_FREE_HEAP)
+        static bool _canCreateForm();
+        // true if there is enough heap to handle a file request at all (WEBSERVER_REQUEST_MIN_FREE_HEAP)
+        static bool _canHandleRequest();
+        // true if the template page that was just created can be rendered: enough heap
+        // (WEBSERVER_FORM_MIN_FREE_HEAP, WEBSERVER_FORM_MIN_FREE_BLOCK) and, for a form, its configuration was
+        // read (Configuration::hasNvsReadFailed())
+        static bool _canRenderTemplate(bool isForm);
+        // plain 503 response for a request that cannot be served with the free heap
+        static AsyncWebServerResponse *_beginLowMemoryResponse(AsyncWebServerRequest *request);
 
         #if WEBSERVER_SPEED_TEST
             void _handlerSpeedTest(AsyncWebServerRequest *request, bool zip, HttpHeaders &headers);

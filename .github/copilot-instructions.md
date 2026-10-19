@@ -31,7 +31,6 @@ in this workspace.
   (`#if`) in builds that cannot act on it, and a config field needs a reader. Keep the config bit itself when other
   builds use it, so the stored layout stays the same.
 - **Show a design/icon preview before implementing UI work** and wait for the approval.
-- **Do not modify the libraries** - other folders under `lib/` are out of bounds and require separate approval.
 - The firmware is **C++17** (`-std=gnu++17` in `conf/common.ini`). Match the surrounding style; the repo's
   `.clang-format` is the reference (WebKit base, 4 spaces, no tabs).
 - **Initialize members in the constructor, not in the class body** - no in-class default member
@@ -75,7 +74,7 @@ in this workspace.
 - `KFCFWConfiguration::getBuildNumber()` / `getBuildNumberString()` expose it; the short firmware version is
   `<major>.<minor>.<revision> Build <number>` and the build string shares that flash string's location
   (`+ strlen(FIRMWARE_VERSION_STR " Build ")`).
-- `lib/KFCLibrary/scripts/extra_script.py` reads the counter for `data/.pvt/build` (it is a separate git repo -
+- `KFCLibrary/scripts/extra_script.py` reads the counter for `data/.pvt/build` (it is a separate git repo -
   changes there must be committed/pushed separately).
 - The library's `SaveCrash::Data::FirmwareVersion::build` bitfield is 16 bit - only the crash log and the
   config-version comparison truncate there.

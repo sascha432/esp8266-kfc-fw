@@ -832,12 +832,13 @@ void KFCFWConfiguration::read(bool wakeup)
     }
 }
 
-void KFCFWConfiguration::write()
+Configuration::WriteResultType KFCFWConfiguration::write()
 {
     auto result = Configuration::write();
     if (result != Configuration::WriteResultType::SUCCESS) {
         Logger_error(F("Failed to write settings to EEPROM. %s"), Configuration::getWriteResultTypeStr(result));
     }
+    return result;
 }
 
 #if defined(HAVE_NVS_FLASH)

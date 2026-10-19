@@ -192,6 +192,19 @@ void Logger::_flushQueue()
         return;
     }
 
+    // LittleFS allocates its caches while writing and crashed in a commit when the allocation failed
+    // (ESP8266, form POSTs with low heap): the queue is kept and written by a later call
+    constexpr size_t kMinFreeBlockSize = 4096;
+    #if ESP8266
+        if (ESP.getMaxFreeBlockSize() < kMinFreeBlockSize) {
+            return;
+        }
+    #elif ESP32
+        if (heap_caps_get_largest_free_block(MALLOC_CAP_8BIT) < kMinFreeBlockSize) {
+            return;
+        }
+    #endif
+
     #if ESP32
         // log messages are sent from multiple cores
         MUTEX_LOCK_BLOCK(_flushLock)

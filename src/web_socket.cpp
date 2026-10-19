@@ -15,6 +15,32 @@
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
 
+#if ESP32
+
+    // Adds the calling task to the task watchdog for a long send loop (esp_task_wdt_reset() in the loop)
+    // and removes it afterwards - but only if it was not registered already: safeSend() also runs in the
+    // async_tcp task, which registered itself, and deleting it there unregistered AsyncTCP's watchdog
+    // ("Failed to remove loop task from WDT")
+    class TaskWdtScope {
+    public:
+        TaskWdtScope() :
+            _added(esp_task_wdt_status(nullptr) == ESP_ERR_NOT_FOUND && esp_task_wdt_add(nullptr) == ESP_OK)
+        {
+        }
+
+        ~TaskWdtScope()
+        {
+            if (_added) {
+                esp_task_wdt_delete(nullptr);
+            }
+        }
+
+    private:
+        bool _added;
+    };
+
+#endif
+
 #if DEBUG_WEB_SOCKETS
 #    include <debug_helper_enable.h>
 #else
@@ -340,16 +366,7 @@ static bool __get_server(AsyncWebSocket *&server, AsyncWebSocketClient *client)
 void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
 {
     #if ESP32
-        bool deleteWdt = false;
-        esp_err_t err = esp_task_wdt_status(nullptr);
-        if (err == ESP_ERR_NOT_FOUND) {
-            if ((err = esp_task_wdt_add(nullptr)) != ESP_OK) {
-                __DBG_printf("esp_task_wdt_add failed err=%x", err);
-            }
-            else {
-                deleteWdt = true;
-            }
-        }
+        TaskWdtScope wdt;
     #endif
     buffer->lock();
     WsClient::foreach(server, sender, [buffer](AsyncWebSocketClient *client) {
@@ -366,11 +383,6 @@ void WsClient::_broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSock
     });
     buffer->unlock();
     server->_cleanBuffers();
-    #if ESP32
-        if (deleteWdt) {
-            esp_task_wdt_delete(nullptr);
-        }
-    #endif
 }
 
 void WsClient::broadcast(AsyncWebSocket *server, WsClient *sender, AsyncWebSocketMessageBuffer *buffer)
@@ -468,9 +480,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         return;
     }
     #if ESP32
-        if (esp_task_wdt_add(nullptr) != ESP_OK) {
-            __DBG_printf_E("esp_task_wdt_add failed");
-        }
+        TaskWdtScope wdt;
     #endif
     WsClient::forsocket(server, client, [server, &message](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {
@@ -489,9 +499,6 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
             }
         }
     });
-    #if ESP32
-        esp_task_wdt_delete(NULL);
-    #endif
 }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const String &message)
@@ -501,9 +508,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         return;
     }
     #if ESP32
-        if (esp_task_wdt_add(nullptr) != ESP_OK) {
-            __DBG_printf_E("esp_task_wdt_add failed");
-        }
+        TaskWdtScope wdt;
     #endif
     WsClient::forsocket(server, client, [server, &message](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {
@@ -521,9 +526,6 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
             }
         }
     });
-    #if ESP32
-        esp_task_wdt_delete(nullptr);
-    #endif
 }
 
 void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, const MQTT::Json::UnnamedObject &json)
@@ -533,9 +535,7 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
         return;
     }
     #if ESP32
-        if (esp_task_wdt_add(nullptr) != ESP_OK) {
-            __DBG_printf_E("esp_task_wdt_add failed");
-        }
+        TaskWdtScope wdt;
     #endif
     WsClient::forsocket(server, client, [server, &json](AsyncWebSocketClient *socket) {
         if (socket->canSend()) {
@@ -549,9 +549,6 @@ void WsClient::safeSend(AsyncWebSocket *server, AsyncWebSocketClient *client, co
             #endif
         }
     });
-    #if ESP32
-        esp_task_wdt_delete(NULL);
-    #endif
 }
 
 void WsClient::_logRequest(AsyncWebSocketClient *client, const __FlashStringHelper *format, ...)

@@ -24,75 +24,7 @@ using KFCConfigurationClasses::System;
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSQ, "MDNSQ", "<service>,<proto>,[<wait=3000ms>]", "Query MDNS");
 PROGMEM_AT_MODE_HELP_COMMAND_DEF_PPPN(MDNSR, "MDNSR", "<stop|start|enable|disable|zeroconf>", "Configure MDNS");
 
-#if ESP8266
-
-void MDNSPlugin::serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent)
-{
-    if (!output._timeout || !p_bSetContent) {
-        return;
-    }
-
-    uint32_t outputLength = 0;
-    MUTEX_LOCK_BLOCK(output._lock) {
-        outputLength = output._output.length();
-        if (output._current != mdnsServiceInfo.serviceDomain()) {
-            output.next();
-            output._current = mdnsServiceInfo.serviceDomain();
-        }
-
-        switch (answerType) {
-            case MDNSResponder::AnswerType::ServiceDomain: {
-                    JsonTools::Utf8Buffer buffer;
-                    output._output.print(F("\"s\":\""));
-                    JsonTools::printToEscaped(output._output, mdnsServiceInfo.serviceDomain(), strlen(mdnsServiceInfo.serviceDomain()), &buffer);
-                    output._output.print(F("\","));
-                }
-                break;
-            case MDNSResponder::AnswerType::HostDomainAndPort: {
-                    JsonTools::Utf8Buffer buffer;
-                    output._output.print(F("\"h\":\""));
-                    JsonTools::printToEscaped(output._output, mdnsServiceInfo.hostDomain(), strlen(mdnsServiceInfo.hostDomain()), &buffer);
-                    output._output.printf_P(PSTR("\",\"p\":%u,"), mdnsServiceInfo.hostPort());
-                }
-                break;
-            case MDNSResponder::AnswerType::IP4Address: {
-                    output._output.print(F("\"a\":["));
-                    for (const IPAddress &ip: mdnsServiceInfo.IP4Adresses()) {
-                        output._output.print('"');
-                        ip.printTo(output._output);
-                        output._output.print(F("\","));
-                    }
-                    StrWrapper(output._output).rtrim(',');
-                    output._output.print(F("],"));
-                }
-                break;
-            case MDNSResponder::AnswerType::Txt: {
-                    auto keys = PSTR("vbtd");
-                    auto ptr = keys;
-                    char key[2] = { 0, 0 };
-                    while((key[0] = pgm_read_byte(ptr++)) != 0) {
-                        auto value = mdnsServiceInfo.value(key);
-                        if (value) {
-                            output._output.printf_P(PSTR("\"%s\":\""), key);
-                            JsonTools::Utf8Buffer buffer;
-                            JsonTools::printToEscaped(output._output, value, strlen(value), &buffer);
-                            output._output.print(F("\","));
-                        }
-                    }
-                }
-                break;
-            default:
-                break;
-        }
-    }
-
-    // flush a pending response right away. _lock must not be held here, _fillBuffer() takes the same lock
-    if (output._notify && output._output.length() != outputLength) {
-        output._notify();
-    }
-}
-
-#elif ESP32
+#if ESP32
 
 bool MDNSPlugin::Output::poll(uint32_t timeout, bool lock)
 {
@@ -199,14 +131,13 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
             auto output = new MDNSPlugin::Output(timeout);
             if (output) {
                 #if ESP8266
-                    output->_serviceQuery = MDNS.installServiceQuery(args.toString(0).c_str(), args.toString(1).c_str(), [this, output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                        serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
-                    });
+                    bool started = output->begin(args.toString(0).c_str(), args.toString(1).c_str());
                 #elif ESP32
                     output->_serviceQuery = mdns_query_async_new(emptyString.c_str(), args.toString(0).c_str(), args.toString(1).c_str(), MDNS_TYPE_PTR, timeout, 64, NULL);
+                    bool started = (output->_serviceQuery != nullptr);
                 #endif
 
-                if (output->_serviceQuery) {
+                if (started) {
                     _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) {
                         #if ESP32
                             if (esp_task_wdt_add(nullptr) != ESP_OK) {

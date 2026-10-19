@@ -35,3 +35,4 @@ src/plugins/weather_station2/docs/temp/
 src/plugins/weather_station2/docs/MIGRATION_LVGL.md
 src/plugins/weather_station2/docs/hass_config.md
 src/plugins/weather_station2/docs/generate_icons.py
+lib/ESP8266mDNS/KFC-SA-2026-0001.py

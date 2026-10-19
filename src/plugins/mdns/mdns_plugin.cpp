@@ -75,6 +75,15 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
     __LDBG_printf("running=%u", getInstance()._isRunning());
     if (getInstance()._isRunning()) {
         if (WebServer::Plugin::getInstance().isAuthenticated(request) == true) {
+            #if ESP8266
+                if (ESP.getFreeHeap() < MDNS_DISCOVERY_MIN_FREE_HEAP) {
+                    __DBG_printf_W("mDNS discovery: not enough memory, free heap %u < %u", ESP.getFreeHeap(), MDNS_DISCOVERY_MIN_FREE_HEAP);
+                    auto response = request->beginResponse(503, FSPGM(mime_text_plain), F("503: Not enough memory, please try again"));
+                    response->addHeader(F("Retry-After"), F("5"));
+                    request->send(response);
+                    return;
+                }
+            #endif
             auto timeout = request->arg(F("timeout")).toInt();
             if (timeout == 0) {
                 timeout = 5000;
@@ -84,11 +93,9 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
             httpHeaders.addNoCache();
             {
                 #if ESP8266
-                    auto service = String(FSPGM(kfcmdns));
-                    auto name = String(FSPGM(udp));
-                    output->_serviceQuery = MDNS.installServiceQuery(service.c_str(), name.c_str(), [output](MDNSResponder::MDNSServiceInfo mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent) {
-                        getInstance().serviceCallback(*output, mdnsServiceInfo, answerType, p_bSetContent);
-                    });
+                    if (!output->begin(String(FSPGM(kfcmdns)).c_str(), String(FSPGM(udp)).c_str())) {
+                        __DBG_printf_E("mDNS discovery: cannot send the query");
+                    }
                 #elif ESP32
                     __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", PSTR("_kfcmdns"), PSTR("_udp"), timeout);
                     output->_serviceQuery = mdns_query_async_new(nullptr, PSTR("_kfcmdns"), PSTR("_udp"), MDNS_TYPE_PTR, timeout, 64, NULL);

@@ -61,7 +61,12 @@ public:
     class Output {
     public:
         Output(uint16_t timeout) :
-            _serviceQuery(nullptr),
+            #if ESP8266
+                _pcb(nullptr),
+                _queryId(0),
+            #elif ESP32
+                _serviceQuery(nullptr),
+            #endif
             _timeout(timeout),
             _resultCounter(0)
         {
@@ -69,13 +74,13 @@ public:
 
         ~Output() {
             MUTEX_LOCK_BLOCK(_lock) {
-                if (_serviceQuery) {
-                    #if ESP8266
-                        MDNS.removeServiceQuery(_serviceQuery);
-                    #elif ESP32
+                #if ESP8266
+                    _end();
+                #elif ESP32
+                    if (_serviceQuery) {
                         mdns_query_async_delete(_serviceQuery);
-                    #endif
-                }
+                    }
+                #endif
             }
         }
 
@@ -83,9 +88,6 @@ public:
             if (_timeout && _resultCounter) {
                 StrWrapper(_output).trim(',');
                 _output.print(F("}]}"));
-                #if ESP8266
-                    _current = String();
-                #endif
             }
             _timeout = 0;
         }
@@ -101,16 +103,30 @@ public:
         }
 
         #if ESP8266
+            // Sends a PTR query for _<service>._<proto>.local from an ephemeral UDP port (mdns_query.cpp). The
+            // responders answer such a "legacy unicast" query with one unicast packet each, which is parsed into
+            // _output and released right away. The service query of the core's mDNS responder kept every answer
+            // on the heap and aborted on the first failed allocation (OOM with 10 devices on the network)
+            bool begin(const char *service, const char *proto);
+
+            // called by the UDP receive callback in the network context
+            void _onPacket(struct pbuf *p, uint16_t port);
+
+            // closes the UDP socket
+            void _end();
+
             // called after new data was added to _output to flush a pending response,
             // must not be called while _lock is held (_fillBuffer() takes the same lock)
             std::function<void()> _notify;
-            String _current;
+            struct udp_pcb *_pcb;
+            uint16_t _queryId;
+            std::vector<uint32_t> _answered; // hash of the service names already in _output
         #elif ESP32
             //TODO check if the async notifier callback is supported, currently missing in the IDF framework
             bool poll(uint32_t timeout = 0, bool lock = true);
+            MDNSResolver::ServiceQuery _serviceQuery;
         #endif
         PrintString _output;
-        MDNSResolver::ServiceQuery _serviceQuery;
         SemaphoreMutex _lock;
         uint16_t _timeout;
         uint16_t _resultCounter;
@@ -133,9 +149,6 @@ public:
         }
     }
     static void mdnsDiscoveryHandler(AsyncWebServerRequest *request);
-    #if ESP8266
-        void serviceCallback(Output &output, MDNSResponder::MDNSServiceInfo &mdnsServiceInfo, MDNSResponder::AnswerType answerType, bool p_bSetContent);
-    #endif
 
     #if AT_MODE_SUPPORTED
         virtual bool atModeHandler(AtModeArgs &args) override;

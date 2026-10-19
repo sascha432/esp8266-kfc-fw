@@ -618,17 +618,54 @@ void Plugin::send(uint16_t httpCode, AsyncWebServerRequest *request, const Strin
     request->send(response);
 }
 
-static String _getUrlAndPostDataFromRequest(AsyncWebServerRequest *request)
+// URL and query string for the access log. POST data is not logged: it contains the passwords of the
+// login and the forms in clear text, and a value of several KB was copied twice (urlEncode, printf) for
+// a log line, which ran a large form POST out of memory. Each value is limited to kMaxLogValueLength
+static String _getUrlAndQueryFromRequest(AsyncWebServerRequest *request)
 {
+    constexpr size_t kMaxLogValueLength = 64;
     auto url = PrintString(urlEncode(request->url(), F("\r\n\" ")));
-    if (request->args()) {
-        for(size_t i = 0; i < request->args(); i++) {
-            auto param = request->getParam(i);
-            url.printf_P(PSTR("%c%s=%s"), (i == 0 ? '?' : '&'), param->name().c_str(), urlEncode(param->value(), F("\r\n\" ?=")).c_str());
+    bool first = true;
+    for(size_t i = 0; i < request->args(); i++) {
+        auto param = request->getParam(i);
+        if (param->isPost() || param->isFile()) {
+            continue;
+        }
+        url.print(first ? '?' : '&');
+        first = false;
+        url.print(param->name());
+        url.print('=');
+        auto &value = param->value();
+        if (value.length() > kMaxLogValueLength) {
+            url.print(urlEncode(value.substring(0, kMaxLogValueLength), F("\r\n\" ?=")));
+            url.print(F("..."));
+        }
+        else {
+            url.print(urlEncode(value, F("\r\n\" ?=")));
         }
     }
     return url;
 }
+
+#if WEBSERVER_LOG_HEAP
+
+    #if ESP8266 && defined(UMM_STATS_FULL)
+        extern "C" size_t umm_free_heap_size_lw_min(void);
+        extern "C" size_t umm_free_heap_size_min_reset(void);
+    #endif
+
+    uint32_t webServerHeapLowWaterMark()
+    {
+        #if ESP8266 && defined(UMM_STATS_FULL)
+            auto min = umm_free_heap_size_lw_min();
+            umm_free_heap_size_min_reset();
+            return min;
+        #else
+            return 0;
+        #endif
+    }
+
+#endif
 
 #if WEBSERVER_LOG_SERIAL
 
@@ -642,7 +679,7 @@ static String _getUrlAndPostDataFromRequest(AsyncWebServerRequest *request)
         log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
         log.print(request->methodToString());
         log.print(' ');
-        log.print(_getUrlAndPostDataFromRequest(request));
+        log.print(_getUrlAndQueryFromRequest(request));
         if (response) {
             auto contentLength = response->getContentLength();
             auto contentLengthStr = contentLength ? String(contentLength) : String('-');
@@ -651,6 +688,9 @@ static String _getUrlAndPostDataFromRequest(AsyncWebServerRequest *request)
         else {
             log.print(F("\" failed"));
         }
+        #if WEBSERVER_LOG_HEAP
+            log.printf_P(PSTR(" heap=%u/%u min=%u"), ESP.getFreeHeap(), ESP.getMaxFreeBlockSize(), webServerHeapLowWaterMark());
+        #endif
         Serial.println(log);
     }
 
@@ -930,6 +970,9 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                         WeatherStationBase::enableDisplay();
                     });
                 #endif
+                if (!_canCreateForm()) {
+                    return _beginLowMemoryResponse(request);
+                }
                 FormUI::Form::BaseForm *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);
@@ -950,6 +993,18 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
         response = new AsyncTemplateResponse(FPSTR(getContentType(path)), mapping.open(FileOpenMode::read), webTemplate, [webTemplate](const String& name, DataProviderInterface &provider) {
             return TemplateDataProvider::callback(name, provider, *webTemplate);
         });
+        // a template page is only rendered with the memory for it, checked after everything the response
+        // needs was created. Every page is checked, not only the forms: a status page rendered next to a form
+        // (two connections) took the heap from 4.9 KB to 2.1 KB and crashed the SDK. A form (GET, or the
+        // error page of a POST) additionally needs a configuration that could be read
+        const bool isForm = webTemplate->getForm() != nullptr;
+        if (!_canRenderTemplate(isForm)) {
+            delete response; // deletes the template and the form
+            if (isForm) {
+                config.discard(); // releases the writeable copies, the next request reads them again
+            }
+            return _beginLowMemoryResponse(request);
+        }
         headers.addNoCache();
     }
     else {
@@ -977,6 +1032,55 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
     return response;
 }
 
+bool Plugin::_canCreateForm()
+{
+    auto freeHeap = ESP.getFreeHeap();
+    if (freeHeap >= WEBSERVER_FORM_CREATE_MIN_FREE_HEAP) {
+        return true;
+    }
+    __DBG_printf_W("not enough memory to create the form, free heap %u < %u", freeHeap, WEBSERVER_FORM_CREATE_MIN_FREE_HEAP);
+    return false;
+}
+
+bool Plugin::_canHandleRequest()
+{
+    auto freeHeap = ESP.getFreeHeap();
+    if (freeHeap >= WEBSERVER_REQUEST_MIN_FREE_HEAP) {
+        return true;
+    }
+    __DBG_printf_W("not enough memory to handle the request, free heap %u < %u", freeHeap, WEBSERVER_REQUEST_MIN_FREE_HEAP);
+    return false;
+}
+
+bool Plugin::_canRenderTemplate(bool isForm)
+{
+    #if defined(HAVE_NVS_FLASH)
+        if (isForm && config.hasNvsReadFailed()) {
+            // the form holds zeros instead of the stored values (the NVS could not be initialized on a low heap)
+            __DBG_printf_W("not rendering the form, the configuration could not be read");
+            return false;
+        }
+    #endif
+    auto freeHeap = ESP.getFreeHeap();
+    #if ESP8266
+        auto maxBlock = ESP.getMaxFreeBlockSize();
+    #else
+        auto maxBlock = ESP.getMaxAllocHeap();
+    #endif
+    if (freeHeap >= WEBSERVER_FORM_MIN_FREE_HEAP && maxBlock >= WEBSERVER_FORM_MIN_FREE_BLOCK) {
+        return true;
+    }
+    __DBG_printf_W("not enough memory to render the %s, free heap %u/%u < %u/%u", isForm ? PSTR("form") : PSTR("page"), freeHeap, maxBlock, WEBSERVER_FORM_MIN_FREE_HEAP, WEBSERVER_FORM_MIN_FREE_BLOCK);
+    return false;
+}
+
+AsyncWebServerResponse *Plugin::_beginLowMemoryResponse(AsyncWebServerRequest *request)
+{
+    auto response = request->beginResponse(503, FSPGM(mime_text_plain), F("503: Not enough memory, please try again"));
+    response->addHeader(F("Retry-After"), F("5"));
+    return response;
+}
+
 void Plugin::setUpdateFirmwareCallback(UpdateFirmwareCallback callback)
 {
 #if 0
@@ -997,6 +1101,10 @@ void Plugin::setUpdateFirmwareCallback(UpdateFirmwareCallback callback)
 
 bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, AsyncWebServerRequest *request, HttpHeaders &headers)
 {
+    if (!_canHandleRequest()) {
+        send(request, _beginLowMemoryResponse(request));
+        return true;
+    }
     __LDBG_printf("path=%s gz=%u request=%p", pathIn.c_str(), client_accepts_gzip, request);
 
     String path = pathIn;
@@ -1123,6 +1231,9 @@ bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, Asy
 
         __LDBG_printf("HTTP post %s", path.c_str());
         headers.addNoCache(true);
+        #if WEBSERVER_LOG_HEAP
+            Serial.printf_P(PSTR("POST %s body=%u params=%u heap=%u/%u min=%u\n"), path.c_str(), request->contentLength(), request->params(), ESP.getFreeHeap(), ESP.getMaxFreeBlockSize(), webServerHeapLowWaterMark());
+        #endif
 
         if (StrView(path).startsWith('/') && path.endsWith(FSPGM(_html))) {
             // auto name = path.substring(1, path.length() - 5);
@@ -1135,20 +1246,38 @@ bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, Asy
                     // release display memory while create the forms
                     WeatherStationBase::disableDisplay();
                 #endif
+                if (!_canCreateForm()) {
+                    #if IOT_WEATHER_STATION
+                        Plugin::executeDelayed(request, []() {
+                            WeatherStationBase::enableDisplay();
+                        });
+                    #endif
+                    send(request, _beginLowMemoryResponse(request));
+                    return true;
+                }
                 FormUI::Form::BaseForm *form = new SettingsForm(request);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
                 webTemplate = new ConfigTemplate(form, isAuthenticated);
+                bool writeFailed = false;
                 if (form->validate()) {
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::SAVE, formName, *form, request);
                     System::Flags::getWriteableConfig().is_factory_settings = false;
-                    config.write();
-                    Plugin::executeDelayed(request, [plugin, formName]() {
-                        plugin->invokeReconfigure(formName);
-                    });
-                    WebTemplate::_aliveRedirection = path.substring(1);
-                    mapping = FileMapping(FSPGM(applying_html), true);
+                    if (config.write() == Configuration::WriteResultType::SUCCESS) {
+                        Plugin::executeDelayed(request, [plugin, formName]() {
+                            plugin->invokeReconfigure(formName);
+                        });
+                        WebTemplate::_aliveRedirection = path.substring(1);
+                        mapping = FileMapping(FSPGM(applying_html), true);
+                    }
+                    else {
+                        // nothing was stored (the NVS could not be opened or a parameter could not be read on a
+                        // low heap and write() discarded the changes): the user gets an error, not "applying"
+                        writeFailed = true;
+                    }
                 }
                 else {
+                    // a form that failed to validate is rendered again with its errors (_beginFileResponse
+                    // checks the memory for it)
                     plugin->createConfigureForm(PluginComponent::FormCallbackType::DISCARD, formName, *form, request);
                     config.discard();
                 }
@@ -1158,6 +1287,11 @@ bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, Asy
                         WeatherStationBase::enableDisplay();
                     });
                 #endif
+                if (writeFailed) {
+                    delete webTemplate; // deletes the form
+                    send(request, _beginLowMemoryResponse(request));
+                    return true;
+                }
             }
             else { // no plugin found
                 bool isRebootHtml = path.endsWith(FSPGM(reboot_html, "reboot.html"));
@@ -1231,6 +1365,9 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
         __LDBG_printf("plugin=%s cannot handle form=%s", plugin.getName(), formName.c_str());
         code = 404;
     }
+    else if (!_canCreateForm()) {
+        code = 503;
+    }
     else {
         FormUI::Form::BaseForm *form = new SettingsForm(request);
         plugin.createConfigureForm(PluginComponent::FormCallbackType::CREATE_POST, formName, *form, request);
@@ -1272,7 +1409,7 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
             log.strftime_P(PSTR(" - - [%m/%d/%Y %H:%M:%S] \""), time(nullptr));
             log.print(request->methodToString());
             log.print(' ');
-            log.print(_getUrlAndPostDataFromRequest(request));
+            log.print(_getUrlAndQueryFromRequest(request));
             log.printf_P(PSTR(" HTTP/1.%u\" %d %u \"%s\""), request->version(), code, request->contentLength(), PSTR("application/x-www-form-urlencoded"));
             Serial.println(log);
         }

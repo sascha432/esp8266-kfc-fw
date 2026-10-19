@@ -145,6 +145,16 @@ namespace MDNSImplementation
     Avoid endless recursion because of malformed compressed labels
 */
 #define MDNS_DOMAIN_MAX_REDIRCTION 6
+/*
+    KFC: maximum RDLength we allocate a buffer for while parsing a received answer. The generic and TXT
+    answer readers do "new unsigned char[RDLength]" up front and the ESP8266 core aborts on a failed
+    "new" (the "if (buffer)" guard is dead), so the attacker-controlled RDLength (up to 0xffff) must not
+    pick the allocation size. Checking RDLength against the packet size alone does not help - a padded
+    (e.g. IP-reassembled) datagram really carries the bytes, so new[0xe000] still reboots the device. The
+    largest RDATA this responder ever parses is a TXT record (MDNS_SERVICE_TXT_MAXLENGTH); a larger
+    answer is of no use to us and the message is dropped. (KFC-SA-2026-0001, 2026-10-18)
+*/
+#define MDNS_RRANSWER_RDLENGTH_MAX MDNS_SERVICE_TXT_MAXLENGTH
 
 /*
     Default service priority and weight in SRV answers

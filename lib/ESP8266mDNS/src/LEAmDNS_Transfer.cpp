@@ -490,7 +490,14 @@ namespace MDNSImplementation
         stcMDNS_RRHeader header;
         uint32_t         u32TTL;
         uint16_t         u16RDLength;
-        if ((_readRRHeader(header)) && (_udpRead32(u32TTL)) && (_udpRead16(u16RDLength)))
+        // KFC: the RDATA has to be inside the packet AND must not exceed the largest RDATA we ever parse.
+        // The generic and TXT readers allocate RDLength bytes and the core aborts on a failed "new"
+        // (RDLength 0xe000 rebooted every ESP8266 on the network, 2026-10-18). getSize() is the whole
+        // (possibly IP-reassembled) datagram, so the packet-size check alone is defeated by padding the
+        // packet to the claimed length - the hard cap is what prevents the oversized allocation.
+        if ((_readRRHeader(header)) && (_udpRead32(u32TTL)) && (_udpRead16(u16RDLength))
+            && (u16RDLength <= m_pUDPContext->getSize())
+            && (u16RDLength <= MDNS_RRANSWER_RDLENGTH_MAX))
         {
             /*  DEBUG_EX_INFO(
                     DEBUG_OUTPUT.printf_P(PSTR("[MDNSResponder] _readRRAnswer: Reading 0x%04X answer
@@ -656,7 +663,14 @@ namespace MDNSImplementation
 
                         stcMDNSServiceTxt* pTxt     = 0;
                         unsigned char      ucLength = *pucCursor++;  // Length of the next txt item
-                        if (ucLength)
+                        // KFC: the item has to be inside the RDATA
+                        if (ucLength > ((pucBuffer + p_u16RDLength) - pucCursor))
+                        {
+                            DEBUG_EX_ERR(
+                                DEBUG_OUTPUT.printf_P(PSTR("[MDNSResponder] _readRRAnswerTXT: "
+                                                           "INVALID TXT item length!\n")););
+                        }
+                        else if (ucLength)
                         {
                             DEBUG_EX_INFO(
                                 static char sacBuffer[64]; *sacBuffer = 0;
@@ -668,8 +682,9 @@ namespace MDNSImplementation
                                     PSTR("[MDNSResponder] _readRRAnswerTXT: Item(%u): %s\n"),
                                     ucLength, sacBuffer););
 
-                            unsigned char* pucEqualSign = (unsigned char*)os_strchr(
-                                (const char*)pucCursor, '=');  // Position of the '=' sign
+                            // KFC: the item is not NUL terminated, search inside the item only
+                            unsigned char* pucEqualSign = (unsigned char*)memchr(
+                                pucCursor, '=', ucLength);  // Position of the '=' sign
                             unsigned char ucKeyLength;
                             if ((pucEqualSign) && ((ucKeyLength = (pucEqualSign - pucCursor))))
                             {

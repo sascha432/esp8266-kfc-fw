@@ -101,18 +101,20 @@ in this workspace.
 - **The serial port is the env's `monitor_port`** (`conf/envs/*.ini`) - never a hardcoded COM port. When testing
   an env whose `monitor_port` is missing, **ask the user which port to use** before flashing or opening a monitor.
 - **`-t buildfs` does not compile the firmware** - always run a plain `pio run -e <env>` as well.
-- Shared/core changes must be built for **both platforms**, e.g. `pio run -e bme280_serial` (the ESP8266 test
-  env) next to the ESP32 env - a change can compile on one and fail on the other.
+- Shared/core changes must be built for **both platforms**, e.g. `pio run -e led_strip_xmas_serial` (the ESP8266
+  test env) next to the ESP32 env - a change can compile on one and fail on the other.
 - **There are no unit tests** - verification happens on the hardware: a trace line, a log or a screenshot has
-  to show what the change did, "it compiles" is not a verification. `logs/check_pages.py` checks pages and
-  endpoints in bulk; the environment sections list the panel/debug key recipes.
+  to show what the change did, "it compiles" is not a verification. `scripts/tools/webui_test.py` checks pages,
+  endpoints, forms and WebSockets in bulk (see the ESP8266 test env section); the environment sections list the
+  panel/debug key recipes.
 - **PC tools** (`scripts/tools`, the mocks under `src/plugins/*/docs/scripts`) run in the workspace venv
   `.venv` (packages in `requirements.txt`, `python -m venv .venv` + `.venv\Scripts\python -m pip install -r
   requirements.txt`); the build scripts run in PlatformIO's own Python. Never add a hardcoded `sys.path` to a
   `site-packages` directory - a missing package goes into `requirements.txt`.
-- Serial capture/reset (pass the env's `monitor_port`):
-  `python logs/serial_capture.py --port <monitor_port> --seconds 60 --no-reset | Out-File -Encoding utf8 logs/x.txt`
-  - **not with `>`**, a redirected file becomes UTF-16 and greps find nothing in it.
+- Serial log (pass the env's `monitor_port`): `.venv\Scripts\python scripts/tools/serial_log.py <port> <seconds>
+  logs/x.txt` opens the port with DTR/RTS low (no reset of the board) and writes UTF-8 with a timestamp per line.
+  ESP8266 output contains NUL bytes (`tr -d '\000'` before grepping). PowerShell redirects (`>`) write UTF-16 -
+  greps find nothing in such a file.
 - Free the serial port first: a leftover `platformio.exe ... monitor` blocks the upload
   (`Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'platformio.exe.*monitor' }`).
   Several resets in a row can leave the device in **safe mode** (plugins off) - one more reset clears it.
@@ -305,14 +307,37 @@ in this workspace.
   the form field and `+LMC=dit` are not compiled in, `getDither()` returns `false`; the `dithering` config bit is kept.
 - **OTA is not available** (single `factory` app partition); use the env's `monitor_port`.
 
-## Environment `bme280_serial` (ESP8266 test env)
+## Environment `led_strip_xmas_serial` (ESP8266 test env)
 
-- `board = nodemcuv2` with `upload_protocol = esptool` - **serial only, no OTA**; use the env's `monitor_port`
-  (`conf/envs/environmental_sensor.ini`). It extends `debug_esp8266`, so `DEBUG` is on and the serial log is verbose.
-- This is the **ESP8266 verification env** for shared/core changes (see the build section): build it next to
-  the ESP32 env, because a change can compile on one platform and fail on the other.
-- Page/endpoint checks against it use the same PC tools as for the panel (`logs/check_pages.py`,
-  `logs/fetch_page.py`, `logs/bw_test.py`).
+- NodeMCU (`board = nodemcuv2`), **serial only, no OTA**; use the env's `monitor_port` (`conf/envs/led_strip.ini`).
+  It extends the ESP-01 LED strip base but unflags the standby pin 3 and `ESP8266_USE_UART_RX_AS_OUTPUT`, so the
+  UART RX and the serial console work - keep those unflags.
+- **1024 pixels on purpose**: a low-memory demo (~20 KB idle heap) for the heap guards of the web server
+  (`WEBSERVER_*_MIN_FREE_*` in `include/web_server.h`). The network form and the visualizer forms (13-14 KB to
+  build) are answered with 503 there - expected, not a regression. Big forms are still to be split into pages
+  for the user.
+- This is the **ESP8266 verification env** for shared/core changes: build it next to the ESP32 env.
+- **WebUI test suite** (workspace venv): `.venv\Scripts\python scripts/tools/webui_test.py --env led_strip_xmas_serial
+  --newlib` (`--env wled_esp32_controller_neopixelbus` for the ESP32 board, both `--env` at once work). It checks
+  uptime and free heap after every form and group and reports `reboot detected` with the cause; `--json <file>`
+  stores the results, the docstring lists the groups. Intermittent problems need **at least 12 runs**
+  (`--repeat 12`) with the serial port logged. A 503 of the heap guards is a warning, not a failure.
+- **Test rules**: never save a form, change brightness/volume, WiFi, passwords or accounts, never start an
+  LED/motor/sound action - the suite only sends invalid form POSTs (every real field missing, the firmware
+  discards them); keep it that way. MQTT publishing is allowed on the two test boards only. Never send
+  hand-made mDNS packets to the multicast group: one malformed packet rebooted every unpatched ESP8266 on the LAN.
+- **Heap diagnostics** (ESP8266, DEBUG build): `-D WEBSERVER_LOG_HEAP=1 -D UMM_STATS_FULL=1 -D UMM_INFO=1` adds
+  `heap=<free>/<largest block> min=<low water mark>` to the access log and a `template done` line after every
+  template page; `scripts/tools/webui_heap_analyze.py <serial log>` tabulates it per request. For a leak, read
+  the free heap with `+HEAP=0` over serial before and after N requests (the status page value includes the
+  page's own allocations), then take `+HEAPDUMP` before and after and compare with
+  `scripts/tools/webui_heapdump_parse.py <a> <b>`: it lists the block kinds that grew. A flash address in such a
+  block is resolved with `xtensa-lx106-elf-nm -C -n .pio/build/<env>/firmware.elf` (the first word of a C++
+  object is its vtable + 8).
+- **ESP8266 crash**: the exception is printed on serial (`Exception (NN)`, `epc1`, `>>>stack>>>`, `last failed
+  alloc call`); resolve the `40xxxxxx` words with
+  `~/.platformio/packages/toolchain-xtensa/bin/xtensa-lx106-elf-addr2line.exe -pfiaC -e .pio/build/<env>/firmware.elf`.
+  The stack dump contains stale frames.
 
 ## Architecture
 
@@ -385,6 +410,12 @@ Recurring bug classes - check these before blaming a change:
   they move literals to flash (plain literals cost RAM there). Use `PSTR()` only together with the `_P`
   readers (`snprintf_P`, `strncmp_P`, ...).
 - A NULL `%s` argument crashes newlib; plain appends use `+=`/`concat`, not a `printf` family call.
+- **ESP8266 has no C++ exceptions**: a failed `new` aborts the device (`Unhandled C++ exception: OOM`) and the SDK
+  crashes in the WiFi code when a beacon cannot be allocated. Check `ESP.getFreeHeap()`/`getMaxFreeBlockSize()`
+  before large allocations and answer 503 instead (see the web server guards).
+- **NVS (ESP8266)**: never deinitialize the partition while a handle is open - the handle becomes invalid (and
+  older NVS library versions leaked it). `Configuration::_nvs_open()`/`_nvs_deinit()` in KFCLibrary take care of
+  it; do not reopen a handle through `_nvs_close()`, it arms the deinit timer.
 - **Unsigned `millis()` arithmetic**: use a signed (clamped) difference - a timestamp written later in
   the same tick underflows and expires a timeout instantly.
 - **LVGL 8.4**: `lv_obj_get_x/y/width()` are layout-dependent (0 before the first layout pass - use

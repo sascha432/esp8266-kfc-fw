@@ -13,7 +13,7 @@
 
 // ESP8266 discovery (mdns_query.cpp): it is only started with MDNS_DISCOVERY_MIN_FREE_HEAP free heap, and an
 // answer that arrives with less than MDNS_DISCOVERY_STOP_FREE_HEAP free is dropped. Every answer adds ~150 byte
-// to the response (docs/webui_crash_report.md, OPEN-4)
+// to the response
 #ifndef MDNS_DISCOVERY_MIN_FREE_HEAP
 #    define MDNS_DISCOVERY_MIN_FREE_HEAP 8192
 #endif

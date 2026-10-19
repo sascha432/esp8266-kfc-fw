@@ -987,7 +987,10 @@ class Device:
         def parallel():
             with concurrent.futures.ThreadPoolExecutor(max_workers=self.args.parallel) as pool:
                 codes = list(pool.map(lambda _: self.get('/status.html').status_code, range(self.args.parallel * 2)))
-            assert all(c == 200 for c in codes), 'HTTP %s' % codes
+            assert all(c in (200, 503) for c in codes), 'HTTP %s' % codes
+            if 503 in codes:
+                # a device short of heap refuses some of them (low-memory guard), that is the expected answer
+                return 'WARN', 'HTTP %s (503: not enough heap)' % codes
             return 'PASS', '%u requests, %u parallel' % (len(codes), self.args.parallel)
         self.check('robustness', 'parallel requests', parallel)
 

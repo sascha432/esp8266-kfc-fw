@@ -130,6 +130,9 @@ public:
     #if DEBUG
         // print loop
         static void HeapCommand(AtModeArgs &args);
+        #if ESP8266
+            static void HeapDumpCommand(AtModeArgs &args);
+        #endif
         static void RssiCommand(AtModeArgs &args);
         static void GpioCommand(AtModeArgs &args);
     #endif

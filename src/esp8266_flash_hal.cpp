@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-// ESP8266: flash access of the file system without optimistic_yield() (FIXED-7, docs/webui_crash_report.md)
+// ESP8266: flash access of the file system without optimistic_yield()
 //
 // The core's flash_hal_read()/flash_hal_write()/flash_hal_erase() call optimistic_yield(10000) before every
 // flash access. LittleFS has no lock on the ESP8266, so a LittleFS call from the loop task that runs longer

@@ -3,6 +3,7 @@
 ## Version 0.0.9 (master)
 
  - ESP32 builds: AsyncTCP 1.1.1 (me-no-dev) is replaced by the maintained fork esp32async/AsyncTCP 3.5.0, 1.1.1 deadlocked under parallel requests and ran stale queued events on freed clients
+ - ESP8266: fixed a heap leak of 48 byte per configuration access that reopened the NVS handle (the partition was deinitialized under an open handle, every status page leaked)
  - Web server: a request is refused with 503 (Retry-After) when the free heap is too low to handle it, a settings form is only built and a template page only rendered with the heap for it, a form whose configuration could not be read from the NVS is not shown and a save that could not be stored answers 503 instead of "applying" (the ESP8266 with 1024 pixels crashed in the WiFi stack or aborted on a failed `new`)
  - ESP32 builds: the local ESP8266mDNS copy is ignored by the LDF (`lib_ignore`), it broke every ESP32 build
  - WebUI test suite: a 503 of the low-memory guard is a warning, a non-JSON answer no longer aborts the suite

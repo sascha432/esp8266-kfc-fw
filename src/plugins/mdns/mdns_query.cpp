@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-// ESP8266 mDNS service discovery with bounded memory (docs/webui_crash_report.md, OPEN-4)
+// ESP8266 mDNS service discovery with bounded memory
 //
 // The service query of the core's mDNS responder (MDNS.installServiceQuery()) keeps every answer with its
 // domains, TXT items and addresses on the heap. It allocates with a plain "new" in the network context and the
@@ -121,9 +121,9 @@ namespace {
 
 bool MDNSPlugin::Output::begin(const char *service, const char *proto)
 {
-    // re-enabled 2026-10-19 by the owner: the LAN-wide crashes of 2026-10-18 came from a build that sent the
-    // same pbuf twice (malformed packets), the valid query crashed nothing and the responder is patched
-    // (lib/ESP8266mDNS 1.2.0-kfc2, docs/webui_crash_report.md OPEN-7)
+    // every packet needs its own pbuf: lwIP leaves the UDP header it added in the pbuf, a second udp_sendto()
+    // with the same pbuf sends a malformed mDNS packet to every device (the core's responder allocated its
+    // RDLength unchecked and rebooted, capped in lib/ESP8266mDNS 1.2.0-kfc2)
     // query name _<service>._<proto>.local, the leading underscores are optional like for MDNS.installServiceQuery()
     char name[kMaxNameLength];
     snprintf_P(name, sizeof(name), PSTR("%s%s.%s%s.local"), *service == '_' ? "" : "_", service, *proto == '_' ? "" : "_", proto);

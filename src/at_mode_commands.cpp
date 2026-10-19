@@ -293,6 +293,46 @@ void ATModeCommands::HeapCommand(AtModeArgs &args)
     atModePrintLoopCommand(args, true, AtModePrintLoop::DisplayType::HEAP);
 }
 
+#if ESP8266
+
+// +HEAPDUMP  (DEBUG)
+// Print the raw heap as hex lines `+HD <address> <32 bytes>` (umm block chain included), for finding leaked
+// blocks offline. The heap keeps changing while the dump runs (~10 s at 115200 baud)
+
+// the serial console runs in the system context where yield() is not allowed: the dump is printed from the
+// main loop, as many lines per pass as the UART buffer takes
+static const uint8_t *heapDumpPos;
+
+static void heapDumpLoop()
+{
+    auto end = reinterpret_cast<const uint8_t *>(SECTION_HEAP_END_ADDRESS);
+    char line[32 * 2 + 1];
+    // Serial is the console wrapper here, the dump goes straight to the UART. Two lines per pass block ~14 ms
+    for (uint8_t n = 0; n < 2 && heapDumpPos < end; n++, heapDumpPos += 32) {
+        auto out = line;
+        for (uint8_t i = 0; i < 32 && heapDumpPos + i < end; i++) {
+            auto byte = heapDumpPos[i];
+            *out++ = "0123456789abcdef"[byte >> 4];
+            *out++ = "0123456789abcdef"[byte & 15];
+        }
+        *out = 0;
+        Serial0.printf_P(PSTR("+HD %08x %s\n"), reinterpret_cast<uint32_t>(heapDumpPos), line);
+    }
+    if (heapDumpPos >= end) {
+        Serial0.printf_P(PSTR("+HEAPDUMP: done free=%u\n"), ESP.getFreeHeap());
+        LoopFunctions::remove(heapDumpLoop);
+    }
+}
+
+void ATModeCommands::HeapDumpCommand(AtModeArgs &args)
+{
+    Serial0.printf_P(PSTR("+HEAPDUMP: start=0x%08x end=0x%08x free=%u\n"), SECTION_HEAP_START_ADDRESS, SECTION_HEAP_END_ADDRESS, ESP.getFreeHeap());
+    heapDumpPos = reinterpret_cast<const uint8_t *>(SECTION_HEAP_START_ADDRESS);
+    LoopFunctions::add(heapDumpLoop);
+}
+
+#endif
+
 // +RSSI=[interval in seconds|0=disable]  (DEBUG)
 // Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)
 
@@ -1700,6 +1740,9 @@ PROGMEM_STRING_DEF(PLGCommandString, "PLG");
 PROGMEM_STRING_DEF(DelayCommandString, "DLY");
 #if DEBUG
     PROGMEM_STRING_DEF(HeapCommandString, "HEAP");
+    #if ESP8266
+        PROGMEM_STRING_DEF(HeapDumpCommandString, "HEAPDUMP");
+    #endif
     PROGMEM_STRING_DEF(RssiCommandString, "RSSI");
     PROGMEM_STRING_DEF(GpioCommandString, "GPIO");
 #endif
@@ -1770,6 +1813,9 @@ static const ATModeCommands::Item PROGMEM ATModeCommandsTable[] = {
     ATModeCommands::Item(ATModeCommands::DelayCommand, SPGM(DelayCommandString)),
     #if DEBUG
         ATModeCommands::Item(ATModeCommands::HeapCommand, SPGM(HeapCommandString)),
+        #if ESP8266
+            ATModeCommands::Item(ATModeCommands::HeapDumpCommand, SPGM(HeapDumpCommandString)),
+        #endif
         ATModeCommands::Item(ATModeCommands::RssiCommand, SPGM(RssiCommandString)),
         ATModeCommands::Item(ATModeCommands::GpioCommand, SPGM(GpioCommandString)),
     #endif

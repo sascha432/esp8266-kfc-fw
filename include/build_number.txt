@@ -5,11 +5,20 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15814
-date   = 2026-10-19 08:25:04
+number = 15823
+date   = 2026-10-19 13:05:04
 env    = wled_esp32_controller_neopixelbus
 
 ; history, newest first: <number> <date> <time> <environments>
+15823 2026-10-19 13:05:04 wled_esp32_controller_neopixelbus
+15822 2026-10-19 12:58:15 led_strip_xmas_serial
+15821 2026-10-19 12:23:33 led_strip_xmas_serial
+15820 2026-10-19 11:45:30 wled_esp32_controller_neopixelbus
+15819 2026-10-19 11:14:02 wled_esp32_controller_neopixelbus
+15818 2026-10-19 11:08:33 led_strip_xmas_serial
+15817 2026-10-19 10:59:48 led_strip_xmas_serial
+15816 2026-10-19 10:52:48 led_strip_xmas_serial
+15815 2026-10-19 10:44:29 led_strip_xmas_serial
 15814 2026-10-19 08:25:04 wled_esp32_controller_neopixelbus
 15813 2026-10-19 08:16:20 wled_esp32_controller_neopixelbus
 15812 2026-10-19 08:05:05 led_strip_xmas_serial

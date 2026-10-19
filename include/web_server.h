@@ -23,14 +23,14 @@
 
 // free heap and largest free block that have to be left after a template page (a settings form, the status
 // page, ...) and its response were created, otherwise the page is not rendered and the request is answered
-// with 503 (Retry-After). Measured on
-// led_strip_xmas_serial (WEBSERVER_LOG_HEAP + UMM_STATS_FULL, docs/webui_crash_report.md OPEN-3): rendering a
+// with 503 (Retry-After). Measured on the ESP8266 (WEBSERVER_LOG_HEAP + UMM_STATS_FULL): rendering a
 // form page costs 3.1-3.6 KB on top of the form (GET) and up to 4.7 KB with the validation errors of a POST
 // (1 KB frame buffer, the TCP send buffer, PrintArgs), and the ESP8266 SDK crashes in the WiFi code when a
 // beacon arrives while it cannot allocate (seen with 1.4 KB free and with 5.9 KB free but a 648 byte largest
 // block). 8 KB free keeps 3.3+ KB for the SDK, the block limit catches the fragmented heap. The form object
 // is the variable part: ~325 byte per field, a 44 field form takes 14 KB and does not fit next to 1024 pixels
-// (~20 KB free) - such a form has to be split into pages, the guard only keeps the device alive
+// (~20 KB free, the low-memory test env led_strip_xmas_serial) - there it is refused with 503. Forms that big
+// should be split into pages, smaller forms are easier for the user
 #ifndef WEBSERVER_FORM_MIN_FREE_HEAP
 #    if ESP8266
 #        define WEBSERVER_FORM_MIN_FREE_HEAP 8192
@@ -57,8 +57,8 @@
 #endif
 // free heap that is required before a settings form is created. Creating a form costs ~325 byte per field, the
 // biggest forms of the firmware (network, 44 field visualizer) take 14 KB, and a `new` that fails while the
-// form is built aborts the device (the core has no exceptions, docs/webui_crash_report.md OPEN-3: 3 reboots in
-// 12 runs with 13-15 KB free). A form bigger than this limit has to be split into pages
+// form is built aborts the device (the core has no exceptions: 3 reboots in 12 test runs with 13-15 KB free).
+// A form bigger than this limit should be split into pages
 #ifndef WEBSERVER_FORM_CREATE_MIN_FREE_HEAP
 #    if ESP8266
 #        define WEBSERVER_FORM_CREATE_MIN_FREE_HEAP 16384

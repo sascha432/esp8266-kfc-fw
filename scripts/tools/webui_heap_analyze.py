@@ -1,4 +1,6 @@
-# heap_analyze.py <serial log> - per request: heap at the access log line, low water mark of the render
+# webui_heap_analyze.py <serial log> - per request: heap at the access log line, low water mark of the render.
+# Needs a build with -D WEBSERVER_LOG_HEAP=1 -D UMM_STATS_FULL=1 -D UMM_INFO=1 (ESP8266), the log is written by
+# scripts/tools/serial_log.py
 import re, sys, collections
 
 LOG = re.compile(r'^(\d+\.\d+) \S+ - - \[[^\]]*\] "(\w+) (\S+) HTTP/1\.\d" (\d+) (\S+) "([^"]*)" heap=(\d+)/(\d+) min=(\d+)')

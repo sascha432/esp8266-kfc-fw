@@ -2,16 +2,14 @@
  * Author: sascha_lammers@gmx.de
  */
 
-// ESP8266 diagnostic for FIXED-7 (docs/webui_crash_report.md): LittleFS has no lock on the ESP8266 and the
-// core's flash_hal_write()/flash_hal_erase() call optimistic_yield(10000) before every flash access. A
-// LittleFS call from the loop task that runs longer than 10 ms (the LED show of 1024 pixels alone takes
-// ~30 ms with interrupts off) yields in the middle of a commit, and the SDK runs the network callbacks
-// (async web server) and the scheduled functions, which can call LittleFS again.
+// ESP8266 diagnostic: logs LittleFS calls that start while another one is running. LittleFS has no lock on
+// the ESP8266; the core's flash_hal_*() used to yield inside a LittleFS call and the async web server
+// re-entered it (fixed by src/esp8266_flash_hal.cpp, which this diagnostic proved).
 //
-// With KFC_LFS_REENTRY_GUARD=1 every LittleFS API call is wrapped (-Wl,--wrap=lfs_..., all of them are
-// called from LittleFS.cpp only) and a call that starts while another one is running is printed on
-// Serial0 with the outer call and the last operations. A heap watch prints the free heap low water mark
-// and failed allocations.
+// Enable in an env with -D KFC_LFS_REENTRY_GUARD=1 plus -Wl,--wrap=lfs_<name> for every __wrap_lfs_* function
+// below (all of them are called from LittleFS.cpp only). A re-entered call is printed on Serial0 with the
+// outer call and the last operations; a heap watch prints the free heap low water mark and failed
+// allocations.
 
 #include <global.h>
 

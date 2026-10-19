@@ -257,6 +257,10 @@ Display heap usage every interval (can be 1s or 1000ms, 0 shows it once). If `um
 
 Display GPIO pin states every interval (can be 1s or 1000ms, 0 shows it once)
 
+### `+HEAPDUMP` **(DEBUG, ESP8266)**
+
+Print the raw heap as hex lines `+HD <address> <32 bytes>`, including the umm block headers, to find leaked blocks offline. The heap keeps changing while the dump runs (~10 s at 115200 baud)
+
 ### `+RSSI=[interval in seconds|0=disable]` **(DEBUG)**
 
 Display the WiFi RSSI every interval (can be 1s or 1000ms, 0 shows it once)

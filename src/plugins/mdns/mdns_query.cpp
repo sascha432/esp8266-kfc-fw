@@ -263,7 +263,9 @@ void MDNSPlugin::Output::_onPacket(pbuf *p, uint16_t port)
                             break;
                         }
                         if (itemLength >= 2 && pbuf_get_at(p, pos + 1) == '=') {
-                            auto keyPtr = strchr_P(kTxtKeys, pbuf_get_at(p, pos));
+                            // a NUL key would match the terminator of kTxtKeys = one row behind txt[]
+                            const char key = pbuf_get_at(p, pos);
+                            auto keyPtr = key ? strchr_P(kTxtKeys, key) : nullptr;
                             if (keyPtr) {
                                 auto &value = txt[keyPtr - kTxtKeys];
                                 uint8_t valueLength = std::min<uint8_t>(itemLength - 2, kMaxTxtLength - 1);

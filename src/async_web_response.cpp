@@ -620,7 +620,7 @@ AsyncTemplateResponse::~AsyncTemplateResponse()
 {
     #if WEBSERVER_LOG_HEAP
         // the low water mark since the access log line of this request = the heap needed to render it
-        Serial.printf_P(PSTR("template done heap=%u/%u min=%u\n"), ESP.getFreeHeap(), ESP.getMaxFreeBlockSize(), webServerHeapLowWaterMark());
+        Serial.printf_P(PSTR("template done heap=%u/%u min=%u\n"), ESP.getFreeHeap(), webServerMaxFreeBlock(), webServerHeapLowWaterMark());
     #endif
     delete _webTemplate;
 }

@@ -38,6 +38,8 @@ void AsyncFileUploadWebHandler::_setError(AsyncWebServerRequest *request, uint16
         // the request releases _tempObject with free()
         request->_tempObject = malloc(sizeof(uint16_t));
         if (!request->_tempObject) {
+            // the error cannot be remembered: without it the upload would finish as a success
+            asyncClientCloseNow(request->client());
             return;
         }
     }

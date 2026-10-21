@@ -4,6 +4,9 @@
 
  - Weather station: fixed the OpenWeatherMap poll interval, a successful request scheduled the next one after 1/10 of the interval (2 minutes minimum) and exhausted the daily API limit
  - ESP32 builds: AsyncTCP 1.1.1 (me-no-dev) is replaced by the maintained fork esp32async/AsyncTCP 3.5.0, 1.1.1 deadlocked under parallel requests and ran stale queued events on freed clients
+ - ESP8266 mDNS discovery: a TXT item with a NUL key wrote one row behind a stack array (remote packet)
+ - Web server: the 503 of the heap guards keeps the headers of the request (a login landing on a refused page lost its session cookie), a saved form is not answered with 503 any more, the WebSocket form save reports a write that stored nothing, an unauthenticated firmware upload is closed at the first chunk
+ - ESP32: `+MDNSQ` removed the loop task from the task watchdog, the shared `TaskWdtScope` is used (include/task_wdt_scope.h)
  - ESP8266: fixed a heap leak of 48 byte per configuration access that reopened the NVS handle (the partition was deinitialized under an open handle, every status page leaked)
  - Web server: a request is refused with 503 (Retry-After) when the free heap is too low to handle it, a settings form is only built and a template page only rendered with the heap for it, a form whose configuration could not be read from the NVS is not shown and a save that could not be stored answers 503 instead of "applying" (the ESP8266 with 1024 pixels crashed in the WiFi stack or aborted on a failed `new`)
  - ESP32 builds: the local ESP8266mDNS copy is ignored by the LDF (`lib_ignore`), it broke every ESP32 build

@@ -5,11 +5,48 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15826
-date   = 2026-10-19 14:13:49
-env    = led_strip_xmas_serial
+number = 15863
+date   = 2026-10-20 21:39:59
+env    = wled_esp32_controller_neopixelbus
 
 ; history, newest first: <number> <date> <time> <environments>
+15863 2026-10-20 21:39:59 wled_esp32_controller_neopixelbus
+15862 2026-10-20 21:37:45 wled_esp32_controller_neopixelbus
+15861 2026-10-20 20:11:23 wled_esp32_controller_neopixelbus
+15860 2026-10-20 20:09:05 led_strip_xmas_serial
+15859 2026-10-19 16:47:15 ws_95
+15858 2026-10-19 16:43:07 ws_96
+15857 2026-10-19 16:41:22 wled_esp32_controller_neopixelbus
+15856 2026-10-19 15:42:17 wt32_sc01_test1
+15855 2026-10-19 15:41:27 wled_esp32_controller_neopixelbus
+15854 2026-10-19 15:35:15 dc_dimmer_76
+15853 2026-10-19 15:33:49 dc_dimmer_75
+15852 2026-10-19 15:32:16 atomic_sunv2_1_97
+15851 2026-10-19 15:30:40 atomic_sun_98
+15850 2026-10-19 15:29:00 1ch_dimmer_181
+15849 2026-10-19 15:27:20 1ch_dimmer_180
+15848 2026-10-19 15:25:32 1ch_dimmer_179
+15847 2026-10-19 15:23:47 1ch_dimmer_133
+15846 2026-10-19 15:22:08 1ch_dimmer_178
+15845 2026-10-19 15:20:25 1ch_dim_pm_177
+15844 2026-10-19 15:18:45 1ch_dim_pm_84
+15843 2026-10-19 15:17:03 1ch_dim_pm_91
+15842 2026-10-19 15:15:20 1ch_dim_pm_90
+15841 2026-10-19 15:13:36 wled_esp32_controller_neopixelbus
+15840 2026-10-19 15:10:22 1ch_dimmer_74
+15839 2026-10-19 15:08:45 phone_ctrl
+15838 2026-10-19 15:05:58 rlybrd_85
+15837 2026-10-19 15:02:49 led_strip_candle
+15836 2026-10-19 15:00:55 led_strip_xmas
+15835 2026-10-19 14:59:11 led_strip_katana
+15834 2026-10-19 14:57:31 led_strip_frame
+15833 2026-10-19 14:55:44 led_strip_balcony
+15832 2026-10-19 14:53:54 single_hexagon
+15831 2026-10-19 14:52:00 hexpanel_17
+15830 2026-10-19 14:50:30 bme280_48
+15829 2026-10-19 14:48:58 blindsctrl_81r
+15828 2026-10-19 14:47:30 blindsctrl_80l
+15827 2026-10-19 14:45:54 clockv2_100
 15826 2026-10-19 14:13:49 led_strip_xmas_serial
 15825 2026-10-19 14:11:02 wled_esp32_controller_neopixelbus
 15824 2026-10-19 13:47:53 wled_esp32_controller_neopixelbus

@@ -90,6 +90,16 @@
 
 class FileMapping;
 
+// largest free heap block, the size the next allocation can get
+inline uint32_t webServerMaxFreeBlock()
+{
+    #if ESP8266
+        return ESP.getMaxFreeBlockSize();
+    #else
+        return ESP.getMaxAllocHeap();
+    #endif
+}
+
 #if WEBSERVER_LOG_HEAP
     // free heap low water mark since the previous call, printed in the access log. ESP8266 with
     // -D UMM_STATS_FULL only (umm_malloc keeps the minimum of the free blocks), 0 otherwise

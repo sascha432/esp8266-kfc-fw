@@ -78,9 +78,7 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
             #if ESP8266
                 if (ESP.getFreeHeap() < MDNS_DISCOVERY_MIN_FREE_HEAP) {
                     __DBG_printf_W("mDNS discovery: not enough memory, free heap %u < %u", ESP.getFreeHeap(), MDNS_DISCOVERY_MIN_FREE_HEAP);
-                    auto response = request->beginResponse(503, FSPGM(mime_text_plain), F("503: Not enough memory, please try again"));
-                    response->addHeader(F("Retry-After"), F("5"));
-                    request->send(response);
+                    request->send(WebServer::Plugin::_beginLowMemoryResponse(request));
                     return;
                 }
             #endif
@@ -94,7 +92,12 @@ void MDNSPlugin::mdnsDiscoveryHandler(AsyncWebServerRequest *request)
             {
                 #if ESP8266
                     if (!output->begin(String(FSPGM(kfcmdns)).c_str(), String(FSPGM(udp)).c_str())) {
+                        // no UDP pcb/pbuf (low heap) or no station interface: an error now, not an empty
+                        // device list after the timeout
                         __DBG_printf_E("mDNS discovery: cannot send the query");
+                        delete output;
+                        request->send(WebServer::Plugin::_beginLowMemoryResponse(request));
+                        return;
                     }
                 #elif ESP32
                     __LDBG_printf("mdns_query_async_new service=%s proto=%s timeout=%u", PSTR("_kfcmdns"), PSTR("_udp"), timeout);

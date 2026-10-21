@@ -10,6 +10,7 @@
 #include <Mutex.h>
 #include "mdns_plugin.h"
 #include "at_mode.h"
+#include "task_wdt_scope.h"
 
 using namespace KFCJson;
 
@@ -140,14 +141,12 @@ bool MDNSPlugin::atModeHandler(AtModeArgs &args)
                 if (started) {
                     _Scheduler.add(timeout, false, [args, output, this](Event::CallbackTimerPtr timer) {
                         #if ESP32
-                            if (esp_task_wdt_add(nullptr) != ESP_OK) {
-                                __DBG_printf_E("esp_task_wdt_add failed");
-                            }
+                            // the loop task is registered with the watchdog for good: only feed it here
+                            TaskWdtScope wdt;
                             while(output->poll(1000)) {
                                 esp_task_wdt_reset();
                                 __LDBG_printf("poll repeat");
                             }
-                            esp_task_wdt_delete(NULL);
                         #endif
                         MUTEX_LOCK_BLOCK(output->_lock) {
                             output->end();

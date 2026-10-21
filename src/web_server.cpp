@@ -689,7 +689,7 @@ static String _getUrlAndQueryFromRequest(AsyncWebServerRequest *request)
             log.print(F("\" failed"));
         }
         #if WEBSERVER_LOG_HEAP
-            log.printf_P(PSTR(" heap=%u/%u min=%u"), ESP.getFreeHeap(), ESP.getMaxFreeBlockSize(), webServerHeapLowWaterMark());
+            log.printf_P(PSTR(" heap=%u/%u min=%u"), ESP.getFreeHeap(), webServerMaxFreeBlock(), webServerHeapLowWaterMark());
         #endif
         Serial.println(log);
     }
@@ -971,7 +971,10 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
                     });
                 #endif
                 if (!_canCreateForm()) {
-                    return _beginLowMemoryResponse(request);
+                    // with the headers of the caller: a login that lands here keeps its SID cookie
+                    auto response = _beginLowMemoryResponse(request);
+                    headers.setResponseHeaders(response);
+                    return response;
                 }
                 FormUI::Form::BaseForm *form = new SettingsForm(nullptr);
                 plugin->createConfigureForm(PluginComponent::FormCallbackType::CREATE_GET, formName, *form, request);
@@ -1003,7 +1006,9 @@ AsyncWebServerResponse *Plugin::_beginFileResponse(const FileMapping &mapping, c
             if (isForm) {
                 config.discard(); // releases the writeable copies, the next request reads them again
             }
-            return _beginLowMemoryResponse(request);
+            auto lowMemory = _beginLowMemoryResponse(request);
+            headers.setResponseHeaders(lowMemory);
+            return lowMemory;
         }
         headers.addNoCache();
     }
@@ -1062,11 +1067,7 @@ bool Plugin::_canRenderTemplate(bool isForm)
         }
     #endif
     auto freeHeap = ESP.getFreeHeap();
-    #if ESP8266
-        auto maxBlock = ESP.getMaxFreeBlockSize();
-    #else
-        auto maxBlock = ESP.getMaxAllocHeap();
-    #endif
+    auto maxBlock = webServerMaxFreeBlock();
     if (freeHeap >= WEBSERVER_FORM_MIN_FREE_HEAP && maxBlock >= WEBSERVER_FORM_MIN_FREE_BLOCK) {
         return true;
     }
@@ -1232,7 +1233,7 @@ bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, Asy
         __LDBG_printf("HTTP post %s", path.c_str());
         headers.addNoCache(true);
         #if WEBSERVER_LOG_HEAP
-            Serial.printf_P(PSTR("POST %s body=%u params=%u heap=%u/%u min=%u\n"), path.c_str(), request->contentLength(), request->params(), ESP.getFreeHeap(), ESP.getMaxFreeBlockSize(), webServerHeapLowWaterMark());
+            Serial.printf_P(PSTR("POST %s body=%u params=%u heap=%u/%u min=%u\n"), path.c_str(), request->contentLength(), request->params(), ESP.getFreeHeap(), webServerMaxFreeBlock(), webServerHeapLowWaterMark());
         #endif
 
         if (StrView(path).startsWith('/') && path.endsWith(FSPGM(_html))) {
@@ -1268,6 +1269,10 @@ bool Plugin::_handleFileRead(const String &pathIn, bool client_accepts_gzip, Asy
                         });
                         WebTemplate::_aliveRedirection = path.substring(1);
                         mapping = FileMapping(FSPGM(applying_html), true);
+                        // the page needs no form (%ALIVE_REDIRECTION% only), and a form would make the
+                        // render check answer 503 "try again" for a save that was stored
+                        delete webTemplate; // deletes the form
+                        webTemplate = new WebTemplate();
                     }
                     else {
                         // nothing was stored (the NVS could not be opened or a parameter could not be read on a
@@ -1391,11 +1396,14 @@ void Plugin::handleFormData(const String &formName, AsyncWebServerRequest *reque
             if (action == WebSocketAction::SAVE && modified) {
                 __LDBG_printf("saving modified data");
                 // save current and previous changes from apply
-                config.write();
+                if (config.write() != Configuration::WriteResultType::SUCCESS) {
+                    // nothing was stored (NVS open failed or a parameter could not be read), the changes are discarded
+                    code = 503;
+                }
             }
             // only reconfigure if the form has changed
             // if config is dirty, those changes have been applied already
-            if (form->hasChanged()) {
+            if (code == 200 && form->hasChanged()) {
                 __LDBG_printf("reconfigure plugin=%s", plugin.getName());
                 plugin.reconfigure(formName);
             }

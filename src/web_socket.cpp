@@ -15,31 +15,7 @@
 #include "../src/plugins/plugins.h"
 #include  "spgm_auto_def.h"
 
-#if ESP32
-
-    // Adds the calling task to the task watchdog for a long send loop (esp_task_wdt_reset() in the loop)
-    // and removes it afterwards - but only if it was not registered already: safeSend() also runs in the
-    // async_tcp task, which registered itself, and deleting it there unregistered AsyncTCP's watchdog
-    // ("Failed to remove loop task from WDT")
-    class TaskWdtScope {
-    public:
-        TaskWdtScope() :
-            _added(esp_task_wdt_status(nullptr) == ESP_ERR_NOT_FOUND && esp_task_wdt_add(nullptr) == ESP_OK)
-        {
-        }
-
-        ~TaskWdtScope()
-        {
-            if (_added) {
-                esp_task_wdt_delete(nullptr);
-            }
-        }
-
-    private:
-        bool _added;
-    };
-
-#endif
+#include "task_wdt_scope.h"
 
 #if DEBUG_WEB_SOCKETS
 #    include <debug_helper_enable.h>

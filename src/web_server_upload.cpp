@@ -144,6 +144,9 @@ void AsyncUpdateWebHandler::handleUpload(AsyncWebServerRequest *request, const S
 {
     auto status = _validateSession(request, false);
     if (!status) {
+        // no session: the rest of the image is not received (and the session not checked per chunk), the
+        // request is deleted when this callback returns
+        asyncClientCloseNow(request->client());
         return;
     }
 

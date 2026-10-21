@@ -827,7 +827,12 @@ void ClockPlugin::getStatus(Print &output)
             output.print(_getAnimationName(_config.getAnimation()));
             #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
                 if (_config.visualizer.input == uint8_t(Clock::VisualizerType::AudioInputType::MICROPHONE)) {
-                    output.printf_P(PSTR(", I2S Microphone, Loudness Gain %u, Band Gain %u"), _config.visualizer.mic_loudness_gain, _config.visualizer.mic_band_gain);
+                    if (_config.visualizer.mic_agc) {
+                        output.printf_P(PSTR(", I2S Microphone, Automatic Gain, Silence -%udBFS, Range %udB"), _config.visualizer.mic_silence, _config.visualizer.mic_range);
+                    }
+                    else {
+                        output.printf_P(PSTR(", I2S Microphone, Loudness Gain %u, Band Gain %u"), _config.visualizer.mic_loudness_gain, _config.visualizer.mic_band_gain);
+                    }
                 }
                 else
             #endif

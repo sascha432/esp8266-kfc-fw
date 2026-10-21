@@ -236,6 +236,24 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                             static_cast<int>(AudioInputType::MICROPHONE)
                         ));
 
+                        form.addObjectGetterSetter(F("v_mag"), FormGetterSetter(cfg.visualizer, mic_agc));
+                        form.addFormUI(F("Automatic Gain"), FormUI::BoolItems());
+
+                        // the automatic gain shows the range below the loudest band, the gains are not used
+                        auto &visualizerMicAgcGroup = form.addDivGroup(F("v_grp_agc"), F("{'i':'#v_mag','s':{'1':'$T.show()'},'m':'$T.hide()'}"));
+
+                        form.addObjectGetterSetter(F("v_msl"), FormGetterSetter(cfg.visualizer, mic_silence));
+                        form.addFormUI(F("Silence Level (-dBFS)"));
+                        cfg.visualizer.addRangeValidatorFor_mic_silence(form);
+
+                        form.addObjectGetterSetter(F("v_mrg"), FormGetterSetter(cfg.visualizer, mic_range));
+                        form.addFormUI(F("Dynamic Range (dB)"));
+                        cfg.visualizer.addRangeValidatorFor_mic_range(form);
+
+                        visualizerMicAgcGroup.end();
+
+                        auto &visualizerMicGainGroup = form.addDivGroup(F("v_grp_mgn"), F("{'i':'#v_mag','s':{'0':'$T.show()'},'m':'$T.hide()'}"));
+
                         form.addObjectGetterSetter(F("v_mlg"), cfg.visualizer, cfg.visualizer.get_bits_mic_loudness_gain, cfg.visualizer.set_bits_mic_loudness_gain);
                         form.addFormUI(F("Microphone Loudness Gain"));
                         cfg.visualizer.addRangeValidatorFor_mic_loudness_gain(form);
@@ -243,6 +261,8 @@ void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI:
                         form.addObjectGetterSetter(F("v_mbg"), cfg.visualizer, cfg.visualizer.get_bits_mic_band_gain, cfg.visualizer.set_bits_mic_band_gain);
                         form.addFormUI(F("Microphone Band Gain"));
                         cfg.visualizer.addRangeValidatorFor_mic_band_gain(form);
+
+                        visualizerMicGainGroup.end();
 
                         visualizerMicGroup.end();
                     #endif

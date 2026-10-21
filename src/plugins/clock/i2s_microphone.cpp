@@ -31,6 +31,11 @@ static constexpr float kBandScale = 3.0f * 255.0f;          // sqrt(peak) * 3 * 
 static constexpr float kBandOffset = 4.0f;
 static constexpr float kLoudnessScale = 128.0f * 10.0f;     // mic_loudness_gain 275 = 0.215 * peak
 
+static float amplitudeToDb(float amplitude)
+{
+    return 20.0f * log10f(amplitude + 1e-9f);
+}
+
 void IRAM_ATTR I2SMicrophoneHandler(void *clsPtr)
 {
     reinterpret_cast<I2SMicrophone *>(clsPtr)->task();
@@ -47,16 +52,18 @@ bool I2SMicrophone::_allocate()
     return _bins && _vReal && _vImag && _window && _readBuffer && _windowFactors;
 }
 
-I2SMicrophone::I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, uint8_t i2sSck, uint8_t *data, size_t dataSize, uint8_t &loudnessLeft, uint8_t &loudnessRight, float loudnessGain, float bandGain) :
+I2SMicrophone::I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, uint8_t i2sSck, uint8_t *data, size_t dataSize, uint8_t &loudnessLeft, uint8_t &loudnessRight, const Settings &settings) :
     _taskHandle(nullptr),
     _i2sPort(i2sPort),
     _data(data),
     _dataSize(dataSize),
     _loudnessLeft(loudnessLeft),
     _loudnessRight(loudnessRight),
-    _loudnessGain(loudnessGain),
-    _bandGain(bandGain),
-    _magnitudeScale(0)
+    _settings(settings),
+    _magnitudeScale(0),
+    _referenceDb(settings.silenceDb),
+    _loudestDb(-120.0f),
+    _lastUpdate(millis())
 {
     i2s_driver_uninstall(_i2sPort);
 
@@ -220,11 +227,29 @@ void I2SMicrophone::readI2S()
         memcpy(window.data() + (kFftSize - count), readBuffer.data(), count * sizeof(int16_t));
     }
 
-    // loudness is the peak of the new samples, same scale as BASS_WASAPI_GetLevel() >> 7
+    // loudness is the peak of the new samples, same scale as BASS_WASAPI_GetLevel() >> 7, or with
+    // the automatic gain the RMS of the new samples without the DC offset
     int32_t peak = 0;
-    for (size_t i = 0; i < count; i++) {
-        const auto value = static_cast<int32_t>(readBuffer[i]);
-        peak = std::max(peak, value < 0 ? -value : value);
+    float rmsDb = 0;
+    if (_settings.agc) {
+        float sum = 0;
+        for (size_t i = 0; i < count; i++) {
+            sum += readBuffer[i];
+        }
+        const float sampleMean = sum / count;
+        float power = 0;
+        for (size_t i = 0; i < count; i++) {
+            const float value = (readBuffer[i] - sampleMean) / 32768.0f;
+            power += value * value;
+        }
+        // +3 dB: the RMS of a sine is 3 dB below its peak
+        rmsDb = 10.0f * log10f(power / count + 1e-12f) + 3.0f;
+    }
+    else {
+        for (size_t i = 0; i < count; i++) {
+            const auto value = static_cast<int32_t>(readBuffer[i]);
+            peak = std::max(peak, value < 0 ? -value : value);
+        }
     }
 
     // remove the DC offset of the microphone and apply the window
@@ -244,6 +269,8 @@ void I2SMicrophone::readI2S()
     _fft->complexToMagnitude();
 
     // peak of every band, the bin of the upper edge belongs to the next band
+    float bandDb[kNumBands];
+    float loudestDb = -120.0f;
     uint16_t b0 = 0;
     for (size_t i = 0; i < _dataSize; i++) {
         const uint16_t b1 = (*_bins)[i];
@@ -260,19 +287,52 @@ void I2SMicrophone::readI2S()
         }
         b0 = b1;
 
+        if (_settings.agc) {
+            // the bands are mapped after the loudest band is known
+            bandDb[i] = amplitudeToDb(magnitude * _magnitudeScale);
+            loudestDb = std::max(loudestDb, bandDb[i]);
+            continue;
+        }
+
         // amplitude relative to full scale without the noise floor
         const float value = magnitude * _magnitudeScale - kNoiseLevel;
-        int32_t output = value > 0 ? static_cast<int32_t>(sqrtf(value * _bandGain) * kBandScale - kBandOffset) : 0;
-        output = std::clamp<int32_t>(output, 0, 255);
-        // slower falloff to reduce flickering
-        if (kPeakDecay && output < _data[i]) {
-            output = std::max<int32_t>(output, _data[i] - kPeakDecay);
-        }
-        _data[i] = static_cast<uint8_t>(output);
+        int32_t output = value > 0 ? static_cast<int32_t>(sqrtf(value * _settings.bandGain) * kBandScale - kBandOffset) : 0;
+        _setBand(i, output);
     }
 
-    // we have mono only
-    _loudnessLeft = _loudnessRight = static_cast<uint8_t>(std::min(255.0f, peak * _loudnessGain / kLoudnessScale));
+    if (!_settings.agc) {
+        // we have mono only
+        _loudnessLeft = _loudnessRight = static_cast<uint8_t>(std::min(255.0f, peak * _settings.loudnessGain / kLoudnessScale));
+        return;
+    }
+
+    // automatic gain: the reference follows the loudest band at once, falls slowly and never below
+    // the silence level. the range below the reference is shown as 0-255
+    const uint32_t now = millis();
+    const float elapsed = (now - _lastUpdate) / 1000.0f;
+    _lastUpdate = now;
+    _loudestDb = loudestDb;
+    _referenceDb = std::max(_settings.silenceDb, loudestDb > _referenceDb ? loudestDb : _referenceDb - kAgcReleaseDbPerSecond * elapsed);
+
+    const bool active = loudestDb > _settings.silenceDb;
+    const float bottom = _referenceDb - _settings.rangeDb;
+    const float scale = 255.0f / _settings.rangeDb;
+    for (size_t i = 0; i < _dataSize; i++) {
+        // silence: the bars fall to 0
+        _setBand(i, active ? static_cast<int32_t>((bandDb[i] - bottom) * scale + 0.5f) : 0);
+    }
+    const int32_t loudness = active ? static_cast<int32_t>((rmsDb - bottom) * scale + 0.5f) : 0;
+    _loudnessLeft = _loudnessRight = static_cast<uint8_t>(std::clamp<int32_t>(loudness, 0, 255));
+}
+
+void I2SMicrophone::_setBand(size_t index, int32_t output)
+{
+    output = std::clamp<int32_t>(output, 0, 255);
+    // slower falloff to reduce flickering
+    if (kPeakDecay && output < _data[index]) {
+        output = std::max<int32_t>(output, _data[index] - kPeakDecay);
+    }
+    _data[index] = static_cast<uint8_t>(output);
 }
 
 #endif

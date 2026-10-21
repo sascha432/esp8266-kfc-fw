@@ -392,7 +392,7 @@ namespace KFCConfigurationClasses {
                         // fire
                         CREATE_UINT32_BITFIELD_MIN_MAX(cooling, 8, 0, 255, 60, 1);
                         CREATE_UINT32_BITFIELD_MIN_MAX(sparking, 8, 0, 255, 95, 1);
-                        CREATE_UINT32_BITFIELD_MIN_MAX(speed, 8, 1, 100, 50, 1); // milliseconds between two updates
+                        CREATE_UINT32_BITFIELD_MIN_MAX(speed, 8, 1, 100, 25, 1); // milliseconds between two updates
                         CREATE_COLOR_FIELD(factor, 0x000000);
                         // the enum values match the pixel mapping of FireField::copyTo()
                         CREATE_ENUM_D_BITFIELD(direction, DirectionType, DirectionType::VERTICAL);
@@ -445,9 +445,18 @@ namespace KFCConfigurationClasses {
                     CREATE_ENUM_D_BITFIELD(peak_show, VisualizerPeakType, VisualizerPeakType::FALLING_DOWN);
                     CREATE_ENUM_D_BITFIELD(type, VisualizerAnimationType, VisualizerAnimationType::SPECTRUM_RAINBOW_BARS_2D);
                     CREATE_ENUM_BITFIELD_SIZE_DEFAULT(orientation, 1, OrientationType, std::underlying_type<OrientationType>::type, uint8, OrientationType::HORIZONTAL);
-                    CREATE_ENUM_BITFIELD_SIZE_DEFAULT(input, 2, AudioInputType, std::underlying_type<AudioInputType>::type, uint8, AudioInputType(int(AudioInputType::MIN) + 1));
+                    // the microphone is the default input if the build has one
+                    #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
+                        CREATE_ENUM_BITFIELD_SIZE_DEFAULT(input, 2, AudioInputType, std::underlying_type<AudioInputType>::type, uint8, AudioInputType::MICROPHONE);
+                    #else
+                        CREATE_ENUM_BITFIELD_SIZE_DEFAULT(input, 2, AudioInputType, std::underlying_type<AudioInputType>::type, uint8, AudioInputType(int(AudioInputType::MIN) + 1));
+                    #endif
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_loudness_gain, 10, 1, 1000, 275, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_band_gain, 10, 1, 1000, 175, 1);
+                    // automatic gain of the microphone: the bands are shown relative to the loudest band
+                    CREATE_UINT8_BITFIELD_MIN_MAX(mic_silence, 8, 20, 90, 62, 1); // -dBFS, below is silence
+                    CREATE_UINT8_BITFIELD_MIN_MAX(mic_range, 8, 10, 80, 40, 1); // dB below the loudest band shown as 0-255
+                    CREATE_BOOL_BITFIELD(mic_agc);
 
                     AudioReactionType audio_reaction;
                     PlasmaAudioType plasma_audio;
@@ -468,6 +477,9 @@ namespace KFCConfigurationClasses {
                         input(kDefaultValueFor_input),
                         mic_loudness_gain(kDefaultValueFor_mic_loudness_gain),
                         mic_band_gain(kDefaultValueFor_mic_band_gain),
+                        mic_silence(kDefaultValueFor_mic_silence),
+                        mic_range(kDefaultValueFor_mic_range),
+                        mic_agc(true),
                         audio_reaction(),
                         plasma_audio(),
                         fire_audio()

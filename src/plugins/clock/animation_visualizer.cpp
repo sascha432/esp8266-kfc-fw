@@ -103,7 +103,7 @@ void VisualizerAnimation::begin()
                     IOT_LED_MATRIX_I2S_MICROPHONE_SCK,
                     _storedData.data(), _storedData.size(),
                     _storedLoudness._leftLevel, _storedLoudness._rightLevel,
-                    _cfg.mic_loudness_gain, _cfg.mic_band_gain / 10.0f
+                    VisualizerMicrophone::Settings(_cfg.mic_loudness_gain, _cfg.mic_band_gain / 10.0f, _cfg.mic_agc, -static_cast<float>(_cfg.mic_silence), _cfg.mic_range)
                 );
                 if (!_microphone->isRunning()) {
                     delete _microphone;

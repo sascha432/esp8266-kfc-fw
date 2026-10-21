@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - LED matrix: automatic gain for the I2S microphone, the bands are shown relative to the loudest band with a silence level and a dynamic range
  - Weather station: fixed the OpenWeatherMap poll interval, a successful request scheduled the next one after 1/10 of the interval (2 minutes minimum) and exhausted the daily API limit
  - ESP32 builds: AsyncTCP 1.1.1 (me-no-dev) is replaced by the maintained fork esp32async/AsyncTCP 3.5.0, 1.1.1 deadlocked under parallel requests and ran stale queued events on freed clients
  - ESP8266 mDNS discovery: a TXT item with a NUL key wrote one row behind a stack array (remote packet)

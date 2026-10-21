@@ -29,9 +29,31 @@ public:
     // previous implementation was 2350 with a 256 point FFT)
     static constexpr float kNoiseLevel = 0.00112f;
     static constexpr uint8_t kPeakDecay = 6;                // peak falloff per update, 0 = disabled
+    // automatic gain: the reference follows the loudest band at once and falls this many dB per second
+    static constexpr float kAgcReleaseDbPerSecond = 3.0f;
+
+    // automatic gain (agc): the range below the loudest band is shown as 0-255, so quiet and loud
+    // music both fill the bars, below the silence level (dBFS) it is silence. without it the
+    // loudness and band gains scale the input
+    struct Settings {
+        float loudnessGain;
+        float bandGain;
+        bool agc;
+        float silenceDb;
+        float rangeDb;
+
+        Settings(float _loudnessGain, float _bandGain, bool _agc, float _silenceDb, float _rangeDb) :
+            loudnessGain(_loudnessGain),
+            bandGain(_bandGain),
+            agc(_agc),
+            silenceDb(_silenceDb),
+            rangeDb(_rangeDb)
+        {
+        }
+    };
 
 public:
-    I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, uint8_t i2sSck, uint8_t *data, size_t dataSize, uint8_t &loudnessLeft, uint8_t &loudnessRight, float loudnessGain, float bandGain);
+    I2SMicrophone(i2s_port_t i2sPort, uint8_t i2sSd, uint8_t i2sWs, uint8_t i2sSck, uint8_t *data, size_t dataSize, uint8_t &loudnessLeft, uint8_t &loudnessRight, const Settings &settings);
     ~I2SMicrophone();
 
     void task();
@@ -40,6 +62,17 @@ public:
     bool isRunning() const
     {
         return _taskHandle != nullptr;
+    }
+
+    // the loudest band of the last update and the reference of the automatic gain, dBFS
+    float getLoudestDb() const
+    {
+        return _loudestDb;
+    }
+
+    float getReferenceDb() const
+    {
+        return _referenceDb;
     }
 
 private:
@@ -52,6 +85,8 @@ private:
 
     bool _allocate();
     void _fadeOut();
+    // clamps the value to 0-255 and applies the peak falloff
+    void _setBand(size_t index, int32_t output);
 
 private:
     std::unique_ptr<_binsType> _bins;
@@ -68,7 +103,9 @@ private:
     size_t _dataSize;
     uint8_t &_loudnessLeft;
     uint8_t &_loudnessRight;
-    float _loudnessGain;
-    float _bandGain;
+    Settings _settings;
     float _magnitudeScale;
+    float _referenceDb;
+    float _loudestDb;
+    uint32_t _lastUpdate;
 };

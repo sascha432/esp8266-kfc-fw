@@ -90,13 +90,13 @@ void WeatherStationBase::_wifiCallback(WiFiCallbacks::EventType event, void *pay
 void WeatherStationBase::_pollDataUpdateLastTime(bool success)
 {
     auto next = _config.getPollIntervalMillis(); // default reload time
-    // reset retries on success
-    if (success) {
-        _pollDataRetries = 0;
-    }
     // add timer for next request
     if (next) {
-        if (_pollDataRetries > kPollDataRetries) {
+        if (success) {
+            // reset retries on success and use the configured interval
+            _pollDataRetries = 0;
+        }
+        else if (_pollDataRetries >= kPollDataRetries) {
             // max retries reached, wait one hour...
             next = 3600UL * 1000UL;
         }

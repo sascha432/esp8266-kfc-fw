@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Weather station: fixed the OpenWeatherMap poll interval, a successful request scheduled the next one after 1/10 of the interval (2 minutes minimum) and exhausted the daily API limit
  - ESP32 builds: AsyncTCP 1.1.1 (me-no-dev) is replaced by the maintained fork esp32async/AsyncTCP 3.5.0, 1.1.1 deadlocked under parallel requests and ran stale queued events on freed clients
  - ESP8266: fixed a heap leak of 48 byte per configuration access that reopened the NVS handle (the partition was deinitialized under an open handle, every status page leaked)
  - Web server: a request is refused with 503 (Retry-After) when the free heap is too low to handle it, a settings form is only built and a template page only rendered with the heap for it, a form whose configuration could not be read from the NVS is not shown and a save that could not be stored answers 503 instead of "applying" (the ESP8266 with 1024 pixels crashed in the WiFi stack or aborted on a failed `new`)

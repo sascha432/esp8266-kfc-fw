@@ -62,31 +62,21 @@ static void delayedSetup()
 {
     // periodic wifi check to detect connection errors
 
-    // check if wifi is up
+    // check if wifi is up once per minute, each network gets WIFI_MAX_ERRORS minutes
     static constexpr uint32_t kCheckWiFiConnectionIntervalSeconds = 60;
-    // increase interval by 15 seconds after each error
-    static constexpr uint32_t kWiFiErrorIntervalIncrease = 15;
-    // maximum reconnect interval is 5 minutes
-    static constexpr uint32_t kCheckWiFiConnectionMaxIntervalSeconds = 300;
-    // current timer interval in seconds
-    static uint32_t resetTimer = kCheckWiFiConnectionIntervalSeconds;
 
     _Scheduler.add(Event::seconds(kCheckWiFiConnectionIntervalSeconds), true, [](Event::CallbackTimerPtr timer) {
         if (System::Flags::getConfig().is_station_mode_enabled) {
-            __LDBG_printf("wifi=%u timer=%u err=%u msg=%s", config.getWiFiUp(), resetTimer, config.getWiFiErrors(), __S(config.getLastError()));
+            __LDBG_printf("wifi=%u err=%u msg=%s", config.getWiFiUp(), config.getWiFiErrors(), __S(config.getLastError()));
             if (!config.getWiFiUp()) {
                 // register wifi error, selects the next network after WIFI_MAX_ERRORS
                 config.registerWiFiError();
-                timer->updateInterval(Event::seconds(resetTimer));
-                // increase reset timer in case connecting takes longer than kWiFiErrorIntervalIncrease seconds
-                resetTimer = std::min<uint32_t>(resetTimer + kWiFiErrorIntervalIncrease, kCheckWiFiConnectionMaxIntervalSeconds);
                 // restart entire wifi subsystem and keep the network selected by registerWiFiError()
                 config.reconfigureWiFi(F("Reconfiguring WiFi adapter"));
             }
             else {
-                // reset timer interval once wifi is connected successfully
-                resetTimer = kCheckWiFiConnectionIntervalSeconds;
-                timer->updateInterval(Event::seconds(kCheckWiFiConnectionIntervalSeconds));
+                // errors only count while the connection is down, old errors must not shorten the next outage
+                config.setWiFiErrors(0);
             }
         }
     });

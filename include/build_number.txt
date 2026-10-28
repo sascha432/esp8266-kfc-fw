@@ -5,11 +5,73 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 15868
-date   = 2026-10-21 16:41:37
-env    = wled_esp32_controller_neopixelbus
+number = 15930
+date   = 2026-10-28 00:15:56
+env    = led_strip_xmas_serial
 
 ; history, newest first: <number> <date> <time> <environments>
+15930 2026-10-28 00:15:56 led_strip_xmas_serial
+15929 2026-10-24 11:28:25 single_hexagon
+15928 2026-10-24 11:26:04 wled_esp32_controller_neopixelbus
+15927 2026-10-24 09:17:26 led_strip_balcony
+15926 2026-10-24 08:42:38 1ch_dimmer_181
+15925 2026-10-24 08:41:50 1ch_dimmer_180
+15924 2026-10-24 08:41:11 1ch_dimmer_179
+15923 2026-10-24 08:40:23 1ch_dimmer_133
+15922 2026-10-24 08:39:45 1ch_dimmer_178
+15921 2026-10-24 08:38:56 1ch_dim_pm_177
+15920 2026-10-24 08:38:04 1ch_dim_pm_84
+15919 2026-10-24 08:37:16 1ch_dim_pm_91
+15918 2026-10-24 08:36:28 1ch_dim_pm_90
+15917 2026-10-24 08:35:41 1ch_dim_pm_174
+15916 2026-10-24 08:34:51 wled_esp32_controller_neopixelbus
+15915 2026-10-24 08:25:56 bme280_48
+15914 2026-10-24 08:25:05 blindsctrl_81r
+15913 2026-10-24 08:24:24 blindsctrl_80l
+15912 2026-10-24 08:20:48 dc_dimmer_76
+15911 2026-10-24 08:19:44 dc_dimmer_75
+15910 2026-10-24 07:33:46 wled_esp32_controller_neopixelbus
+15909 2026-10-24 02:20:20 led_strip_candle
+15908 2026-10-24 02:19:15 led_strip_xmas
+15907 2026-10-24 02:18:11 led_strip_katana
+15906 2026-10-24 02:17:08 led_strip_frame
+15905 2026-10-24 02:16:30 led_strip_balcony
+15904 2026-10-24 02:15:33 single_hexagon
+15903 2026-10-24 02:07:48 clockv2_100
+15902 2026-10-24 02:01:30 wled_esp32_controller_neopixelbus
+15901 2026-10-24 00:29:20 wt32_sc01_test1
+15900 2026-10-24 00:28:33 wled_esp32_controller_neopixelbus
+15899 2026-10-24 00:26:30 ws_99
+15898 2026-10-24 00:25:18 ws_96
+15897 2026-10-24 00:24:03 ws_95
+15896 2026-10-24 00:22:25 dc_dimmer_76
+15895 2026-10-24 00:20:35 dc_dimmer_75
+15894 2026-10-24 00:18:46 atomic_sunv2_1_97
+15893 2026-10-24 00:17:02 atomic_sun_98
+15892 2026-10-24 00:15:10 1ch_dimmer_181
+15891 2026-10-24 00:13:17 1ch_dimmer_180
+15890 2026-10-24 00:11:34 1ch_dimmer_179
+15889 2026-10-24 00:09:53 1ch_dimmer_133
+15888 2026-10-24 00:08:11 1ch_dimmer_178
+15887 2026-10-24 00:06:26 1ch_dim_pm_177
+15886 2026-10-24 00:04:42 1ch_dim_pm_84
+15885 2026-10-24 00:02:58 1ch_dim_pm_91
+15884 2026-10-24 00:01:11 1ch_dim_pm_90
+15883 2026-10-23 23:59:23 1ch_dim_pm_174
+15882 2026-10-23 23:57:43 1ch_dimmer_74
+15881 2026-10-23 23:56:09 phone_ctrl
+15880 2026-10-23 23:54:38 rlybrd_85
+15879 2026-10-23 23:52:55 led_strip_candle
+15878 2026-10-23 23:51:08 led_strip_xmas
+15877 2026-10-23 23:49:23 led_strip_katana
+15876 2026-10-23 23:47:42 led_strip_frame
+15875 2026-10-23 23:45:59 led_strip_balcony
+15874 2026-10-23 23:44:08 single_hexagon
+15873 2026-10-23 23:42:11 hexpanel_17
+15872 2026-10-23 23:40:34 bme280_48
+15871 2026-10-23 23:38:59 blindsctrl_81r
+15870 2026-10-23 23:37:27 blindsctrl_80l
+15869 2026-10-23 23:35:35 clockv2_100
 15868 2026-10-21 16:41:37 wled_esp32_controller_neopixelbus
 15867 2026-10-21 16:36:05 wled_esp32_controller_neopixelbus
 15866 2026-10-21 16:29:03 wled_esp32_controller_neopixelbus

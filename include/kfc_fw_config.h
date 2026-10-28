@@ -388,7 +388,7 @@ inline bool KFCFWConfiguration::registerWiFiError()
 {
     __LDBG_printf("err=%u wifi=%u", _wifiErrorCount, _wifiNumActive);
     // change wifi network after WIFI_MAX_ERRORS errors
-    if (++_wifiErrorCount > WIFI_MAX_ERRORS) {
+    if (++_wifiErrorCount >= WIFI_MAX_ERRORS) {
         // reset errors
         _wifiErrorCount = 0;
         // get networks

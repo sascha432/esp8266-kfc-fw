@@ -1,7 +1,16 @@
 from zeroconf import ServiceBrowser, Zeroconf
 
-TYPE = "_kfcmdns._udp.local."
+KFC_TYPE = "_kfcmdns._udp.local."
+# devices with other firmware that only announce a web server, matched by the instance name
+HTTP_TYPE = "_http._tcp.local."
+HTTP_PREFIXES = ('pixeled-', 'hassctrl-')
 FORMAT = "%-16.16s | %-22.22s | %s | %-16.16s | %-32.32s | %-19.19s | %-12.12s"
+
+def get_txt(info, key):
+    value = info.properties.get(key)
+    if value is None:
+        return '???'
+    return value.decode('ascii', 'replace')
 
 class MyListener:
 
@@ -12,35 +21,31 @@ class MyListener:
         pass
 
     def add_service(self, zeroconf, type, name):
-        info = zeroconf.get_service_info(type, name)
-        # print("Service %s added, service info: %s" % (name, info))
-        addresses = []
-        for addr in info.addresses:
-            addresses.append("%d.%d.%d.%d" % (addr[0], addr[1], addr[2], addr[3]))
-        name = name.replace('.' + TYPE, '')
-        try:
-            version = '%s Build %s ' % (info.properties[b'v'].decode('ascii') , info.properties[b'b'].decode('ascii'))
-        except:
-            version = '???'
-            version = str(info.properties)
-            pass
-        try:
-            title = info.properties[b't'].decode('ascii')
-        except:
-            title = '???'
-            pass
-        try:
-            device = info.properties[b'd'].decode('ascii')
-        except:
-            device = '???'
-            pass
+        name = name[:-len('.' + type)] if name.endswith('.' + type) else name
+        prefix = None
+        if type == HTTP_TYPE:
+            prefix = next((p for p in HTTP_PREFIXES if name.lower().startswith(p)), None)
+            if prefix is None:
+                return
+        info = zeroconf.get_service_info(type, name + '.' + type)
+        if info is None:
+            return
+        addresses = info.parsed_addresses()
+        if prefix:
+            title = '-'
+            version = '-'
+            device = prefix.rstrip('-')
+        else:
+            version = '%s Build %s' % (get_txt(info, b'v'), get_txt(info, b'b'))
+            title = get_txt(info, b't')
+            device = get_txt(info, b'd')
         print(FORMAT % (name, info.server, ("%- 5u" % (info.port)), ', '.join(addresses), title, version, device))
 
 
 zeroconf = Zeroconf()
 listener = MyListener()
 
-browser = ServiceBrowser(zeroconf, TYPE, listener)
+browser = ServiceBrowser(zeroconf, [KFC_TYPE, HTTP_TYPE], listener)
 
 try:
     print("----------------------")

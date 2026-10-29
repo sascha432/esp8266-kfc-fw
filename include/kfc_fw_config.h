@@ -111,6 +111,9 @@ public:
     void setup();
     bool reconfigureWiFi(const __FlashStringHelper *msg = nullptr, uint8_t configNum = kKeepWiFiNetwork);
     bool connectWiFi(uint8_t configNum = kKeepWiFiNetwork, bool ignoreSoftAP = false);
+    // select the active network (scan for the auto priorities, IP configuration) and start it with WiFi.begin()
+    // the adapter is not reset, the station mode must be enabled (connectWiFi() does that)
+    bool connectWiFiStation();
     void read(bool wakeup = false);
     Configuration::WriteResultType write(); // logs a failure, the caller decides what to do with it
     #if defined(HAVE_NVS_FLASH)
@@ -174,6 +177,10 @@ public:
 
     static void apStandbyModeHandler(WiFiCallbacks::EventType event, void *payload);
 
+    // switch the soft AP off, clearConfig also clears its SSID/password in the SDK (WiFi.softAPdisconnect())
+    // ESP8266: stops IGMP on the AP interface first, a pending multicast report (mDNS) is sent through the freed interface otherwise
+    static void disableSoftAP(bool clearConfig = false);
+
     // return id of the active wifi configuration (station number in the config)
     // use this for any lookup in Network::Settings::getConfig().stations[]
     StationConfigType getWiFiConfigurationId() const;
@@ -219,8 +226,11 @@ public:
     static void setWiFiConnectLedMode();
 
     // return seconds since WiFi has been connected
-    // 0 = not connected
+    // 0 = not connected, a link-local address does not count
     static uint32_t getWiFiUp();
+
+    // 169.254.0.0/16, lwIP's AutoIP fallback without a DHCP answer
+    static bool isLinkLocal(const IPAddress &ip);
 
     #ifndef DISABLE_TWO_WIRE
         static TwoWire &initTwoWire(bool reset = false, Print *output = nullptr);
@@ -298,7 +308,7 @@ inline void KFCFWConfiguration::_apStandbyModeHandler(WiFiCallbacks::EventType e
 {
     __LDBG_printf("event=%u", event);
     if (event == WiFiCallbacks::EventType::CONNECTED) {
-        WiFi.enableAP(false);
+        disableSoftAP();
         Logger_notice(F("AP Mode disabled"));
     }
     else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
@@ -310,6 +320,11 @@ inline void KFCFWConfiguration::_apStandbyModeHandler(WiFiCallbacks::EventType e
 inline void KFCFWConfiguration::apStandbyModeHandler(WiFiCallbacks::EventType event, void *payload)
 {
     config._apStandbyModeHandler(event);
+}
+
+inline bool KFCFWConfiguration::isLinkLocal(const IPAddress &ip)
+{
+    return ip[0] == 169 && ip[1] == 254;
 }
 
 inline KFCFWConfiguration::StationConfigType KFCFWConfiguration::getWiFiConfigurationId() const

@@ -944,11 +944,11 @@ void ATModeCommands::WiFiCommand(AtModeArgs &args)
                 break;
             case WiFiCommandsType::AP_OFF:
                 args.print(F("disabling AP mode"));
-                WiFi.enableAP(false);
+                KFCFWConfiguration::disableSoftAP();
                 break;
             case WiFiCommandsType::AP_STBY: {
                     args.print(F("disabling AP mode (stand-by is enabled)"));
-                    WiFi.enableAP(false);
+                    KFCFWConfiguration::disableSoftAP();
                     auto &flags = System::Flags::getWriteableConfig();
                     flags.is_softap_standby_mode_enabled = true;
                     flags.is_softap_enabled = false;

@@ -26,6 +26,10 @@
 #endif
 #include "deep_sleep.h"
 #include "PinMonitor.h"
+#if ESP8266
+#    include <lwip/igmp.h>
+#    include <lwip/netif.h>
+#endif
 #include "../src/plugins/plugins.h"
 #if IOT_SWITCH
 #    include "../src/plugins/switch/switch.h"
@@ -257,6 +261,14 @@ void KFCFWConfiguration::_onWiFiDisconnectCb(const WiFiEventStationModeDisconnec
 
 void KFCFWConfiguration::_onWiFiGotIPCb(const WiFiEventStationModeGotIP &event)
 {
+    if (isLinkLocal(event.ip)) {
+        // lwIP (AutoIP) assigns 169.254.x.x after ~4 minutes without a DHCP answer. nothing on the LAN is reachable
+        // with it: it does not count as connected, the WiFi watchdog keeps running and requests DHCP again. counting
+        // it as connected stopped the watchdog and kept the devices offline until the next reboot
+        _wifiUp = 0;
+        Logger_notice(F("No DHCP answer, link-local address %s is not used"), event.ip.toString().c_str());
+        return;
+    }
     _wifiUp = millis_not_zero();
 
     PrintString msg = Network::Settings::getConfig().stations[getWiFiConfigurationId()].isDHCPEnabled() ? F("DHCP") : F("Static configuration");
@@ -1353,9 +1365,32 @@ bool KFCFWConfiguration::reconfigureWiFi(const __FlashStringHelper *msg, uint8_t
     WiFi.setAutoConnect(false);
     WiFi.setAutoReconnect(false);
     WiFi.disconnect(true);
-    WiFi.softAPdisconnect(true);
+    disableSoftAP(true);
 
     return connectWiFi(configNum);
+}
+
+void KFCFWConfiguration::disableSoftAP(bool clearConfig)
+{
+    #if ESP8266
+        // mDNS joins its multicast group on every interface that is up and lwIP sends the join report up to 500 ms
+        // later. when the AP goes down in between (stand-by mode switches it off right after the station connected),
+        // the report went through the freed SDK interface: Exception (2) in igmp_tmr(). mDNS cannot leave the group
+        // itself, it skips interfaces that are down
+        for (auto netIf = netif_list; netIf; netIf = netIf->next) {
+            if (netIf->num == SOFTAP_IF && (netIf->flags & NETIF_FLAG_IGMP)) {
+                igmp_stop(netIf);
+                // mDNS starts IGMP again when the AP comes back
+                netIf->flags &= ~NETIF_FLAG_IGMP;
+            }
+        }
+    #endif
+    if (clearConfig) {
+        WiFi.softAPdisconnect(true);
+    }
+    else {
+        WiFi.enableAP(false);
+    }
 }
 
 bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
@@ -1382,34 +1417,7 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
         WiFi.setAutoConnect(false); // WiFi callbacks have to be installed first during boot
         WiFi.setAutoReconnect(true);
         WiFi.enableSTA(true);
-
-        // wifi connection result
-        bool result;
-        // scan for WiFi networks to get the signal strength, the result changes the order of getStations()
-        auto wifiNum = scanWifiStrength(getWiFiConfigurationNum());
-        // get wifi config for the selected network (index into the ordered list, not the station id)
-        size_t wifiIndex;
-        auto network = Network::WiFi::getNetworkConfigOrdered(wifiNum, wifiIndex);
-        if (network.isDHCPEnabled()) {
-            result = WiFi.config(0U, 0U, 0U, 0U, 0U);
-        }
-        else {
-            result = WiFi.config(network.getLocalIp(), network.getGateway(), network.getSubnet(), network.getDns1(), network.getDns2());
-        }
-        if (!result) {
-            setLastError(PrintString(F("Failed to configure Station Mode with %s"), network.isDHCPEnabled() ? PSTR("DHCP") : PSTR("static address")));
-            Logger_error(F("%s"), getLastError());
-        }
-        else {
-            if (WiFi.begin(Network::WiFi::getSSID(wifiIndex), Network::WiFi::getPassword(wifiIndex)) == WL_CONNECT_FAILED) {
-                setLastError(F("Failed to start Station Mode"));
-                Logger_error(F("%s"), getLastError());
-            }
-            else {
-                __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(wifiIndex));
-                station_mode_success = true;
-            }
-        }
+        station_mode_success = connectWiFiStation();
     }
     else {
         __LDBG_printf("disabling station mode");
@@ -1491,8 +1499,7 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
         }
         else {
             __LDBG_print("disabling AP mode");
-            WiFi.softAPdisconnect(true);
-            WiFi.enableAP(false);
+            disableSoftAP(true);
             ap_mode_success = true;
         }
 
@@ -1523,6 +1530,35 @@ bool KFCFWConfiguration::connectWiFi(uint8_t configNum, bool ignoreSoftAP)
     #endif
 
     return (station_mode_success && ap_mode_success);
+}
+
+bool KFCFWConfiguration::connectWiFiStation()
+{
+    // wifi connection result
+    bool result;
+    // scan for WiFi networks to get the signal strength, the result changes the order of getStations()
+    auto wifiNum = scanWifiStrength(getWiFiConfigurationNum());
+    // get wifi config for the selected network (index into the ordered list, not the station id)
+    size_t wifiIndex;
+    auto network = Network::WiFi::getNetworkConfigOrdered(wifiNum, wifiIndex);
+    if (network.isDHCPEnabled()) {
+        result = WiFi.config(0U, 0U, 0U, 0U, 0U);
+    }
+    else {
+        result = WiFi.config(network.getLocalIp(), network.getGateway(), network.getSubnet(), network.getDns1(), network.getDns2());
+    }
+    if (!result) {
+        setLastError(PrintString(F("Failed to configure Station Mode with %s"), network.isDHCPEnabled() ? PSTR("DHCP") : PSTR("static address")));
+        Logger_error(F("%s"), getLastError());
+        return false;
+    }
+    if (WiFi.begin(Network::WiFi::getSSID(wifiIndex), Network::WiFi::getPassword(wifiIndex)) == WL_CONNECT_FAILED) {
+        setLastError(F("Failed to start Station Mode"));
+        Logger_error(F("%s"), getLastError());
+        return false;
+    }
+    __LDBG_printf("Station Mode SSID %s", Network::WiFi::getSSID(wifiIndex));
+    return true;
 }
 
 const __FlashStringHelper *KFCFWConfiguration::getChipModel()

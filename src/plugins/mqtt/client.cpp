@@ -511,6 +511,15 @@ namespace MQTT {
         else {
             __LDBG_printf("conn=%s", _connection());
         }
+        if (!KFCFWConfiguration::getWiFiUp()) {
+            // ESPAsyncTCP 1.2.2 (lwIP 2) leaks its tcp_pcb when tcp_connect() fails, which it does without a route:
+            // ~190 byte per attempt (the reconnect timer armed by the TCP disconnect fires after WiFi went down).
+            // a link-local address does not count either. the WiFi CONNECTED event connects again
+            __LDBG_printf("WiFi not connected conn=%s", _connection());
+            _Timer(_reconnectTimer).remove();
+            _connState = ConnectionState::IDLE;
+            return;
+        }
         _connState = ConnectionState::PRE_CONNECT;
 
         // remove reconnect timer if running and force disconnect

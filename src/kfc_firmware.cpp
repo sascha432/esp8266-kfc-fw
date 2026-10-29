@@ -26,6 +26,9 @@
 #if HAVE_IOEXPANDER
 #    include <IOExpander.h>
 #endif
+#if ESP32
+#    include <esp_task_wdt.h>
+#endif
 
 #if DEBUG_ALL
 #    include <debug_helper_enable.h>
@@ -64,20 +67,53 @@ static void delayedSetup()
 
     // check if wifi is up once per minute, each network gets WIFI_MAX_ERRORS minutes
     static constexpr uint32_t kCheckWiFiConnectionIntervalSeconds = 60;
+    // restart the device after that many minutes without a connection, 0 = never. the station can stop associating
+    // for good (ESP8266 SDK state machine, the device stayed offline for hours while the networks were up) and only
+    // a reset recovers from that. skipped while a client is connected to the soft AP (stand-by mode)
+    static constexpr uint32_t kRestartAfterOfflineMinutes = 30;
+    // checks that found the connection down in a row, one per minute
+    static uint32_t offlineMinutes = 0;
 
     _Scheduler.add(Event::seconds(kCheckWiFiConnectionIntervalSeconds), true, [](Event::CallbackTimerPtr timer) {
-        if (System::Flags::getConfig().is_station_mode_enabled) {
-            __LDBG_printf("wifi=%u err=%u msg=%s", config.getWiFiUp(), config.getWiFiErrors(), __S(config.getLastError()));
-            if (!config.getWiFiUp()) {
-                // register wifi error, selects the next network after WIFI_MAX_ERRORS
-                config.registerWiFiError();
-                // restart entire wifi subsystem and keep the network selected by registerWiFiError()
-                config.reconfigureWiFi(F("Reconfiguring WiFi adapter"));
-            }
+        if (!System::Flags::getConfig().is_station_mode_enabled) {
+            return;
+        }
+        if (config.getWiFiUp()) {
+            // errors only count while the connection is down, old errors must not shorten the next outage
+            config.setWiFiErrors(0);
+            offlineMinutes = 0;
+            return;
+        }
+        offlineMinutes++;
+        // the SDK keeps reconnecting on its own (auto reconnect), the state goes into the log for the next analysis
+        Logger_notice(F("WiFi down for %u min: #%u err=%u status=%d mode=%d channel=%d ip=%s heap=%u block=%u"),
+            offlineMinutes, config.getWiFiConfigurationId() + 1, config.getWiFiErrors(), static_cast<int>(WiFi.status()),
+            static_cast<int>(WiFi.getMode()), static_cast<int>(WiFi.channel()), WiFi.localIP().toString().c_str(),
+            ESP.getFreeHeap(), webServerMaxFreeBlock()
+        );
+        // select the next network after WIFI_MAX_ERRORS errors and start it with WiFi.begin(). the adapter is not
+        // reset (reconfigureWiFi()): disconnecting and toggling the mode while the SDK runs its own reconnect scan
+        // left the station dead until the next reboot
+        if (config.registerWiFiError()) {
+            config.connectWiFiStation();
+        }
+        #if ESP8266
             else {
-                // errors only count while the connection is down, old errors must not shorten the next outage
-                config.setWiFiErrors(0);
+                // the SDK only retries on its own while it is connecting: after an explicit disconnect (idle) or when it
+                // gave up (wrong password, connect failed) the station is started again, without resetting the adapter
+                auto status = WiFi.status();
+                if (KFCFWConfiguration::isLinkLocal(WiFi.localIP())) {
+                    // associated with a link-local address (no DHCP answer): a new association restarts DHCP
+                    WiFi.reconnect();
+                }
+                else if (status == WL_IDLE_STATUS || status == WL_CONNECT_FAILED || status == WL_WRONG_PASSWORD) {
+                    config.connectWiFiStation();
+                }
             }
+        #endif
+        if (kRestartAfterOfflineMinutes && offlineMinutes >= kRestartAfterOfflineMinutes && WiFi.softAPgetStationNum() == 0) {
+            Logger_error(F("WiFi down for %u minutes, restarting device"), offlineMinutes);
+            config.restartDevice();
         }
     });
 
@@ -335,6 +371,14 @@ void setup()
                     auto endTimeout = millis() + (KFC_BOOT_MENU_TIMEOUT * 1000UL);
 
                     while(millis() < endTimeout) {
+                        // the menu waits 15 seconds: the ESP32 task watchdog (loop task) fired during the wait,
+                        // the reset showed the menu again and the device looped
+                        #if ESP32
+                            esp_task_wdt_reset();
+                        #elif defined(ESP8266)
+                            ESP.wdtFeed();
+                        #endif
+                        delay(1);
                         if (KFC_SAFE_MODE_SERIAL_PORT.available()) {
                             auto ch = KFC_SAFE_MODE_SERIAL_PORT.read();
                             switch(ch) {
@@ -459,7 +503,7 @@ void setup()
             Logger_warning(F("SoftAP is using default password and will be disabled in " _STRINGIFY(SOFTAP_SHUTDOWN_TIME) " minutes..."));
             _Scheduler.add(Event::minutes(SOFTAP_SHUTDOWN_TIME), false, [](Event::CallbackTimerPtr timer) {
                 if (WiFi.getMode() & WIFI_AP) {
-                    WiFi.enableAP(false);
+                    KFCFWConfiguration::disableSoftAP();
                 }
             });
         }

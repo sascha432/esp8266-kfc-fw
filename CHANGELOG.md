@@ -2,7 +2,11 @@
 
 ## Version 0.0.9 (master)
 
- - WiFi watchdog: checks once per minute and changes the network after 5 minutes without a connection, the error count is reset while connected (errors of earlier outages added up and moved the devices to the backup network after a short router restart)
+ - ESP32: the boot menu (multiple resets) fed no watchdog during its 15 second wait, the task watchdog reset the device and the menu came up again (boot loop)
+ - WiFi: a link-local address (169.254.x.x, lwIP's fallback after ~4 minutes without a DHCP answer) does not count as connected, the watchdog reassociates to request DHCP again (the devices stayed offline with it until the next reboot)
+ - ESP8266: fixed `Exception (2)` in `igmp_tmr()` after a WiFi outage, stand-by mode switched the soft AP off while an mDNS multicast report for it was pending (IGMP is stopped on the AP interface first)
+ - MQTT: no connect attempt while WiFi is down, ESPAsyncTCP leaked a `tcp_pcb` (~190 byte) per attempt that failed without a route
+ - WiFi watchdog: checks once per minute and switches to the next network after 5 minutes with `WiFi.begin()` instead of resetting the adapter (a reset during the SDK's own reconnect scan left the ESP8266 station dead, devices stayed offline for hours while the networks were up), logs the WiFi state while down, restarts the device after 30 minutes without a connection, the error count is reset while connected (errors of earlier outages added up and moved the devices to the backup network after a short router restart)
  - LED matrix: automatic gain for the I2S microphone, the bands are shown relative to the loudest band with a silence level and a dynamic range
  - Weather station: fixed the OpenWeatherMap poll interval, a successful request scheduled the next one after 1/10 of the interval (2 minutes minimum) and exhausted the daily API limit
  - ESP32 builds: AsyncTCP 1.1.1 (me-no-dev) is replaced by the maintained fork esp32async/AsyncTCP 3.5.0, 1.1.1 deadlocked under parallel requests and ran stale queued events on freed clients

@@ -2,6 +2,7 @@
 
 ## Version 0.0.9 (master)
 
+ - Fixed the phone controller ignoring the MQTT `/allow/set` and `/answer` topics (inverted check since the StrView migration)
  - Fixed "Export Settings" downloading an empty file on a low heap (ESP8266 with 1024 pixels), it answers 503 if the export cannot be built
  - Fixed the web server not answering after saving the network settings: the restart could not bind port 80 while the browser still had connections on it, a network save does not restart the web server anymore and a failed bind is retried
  - Fixed a crash (Exception 3) when saving the Remote Access form

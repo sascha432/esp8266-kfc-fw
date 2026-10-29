@@ -68,7 +68,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "Web Server",       // friendly name
     "",                 // web_templates
     "remote",           // config_forms
-    "network,mdns",     // reconfigure_dependencies
+    "mdns",             // reconfigure_dependencies
     PluginComponent::PriorityType::HTTP,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::NONE),
@@ -822,6 +822,38 @@ void Plugin::_handlerImportSettings(AsyncWebServerRequest *request, HttpHeaders 
     send(request, request->beginResponse(200, FSPGM(mime_text_plain), PrintString(F("{\"status\":%u,\"count\":%d,\"message\":\"%s\"}"), status, count, message)));
 }
 
+// a PrintString that records a write that could not grow the string
+class ExportString : public PrintString {
+public:
+    ExportString() :
+        PrintString(),
+        _failed(false)
+    {
+    }
+
+    virtual size_t write(uint8_t data) override {
+        auto written = PrintString::write(data);
+        _failed |= (written == 0);
+        return written;
+    }
+
+    virtual size_t write(const uint8_t *buf, size_t size) override {
+        auto written = PrintString::write(buf, size);
+        _failed |= (written != size);
+        return written;
+    }
+
+    bool hasFailed() const {
+        return _failed;
+    }
+
+private:
+    bool _failed;
+};
+
+// the size of the exported settings is ~4.1 KB
+static constexpr size_t kExportSettingsReserve = 4608;
+
 void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders &headers)
 {
     if (!isAuthenticated(request)) {
@@ -831,15 +863,28 @@ void Plugin::_handlerExportSettings(AsyncWebServerRequest *request, HttpHeaders 
     headers.clear();
     headers.addNoCache();
 
-    auto hostname = System::Device::getName();
+    // the export is ~4 KB: on a short heap the download was an empty file with HTTP 200. Reserve it in one block
+    // and answer 503 if any write failed
+    ExportString content;
+    bool exported = content.reserve(kExportSettingsReserve);
+    if (exported) {
+        config.exportAsJson(content, config.getFirmwareVersion());
+        exported = !content.hasFailed();
+    }
+    if (!exported) {
+        auto response = _beginLowMemoryResponse(request);
+        headers.setResponseHeaders(response);
+        send(request, response);
+        return;
+    }
 
-    PrintString filename(F("kfcfw_config_%s_b%u_"), hostname, KFCFWConfiguration::getBuildNumber());
+    // the file name only for a successful export, a 503 must not be saved as a .json file
+    PrintString filename(F("kfcfw_config_%s_b%u_"), System::Device::getName(), KFCFWConfiguration::getBuildNumber());
     filename.strftime_P(PSTR("%Y%m%d_%H%M%S.json"), time(nullptr));
     headers.add<HttpDispositionHeader>(filename);
 
-    PrintString content;
-    config.exportAsJson(content, config.getFirmwareVersion());
-    auto response = request->beginResponse(200, FSPGM(mime_application_json), content);
+    // moved into the response: a copy needs a second 4 KB block, and a failed copy was sent as an empty 200
+    auto response = request->beginResponse(200, FSPGM(mime_application_json), static_cast<String &&>(content));
     headers.setResponseHeaders(response);
     send(request, response);
 }
@@ -938,6 +983,25 @@ void Plugin::begin(bool restart)
     _server->onNotFound(handlerNotFound);
 
     _server->begin();
+    if (!_server->isListening()) {
+        // a restart (Remote Access form) binds port 80 again while the browser still has connections on it (open or in
+        // TIME_WAIT): lwIP refuses the bind, AsyncServer::begin() gives up silently and port 80 refuses connections until
+        // the next reboot. Retry until the old connections are gone
+        Logger_warning(F("web server cannot listen on port %u, retrying"), cfg.getPort());
+        _Scheduler.add(Event::seconds(1), true, [](Event::CallbackTimerPtr timer) {
+            auto &server = Plugin::getInstance()._server;
+            if (!server) {
+                timer->disarm(); // stopped or restarted, begin() checks again
+                return;
+            }
+            server->begin();
+            if (server->isListening()) {
+                Logger_notice(F("web server listening again"));
+                timer->disarm();
+            }
+        });
+        return;
+    }
     __LDBG_printf("HTTP running on port %u", cfg.getPort());
 }
 

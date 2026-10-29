@@ -26,7 +26,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "MQTT",             // friendly name
     "",                 // web_templates
     "mqtt",             // config_forms
-    "network",          // reconfigure_dependencies
+    "network,station-*", // reconfigure_dependencies
     PluginComponent::PriorityType::MQTT,
     PluginComponent::RTCMemoryId::NONE,
     #if MQTT_AUTO_DISCOVERY

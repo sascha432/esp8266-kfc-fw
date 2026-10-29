@@ -2,6 +2,11 @@
 
 ## Version 0.0.9 (master)
 
+ - Fixed "Export Settings" downloading an empty file on a low heap (ESP8266 with 1024 pixels), it answers 503 if the export cannot be built
+ - Fixed the web server not answering after saving the network settings: the restart could not bind port 80 while the browser still had connections on it, a network save does not restart the web server anymore and a failed bind is retried
+ - Fixed a crash (Exception 3) when saving the Remote Access form
+ - Fixed the WiFi station form saving "<No SSID>" as the SSID of an enabled station without one
+ - WebUI: the network configuration is split into pages, one per WiFi station (Configuration, Network), the single form did not fit the ESP8266 with 1024 pixels (503)
  - ESP32: the boot menu (multiple resets) fed no watchdog during its 15 second wait, the task watchdog reset the device and the menu came up again (boot loop)
  - WiFi: a link-local address (169.254.x.x, lwIP's fallback after ~4 minutes without a DHCP answer) does not count as connected, the watchdog reassociates to request DHCP again (the devices stayed offline with it until the next reboot)
  - ESP8266: fixed `Exception (2)` in `igmp_tmr()` after a WiFi outage, stand-by mode switched the soft AP off while an mDNS multicast report for it was pending (IGMP is stopped on the AP interface first)

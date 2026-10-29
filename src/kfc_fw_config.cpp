@@ -1855,9 +1855,9 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     // web_templates (class StatusTemplate)
     "index,status",
     // config_forms
-    "wifi,network,device,password",
+    "wifi,network,station-*,device,password",
     // reconfigure_dependencies
-    "wifi,network",
+    "wifi,network,station-*",
     PluginComponent::PriorityType::CONFIG,
     PluginComponent::RTCMemoryId::CONFIG,
     static_cast<uint8_t>(PluginComponent::MenuType::NONE),
@@ -1916,7 +1916,7 @@ void KFCConfigurationPlugin::setup(SetupModeType mode, const PluginComponents::D
 
 void KFCConfigurationPlugin::reconfigure(const String &source)
 {
-    if (FSPGM(network) == source || FSPGM(wifi) == source) {
+    if (FSPGM(network) == source || FSPGM(wifi) == source || source.startsWith(F("station-"))) {
         config.reconfigureWiFi();
     }
 }

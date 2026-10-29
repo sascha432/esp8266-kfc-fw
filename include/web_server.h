@@ -56,7 +56,7 @@
 #    endif
 #endif
 // free heap that is required before a settings form is created. Creating a form costs ~325 byte per field, the
-// biggest forms of the firmware (network, 44 field visualizer) take 14 KB, and a `new` that fails while the
+// biggest form of the firmware (44 field visualizer) takes 14 KB, and a `new` that fails while the
 // form is built aborts the device (the core has no exceptions: 3 reboots in 12 test runs with 13-15 KB free).
 // A form bigger than this limit should be split into pages
 #ifndef WEBSERVER_FORM_CREATE_MIN_FREE_HEAP
@@ -542,6 +542,11 @@ namespace WebServer {
     class AsyncWebServerEx : public AsyncWebServer {
     public:
         using AsyncWebServer::AsyncWebServer;
+
+        // false while the listening socket could not be bound (AsyncServer::begin() fails silently)
+        bool isListening() {
+            return _server.status() != 0;
+        }
 
     private:
         friend Plugin;

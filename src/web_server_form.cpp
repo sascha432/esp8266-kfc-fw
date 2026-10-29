@@ -10,36 +10,6 @@
 
 using KFCConfigurationClasses::System;
 
-struct WebServerConfigCombo
-{
-    using Type = WebServerConfigCombo;
-    using ModeType = WebServerTypes::ModeType;
-
-    System::FlagsConfig::ConfigFlags_t *flags;
-    System::WebServerConfig::WebServerConfig_t *cfg;
-
-    WebServerConfigCombo(System::FlagsConfig::ConfigFlags_t *_flags, System::WebServerConfig::WebServerConfig_t *_cfg) :
-        flags(_flags),
-        cfg(_cfg)
-    {
-    }
-
-    static ModeType get_webserver_mode(const Type &obj)
-    {
-        return obj.flags->is_web_server_enabled == false ? ModeType::DISABLED : (obj.cfg->is_https ? ModeType::SECURE : ModeType::UNSECURE);
-    }
-
-    static void set_webserver_mode(Type &obj, ModeType mode)
-    {
-        if (mode == ModeType::DISABLED) {
-            obj.flags->is_web_server_enabled = false;
-        } else {
-            obj.flags->is_web_server_enabled = true;
-            obj.cfg->is_https = (mode == ModeType::SECURE);
-        }
-    }
-};
-
 using namespace WebServer;
 
 void Plugin::createConfigureForm(FormCallbackType type, const String &name, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
@@ -54,7 +24,6 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &name, Form
 
     auto &flags = System::Flags::getWriteableConfig();
     auto &cfg = System::WebServer::getWriteableConfig();
-    WebServerConfigCombo combo(&flags, &cfg);
 
     auto &ui = form.createWebUI();
     ui.setTitle(F("Remote Access Configuration"));
@@ -71,7 +40,21 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &name, Form
         #endif
     );
 
-    form.addObjectGetterSetter(F("mode"), combo, combo.get_webserver_mode, combo.set_webserver_mode);
+    // the field is read and stored after this function returned (validate() of a POST): capture the writeable
+    // configs, never an object on this stack (a local helper object here crashed every save with Exception (3))
+    form.addCallbackGetterSetter<System::WebServer::ModeType>(F("mode"), [&flags, &cfg](System::WebServer::ModeType &mode, FormUI::Field::BaseField &, bool store) {
+        using ModeType = System::WebServer::ModeType;
+        if (store) {
+            flags.is_web_server_enabled = (mode != ModeType::DISABLED);
+            if (mode != ModeType::DISABLED) {
+                cfg.is_https = (mode == ModeType::SECURE);
+            }
+        }
+        else {
+            mode = !flags.is_web_server_enabled ? ModeType::DISABLED : (cfg.is_https ? ModeType::SECURE : ModeType::UNSECURE);
+        }
+        return true;
+    }, FormUI::InputFieldType::TEXT);
     form.addFormUI(F("HTTP Server"), modeItems);
     form.addValidator(FormUI::Validator::EnumRange<System::WebServer::ModeType>());
 

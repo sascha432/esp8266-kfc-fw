@@ -99,7 +99,14 @@ void RegisterEx::_createMenu()
 
     _navMenu.config = _bootstrapMenu.addMenu(FSPGM(Configuration));
     _bootstrapMenu.addMenuItem(FSPGM(WiFi), FSPGM(wifi_html), _navMenu.config);
-    _bootstrapMenu.addMenuItem(FSPGM(Network), FSPGM(network_html), _navMenu.config);
+    {
+        // the WiFi stations have one page each (/network/station-<n>.html, see KFCConfigurationPlugin::createConfigureForm())
+        auto networkMenu = _bootstrapMenu.addSubMenu(FSPGM(Network), _navMenu.config);
+        networkMenu.addMenuItem(F("Device and Access Point"), FSPGM(network_html));
+        for (int i = 1; i <= KFCConfigurationClasses::Network::WiFi::kNumStations; i++) {
+            networkMenu.addMenuItem(PrintString(F("WiFi Station %d"), i), PrintString(F("network/station-%d.html"), i));
+        }
+    }
     _bootstrapMenu.addMenuItem(FSPGM(Device), FSPGM(device_html), _navMenu.config);
     _bootstrapMenu.addMenuItem(F("Remote Access"), FSPGM(remote_html), _navMenu.config);
 

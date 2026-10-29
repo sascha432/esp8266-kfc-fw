@@ -399,7 +399,13 @@ class Device:
         return False
 
     def read_health(self):
-        r = self.get('/status.html')
+        # a 503 of the heap guards (Retry-After: 5) is expected right after the stress groups on a low-memory
+        # device: retry for 30 seconds before it counts as a failure
+        for _ in range(6):
+            r = self.get('/status.html')
+            if r.status_code != 503:
+                break
+            time.sleep(5)
         assert r.status_code == 200, 'status page: %u' % r.status_code
         m = UPTIME.search(r.text)
         uptime = None
@@ -622,14 +628,14 @@ class Device:
                 try:
                     data = json.loads(r.text)
                 except ValueError as e:
-                    # e.g. an empty answer of /export-settings when the device is short of heap
+                    # the firmware answers 503 when it is short of heap, an empty or broken body is a failure
                     raise AssertionError('invalid JSON (%u bytes): %s' % (len(r.content), e))
                 return 'PASS', '%u bytes, %s' % (len(r.content), type(data).__name__)
             return run
         self.check('api', '/webui-handler', json_endpoint('/webui-handler', allow=(503,)))
         self.check('api', '/savecrash.json', json_endpoint('/savecrash.json'))
         # contains the passwords: parsed only, never printed or stored
-        self.check('api', '/export-settings', json_endpoint('/export-settings'))
+        self.check('api', '/export-settings', json_endpoint('/export-settings', allow=(503,)))
 
         def sync_time():
             r = self.get('/sync-time')

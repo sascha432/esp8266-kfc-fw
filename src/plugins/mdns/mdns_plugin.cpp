@@ -39,7 +39,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "MDNS",                 // friendly name
     "",                     // web_templates
     "",                     // config_forms
-    "wifi,network",         // reconfigure_dependencies
+    "wifi,network,station-*", // reconfigure_dependencies
     PluginComponent::PriorityType::MDNS,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::CUSTOM),

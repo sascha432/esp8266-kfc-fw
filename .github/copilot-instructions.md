@@ -313,9 +313,9 @@ in this workspace.
   It extends the ESP-01 LED strip base but unflags the standby pin 3 and `ESP8266_USE_UART_RX_AS_OUTPUT`, so the
   UART RX and the serial console work - keep those unflags.
 - **1024 pixels on purpose**: a low-memory demo (~20 KB idle heap) for the heap guards of the web server
-  (`WEBSERVER_*_MIN_FREE_*` in `include/web_server.h`). The network form and the visualizer forms (13-14 KB to
-  build) are answered with 503 there - expected, not a regression. Big forms are still to be split into pages
-  for the user.
+  (`WEBSERVER_*_MIN_FREE_*` in `include/web_server.h`). The visualizer forms (~14 KB to build) only fit while
+  the heap is idle and are answered with 503 otherwise - expected, not a regression. Big forms are split into
+  pages, as the network form is (one page per WiFi station, `/network/station-<n>.html`).
 - This is the **ESP8266 verification env** for shared/core changes: build it next to the ESP32 env.
 - **WebUI test suite** (workspace venv): `.venv\Scripts\python scripts/tools/webui_test.py --env led_strip_xmas_serial
   --newlib` (`--env wled_esp32_controller_neopixelbus` for the ESP32 board, both `--env` at once work). It checks

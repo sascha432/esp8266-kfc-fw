@@ -25,7 +25,7 @@ PROGMEM_DEFINE_PLUGIN_OPTIONS(
     "",                 // web_templates
     "",                 // config_forms
     // reconfigure_dependencies
-    "wifi,network,device",
+    "wifi,network,station-*,device",
     PluginComponent::PriorityType::SSDP,
     PluginComponent::RTCMemoryId::NONE,
     static_cast<uint8_t>(PluginComponent::MenuType::NONE),

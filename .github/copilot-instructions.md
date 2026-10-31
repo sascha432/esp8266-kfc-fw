@@ -42,7 +42,10 @@ in this workspace.
   chained `trim()/toLowerCase()`). Use the project's `StrView`/`StrWrapper`
   (`lib/KFCLibrary/KFCBaseLibrary/include/StrView.h`) instead, and put the flash string on the left:
   `F("...") == str`, never `str == F("...")`.
-- Keep `CHANGELOG.md` entries to one line per change - the owner maintains the wording. Add to the top of the file.
+- **Changelog with every change**: `CHANGELOG.md`, an entry under today's date (`### YYYY-MM-DD`, newest first,
+  inside `## Unreleased (<version>)`), under Added, Changed, Fixed or Removed, saying what a user or developer
+  sees. `* ` bullets wrapped at 100 columns. A change that reverses an entry of the same day replaces it
+  instead of adding a second one. The owner maintains the wording.
 
 ## Filesystem and the WebUI
 

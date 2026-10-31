@@ -602,7 +602,7 @@ void PowerScreen::create(lv_obj_t *parent)
     // footer bar - the cards use the rest of the screen. The chips of the channel selector sit
     // next to it, the text stops before them
     _status = LVGLUI::addLabel(parent, 10, kStatusY, "", LVGLUI::kFontSmall, LVGLUI::kColorTextMuted,
-                               static_cast<lv_coord_t>(kScreenWidth - 20 - (WEATHER_STATION2_NUM_POWER_CHANNELS * (kChipWidth + kChipGap))));
+                               static_cast<lv_coord_t>(kScreenWidth - 20 - (PowerChannels::kNumChannels * (kChipWidth + kChipGap))));
 }
 
 void PowerScreen::update()

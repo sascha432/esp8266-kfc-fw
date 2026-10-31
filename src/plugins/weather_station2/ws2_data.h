@@ -216,10 +216,6 @@ struct IndoorValue {
     }
 };
 
-// number of indoor metrics as a preprocessor constant, PROGMEM_DEF_LOCAL_VARNAMES() of the
-// configuration form needs an integer literal (the static_assert keeps both in sync)
-#define WEATHER_STATION2_NUM_INDOOR_METRICS 4
-
 struct IndoorValues {
     // the configuration strings, the model and the screens use the same order
     enum class Metric : uint8_t {
@@ -228,7 +224,7 @@ struct IndoorValues {
         PRESSURE,
         ECO2,
     };
-    static constexpr uint8_t kNumMetrics = WEATHER_STATION2_NUM_INDOOR_METRICS;
+    static constexpr uint8_t kNumMetrics = static_cast<uint8_t>(Metric::ECO2) + 1;
 
     IndoorValue values[kNumMetrics];
 
@@ -259,10 +255,6 @@ enum class PowerSourceType : uint8_t {
     LOCAL,      // the local INA219 sensor of the sensor plugin (1 channel)
     REMOTE,     // one channel of the TCP power monitor server
 };
-
-// number of power channels as a preprocessor constant, PROGMEM_DEF_LOCAL_VARNAMES() of the
-// configuration form needs an integer literal (the static_assert keeps both in sync)
-#define WEATHER_STATION2_NUM_POWER_CHANNELS 4
 
 // latest sample of one power channel. The energy is the total (persistent) counter of the source,
 // the local INA219 has none (hasEnergy stays false)
@@ -305,7 +297,7 @@ struct PowerValues {
 };
 
 struct PowerChannels {
-    static constexpr uint8_t kNumChannels = WEATHER_STATION2_NUM_POWER_CHANNELS;
+    static constexpr uint8_t kNumChannels = 4;
 
     PowerValues values[kNumChannels];
 

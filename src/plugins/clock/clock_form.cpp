@@ -723,8 +723,10 @@ void ClockPlugin::_createConfigureFormIRRemote(FormUI::Form::BaseForm &form, Clo
     form.addFormUI(F("Color Step Per Press"));
     cfg.ir.addRangeValidatorFor_step(form);
 
-    // PROGMEM_DEF_LOCAL_VARNAMES needs a literal, the index is ActionType::RED_UP..BLUE_DOWN
-    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, 30, icd, icv, irr);
+    // icd is indexed by the ActionType, icv by the color button and irr by the row of color buttons
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, static_cast<uint8_t>(ActionType::MAX), icd);
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IRRemoteConfigType::kNumColors, icv);
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IRRemoteConfigType::kNumColors / 4, irr);
 
     static const char *const kChannelNames[IRRemoteConfigType::kNumChannels] = { "Red", "Green", "Blue" };
 

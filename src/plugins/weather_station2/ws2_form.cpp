@@ -58,9 +58,7 @@ static void _addSensorsGroup(FormUI::Form::BaseForm &form)
 {
     auto &group = form.addCardGroup(F("ws2_sensors"), F("Sensors"), false);
 
-    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WEATHER_STATION2_NUM_INDOOR_METRICS, sst, stp, svt, svl);
-
-    static_assert(WEATHER_STATION2_NUM_INDOOR_METRICS == IndoorValues::kNumMetrics, "update WEATHER_STATION2_NUM_INDOOR_METRICS");
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, IndoorValues::kNumMetrics, sst, stp, svt, svl);
 
     for (uint8_t i = 0; i < IndoorValues::kNumMetrics; i++) {
         const auto metric = static_cast<IndoorValues::Metric>(i);
@@ -172,9 +170,7 @@ static void _addPowerGroup(FormUI::Form::BaseForm &form)
                    FormUI::Type::NUMBER_RANGE, FormUI::Suffix(F("minutes")));
     form.addValidator(FormUI::Validator::Range(WeatherStation::kPowerGraphMinutesMin, WeatherStation::kPowerGraphMinutesMax, false));
 
-    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, WEATHER_STATION2_NUM_POWER_CHANNELS, pct, pcn, pci);
-
-    static_assert(WEATHER_STATION2_NUM_POWER_CHANNELS == PowerChannels::kNumChannels, "update WEATHER_STATION2_NUM_POWER_CHANNELS");
+    PROGMEM_DEF_LOCAL_VARNAMES(_VAR_, PowerChannels::kNumChannels, pct, pcn, pci);
 
     for (uint8_t i = 0; i < PowerChannels::kNumChannels; i++) {
         // source type

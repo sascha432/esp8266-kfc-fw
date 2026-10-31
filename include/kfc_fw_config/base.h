@@ -10,13 +10,7 @@
 #include <crc16.h>
 #include <KFCForms.h>
 #include <KFCSerialization.h>
-#include <boost/preprocessor/tuple/rem.hpp>
-#include <boost/preprocessor/variadic/size.hpp>
-#include <boost/preprocessor/variadic/elem.hpp>
-#include <boost/preprocessor/variadic/to_tuple.hpp>
-#include <boost/preprocessor/control/if.hpp>
-#include <boost/preprocessor/comparison/equal.hpp>
-#include <boost/preprocessor/punctuation/remove_parens.hpp>
+#include <pp_tools.h>
 
 #include <kfc_fw_config_types.h>
 
@@ -133,22 +127,28 @@ namespace ConfigurationHelper {
     static constexpr size_t k##name##MinSize = mins; \
     CREATE_STRING_GETTER_SETTER(class_name, name, maxs)
 
+// the form items of addRangeValidatorFor_*(), the variadic arguments are default_value[, step_size]
+#define _KFC_RANGE_ITEMS(...)                   _KFC_RANGE_ITEMS_SELECT(__VA_ARGS__, _KFC_RANGE_ITEMS_STEP, _KFC_RANGE_ITEMS_DEFAULT, )(__VA_ARGS__)
+#define _KFC_RANGE_ITEMS_SELECT(_1, _2, macro, ...) macro
+#define _KFC_RANGE_ITEMS_DEFAULT(default_value) FormUI::Type::NUMBER_RANGE
+#define _KFC_RANGE_ITEMS_STEP(default_value, step) FormUI::Attribute(F("step"), step), FormUI::Type::NUMBER_RANGE
+
 //name, size, type, min_value, max_value, default_value[, step_size]
 #define CREATE_BITFIELD_TYPE_MIN_MAX(name, size, type, min_value, max_value, ...) \
     using common_type_t_##name = std::common_type_t<type, long>; \
     inline static FormUI::Validator::Range &addRangeValidatorFor_##name(FormUI::Form::BaseForm &form, bool allowZero = false) { \
         form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax(kMinValueFor_##name, kMaxValueFor_##name), \
-            BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
+            _KFC_RANGE_ITEMS(__VA_ARGS__)); \
         return form.addValidator(FormUI::Validator::Range(static_cast<common_type_t_##name>(kMinValueFor_##name), static_cast<common_type_t_##name>(kMaxValueFor_##name), allowZero)); \
     } \
     inline static FormUI::Validator::Range &addRangeValidatorFor_##name(const String &message, FormUI::Form::BaseForm &form, bool allowZero = false) { \
         form.getLastField().getFormUI()->addItems(FormUI::PlaceHolder(kDefaultValueFor_##name), FormUI::MinMax(kMinValueFor_##name, kMaxValueFor_##name), \
-            BOOST_PP_REMOVE_PARENS(BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__),1),(FormUI::Type::NUMBER_RANGE),(FormUI::Attribute(F("step"),BOOST_PP_VARIADIC_ELEM(1,##__VA_ARGS__)),FormUI::Type::NUMBER_RANGE)))); \
+            _KFC_RANGE_ITEMS(__VA_ARGS__)); \
         return form.addValidator(FormUI::Validator::Range(message, static_cast<common_type_t_##name>(kMinValueFor_##name), static_cast<common_type_t_##name>(kMaxValueFor_##name), allowZero)); \
     } \
     static constexpr type kMinValueFor_##name = min_value; \
     static constexpr type kMaxValueFor_##name = max_value; \
-    static constexpr type kDefaultValueFor_##name = BOOST_PP_VARIADIC_ELEM(0,##__VA_ARGS__); \
+    static constexpr type kDefaultValueFor_##name = KFC_PP_FIRST(__VA_ARGS__); \
     static constexpr type kTypeMinValueFor_##name = std::is_signed<type>::value ? -(1LL << (size - 1)) : 0; \
     static constexpr type kTypeMaxValueFor_##name = std::is_signed<type>::value ? (1LL << (size - 1)) - 1 : (1ULL << size) - 1; \
     static_assert(min_value >= kTypeMinValueFor_##name && min_value <= kTypeMaxValueFor_##name, "min_value value out of range (" _STRINGIFY(size) " bits)"); \

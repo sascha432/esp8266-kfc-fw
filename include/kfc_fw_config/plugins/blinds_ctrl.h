@@ -5,9 +5,6 @@
 #include "kfc_fw_config/base.h"
 #include "ConfigurationHelper.h"
 
-// #define CTOR_INIT_DEFAULT_FOR(name,n) name(kDefaultValueFor_##name),
-// #define CTOR_INIT_DEFAULT(...) BOOST_PP_SEQ_FOR_EACH(CTOR_INIT_DEFAULT_FOR,(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)),BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
-
 namespace KFCConfigurationClasses {
 
     namespace Plugins {

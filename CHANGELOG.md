@@ -26,6 +26,16 @@ Fixed
   validator with an empty value allowed (ping monitor gateway) accepting only an empty value
 * KFCLibrary: wrong UTF-8 encoding of code points above U+FFFF, the const `front()`/`back()` of
   `stdex::fixed_circular_buffer` calling themselves, `stdex::enum_type` assignment calling itself
+* WebUI: a switch or slider set to the value it had sent before was not sent again, after the device
+  changed it (e.g. LEDs turned off by brightness 0) turning them on again did nothing and the switch
+  jumped back to off
+* Clock/LED matrix: on/off and the brightness behave the same from the WebUI, MQTT, buttons, the
+  rotary encoder, IR and `+LMC=br`: brightness 0 and off turn the LEDs off and keep the previous
+  level, on restores it, a level above 0 turns them on. Turning off was stored as on (saved before
+  the fading had finished), a settings form saved while the LEDs were off turned them on, the rotary
+  encoder stored the previous level instead of the new one, brightness down turned LEDs that were
+  off on with level 1, and a state update sent while a request was pending made the WebUI controls
+  jump back
 
 Removed
 

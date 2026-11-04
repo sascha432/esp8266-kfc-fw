@@ -276,8 +276,9 @@ void ClockPlugin::_setupTimer()
             }
         #endif
 
-        // mqtt update / webui update
-        if (_schedulePublishState || (_timerCounter % kUpdateMQTTInterval == 0)) {
+        // mqtt update / webui update. a pending request changes the state before the next frame and
+        // publishes it, publishing now would send the old state (the WebUI controls jump back)
+        if ((_schedulePublishState || (_timerCounter % kUpdateMQTTInterval == 0)) && _tasks.empty()) {
             _schedulePublishState = false;
             _publishState();
         }
@@ -870,9 +871,14 @@ void ClockPlugin::_setBrightness(uint8_t brightness, int ms, uint32_t maxTime)
     }
     else {
         // _setBrightnessLevel is called once the fading is complete
-        // enable LEDs now if the brightness is not 0, but wait until fading is complete before disabling them
+        // enable LEDs now if the brightness is not 0, but wait until fading is complete before disabling them.
+        // _config.enabled is the requested state and changes now: the state is saved before the fading is
+        // complete (_setState(), the WebUI and MQTT) and the toggles (buttons, IR) read it
         if (brightness != 0) {
             _enable();
+        }
+        else {
+            _config.enabled = false;
         }
         _startBrightness = _getFadingBrightness();
         _fadingBrightness = ~_getBrightness();
@@ -1130,7 +1136,10 @@ void ClockPlugin::readConfig(bool setup)
     beginIRReceiver();
 
     _setColor(_config.solid_color.value);
-    _setBrightnessLevel(_config.getBrightness(), false);
+    // LEDs that are off stay off (a form saved while they are off must not turn them on, see
+    // _reconfigureQueued()), the stored level is the previous level for turning them on
+    _savedBrightness = _config.getBrightness();
+    _setBrightnessLevel(_config.enabled ? _config.getBrightness() : 0, false);
     _setAnimation(_config.getAnimation());
 }
 
@@ -1152,8 +1161,9 @@ void ClockPlugin::_setBrightnessLevel(uint8_t brightness, bool useEnable)
             _disable();
         }
     }
-    _updateBrightnessSettings();
+    // the new level is stored as the previous level (0 keeps the previous level)
     _targetBrightness = brightness;
+    _updateBrightnessSettings();
     _fadeTimer.disable();
     _forceUpdate = true;
     _isFading = false;
@@ -1168,6 +1178,8 @@ void ClockPlugin::_enable()
     }
     if (_isEnabled) {
         __LDBG_printf("enable LED SKIPPED (is_enabled=%u, config=%u)", _isEnabled, _config.enabled);
+        // turned on again while fading out, the LEDs are still enabled
+        _config.enabled = true;
         return;
     }
     if (isTempProtectionActive()) {

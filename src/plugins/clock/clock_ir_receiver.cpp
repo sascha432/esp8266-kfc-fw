@@ -137,11 +137,11 @@ void ClockPlugin::_irRemoteActionQueued(uint32_t code, bool repeat)
         const int step = repeat ? kBrightnessChangeHold : kBrightnessChangeClick;
         if (code == ir.getCode(ActionType::BRIGHTNESS_UP)) {
             __LDBG_printf("IR brightness %u + %d", _targetBrightness, step);
-            _setBrightness(std::min<int>(255, _targetBrightness + step));
+            _changeBrightness(step);
         }
         else {
             __LDBG_printf("IR brightness %u - %d", _targetBrightness, step);
-            _setBrightness(std::max<int>(1, _targetBrightness - step));
+            _changeBrightness(-step);
         }
         return;
     }

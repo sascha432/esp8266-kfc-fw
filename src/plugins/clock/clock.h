@@ -358,6 +358,10 @@ private:
     // copies the visualizer mode of an animation into VisualizerType::type
     void _syncVisualizerType(AnimationType animation);
     void _setState(bool state, bool autoOff);
+    // brightness up/down of the buttons, the rotary encoder and the IR remote: changes the level by delta
+    // (at least 1) and saves it. While the LEDs are off, increasing turns them on with the previous level
+    // (same as _setState(true)) and decreasing keeps them off
+    void _changeBrightness(int delta, bool fade = true);
     void _saveState();
     void _setColorAndRefresh(Color color);
     void _publishAnimation(Clock::Animation *animation, uint16_t blendTime = Clock::BlendAnimation::kDefaultTime);

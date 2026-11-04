@@ -80,6 +80,24 @@ void ClockPlugin::_setState(bool state, bool autoOff)
     _saveState();
 }
 
+void ClockPlugin::_changeBrightness(int delta, bool fade)
+{
+    if (_targetBrightness == 0) {
+        if (delta > 0) {
+            _setState(true, false);
+        }
+        return;
+    }
+    const auto brightness = static_cast<uint8_t>(std::clamp<int>(_targetBrightness + delta, 1, Clock::kMaxBrightness));
+    if (fade) {
+        _setBrightness(brightness);
+    }
+    else {
+        _setBrightnessLevel(brightness);
+    }
+    _saveState();
+}
+
 void ClockPlugin::_createConfigureFormAnimation(AnimationType animation, FormUI::Form::BaseForm &form, ClockConfigType &cfg, TitleType titleType)
 {
     FormUI::Group *group = nullptr;

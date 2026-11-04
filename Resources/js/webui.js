@@ -431,6 +431,13 @@ $.webUIComponent = {
         }
         if (value !== undefined) {
             // console.log('queue_update_element', id, element, component.converter ? value + '=>' + component.converter.from(value) : value)
+            if (use_queue && (component.type == 'switch' || component.type == 'slider')) {
+                // the device state is the reference for skipping unchanged values, not the last value sent:
+                // otherwise turning the LEDs on again after the device turned them off is never sent.
+                // range controls only, an update of a select or the color picker fires their change
+                // handler and would be sent back
+                queue.published.set = value;
+            }
             if (component.converter) {
                 value = component.converter.from(value);
             }

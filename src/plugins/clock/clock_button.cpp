@@ -55,16 +55,8 @@ void ClockPlugin::_rotaryCallbackQueued(bool decrease, uint32_t now)
 
         // __LDBG_printf("diff=%u decrease=%u acceleration=%u", diff, decrease, _rotaryAcceleration);
 
-        if (_isEnabled) {
-            auto brightness = _targetBrightness;
-            if (decrease) {
-                _setBrightnessLevel(std::max<int16_t>(1, brightness - (_rotaryAcceleration / kRotaryAccelerationDivider)));
-            }
-            else {
-                _setBrightnessLevel(std::min<int16_t>(255, brightness + (_rotaryAcceleration / kRotaryAccelerationDivider)));
-            }
-            _saveState();
-        }
+        const int step = _rotaryAcceleration / kRotaryAccelerationDivider;
+        _changeBrightness(decrease ? -step : step, false);
     }
     else if (_rotaryAction == 1) {
         if (diff > 1000) { // limit input frequency to once per second
@@ -258,13 +250,13 @@ void ClockPlugin::_buttonCallbackQueued(ButtonType button, EventType eventType, 
                 switch (eventType) {
                     case EventType::PRESSED:
                     case EventType::SINGLE_CLICK:
-                        _setBrightness(std::min(255, _targetBrightness + kBrightnessChangeClick));
+                        _changeBrightness(kBrightnessChangeClick);
                         break;
                     case EventType::LONG_PRESSED:
-                        _setBrightness(std::min(255, _targetBrightness + kBrightnessChangeLongPress));
+                        _changeBrightness(kBrightnessChangeLongPress);
                         break;
                     case EventType::HOLD:
-                        _setBrightness(std::min(255, _targetBrightness + kBrightnessChangeHold));
+                        _changeBrightness(kBrightnessChangeHold);
                         break;
                     default:
                         break;
@@ -278,13 +270,13 @@ void ClockPlugin::_buttonCallbackQueued(ButtonType button, EventType eventType, 
                 switch (eventType) {
                     case EventType::PRESSED:
                     case EventType::SINGLE_CLICK:
-                        _setBrightness(std::max(1, _targetBrightness - kBrightnessChangeClick));
+                        _changeBrightness(-kBrightnessChangeClick);
                         break;
                     case EventType::LONG_PRESSED:
-                        _setBrightness(std::max(1, _targetBrightness - kBrightnessChangeLongPress));
+                        _changeBrightness(-kBrightnessChangeLongPress);
                         break;
                     case EventType::HOLD:
-                        _setBrightness(std::max(1, _targetBrightness - kBrightnessChangeHold));
+                        _changeBrightness(-kBrightnessChangeHold);
                         break;
                     default:
                         break;

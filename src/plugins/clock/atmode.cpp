@@ -59,6 +59,7 @@ bool ClockPlugin::atModeHandler(AtModeArgs &args)
                 auto brightness = args.toIntMinMax<uint16_t>(1, 0, Clock::kMaxBrightness);
                 auto time = args.toMillis(2, 0, 60000, 10000);
                 _setBrightness(brightness, time);
+                _saveState();
                 args.printf_P("fading brightness to %.2f%% (%u) in %.3f seconds", brightness / (float)Clock::kMaxBrightness * 100.0, brightness, time / 1000.0);
             }
         }

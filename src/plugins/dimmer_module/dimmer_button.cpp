@@ -8,7 +8,7 @@
 #include "dimmer_button.h"
 #include "dimmer_buttons.h"
 #include "dimmer_module.h"
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 
 #if DEBUG_IOT_DIMMER_MODULE //&& DEBUG_PIN_MONITOR
 #include <debug_helper_enable.h>
@@ -30,12 +30,12 @@ Button::Button(uint8_t pin, uint8_t channel, uint8_t button, Buttons &dimmer, Si
     if (_longPressTime == 0) {
         _longPressTime = std::max<uint16_t>(_repeatTime, _clickTime + 50);
         _repeatTime = _longPressTime;
-        EventTypeEnum(_subscribedEvents) ^= EventTypeEnum(EventTypeEnum::Enum::LONG_PRESSED);
+        _subscribedEvents = EventTypeEnum(_subscribedEvents) ^ EventType::LONG_PRESSED;
     }
     // if (_button == 1) {
-    //     EventTypeEnum(_subscribedEvents) |= EventTypeEnum(EventTypeEnum::Enum::SINGLE_CLICK);
+    //     _subscribedEvents = EventTypeEnum(_subscribedEvents) | EventType::SINGLE_CLICK;
     // }
-    EventTypeEnum(_subscribedEvents) |= EventTypeEnum(EventTypeEnum::Enum::REPEATED_CLICK);
+    _subscribedEvents = EventTypeEnum(_subscribedEvents) | EventType::REPEATED_CLICK;
 
 // #if DEBUG_PIN_MONITOR
 //     setName(PrintString(F("%s:%u"), _button == 0 ? PSTR("BUTTON-UP") : PSTR("BUTTON-DOWN"), _channel));

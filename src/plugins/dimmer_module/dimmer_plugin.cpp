@@ -122,7 +122,7 @@ void Plugin::createWebUI(WebUINS::Root &webUI)
         #endif
 
         #if IOT_DIMMER_HAVE_CHANNEL_ORDER
-            const auto channelOrder = std::array_of<const int8_t>(IOT_DIMMER_CHANNEL_ORDER);
+            const auto channelOrder = stdex::array_of<const int8_t>(IOT_DIMMER_CHANNEL_ORDER);
         #endif
         for (unsigned int number = 1; number <= kNumChannels; number++) {
             #if IOT_DIMMER_HAVE_CHANNEL_ORDER

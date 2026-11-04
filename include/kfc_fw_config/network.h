@@ -22,11 +22,11 @@ namespace KFCConfigurationClasses {
 
             struct __attribute__packed__ SoftAPSettings {
                 using Type = SoftAPSettings;
-                CREATE_IPV4_ADDRESS(address, kCreateIPv4Address(192, 168, 4, 1));
-                CREATE_IPV4_ADDRESS(subnet, kCreateIPv4Address(255, 255, 255, 0));
-                CREATE_IPV4_ADDRESS(gateway, kCreateIPv4Address(192, 168, 4, 1));
-                CREATE_IPV4_ADDRESS(dhcp_start, kCreateIPv4Address(192, 168, 4, 2));
-                CREATE_IPV4_ADDRESS(dhcp_end, kCreateIPv4Address(192, 168, 4, 100));
+                CREATE_IPV4_ADDRESS(address, createIPv4Address(192, 168, 4, 1));
+                CREATE_IPV4_ADDRESS(subnet, createIPv4Address(255, 255, 255, 0));
+                CREATE_IPV4_ADDRESS(gateway, createIPv4Address(192, 168, 4, 1));
+                CREATE_IPV4_ADDRESS(dhcp_start, createIPv4Address(192, 168, 4, 2));
+                CREATE_IPV4_ADDRESS(dhcp_end, createIPv4Address(192, 168, 4, 100));
                 CREATE_UINT8_BITFIELD_MIN_MAX(channel, 8, 0, 255, 1, 7);
                 CREATE_ENUM_BITFIELD_SIZE_DEFAULT(encryption, 8, EncryptionType, std::underlying_type<EncryptionType>::type, uint8, kWiFiEncryptionTypeDefault);
 
@@ -84,8 +84,8 @@ namespace KFCConfigurationClasses {
 
                 using Type = StationModeSettings;
                 CREATE_IPV4_ADDRESS(local_ip, 0);
-                CREATE_IPV4_ADDRESS(subnet, kCreateIPv4Address(255, 255, 255, 0));
-                CREATE_IPV4_ADDRESS(gateway, kCreateIPv4Address(192, 168, 4, 1));
+                CREATE_IPV4_ADDRESS(subnet, createIPv4Address(255, 255, 255, 0));
+                CREATE_IPV4_ADDRESS(gateway, createIPv4Address(192, 168, 4, 1));
                 CREATE_IPV4_ADDRESS(dns1, kGlobalDNS);
                 CREATE_IPV4_ADDRESS(dns2, kGlobalDNS);
                 CREATE_UINT8_BITFIELD_MIN_MAX(priority, 6, 0, 63, 1, 1);
@@ -133,8 +133,8 @@ namespace KFCConfigurationClasses {
 
                 static constexpr int kNumStations = WIFI_STATION_MAX_NUM;
 
-                CREATE_IPV4_ADDRESS(global_dns1, kCreateIPv4Address(8, 8, 8, 8));
-                CREATE_IPV4_ADDRESS(global_dns2, kCreateIPv4Address(8, 8, 4, 4));
+                CREATE_IPV4_ADDRESS(global_dns1, createIPv4Address(8, 8, 8, 8));
+                CREATE_IPV4_ADDRESS(global_dns2, createIPv4Address(8, 8, 4, 4));
                 StationModeSettings stations[kNumStations];
                 uint8_t activeNetwork;
 

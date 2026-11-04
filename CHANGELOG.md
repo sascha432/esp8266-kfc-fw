@@ -7,6 +7,36 @@ and what is gone under Removed. Releases up to 0.0.8 have no dates.
 
 ## Unreleased (0.0.9)
 
+### 2026-11-04
+
+Changed
+
+* KFCLibrary: `__BASENAME_FILE__` uses a small constexpr helper in `debug_helper.h`, the panic macro
+  is `__DBG_panic_at()`, `createIPv4Address()` is constexpr (replaces `kCreateIPv4Address()`), the
+  recursive constexpr helpers (`kNumBitsRequired`, `mask_of`, `indexDigits`, `getButtonIndex`) are
+  loops and `if __CONSTEXPR17` is `if constexpr`
+* KFCLibrary: stl_ext only adds to `stdex` (nothing to `std` anymore), the
+  `STL_STD_EXT_NAMESPACE` build flags are gone
+
+Fixed
+
+* WiFi callbacks were never removed (`WiFiCallbacks::remove()` changed a temporary copy), the
+  callbacks of stopped plugins stayed registered and were called after the object was gone
+* The dimmer buttons subscribing to the wrong events (repeated click/long press), the hostname
+  validator with an empty value allowed (ping monitor gateway) accepting only an empty value
+* KFCLibrary: wrong UTF-8 encoding of code points above U+FFFF, the const `front()`/`back()` of
+  `stdex::fixed_circular_buffer` calling themselves, `stdex::enum_type` assignment calling itself
+
+Removed
+
+* KFCLibrary: the unused `TypeName` and `DebugDumper` helpers and the duplicate `__PP_CAT` macros
+  (`__UNIQUE_NAME` uses `KFC_PP_CAT` of `pp_tools.h`)
+* KFCLibrary: `constexpr_tools.h` and the unused stl_ext headers and helpers (`chunked_list`,
+  `printf_wrapper`, `variant`, the type size helpers, the C++11 polyfills, ...), standard C++17
+  is used instead
+* KFCLibrary: the MSVC, Win32 and host build remnants (`push_macro("new")`, `_ASSERTE`,
+  `__CONSTEXPR17`, the disabled GFX buffer pool and the Visual Studio syslog test)
+
 ### 2026-10-30
 
 Changed

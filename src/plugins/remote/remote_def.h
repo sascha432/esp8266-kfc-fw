@@ -134,7 +134,7 @@ namespace RemoteControl {
     };
 
     // PROGMEM requires uint32_t
-    static constexpr auto kButtonPins PROGMEM = stdex::cexpr::array_of<const uint32_t>(IOT_REMOTE_CONTROL_BUTTON_PINS);
+    static constexpr auto kButtonPins PROGMEM = stdex::array_of<const uint32_t>(IOT_REMOTE_CONTROL_BUTTON_PINS);
 
     using Plugins = KFCConfigurationClasses::PluginsType;
     using ConfigType = Plugins::RemoteControl::Config_t;

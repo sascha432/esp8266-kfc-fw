@@ -383,10 +383,10 @@ inline bool Logger::isExtraFileEnabled(Level level) const
 inline void Logger::setExtraFileEnabled(Level level, bool state)
 {
     if (state) {
-        LoggerEnum(_enabled) |= LoggerEnum(level);
+        _enabled = LoggerEnum(_enabled) | level;
     }
     else {
-        LoggerEnum(_enabled) &= ~LoggerEnum(level);
+        _enabled = LoggerEnum(_enabled) & ~LoggerEnum(level);
     }
 }
 

@@ -6,7 +6,7 @@
 #include "BlindsControl.h"
 #include "blinds_plugin.h"
 #include "kfc_fw_config.h"
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 
 #if DEBUG_IOT_BLINDS_CTRL
 #    include <debug_helper_enable.h>

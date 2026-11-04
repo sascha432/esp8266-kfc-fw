@@ -6,7 +6,7 @@
 
 #include "clock.h"
 #include "animation.h"
-#include "stl_ext/algorithm.h"
+#include <algorithm>
 #include "InterpolationLib.h"
 #if IOT_LED_MATRIX_ENABLE_VISUALIZER_I2S_MICROPHONE
 #    include "i2s_microphone.h"

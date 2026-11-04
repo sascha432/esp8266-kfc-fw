@@ -5,7 +5,7 @@
 #include "dimmer_channel.h"
 #include "dimmer_module.h"
 #include <WebUISocket.h>
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 #include <stl_ext/utility.h>
 #include <../src/plugins/mqtt/mqtt_client.h>
 

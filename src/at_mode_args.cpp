@@ -5,7 +5,7 @@
 #if AT_MODE_SUPPORTED
 
 #include <Arduino_compat.h>
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 #include "at_mode.h"
 #include "kfc_fw_config.h"
 #include <Form.h>

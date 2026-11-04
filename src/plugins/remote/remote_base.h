@@ -24,8 +24,15 @@ namespace RemoteControl {
 
     static constexpr uint32_t kButtonPinsMask = Interrupt::PinAndMask::mask_of(kButtonPins);
 
-    static inline constexpr size_t getButtonIndex(uint8_t pin, size_t index = 0) {
-        return pin == kButtonPins[index] ? index : getButtonIndex(pin, index + 1);
+    // index of the pin in kButtonPins or kButtonPins.size() if the pin is not a button
+    static inline constexpr size_t getButtonIndex(uint8_t pin)
+    {
+        for (size_t index = 0; index < kButtonPins.size(); index++) {
+            if (pin == kButtonPins[index]) {
+                return index;
+            }
+        }
+        return kButtonPins.size();
     }
 
     // button combination used for maintenance mode
@@ -33,6 +40,7 @@ namespace RemoteControl {
     static constexpr uint8_t kButtonSystemComboPins[2] = { kButtonPins.front(), kButtonPins.back() };
     // and the combined bit mask
     static constexpr uint16_t kButtonSystemComboBitMask = _BV(getButtonIndex(kButtonSystemComboPins[0])) | _BV(getButtonIndex(kButtonSystemComboPins[1]));
+    static_assert(getButtonIndex(kButtonSystemComboPins[0]) < kButtonPins.size() && getButtonIndex(kButtonSystemComboPins[1]) < kButtonPins.size(), "system combo pins must be button pins");
     static constexpr uint16_t kGPIOSystemComboBitMask = _BV(kButtonSystemComboPins[0]) | _BV(kButtonSystemComboPins[1]);
 
 

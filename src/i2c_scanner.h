@@ -103,7 +103,7 @@ inline static bool __isPinSerial(const HardwareSerial &serial, uint8_t pin)
 inline static bool __isPinSerialDebug(uint8_t pin)
 {
     #if DEBUG
-        if __CONSTEXPR17(std::is_base_of_v<HardwareSerial, decltype(Serial)>) {
+        if constexpr (std::is_base_of_v<HardwareSerial, decltype(Serial)>) {
             return __isPinSerial(*reinterpret_cast<HardwareSerial *>(&Serial), pin);
         }
         else {

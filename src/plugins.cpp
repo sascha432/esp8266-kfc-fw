@@ -3,7 +3,7 @@
 */
 
 #include <Arduino_compat.h>
-#include <stl_ext/memory>
+#include <stl_ext/memory.h>
 #include "PluginComponent.h"
 #include "plugins_menu.h"
 #include "reset_detector.h"

@@ -9,7 +9,7 @@
 #include <save_crash.h>
 #include "fs_mapping.h"
 #include "web_server.h"
-#include "stl_ext/algorithm.h"
+#include <algorithm>
 #include "../src/plugins/plugins.h"
 
 #if DEBUG_ASYNC_WEB_RESPONSE

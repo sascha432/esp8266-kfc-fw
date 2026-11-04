@@ -7,7 +7,7 @@
 #include <MicrosTimer.h>
 #include <chrono>
 #include <ReadADC.h>
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 #include <KFCForms.h>
 #include <WebUISocket.h>
 #include <async_web_response.h>

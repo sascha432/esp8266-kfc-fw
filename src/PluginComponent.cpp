@@ -26,7 +26,7 @@
 AUTO_STRING_DEF(__pure_virtual, "pure virtual call: %s\n")
 #define __DBG_panic_pure_virtual() \
     DEBUG_OUTPUT.printf_P(SPGM(__pure_virtual), (PGM_P)getName()); \
-    __debugbreak_and_panic()
+    __DBG_panic_at()
 
 PluginComponent *PluginComponent::findPlugin(NameType name, bool isSetup)
 {

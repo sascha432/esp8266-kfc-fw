@@ -183,17 +183,12 @@ namespace WebServer {
             session._type = 0;
         }
 
-#pragma push_macro("new")
-#undef new
-
         inline Session &Session::operator=(Session &&session) noexcept
         {
             this->~Session();
             ::new(static_cast<void *>(this)) Session(std::move(session));
             return *this;
         }
-
-#pragma pop_macro("new")
 
         inline bool Session::operator==(uint32_t id) const
         {

@@ -138,7 +138,7 @@ void ATMode::handleEvent(String &commandString)
         else if (kAllowShortPrefix && StrView(commandString).startsWith('+')) {
             // allow using AT+COMMAND[?|=<args,...>] and +COMMAND[?|=<args,...>]
         }
-        else if __CONSTEXPR17 (kAllowNoPrefix) {
+        else if constexpr (kAllowNoPrefix) {
             // allow using COMMAND [<arg1>][ <args...>] (or /COMMAND, --COMMAND -COMMAND)
             atModeCommands = false;
         }
@@ -187,7 +187,7 @@ void ATMode::handleEvent(String &commandString)
             tokenizer(command, args, true, &nextCommand);
             __LDBG_printf("cmd=%s,argc=%u,args='%s',next_cmd='%s'", command, args.size(), __S(implode(F("' '"), args.getArgs())), __S(nextCommand));
         }
-        else if __CONSTEXPR17 (kAllowNoPrefix) {
+        else if constexpr (kAllowNoPrefix) {
             // run tokenizer in cli mode
             // command arg1 arg2 arg3 ; command2 ...
             args.setQueryMode(false);

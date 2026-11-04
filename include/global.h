@@ -250,10 +250,6 @@
 #    error MDNS_PLUGIN=1 required
 #endif
 
-#ifndef HAS_STRFTIME_P
-#    define HAS_STRFTIME_P 1
-#endif
-
 #ifndef __ICACHE_FLASH_ATTR
 #    define __ICACHE_FLASH_ATTR ICACHE_FLASH_ATTR
 #endif

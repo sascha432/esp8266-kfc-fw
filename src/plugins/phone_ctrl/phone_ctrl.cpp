@@ -17,7 +17,7 @@
 #include "plugins.h"
 #include "plugins_menu.h"
 #include "Utility/ProgMemHelper.h"
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 #include <WebUISocket.h>
 #include "pin_monitor.h"
 #include "../src/plugins/mqtt/component.h"

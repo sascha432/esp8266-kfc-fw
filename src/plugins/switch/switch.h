@@ -5,7 +5,7 @@
 #pragma once
 
 #include <Arduino_compat.h>
-#include <stl_ext/memory>
+#include <stl_ext/memory.h>
 #include <EventScheduler.h>
 #include <WebUIComponent.h>
 #include <BitsToStr.h>

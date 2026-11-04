@@ -17,7 +17,7 @@
 #include "plugins.h"
 #include "plugins_menu.h"
 #include "Utility/ProgMemHelper.h"
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 
 #if DEBUG_PING_MONITOR
 #include <debug_helper_enable.h>

@@ -18,10 +18,6 @@
 #    include "pixel_output_neobus.h"
 #endif
 
-#if __GNUG__ < 8
-#    error not supported
-#endif
-
 extern "C" uint8_t getNeopixelShowMethodInt();
 extern "C" const __FlashStringHelper *getNeopixelShowMethodStr();
 
@@ -224,7 +220,7 @@ namespace Clock {
         inline __attribute__((__always_inline__))
         typename _Ta::type getRow(typename _Ta::type row, typename _Ta::type col) const
         {
-            if __CONSTEXPR17 (_Ta::kRotate) {
+            if constexpr (_Ta::kRotate) {
                 return col;
             }
             else {
@@ -236,7 +232,7 @@ namespace Clock {
         inline __attribute__((__always_inline__))
         typename _Ta::type getCol(typename _Ta::type row, typename _Ta::type col) const
         {
-            if __CONSTEXPR17 (_Ta::kRotate) {
+            if constexpr (_Ta::kRotate) {
                 return row;
             }
             else {
@@ -250,8 +246,8 @@ namespace Clock {
         inline __attribute__((__always_inline__))
         typename _Ta::type _row(typename _Ta::type row, typename _Ta::type col) const
         {
-            if __CONSTEXPR17 (_Ta::kInterleaved) {
-                if __CONSTEXPR17 (_Ta::kReverseRows) {
+            if constexpr (_Ta::kInterleaved) {
+                if constexpr (_Ta::kReverseRows) {
                     if ((col & 1) == _Ta::kInterleaved) {
                         return (kRows - 1) - row;
                     }
@@ -265,7 +261,7 @@ namespace Clock {
                 }
             }
             else {
-                if __CONSTEXPR17 (_Ta::kReverseRows) {
+                if constexpr (_Ta::kReverseRows) {
                     return (kRows - 1) - row;
                 }
                 else {
@@ -280,7 +276,7 @@ namespace Clock {
         inline __attribute__((__always_inline__))
         typename _Ta::type _col(typename _Ta::type row, typename _Ta::type col) const
         {
-            if __CONSTEXPR17 (_Ta::kReverseColumns) {
+            if constexpr (_Ta::kReverseColumns) {
                 return (kCols - 1) - col;
             }
             else {
@@ -305,7 +301,7 @@ namespace Clock {
         inline __attribute__((__always_inline__))
         PixelCoordinatesType getPoint(PixelAddressType address) const
         {
-            if __CONSTEXPR17 (kRows == 1) {
+            if constexpr (kRows == 1) {
                 return PixelCoordinatesType(_row(getRow(0, address), getCol(0, address)), _col(getRow(0, address), getCol(0, address)));
             }
             else {

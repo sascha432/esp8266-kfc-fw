@@ -16,7 +16,7 @@
 #include "PluginComponent.h"
 #include <kfc_fw_config.h>
 #include "blinds_defines.h"
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 
 #if DEBUG_IOT_BLINDS_CTRL
 #    include <debug_helper_enable.h>
@@ -333,7 +333,7 @@ protected:
 
         static_assert((kToneDuration % kTimerInterval) == 0, "kToneDuration must be a multiple of kTimerInterval");
         static_assert(kToneDuration >= kTimerInterval, "kToneDuration must be greater or equal kTimerInterval");
-        static constexpr auto kToneMaxLoop = stdex::max<uint8_t>({1, kToneDuration / kTimerInterval});
+        static constexpr auto kToneMaxLoop = std::max<uint8_t>({1, kToneDuration / kTimerInterval});
 
         uint16_t counter;
         uint16_t loop;

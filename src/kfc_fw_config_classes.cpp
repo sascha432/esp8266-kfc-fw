@@ -217,7 +217,7 @@ namespace KFCConfigurationClasses {
         uint8_t mac[6];
         ::WiFi.macAddress(mac);
         uint8_t tmp = (mac[5] <= 1 || mac[5] >= 253 ? (mac[4] <= 1 || mac[4] >= 253 ? (mac[3] <= 1 || mac[3] >= 253 ? mac[3] : rand() % 98 + 1) : mac[4]) : mac[5]);
-        local_ip = kCreateIPv4Address(192, 168, 4, 0) | (tmp << 24U);
+        local_ip = createIPv4Address(192, 168, 4, 0) | (tmp << 24U);
     }
 
     void Network::Settings::defaults()

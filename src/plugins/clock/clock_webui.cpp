@@ -6,7 +6,7 @@
 #include "clock.h"
 #include <Arduino_compat.h>
 #include <WebUISocket.h>
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 
 #if DEBUG_IOT_CLOCK
 #    include <debug_helper_enable.h>

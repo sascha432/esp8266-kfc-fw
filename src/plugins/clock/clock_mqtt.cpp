@@ -4,7 +4,7 @@
 
 #include <Arduino_compat.h>
 #include "clock.h"
-#include <stl_ext/algorithm.h>
+#include <algorithm>
 #include "../src/plugins/sensor/sensor.h"
 
 #if DEBUG_IOT_CLOCK

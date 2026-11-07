@@ -82,8 +82,9 @@ void Register::dumpList(Print &output)
 
 void RegisterEx::_createMenu()
 {
-    _navMenu.home = _bootstrapMenu.addMenu(FSPGM(Home));
-    _bootstrapMenu.getItem(_navMenu.home)->setUri(FSPGM(index_html));
+    // a top level menu is a menu item without a parent: created with its URI, the URI stays a PROGMEM string
+    // (Item::setUri() stores a heap copy)
+    _navMenu.home = _bootstrapMenu.addMenuItem(FSPGM(Home), FSPGM(index_html), BootstrapMenu::InvalidMenuId);
 
     // since "home" has an URI, this menu is hidden
     _bootstrapMenu.addMenuItem(FSPGM(Home), FSPGM(index_html), _navMenu.home);
@@ -94,18 +95,29 @@ void RegisterEx::_createMenu()
     _bootstrapMenu.addMenuItem(FSPGM(Reboot_Device), FSPGM(reboot_html), _navMenu.home);
     _bootstrapMenu.addMenuItem(F("About"), F("about.html"), _navMenu.home);
 
-    _navMenu.status = _bootstrapMenu.addMenu(FSPGM(Status));
-    _bootstrapMenu.getItem(_navMenu.status)->setUri(FSPGM(status_html));
+    _navMenu.status = _bootstrapMenu.addMenuItem(FSPGM(Status), FSPGM(status_html), BootstrapMenu::InvalidMenuId);
 
     _navMenu.config = _bootstrapMenu.addMenu(FSPGM(Configuration));
     _bootstrapMenu.addMenuItem(FSPGM(WiFi), FSPGM(wifi_html), _navMenu.config);
     {
-        // the WiFi stations have one page each (/network/station-<n>.html, see KFCConfigurationPlugin::createConfigureForm())
+        // the WiFi stations have one page each (/network/station-<n>.html, see KFCConfigurationPlugin::createConfigureForm()).
+        // Label and URI are PROGMEM strings, a PrintString would be a heap copy of each for as long as the menu exists
         auto networkMenu = _bootstrapMenu.addSubMenu(FSPGM(Network), _navMenu.config);
         networkMenu.addMenuItem(F("Device and Access Point"), FSPGM(network_html));
-        for (int i = 1; i <= KFCConfigurationClasses::Network::WiFi::kNumStations; i++) {
-            networkMenu.addMenuItem(PrintString(F("WiFi Station %d"), i), PrintString(F("network/station-%d.html"), i));
-        }
+        #define WIFI_STATION_MENU_ITEM(n) \
+            if constexpr (n <= KFCConfigurationClasses::Network::WiFi::kNumStations) { \
+                networkMenu.addMenuItem(F("WiFi Station " #n), F("network/station-" #n ".html")); \
+            }
+        // WIFI_STATION_MAX_NUM is 1 to 8
+        WIFI_STATION_MENU_ITEM(1)
+        WIFI_STATION_MENU_ITEM(2)
+        WIFI_STATION_MENU_ITEM(3)
+        WIFI_STATION_MENU_ITEM(4)
+        WIFI_STATION_MENU_ITEM(5)
+        WIFI_STATION_MENU_ITEM(6)
+        WIFI_STATION_MENU_ITEM(7)
+        WIFI_STATION_MENU_ITEM(8)
+        #undef WIFI_STATION_MENU_ITEM
     }
     _bootstrapMenu.addMenuItem(FSPGM(Device), FSPGM(device_html), _navMenu.config);
     _bootstrapMenu.addMenuItem(F("Remote Access"), FSPGM(remote_html), _navMenu.config);
@@ -238,6 +250,9 @@ void Register::setup(SetupModeType mode, DependenciesPtr dependencies)
             #endif
         }
     }
+
+    // the menu is complete, the item list gives back the capacity it kept from growing
+    _bootstrapMenu.shrinkToFit();
 
     #if ENABLE_DEEP_SLEEP
         if (mode == SetupModeType::AUTO_WAKE_UP) {

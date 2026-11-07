@@ -7,6 +7,24 @@ and what is gone under Removed. Releases up to 0.0.8 have no dates.
 
 ## Unreleased (0.0.9)
 
+### 2026-11-07
+
+Changed
+
+* ESP8266: less static RAM and heap. GCC's lookup tables for switch statements are not created
+  anymore (`-fno-tree-switch-conversion`, 2.7 KB of DRAM), the file names of the debug output
+  (`__BASENAME_FILE__`) are in flash, the WebUI menu creates the WiFi station items, Home and Status
+  with PROGMEM strings and gives back the unused capacity of its item list after the plugin setup
+* KFCLibrary: `stdex::shrink_to_fit()` (`stl_ext/memory.h`) replaces `std::vector::shrink_to_fit()`,
+  which does nothing on the ESP8266 (no exceptions); the configuration parameter list is a
+  `std::vector` instead of a `std::list`
+* Smaller code: the `_setLast()` of the MQTT JSON writer is not inlined anymore and its object
+  writer has no recursion counter (4 byte of stack less per writer), `MQTT::Component::publish()`,
+  `subscribe()` and `unsubscribe()` are in `component.cpp`, the debug print and assert macros call
+  one function each in KFCLibrary `debug_helper.cpp` (printed through a 64 byte stack buffer, no
+  static RAM), the event scheduler, `LoopFunctions` and `WiFiCallbacks` code moved into `.cpp` files
+  and the `O3` pragmas of the KFCLibrary headers are gone
+
 ### 2026-11-04
 
 Changed

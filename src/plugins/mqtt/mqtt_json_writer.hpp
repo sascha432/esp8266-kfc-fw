@@ -8,7 +8,7 @@
 #include <JsonTools.h>
 #include "mqtt_strings.h"
 
-#define MQTT_JSON_WRITER_DEBUG 1
+#define MQTT_JSON_WRITER_DEBUG 0
 
 #if MQTT_JSON_WRITER_DEBUG
 #    include <debug_helper_enable.h>
@@ -863,7 +863,9 @@ namespace MQTT {
                 }
             }
 
-            inline __attribute__((__always_inline__))
+            // called by every append/close of the arrays and objects: inlined it was a copy (with the debug
+            // asserts) at every call site, out of line it is one copy (comdat) for the whole firmware
+            __attribute__((__noinline__))
             void _setLast(char ch) {
                 if (_output.length() > 1) {
                     #if MQTT_JSON_WRITER_DEBUG
@@ -1330,22 +1332,11 @@ namespace MQTT {
                     std::is_same<const __FlashStringHelper *, _Ta>::value), "type not allowed");
             }
 
-            int _debugLevel{0};
-
+            // the recursion is resolved at compile time, one argument less per call
             template<typename _Ta, typename ... _Args>
             void add(const _Ta &arg, _Args&& ...args) {
-                _debugLevel++;
-                if (_debugLevel > 16) {
-                    __DBG_printf("JSON recursion arg=%p", std::addressof(arg));
-#if DEBUG && 0
-                    // enable to trace
-                    panic();
-#endif
-                    return;
-                }
                 add(arg);
                 add(std::forward<_Args>(args)...);
-                _debugLevel--;
             }
         };
 

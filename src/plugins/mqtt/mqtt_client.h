@@ -915,35 +915,8 @@ public:
         return PrintString(F("%u,%u,%u"), ((color >> 16) & 0xff), ((color >> 8) & 0xff), (color & 0xff));
     }
 
-    inline __attribute__((__always_inline__))
-    uint16_t Component::subscribe(const String& topic, QosType qos)
-    {
-        if (!isConnected()) {
-            __DBG_assertf(isConnected() == true, "isConnected() == false: subscribe(%s) client=%p", __S(topic), getClient());
-            return 0;
-        }
-        return client().subscribe(this, topic, qos);
-    }
-
-    inline __attribute__((__always_inline__))
-    uint16_t Component::unsubscribe(const String& topic)
-    {
-        if (!isConnected()) {
-            __DBG_assertf(isConnected() == true, "isConnected() == false: unsubscribe(%s) client=%p", __S(topic), getClient());
-            return 0;
-        }
-        return client().unsubscribe(this, topic);
-    }
-
-    inline __attribute__((__always_inline__))
-    uint16_t Component::publish(const String& topic, bool retain, const String& payload, QosType qos)
-    {
-        if (!isConnected()) {
-            __DBG_assertf(isConnected() == true, "isConnected() == false: publish(%s) client=%p", __S(topic), getClient());
-            return 0;
-        }
-        return client().publish(this, topic, retain, payload, qos);
-    }
+    // Component::subscribe(), unsubscribe() and publish() are in component.cpp, each inlined copy had its
+    // own assert message
 
     inline __attribute__((__always_inline__))
     bool ComponentBase::isConnected() const

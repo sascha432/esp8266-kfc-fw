@@ -5,8 +5,8 @@ transport, and which `-D` switches select or influence them (including the I2S m
 visualizer).
 
 The transports themselves (RMT memory blocks, mixed I2S+RMT, measured frame times) are described in
-[`.github/copilot-instructions.md`](../.github/copilot-instructions.md), section
-`Environment wled_esp32_controller_neopixelbus`. This page is the library and flag reference.
+[`.github/instructions/clock-leds.instructions.md`](../.github/instructions/clock-leds.instructions.md),
+section `Environment wled_esp32_controller_neopixelbus`. This page is the library and flag reference.
 
 ## 1. LED libraries
 
@@ -144,5 +144,5 @@ a rare random crash that is still unfixed:
   filesystem size problem.
 
 The transports, the measured frame times and the flash-stall behavior are described in
-[`.github/copilot-instructions.md`](../.github/copilot-instructions.md), section
-`Environment wled_esp32_controller_neopixelbus`.
+[`.github/instructions/clock-leds.instructions.md`](../.github/instructions/clock-leds.instructions.md),
+section `Environment wled_esp32_controller_neopixelbus`.

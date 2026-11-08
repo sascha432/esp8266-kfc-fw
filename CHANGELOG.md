@@ -11,6 +11,19 @@ and what is gone under Removed. Releases up to 0.0.8 have no dates.
 
 Changed
 
+* Build flags: every env compiles with the core's `-Os`. PlatformIO adds the core's flags after
+  `build_flags`, so the `-Og` of the debug configs and the `-O3` of the WLED envs never reached the
+  compiler - they are gone, as are the second `-fstack-protector` of the WLED envs, the unused
+  `GCC_OPTIMIZE_LEVEL` define and the `-O0`/`-O1` unflags. `bme280_esp32_s3` unflags the core's
+  `-fstack-protector`, so its `-fstack-protector-all` is used now
+* NeoPixelEspEx: `O3` only for the transport (`_espShow()`, `espShow()`, `externalShow()`, the RMT
+  translators) instead of the whole header, so its small accessors (`Context::validate()`,
+  `getStats()`, ...) are inlined into the clock code again. `PixelDisplay::_showNeoPixelEx()` is
+  `noinline`, otherwise GCC inlines it into the IRAM function `ClockPlugin::_display_show()`
+* KFCLibrary: the `O3` pragmas of the KFCGfx sources cover the code of the file only, not the
+  headers it includes, the ones of sources without code are gone; the moon phase code has no `Os`
+  pragma anymore
+
 * ESP8266: less static RAM and heap. GCC's lookup tables for switch statements are not created
   anymore (`-fno-tree-switch-conversion`, 2.7 KB of DRAM), the file names of the debug output
   (`__BASENAME_FILE__`) are in flash, the WebUI menu creates the WiFi station items, Home and Status

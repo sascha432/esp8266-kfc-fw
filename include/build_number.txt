@@ -5,11 +5,42 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 16127
-date   = 2026-11-07 06:41:28
+number = 16158
+date   = 2026-11-07 17:34:19
 env    = hexpanel_17
 
 ; history, newest first: <number> <date> <time> <environments>
+16158 2026-11-07 17:34:19 hexpanel_17
+16157 2026-11-07 17:26:04 wled_esp32_controller_neopixelbus
+16156 2026-11-07 15:07:08 wled_esp32_controller_neopixelbus
+16155 2026-11-07 15:05:18 ws_95
+16154 2026-11-07 15:04:06 led_strip_xmas_serial
+16153 2026-11-07 15:02:50 led_strip_xmas_serial
+16152 2026-11-07 14:58:58 led_strip_xmas_serial
+16151 2026-11-07 07:49:32 ws_96
+16150 2026-11-07 07:48:07 ws_95
+16149 2026-11-07 07:46:59 dc_dimmer_76
+16148 2026-11-07 07:45:48 dc_dimmer_75
+16147 2026-11-07 07:44:32 atomic_sunv2_1_97
+16146 2026-11-07 07:43:17 atomic_sun_98
+16145 2026-11-07 07:41:57 1ch_dim_pm_177
+16144 2026-11-07 07:40:36 1ch_dim_pm_175
+16143 2026-11-07 07:39:15 1ch_dim_pm_84
+16142 2026-11-07 07:37:52 1ch_dim_pm_91
+16141 2026-11-07 07:36:28 1ch_dim_pm_90
+16140 2026-11-07 07:35:16 phone_ctrl
+16139 2026-11-07 07:34:01 rlybrd_85
+16138 2026-11-07 07:32:40 wled_esp32_controller_neopixelbus
+16137 2026-11-07 07:31:16 led_strip_xmas
+16136 2026-11-07 07:29:54 led_strip_katana
+16135 2026-11-07 07:28:34 led_strip_frame
+16134 2026-11-07 07:27:10 led_strip_balcony
+16133 2026-11-07 07:25:48 single_hexagon
+16132 2026-11-07 07:25:32 hexpanel_17
+16131 2026-11-07 07:24:19 bme280_48
+16130 2026-11-07 07:23:08 blindsctrl_81r
+16129 2026-11-07 07:21:57 blindsctrl_80l
+16128 2026-11-07 07:20:39 clockv2_100
 16127 2026-11-07 06:41:28 hexpanel_17
 16126 2026-11-07 06:32:17 wled_esp32_controller_neopixelbus
 16125 2026-11-07 06:29:21 led_strip_xmas_serial

@@ -302,11 +302,7 @@
 
 // optimize loop function, adds some code size but improves frame rate on the ESP8266 quite a lot for FastLED (less aborted frames)
 #ifndef IOT_CLOCK_OPTIMIZE_LOOP
-#    if ESP32
-#        define IOT_CLOCK_OPTIMIZE_LOOP 1
-#    else
-#        define IOT_CLOCK_OPTIMIZE_LOOP 1
-#    endif
+#    define IOT_CLOCK_OPTIMIZE_LOOP 1
 #endif
 
 #ifndef IOT_LED_MATRIX

@@ -1046,6 +1046,9 @@ namespace Clock {
 
         #if IOT_LED_MATRIX_NEOPIXEL_EX_SUPPORT
 
+            // noinline: inlined into the IRAM function ClockPlugin::_display_show() it costs IRAM, and every
+            // translation unit that inlines it gets its own copy of the NeoPixelEx transport
+            __attribute__((noinline))
             void _showNeoPixelEx(uint8_t brightness)
             {
                 auto ptr = &_controller;

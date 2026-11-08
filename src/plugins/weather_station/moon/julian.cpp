@@ -5,9 +5,6 @@
 #include "julian.h"
 #include <math.h>
 
-#pragma GCC push_options
-#pragma GCC optimize ("Os")
-
 time_t jToUnixtime(double jTime)
 {
     return (jTime - 2440587.5) * 86400;
@@ -65,5 +62,3 @@ julianYearType julianYear(double td)
     }
     return julianYearType(y, m);
 }
-
-#pragma GCC pop_options

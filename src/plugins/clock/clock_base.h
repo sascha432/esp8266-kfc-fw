@@ -24,6 +24,9 @@
 // pixel type and color math, FastLED is only used as transport (see pixel_color.h)
 #include "pixel_color.h"
 
+// FastLED's transport is header code and cannot get O3 without the rest of FastLED.h. Side effect: GCC does not
+// inline a function with its own optimize options into a caller with other options, so FastLED's accessors
+// (getBrightness(), CLEDController::leds()/next(), ...) are calls in the -Os code - accepted, a few per frame
 #if !HAVE_NEOPIXELBUS
 #    pragma GCC push_options
 #    pragma GCC optimize ("O3")

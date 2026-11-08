@@ -15,9 +15,6 @@
 #include "moontool.h"
 #include "../moon_phase.h"
 
-#pragma GCC push_options
-#pragma GCC optimize ("Os")
-
 /*  Astronomical constants  */
 
 /* 1980 January 0.0 */
@@ -314,5 +311,3 @@ void phaseShort(double pDate, MoonPhaseType &moon)
     // age of the moon in days
     moon.mAge = synmonth * moon.pPhase;
 }
-
-#pragma GCC pop_options

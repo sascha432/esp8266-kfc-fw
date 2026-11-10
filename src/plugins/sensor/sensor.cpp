@@ -23,12 +23,19 @@ WebUINS::ConfigIterator<_NextConfig>::ConfigIterator(MQTT::SensorPtr sensor, Sen
     SensorPlugin::getInstance().addSensor(sensor, config);
 }
 
+#if IOT_SENSOR_HAVE_LD2420
+    // the gate thresholds of the LD2420 have their own page
+#    define IOT_SENSOR_CONFIG_FORMS "sensor,ld2420"
+#else
+#    define IOT_SENSOR_CONFIG_FORMS "sensor"
+#endif
+
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     SensorPlugin,
     "sensor",           // name
     "Sensors",          // friendly name
     "",                 // web_templates
-    "sensor",           // config_forms
+    IOT_SENSOR_CONFIG_FORMS, // config_forms
     "",                 // reconfigure_dependencies
     PluginComponent::PriorityType::SENSOR,
     PluginComponent::RTCMemoryId::NONE,
@@ -164,6 +171,9 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
         #if IOT_SENSOR_HAVE_MPU6050
             addSensor<Sensor_MPU6050>(F(IOT_SENSOR_NAMES_MPU6050), IOT_SENSOR_HAVE_MPU6050);
         #endif
+        #if IOT_SENSOR_HAVE_LD2420
+            addSensor<Sensor_LD2420>(F(IOT_SENSOR_NAMES_LD2420));
+        #endif
         #if IOT_SENSOR_HAVE_SYSTEM_METRICS
             addSensor<Sensor_SystemMetrics>();
         #endif
@@ -205,6 +215,22 @@ void SensorPlugin::_timerEvent()
 
 void SensorPlugin::createConfigureForm(FormCallbackType type, const String &formName, FormUI::Form::BaseForm &form, AsyncWebServerRequest *request)
 {
+    #if IOT_SENSOR_HAVE_LD2420
+        if (F("ld2420") == formName) {
+            auto sensor = getSensor<Sensor_LD2420>(SensorType::LD2420);
+            if (!sensor) {
+                return;
+            }
+            if (type == FormCallbackType::SAVE) {
+                sensor->configurationSaved(&form);
+            }
+            else if (isCreateFormCallbackType(type)) {
+                sensor->createGateForm(form);
+                form.finalize();
+            }
+            return;
+        }
+    #endif
     if (type == FormCallbackType::SAVE) {
         for(const auto sensor: _sensors) {
             sensor->configurationSaved(&form);

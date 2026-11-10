@@ -7,6 +7,49 @@ and what is gone under Removed. Releases up to 0.0.8 have no dates.
 
 ## Unreleased (0.0.9)
 
+### 2026-11-10
+
+Added
+
+* HLK-LD2420 WebUI: the sensor configuration page has a card for the detection range and the
+  presence timeout, the new page `/ld2420.html` (button Gate Thresholds) the move/still thresholds
+  of the 16 gates, both with help texts. Saving writes only the changed values to the sensor once
+  it is idle (after a running monitor or command) and reads them back
+
+Changed
+
+* HLK-LD2420: a read value out of its range is taken as a garbled reply (the frames have no
+  checksum) and read again, a reply that is too short or carries an error code no longer aborts the
+  command but is retried
+* HLK-LD2420: the serial port and the command frames are `LD24xxSerial` (`LD24xxSerial.h/.cpp`) for
+  the next HLK radar sensors. It uses the hardware UARTs with fixed pins: the sensor's RX on GPIO2
+  (UART1 TX), its OT1 on GPIO13, where UART0 receives while a command runs. The serial console
+  ignores its input meanwhile and prints its output afterwards. `IOT_SENSOR_LD2420_RX` and
+  `IOT_SENSOR_LD2420_TX` are gone, I2C cannot use GPIO2. SoftwareSerial does not work with the
+  sensor at 115200 baud. The AT output says receive errors instead of framing errors
+* `led_strip_xmas_serial`: LD2420 OT1 on D7 and RX on D4, I2C moved from GPIO2/GPIO0 to GPIO4/GPIO5
+* `bme280_serial`: I2C on GPIO4/GPIO5, `monitor_port` added
+* The commented-out custom IRAM/cache sizes (`MMU_IRAM_SIZE`/`MMU_ICACHE_SIZE`) in the env files are
+  replaced with the 48 KB IRAM preset: the cache is 16 or 32 KB, any other size keeps 32 KB and the
+  cache overwrites the IRAM above 32 KB
+
+Fixed
+
+* Forms checked only the first validator of a field (KFCWebFramework `_validatorFindNext()`). The
+  second ones are checked now: the MQTT hostname has to be 3-128 characters, a ping monitor host
+  has to be empty, an IP address, a hostname or `${gateway}`
+
+### 2026-11-09
+
+Added
+
+* HLK-LD2420 radar presence sensor (`IOT_SENSOR_HAVE_LD2420`, ESP8266): its presence output OT2 is
+  the motion sensor input, the AT command `+LD2420` reads and writes the configuration the sensor
+  keeps in its flash (detection range, presence timeout, move/still thresholds of the 16 gates),
+  restarts it and prints the reported presence and distance. The status page shows the firmware
+  version, the detection range and the timeout
+* `led_strip_xmas_serial`: LD2420 on D5 (OT2), D6 (OT1) and D7 (RX), motion sensor with auto off
+
 ### 2026-11-07
 
 Changed
@@ -37,6 +80,11 @@ Changed
   one function each in KFCLibrary `debug_helper.cpp` (printed through a 64 byte stack buffer, no
   static RAM), the event scheduler, `LoopFunctions` and `WiFiCallbacks` code moved into `.cpp` files
   and the `O3` pragmas of the KFCLibrary headers are gone
+
+Fixed
+
+* Clock visualizer: no "offset of packed bit-field has changed in GCC 4.4" notes for `mic_silence`
+  and `mic_range` anymore (`uint32_t` storage, same layout, the stored config stays valid)
 
 ### 2026-11-04
 

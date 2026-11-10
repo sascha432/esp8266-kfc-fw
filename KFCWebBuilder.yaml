@@ -81,6 +81,8 @@ web_builder:
     '#if !IOT_SENSOR':
       - ./Resources/html/sensor.html
       - ./Resources/js/forms/sensor.js
+    '#if !IOT_SENSOR_HAVE_LD2420':
+      - ./Resources/html/ld2420.html
     '#if !IOT_WEATHER_STATION':
       - ./Resources/html/weather.html
       - ./Resources/html/curated-art.html

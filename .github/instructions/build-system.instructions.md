@@ -52,6 +52,17 @@ Details for `platformio.ini`, `conf/**` and `scripts/**`. The general build, fla
   `optimize` attribute on the function - never around a header or its includes: GCC does not inline a function
   with its own optimize options into a caller with other options, so every small accessor becomes a call.
 
+## ESP8266 IRAM
+
+- The instruction cache is **16 KB or 32 KB**, so IRAM is 32 KB (default) or 48 KB. More IRAM only comes from the
+  core presets `-D PIO_FRAMEWORK_ARDUINO_MMU_CACHE16_IRAM48` (or `..._SECHEAP_SHARED`, the unused IRAM becomes a
+  second heap). Never use `PIO_FRAMEWORK_ARDUINO_MMU_CUSTOM` with other `MMU_IRAM_SIZE`/`MMU_ICACHE_SIZE`
+  values: the core keeps the 32 KB cache for any `MMU_ICACHE_SIZE` other than `0x4000`, the build links and the
+  cache overwrites the IRAM above 32 KB at runtime (tested with `0x9000`/`0x7000`: every word above `0x40108000`
+  was wrong right after boot).
+- The 16 KB cache makes code in flash slower (`weather_station.ini`: the SECHEAP preset lagged). Check the free
+  IRAM in `firmware.elf` (`_text_end`, `0x40108000` = 32 KB) before switching an env.
+
 ## Compiling a single TU, IDE
 
 - For a single TU, `pio run -e <env> -t compiledb` writes `compile_commands.json`; the recorded command

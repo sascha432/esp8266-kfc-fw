@@ -11,6 +11,9 @@ The test rules for devices (no form saves, no actions, MQTT, mDNS) are in
 - NodeMCU (`board = nodemcuv2`), **serial only, no OTA**; use the env's `monitor_port` (`conf/envs/led_strip.ini`).
   It extends the ESP-01 LED strip base but unflags the standby pin 3 and `ESP8266_USE_UART_RX_AS_OUTPUT`, so the
   UART RX and the serial console work - keep those unflags.
+- The **HLK-LD2420** radar (OT1 on D7, RX on D4) borrows UART0 RX while a
+  `+LD2420` command runs, including the read about 1 s after boot: the serial console ignores input meanwhile and
+  prints the held output afterwards. Send the next serial command after the previous one has answered.
 - **1024 pixels on purpose**: a low-memory demo (~20 KB idle heap) for the heap guards of the web server
   (`WEBSERVER_*_MIN_FREE_*` in `include/web_server.h`). The visualizer forms (~14 KB to build) only fit while
   the heap is idle and are answered with 503 otherwise - expected, not a regression. Big forms are split into

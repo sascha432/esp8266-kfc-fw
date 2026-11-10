@@ -26,6 +26,7 @@
 #include "Sensor_Motion.h"
 #include "Sensor_AmbientLight.h"
 #include "Sensor_MPU6050.h"
+#include "Sensor_LD2420.h"
 
 #if DEBUG_IOT_SENSOR
 #    include <debug_helper_enable.h>
@@ -95,6 +96,10 @@
 
 #ifndef IOT_SENSOR_NAMES_INA219
 #    define IOT_SENSOR_NAMES_INA219 "INA219 Voltage"
+#endif
+
+#ifndef IOT_SENSOR_NAMES_LD2420
+#    define IOT_SENSOR_NAMES_LD2420 "HLK-LD2420 Radar"
 #endif
 
 #ifndef IOT_SENSOR_NAMES_INA219_FORM_TITLE

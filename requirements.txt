@@ -5,6 +5,7 @@
 # The build scripts (scripts/*.py, KFCWebBuilder) run in PlatformIO's own Python and do not use it.
 # scripts/audio_analyzer has its own venv and requirements.txt.
 
+pyserial
 requests
 requests-toolbelt
 websocket-client

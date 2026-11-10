@@ -40,6 +40,9 @@
                 <div data-target="#mpu_tt">Deviation from a stable orientation that is reported as tilted. The state has to leave the threshold by 5 degrees again (hysteresis) and is only updated while the device is at rest</div>
                 <div data-target="#mpu_si">Interval the sensor is sampled at</div>
                 <div data-target="#mpu_dt">Time a new orientation has to be stable before it is applied. The rotation and tilt state (and the display callbacks) only change while the device is at rest, so wiggling it does not toggle them</div>
+                <div data-target="#ldmin">First gate the radar detects presence in. Each gate covers about 0.7 m, gate 0 starts at the sensor. Raise it to ignore anything right in front of the sensor. The radar stores these values itself, they are written to it when the form is saved</div>
+                <div data-target="#ldmax">Last gate the radar detects presence in, the range ends at (max. gate + 1) x 0.7 m: 12 is about 9 m. Lower it if the radar sees through a wall or a door</div>
+                <div data-target="#ldto">Time the presence output stays on after the radar has stopped detecting anyone. The motion sensor timeout adds to it. The sensitivity of each gate is set on the Gate Thresholds page</div>
             </div>
         </form>
         <!--%%FOOT-->

@@ -549,3 +549,35 @@ Calibration:
 1. Put the device in the orientation it is mounted in and read `a[...]`: the accelerometer offsets are the values the axes read at rest (bias), the gyroscope offsets are the values the axes read while it does not rotate
 2. The rotation offset aligns a stable device with the reference orientation of the installation, the tilt threshold is the allowed deviation (`dev`) and the debounce time filters short movements. `rot` counts 90 degree steps clockwise from the module's -X axis (the X axis pointing down): `+X` up is `180`, `+Y` up is `90`. A module that is mounted differently is aligned with the invert flags and the rotation offset
 3. While `settled=0` the gyroscope still sees movement (above 15°/s). The rotation, the tilt state and the callbacks are only updated once the device has come to rest, so wiggling it does not toggle them
+
+### `+LD2420=<read|range,<min gate>,<max gate>|timeout,<seconds>|gate,<0-15|*>,<move>,<still>|factory|restart|mon[,<seconds>[,raw]]>`
+
+HLK-LD2420 radar presence sensor (`IOT_SENSOR_HAVE_LD2420`, ESP8266). The presence output OT2 is read by the motion sensor, this command talks to the UART of the sensor: OT1 on GPIO13 (D7), RX of the sensor on GPIO2 (D4, UART1 TX), I2C cannot use GPIO2. UART0 receives the sensor while a command runs, the serial console ignores its input meanwhile and prints its output when the command has finished (up to 1 KB, a `mon` started from the serial console prints everything at the end; the WebSocket console shows it live). The sensor stores its configuration in its own flash. The commands run in the background and print their result when the sensor has answered, a second command while one runs returns `ERROR - busy`
+
+- `read` (or no argument) reads the firmware version, the detection range, the presence timeout and the thresholds of the 16 gates. The firmware reads them once after boot for the status page
+- `range,<min gate 0-15>,<max gate 1-15>` detection range, a gate is about 0.7m
+- `timeout,<0-65535>` seconds the presence is held after the last detection
+- `gate,<0-15|*>,<move>,<still>` trigger (move) and hold (still) threshold of a gate or of all gates (`*`), 0-65535, a lower value is more sensitive
+- `factory` the values of a new module with firmware v1.6.1: gates 0-12, timeout 30s, the thresholds that `read` shows for a new module
+- `restart` restarts the sensor
+- `mon[,<seconds 0-300>[,raw]]` prints the presence and the distance that the sensor reports for 10 seconds (or the given time, `0` stops it): a presence change at once, a distance change every 250ms and the state once per second. `raw` prints the received bytes as hex. UART0 receives the sensor while the monitor is active
+
+A write only sends the values that changed and reads the configuration back. Each command prints the retries, the receive errors (overruns and framing errors of the UART) and the longest reply time (the sensor answers within about 40ms), a reply that did not arrive prints a `timeout` line with the bytes received since the command. The replies have no checksum: a read value out of its range (gates 0-15, min. gate <= max. gate, timeout and thresholds 0-65535) is a garbled reply, it prints an `invalid reply` line and the command is sent again. A reply with an error code prints `returned error` and is sent again as well, `ERROR - command failed` follows after the last retry
+
+The same values can be changed in the WebUI: the card of the sensor on the sensor configuration page (`/sensor.html`) and the gate thresholds on `/ld2420.html`. A saved form is written as soon as the sensor is idle (after a running monitor or command)
+``` text
++LD2420=timeout,35
++LD2420: 0 retries, 0 receive errors, max. reply time 53ms
++LD2420: configuration written, reading it back
++LD2420: 0 retries, 0 receive errors, max. reply time 51ms
++LD2420: firmware v1.6.1, 115200 baud
++LD2420: detection gates 0-12, presence timeout 35s
++LD2420: gate  0 move 60000 still 40000
+...
++LD2420: gate 15 move   200 still   100
++LD2420=mon,5
++LD2420: monitor for 5s
++LD2420: presence ON, distance 134cm
++LD2420: presence ON, distance 105cm
++LD2420: monitor end
+```

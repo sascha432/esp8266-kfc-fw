@@ -454,8 +454,9 @@ namespace KFCConfigurationClasses {
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_loudness_gain, 10, 1, 1000, 275, 1);
                     CREATE_UINT32_BITFIELD_MIN_MAX(mic_band_gain, 10, 1, 1000, 175, 1);
                     // automatic gain of the microphone: the bands are shown relative to the loudest band
-                    CREATE_UINT8_BITFIELD_MIN_MAX(mic_silence, 8, 20, 90, 62, 1); // -dBFS, below is silence
-                    CREATE_UINT8_BITFIELD_MIN_MAX(mic_range, 8, 10, 80, 40, 1); // dB below the loudest band shown as 0-255
+                    // uint32_t: both cross a byte boundary, as uint8_t GCC notes "offset of packed bit-field has changed in GCC 4.4"
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mic_silence, 8, 20, 90, 62, 1); // -dBFS, below is silence
+                    CREATE_UINT32_BITFIELD_MIN_MAX(mic_range, 8, 10, 80, 40, 1); // dB below the loudest band shown as 0-255
                     CREATE_BOOL_BITFIELD(mic_agc);
 
                     AudioReactionType audio_reaction;

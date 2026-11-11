@@ -26,7 +26,8 @@ public:
     void setType(DisplayType type, Event::milliseconds interval);
     DisplayType getType() const;
     void printHeap();
-    void printGPIO();
+    // uses no state of the interval: +GPIO=0 prints it without an object
+    static void printGPIO();
     void printRSSI();
     void print();
     bool removeTimer();

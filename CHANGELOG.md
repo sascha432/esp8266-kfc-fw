@@ -38,6 +38,9 @@ Fixed
 * Forms checked only the first validator of a field (KFCWebFramework `_validatorFindNext()`). The
   second ones are checked now: the MQTT hostname has to be 3-128 characters, a ping monitor host
   has to be empty, an IP address, a hostname or `${gateway}`
+* AT console: `+GPIO=0` and `+RSSI=0` print the pin states and the RSSI once, as documented, instead
+  of the heap. `+GPIO` (ESP8266) shows the direction of a pin from its output enable: an output that
+  was low was shown as `IN`, an input with a set output latch as `OUT`, GPIO16 was inverted
 
 ### 2026-11-09
 

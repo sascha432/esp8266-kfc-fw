@@ -162,12 +162,13 @@ void AtModePrintLoop::printGPIO()
                 // pinMode(i, INPUT);
                 Serial.printf_P(PSTR("%u=%u "), i, digitalRead(i));
                 #if ESP8266
+                    // the direction is the output enable register, GPO is the output level
                     if (i == 16) {
-                        Serial.print((GP16E & 1) ? F("IN ") : F("OUT "));
+                        Serial.print((GP16E & 1) ? F("OUT ") : F("IN "));
                     }
                     else {
                         String tmp;
-                        tmp = GPO & (1 << i) ? F("OUT") : F("IN");
+                        tmp = GPE & (1 << i) ? F("OUT") : F("IN");
                         tmp += GPF(i) & (1 << GPFPU) ? F("_PULLUP ") : F(" ");
                         Serial.print(tmp);
                     }
@@ -272,8 +273,19 @@ static void atModePrintLoopCommand(AtModeArgs &args, bool isHeap, AtModePrintLoo
                 atModePrintLoop->remove();
                 args.print(F("Interval disabled"));
             }
-            printHeapOnce();
-            Serial.println();
+            // show the state of the command once
+            switch(type) {
+                case AtModePrintLoop::DisplayType::GPIO:
+                    AtModePrintLoop::printGPIO();
+                    break;
+                case AtModePrintLoop::DisplayType::RSSI:
+                    Serial.printf_P(PSTR("+RSSI: %d dBm\n"), WiFi.RSSI());
+                    break;
+                default:
+                    printHeapOnce();
+                    Serial.println();
+                    break;
+            }
         }
         else {
             if (!atModePrintLoop) {

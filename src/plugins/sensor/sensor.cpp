@@ -26,6 +26,9 @@ WebUINS::ConfigIterator<_NextConfig>::ConfigIterator(MQTT::SensorPtr sensor, Sen
 #if IOT_SENSOR_HAVE_LD2420
     // the gate thresholds of the LD2420 have their own page
 #    define IOT_SENSOR_CONFIG_FORMS "sensor,ld2420"
+#elif IOT_SENSOR_HAVE_LD2450
+    // the zone areas of the LD2450 have their own page
+#    define IOT_SENSOR_CONFIG_FORMS "sensor,ld2450"
 #else
 #    define IOT_SENSOR_CONFIG_FORMS "sensor"
 #endif
@@ -174,6 +177,9 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
         #if IOT_SENSOR_HAVE_LD2420
             addSensor<Sensor_LD2420>(F(IOT_SENSOR_NAMES_LD2420));
         #endif
+        #if IOT_SENSOR_HAVE_LD2450
+            addSensor<Sensor_LD2450>(F(IOT_SENSOR_NAMES_LD2450));
+        #endif
         #if IOT_SENSOR_HAVE_SYSTEM_METRICS
             addSensor<Sensor_SystemMetrics>();
         #endif
@@ -226,6 +232,22 @@ void SensorPlugin::createConfigureForm(FormCallbackType type, const String &form
             }
             else if (isCreateFormCallbackType(type)) {
                 sensor->createGateForm(form);
+                form.finalize();
+            }
+            return;
+        }
+    #endif
+    #if IOT_SENSOR_HAVE_LD2450
+        if (F("ld2450") == formName) {
+            auto sensor = getSensor<Sensor_LD2450>(SensorType::LD2450);
+            if (!sensor) {
+                return;
+            }
+            if (type == FormCallbackType::SAVE) {
+                sensor->configurationSaved(&form);
+            }
+            else if (isCreateFormCallbackType(type)) {
+                sensor->createAreaForm(form);
                 form.finalize();
             }
             return;

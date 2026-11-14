@@ -7,6 +7,39 @@ and what is gone under Removed. Releases up to 0.0.8 have no dates.
 
 ## Unreleased (0.0.9)
 
+### 2026-11-14
+
+Added
+
+* HLK-LD2450 live view `/ld2450-radar.html` (button Live View on the sensor card) draws the targets like the vendor
+  tool: the sensor at the bottom center, the fan of 60 degrees to either side, range rings in meters and up to three
+  targets with distance, angle and speed. The firmware pushes them over the WebSocket `/ld2450-live` (10 frames per
+  second, plus the zone areas when a page connects) instead of one request per frame; the serial port is open and the
+  status page says `live view running` while a page is connected, the stream stops when the last page closes and the
+  serial console gets the port back. A command during the stream answers `ERROR - busy, live view running`. The
+  installation notes of the module are on the page and in `docs/AtModeHelp.md`, which documents the messages of the
+  WebSocket as well
+
+### 2026-11-13
+
+Added
+
+* HLK-LD2450 radar tracking sensor (`IOT_SENSOR_HAVE_LD2450`, ESP8266): it uses the serial port of the
+  LD2420 (`LD24xxSerial`), same pins and 256000 baud. The AT command `+LD2450` reads the firmware
+  version, the MAC address, the target tracking mode and the three zone areas, writes the tracking
+  mode, the zones and Bluetooth, restarts the sensor and prints the reported targets (position in mm,
+  speed, distance and resolution) with `mon`. The sensor has no presence output, the status page shows
+  firmware, tracking mode and zone type
+* HLK-LD2450 WebUI: the sensor configuration page has a card for the target tracking mode and the zone
+  type, the new page `/ld2450.html` (button Zone Areas) the three zone areas in mm, both with help
+  texts. Saving writes only the changed values to the sensor once it is idle and reads them back
+* `led_strip_xmas_serial`: LD2450 instead of the LD2420 on D7 (TX) and D4 (RX)
+
+Changed
+
+* `LD24xxSerial`: the command data limit is 26 bytes (`kMaxCommandData`), the zone areas of the LD2450
+  are one command, and the serial port is enabled by either radar (`IOT_SENSOR_HAVE_LD24XX`)
+
 ### 2026-11-10
 
 Added

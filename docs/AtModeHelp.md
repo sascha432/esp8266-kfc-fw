@@ -581,3 +581,70 @@ The same values can be changed in the WebUI: the card of the sensor on the senso
 +LD2420: presence ON, distance 105cm
 +LD2420: monitor end
 ```
+
+### `+LD2450=<read|mode,<single|multi>|zone,<off|disabled|detect|filter>|area,<0-2>,<x1>,<y1>,<x2>,<y2>|area,<0-2>,off|bluetooth,<on|off>|factory|restart|mon[,<seconds>[,raw]]>`
+
+HLK-LD2450 radar tracking sensor (`IOT_SENSOR_HAVE_LD2450`, ESP8266). It has no presence output: the targets it reports are the presence. This command talks to its UART and uses the pins of the LD2420: TX of the sensor on GPIO13 (D7), RX of the sensor on GPIO2 (D4, UART1 TX), I2C cannot use GPIO2. UART0 receives the sensor while a command or the monitor runs, the serial console ignores its input meanwhile and prints its output when the command has finished (up to 1 KB, a `mon` started from the serial console prints everything at the end; the WebSocket console shows it live). The sensor stores its configuration in its own flash. The commands run in the background and print their result when the sensor has answered, a second command while one runs returns `ERROR - busy, <read|write|monitor|live view> running`
+
+- `read` (or no argument) reads the firmware version, the MAC address (and whether Bluetooth is on), the target tracking mode and the three zone areas. The firmware reads them once after boot for the status page
+- `mode,<single|multi>` reports one target or up to three
+- `zone,<off|disabled|detect|filter>` what the areas do: ignored, targets inside are reported (`detect`) or targets inside are hidden (`filter`), `off` disables them and clears the areas
+- `area,<0-2>,<x1>,<y1>,<x2>,<y2>` a zone area, the corners in mm: x is left/right, y is the distance in front of the sensor. `area,<0-2>,off` clears one area
+- `bluetooth,<on|off>` the Bluetooth interface of the module
+- `factory` restores the factory defaults, the sensor restarts
+- `restart` restarts the sensor
+- `mon[,<seconds 0-300>[,raw]]` prints the reported targets for 10 seconds (or the given time, `0` stops it): `x` and `y` in mm, the speed in mm/s, the distance and the distance resolution. The targets are printed when they change at most every 500ms, the state once per second. `raw` prints the received bytes as hex. UART0 receives the sensor while the monitor is active
+
+The same values can be changed in the WebUI: the card of the sensor on the sensor configuration page (`/sensor.html`, target tracking mode and zone type) and the zone areas on `/ld2450.html`. A saved form is written as soon as the sensor is idle (after a running monitor or command) and read back
+
+The module runs at 256000 baud (115200 baud is tried when it does not answer), so the monitor prints about 20 target frames per second. A write only sends the values that changed and reads the configuration back. Each command prints the retries, the receive errors (overruns and framing errors of the UART) and the longest reply time, a reply that did not arrive prints a `timeout` line with the bytes received since the command. The replies have no checksum: a value out of its range is a garbled reply, it prints an `invalid reply` line and the command is sent again. A reply with an error code prints `returned error` and is sent again as well, `ERROR - command failed` follows after the last retry
+
+``` text
++LD2450=read
++LD2450: 0 retries, 0 receive errors, max. reply time 42ms
++LD2450: firmware 1.02.230801, 256000 baud, bluetooth off
++LD2450: mac 08:05:04:03:02:01
++LD2450: target tracking multi
++LD2450: zone area detection
++LD2450: area 0 x -1000..1000 mm, y 0..6000 mm
++LD2450: area 1 x 0..0 mm, y 0..0 mm
++LD2450: area 2 x 0..0 mm, y 0..0 mm
++LD2450=area,0,-1000,0,1000,6000
++LD2450: 0 retries, 0 receive errors, max. reply time 45ms
++LD2450: configuration written, reading it back
++LD2450: 0 retries, 0 receive errors, max. reply time 44ms
++LD2450: firmware 1.02.230801, 256000 baud, bluetooth off
++LD2450: mac 08:05:04:03:02:01
++LD2450: target tracking multi
++LD2450: zone area detection
++LD2450: area 0 x -1000..1000 mm, y 0..6000 mm
++LD2450: area 1 x 0..0 mm, y 0..0 mm
++LD2450: area 2 x 0..0 mm, y 0..0 mm
++LD2450=mon,5
++LD2450: monitor for 5s
++LD2450: 1 target, x -120mm y 1350mm -300mm/s 1355mm away, resolution 20mm
++LD2450: no targets
++LD2450: monitor end
+```
+
+**Live view.** `/ld2450-radar.html` (button Live View on the sensor card) draws the targets the way the vendor tool
+does: the sensor at the bottom center, the fan of 60 degrees to either side, range rings in meters and up to three
+targets with their distance, angle and speed. The targets are pushed over the WebSocket `/ld2450-live` instead of one
+request per frame: `{"cfg":{"multi":1,"bluetooth":0,"zone":2,"areas":[[x1,y1,x2,y2],...]}}` once when a page
+connects, then up to 10 times per second `{"t":[[x,y,speed,resolution],...]}` with x and y in mm, the speed in mm/s
+and a target slot with x = y = 0 for no target. The serial port is open and the stream runs while a page is
+connected, the serial console is paused meanwhile and gets the port back when the last page is closed (the status page
+shows `live view running`, a command returns `ERROR - busy` meanwhile). A saved form stops the stream, writes the
+values and restarts it.
+
+**Installation** (from the module's manual):
+
+1. Try to ensure that the radar antenna faces the area to be detected, and that the surroundings of the antenna are
+   open and unobstructed.
+2. Ensure that the sensor installation position is firm and stable. Shaking of the radar itself will affect
+   detection performance.
+3. Ensure that there are no moving or vibrating objects behind the radar. Since radar waves are penetrating, the back
+   lobe of the antenna signal may detect moving objects behind the radar. A metal shield or metal backplate can be
+   used to shield the radar back lobe and reduce the impact caused by objects behind the radar.
+4. When multiple 24GHz band radars are present, do not install them facing each other's beam direction. Keep
+   installation positions as far apart as possible to avoid possible mutual interference.

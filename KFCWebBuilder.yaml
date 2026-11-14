@@ -83,6 +83,10 @@ web_builder:
       - ./Resources/js/forms/sensor.js
     '#if !IOT_SENSOR_HAVE_LD2420':
       - ./Resources/html/ld2420.html
+    '#if !IOT_SENSOR_HAVE_LD2450':
+      - ./Resources/html/ld2450.html
+      - ./Resources/html/ld2450-radar.html
+      - ./Resources/js/ld2450-radar.js
     '#if !IOT_WEATHER_STATION':
       - ./Resources/html/weather.html
       - ./Resources/html/curated-art.html
@@ -142,6 +146,7 @@ web_builder:
           - ./Resources/js/ws-console.js
           - ./Resources/js/http2serial.js
           - ./Resources/js/ping-console.js
+          - ./Resources/js/ld2450-radar.js
           - ./Resources/js/webui.js
           - ./Resources/js/webui-led-matrix.js
           - ./lib/KFCLibrary/KFCWebBuilder/Resources/charts-js-2.9.3-dist/Chart.js

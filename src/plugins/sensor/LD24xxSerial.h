@@ -6,25 +6,27 @@
 
 // any HLK LD24xx radar sensor that is configured over its serial port
 #ifndef IOT_SENSOR_HAVE_LD24XX
-#    define IOT_SENSOR_HAVE_LD24XX IOT_SENSOR_HAVE_LD2420
+#    define IOT_SENSOR_HAVE_LD24XX (IOT_SENSOR_HAVE_LD2420 || IOT_SENSOR_HAVE_LD2450)
 #endif
 
 #if IOT_SENSOR_HAVE_LD24XX
 
 // Serial port and command frames of the HLK LD24xx radar sensors
 //
-// The hardware UARTs, fixed pins: the sensor's RX on GPIO2 (UART1 TX, TX only), its TX (OT1 of the LD2420) on GPIO13.
-// UART0 is the serial console and receives the sensor only while the port is open (while a command runs): the RX
-// signal is switched from GPIO3 to GPIO13, the same pin swap as Serial.swap(). The serial console is paused
-// meanwhile, its input is ignored and its output is buffered (kConsoleHoldSize) and sent when the port is closed. The
-// sensor runs at the baud rate of the console, 115200.
+// The hardware UARTs, fixed pins: the sensor's RX on GPIO2 (UART1 TX, TX only), its TX on GPIO13 (OT1 of the LD2420,
+// TX of the LD2450). UART0 is the serial console and receives the sensor only while the port is open (while a command
+// runs): the RX signal is switched from GPIO3 to GPIO13, the same pin swap as Serial.swap(). The serial console is
+// paused meanwhile, its input is ignored and its output is buffered (kConsoleHoldSize) and sent when the port is
+// closed. The console baud rate is switched to the one of the sensor while the port is open, 115200 (LD2420 firmware
+// 1.5.3 and later) or 256000 (LD2450).
 //
-// SoftwareSerial does not work at 115200 baud: bit errors and lost replies, and the frames have no checksum.
+// SoftwareSerial does not work at these baud rates: bit errors and lost replies, and the frames have no checksum.
 //
 // Protocol, little endian
 //   command: FD FC FB FA <length:2> <command:2> <data...> 04 03 02 01, length = 2 + data length
 //   reply:   FD FC FB FA <length:2> <command | 0x100:2> <error:2> <data...> 04 03 02 01
 // https://github.com/esphome/esphome/tree/dev/esphome/components/ld2420
+// https://github.com/esphome/esphome/tree/dev/esphome/components/ld2450
 
 #if !ESP8266
 #    error the LD24xx serial port supports ESP8266 only (UART0 pin swap)
@@ -96,7 +98,8 @@ inline uint16_t LD24xxHardwareUart::getErrors() const
 class LD24xxSerial {
 public:
     static constexpr uint8_t kMaxFrameLength = 64;
-    static constexpr uint8_t kMaxCommandData = 18;
+    // the largest command data: the zone areas of the LD2450
+    static constexpr uint8_t kMaxCommandData = 26;
 
     static constexpr uint16_t kCmdDisableConfig = 0x00fe;
     static constexpr uint16_t kCmdEnableConfig = 0x00ff;

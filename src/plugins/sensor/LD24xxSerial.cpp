@@ -24,6 +24,17 @@ namespace {
     constexpr uint8_t kFrameHeader[4] = { 0xfd, 0xfc, 0xfb, 0xfa };
     constexpr uint8_t kFrameFooter[4] = { 0x04, 0x03, 0x02, 0x01 };
 
+    // the baud rates of the LD2410/LD2450, the value of command 0x00A1 is the index + 1
+    const uint32_t kBaudRates[] PROGMEM = { 9600, 19200, 38400, 57600, 115200, 230400, 256000, 460800 };
+    constexpr uint8_t kBaudRateCount = sizeof(kBaudRates) / sizeof(kBaudRates[0]);
+    // the order a module that does not answer is searched in: the defaults of the firmware versions first
+    const uint8_t kScanOrder[kBaudRateCount] PROGMEM = { 6, 4, 3, 2, 1, 0, 5, 7 };
+
+    uint32_t getBaudRate(uint8_t index)
+    {
+        return static_cast<uint32_t>(pgm_read_dword(&kBaudRates[index]));
+    }
+
 }
 
 LD24xxConsoleHold::LD24xxConsoleHold() :
@@ -88,6 +99,8 @@ LD24xxHardwareUart::LD24xxHardwareUart(uint32_t baud) :
         Serial1.begin(baud, SERIAL_8N1, SERIAL_TX_ONLY);
     }
     else {
+        // the last frame of the previous port leaves at its own baud rate
+        Serial1.flush();
         Serial1.updateBaudRate(baud);
     }
     _pauseConsole();
@@ -134,9 +147,10 @@ int LD24xxHardwareUart::read()
     return data;
 }
 
-void LD24xxHardwareUart::write(const uint8_t *data, size_t length)
+size_t LD24xxHardwareUart::write(const uint8_t *data, size_t length)
 {
-    Serial1.write(data, length);
+    // 0 while UART1 has no TX (a failed initialization): the commands never leave the chip
+    return Serial1.write(data, length);
 }
 
 void LD24xxHardwareUart::_pauseConsole()
@@ -174,8 +188,38 @@ LD24xxSerial::LD24xxSerial(uint32_t baud) :
     _frame(),
     _length(0),
     _frameLength(0),
+    _written(0),
     _rxBytes(0)
 {
+}
+
+size_t LD24xxSerial::writeRaw(const uint8_t *data, size_t length)
+{
+    return _uart.write(data, length);
+}
+
+uint32_t LD24xxSerial::getScanBaud(uint8_t index, uint32_t first)
+{
+    if (index == 0) {
+        return first;
+    }
+    for(uint8_t i = 0; i < kBaudRateCount; i++) {
+        auto baud = getBaudRate(pgm_read_byte(&kScanOrder[i]));
+        if (baud != first && --index == 0) {
+            return baud;
+        }
+    }
+    return 0;
+}
+
+uint8_t LD24xxSerial::getBaudValue(uint32_t baud)
+{
+    for(uint8_t i = 0; i < kBaudRateCount; i++) {
+        if (getBaudRate(i) == baud) {
+            return i + 1;
+        }
+    }
+    return 0;
 }
 
 void LD24xxSerial::sendCommand(uint16_t command, const uint8_t *data, uint8_t length)
@@ -202,7 +246,7 @@ void LD24xxSerial::sendCommand(uint16_t command, const uint8_t *data, uint8_t le
     }
     _length = 0;
     _rxBytes = 0;
-    _uart.write(frame, ptr - frame);
+    _written = static_cast<uint8_t>(_uart.write(frame, ptr - frame));
 }
 
 bool LD24xxSerial::readReply()

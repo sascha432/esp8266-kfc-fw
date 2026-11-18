@@ -9,6 +9,9 @@
 //   {"cfg":{"multi":1,"bluetooth":0,"zone":2,"areas":[[x1,y1,x2,y2],[x1,y1,x2,y2],[x1,y1,x2,y2]]}}
 //   {"t":[[x,y,speed,resolution],...]}             x/y in mm, speed in mm/s, resolution in mm
 // A target slot without a target has x = y = 0. The configuration is sent when the page connects.
+//
+// The view covers a fixed 7 m. The area of the module (x -3..3 m, y 0..6 m) is shaded, a target outside it is a false
+// detection: a grey hollow dot, the presence of the firmware ignores it. A target farther than 7 m is drawn at the edge.
 
 $(function() {
 
@@ -16,15 +19,21 @@ $(function() {
         return;
     }
 
-    var kMaxRange = 6000;           // mm, the detection range of the module
+    var kRangeX = 3000;             // mm, the area of the module to either side
+    var kRangeY = 6000;             // mm, the area of the module in front of it
+    var kMaxRange = 7000;           // mm, the range of the view
     var kHalfAngle = 60;            // degrees to either side of the sensor
     var kRingStep = 1000;           // mm between the range rings
     var kTrailLength = 12;          // positions the trail of a target keeps
     var kStaleTimeout = 1500;       // ms without a message before the targets are removed
     var kColors = ['#e74c3c', '#27ae60', '#2980b9'];
+    var kAspect = 1.6;              // width / height that fits the fan of 2 x 60 degrees
+    var kMinHeight = 240;           // px, the canvas does not get smaller on a short window
+    var kBelowCanvas = 48;          // px for the state line below the canvas
 
     var canvas = document.getElementById('ld2450-radar-canvas');
     var ctx = canvas.getContext('2d');
+    var view = { width: canvas.width, height: canvas.height };
     var state = $('#ld2450-radar-state');
     var targets = [];
     var trails = [[], [], []];
@@ -36,27 +45,54 @@ $(function() {
         return target && (target[0] !== 0 || target[1] !== 0);
     }
 
+    // a target outside the area of the module is a false detection
+    function isInArea(target) {
+        return hasTarget(target) && Math.abs(target[0]) <= kRangeX && target[1] >= 0 && target[1] <= kRangeY;
+    }
+
     function rad(degrees) {
         return degrees * Math.PI / 180;
     }
 
+    // the canvas follows the width of its column, its height is limited to the window: the sensor at the bottom of the
+    // fan stays visible without scrolling on a large screen. The drawing uses CSS pixels, the bitmap the device pixels
+    function resize() {
+        var width = Math.max(1, Math.floor($(canvas).parent().width()));
+        var top = canvas.getBoundingClientRect().top + window.pageYOffset;
+        var available = window.innerHeight - top - kBelowCanvas;
+        var height = Math.round(Math.max(kMinHeight, Math.min(width / kAspect, available)));
+        var ratio = window.devicePixelRatio || 1;
+        canvas.style.height = height + 'px';
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        view = { width: width, height: height };
+        draw();
+    }
+
     // the sensor is drawn at the bottom center, the fan opens upwards
     function geometry() {
-        var oy = canvas.height - 26;
+        var oy = view.height - 26;
         var scaleY = (oy - 40) / kMaxRange;
-        var scaleX = (canvas.width / 2 - 26) / (Math.sin(rad(kHalfAngle)) * kMaxRange);
+        var scaleX = (view.width / 2 - 26) / (Math.sin(rad(kHalfAngle)) * kMaxRange);
         var scale = Math.min(scaleX, scaleY);
-        return { ox: canvas.width / 2, oy: oy, scale: scale };
+        return { ox: view.width / 2, oy: oy, scale: scale };
     }
 
     function drawBackground(t, angleStart, angleEnd) {
-        // the detection area of the module
+        // the view
         ctx.beginPath();
         ctx.moveTo(t.ox, t.oy);
         ctx.arc(t.ox, t.oy, kMaxRange * t.scale, angleStart, angleEnd);
         ctx.closePath();
-        ctx.fillStyle = 'rgba(52, 152, 219, 0.08)';
-        ctx.fill();
+        ctx.strokeStyle = 'rgba(120, 140, 160, 0.28)';
+        ctx.stroke();
+
+        // the area of the module, a target outside is a false detection
+        ctx.fillStyle = 'rgba(52, 152, 219, 0.12)';
+        ctx.strokeStyle = 'rgba(52, 152, 219, 0.45)';
+        ctx.fillRect(t.ox - kRangeX * t.scale, t.oy - kRangeY * t.scale, 2 * kRangeX * t.scale, kRangeY * t.scale);
+        ctx.strokeRect(t.ox - kRangeX * t.scale, t.oy - kRangeY * t.scale, 2 * kRangeX * t.scale, kRangeY * t.scale);
 
         ctx.font = '12px sans-serif';
         ctx.lineWidth = 1;
@@ -137,13 +173,43 @@ $(function() {
         ctx.lineWidth = 1;
     }
 
+    // the position of a target on the canvas: a target farther than the view is drawn at its edge, every dot stays on the
+    // canvas
+    function targetPosition(t, target) {
+        var x = target[0];
+        var y = target[1];
+        var distance = Math.sqrt(x * x + y * y);
+        if (distance > kMaxRange) {
+            x = x * kMaxRange / distance;
+            y = y * kMaxRange / distance;
+        }
+        return {
+            x: Math.min(view.width - 6, Math.max(6, t.ox + x * t.scale)),
+            y: Math.min(view.height - 6, Math.max(6, t.oy - y * t.scale))
+        };
+    }
+
     function drawTargets(t) {
         for (var i = 0; i < targets.length; i++) {
             if (!hasTarget(targets[i])) {
                 continue;
             }
-            var x = t.ox + targets[i][0] * t.scale;
-            var y = t.oy - targets[i][1] * t.scale;
+            var pos = targetPosition(t, targets[i]);
+            var x = pos.x;
+            var y = pos.y;
+            if (!isInArea(targets[i])) {
+                // false detection
+                ctx.strokeStyle = '#8a96a3';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.lineWidth = 1;
+                ctx.fillStyle = '#8a96a3';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText(String(i + 1), x + 9, y + 4);
+                continue;
+            }
             ctx.globalAlpha = 0.25;
             ctx.fillStyle = kColors[i];
             ctx.beginPath();
@@ -163,7 +229,7 @@ $(function() {
         var t = geometry();
         var angleStart = rad(-90 - kHalfAngle);
         var angleEnd = rad(-90 + kHalfAngle);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, view.width, view.height);
         drawBackground(t, angleStart, angleEnd);
         drawZones(t);
         drawTrails(t);
@@ -188,14 +254,16 @@ $(function() {
             card.find('.ld2450-distance').text((distance / 1000).toFixed(2) + ' m');
             card.find('.ld2450-angle').text((angle >= 0 ? '+' : '') + angle.toFixed(1) + '\u00b0');
             card.find('.ld2450-speed').text((target[2] / 1000).toFixed(2) + ' m/s');
-            card.find('.ld2450-position').text('x ' + x + ' mm, y ' + y + ' mm, resolution ' + target[3] + ' mm');
+            card.find('.ld2450-position').text('x ' + x + ' mm, y ' + y + ' mm, resolution ' + target[3] + ' mm' +
+                (isInArea(target) ? '' : ', false, outside the 3 x 6 m area'));
         }
     }
 
     function addToTrails() {
         for (var i = 0; i < 3; i++) {
             var trail = trails[i];
-            if (!hasTarget(targets[i])) {
+            if (!isInArea(targets[i])) {
+                // no trail for a false detection
                 trail.length = 0;
                 continue;
             }
@@ -272,7 +340,8 @@ $(function() {
         }
     }, 500);
 
-    draw();
+    $(window).on('resize', resize);
+    resize();
     updateTargets();
     socket = new WS_Console($.getWebSocketLocation('/ld2450-live'), $.getSessionId(), 1, socketHandler, null);
     socket.connect();

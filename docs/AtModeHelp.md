@@ -550,17 +550,23 @@ Calibration:
 2. The rotation offset aligns a stable device with the reference orientation of the installation, the tilt threshold is the allowed deviation (`dev`) and the debounce time filters short movements. `rot` counts 90 degree steps clockwise from the module's -X axis (the X axis pointing down): `+X` up is `180`, `+Y` up is `90`. A module that is mounted differently is aligned with the invert flags and the rotation offset
 3. While `settled=0` the gyroscope still sees movement (above 15°/s). The rotation, the tilt state and the callbacks are only updated once the device has come to rest, so wiggling it does not toggle them
 
-### `+LD2420=<read|range,<min gate>,<max gate>|timeout,<seconds>|gate,<0-15|*>,<move>,<still>|factory|restart|mon[,<seconds>[,raw]]>`
+### `+LD2420=<read|range,<min gate>,<max gate>|timeout,<seconds>|gate,<0-15|*>,<move>,<still>|factory|restart|mon[,<seconds>[,raw]]|tx[,<seconds>]>`
 
-HLK-LD2420 radar presence sensor (`IOT_SENSOR_HAVE_LD2420`, ESP8266). The presence output OT2 is read by the motion sensor, this command talks to the UART of the sensor: OT1 on GPIO13 (D7), RX of the sensor on GPIO2 (D4, UART1 TX), I2C cannot use GPIO2. UART0 receives the sensor while a command runs, the serial console ignores its input meanwhile and prints its output when the command has finished (up to 1 KB, a `mon` started from the serial console prints everything at the end; the WebSocket console shows it live). The sensor stores its configuration in its own flash. The commands run in the background and print their result when the sensor has answered, a second command while one runs returns `ERROR - busy`
+HLK-LD2420 radar presence sensor (`IOT_SENSOR_HAVE_LD2420`, ESP8266). The presence output OT2 is read by the motion sensor, this command talks to the UART of the sensor (pins below). UART0 receives the sensor while a command runs, the serial console ignores its input meanwhile and prints its output when the command has finished (up to 1 KB, a `mon` started from the serial console prints everything at the end; the WebSocket console shows it live). The sensor stores its configuration in its own flash. The commands run in the background and print their result when the sensor has answered, a second command while one runs returns `ERROR - busy`.
+
+| ESP8266 | Sensor | Notes |
+| ------- | ------ | ----- |
+| GPIO13 (D7) | OT1 (TX) | UART0 RX while the port is open, fixed |
+| GPIO2 (D4) | RX | UART1 TX, fixed, I2C cannot use it |
 
 - `read` (or no argument) reads the firmware version, the detection range, the presence timeout and the thresholds of the 16 gates. The firmware reads them once after boot for the status page
 - `range,<min gate 0-15>,<max gate 1-15>` detection range, a gate is about 0.7m
 - `timeout,<0-65535>` seconds the presence is held after the last detection
-- `gate,<0-15|*>,<move>,<still>` trigger (move) and hold (still) threshold of a gate or of all gates (`*`), 0-65535, a lower value is more sensitive
+- `gate,<0-15|*>,<move>,<still>` trigger (move) and hold (still) threshold of a gate or of all gates (`*`), 0-65535, a lower value is more sensitive. A gate out of range is an error
 - `factory` the values of a new module with firmware v1.6.1: gates 0-12, timeout 30s, the thresholds that `read` shows for a new module
 - `restart` restarts the sensor
-- `mon[,<seconds 0-300>[,raw]]` prints the presence and the distance that the sensor reports for 10 seconds (or the given time, `0` stops it): a presence change at once, a distance change every 250ms and the state once per second. `raw` prints the received bytes as hex. UART0 receives the sensor while the monitor is active
+- `mon[,<seconds 0-300>[,raw]]` prints the presence and the distance that the sensor reports for 10 seconds (or the given time, `0` stops it): a presence change at once, a distance change every 500ms and the state once per second. `raw` prints the received bytes as hex. UART0 receives the sensor while the monitor is active
+- `tx[,<seconds 1-30>]` writes a continuous `0x55` pattern to the TX pin to check the wiring, see `+LD2450`
 
 A write only sends the values that changed and reads the configuration back. Each command prints the retries, the receive errors (overruns and framing errors of the UART) and the longest reply time (the sensor answers within about 40ms), a reply that did not arrive prints a `timeout` line with the bytes received since the command. The replies have no checksum: a read value out of its range (gates 0-15, min. gate <= max. gate, timeout and thresholds 0-65535) is a garbled reply, it prints an `invalid reply` line and the command is sent again. A reply with an error code prints `returned error` and is sent again as well, `ERROR - command failed` follows after the last retry
 
@@ -576,28 +582,40 @@ The same values can be changed in the WebUI: the card of the sensor on the senso
 ...
 +LD2420: gate 15 move   200 still   100
 +LD2420=mon,5
-+LD2420: monitor for 5s
++LD2420: monitor for 5s at 115200 baud
 +LD2420: presence ON, distance 134cm
 +LD2420: presence ON, distance 105cm
 +LD2420: monitor end
 ```
 
-### `+LD2450=<read|mode,<single|multi>|zone,<off|disabled|detect|filter>|area,<0-2>,<x1>,<y1>,<x2>,<y2>|area,<0-2>,off|bluetooth,<on|off>|factory|restart|mon[,<seconds>[,raw]]>`
+### `+LD2450=<read|mode,<single|multi>|zone,<off|disabled|detect|filter>|area,<0-2>,<x1>,<y1>,<x2>,<y2>|area,<0-2>,off|factory|restart|mon[,<seconds>[,raw]]|tx[,<seconds>]>`
 
-HLK-LD2450 radar tracking sensor (`IOT_SENSOR_HAVE_LD2450`, ESP8266). It has no presence output: the targets it reports are the presence. This command talks to its UART and uses the pins of the LD2420: TX of the sensor on GPIO13 (D7), RX of the sensor on GPIO2 (D4, UART1 TX), I2C cannot use GPIO2. UART0 receives the sensor while a command or the monitor runs, the serial console ignores its input meanwhile and prints its output when the command has finished (up to 1 KB, a `mon` started from the serial console prints everything at the end; the WebSocket console shows it live). The sensor stores its configuration in its own flash. The commands run in the background and print their result when the sensor has answered, a second command while one runs returns `ERROR - busy, <read|write|monitor|live view> running`
+HLK-LD2450 radar tracking sensor (`IOT_SENSOR_HAVE_LD2450`, ESP8266). It has no presence output: the targets it reports are the presence. This command talks to its UART, on the pins of the LD2420 (below). UART0 receives the sensor while a command or the monitor runs, the serial console ignores its input meanwhile and prints its output when the command has finished (up to 1 KB, a `mon` started from the serial console prints everything at the end; the WebSocket console shows it live). The sensor stores its configuration in its own flash. The commands run in the background and print their result when the sensor has answered, a second command while one runs returns `ERROR - busy, <read|write|monitor|live view|TX test> running`. A build has one LD24xx radar (LD2420, LD2410C or LD2450), more than one is a compile error: GPIO13 is the only RX pin, and two 24 GHz radars close to each other disturb each other
+
+| ESP8266 | Sensor | Notes |
+| ------- | ------ | ----- |
+| GPIO13 (D7) | TX | UART0 RX while the port is open, fixed |
+| GPIO2 (D4) | RX | UART1 TX, fixed, I2C cannot use it |
+
+**Baud rate.** The module keeps its baud rate in its own flash as well (default 256000, `IOT_SENSOR_LD2450_BAUD`). A module that does not answer at its rate is searched on the other rates it supports (115200, 57600, 38400, 19200, 9600, 230400 and 460800), and a read that finds it there sets it back (command 0x00A1 and a restart, `read` prints `setting the module from <rate> to 256000 baud`). The boot read finds and sets it the same way, it is repeated up to 3 times if the module does not answer. At 19200 baud the module reports about 5 frames per second instead of 10
+
+Bluetooth, the orientation of the module and why the radars cannot be mixed on one board: [HLK-LD24xx-radar.md](datasheets/HLK-LD24xx-radar.md)
+
+**Presence** (`IOT_SENSOR_LD2450_PRESENCE=1`, envs `presense_ld2450_2` and `presense_serial`): the firmware reads the target frames all the time and publishes the presence (a target within the presence timeout, `/sensor.html`, default 5 s) and the number of targets as a WebUI tile and over MQTT. Only targets inside the area of the module count (x -3..+3 m, y 0..6 m), a target outside it is a false detection: `mon` marks it with `outside the area`. UART0 receives the sensor all the time: the USB serial console gets no input after the boot read (3 s after boot) and its output is held (up to 1 KB, sent while a command runs). Use the WebSocket console (`/serial-console`) for the AT commands, a command takes the port for its duration and the stream continues afterwards. `mon` keeps the presence updated (`mon,<seconds>,raw` does not decode the frames), a command, a raw monitor or `tx` that holds the port longer than the timeout clears it. Without the flag the port is open only while a command, the monitor or the live view runs
 
 - `read` (or no argument) reads the firmware version, the MAC address (and whether Bluetooth is on), the target tracking mode and the three zone areas. The firmware reads them once after boot for the status page
 - `mode,<single|multi>` reports one target or up to three
 - `zone,<off|disabled|detect|filter>` what the areas do: ignored, targets inside are reported (`detect`) or targets inside are hidden (`filter`), `off` disables them and clears the areas
-- `area,<0-2>,<x1>,<y1>,<x2>,<y2>` a zone area, the corners in mm: x is left/right, y is the distance in front of the sensor. `area,<0-2>,off` clears one area
-- `bluetooth,<on|off>` the Bluetooth interface of the module
-- `factory` restores the factory defaults, the sensor restarts
+- `area,<0-2>,<x1>,<y1>,<x2>,<y2>` a zone area, the corners in mm: x is left/right, y is the distance in front of the sensor. `area,<0-2>,off` clears one area. An area number out of range is an error, a value out of range is limited to the range
+- Bluetooth: the firmware switches it off (`IOT_SENSOR_LD24XX_BLUETOOTH_OFF`, default 1), with Bluetooth on the module switches its radar off about 150 s after its start (`docs/datasheets/HLK-LD24xx-radar.md`). A read that finds it on sends command 0x00A4 and restarts the module, which applies it after the restart, then reads it back; the log has `LD2450: Bluetooth off ok`. Once per boot and module: a new module and a factory reset have Bluetooth on. `read` shows the state (`bluetooth on|off`, the MAC address is 08:05:04:03:02:01 while it is off)
+- `factory` restores the factory defaults, the sensor restarts at 256000 baud
 - `restart` restarts the sensor
 - `mon[,<seconds 0-300>[,raw]]` prints the reported targets for 10 seconds (or the given time, `0` stops it): `x` and `y` in mm, the speed in mm/s, the distance and the distance resolution. The targets are printed when they change at most every 500ms, the state once per second. `raw` prints the received bytes as hex. UART0 receives the sensor while the monitor is active
+- `tx[,<seconds 1-30>]` writes a continuous `0x55` pattern to the TX pin for the given time (default 5s): a multimeter on the pin shows a mid level while the UART drives it, 0 or 3.3 V means the pin is not driven. Use it to check the wiring of a module that does not answer
 
-The same values can be changed in the WebUI: the card of the sensor on the sensor configuration page (`/sensor.html`, target tracking mode and zone type) and the zone areas on `/ld2450.html`. A saved form is written as soon as the sensor is idle (after a running monitor or command) and read back
+The same values can be changed in the WebUI: the card of the sensor on the sensor configuration page (`/sensor.html`, target tracking mode, zone type and, with the presence, the presence timeout) and the zone areas on `/ld2450.html`. A saved form is written as soon as the sensor is idle (after a running monitor or command) and read back
 
-The module runs at 256000 baud (115200 baud is tried when it does not answer), so the monitor prints about 20 target frames per second. A write only sends the values that changed and reads the configuration back. Each command prints the retries, the receive errors (overruns and framing errors of the UART) and the longest reply time, a reply that did not arrive prints a `timeout` line with the bytes received since the command. The replies have no checksum: a value out of its range is a garbled reply, it prints an `invalid reply` line and the command is sent again. A reply with an error code prints `returned error` and is sent again as well, `ERROR - command failed` follows after the last retry
+A write only sends the values that changed and reads the configuration back. Each command prints the retries, the receive errors (overruns and framing errors of the UART) and the longest reply time, a reply that did not arrive prints a `timeout` line with the bytes received since the command. The replies have no checksum: a value out of its range is a garbled reply, it prints an `invalid reply` line and the command is sent again. A reply with an error code prints `returned error` and is sent again as well, `ERROR - command failed` follows after the last retry
 
 ``` text
 +LD2450=read
@@ -621,7 +639,7 @@ The module runs at 256000 baud (115200 baud is tried when it does not answer), s
 +LD2450: area 1 x 0..0 mm, y 0..0 mm
 +LD2450: area 2 x 0..0 mm, y 0..0 mm
 +LD2450=mon,5
-+LD2450: monitor for 5s
++LD2450: monitor for 5s at 256000 baud
 +LD2450: 1 target, x -120mm y 1350mm -300mm/s 1355mm away, resolution 20mm
 +LD2450: no targets
 +LD2450: monitor end
@@ -634,8 +652,8 @@ request per frame: `{"cfg":{"multi":1,"bluetooth":0,"zone":2,"areas":[[x1,y1,x2,
 connects, then up to 10 times per second `{"t":[[x,y,speed,resolution],...]}` with x and y in mm, the speed in mm/s
 and a target slot with x = y = 0 for no target. The serial port is open and the stream runs while a page is
 connected, the serial console is paused meanwhile and gets the port back when the last page is closed (the status page
-shows `live view running`, a command returns `ERROR - busy` meanwhile). A saved form stops the stream, writes the
-values and restarts it.
+shows `live view running`). A command, the monitor and a saved form pause the stream, it resumes when they have
+finished.
 
 **Installation** (from the module's manual):
 
@@ -648,3 +666,58 @@ values and restarts it.
    used to shield the radar back lobe and reduce the impact caused by objects behind the radar.
 4. When multiple 24GHz band radars are present, do not install them facing each other's beam direction. Keep
    installation positions as far apart as possible to avoid possible mutual interference.
+
+### `+LD2410C=<read|range,<max move gate>,<max still gate>|timeout,<seconds>|gate,<0-8|*>,<move>,<still>|factory|restart|mon[,<seconds>[,raw|gates]]|out|tx[,<seconds>]>`
+
+HLK-LD2410C radar presence sensor (`IOT_SENSOR_HAVE_LD2410C`, ESP8266). Its presence output OUT is read by the sensor itself, this command talks to its UART (pins below), `IOT_SENSOR_LD2410C_BAUD` (default 256000). A module on another rate is searched and set back, see the baud rate notes of `+LD2450`. The serial port is only open while a command or the monitor runs, UART0 receives the sensor meanwhile: the serial console ignores its input and prints its output when the command has finished (up to 1 KB, the WebSocket console shows it live). The sensor stores its configuration in its own flash. The commands run in the background and print their result when the sensor has answered, a second command while one runs returns `ERROR - busy`
+
+| ESP8266 | Sensor | Notes |
+| ------- | ------ | ----- |
+| GPIO13 (D7) | TX | UART0 RX while the port is open, fixed |
+| GPIO2 (D4) | RX | UART1 TX, fixed, I2C cannot use it |
+| `IOT_SENSOR_LD2410C_OUT_PIN` | OUT | presence output, GPIO4 (D2) on `presense_ld2410_1` |
+
+The OUT pin is read every 250 ms and published as occupancy like Home Assistant shows it: the WebUI tile shows `Detected` or `Clear`, MQTT a binary sensor with the device class `occupancy` (state topic `<base topic>/ld2410c`, `ON`/`OFF`, auto discovery). `+LD2410C=out` prints its state.
+
+- `read` (or no argument) reads the firmware version, the max. moving/still gate, the nobody duration, the move/still sensitivity of the 9 gates and the Bluetooth MAC address (08:05:04:03:02:01 while Bluetooth is off), then switches the module to engineering mode: its data frames carry the energy of every gate until it restarts. The firmware reads them once after boot for the status page and switches Bluetooth off like on the LD2450
+- `range,<max moving gate 1-8>,<max still gate 1-8>` the furthest gate that reports a moving/still target, a gate is 0.75 m
+- `timeout,<0-65535>` seconds the presence is held after the last detection (nobody duration)
+- `gate,<0-8|*>,<move>,<still>` sensitivity of a gate or of all gates (`*`), 0-100: the module reports a target only when its energy is above the value, a **higher** value is less sensitive and 100 ignores the gate (like the thresholds of the LD2420). A gate out of range is an error (`ERROR - gate must be 0-8`), a sensitivity out of range is limited to 0-100
+- `factory` restores the factory defaults, the sensor restarts at 256000 baud and is set back to `IOT_SENSOR_LD2410C_BAUD` at the next read
+- `restart` restarts the sensor
+- `mon[,<seconds 0-300>[,raw]]` prints the reported presence (`detected` or `clear`) and distances for 10 seconds (or the given time, `0` stops it): a presence change at once, a distance change every 500ms and the state once per second. `raw` prints the received bytes as hex, `gates` the moving and still energy of every gate (0-100) below each frame, a `*` marks a gate above its value, plus the light value and the state of OUT. A module that has restarted since the last read reports no gates, `read` switches engineering mode on again
+- `out` prints the level of the presence output and the presence the firmware publishes
+- `tx[,<seconds 1-30>]` writes a continuous `0x55` pattern to the TX pin to check the wiring, see `+LD2450`
+
+A write only sends the values that changed, reads the configuration back and prints it. Each command prints the retries, the receive errors and the longest reply time, a reply that did not arrive prints a `timeout` line with the bytes received and sent. The replies have no checksum: a value out of its range is a garbled reply, it prints an `invalid reply` line and the command is sent again
+
+The same values can be changed in the WebUI: the card of the sensor on the sensor configuration page (`/sensor.html`, max. gates and nobody duration) and the gate sensitivity on `/ld2410c.html`. A saved form is written as soon as the sensor is idle
+
+**Live view.** `/ld2410c.html` shows the energy of every gate as a bar below its values: the black mark is the value, the orange one the highest energy since the page was opened, a red bar is above its value (the radar filters as well: a gate just above its value does not always report a target). The firmware pushes the frames over the WebSocket `/ld2410c-live` (about 10 per second, the peak of the frames between two messages) and keeps the serial port open while a page is connected: the console waits like during the monitor. A frame without the gates (the module has restarted) starts a read, at most every 10 seconds. *Raise values to peak + 10* sets every gate whose peak reached its value to the peak + 10 in the form, *Save Changes* writes them. To find what the gates see in an empty room, leave the page open for a while before raising the values
+
+``` text
++LD2410C=read
++LD2410C: 0 retries, 0 receive errors, max. reply time 7ms
++LD2410C: firmware 2.44.25070917, 256000 baud, bluetooth off
++LD2410C: mac 08:05:04:03:02:01
++LD2410C: max. moving gate 8, max. still gate 8, nobody duration 5s
++LD2410C: gate 0 move  50 still   0
++LD2410C: gate 1 move  50 still   0
++LD2410C: gate 2 move  40 still  40
+...
++LD2410C: gate 8 move  15 still  20
++LD2410C=out
++LD2410C: output GPIO4 is high, presence detected
++LD2410C=mon,5
++LD2410C: monitor for 5s at 256000 baud
++LD2410C: presence detected, moving 30cm (energy 0), still 30cm (energy 63), detected 30cm
++LD2410C: monitor end
++LD2410C=mon,5,gates
++LD2410C: monitor for 5s at 256000 baud
++LD2410C: presence detected, moving 344cm (energy 0), still 314cm (energy 100), detected 289cm
++LD2410C: gate     0    1    2    3    4    5    6    7    8   light 0, out 1
++LD2410C: move    17   10    1    3    4    5    9    6    5
++LD2410C: still    0    0   23   60* 100*  92*  35*  25*  24*
+...
++LD2410C: monitor end
+```

@@ -25,13 +25,24 @@ WebUINS::ConfigIterator<_NextConfig>::ConfigIterator(MQTT::SensorPtr sensor, Sen
 
 #if IOT_SENSOR_HAVE_LD2420
     // the gate thresholds of the LD2420 have their own page
-#    define IOT_SENSOR_CONFIG_FORMS "sensor,ld2420"
-#elif IOT_SENSOR_HAVE_LD2450
-    // the zone areas of the LD2450 have their own page
-#    define IOT_SENSOR_CONFIG_FORMS "sensor,ld2450"
+#    define IOT_SENSOR_CONFIG_FORM_LD2420 ",ld2420"
 #else
-#    define IOT_SENSOR_CONFIG_FORMS "sensor"
+#    define IOT_SENSOR_CONFIG_FORM_LD2420 ""
 #endif
+#if IOT_SENSOR_HAVE_LD2450
+    // the zone areas of the LD2450 have their own page
+#    define IOT_SENSOR_CONFIG_FORM_LD2450 ",ld2450"
+#else
+#    define IOT_SENSOR_CONFIG_FORM_LD2450 ""
+#endif
+#if IOT_SENSOR_HAVE_LD2410C
+    // the gate sensitivity of the LD2410C has its own page
+#    define IOT_SENSOR_CONFIG_FORM_LD2410C ",ld2410c"
+#else
+#    define IOT_SENSOR_CONFIG_FORM_LD2410C ""
+#endif
+
+#define IOT_SENSOR_CONFIG_FORMS "sensor" IOT_SENSOR_CONFIG_FORM_LD2420 IOT_SENSOR_CONFIG_FORM_LD2450 IOT_SENSOR_CONFIG_FORM_LD2410C
 
 PROGMEM_DEFINE_PLUGIN_OPTIONS(
     SensorPlugin,
@@ -180,6 +191,9 @@ void SensorPlugin::setup(SetupModeType mode, const PluginComponents::Dependencie
         #if IOT_SENSOR_HAVE_LD2450
             addSensor<Sensor_LD2450>(F(IOT_SENSOR_NAMES_LD2450));
         #endif
+        #if IOT_SENSOR_HAVE_LD2410C
+            addSensor<Sensor_LD2410C>(F(IOT_SENSOR_NAMES_LD2410C));
+        #endif
         #if IOT_SENSOR_HAVE_SYSTEM_METRICS
             addSensor<Sensor_SystemMetrics>();
         #endif
@@ -253,6 +267,22 @@ void SensorPlugin::createConfigureForm(FormCallbackType type, const String &form
             return;
         }
     #endif
+    #if IOT_SENSOR_HAVE_LD2410C
+        if (F("ld2410c") == formName) {
+            auto sensor = getSensor<Sensor_LD2410C>(SensorType::LD2410C);
+            if (!sensor) {
+                return;
+            }
+            if (type == FormCallbackType::SAVE) {
+                sensor->configurationSaved(&form);
+            }
+            else if (isCreateFormCallbackType(type)) {
+                sensor->createGateForm(form);
+                form.finalize();
+            }
+            return;
+        }
+    #endif
     if (type == FormCallbackType::SAVE) {
         for(const auto sensor: _sensors) {
             sensor->configurationSaved(&form);
@@ -279,6 +309,13 @@ void SensorPlugin::createMenu()
     if (_hasConfigureForm()) {
         bootstrapMenu.addMenuItem(getFriendlyName(), F("sensor.html"), navMenu.config);
     }
+    // live views of the radars
+    #if IOT_SENSOR_HAVE_LD2450
+        bootstrapMenu.addMenuItem(F("LD2450 Live View"), F("ld2450-radar.html"), navMenu.util);
+    #endif
+    #if IOT_SENSOR_HAVE_LD2410C
+        bootstrapMenu.addMenuItem(F("LD2410C Live View"), F("ld2410c.html"), navMenu.util);
+    #endif
 }
 
 void SensorPlugin::addGroup(WebUINS::Root &webUI, const __FlashStringHelper *title)

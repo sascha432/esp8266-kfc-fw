@@ -5,11 +5,67 @@
 ; "number" is the build that is currently being compiled
 ; -------------------------------------------------------------------------
 
-number = 16250
-date   = 2026-11-14 11:31:16
-env    = led_strip_xmas_serial
+number = 16306
+date   = 2026-11-18 14:17:12
+env    = presense_ld2450_2
 
 ; history, newest first: <number> <date> <time> <environments>
+16306 2026-11-18 14:17:12 presense_ld2450_2
+16305 2026-11-18 13:17:00 presense_ld2450_2
+16304 2026-11-18 11:58:59 presense_ld2450_2
+16303 2026-11-18 10:01:08 presense_ld2450_2
+16302 2026-11-18 09:59:43 presense_ld2450_2
+16301 2026-11-18 09:07:03 presense_ld2450_2
+16300 2026-11-18 08:32:13 presense_serial
+16299 2026-11-18 08:23:10 presense_serial
+16298 2026-11-18 06:58:00 presense_serial
+16297 2026-11-18 06:29:36 presense_serial
+16296 2026-11-18 06:14:53 presense_ld2410_1
+16295 2026-11-17 08:32:42 led_strip_xmas_serial
+16294 2026-11-17 08:31:32 presense_serial
+16293 2026-11-17 08:25:05 presense_ld2410_1
+16292 2026-11-17 08:23:54 presense_ld2410_1
+16291 2026-11-17 08:04:56 presense_serial
+16290 2026-11-17 04:29:01 presense_serial
+16289 2026-11-16 20:48:46 presense_serial
+16288 2026-11-16 20:07:52 presense_serial
+16287 2026-11-16 19:59:35 presense_serial
+16286 2026-11-16 19:49:28 presense_serial
+16285 2026-11-16 19:48:24 presense_serial
+16284 2026-11-16 19:37:10 presense_serial
+16283 2026-11-16 19:24:17 presense_serial
+16282 2026-11-16 19:06:37 presense_serial
+16281 2026-11-16 18:34:04 presense_serial
+16280 2026-11-16 18:15:44 presense_serial
+16279 2026-11-16 18:14:24 presense_serial
+16278 2026-11-16 18:03:12 presense_serial
+16277 2026-11-16 16:49:08 presense_serial
+16276 2026-11-16 16:27:46 presense_serial
+16275 2026-11-16 15:52:26 presense_serial
+16274 2026-11-16 13:43:34 presense_serial
+16273 2026-11-16 13:38:46 presense_serial
+16272 2026-11-16 13:30:49 presense_serial
+16271 2026-11-16 13:29:10 presense_serial
+16270 2026-11-16 13:24:13 presense_serial
+16269 2026-11-16 13:19:18 presense_serial
+16268 2026-11-16 13:17:49 presense_serial
+16267 2026-11-16 13:16:16 presense_serial
+16266 2026-11-16 13:14:44 presense_serial
+16265 2026-11-16 12:43:14 presense_serial
+16264 2026-11-16 11:57:04 presense_serial
+16263 2026-11-16 11:51:59 presense_serial
+16262 2026-11-16 11:46:23 presense_serial
+16261 2026-11-16 11:45:18 presense_serial
+16260 2026-11-16 11:33:18 presense_serial
+16259 2026-11-16 11:31:36 presense_serial
+16258 2026-11-16 11:29:01 presense_serial
+16257 2026-11-16 11:19:01 presense_serial
+16256 2026-11-16 11:17:48 presense_serial
+16255 2026-11-16 11:08:51 presense_serial
+16254 2026-11-16 11:04:04 presense_serial
+16253 2026-11-16 10:48:35 presense_serial
+16252 2026-11-16 10:40:12 presense_serial
+16251 2026-11-15 10:07:05 presense_serial
 16250 2026-11-14 11:31:16 led_strip_xmas_serial
 16249 2026-11-14 11:28:35 led_strip_xmas_serial
 16248 2026-11-14 11:19:13 led_strip_xmas_serial

@@ -255,6 +255,21 @@ namespace KFCConfigurationClasses {
 
             #endif
 
+            #if IOT_SENSOR_HAVE_LD2450 && IOT_SENSOR_LD2450_PRESENCE
+                // HLK-LD2450: presence is kept this many seconds after the last frame with a target
+                struct __attribute__packed__ LD2450ConfigType {
+                    using Type = LD2450ConfigType;
+
+                    CREATE_UINT32_BITFIELD_MIN_MAX(presence_timeout, 10, 1, 600, 5, 1);
+
+                    LD2450ConfigType() :
+                        presence_timeout(kDefaultValueFor_presence_timeout)
+                    {
+                    }
+
+                };
+            #endif
+
             struct __attribute__packed__ SensorConfigType {
                 #if IOT_SENSOR_HAVE_BATTERY
                     BatteryConfigType battery;
@@ -279,6 +294,9 @@ namespace KFCConfigurationClasses {
                 #endif
                 #if IOT_SENSOR_HAVE_MPU6050
                     MPU6050ConfigType mpu6050;
+                #endif
+                #if IOT_SENSOR_HAVE_LD2450 && IOT_SENSOR_LD2450_PRESENCE
+                    LD2450ConfigType ld2450;
                 #endif
             };
 

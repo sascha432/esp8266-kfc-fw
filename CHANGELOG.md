@@ -7,6 +7,92 @@ and what is gone under Removed. Releases up to 0.0.8 have no dates.
 
 ## Unreleased (0.0.9)
 
+### 2026-11-18
+
+Added
+
+* HLK-LD2410C radar presence sensor (`IOT_SENSOR_HAVE_LD2410C`, ESP8266) on the UART pins of the
+  other HLK radars, its presence output OUT on `IOT_SENSOR_LD2410C_OUT_PIN`. The card on the sensor
+  configuration page has the max. moving/still gate and the nobody duration, the new page
+  `/ld2410c.html` (button Gate Sensitivity) the move/still value of the 9 gates (0-100): the module
+  reports a target only when its energy is above the value, a higher value makes a gate less
+  sensitive, 100 ignores it. OUT is read every 250 ms and published as occupancy: the WebUI tile
+  shows Detected or Clear like Home Assistant, MQTT a binary sensor with the device class occupancy
+  (auto discovery). The AT command `+LD2410C` reads and writes the configuration the module keeps in
+  its own flash (0x0061/0x0060/0x0064), prints the reported presence and distances and the state of
+  the output pin, a saved form is written as soon as the module is idle
+* HLK-LD2410C live view on `/ld2410c.html`: the moving and still energy of every gate as a bar below
+  its values, with the peak since the page was opened. A red bar is above its value. "Raise values
+  to peak + 10" sets the gates whose peak reached their value in the form, Save Changes writes them.
+  The firmware pushes the frames over the WebSocket `/ld2410c-live`. A read switches the module to
+  engineering mode (command 0x0062), its frames carry the energy of every gate until it restarts,
+  the live view reads it again when a frame has no gates. `+LD2410C=mon,<seconds>,gates` prints the
+  energy of every gate, the light value and OUT below each frame, a `*` marks a gate above its value
+* HLK-LD2450 presence (`IOT_SENSOR_LD2450_PRESENCE=1`): the firmware reads the target frames all the
+  time and publishes the presence and the number of targets. The WebUI tile shows Detected (with the
+  number of targets), Clear or Unknown, MQTT has a binary sensor with the device class occupancy and
+  a Targets sensor (auto discovery). A target switches the presence on at once, the presence timeout
+  on `/sensor.html` (default 5 s) clears it. Only targets inside the area of the module count
+  (x -3..+3 m, y 0..6 m), a target outside it is a false detection, `+LD2450=mon` marks it. The USB
+  serial console is paused after the boot read, the AT commands go over the WebSocket console
+* WebUI: the Utilities menu links the live views of the HLK radars, LD2450 Live View
+  (`/ld2450-radar.html`) and LD2410C Live View (`/ld2410c.html`), in builds with that radar
+* `+LD2450=tx`, `+LD2410C=tx` and `+LD2420=tx` write a continuous pattern to the TX pin for 1-30
+  seconds, a multimeter on the pin shows a mid level while the UART drives it. The `timeout` lines
+  print how many bytes the UART accepted, so a dead module or a missing TX wire can be told from a
+  garbled reply
+* HLK LD24xx radars: the log has the result of every command the firmware sends by itself (boot
+  read, saved form, baud rate change) with the bytes and receive errors of the last attempt
+* `docs/datasheets/HLK-LD24xx-radar.md`: wiring of an LD2410C on a D1 mini (GPIO and D names of the
+  pins), the baud rate, the factory reset, the paused serial console, how to check the wiring, the
+  mounting orientation of the LD2410C and the LD2450 from their manuals (LD2450 upright, LD2410C
+  with the pins at the top), why the radars cannot be mixed on one board, the presence of the
+  LD2450 and that Bluetooth has to be off on the LD2450: with it on, it stops reporting about 150 s
+  after its start
+
+Changed
+
+* HLK-LD2450 and LD2410C: the firmware switches Bluetooth off (`IOT_SENSOR_LD24XX_BLUETOOTH_OFF`,
+  default 1): with Bluetooth on, the LD2450 switched its radar off about 150 s after its start and
+  only a power cycle brought it back. A read that finds Bluetooth on sends command 0x00A4 and
+  restarts the module, which only applies it after a restart, once per boot. The LD2410C read has
+  the Bluetooth MAC address, the module reports 08:05:04:03:02:01 while Bluetooth is off.
+  `+LD2450=bluetooth,<on|off>` is removed: it sent the command without the restart and changed
+  nothing
+* HLK LD2410C, LD2420 and LD2450: one base class `LD24xxSensor`
+  (`src/plugins/sensor/LD24xxSensor.h`) runs the commands, the retries, the baud rate search, the
+  monitor, the TX test, the boot read and the saved forms of all three, `LD24xxSensorT<Params>`
+  keeps the configuration and the form values. A sensor implements its read and write steps, the
+  decoding of its replies and data frames, its forms and AT subcommands. The monitors of the three
+  print a change every 500ms at most (the LD2420 every 250ms before)
+* HLK LD24xx radars: a build has one radar (LD2420, LD2410C or LD2450), more than one is a compile
+  error: GPIO13 is the only RX pin, and two 24 GHz radars close to each other disturb each other
+* HLK-LD2450 live view: a command and the monitor no longer answer `ERROR - busy` while a live view
+  page is open, they pause the stream and it resumes afterwards
+
+Fixed
+
+* HLK-LD2450: `factory` restarts the module after the factory reset command, the factory values only
+  take effect after a restart. The module answered the command and stayed in the configuration
+  mode, it did not report until the next power cycle
+* HLK-LD2450: a module that was set to another baud rate never answered and the live view showed no
+  targets, only 256000 and 115200 baud were tried. The first command is now sent on every rate the
+  modules support (9600 to 460800), a module found on another rate is set back to its default
+  (`IOT_SENSOR_LD2450_BAUD`, `IOT_SENSOR_LD2410C_BAUD`) with command 0x00A1 and a restart. A boot
+  read that gets no reply is repeated up to 3 times
+* HLK-LD2450: a failed command leaves the configuration mode at every baud rate it tried, also when
+  the first command got no reply. A module in it stops reporting targets
+* `+LD2450=area` and `+LD2420=gate` reject an index out of range or a non-numeric one, it was
+  limited to the range (or read as 0) and changed another area or gate
+* HLK-LD2450 live view: on a large screen the radar was taller than the window and the sensor at the
+  bottom of the fan was cut off. The canvas has the aspect of the fan, follows the width of its
+  column and the height of the window, and is drawn at the pixel ratio of the screen
+* HLK-LD2450 live view: the radar was drawn with a 6 m range, a target farther away was drawn
+  outside the canvas. The view covers a fixed 7 m with the area of the module (x -3..+3 m, y 0..6 m)
+  shaded, a target outside the area is a grey hollow dot, at the edge if it is farther than 7 m
+* HLK LD24xx radars: a saved form that changed nothing on the module closed the serial port of the
+  live view, the live view stopped until the page was opened again
+
 ### 2026-11-14
 
 Added
@@ -33,7 +119,6 @@ Added
 * HLK-LD2450 WebUI: the sensor configuration page has a card for the target tracking mode and the zone
   type, the new page `/ld2450.html` (button Zone Areas) the three zone areas in mm, both with help
   texts. Saving writes only the changed values to the sensor once it is idle and reads them back
-* `led_strip_xmas_serial`: LD2450 instead of the LD2420 on D7 (TX) and D4 (RX)
 
 Changed
 
@@ -60,8 +145,6 @@ Changed
   ignores its input meanwhile and prints its output afterwards. `IOT_SENSOR_LD2420_RX` and
   `IOT_SENSOR_LD2420_TX` are gone, I2C cannot use GPIO2. SoftwareSerial does not work with the
   sensor at 115200 baud. The AT output says receive errors instead of framing errors
-* `led_strip_xmas_serial`: LD2420 OT1 on D7 and RX on D4, I2C moved from GPIO2/GPIO0 to GPIO4/GPIO5
-* `bme280_serial`: I2C on GPIO4/GPIO5, `monitor_port` added
 * The commented-out custom IRAM/cache sizes (`MMU_IRAM_SIZE`/`MMU_ICACHE_SIZE`) in the env files are
   replaced with the 48 KB IRAM preset: the cache is 16 or 32 KB, any other size keeps 32 KB and the
   cache overwrites the IRAM above 32 KB
@@ -84,7 +167,6 @@ Added
   keeps in its flash (detection range, presence timeout, move/still thresholds of the 16 gates),
   restarts it and prints the reported presence and distance. The status page shows the firmware
   version, the detection range and the timeout
-* `led_strip_xmas_serial`: LD2420 on D5 (OT2), D6 (OT1) and D7 (RX), motion sensor with auto off
 
 ### 2026-11-07
 
@@ -93,8 +175,8 @@ Changed
 * Build flags: every env compiles with the core's `-Os`. PlatformIO adds the core's flags after
   `build_flags`, so the `-Og` of the debug configs and the `-O3` of the WLED envs never reached the
   compiler - they are gone, as are the second `-fstack-protector` of the WLED envs, the unused
-  `GCC_OPTIMIZE_LEVEL` define and the `-O0`/`-O1` unflags. `bme280_esp32_s3` unflags the core's
-  `-fstack-protector`, so its `-fstack-protector-all` is used now
+  `GCC_OPTIMIZE_LEVEL` define and the `-O0`/`-O1` unflags. An env with
+  `-fstack-protector-all` unflags the core's `-fstack-protector`, so it is used now
 * NeoPixelEspEx: `O3` only for the transport (`_espShow()`, `espShow()`, `externalShow()`, the RMT
   translators) instead of the whole header, so its small accessors (`Context::validate()`,
   `getStats()`, ...) are inlined into the clock code again. `PixelDisplay::_showNeoPixelEx()` is
@@ -529,9 +611,8 @@ Added
 * Support for INMP441 microphone for the audio visualizer
 * Adafruit NeoPixel support
 * Support for up to 4 LED output pins
-* LED Matrix and Strip support for ESP32 (wled_esp32_controller, compatible with many WLED
-  controllers or my own version [EasyEDA schematics and
-  PCB](https://oshwlab.com/sascha23095123423/wled-controller_copy))
+* LED Matrix and Strip support for ESP32 (compatible with many WLED controllers or my own version
+  [EasyEDA schematics and PCB](https://oshwlab.com/sascha23095123423/wled-controller_copy))
 * UDP video streaming to the visualizer
 
 Changed

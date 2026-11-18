@@ -11,3 +11,5 @@ requests-toolbelt
 websocket-client
 Pillow
 zeroconf
+# text of the datasheet PDFs in docs/datasheets/
+pypdf

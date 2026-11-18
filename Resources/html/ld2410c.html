@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<!--%%HEAD-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/bootstrap.min.css" debug_loader="1">
+    <link rel="stylesheet" href="../css/styles.css" debug_loader="1">
+    <link rel="stylesheet" href="../../lib/KFCWebBuilder/Resources/css/open-iconic-bootstrap.css" debug_loader="1">
+    <title>KFC FW</title>
+</head>
+<!--HEAD%%-->
+
+<body>
+    <!--%%NAV-->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="index.html">KFC FW</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        </div>
+    </nav>
+    <!--NAV%%-->
+    <style>
+/* one line stays visible while the gates are scrolled, the rest of the live view scrolls with the page */
+.ld2410c-live {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    padding: 4px 8px;
+}
+
+.ld2410c-live .badge {
+    flex: 0 0 auto;
+}
+
+.ld2410c-live .btn {
+    flex: 0 0 auto;
+}
+
+.ld2410c-gate {
+    margin-top: 6px;
+}
+
+.ld2410c-row {
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    line-height: 1.1;
+    margin-bottom: 3px;
+}
+
+.ld2410c-name {
+    width: 3em;
+    color: #6c757d;
+}
+
+.ld2410c-bar {
+    position: relative;
+    flex: 1 1 auto;
+    height: 12px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.ld2410c-fill {
+    height: 100%;
+    width: 0;
+    background: #2980b9;
+}
+
+.ld2410c-row:nth-child(2) .ld2410c-fill {
+    background: #27ae60;
+}
+
+.ld2410c-row.ld2410c-over .ld2410c-fill {
+    background: #e74c3c;
+}
+
+.ld2410c-peak, .ld2410c-value {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    margin-left: -1px;
+}
+
+.ld2410c-peak {
+    width: 2px;
+    background: #f39c12;
+}
+
+.ld2410c-value {
+    width: 3px;
+    background: #212529;
+}
+
+.ld2410c-num {
+    min-width: 7em;
+    padding-left: 6px;
+    white-space: nowrap;
+}
+
+.ld2410c-row.ld2410c-over .ld2410c-num {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+.ld2410c-row.ld2410c-unused {
+    opacity: 0.4;
+}
+    </style>
+    <div class="container">
+        <form method="POST" action="ld2410c.html">
+            <div class="ld2410c-live d-flex align-items-center hidden" id="ld2410c-live">
+                <span class="badge badge-secondary mr-2" id="ld2410c-presence">-</span>
+                <span class="small text-truncate mr-auto" id="ld2410c-short">-</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 ml-2" id="ld2410c-live-toggle">Stop</button>
+            </div>
+            <div class="card mb-0 hidden" id="ld2410c-tools">
+                <div class="card-body py-2">
+                    <div class="small" id="ld2410c-target">-</div>
+                    <div class="small text-muted mt-1" id="ld2410c-live-state">Connecting...</div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm mr-2" id="ld2410c-reset-peaks">Reset peaks</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="ld2410c-raise">Raise values to peak + 10</button>
+                    </div>
+                    <div class="small text-muted mt-2">The bars show the energy of every gate, the black mark is its
+                        value and the orange mark the highest energy since the page was opened. A red bar is above its
+                        value; the radar also filters, a gate just above its value does not always report a target. To find what a gate sees in an empty room, leave the page
+                        open for a while. "Raise values" sets every gate whose peak reached its value to the peak +
+                        10, Save Changes writes them to the radar.</div>
+                </div>
+            </div>
+            %FORM_HTML%
+            <div class="form-help-block">
+                <div data-target="#lcm_0">Signal strength a gate needs to report a target: Move starts the detection, Still keeps it on while the person does not move. The radar reports a target only when its energy (0-100) is above the value: a higher value makes a gate less sensitive, 100 ignores the gate. Raise the values of a gate that detects presence in an empty room (fans, curtains, plants in a draft, people behind a wall) and lower them if a person sitting still is lost. The radar stores the values itself, the changed gates are written to it when the form is saved. The serial console command AT+LD2410C=mon,30,gates prints the energy of every gate, AT+LD2410C=factory resets the module to its defaults</div>
+            </div>
+        </form>
+        <!--%%FOOT-->
+        <div class="row">
+            <div class="col footer">&nbsp;</div>
+        </div>
+        <!--FOOT%%-->
+    </div>
+    <!--%%JAVASCRIPT-->
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/jquery-3.3.1.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/popper.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/bootstrap.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../../lib/KFCWebBuilder/Resources/js/js.cookie.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/main.min.js"></script>
+	<script debug_loader="1" type="text/javascript" src="../js/debug.js"></script>
+    <!--JAVASCRIPT%%-->
+
+    %FORM_VALIDATOR%
+</body>
+
+</html>

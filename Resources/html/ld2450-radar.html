@@ -26,8 +26,8 @@
     <!--NAV%%-->
     <style>
 #ld2450-radar-canvas {
+    display: block;
     width: 100%;
-    height: auto;
     background: #10161d;
     border-radius: 4px;
 }
@@ -69,7 +69,7 @@
     <div class="container-fluid ld2450-radar pt-3" id="ld2450-radar">
         <div class="row">
             <div class="col-lg-8">
-                <canvas id="ld2450-radar-canvas" width="720" height="620"></canvas>
+                <canvas id="ld2450-radar-canvas" width="720" height="450"></canvas>
                 <div class="text-muted small mt-2" id="ld2450-radar-state">Connecting...</div>
             </div>
             <div class="col-lg-4">
@@ -124,8 +124,10 @@
                 </div>
                 <div class="text-muted small mt-3">
                     <div>X is left and right of the sensor (negative is left), Y is the distance in front of it. The
-                        radar reports up to three targets, a target with speed 0 is standing still. The serial console
-                        is paused while this page is open.</div>
+                        radar reports up to three targets, a target with speed 0 is standing still. The shaded
+                        rectangle is the area of the module (X &plusmn;3 m, Y 0-6 m): a grey target outside it is a
+                        false detection, the presence ignores it. A target farther than 7 m is drawn at the edge. The
+                        serial console is paused while this page is open.</div>
                     <div class="mt-2"><b>Installation</b></div>
                     <ol class="pl-4 mb-0">
                         <li>Try to ensure that the radar antenna faces the area to be detected, and that the

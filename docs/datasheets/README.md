@@ -31,3 +31,9 @@ Scaling factors:
 - temperature: `raw / 340 + 36.53` °C
 
 I2C address: `0x68` with AD0 low, `0x69` with AD0 high.
+
+## HLK LD24xx radars
+
+- `HLK-LD24xx-radar.md` - wiring of the `presense_serial` board (D1 mini, HLK-LD2410C), notes on the HLK-LD2450. The
+  commands are documented in `docs/AtModeHelp.md`
+- `HLK-LD2420-Product Manual V1.2.pdf`, `HLK-LD2420 command protocol.xlsx` - the vendor documents of the HLK-LD2420

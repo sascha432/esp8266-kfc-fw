@@ -30,10 +30,7 @@
             <div class="form-help-block">
                 <div data-target="#ari">Add a percentage of the current timeout to slow down reconnects over time</div>
                 <div data-target="#t">Variables: ${device_name}, ${object_id}, ${device_title}, ${device_title_no_space}. Non printable characters, /, # and + will be removed. No_space replaces spaces with underscore. Avoid any leading /</div>
-                <div data-target="#gt">Subscribe to group topic to receive commands. The group topic must not contain the topic and the topic must not contain the group topic<br>Variables: ${component_name}</div>
-                <div data-target="#adi">Rebroadcast auto discovery in intervals. Set to 0 to disable rebroadcasts</div>
-                <div data-target="#add">Delay publishing auto discovery after reboot. Set to 0 to publish auto discovery manually. Rebroadcasts are also disabled</div>
-                <div data-target="#adn">The name for the auto discovery should be unique per device. To enable friendly names, use "${device_name} ${component_name}"<br>Variables: ${device_name}, ${device_title}, ${component_name}</div>
+                <div data-target="#add">The auto discovery is published after each connect, after a random delay within this time, one message at a time. Devices that connect at the same time do not publish at the same time. Entities of this device that no longer exist are removed from Home Assistant</div>
             </div>
         </form>
         <!--%%FOOT-->

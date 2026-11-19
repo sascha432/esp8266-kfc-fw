@@ -53,9 +53,6 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
         QosType::AT_MOST_ONCE, F("At most once (0)"),
         QosType::AT_LEAST_ONCE, F("At least once (1)"),
         QosType::EXACTLY_ONCE, F("Exactly once (2)")
-#if ASYNC_TCP_SSL_ENABLED
-       ,ModeType::SECURE, F("TLS/Secure MQTT")
-#endif
     );
 
     if (!System::Flags::getConfig().is_mqtt_enabled) {
@@ -120,14 +117,6 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
     MqttClient::addBaseTopicLengthValidator(form);
     form.addFormUI(FSPGM(Topic));
 
-#if MQTT_GROUP_TOPIC
-
-    form.addStringGetterSetter(F("gt"), ClientConfig::getGroupTopic, ClientConfig::setGroupTopic);
-    ClientConfig::addGroupTopicLengthValidator(form, true);
-    form.addFormUI(F("Group Topic"));
-
-#endif
-
     form.addObjectGetterSetter(F("qos"), cfg, cfg.get_enum_qos, cfg.set_enum_qos);
     form.addFormUI(F("Quality Of Service"), qosItems);
     form.addValidator(FormUI::Validator::EnumRange<QosType>(F("Invalid value for QoS")));
@@ -147,17 +136,11 @@ void Plugin::createConfigureForm(FormCallbackType type, const String &formName, 
     MqttClient::addAutoDiscoveryPrefixLengthValidator(form, true);
     form.addValidator(FormUI::Validator::Length(0, MqttClient::kAutoDiscoveryPrefixMaxSize));
 
+    // the auto discovery is published after each connect, after a random delay within this time. devices that
+    // connect at the same time do not publish at the same time
     form.addObjectGetterSetter(F("add"), FormGetterSetter(cfg, auto_discovery_delay));
-    form.addFormUI(F("Auto Discovery Delay"), FormUI::Suffix(FSPGM(seconds)), FormUI::IntAttribute(F("disabled-value"), 0), FormUI::FPStringAttribute(F("disabled-value-targets"), F("#adi")));
-    cfg.addRangeValidatorFor_auto_discovery_delay(form, true);
-
-    form.addObjectGetterSetter(F("adi"), FormGetterSetter(cfg, auto_discovery_rebroadcast_interval));
-    form.addFormUI(F("Auto Discovery Rebroadcast"), FormUI::Suffix(FSPGM(minutes)), FormUI::IntAttribute(F("disabled-value"), 0));
-    cfg.addRangeValidatorFor_auto_discovery_rebroadcast_interval(form, true);
-
-    form.addStringGetterSetter(F("adn"), MqttClient::getAutoDiscoveryName, MqttClient::setAutoDiscoveryName);
-    form.addFormUI(F("Auto Discovery Name"), FormUI::PlaceHolder(F("Disabled")));
-    MqttClient::addAutoDiscoveryNameLengthValidator(form, true);
+    form.addFormUI(F("Auto Discovery Start Window"), FormUI::Suffix(FSPGM(seconds)));
+    cfg.addRangeValidatorFor_auto_discovery_delay(form);
 
     autoDiscoveryGroup.end();
     hassGroup.end();

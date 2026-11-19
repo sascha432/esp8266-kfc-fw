@@ -3,14 +3,10 @@
  */
 
 #include <Arduino_compat.h>
-#include <ESPAsyncWebServer.h>
-#include <EventScheduler.h>
 #include <kfc_fw_config.h>
-#include <PrintHtmlEntitiesString.h>
-#include "mqtt_def.h"
+#include <PrintString.h>
 #include "mqtt_plugin.h"
-#include "mqtt_strings.h"
-#include "auto_discovery.h"
+#include "mqtt_client.h"
 #include "logger.h"
 #include "templates.h"
 
@@ -21,243 +17,326 @@
 #endif
 
 using KFCConfigurationClasses::System;
-using Plugins = KFCConfigurationClasses::PluginsType;
-using MqttClient = KFCConfigurationClasses::Plugins::MQTTConfigNS::MqttClient;
+
+#if ESP32
+#    define PACKET_LIST_LOCK()      portENTER_CRITICAL(&_mux)
+#    define PACKET_LIST_UNLOCK()    portEXIT_CRITICAL(&_mux)
+#else
+#    define PACKET_LIST_LOCK()
+#    define PACKET_LIST_UNLOCK()
+#endif
 
 namespace MQTT {
 
-    ComponentVector Client::_components;
-    Client *Client::_mqttClient;
+    // maximum size of incoming messages waiting for the main loop
+    static constexpr size_t kInboxMaxSize = MQTT_RECV_MAX_MESSAGE_SIZE * 4;
+    // a message the library refuses (not enough memory) is dropped after this many attempts, 100 ms apart
+    static constexpr uint16_t kMaxRetries = 300;
 
-    PacketQueue::PacketQueue(uint16_t packetId, uint32_t time, bool delivered, uint16_t internalPacketId) :
-        _packetId(packetId),
-        _internalId(internalPacketId == 0 ? MQTT::Client::getNextInternalPacketId() : internalPacketId),
-        _delivered(delivered),
-        _time(time),
-        _timeout(kDefaultAckTimeout)
+    static inline bool timeReached(uint32_t now, uint32_t time)
     {
+        return static_cast<int32_t>(now - time) >= 0;
     }
 
-    bool PacketQueueVector::setTimeout(uint16_t internalId, uint16_t timeout)
+    // ------------------------------------------------------------------------
+    // Packet, PacketList
+    // ------------------------------------------------------------------------
+
+    Packet *Packet::create(Type type, const char *topic, size_t topicLength, const char *payload, size_t payloadLength, uint8_t qos, bool retain, uint16_t value)
     {
-        auto queue = find(PacketQueueInternalId(internalId));
-        if (queue) {
-            queue->setTimeout(timeout);
-            return true;
+        auto packet = reinterpret_cast<Packet *>(malloc(sizeof(Packet) + topicLength + payloadLength + 2));
+        if (!packet) {
+            return nullptr;
         }
-        return false;
+        packet->next = nullptr;
+        packet->topicLength = topicLength;
+        packet->payloadLength = payloadLength;
+        packet->value = value;
+        packet->type = type;
+        packet->qos = qos;
+        packet->retain = retain;
+        if (topicLength) {
+            memcpy(packet->topic(), topic, topicLength);
+        }
+        packet->topic()[topicLength] = 0;
+        if (payload && payloadLength) {
+            memcpy(packet->payload(), payload, payloadLength);
+        }
+        packet->payload()[payloadLength] = 0;
+        return packet;
     }
+
+    PacketList::PacketList() :
+        _head(nullptr),
+        _tail(nullptr),
+        _size(0),
+        _count(0)
+    {
+        #if ESP32
+            portMUX_INITIALIZE(&_mux);
+        #endif
+    }
+
+    PacketList::~PacketList()
+    {
+        clear();
+    }
+
+    bool PacketList::push(Packet *packet, size_t maxSize, bool replace)
+    {
+        Packet *replaced = nullptr;
+        bool result = true;
+        PACKET_LIST_LOCK();
+        if (replace) {
+            Packet *prev = nullptr;
+            for (auto cur = _head; cur; prev = cur, cur = cur->next) {
+                if (cur->type == packet->type && cur->retain && cur->topicLength == packet->topicLength && memcmp(cur->topic(), packet->topic(), packet->topicLength) == 0) {
+                    if (maxSize && (_size - cur->size() + packet->size()) > maxSize) {
+                        result = false;
+                        break;
+                    }
+                    packet->next = cur->next;
+                    if (prev) {
+                        prev->next = packet;
+                    }
+                    else {
+                        _head = packet;
+                    }
+                    if (_tail == cur) {
+                        _tail = packet;
+                    }
+                    _size = _size - cur->size() + packet->size();
+                    replaced = cur;
+                    break;
+                }
+            }
+        }
+        if (result && !replaced) {
+            if (maxSize && (_size + packet->size()) > maxSize) {
+                result = false;
+            }
+            else {
+                packet->next = nullptr;
+                if (_tail) {
+                    _tail->next = packet;
+                }
+                else {
+                    _head = packet;
+                }
+                _tail = packet;
+                _size += packet->size();
+                _count++;
+            }
+        }
+        PACKET_LIST_UNLOCK();
+        if (replaced) {
+            free(replaced);
+        }
+        if (!result) {
+            free(packet);
+        }
+        return result;
+    }
+
+    Packet *PacketList::pop()
+    {
+        PACKET_LIST_LOCK();
+        auto packet = _head;
+        if (packet) {
+            _head = packet->next;
+            if (!_head) {
+                _tail = nullptr;
+            }
+            _size -= packet->size();
+            _count--;
+        }
+        PACKET_LIST_UNLOCK();
+        return packet;
+    }
+
+    void PacketList::clear()
+    {
+        PACKET_LIST_LOCK();
+        auto packet = _head;
+        _head = nullptr;
+        _tail = nullptr;
+        _size = 0;
+        _count = 0;
+        PACKET_LIST_UNLOCK();
+        while (packet) {
+            auto next = packet->next;
+            free(packet);
+            packet = next;
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Client
+    // ------------------------------------------------------------------------
+
+    Client *Client::_client;
+    ComponentVector Client::_components;
+    PacketList Client::_inbox;
+    Packet *Client::_rxPacket;
+    String Client::_rxDiscoveryPrefix;
+    uint16_t Client::_rxDropped;
+    uint8_t Client::_generation;
 
     void Client::setupInstance()
     {
-        __LDBG_printf("enabled=%u", System::Flags::getConfig().is_mqtt_enabled);
-        #if DEBUG
-            if (_mqttClient) {
-                __LDBG_panic("MQTT client already exists");
-            }
-        #endif
-        if (System::Flags::getConfig().is_mqtt_enabled) {
-            _mqttClient = new Client();
+        if (_client || !Plugins::MqttClient::isEnabled()) {
+            return;
         }
+        _rxDiscoveryPrefix = Plugins::MqttClient::getAutoDiscoveryPrefix();
+        _rxDiscoveryPrefix += '/';
+        new Client(); // sets _client
+        LOOP_FUNCTION_ADD(_loopFunction);
     }
 
     void Client::deleteInstance()
     {
-        __LDBG_printf("client=%p", _mqttClient);
-        if (_mqttClient) {
-            delete _mqttClient;
-            _mqttClient = nullptr;
+        if (!_client) {
+            return;
+        }
+        LoopFunctions::remove(_loopFunction);
+        delete _client;
+        _client = nullptr;
+        _inbox.clear();
+        if (_rxPacket) {
+            free(_rxPacket);
+            _rxPacket = nullptr;
         }
     }
 
-    #include <HeapStream.h>
-
     Client::Client() :
+        _config(Plugins::MqttClient::getConfig()),
         _hostname(Plugins::MqttClient::getHostname()),
         _username(Plugins::MqttClient::getUsername()),
         _password(Plugins::MqttClient::getPassword()),
-        _config(Plugins::MqttClient::getConfig()),
-        _client(new AsyncMqttClient()),
-        _port(_config.getPort()),
         _lastWillTopic(formatTopic(MQTT_LAST_WILL_TOPIC)),
-        _connState(ConnectionState::NONE),
-        #if MQTT_AUTO_DISCOVERY
-            #if IOT_REMOTE_CONTROL
-                _startAutoDiscovery(false),
-            #else
-                _startAutoDiscovery(true),
-            #endif
-        #endif
-        _messageProperties(nullptr)
+        _lastWillPayload(FPSTR(MQTT_LAST_WILL_TOPIC_OFFLINE)),
+        _port(_config.getPort()),
+        _current(nullptr),
+        _deadline(0),
+        _reconnectDelay(_config.auto_reconnect_min),
+        _ackTime(0),
+        _retryTime(0),
+        _connectedTime(0),
+        _ackId(0),
+        _retries(0),
+        _dropped(0),
+        _state(StateType::IDLE),
+        _resolved(false),
+        _reconnect(true)
     {
-        size_t maxLength = 1;
-        char *clientIdBuffer = _client->getClientId(maxLength);
-        PrintString buffer = F("kfc-");
-        WebTemplate::printUniqueId(buffer, FSPGM(kfcfw));
-        strncpy(clientIdBuffer, buffer.c_str(), maxLength - 1)[maxLength - 1] = 0;
-        _client->setClientId(clientIdBuffer);
+        // the zeroconf callback can be called before the constructor returns
+        _client = this;
 
-        // add client to all components and call onStartup
-        for(auto component: _components) {
-            component->setClient(this);
-            component->onStartup();
-        }
+        // kfc-<unique id>, the library has the buffer
+        size_t maxLength;
+        auto clientId = _mqtt.getClientId(maxLength);
+        PrintString id(F("kfc-"));
+        WebTemplate::printUniqueId(id, FSPGM(kfcfw));
+        strlcpy(clientId, id.c_str(), maxLength);
+        _mqtt.setClientId(clientId);
+        _mqtt.setCredentials(_username.c_str(), _password.c_str());
+        _mqtt.setKeepAlive(_config.keepalive);
+        _mqtt.setCleanSession(true);
+        _mqtt.setWill(_lastWillTopic.c_str(), _getQos(QosType::ONLINE_STATUS), true, _lastWillPayload.c_str(), _lastWillPayload.length());
 
-        // connect to server
-        __LDBG_printf("hostname=%s port=%u username=%s client_id=%s", _hostname.c_str(), _port, _username.c_str(), __S(_client->getClientId()));
+        // the callbacks run in the context of the TCP stack, they only add events to the inbox
+        _mqtt.onConnect([](bool sessionPresent) {
+            _pushEvent(Packet::Type::CONNECTED);
+        });
+        _mqtt.onDisconnect([](AsyncMqttClientDisconnectReason reason) {
+            _pushEvent(Packet::Type::DISCONNECTED, static_cast<uint16_t>(reason));
+        });
+        _mqtt.onPublish([](uint16_t packetId) {
+            _pushEvent(Packet::Type::ACK, packetId);
+        });
+        _mqtt.onSubscribe([](uint16_t packetId, uint8_t qos) {
+            _pushEvent(Packet::Type::ACK, packetId);
+        });
+        _mqtt.onUnsubscribe([](uint16_t packetId) {
+            _pushEvent(Packet::Type::ACK, packetId);
+        });
+        _mqtt.onMessage(_onMessageCallback);
+        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, [](WiFiCallbacks::EventType event, void *payload) {
+            _pushEvent(event == WiFiCallbacks::EventType::CONNECTED ? Packet::Type::WIFI_UP : Packet::Type::WIFI_DOWN);
+        }, this);
+
+        auto generation = ++_generation;
         if (config.hasZeroConf(_hostname)) {
-            config.resolveZeroConf(Plugin::getPlugin().getFriendlyName(), _hostname, _port, [this](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
-                this->_zeroConfCallback(hostname, address, port, type);
+            config.resolveZeroConf(Plugin::getPlugin().getFriendlyName(), _hostname, _port, [generation](const String &hostname, const IPAddress &address, uint16_t port, const String &resolved, MDNSResolver::ResponseType type) {
+                if (_client && _generation == generation) {
+                    _client->_setServer(hostname, address, port);
+                }
             });
         }
         else {
-            _zeroConfCallback(_hostname, convertToIPAddress(_hostname), _port, MDNSResolver::ResponseType::NONE);
+            _setServer(_hostname, convertToIPAddress(_hostname), _port);
         }
 
+        if (KFCFWConfiguration::getWiFiUp()) {
+            _onWiFi(true);
+        }
     }
 
     Client::~Client()
     {
-        __LDBG_printf("conn=%s", _connection());
-        WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, MQTT::Client::handleWiFiEvents);
-        _resetClient();
-        _Timer(_reconnectTimer).remove();
-        _Timer(_connectTimer).remove();
-
-        _autoReconnectTimeout = kAutoReconnectDisabled;
-        auto state = setConnState(ConnectionState::DISCONNECTED);
-
-        // call onDisconnect() and remove client from all components to avoid being called without a client
-        for(auto component: _components) {
-            if (state == ConnectionState::CONNECTED) {
-                component->onDisconnect(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
-            }
-            component->onShutdown();
-            component->setClient(nullptr);
-        }
-        disconnect(true);
-        delete _client;
+        WiFiCallbacks::remove(WiFiCallbacks::EventType::ANY, this);
+        _reconnect = false;
+        // a forced disconnect: the server publishes the last will
+        _mqtt.disconnect(true);
+        _closed(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
     }
 
-    void Client::_resetClient()
+    void Client::_setServer(const String &hostname, const IPAddress &address, uint16_t port)
     {
-        __LDBG_printf("queue=%p rebroadcast_timer=%u queue_timer=%u queue_size=%u conn=%s", _autoDiscoveryQueue.get(), (bool)_autoDiscoveryRebroadcast, (bool)_queue.getTimer(), _queue.size(), _connection());
-        MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
-            _autoDiscoveryQueue.reset();
-            _autoDiscoveryRebroadcast.remove();
-            _queue.clear();
-            _packetQueue.clear();
-        }
-    }
-
-    void Client::_zeroConfCallback(const String &hostname, const IPAddress &address, uint16_t port, MDNSResolver::ResponseType type)
-    {
-        _address = address;
+        __LDBG_printf("hostname=%s address=%s port=%u", hostname.c_str(), address.toString().c_str(), port);
         _hostname = hostname;
+        _address = address;
         _port = port;
-        __LDBG_printf("zeroconf address=%s hostname=%s port=%u type=%u", _address.toString().c_str(), _hostname.c_str(), _port, type);
-
-        _setupClient();
-        WiFiCallbacks::add(WiFiCallbacks::EventType::CONNECTION, MQTT::Client::handleWiFiEvents);
-
-        if (WiFi.isConnected()) {
-            connect();
-        }
-    }
-
-    void Client::_setupClient()
-    {
-        __LDBG_printf("hostname=%s port=%u", _hostname.c_str(), _port);
-        _resetClient();
-
-        _autoReconnectTimeout = _config.auto_reconnect_min;
-
         if (IPAddress_isValid(_address)) {
-            _client->setServer(_address, _port);
+            _mqtt.setServer(_address, _port);
         }
         else {
-            _client->setServer(_hostname.c_str(), _port);
+            _mqtt.setServer(_hostname.c_str(), _port);
         }
-        #if ASYNC_TCP_SSL_ENABLED
-            if (_config._get_enum_mode() == ModeType::SECURE) {
-                _client->setSecure(true);
-                uint16_t size = MqttClient::kFingerprintMaxSize;
-                auto fingerPrint = MqttClient::getFingerPrint(size);
-                if (fingerPrint && size == MqttClient::kFingerprintMaxSize) {
-                    _client->addServerFingerprint(fingerPrint); // addServerFingerprint supports multiple fingerprints
-                }
-            }
-        #endif
-        _client->setCredentials(_username.c_str(), _password.c_str());
-        _client->setKeepAlive(_config.keepalive);
-
-        _client->onConnect([](bool sessionPresent) {
-            MQTT::Client *client;
-            if ((client = MQTT::Client::getClient()) != nullptr) {
-                client->onConnect(sessionPresent);
-            }
-        });
-        _client->onDisconnect([](AsyncMqttClientDisconnectReason reason) {
-            MQTT::Client *client;
-            if ((client = MQTT::Client::getClient()) != nullptr) {
-                client->onDisconnect(reason);;
-            }
-        });
-        _client->onMessage([](char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-            MQTT::Client *client;
-            if ((client = MQTT::Client::getClient()) != nullptr) {
-                client->onMessageRaw(topic, payload, properties, len, index, total);
-            }
-        });
-        _client->onPublish([](uint16_t packetId) {
-            MQTT::Client *client;
-            if ((client = MQTT::Client::getClient()) != nullptr) {
-                client->_onPacketAck(packetId, PacketAckType::PUBLISH);
-            }
-        });
-        _client->onSubscribe([](uint16_t packetId, uint8_t qos) {
-            MQTT::Client *client;
-            if ((client = MQTT::Client::getClient()) != nullptr) {
-                client->_onPacketAck(packetId, PacketAckType::SUBSCRIBE);
-            }
-        });
-        _client->onUnsubscribe([](uint16_t packetId) {
-            MQTT::Client *client;
-            if ((client = MQTT::Client::getClient()) != nullptr) {
-                client->_onPacketAck(packetId, PacketAckType::UNSUBSCRIBE);
-            }
-        });
+        _resolved = true;
     }
 
-    //
-    // Components
-    //
+    // ------------------------------------------------------------------------
+    // components
+    // ------------------------------------------------------------------------
 
     void Client::registerComponent(ComponentPtr component)
     {
-        if (_mqttClient) {
-            component->setClient(_mqttClient);
-            _mqttClient->_registerComponent(component);
-        }
-        else {
-            if (!isComponentRegistered(component)) {
-                _components.push_back(component);
-            }
+        if (component && !isComponentRegistered(component)) {
+            _components.push_back(component);
         }
     }
 
     bool Client::unregisterComponent(ComponentPtr component)
     {
-        auto size = _components.size();
-        if (_mqttClient) {
-            auto result = _mqttClient->_unregisterComponent(component);
-            component->setClient(nullptr);
-            return result;
+        auto iterator = std::find(_components.begin(), _components.end(), component);
+        if (iterator == _components.end()) {
+            return false;
         }
-        else {
-            _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
+        _components.erase(iterator);
+        if (_client) {
+            auto &subscriptions = _client->_subscriptions;
+            for (size_t i = 0; i < subscriptions.size();) {
+                if (subscriptions[i].component == component) {
+                    String topic = subscriptions[i].topic;
+                    _client->unsubscribe(component, topic); // removes the entry
+                }
+                else {
+                    i++;
+                }
+            }
         }
-        return size != _components.size();
+        return true;
     }
 
     bool Client::isComponentRegistered(ComponentPtr component)
@@ -265,88 +344,556 @@ namespace MQTT {
         return std::find(_components.begin(), _components.end(), component) != _components.end();
     }
 
-    void Client::_registerComponent(ComponentPtr component)
+    // ------------------------------------------------------------------------
+    // state machine
+    // ------------------------------------------------------------------------
+
+    void Client::_loopFunction()
     {
-        if (!component) {
-            __DBG_assertf(false, "registerComponent(nullptr)");
+        if (_client) {
+            _client->_loop();
+        }
+    }
+
+    void Client::_loop()
+    {
+        _processInbox();
+        auto now = millis();
+        switch (_state) {
+            case StateType::WAIT:
+                if (_resolved && timeReached(now, _deadline)) {
+                    _connect(now);
+                }
+                break;
+            case StateType::CONNECTING:
+                if (timeReached(now, _deadline)) {
+                    _abort(F("Connection to MQTT server %s timed out"));
+                }
+                break;
+            case StateType::CONNECTED:
+                _pump(now);
+                break;
+            case StateType::IDLE:
+                break;
+        }
+    }
+
+    void Client::_processInbox()
+    {
+        Packet *packet;
+        while ((packet = _inbox.pop()) != nullptr) {
+            switch (packet->type) {
+                case Packet::Type::CONNECTED:
+                    _onConnected();
+                    break;
+                case Packet::Type::DISCONNECTED:
+                    _onDisconnected(static_cast<AsyncMqttClientDisconnectReason>(packet->value));
+                    break;
+                case Packet::Type::ACK:
+                    if (_ackId && packet->value == _ackId) {
+                        _ackId = 0;
+                    }
+                    break;
+                case Packet::Type::WIFI_UP:
+                    _onWiFi(true);
+                    break;
+                case Packet::Type::WIFI_DOWN:
+                    _onWiFi(false);
+                    break;
+                case Packet::Type::MESSAGE:
+                case Packet::Type::DISCOVERY_TOPIC:
+                    if (isConnected()) {
+                        _onMessage(packet);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            free(packet);
+        }
+    }
+
+    void Client::_onWiFi(bool up)
+    {
+        __LDBG_printf("wifi=%u state=%s", up, _getStateString(_state));
+        if (up) {
+            if (_state == StateType::IDLE && _reconnect) {
+                // devices that get WiFi at the same time (access point restarted) do not connect at the same time
+                _reconnectDelay = _config.auto_reconnect_min;
+                _state = StateType::WAIT;
+                _deadline = millis() + (getRandom() % 3000);
+            }
+        }
+        else if (_state != StateType::IDLE) {
+            if (_state == StateType::CONNECTED || _state == StateType::CONNECTING) {
+                _mqtt.disconnect(true);
+                _closed(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
+            }
+            _state = StateType::IDLE;
+        }
+    }
+
+    void Client::_connect(uint32_t now)
+    {
+        if (!KFCFWConfiguration::getWiFiUp()) {
+            // ESPAsyncTCP leaks its tcp_pcb when tcp_connect() fails without a route. the WiFi event connects again
+            _state = StateType::IDLE;
             return;
         }
-        __LDBG_printf("component=%p type=%s", component, component->getName());
-        MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
-        if (isComponentRegistered(component)) {
-                __DBG_assertf(false, "component=%p type=%s already registered", component, component->getName());
+        __LDBG_printf("connecting to %s:%u", _hostname.c_str(), _port);
+        _state = StateType::CONNECTING;
+        _deadline = now + (kConnectTimeout + _config.keepalive) * 1000U;
+        _mqtt.connect();
+    }
+
+    void Client::_onConnected()
+    {
+        if (_state != StateType::CONNECTING) {
+            // the connection has been given up already
+            _mqtt.disconnect(true);
+            return;
+        }
+        _state = StateType::CONNECTED;
+        _connectedTime = millis();
+        _reconnectDelay = _config.auto_reconnect_min;
+        _ackId = 0;
+
+        PrintString server;
+        _printServer(server);
+        Logger_notice(F("Connected to MQTT server %s"), server.c_str());
+
+        #if MQTT_SET_LAST_WILL_MODE == 2
+            publish(formatTopic(MQTT_AVAILABILITY_TOPIC), true, FPSTR(MQTT_AVAILABILITY_TOPIC_ONLINE), QosType::ONLINE_STATUS);
+        #endif
+        publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), QosType::ONLINE_STATUS);
+        // the last will of the previous connection can arrive after "online", it is answered with "online" again
+        _enqueue(Packet::Type::SUBSCRIBE, _lastWillTopic, nullptr, 0, QosType::ONLINE_STATUS, false);
+
+        for (size_t i = 0; i < _components.size(); i++) {
+            _components[i]->onConnect();
+        }
+
+        #if MQTT_AUTO_DISCOVERY && MQTT_AUTO_DISCOVERY_ON_CONNECT
+            if (_config.auto_discovery) {
+                // devices that connect at the same time (server or access point restarted) spread their auto discovery
+                _startDiscovery(getRandom() % (_config.auto_discovery_delay * 1000U + 1), nullptr);
+            }
+        #endif
+    }
+
+    void Client::_onDisconnected(AsyncMqttClientDisconnectReason reason)
+    {
+        if (_state != StateType::CONNECTED && _state != StateType::CONNECTING) {
+            // the connection has been closed already
+            return;
+        }
+        if (_state == StateType::CONNECTED) {
+            Logger_notice(F("Disconnected from MQTT server, reason: %s"), _getReasonString(reason));
+        }
+        _closed(reason);
+        _scheduleReconnect();
+    }
+
+    void Client::_closed(AsyncMqttClientDisconnectReason reason)
+    {
+        auto wasConnected = (_state == StateType::CONNECTED);
+        _state = StateType::IDLE;
+        _discovery.reset();
+        _outbox.clear();
+        if (_current) {
+            free(_current);
+            _current = nullptr;
+        }
+        _subscriptions.clear();
+        _ackId = 0;
+        if (wasConnected) {
+            for (size_t i = 0; i < _components.size(); i++) {
+                _components[i]->onDisconnect(reason);
+            }
+        }
+    }
+
+    void Client::_scheduleReconnect()
+    {
+        if (!_reconnect || !KFCFWConfiguration::getWiFiUp()) {
+            _state = StateType::IDLE;
+            return;
+        }
+        // +-25% so that devices that lost the connection at the same time do not reconnect at the same time
+        uint32_t delay = (_reconnectDelay * (75 + (getRandom() % 51))) / 100U;
+        _state = StateType::WAIT;
+        _deadline = millis() + delay;
+        PrintString server;
+        _printServer(server);
+        Logger_notice(F("Reconnecting to MQTT server %s in %.1f seconds"), server.c_str(), delay / 1000.0);
+        _reconnectDelay = std::min<uint32_t>(_config.auto_reconnect_max, _reconnectDelay + ((_reconnectDelay * _config.auto_reconnect_incr) / 100U));
+    }
+
+    void Client::_abort(const __FlashStringHelper *message)
+    {
+        PrintString server;
+        _printServer(server);
+        Logger_notice(message, server.c_str());
+        _mqtt.disconnect(true);
+        _closed(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
+        _scheduleReconnect();
+    }
+
+    void Client::connect()
+    {
+        _reconnect = true;
+        _reconnectDelay = _config.auto_reconnect_min;
+        if (_state == StateType::IDLE || _state == StateType::WAIT) {
+            _state = StateType::WAIT;
+            _deadline = millis();
+        }
+    }
+
+    void Client::disconnect(bool reconnect)
+    {
+        _reconnect = reconnect;
+        if (_state == StateType::CONNECTED) {
+            // after a clean disconnect the server does not publish the last will
+            #if MQTT_SET_LAST_WILL_MODE == 2
+                String availability = formatTopic(MQTT_AVAILABILITY_TOPIC);
+                String offline = FPSTR(MQTT_AVAILABILITY_TOPIC_OFFLINE);
+                _mqtt.publish(availability.c_str(), _getQos(QosType::ONLINE_STATUS), true, offline.c_str(), offline.length());
+            #endif
+            _mqtt.publish(_lastWillTopic.c_str(), _getQos(QosType::ONLINE_STATUS), true, _lastWillPayload.c_str(), _lastWillPayload.length());
+            _mqtt.disconnect(false);
+        }
+        else if (_state == StateType::CONNECTING) {
+            _mqtt.disconnect(true);
+        }
+        _closed(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
+        if (reconnect) {
+            _scheduleReconnect();
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // outbox
+    // ------------------------------------------------------------------------
+
+    void Client::_pump(uint32_t now)
+    {
+        if (_ackId) {
+            if (timeReached(now, _ackTime + kAckTimeout)) {
+                _abort(F("MQTT server %s did not acknowledge a packet"));
+            }
+            return;
+        }
+        if (!_current) {
+            _current = _outbox.pop();
+            if (!_current) {
+                // nothing else to send
+                if (_discovery) {
+                    _discovery->loop(now);
+                    if (_discovery && _discovery->isDone()) {
+                        _discovery.reset();
+                    }
+                }
                 return;
             }
-            // turn off interrupts to avoid issues with running auto discovery
-            _components.push_back(component);
+            _retries = 0;
         }
-        __LDBG_printf("components=%u entities=%u", _components.size(), AutoDiscovery::List::size(_components));
+        if (!timeReached(now, _retryTime)) {
+            return;
+        }
+        // the packet is handed to the library only if it fits into the TCP buffer. the library never holds more
+        // than one message
+        if (_mqtt.getAsyncClient().space() < (_current->topicLength + _current->payloadLength + 16U)) {
+            return;
+        }
+        uint16_t packetId = 0;
+        switch (_current->type) {
+            case Packet::Type::PUBLISH:
+                packetId = _mqtt.publish(_current->topic(), _current->qos, _current->retain, _current->payload(), _current->payloadLength);
+                break;
+            case Packet::Type::SUBSCRIBE:
+                packetId = _mqtt.subscribe(_current->topic(), _current->qos);
+                break;
+            case Packet::Type::UNSUBSCRIBE:
+                packetId = _mqtt.unsubscribe(_current->topic());
+                break;
+            default:
+                break;
+        }
+        if (!packetId) {
+            // the library refuses to publish if the largest free block is below MQTT_MIN_FREE_MEMORY
+            if (++_retries >= kMaxRetries) {
+                Logger_error(F("MQTT message dropped, not enough memory: %s"), _current->topic());
+                free(_current);
+                _current = nullptr;
+                _dropped++;
+            }
+            else {
+                _retryTime = now + 100;
+            }
+            return;
+        }
+        if (_discovery) {
+            // the library has a copy of the message, ours is still allocated
+            _discovery->sample();
+        }
+        if (_current->type != Packet::Type::PUBLISH || _current->qos) {
+            _ackId = packetId;
+            _ackTime = now;
+        }
+        free(_current);
+        _current = nullptr;
     }
 
-    bool Client::_unregisterComponent(ComponentPtr component)
+    bool Client::_enqueue(Packet::Type type, const String &topic, const char *payload, size_t payloadLength, QosType qos, bool retain)
     {
-        if (!component) {
-            __DBG_assertf(false, "unregisterComponent(nullptr)");
+        if (topic.length() + payloadLength > MQTT_MAX_MESSAGE_SIZE) {
+            Logger_error(F("MQTT maximum message size exceeded: %u/%u: %s"), topic.length() + payloadLength, MQTT_MAX_MESSAGE_SIZE, topic.c_str());
             return false;
         }
-        MUTEX_LOCK_RECURSIVE_BLOCK(_lock) {
-            auto size = _components.size();
-            if (size) {
-                remove(component);
-                _components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
-            }
-            __LDBG_printf("components=%u entities=%u removed=%u", _components.size(), AutoDiscovery::List::size(_components), _components.size() != size);
-            return _components.size() != size;
+        auto packet = Packet::create(type, topic.c_str(), topic.length(), payload, payloadLength, _getQos(qos), retain);
+        // push() deletes the packet if the outbox is full
+        if (!packet || !_outbox.push(packet, MQTT_OUTBOX_MAX_SIZE, type == Packet::Type::PUBLISH && retain)) {
+            _dropped++;
+            return false;
         }
-        __builtin_unreachable();
+        return true;
     }
 
-
-    void Client::remove(ComponentPtr component)
+    bool Client::subscribe(ComponentPtr component, const String &topic, QosType qos)
     {
-        __LDBG_printf("component=%p topics=%u", component, _topics.size());
-        _topics.erase(std::remove_if(_topics.begin(), _topics.end(), [this, component](const ClientTopic &topic) {
-            if (topic.getComponent() == component) {
-                __LDBG_printf("topic=%s in_use=%d", topic.getTopic().c_str(), _topicInUse(component, topic));
-                if (!_topicInUse(component, topic)) {
-                    unsubscribe(nullptr, topic.getTopic());
+        if (!isConnected() || !topic.length()) {
+            return false;
+        }
+        bool subscribed = false;
+        for (const auto &subscription : _subscriptions) {
+            if (subscription.topic == topic) {
+                if (subscription.component == component) {
+                    return true;
                 }
+                subscribed = true;
+            }
+        }
+        if (!subscribed && !_enqueue(Packet::Type::SUBSCRIBE, topic, nullptr, 0, qos, false)) {
+            return false;
+        }
+        _subscriptions.emplace_back(topic, component);
+        return true;
+    }
+
+    bool Client::unsubscribe(ComponentPtr component, const String &topic)
+    {
+        auto size = _subscriptions.size();
+        _subscriptions.erase(std::remove_if(_subscriptions.begin(), _subscriptions.end(), [component, &topic](const Subscription &subscription) {
+            return subscription.component == component && subscription.topic == topic;
+        }), _subscriptions.end());
+        if (size == _subscriptions.size()) {
+            return false;
+        }
+        if (!isConnected()) {
+            return true;
+        }
+        for (const auto &subscription : _subscriptions) {
+            if (subscription.topic == topic) {
+                // another component uses the topic
                 return true;
             }
+        }
+        return _enqueue(Packet::Type::UNSUBSCRIBE, topic, nullptr, 0, QosType::AT_LEAST_ONCE, false);
+    }
+
+    bool Client::publish(const String &topic, bool retain, const String &payload, QosType qos)
+    {
+        if (!isConnected() || !topic.length()) {
             return false;
-        }), _topics.end());
-        _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [this, component](const ClientQueue &queue) {
-            return (queue.getComponent() == component);
-        }), _queue.end());
+        }
+        return _enqueue(Packet::Type::PUBLISH, topic, payload.c_str(), payload.length(), qos, retain);
     }
 
-    //
-    // Topics
-    //
-
-    String MQTT::Client::formatTopic(const String &componentName, const __FlashStringHelper *format, ...)
+    uint8_t Client::_getQos(QosType qos) const
     {
-        String suffix;
-        va_list arg;
-        va_start(arg, format);
-        String topic = _formatTopic(componentName, format, arg);
-        va_end(arg);
+        if (qos == QosType::DEFAULT) {
+            qos = static_cast<QosType>(_config.qos);
+        }
+        return std::min<uint8_t>(static_cast<uint8_t>(qos), 2);
+    }
+
+    // ------------------------------------------------------------------------
+    // incoming messages
+    // ------------------------------------------------------------------------
+
+    void Client::_pushEvent(Packet::Type type, uint16_t value)
+    {
+        auto packet = Packet::create(type, nullptr, 0, nullptr, 0, 0, false, value);
+        if (packet) {
+            _inbox.push(packet);
+        }
+    }
+
+    void Client::_onMessageCallback(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
+    {
+        if (index == 0) {
+            if (_rxPacket) {
+                // the previous message is incomplete
+                free(_rxPacket);
+                _rxPacket = nullptr;
+            }
+            auto topicLength = strlen(topic);
+            // the retained auto discovery of this device: only the topic is needed
+            if (properties.retain && topicLength > 7 && strncmp(topic, _rxDiscoveryPrefix.c_str(), _rxDiscoveryPrefix.length()) == 0 && strcmp_P(topic + topicLength - 7, PSTR("/config")) == 0) {
+                auto packet = Packet::create(Packet::Type::DISCOVERY_TOPIC, topic, topicLength);
+                if (!packet || !_inbox.push(packet, kInboxMaxSize)) {
+                    _rxDropped++;
+                }
+                return;
+            }
+            if (total > MQTT_RECV_MAX_MESSAGE_SIZE) {
+                _rxDropped++;
+                return;
+            }
+            _rxPacket = Packet::create(Packet::Type::MESSAGE, topic, topicLength, nullptr, total, properties.qos, properties.retain);
+            if (!_rxPacket) {
+                _rxDropped++;
+                return;
+            }
+        }
+        if (!_rxPacket || (index + len) > _rxPacket->payloadLength) {
+            return;
+        }
+        memcpy(_rxPacket->payload() + index, payload, len);
+        if ((index + len) == total) {
+            auto packet = _rxPacket;
+            _rxPacket = nullptr;
+            if (!_inbox.push(packet, kInboxMaxSize)) {
+                _rxDropped++;
+            }
+        }
+    }
+
+    void Client::_onMessage(Packet *packet)
+    {
+        auto topic = packet->topic();
+        if (packet->type == Packet::Type::DISCOVERY_TOPIC) {
+            if (_discovery) {
+                _discovery->onTopic(topic);
+            }
+            return;
+        }
+        if (_lastWillTopic == topic) {
+            // another client or the last will of the previous connection marked the device as offline
+            if (strcmp_P(packet->payload(), MQTT_LAST_WILL_TOPIC_ONLINE) != 0) {
+                publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), QosType::ONLINE_STATUS);
+            }
+            return;
+        }
+        // a component can subscribe or unsubscribe inside onMessage()
+        for (size_t i = 0; i < _subscriptions.size(); i++) {
+            if (isTopicMatch(topic, _subscriptions[i].topic.c_str())) {
+                _subscriptions[i].component->onMessage(topic, packet->payload(), packet->payloadLength);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // auto discovery
+    // ------------------------------------------------------------------------
+
+    bool Client::publishAutoDiscovery(AutoDiscovery::StatusCallback callback)
+    {
+        #if MQTT_AUTO_DISCOVERY
+            if (!isConnected() || !_config.auto_discovery) {
+                return false;
+            }
+            _startDiscovery(MQTT_DISCOVERY_REQUEST_DELAY_MS, callback);
+            return true;
+        #else
+            return false;
+        #endif
+    }
+
+    bool Client::isAutoDiscoveryRunning() const
+    {
+        return _discovery != nullptr;
+    }
+
+    void Client::_startDiscovery(uint32_t delayMillis, AutoDiscovery::StatusCallback callback)
+    {
+        // a running auto discovery reports a failure and unsubscribes
+        _discovery.reset();
+        _discovery.reset(new AutoDiscovery::Discovery(*this, delayMillis, callback));
+    }
+
+    // ------------------------------------------------------------------------
+    // topics
+    // ------------------------------------------------------------------------
+
+    String Client::formatTopic(const String &componentName, const __FlashStringHelper *format, ...)
+    {
+        PrintString topic = getBaseTopic();
+        if (componentName.length()) {
+            if (componentName.charAt(0) != '/') {
+                topic += '/';
+            }
+            topic.print(componentName);
+        }
+        if (format) {
+            if (!componentName.length() && pgm_read_byte(RFPSTR(format)) != '/') {
+                topic += '/';
+            }
+            va_list arg;
+            va_start(arg, format);
+            topic.vprintf_P(RFPSTR(format), arg);
+            va_end(arg);
+        }
         return topic;
     }
 
-    String MQTT::Client::formatTopic(const __FlashStringHelper *format, ...)
+    String Client::formatTopic(const __FlashStringHelper *format, ...)
     {
-        va_list arg;
-        va_start(arg, format);
-        String topic = _formatTopic(String(), format, arg);
-        va_end(arg);
+        PrintString topic = getBaseTopic();
+        if (format) {
+            if (pgm_read_byte(RFPSTR(format)) != '/') {
+                topic += '/';
+            }
+            va_list arg;
+            va_start(arg, format);
+            topic.vprintf_P(RFPSTR(format), arg);
+            va_end(arg);
+        }
         return topic;
     }
 
-    String MQTT::Client::_filterString(PGM_P str, bool replaceSpace)
+    String Client::getBaseTopic()
+    {
+        String topic = Plugins::MqttClient::getBaseTopic();
+        if (topic.indexOf(F("${device_name}")) != -1) {
+            topic.replace(F("${device_name}"), filterString(System::Device::getName()));
+        }
+        if (topic.indexOf(F("${object_id}")) != -1) {
+            topic.replace(F("${object_id}"), filterString(System::Device::getObjectIdOrName(), true));
+        }
+        if (topic.indexOf(F("${device_title}")) != -1) {
+            topic.replace(F("${device_title}"), filterString(System::Device::getTitle()));
+        }
+        if (topic.indexOf(F("${device_title_no_space}")) != -1) {
+            topic.replace(F("${device_title_no_space}"), filterString(System::Device::getTitle(), true));
+        }
+        StrWrapper(topic).rtrim('/');
+        return topic;
+    }
+
+    String Client::getBaseTopicPrefix()
+    {
+        String baseTopic = filterString(System::Device::getObjectIdOrName(), true);
+        if (!StrView(baseTopic).endsWith('_')) {
+            baseTopic += '_';
+        }
+        return baseTopic;
+    }
+
+    String Client::filterString(const char *str, bool replaceSpace)
     {
         String out = FPSTR(str);
-        for(size_t i = 0; i < out.length(); i++) {
+        for (size_t i = 0; i < out.length(); i++) {
             auto ch = out.charAt(i);
             if (replaceSpace) {
                 if (ch == ' ') {
@@ -363,17 +910,17 @@ namespace MQTT {
         return out;
     }
 
-    bool MQTT::Client::_isTopicMatch(const char *topic, const char *match) const
+    bool Client::isTopicMatch(const char *topic, const char *match)
     {
-        while(*topic) {
-            switch(*match) {
+        while (*topic) {
+            switch (*match) {
                 case 0:
                     return false;
                 case '#':
                     return true;
                 case '+':
                     match++;
-                    while(*topic && *topic != '/') {
+                    while (*topic && *topic != '/') {
                         topic++;
                     }
                     if (!*topic && !*match) {
@@ -392,447 +939,172 @@ namespace MQTT {
             topic++;
             match++;
         }
-        return true;
+        // "a/#" matches "a" as well
+        return *match == 0 || *match == '#' || (match[0] == '/' && match[1] == '#' && match[2] == 0);
     }
 
-    String MQTT::Client::_getBaseTopic()
+    int8_t Client::toBool(const char *str, int8_t invalid)
     {
-        String topic = Plugins::MqttClient::getBaseTopic();
-        // __LDBG_printf("base_topic=%s ${device_name}=%d ${object_id}=%d ${device_title}=%d ${device_title_no_space}=%d",
-        //     __S(topic),
-        //     topic.indexOf(F("${device_name}")),
-        //     topic.indexOf(F("${object_id}")),
-        //     topic.indexOf(F("${device_title}")),
-        //     topic.indexOf(F("${device_title_no_space}"))
-        // );
-        if (topic.indexOf(F("${device_name}")) != -1) {
-            topic.replace(F("${device_name}"), _filterString(System::Device::getName()));
+        while (isspace(*str)) {
+            str++;
         }
-        if (topic.indexOf(F("${object_id}")) != -1) {
-            topic.replace(F("${object_id}"), _filterString(System::Device::getObjectIdOrName(), true));
+        if (!*str) {
+            return invalid;
         }
-        if (topic.indexOf(F("${device_title}")) != -1) {
-            topic.replace(F("${device_title}"), _filterString(System::Device::getTitle()));
+        // an integer
+        char *end = nullptr;
+        auto value = strtol(str, &end, 0);
+        while (isspace(*end)) {
+            end++;
         }
-        if (topic.indexOf(F("${device_title_no_space}")) != -1) {
-            topic.replace(F("${device_title_no_space}"), _filterString(System::Device::getTitle(), true));
+        if (end && !*end) {
+            return value != 0;
         }
-        #if DEBUG_MQTT_CLIENT && 0
-            StrWrapper(topic).rtrim('/');
-            __DBG_printf("base_topic=%s replaced", __S(topic));
-            return topic;
-        #else
-            StrWrapper(topic).rtrim('/');
-            return topic;
-        #endif
-    }
-
-    #if MQTT_GROUP_TOPIC
-
-        bool MQTT::Client::_getGroupTopic(ComponentPtr component, String groupTopic, String &topic)
-        {
-            String deviceTopic = MQTT::Client::_getBaseTopic();
-            if (!topic.startsWith(deviceTopic) || topic.startsWith(groupTopic)) {
-                return false;
-            }
-            if (topic.indexOf(F("${component_name}")) != -1) {
-                topic.replace(F("${component_name}"), component->getName());
-            }
-            groupTopic += &topic.c_str()[deviceTopic.length() - 1];
-            topic = std::move(groupTopic);
-            String_rtrim(topic, '/');
+        auto tmp = String(str);
+        StrWrapper(tmp).trim();
+        auto cTmp = tmp.c_str();
+        if ((strcasecmp_P(cTmp, PSTR("on")) == 0) ||
+            (strcasecmp_P(cTmp, PSTR("yes")) == 0) ||
+            (strcasecmp_P(cTmp, PSTR("enable")) == 0) ||
+            (strcasecmp_P(cTmp, PSTR("enabled")) == 0) ||
+            (strcasecmp_P(cTmp, SPGM(mqtt_bool_on)) == 0) ||
+            (strcasecmp_P(cTmp, SPGM(mqtt_status_topic_online)) == 0) ||
+            (strcasecmp_P(cTmp, SPGM(mqtt_bool_true)) == 0)
+        ) {
             return true;
         }
-
-    #endif
-
-    String MQTT::Client::_formatTopic(const String &suffix, const __FlashStringHelper *format, va_list arg)
-    {
-        PrintString topic = MQTT::Client::_getBaseTopic(); // any trailing slashes are stripped
-        if (suffix.length()) {
-            if (suffix.charAt(0) != '/') { // add slash if missing
-                topic += '/';
-            }
-            topic.print(suffix);
+        if ((strcasecmp_P(cTmp, PSTR("off")) == 0) ||
+            (strcasecmp_P(cTmp, PSTR("no")) == 0) ||
+            (strcasecmp_P(cTmp, PSTR("disable")) == 0) ||
+            (strcasecmp_P(cTmp, PSTR("disabled")) == 0) ||
+            (strcasecmp_P(cTmp, SPGM(mqtt_bool_off)) == 0) ||
+            (strcasecmp_P(cTmp, SPGM(mqtt_status_topic_offline)) == 0) ||
+            (strcasecmp_P(cTmp, SPGM(mqtt_bool_false)) == 0)
+        ) {
+            return false;
         }
-        if (format) {
-            if (!suffix.length() && pgm_read_byte(RFPSTR(format)) != '/') { // add slash if missing
-                topic += '/';
-            }
-            topic.vprintf_P(RFPSTR(format), arg);
-        }
-        __LDBG_assertf(topic.indexOf(F("//")) == -1, "topic '%s' contains //", topic.c_str());
-        // __LDBG_printf("topic=%s", topic.c_str());
-        return topic;
+        return invalid;
     }
 
-    #if DEBUG_MQTT_CLIENT
-
-        const __FlashStringHelper *MQTT::Client::_getConnStateStr()
-        {
-            switch(_connState) {
-                case ConnectionState::AUTO_RECONNECT_DELAY:
-                    return F("AUTO_RECONNECT_DELAY");
-                case ConnectionState::PRE_CONNECT:
-                    return F("PRE_CONNECT");
-                case ConnectionState::CONNECTING:
-                    return F("CONNECTING");
-                case ConnectionState::CONNECTED:
-                    return F("CONNECTED");
-                case ConnectionState::DISCONNECTED:
-                    return F("DISCONNECTED");
-                case ConnectionState::DISCONNECTING:
-                    return F("DISCONNECTING");
-                case ConnectionState::IDLE:
-                    return F("IDLE");
-                case ConnectionState::NONE:
-                    break;
-            }
-            return F("NONE");
-        }
-
-        const char *MQTT::Client::_connection()
-        {
-            DEBUG_HELPER_PUSH_STATE();
-            DEBUG_HELPER_SILENT();
-            _connectionStr = PrintString(F("%s state=%s auto_reconnect=%u timer=%u"), _client->getAsyncClient().stateToString(), RFPSTR(_getConnStateStr()), _autoReconnectTimeout, (bool)_reconnectTimer);
-            DEBUG_HELPER_POP_STATE();
-            return _connectionStr.c_str();
-        }
-
-    #endif
-
-    void MQTT::Client::connect()
+    String Client::toRGB(uint32_t color)
     {
-        if ((_connState == ConnectionState::CONNECTING || _connState == ConnectionState::CONNECTED) && _client->connected()) {
-            __LDBG_printf("aborting connect, conn=%s", _connection());
-            return;
+        return PrintString(F("%u,%u,%u"), ((color >> 16) & 0xff), ((color >> 8) & 0xff), (color & 0xff));
+    }
+
+    // ------------------------------------------------------------------------
+    // status
+    // ------------------------------------------------------------------------
+
+    void Client::_printServer(Print &output) const
+    {
+        if (_username.length()) {
+            output.print(_username);
         }
         else {
-            __LDBG_printf("conn=%s", _connection());
+            output.print(F("Anonymous"));
         }
-        if (!KFCFWConfiguration::getWiFiUp()) {
-            // ESPAsyncTCP 1.2.2 (lwIP 2) leaks its tcp_pcb when tcp_connect() fails, which it does without a route:
-            // ~190 byte per attempt (the reconnect timer armed by the TCP disconnect fires after WiFi went down).
-            // a link-local address does not count either. the WiFi CONNECTED event connects again
-            __LDBG_printf("WiFi not connected conn=%s", _connection());
-            _Timer(_reconnectTimer).remove();
-            _connState = ConnectionState::IDLE;
-            return;
-        }
-        _connState = ConnectionState::PRE_CONNECT;
-
-        // remove reconnect timer if running and force disconnect
-        auto timeout = _autoReconnectTimeout;
-        _Timer(_reconnectTimer).remove();
-
-        _autoReconnectTimeout = kAutoReconnectDisabled; // disable auto reconnect
-        disconnect(true);
-        _autoReconnectTimeout = timeout; // restore timeout
-
-        _client->setCleanSession(true);
-        _client->setKeepAlive(_config.keepalive);
-
-        #if MQTT_SET_LAST_WILL_MODE != 0
-            __LDBG_printf("topic=%s value=%s", _lastWillTopic.c_str(), MQTT_LAST_WILL_TOPIC_OFFLINE);
-            _client->setWill(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, MQTT_LAST_WILL_TOPIC_OFFLINE);
-        #endif
-
-        _connState = ConnectionState::CONNECTING;
-        _client->connect();
-
-        // AsyncMqttClient ignores the result of AsyncClient::connect(). if it fails without calling
-        // the disconnect callback, the client would stay in CONNECTING until the next WiFi event
-        _Timer(_connectTimer).add(Event::seconds(kConnectTimeout + _config.keepalive), false, [](Event::CallbackTimerPtr timer) {
-            // call outside of the timer callback, onDisconnect() rearms the reconnect timer
-            LoopFunctions::callOnce([]() {
-                auto client = MQTT::Client::getClient();
-                if (client) {
-                    client->_connectTimeout();
-                }
-            });
-        });
-    }
-
-    void MQTT::Client::_connectTimeout()
-    {
-        __LDBG_printf("conn=%s", _connection());
-        if (_connState != ConnectionState::PRE_CONNECT && _connState != ConnectionState::CONNECTING) {
-            return;
-        }
-        Logger_notice(F("Connection to MQTT server %s timed out"), connectionDetailsString(false).c_str());
-        _client->disconnect(true);
-        // the disconnect callback was not called, the TCP client has no connection to close
-        if (_connState == ConnectionState::PRE_CONNECT || _connState == ConnectionState::CONNECTING) {
-            onDisconnect(AsyncMqttClientDisconnectReason::TCP_DISCONNECTED);
-        }
-    }
-
-    void MQTT::Client::disconnect(bool forceDisconnect)
-    {
-        __LDBG_printf("force_disconnect=%d conn=%s", forceDisconnect, _connection());
-        if (setConnState(ConnectionState::DISCONNECTING) == ConnectionState::CONNECTED && !forceDisconnect && _client->connected()) {
-            // set offline if last will is not used
-            // for example for clients that go to deep sleep
-            // when reconfiguring or stopping mqtt, the device is marked offline manually
-            __LDBG_printf("marking device as offline manually conn=%s", _connection());
-            // clear client to send going offline status
-            _resetClient();
-
-            // set last will topic
-            _client->publish(_lastWillTopic.c_str(), _translateQosType(getDefaultQos()), true, MQTT_LAST_WILL_TOPIC_OFFLINE);
-        }
-        _client->disconnect(forceDisconnect);
-    }
-
-    void MQTT::Client::autoReconnect(AutoReconnectType timeout)
-    {
-        __LDBG_printf("timeout=%u clamped=%u conn=%s", timeout, std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max), _connection());
-        if (timeout) {
-            _connState = ConnectionState::AUTO_RECONNECT_DELAY;
-            timeout = std::clamp<AutoReconnectType>(timeout, _config.auto_reconnect_min, _config.auto_reconnect_max);
-            Logger_notice(F("Reconnecting to MQTT server %s in %.1f seconds"), connectionDetailsString(false).c_str(), timeout / 1000.0);
-            _Timer(_reconnectTimer).add(Event::milliseconds(timeout), false, [](Event::CallbackTimerPtr timer) {
-                // call outside of the timer callback, a reconnect timer added inside its own callback
-                // is removed by the scheduler when the callback returns (no repeat)
-                LoopFunctions::callOnce([]() {
-                    auto client = MQTT::Client::getClient();
-                    if (client) {
-                        __LDBG_printf("reconnect: conn=%s", client->_connection());
-                        if (!client->isConnected()) {
-                            client->connect();
-                        }
-                    }
-                });
-            });
-            // increase timeout on each reconnect attempt
-            setAutoReconnect(timeout + ((uint32_t(timeout) * _config.auto_reconnect_incr) / 100U));
+        output.print('@');
+        if (IPAddress_isValid(_address)) {
+            _address.printTo(output);
         }
         else {
-            _connState = ConnectionState::IDLE;
-            _Timer(_reconnectTimer).remove();
-            setAutoReconnect(kAutoReconnectDisabled);
+            output.print(_hostname);
         }
+        output.print(':');
+        output.print(_port);
     }
 
-    void MQTT::Client::onConnect(bool sessionPresent)
+    const __FlashStringHelper *Client::_getStateString(StateType state)
     {
-        __LDBG_printf("session=%d conn=%s", sessionPresent, _connection());
-        Logger_notice(F("Connected to MQTT server %s"), connectionDetailsString(false).c_str());
-        _connState = ConnectionState::CONNECTED;
-        _Timer(_connectTimer).remove();
+        switch (state) {
+            case StateType::WAIT:
+                return F("waiting to reconnect");
+            case StateType::CONNECTING:
+                return F("connecting");
+            case StateType::CONNECTED:
+                return F("connected");
+            case StateType::IDLE:
+                break;
+        }
+        return F("disconnected");
+    }
 
-        _resetClient();
+    const __FlashStringHelper *Client::_getReasonString(AsyncMqttClientDisconnectReason reason)
+    {
+        switch (reason) {
+            case AsyncMqttClientDisconnectReason::TCP_DISCONNECTED:
+                return F("Network disconnect");
+            case AsyncMqttClientDisconnectReason::MQTT_UNACCEPTABLE_PROTOCOL_VERSION:
+                return F("Unacceptable protocol version");
+            case AsyncMqttClientDisconnectReason::MQTT_IDENTIFIER_REJECTED:
+                return F("Identifier rejected");
+            case AsyncMqttClientDisconnectReason::MQTT_SERVER_UNAVAILABLE:
+                return F("Server unavailable");
+            case AsyncMqttClientDisconnectReason::MQTT_MALFORMED_CREDENTIALS:
+                return F("Malformed credentials");
+            case AsyncMqttClientDisconnectReason::MQTT_NOT_AUTHORIZED:
+                return F("Not authorized");
+            case AsyncMqttClientDisconnectReason::ESP8266_NOT_ENOUGH_SPACE:
+                return F("ESP8266 not enough space");
+            case AsyncMqttClientDisconnectReason::TLS_BAD_FINGERPRINT:
+                return F("Bad fingerprint");
+        }
+        return F("Unknown");
+    }
 
-        // set last will topic
-        publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), QosType::ONLINE_STATUS);
-
-        // monitor topic in case the status is set to "offline"
-        subscribe(nullptr, _lastWillTopic, QosType::ONLINE_STATUS);
-
-        #if MQTT_SET_LAST_WILL_MODE != 2 && IOT_REMOTE_CONTROL == 1
-            #error remote control requires MQTT_SET_LAST_WILL_MODE == 2 for MQTT_AVAILABILITY_TOPIC
-        #endif
-
+    void Client::printStatus(Print &output)
+    {
+        output.print(_getStateString(_state));
+        output.print(' ');
+        _printServer(output);
+        output.printf_P(PSTR(", QoS %u" HTML_S(br) "Topic %s"), _getQos(QosType::DEFAULT), getBaseTopic().c_str());
         #if MQTT_AUTO_DISCOVERY
-            _autoDiscoveryStatusTopic = _getAutoDiscoveryStatusTopic();
-            __LDBG_printf("subscribe=%s", __S(_autoDiscoveryStatusTopic));
-            subscribe(nullptr, _autoDiscoveryStatusTopic, QosType::AUTO_DISCOVERY);
+            if (_config.auto_discovery) {
+                size_t entities = 0;
+                for (auto component : _components) {
+                    entities += component->getAutoDiscoveryCount();
+                }
+                output.printf_P(PSTR(HTML_S(br) "Auto discovery %s, %u entities"), Plugins::MqttClient::getAutoDiscoveryPrefix(), entities);
+                if (_discovery) {
+                    output.print(F(", publishing"));
+                }
+                else if (_discoveryStats.finished && _discoveryStats.result == StatusType::SUCCESS) {
+                    output.printf_P(PSTR(", published %u minutes ago"), (millis() - _discoveryStats.finished) / 60000U);
+                }
+            }
         #endif
+    }
 
-        // reset reconnect timer if connection was successful
-        setAutoReconnect(_config.auto_reconnect_min);
-
-        for(const auto &component: _components) {
-            component->onConnect();
+    void Client::printDebug(Print &output)
+    {
+        auto now = millis();
+        output.printf_P(PSTR("state=%s server="), _getStateString(_state));
+        _printServer(output);
+        output.printf_P(PSTR(" qos=%u keepalive=%u resolved=%u reconnect=%u\n"), _getQos(QosType::DEFAULT), _config.keepalive, _resolved, _reconnect);
+        if (_state == StateType::CONNECTED) {
+            output.printf_P(PSTR("connected=%us"), (now - _connectedTime) / 1000U);
         }
+        else if (_state == StateType::WAIT || _state == StateType::CONNECTING) {
+            output.printf_P(PSTR("next=%dms"), static_cast<int32_t>(_deadline - now));
+        }
+        output.printf_P(PSTR(" reconnect_delay=%ums\n"), _reconnectDelay);
+        output.printf_P(PSTR("outbox=%u/%u bytes packets=%u current=%u ack_wait=%u dropped=%u inbox=%u received_dropped=%u subscriptions=%u\n"),
+            _outbox.size(), MQTT_OUTBOX_MAX_SIZE, _outbox.count(), _current != nullptr, _ackId ? (now - _ackTime) : 0, _dropped, _inbox.count(), _rxDropped, _subscriptions.size());
         #if MQTT_AUTO_DISCOVERY
-            if (_startAutoDiscovery) {
-                publishAutoDiscovery();
+            output.printf_P(PSTR("auto discovery=%u prefix=%s start_window=%us phase=%s\n"), _config.auto_discovery, Plugins::MqttClient::getAutoDiscoveryPrefix(),
+                _config.auto_discovery_delay, _discovery ? reinterpret_cast<PGM_P>(AutoDiscovery::Discovery::getPhaseName(_discovery->getPhase())) : PSTR("-"));
+            auto &stats = _discoveryStats;
+            PGM_P result = stats.result == StatusType::SUCCESS ? PSTR("success") : (stats.result == StatusType::FAILURE ? PSTR("failure") : PSTR("running/none"));
+            output.printf_P(PSTR("last: result=%s entities=%u removed=%u skipped=%u duration=%ums finished=%ds ago\n"),
+                result, stats.entities, stats.removed, stats.skipped, stats.duration, stats.finished ? static_cast<int>((now - stats.finished) / 1000U) : -1);
+            const AutoDiscovery::MemoryStats *phases[] = { &stats.collect, &stats.remove, &stats.publish };
+            for (uint8_t i = 0; i < 3; i++) {
+                auto &mem = *phases[i];
+                output.printf_P(PSTR("memory %s: heap=%u min=%u used=%u block=%u min=%u\n"),
+                    AutoDiscovery::Discovery::getPhaseName(static_cast<AutoDiscovery::Discovery::PhaseType>(i + 1)),
+                    mem.heapStart, mem.heapMin, mem.heapStart - mem.heapMin, mem.blockStart, mem.blockMin);
             }
         #endif
-    }
-
-    void MQTT::Client::onDisconnect(AsyncMqttClientDisconnectReason reason)
-    {
-        __LDBG_printf("reason=%d auto_reconnect=%d conn=%s", (int)reason, _autoReconnectTimeout, _connection());
-        _Timer(_connectTimer).remove();
-
-        // onDisconnect() sets _startAutoDiscovery
-        // _startAutoDiscovery = _startAutoDiscovery || isAutoDiscoveryRunning();
-
-        // check if the connection was established
-        if (setConnState(ConnectionState::DISCONNECTED) == ConnectionState::CONNECTED) {
-            PrintString str;
-            if (_autoReconnectTimeout) {
-                str.printf_P(PSTR(", reconnecting in %d ms"), _autoReconnectTimeout);
-            }
-            Logger_notice(F("Disconnected from MQTT server, reason: %s%s"), _reasonToString(reason), str.c_str());
-            for(const auto &component: _components) {
-                component->onDisconnect(reason);
-            }
-        }
-        _topics.clear();
-        _resetClient();
-
-        // reconnect automatically
-        autoReconnect(_autoReconnectTimeout);
-    }
-
-    bool MQTT::Client::_topicInUse(ComponentPtr component, const String &topic)
-    {
-        for(const auto &mqttTopic: _topics) {
-            if ((component != mqttTopic.getComponent()) && mqttTopic.match(topic)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool MQTT::Client::publishAutoDiscovery(RunFlags flags, AutoDiscovery::StatusCallback callback)
-    {
-        #if MQTT_AUTO_DISCOVERY
-            _startAutoDiscovery = false;
-            _autoDiscoveryRebroadcast.remove();
-
-            if (AutoDiscovery::Queue::isEnabled() && !_components.empty()) {
-                if (_autoDiscoveryQueue && (flags & RunFlags::ABORT_RUNNING)) { // abort running auto discovery if flag is set
-                    _autoDiscoveryQueue.reset();
-                }
-                if (!_autoDiscoveryQueue) {
-                    __LDBG_printf("starting auto discovery queue");
-                    _autoDiscoveryQueue.reset(new AutoDiscovery::Queue(*this));
-                    _autoDiscoveryQueue->setStatusCallback(callback);
-                    _autoDiscoveryQueue->publish(flags);
-                    return true;
-                }
-            }
-            __LDBG_printf("publishAutoDiscovery false: enabled=%u empty=%u queue=%p", AutoDiscovery::Queue::isEnabled(), _components.empty(), _autoDiscoveryQueue.get());
-        #endif
-        return false;
-    }
-
-    #if MQTT_AUTO_DISCOVERY
-
-        void MQTT::Client::updateAutoDiscoveryTimestamps(bool success)
-        {
-            using namespace MQTT::Json;
-
-            _resetAutoDiscoveryInitialState();
-
-            auto now = time(nullptr);
-            if (!isTimeValid(now)) {
-                now = std::max(_autoDiscoveryLastSuccess, _autoDiscoveryLastFailure) + 1;
-            }
-
-            if (success) {
-                _autoDiscoveryLastSuccess = now;
-            }
-            else {
-                _autoDiscoveryLastFailure = now;
-            }
-
-            auto json = UnnamedObject(
-                NamedUint32(F("last_success"), _autoDiscoveryLastSuccess),
-                NamedUint32(F("last_failure"), _autoDiscoveryLastFailure)
-            ).toString();
-            publish(_autoDiscoveryStatusTopic, true, json, QosType::AT_LEAST_ONCE);
-        }
-
-    #endif
-
-    void MQTT::Client::onMessageRaw(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
-    {
-        __LDBG_printf("topic=%s payload=%s idx:len:total=%d:%d:%d qos=%d dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), index, len, total, properties.qos, properties.dup, properties.retain);
-        if (total > MQTT_RECV_MAX_MESSAGE_SIZE) {
-            __LDBG_printf("discarding message, size exceeded %d/%d", (unsigned)total, MQTT_RECV_MAX_MESSAGE_SIZE);
-            return;
-        }
-        if (index == 0) {
-            if (_buffer.length()) {
-                __LDBG_printf("discarding previous message, buffer=%u", _buffer.length());
-                _buffer.clear();
-            }
-            _buffer.write(payload, len);
-        } else if (index > 0) {
-            if (index != _buffer.length()) {
-                __LDBG_printf("discarding message, index=%u buffer=%u", index, _buffer.length());
-                _buffer.clear();
-                return;
-            }
-            _buffer.write(payload, len);
-        }
-        if (_buffer.length() == total) {
-            onMessage(topic, _buffer.begin_str(), properties, total);
-            _buffer.clear();
-        }
-    }
-
-    void MQTT::Client::onMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len)
-    {
-        __LDBG_printf("topic=%s payload=%s len=%d qos=%d dup=%d retain=%d", topic, printable_string(payload, len, DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str(), len, properties.qos, properties.dup, properties.retain);
-        _messageProperties = &properties;
-        if (_autoDiscoveryStatusTopic == topic) {
-            if (_autoDiscoveryLastFailure == ~0U || _autoDiscoveryLastSuccess == ~0U) {
-                _resetAutoDiscoveryInitialState();
-                // payload is the RAM buffer of the MQTT client and the needle is a PROGMEM string
-                auto pos = StrView(payload).indexOf(F("failure\":"));
-                if (pos != -1) {
-                    uint32_t time = atol(payload + pos + 9);
-                    if (time) {
-                        _autoDiscoveryLastFailure = time;
-                    }
-                }
-                pos = StrView(payload).indexOf(F("success\":"));
-                if (pos != -1) {
-                    uint32_t time = atol(payload + pos + 9);
-                    if (time) {
-                        _autoDiscoveryLastSuccess = time;
-                    }
-                }
-            }
-        }
-        else if (_lastWillTopic == topic) {
-            // ignore this topic if not connected
-            if (isConnected()) {
-                auto onlineStr = MQTT_LAST_WILL_TOPIC_ONLINE;
-                auto onlineLen = strlen_P(onlineStr);
-                __LDBG_printf("online=%u(%s) len=%u(%s) cmp=%d", onlineLen, onlineStr, len, payload, strncmp_P(payload, onlineStr, std::min(len, onlineLen)));
-                // if the length or contents do not match "online", publish "online" again
-                // this happens if another client (or last will / dead connection) sets the status to "offline"
-                if (onlineLen != len || strncmp_P(payload, onlineStr, len) != 0) {
-                    __LDBG_printf("resending MQTT_LAST_WILL_TOPIC_ONLINE");
-                    publish(_lastWillTopic, true, FPSTR(MQTT_LAST_WILL_TOPIC_ONLINE), QosType::ONLINE_STATUS);
-                }
-            }
-        }
-        else {
-            for(const auto &mqttTopic : _topics) {
-                if (_isTopicMatch(topic, mqttTopic.getTopic().c_str())) {
-                    mqttTopic.getComponent()->onMessage(topic, payload, len);
-                }
-            }
-        }
-        _messageProperties = nullptr;
-    }
-
-    void MQTT::Client::_handleWiFiEvents(WiFiCallbacks::EventType event, void *payload)
-    {
-        __LDBG_printf("event=%d payload=%p conn=%s", event, payload, _connection());
-        if (event == WiFiCallbacks::EventType::CONNECTED) {
-            setAutoReconnect(_config.auto_reconnect_min);
-            if (!isConnected()) {
-                connect();
-            }
-        }
-        else if (event == WiFiCallbacks::EventType::DISCONNECTED) {
-            // force a quick disconnect if WiFi is down and do not reconnect until it is back
-            setAutoReconnect(kAutoReconnectDisabled);
-            if (isConnected()) {
-                _client->setKeepAlive(5);
-            }
-        }
     }
 
 }
-

@@ -69,6 +69,22 @@ Changed
   error: GPIO13 is the only RX pin, and two 24 GHz radars close to each other disturb each other
 * HLK-LD2450 live view: a command and the monitor no longer answer `ERROR - busy` while a live view
   page is open, they pause the stream and it resumes afterwards
+* MQTT client rewritten (`src/plugins/mqtt/`), about 15 KB less flash. The auto discovery is
+  published after every connect, after a random delay within the start window (MQTT page, 30 s by
+  default) and one message at a time: each waits for its acknowledgment and is followed by a pause
+  of 250 ms, so devices that connect at the same time (access point or server restarted) do not
+  flood the network. Before publishing, it collects the retained auto discovery of the device and
+  removes the entities that no longer exist from Home Assistant. A sleeping device (remote control)
+  publishes it only when requested
+* MQTT: the client runs in the main loop, the callbacks of plugins (`onConnect()`, `onMessage()`,
+  `onDisconnect()`) are no longer called inside the TCP callbacks. One outbox (4 KB on ESP8266, 16
+  KB on ESP32) hands the MQTT library one packet at a time, a retained message replaces a queued one
+  to the same topic. Reconnects and the first connect after WiFi is up wait a random time, the
+  connection is closed if the server does not acknowledge a packet within 30 s
+* MQTT: the auto discovery and the online status use QoS 1 instead of 2
+* `+MQTT?` shows the outbox, the discarded messages and the last auto discovery with its memory
+  usage per phase. `+MQTT=auto` publishes the auto discovery after 2 s, `+MQTT=list[,full]` lists
+  it without publishing
 
 Fixed
 
@@ -92,6 +108,19 @@ Fixed
   shaded, a target outside the area is a grey hollow dot, at the edge if it is farther than 7 m
 * HLK LD24xx radars: a saved form that changed nothing on the module closed the serial port of the
   live view, the live view stopped until the page was opened again
+* MQTT auto discovery: the entity id that Home Assistant gives a new entity is sent as
+  `default_entity_id` (`<component>.<id>`), Home Assistant 2026.4 dropped `object_id` and named new
+  entities after their display name. Existing entities keep their id
+* MQTT auto discovery: every entity had two `name` keys, the default name and the one of the plugin
+* MQTT: a message was passed to a component whose subscription was longer than the topic (`a/b/c`
+  received `a/b`)
+
+Removed
+
+* MQTT: the auto discovery rebroadcast interval and the retained `auto_discovery/state` topic (the
+  auto discovery is published after every connect), the unused fields Auto Discovery Name and Group
+  Topic, the TLS code (no build enabled it) and last will mode 0. The stored MQTT settings keep their
+  layout
 
 ### 2026-11-14
 

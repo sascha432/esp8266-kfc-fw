@@ -2,7 +2,7 @@
  * Author: sascha_lammers@gmx.de
  */
 
-// Yaml code for Home Assistant and auto discovery
+// Home Assistant auto discovery payloads
 
 #include <Arduino_compat.h>
 #include <PrintString.h>
@@ -20,9 +20,36 @@
 #    include <debug_helper_disable.h>
 #endif
 
+#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+#    define MQTT_DEVICE_REG_CONNECTIONS  "cns"
+#    define MQTT_DEVICE_REG_IDENTIFIERS  "ids"
+#    define MQTT_DEVICE_REG_NAME         "name"
+#    define MQTT_DEVICE_REG_MANUFACTURER "mf"
+#    define MQTT_DEVICE_REG_MODEL        "mdl"
+#    define MQTT_DEVICE_REG_SW_VERSION   "sw"
+#else
+#    define MQTT_DEVICE_REG_CONNECTIONS  "connections"
+#    define MQTT_DEVICE_REG_IDENTIFIERS  "identifiers"
+#    define MQTT_DEVICE_REG_NAME         "name"
+#    define MQTT_DEVICE_REG_MANUFACTURER "manufacturer"
+#    define MQTT_DEVICE_REG_MODEL        "model"
+#    define MQTT_DEVICE_REG_SW_VERSION   "sw_version"
+#endif
+
 using KFCConfigurationClasses::System;
 using namespace MQTT::AutoDiscovery;
-using namespace KFCJson;
+
+Entity::Entity() :
+    _format(FormatType::JSON),
+    _type(ComponentType::SWITCH),
+    _hasName(false)
+{
+}
+
+bool Entity::create(ComponentPtr component, const String &componentName, FormatType format)
+{
+    return create(component->getType(), componentName, format);
+}
 
 bool Entity::create(ComponentType componentType, const String &componentName, FormatType format)
 {
@@ -36,11 +63,10 @@ bool Entity::create(ComponentType componentType, const String &componentName, Fo
     return _create(componentType, suffix, format);
 }
 
-bool Entity::_create(ComponentType componentType, const String &name, FormatType format, NameType platform)
+bool Entity::_create(ComponentType componentType, const String &name, FormatType format)
 {
-    String uniqueId;
-
     _format = format;
+    _type = componentType;
     _topic = MqttClient::getAutoDiscoveryPrefix();
     _topic += '/';
     _topic += Component::getNameByType(componentType);
@@ -48,124 +74,143 @@ bool Entity::_create(ComponentType componentType, const String &name, FormatType
         _topic += '/';
     }
     _topic += name;
-
     if (!StrView(_topic).endsWith('/')) {
         _topic += '/';
     }
     _topic += F("config");
 
-    _discovery = PrintString();
     if (format == FormatType::TOPIC) {
-        __LDBG_printf("MQTT auto discovery topic only '%s'", _topic.c_str());
         return false;
     }
 
-    if (_format == FormatType::JSON) {
-        _discovery += '{';
-        #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-            _baseTopic = MQTT::Client::getBaseTopic();
-            __LDBG_printf("base_topic=%s", __S(_baseTopic));
-            addParameter(F("~"), _baseTopic);
-        #endif
-    }
-    else {
-        _discovery += Component::getNameByType(componentType);
-        _discovery += F(":\n  - ");
-    }
-    uniqueId = _getUniqueId(name);
+    _discovery = PrintString();
+    _discovery += '{';
+    #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+        _baseTopic = Client::getBaseTopic();
+        addParameter(F("~"), _baseTopic);
+    #endif
+
+    PrintString uniqueId;
+    WebTemplate::printUniqueId(uniqueId, name);
     if (componentType != ComponentType::DEVICE_AUTOMATION) {
-        addParameter(FSPGM(mqtt_name), name);
-        addParameter(FSPGM(mqtt_platform), platform);
-        if (format == FormatType::JSON) {
-            addParameter(FSPGM(mqtt_unique_id), uniqueId);
-        }
-        addParameter(FSPGM(mqtt_availability_topic), MQTT::Client::formatTopic(MQTT_AVAILABILITY_TOPIC));
+        // the name is added by finalize() if the component does not add one
+        _name = name;
+        addParameter(FSPGM(mqtt_platform), FSPGM(mqtt));
+        addParameter(FSPGM(mqtt_unique_id), uniqueId);
+        addParameter(FSPGM(mqtt_availability_topic), Client::formatTopic(MQTT_AVAILABILITY_TOPIC));
         #if MQTT_AVAILABILITY_TOPIC_ADD_PAYLOAD_ON_OFF
             addParameter(FSPGM(mqtt_payload_available), MQTT_AVAILABILITY_TOPIC_ONLINE);
             addParameter(FSPGM(mqtt_payload_not_available), MQTT_AVAILABILITY_TOPIC_OFFLINE);
         #endif
     }
-    if (_format == FormatType::JSON) {
-        PrintString model;
-        WebTemplate::printModel(model);
 
-        #define JSON_VALUE_START            "\":\""
-        #define JSON_NEXT_KEY_START         "\",\""
+    PrintString model;
+    WebTemplate::printModel(model);
 
-        auto namePtr = System::Device::getTitle();
-        if (StrView(namePtr) == FSPGM(KFC_Firmware)) {
-            namePtr = System::Device::getName();
-        }
+    #define JSON_VALUE_START            "\":\""
+    #define JSON_NEXT_KEY_START         "\",\""
 
-        _discovery.print(F("\"device\":{\"" MQTT_DEVICE_REG_IDENTIFIERS "\":[\""));
-        _discovery.print(uniqueId);
-        _discovery.print(F("\"],\"" MQTT_DEVICE_REG_CONNECTIONS "\":[[\"mac" JSON_NEXT_KEY_START));
-        uint8_t mac[WL_MAC_ADDR_LENGTH];
-        WiFi.macAddress(mac);
-        printMacAddress(mac, _discovery);
-        _discovery.print(F("\"]],\"" MQTT_DEVICE_REG_MODEL JSON_VALUE_START));
-        _discovery.print(model);
-        _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_NAME JSON_VALUE_START));
-        _discovery.print(namePtr);
-        _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_SW_VERSION JSON_VALUE_START "KFC FW "));
-        _discovery.print(KFCFWConfiguration::getFirmwareVersion());
-        _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_MANUFACTURER JSON_VALUE_START));
-        _discovery.print(FSPGM(KFCLabs));
-        _discovery.print(F("\"},"));
+    auto namePtr = System::Device::getTitle();
+    if (StrView(namePtr) == FSPGM(KFC_Firmware)) {
+        namePtr = System::Device::getName();
     }
 
-    __LDBG_printf("MQTT auto discovery topic '%s'", _topic.c_str());
+    _discovery.print(F("\"device\":{\"" MQTT_DEVICE_REG_IDENTIFIERS "\":[\""));
+    _discovery.print(uniqueId);
+    _discovery.print(F("\"],\"" MQTT_DEVICE_REG_CONNECTIONS "\":[[\"mac" JSON_NEXT_KEY_START));
+    uint8_t mac[WL_MAC_ADDR_LENGTH];
+    WiFi.macAddress(mac);
+    printMacAddress(mac, _discovery);
+    _discovery.print(F("\"]],\"" MQTT_DEVICE_REG_MODEL JSON_VALUE_START));
+    _discovery.print(model);
+    _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_NAME JSON_VALUE_START));
+    _discovery.print(namePtr);
+    _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_SW_VERSION JSON_VALUE_START "KFC FW "));
+    _discovery.print(KFCFWConfiguration::getFirmwareVersion());
+    _discovery.print(F(JSON_NEXT_KEY_START MQTT_DEVICE_REG_MANUFACTURER JSON_VALUE_START));
+    _discovery.print(FSPGM(KFCLabs));
+    _discovery.print(F("\"},"));
+
     return true;
+}
+
+void Entity::addObjectId(const String &value)
+{
+    // Home Assistant 2026.4 removed "object_id": "default_entity_id" is the complete entity id
+    // <component>.<lowercase letters, digits and underscores>
+    String id = Component::getNameByType(_type);
+    id += '.';
+    auto start = id.length();
+    for (auto ptr = value.c_str(); *ptr; ptr++) {
+        auto ch = *ptr;
+        if (isalnum(ch)) {
+            id += static_cast<char>(tolower(ch));
+        }
+        else if (id.length() > start && id.charAt(id.length() - 1) != '_') {
+            id += '_';
+        }
+    }
+    while (id.length() > start && id.charAt(id.length() - 1) == '_') {
+        id.remove(id.length() - 1);
+    }
+    addParameter(FSPGM(mqtt_default_entity_id), id);
 }
 
 void Entity::__addParameter(NameType name, const char *str, bool quotes)
 {
-    __DBG_validatePointerCheck(name, VP_HPS);
-    __DBG_validatePointerCheck(str, VP_HPS);
-    if (_format == FormatType::TOPIC) {
+    if (_format != FormatType::JSON) {
         return;
     }
-    else if (_format == FormatType::JSON) {
-        _discovery.printf_P(PSTR("\"%s\":"), name);
-        if (quotes) {
-            _discovery.print('"');
+    _discovery.printf_P(PSTR("\"%s\":"), name);
+    if (quotes) {
+        _discovery.print('"');
+    }
+    #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
+        // replace the base topic of topics ("..._t") with "~"
+        auto len = strlen_P(RFPSTR(name));
+        if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) {
+            if (strncmp_P(_baseTopic.c_str(), str, _baseTopic.length()) == 0) {
+                str += _baseTopic.length();
+                _discovery.print('~');
+            }
         }
-        #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-                auto len = strlen_P(RFPSTR(name));
-                if (len > 2 && pgm_read_word(RFPSTR(name) + len - 2) == (('_') | ('t' << 8))) { // check if the name ends with "_t"
-                    if (strncmp_P(_baseTopic.c_str(), str, _baseTopic.length()) == 0) { // replace _baseTopic with ~
-                        str += _baseTopic.length();
-                        _discovery.print('~');
-                    }
-                }
-        #endif
-        if (quotes) {
-            JsonTools::Utf8Buffer buffer;
-            JsonTools::printToEscaped(_discovery, FPSTR(str), &buffer);
-            _discovery.print(F("\","));
-        }
-        else {
-            _discovery.print(FPSTR(str));
-            _discovery.print(',');
-        }
+    #endif
+    if (quotes) {
+        KFCJson::JsonTools::Utf8Buffer buffer;
+        KFCJson::JsonTools::printToEscaped(_discovery, FPSTR(str), &buffer);
+        _discovery.print(F("\","));
     }
     else {
-        _discovery.printf_P(PSTR("%s: %s\n    "), name, str);
+        _discovery.print(FPSTR(str));
+        _discovery.print(',');
     }
 }
 
 void Entity::finalize()
 {
-    if (!_discovery.length()) {
-        __LDBG_printf("MQTT auto discovery payload empty");
+    if (_format != FormatType::JSON || !_discovery.length()) {
         return;
     }
-    if (_format == FormatType::JSON) {
-        _discovery.remove(_discovery.length() - 1);
-        _discovery += '}';
+    if (!_hasName && _name.length()) {
+        addParameter(FSPGM(mqtt_name), _name);
     }
-    else {
-        _discovery.remove(_discovery.length() - 4);
-    }
-    __LDBG_printf("MQTT auto discovery payload '%s'", printable_string(_discovery.c_str(), _discovery.length(), DEBUG_MQTT_CLIENT_PAYLOAD_LEN).c_str());
+    _name = String();
+    // replace the last comma
+    _discovery.remove(_discovery.length() - 1);
+    _discovery += '}';
+}
+
+String Entity::getConfigWildcardTopic()
+{
+    return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
+}
+
+String Entity::getConfig2ndLevelWildcardTopic()
+{
+    return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), System::Device::getObjectIdOrName());
+}
+
+String Entity::getTriggersTopic()
+{
+    return Client::formatTopic(F("/triggers"));
 }

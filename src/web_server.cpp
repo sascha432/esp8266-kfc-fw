@@ -341,13 +341,10 @@ void Plugin::handlerNotFound(AsyncWebServerRequest *request)
             bool result = false;
             if (client) {
                 auto sessionId = session.getId();
-                result = client->publishAutoDiscovery(MQTT::RunFlags::FORCE, [sessionId](MQTT::StatusType status) {
+                result = client->publishAutoDiscovery([sessionId](MQTT::StatusType status) {
                     const auto session = Action::Handler::getInstance().getSession(sessionId);
                     if (session) {
                         switch(status) {
-                            case MQTT::StatusType::DEFERRED:
-                                session->setStatus(F("Auto discovery deferred..."));
-                                break;
                             case MQTT::StatusType::STARTED:
                                 session->setStatus(F("Auto discovery running..." MESSAGE_TEMPLATE_AUTO_RELOAD(15)));
                                 break;

@@ -13,16 +13,16 @@
 #    define MQTT_AUTO_DISCOVERY 1
 #endif
 
-// Mode 0:
-// -------
-// set MQTT_AVAILABILITY_TOPIC to MQTT_AVAILABILITY_TOPIC_ONLINE after connecting
-// and MQTT_AVAILABILITY_TOPIC_OFFLINE when disconnect() is called. last will
-// is disabled
-//
-// connect: MQTT_AVAILABILITY_TOPIC -> MQTT_AVAILABILITY_TOPIC_ONLINE
-// disconnect: MQTT_AVAILABILITY_TOPIC -> MQTT_AVAILABILITY_TOPIC_OFFLINE
-// connection lost: do nothing
-//
+// publish the auto discovery after each connect. a device that sleeps most of the time (remote control)
+// publishes it only when requested (configuration change, AT command, WebUI)
+#ifndef MQTT_AUTO_DISCOVERY_ON_CONNECT
+#    if IOT_REMOTE_CONTROL
+#        define MQTT_AUTO_DISCOVERY_ON_CONNECT 0
+#    else
+#        define MQTT_AUTO_DISCOVERY_ON_CONNECT 1
+#    endif
+#endif
+
 // Mode 1: (default)
 // -------
 // set MQTT_AVAILABILITY_TOPIC to MQTT_AVAILABILITY_TOPIC_ONLINE after connecting and
@@ -72,12 +72,6 @@
 #    define MQTT_AVAILABILITY_TOPIC_OFFLINE SPGM(mqtt_status_topic_offline)
 #endif
 
-// add name to each MQTT device
-// Device Name + ' ' + Component Name
-#ifndef MQTT_AUTO_DISCOVERY_USE_NAME
-#    define MQTT_AUTO_DISCOVERY_USE_NAME 0
-#endif
-
 #if MQTT_SET_LAST_WILL_MODE == 1
 
 #    if (defined(MQTT_LAST_WILL_TOPIC) || defined(MQTT_LAST_WILL_TOPIC_ONLINE) || defined(MQTT_LAST_WILL_TOPIC_OFFLINE))
@@ -103,76 +97,49 @@
 #        define MQTT_LAST_WILL_TOPIC_OFFLINE SPGM(mqtt_bool_off)
 #    endif
 
-#elif MQTT_SET_LAST_WILL_MODE != 0
+#else
 
 #    error MQTT_SET_LAST_WILL_MODE invalid value
 
 #endif
 
-// enable callbacks for QoS. onSubscribe(), onPublish() and onUnsubscribe()
-#ifndef MQTT_USE_PACKET_CALLBACKS
-#    define MQTT_USE_PACKET_CALLBACKS 0
-#endif
-
-// timeout if subscribe/unsubcribe/publish cannot be sent
-#ifndef MQTT_QUEUE_TIMEOUT
-#    define MQTT_QUEUE_TIMEOUT 7500
-#endif
-
-// default timeout waiting for the acknowledgement packet
-#ifndef MQTT_DEFAULT_TIMEOUT
-#    define MQTT_DEFAULT_TIMEOUT 10000
-#endif
-
-// delay before retrying subscribe/unsubcribe/publish
-#ifndef MQTT_QUEUE_RETRY_DELAY
-#    define MQTT_QUEUE_RETRY_DELAY 250
-#endif
-
-// maximum size of topc + payload + header (~7 byte) + safety limit for sending messages
+// maximum size of topic + payload + header (~7 byte) + safety limit for sending messages. a message is
+// only handed to the MQTT library when it fits into the TCP buffer
 #ifndef MQTT_MAX_MESSAGE_SIZE
 #    define MQTT_MAX_MESSAGE_SIZE (TCP_SND_BUF - 64)
 #endif
 
-// incoming message that exceed the limit are discarded
+// incoming messages that exceed the limit are discarded
 #ifndef MQTT_RECV_MAX_MESSAGE_SIZE
 #    define MQTT_RECV_MAX_MESSAGE_SIZE 1024
 #endif
 
-#if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
-
-#    define MQTT_DEVICE_REG_CONNECTIONS  "cns"
-#    define MQTT_DEVICE_REG_IDENTIFIERS  "ids"
-#    define MQTT_DEVICE_REG_NAME         "name"
-#    define MQTT_DEVICE_REG_MANUFACTURER "mf"
-#    define MQTT_DEVICE_REG_MODEL        "mdl"
-#    define MQTT_DEVICE_REG_SW_VERSION   "sw"
-
-#else
-
-#    define MQTT_DEVICE_REG_CONNECTIONS  "connections"
-#    define MQTT_DEVICE_REG_IDENTIFIERS  "identifiers"
-#    define MQTT_DEVICE_REG_NAME         "name"
-#    define MQTT_DEVICE_REG_MANUFACTURER "manufacturer"
-#    define MQTT_DEVICE_REG_MODEL        "model"
-#    define MQTT_DEVICE_REG_SW_VERSION   "sw_version"
-
+// maximum size of all messages waiting to be sent. publish() returns false if the limit is reached
+#ifndef MQTT_OUTBOX_MAX_SIZE
+#    if ESP8266
+#        define MQTT_OUTBOX_MAX_SIZE 4096
+#    else
+#        define MQTT_OUTBOX_MAX_SIZE 16384
+#    endif
 #endif
 
-#ifndef DEBUG_MQTT_AUTO_DISCOVERY_QUEUE
-#    define DEBUG_MQTT_AUTO_DISCOVERY_QUEUE (0 || defined(DEBUG_ALL))
+// pause after each auto discovery message
+#ifndef MQTT_DISCOVERY_GAP_MS
+#    define MQTT_DISCOVERY_GAP_MS 250
 #endif
 
-#ifndef DEBUG_MQTT_CLIENT_PAYLOAD_LEN
-#    define DEBUG_MQTT_CLIENT_PAYLOAD_LEN 128
+// delay before the auto discovery starts if it was requested (configuration change, AT command, WebUI). after
+// connecting, a random delay between 0 and the configured start window is used
+#ifndef MQTT_DISCOVERY_REQUEST_DELAY_MS
+#    define MQTT_DISCOVERY_REQUEST_DELAY_MS 2000
 #endif
 
-// initial delay after connect +-10%
-#ifndef MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY
-#    define MQTT_AUTO_DISCOVERY_QUEUE_INITIAL_DELAY 30000
+// the retained auto discovery of the device is collected until no message has been received for this time
+#ifndef MQTT_DISCOVERY_COLLECT_QUIET_MS
+#    define MQTT_DISCOVERY_COLLECT_QUIET_MS 3000
 #endif
 
-// delay before retrying to send
-#ifndef MQTT_AUTO_DISCOVERY_ERROR_DELAY
-#    define MQTT_AUTO_DISCOVERY_ERROR_DELAY 5000
+// maximum time to collect the retained auto discovery
+#ifndef MQTT_DISCOVERY_COLLECT_MAX_MS
+#    define MQTT_DISCOVERY_COLLECT_MAX_MS 20000
 #endif

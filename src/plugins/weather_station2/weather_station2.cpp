@@ -213,17 +213,10 @@ void WeatherStation2Plugin::onConnect()
     _updateMqttSubscriptions();
 }
 
+// also called if the client is destroyed while connected (MQTT disabled or reconfigured)
 void WeatherStation2Plugin::onDisconnect(AsyncMqttClientDisconnectReason reason)
 {
     __LDBG_printf("reason=%d", static_cast<int>(reason));
-    _mqttSubscribed.clear();
-    _data.mqttDisconnected();
-}
-
-void WeatherStation2Plugin::onShutdown()
-{
-    // the client is destroyed (MQTT disabled in the configuration), the metrics fall back to
-    // "offline"
     _mqttSubscribed.clear();
     _data.mqttDisconnected();
 }

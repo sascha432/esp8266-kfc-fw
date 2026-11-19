@@ -378,11 +378,25 @@ Create a table for the given voltage range
 Manage MQTT
 
   con[nect]                                   Connect to server
-  dis[connect][,<true|false>]                 Disconnect from server and enable/disable auto reconnect
+  dis[connect][,<reconnect>]                  Disconnect from server, reconnect after the reconnect delay if true
   set,<enable,disable>                        Enable or disable MQTT
   top[ics]                                    List subscribed topics
-  auto[discovery][,restart][,force]           Publish auto discovery
-  list[,<full|crc|file>]                      List auto discovery (file = /.logs/mqtt_auto_discovery.json)
+  auto[discovery]                             Publish auto discovery (starts after 2 seconds, a running one starts again)
+  list[,full]                                 List auto discovery topics (and payloads), nothing is published
+
+### `+MQTT?`
+
+Display the MQTT state: server, reconnect delay, the outbox (bytes, packets, a packet waiting for its acknowledgment,
+dropped messages), the received messages that have been discarded and the subscriptions. The auto discovery lines show
+the start window, the current phase (`wait`, `collect`, `remove`, `publish`) and the last run: result, entities, removed
+entities, duration and its memory usage per phase - the free heap and the largest free block at the start of the
+phase and the lowest values sampled while it ran. `used` is the difference of the free heap
+
+The auto discovery runs after each connect, after a random delay within the start window (`Auto Discovery Start
+Window` on the MQTT page, 30 seconds by default). It subscribes to the retained auto discovery of the device, removes
+the entities that no longer exist (an empty retained message), unsubscribes and publishes every entity, one at a time:
+each message waits for its acknowledgment and is followed by a pause of 250 ms. A device that sleeps (remote control)
+publishes it only when requested
 
 ## STK500v1 Programmer
 

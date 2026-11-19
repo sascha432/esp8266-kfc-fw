@@ -103,7 +103,9 @@ Configure and control the device with AT commands via serial interface or WebUI
 
 ### MQTT Client
 
-MQTT Client with API to easily add components that work with Home Assistant, as well as auto discovery
+MQTT Client with API to easily add components that work with Home Assistant, as well as auto discovery. The auto
+discovery is published after each connect, spread over a start window and one message at a time, and removes the
+entities of the device that no longer exist
 
 ### SSDP auto discovery
 

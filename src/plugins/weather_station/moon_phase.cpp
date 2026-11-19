@@ -114,7 +114,7 @@ static void _debugMoonToFile(Stream &file)
 void startMoonDebug()
 {
     _Scheduler.add(Event::seconds(1800), true, [](Event::CallbackTimerPtr timer) {
-        auto file = KFCFS.open(F("/.logs/moon_phase.log"), FileOpenMode::appendplus);
+        auto file = KFCFS.open(F("/.logs/moon_phase.log"), fs::FileOpenMode::appendplus);
         if (file) {
             _debugMoonToFile(file);
         }

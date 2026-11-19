@@ -10,16 +10,16 @@
 #include "mqtt_base.h"
 #include "mqtt_strings.h"
 
-#if 0
-#include <debug_helper_disable_ptr_validation.h>
-#endif
-
 namespace MQTT {
 
     namespace AutoDiscovery {
 
+        // builds the topic and payload of one Home Assistant auto discovery entity
+        //
+        // topic: <prefix>/<component>/<object id or device name>[/<name>]/config
         class Entity {
         public:
+            Entity();
 
             // returns true to continue, false to stop (format FormatType::TOPIC)
             bool create(ComponentPtr component, const String &componentName, FormatType format);
@@ -36,68 +36,47 @@ namespace MQTT {
 
         public:
             inline void addParameter(NameType name, const char *value) { // PROGMEM safe
-                __DBG_validatePointerCheck(name, VP_HPS);
-                __DBG_validatePointerCheck(value, VP_HPS);
                 __addParameter(name, value, true);
             }
 
             inline void addParameter(NameType name, NameType value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
-                __DBG_validatePointerCheck(value, VP_HPS);
                 __addParameter(name, value, true);
             }
 
             inline void addParameter(NameType name, const String &value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, value, true);
             }
 
             inline void addParameter(NameType name, char value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), true);
             }
 
             inline void addParameter(NameType name, int32_t value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), false);
             }
 
             inline void addParameter(NameType name, uint32_t value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), false);
             }
 
             inline void addParameter(NameType name, float value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), false);
             }
 
             inline void addParameter(NameType name, double value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), false);
             }
 
             inline void addParameter(NameType name, int64_t value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), false);
             }
 
             inline void addParameter(NameType name, uint64_t value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, String(value), false);
             }
 
-            // template<typename _Ta, typename std::enable_if<!std::is_same<_Ta, bool>::value && std::is_arithmetic<_Ta>::value, int>::type = 0>
-            // void addParameter(NameType name, _Ta value) {
-            //     __DBG_validatePointerCheck(name, VP_HPS);
-            //     PrintString str; // support for uint64_t
-            //     str.print(value);
-            //     __addParameter(name, static_cast<String &>(str), false);
-            // }
-
             template<typename _Ta, typename std::enable_if<std::is_same<_Ta, bool>::value, int>::type = 0>
             void addParameter(NameType name, _Ta value) {
-                __DBG_validatePointerCheck(name, VP_HPS);
                 __addParameter(name, value ? FSPGM(mqtt_bool_true) : FSPGM(mqtt_bool_false), false);
             }
 
@@ -107,15 +86,18 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_state_topic), value);
             }
 
+            // an empty name keeps the default name
             void addName(const String &value) {
                 if (value.length() == 0) {
                     return;
                 }
+                _hasName = true;
                 addParameter(FSPGM(mqtt_name), value);
             }
 
             template<typename _T>
             void addName(_T value) {
+                _hasName = true;
                 addParameter(FSPGM(mqtt_name), value);
             }
 
@@ -131,9 +113,12 @@ namespace MQTT {
                 addParameter(FSPGM(mqtt_friendly_name), value);
             }
 
-            template<typename _T>
-            void addObjectId(_T value) {
-                addParameter(FSPGM(mqtt_object_id), value);
+            // the entity id that Home Assistant uses when it creates the entity: <component>.<object id>. an
+            // existing entity keeps its id
+            void addObjectId(const String &value);
+
+            void addObjectId(const __FlashStringHelper *value) {
+                addObjectId(String(value));
             }
 
             template<typename _T>
@@ -339,18 +324,22 @@ namespace MQTT {
                 __addParameter(FSPGM(mqtt_preset_modes), json.c_str(), false);
             }
 
-
         public:
+            // closes the JSON object, adds the default name if the component did not add one
             void finalize();
-            String &getPayload();
-            String &getTopic();
 
-            // roughly the free space needed in the MQTT clients tcp buffer
-            size_t getMessageSize() const;
+            String &getPayload() {
+                return static_cast<String &>(_discovery);
+            }
 
-            static String getWildcardTopic();
+            String &getTopic() {
+                return _topic;
+            }
+
+            // the auto discovery topics of this device, <prefix>/+/<node>/config and <prefix>/+/<node>/+/config
             static String getConfigWildcardTopic();
             static String getConfig2ndLevelWildcardTopic();
+            // topic for the device triggers
             static String getTriggersTopic();
 
         private:
@@ -364,54 +353,18 @@ namespace MQTT {
                 __addParameter(name, value.c_str(), quotes);
             }
 
-        private:
-            bool _create(ComponentType componentType, const String &name, FormatType format, NameType platform = FSPGM(mqtt));
-            String _getUniqueId(const String &name);
+            bool _create(ComponentType componentType, const String &name, FormatType format);
 
-            FormatType _format;
             PrintString _discovery;
             String _topic;
+            String _name;
             #if MQTT_AUTO_DISCOVERY_USE_ABBREVIATIONS
                 String _baseTopic;
             #endif
+            FormatType _format;
+            ComponentType _type;
+            bool _hasName;
         };
-
-        inline String &Entity::getPayload()
-        {
-            return static_cast<String &>(_discovery);
-        }
-
-        inline String &Entity::getTopic()
-        {
-            return _topic;
-        }
-
-        inline size_t Entity::getMessageSize() const
-        {
-            return _discovery.length() + _topic.length() + 16;
-        }
-
-        inline String Entity::getWildcardTopic()
-        {
-            return PrintString(F("%s/+/%s/#"), MqttClient::getAutoDiscoveryPrefix(), KFCConfigurationClasses::System::Device::getObjectIdOrName());
-        }
-
-        inline String Entity::getConfigWildcardTopic()
-        {
-            return PrintString(F("%s/+/%s/config"), MqttClient::getAutoDiscoveryPrefix(), KFCConfigurationClasses::System::Device::getObjectIdOrName());
-        }
-
-        inline String Entity::getConfig2ndLevelWildcardTopic()
-        {
-            return PrintString(F("%s/+/%s/+/config"), MqttClient::getAutoDiscoveryPrefix(), KFCConfigurationClasses::System::Device::getObjectIdOrName());
-        }
-
-        inline String Entity::_getUniqueId(const String &name)
-        {
-            PrintString tmp;
-            WebTemplate::printUniqueId(tmp, name);
-            return tmp;
-        }
 
     }
 

@@ -75,9 +75,8 @@ private:
 #if MQTT_SUPPORT
     // MQTTComponent: the topics belong to the data source, the plugin only subscribes to them
     virtual void onConnect() override;
+    // also called if the client is destroyed while connected (MQTT disabled or reconfigured)
     virtual void onDisconnect(AsyncMqttClientDisconnectReason reason) override;
-    // the client is destroyed (MQTT disabled in the configuration or reconfigured)
-    virtual void onShutdown() override;
     virtual void onMessage(const char *topic, const char *payload, size_t len) override;
     // subscribes to the topics of the configured MQTT sources and removes the obsolete ones
     void _updateMqttSubscriptions();

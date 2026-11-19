@@ -61,42 +61,26 @@ void Plugin::reconfigure(const String &source)
     Client::setupInstance();
 }
 
-void Plugin::shutdown()
-{
-    __LDBG_println();
-    #if MQTT_SET_LAST_WILL_MODE == 0
-        auto client = Client::getClient();
-        if (client) {
-            // send last will manually and give system some time to push out the tcp buffer
-            client->disconnect(false);
-            delay(100);
-        }
-    #endif
-    // crashing sometimes
-    // MQTT::Client::deleteInstance();
-}
-
 void Plugin::getStatus(Print &output)
 {
     auto client = Client::getClient();
     if (client) {
-        output.print(client->connectionStatusString());
-        output.printf_P(PSTR(HTML_S(br) "%u components, %u entities" HTML_S(br)),
-            client->_components.size(),
-            AutoDiscovery::List::size(client->_components)
-        );
+        client->printStatus(output);
     }
     else {
         output.print(FSPGM(Disabled));
     }
 }
 
-
 #if AT_MODE_SUPPORTED
 
 #include "at_mode.h"
 
-#define COMMANDS "con|dis|set|top|auto|list"
+#if MQTT_AUTO_DISCOVERY
+#    define COMMANDS "con|dis|set|top|auto|list"
+#else
+#    define COMMANDS "con|dis|set|top"
+#endif
 
 enum class Command {
     INVALID = -1,
@@ -110,160 +94,108 @@ enum class Command {
 
 PROGMEM_AT_MODE_HELP_COMMAND_DEF(MQTT, "MQTT", "<" COMMANDS ">", "Manage MQTT\n"
     "    con[nect]                                   Connect to server\n"
-    "    dis[connect][,<true|false>]                 Disconnect from server and enable/disable auto reconnect\n"
+    "    dis[connect][,<reconnect>]                  Disconnect from server, reconnect after the reconnect delay if true\n"
     "    set,<enable,disable>                        Enable or disable MQTT\n"
     "    top[ics]                                    List subscribed topics\n"
-    "    auto[discovery][,restart][,force]           Publish auto discovery\n"
-    "    list[,<full|crc>]                           List auto discovery\n",
-    "Display MQTT status"
+    #if MQTT_AUTO_DISCOVERY
+    "    auto[discovery]                             Publish auto discovery\n"
+    "    list[,full]                                 List auto discovery topics (and payloads)\n"
+    #endif
+    ,
+    "Display MQTT status, outbox and the memory usage of the last auto discovery"
 );
+
+#if MQTT_AUTO_DISCOVERY
+
+static void printAutoDiscovery(Print &output, bool full)
+{
+    output.printf_P(PSTR("Prefix: %s\nBase topic: %s\n"), Plugins::MqttClient::getAutoDiscoveryPrefix(), MQTT::Client::getBaseTopic().c_str());
+    auto format = full ? FormatType::JSON : FormatType::TOPIC;
+    for (auto component : MQTT::Client::getComponents()) {
+        auto count = component->getAutoDiscoveryCount();
+        for (uint8_t i = 0; i < count; i++) {
+            std::unique_ptr<AutoDiscovery::Entity> entity(component->getAutoDiscovery(format, i));
+            if (!entity) {
+                continue;
+            }
+            output.print(entity->getTopic());
+            if (full) {
+                entity->finalize();
+                output.print(':');
+                output.print(entity->getPayload());
+            }
+            output.println();
+            delay(5);
+        }
+    }
+}
+
+#endif
 
 bool Plugin::atModeHandler(AtModeArgs &args)
 {
-    if (args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
-        auto clientPtr = Client::getClient();
-        if (!clientPtr) {
-            args.print(FSPGM(disabled));
-        }
-        else if (args.isQueryMode()) {
-            args.printf_P(PSTR("status: %s"), clientPtr->connectionStatusString().c_str());
-        }
-        else if (args.requireArgs(1, 3)) {
-            auto &client = *clientPtr;
-            auto actionsStr = PSTR(COMMANDS);
-            auto action = static_cast<Command>(stringlist_find_P_P(actionsStr, args.get(0), '|'));
-            switch(action) {
-                case Command::CONNECT:
-                    if (Plugins::MqttClient::isEnabled()) {
-                        args.printf_P(PSTR("connecting to %s"), client.connectionStatusString().c_str());
-                        client.setAutoReconnect();
-                        client.connect();
-                    }
-                    else {
-                        args.print(F("disabled or not configured"));
-                    }
-                    break;
-                case Command::DISCONNECT:
-                    if (args.isTrue(1)) {
-                        client.setAutoReconnect();
-                    }
-                    else {
-                        client.setAutoReconnect(0);
-                    }
-                    client.disconnect(false);
-                    args.print(F("disconnected"));
-                    break;
-                case Command::SET:
-                    if  (args.isTrue(1)) {
-                        System::Flags::getWriteableConfig().is_mqtt_enabled = true;
-                        config.write();
-                        args.print(F("enabled"));
-                    }
-                    else {
-                        client.setAutoReconnect(0);
-                        client.disconnect(true);
-                        System::Flags::getWriteableConfig().is_mqtt_enabled = false;
-                        config.write();
-                        args.print(F("disconnected and disabled"));
-                    }
-                    break;
-                case Command::TOPICS:
-                    for(const auto &topic: client.getTopics()) {
-                        args.print(F("topic=%s component=%p name=%s"), topic.getTopic().c_str(), topic.getComponent(), topic.getComponent()->getName());
-                    }
-                    break;
-                case Command::AUTO_DISCOVERY: {
-                        MQTT::RunFlags flags = MQTT::RunFlags::NONE;
-                        if (args.has(F("force"))) {
-                            flags = MQTT::RunFlags::FORCE;
-                        }
-                        if (args.has(F("restart")) || args.has(F("abort"))) {
-                            flags |= MQTT::RunFlags::ABORT_RUNNING;
-                        }
-                        if (args.has(F("now"))) {
-                            flags |= MQTT::RunFlags::FORCE_NOW;
-                        }
-
-                        if (!client.isConnected()) {
-                            args.print(F("MQTT client not connected"));
-                        }
-                        else if (!(flags & MQTT::RunFlags::ABORT_RUNNING) && client.isAutoDiscoveryRunning()) {
-                            args.print(F("auto discovery already running"));
-                        }
-                        else if (client.publishAutoDiscovery(flags)) {
-                            args.print(F("auto discovery started"));
-                        }
-                        else {
-                            args.print(F("auto discovery not available"));
-                        }
-                    } break;
-                case Command::LIST: {
-                        auto &stream = args.getStream();
-                        if (args.equalsIgnoreCase(1, F("crc"))) {
-                            auto list = client.getAutoDiscoveryList(FormatType::JSON);
-                            for(auto crc: list.crc()) {
-                                stream.printf_P(PSTR("%08x\n"), crc);
-                            }
-                        }
-                        else if (args.equalsIgnoreCase(1, F("file"))) {
-                            String filename = F("/.logs/mqtt_auto_discovery.json");
-                            stream.printf_P(PSTR("Filename: %s\n"), filename.c_str());
-                            auto list = client.getAutoDiscoveryList(FormatType::JSON);
-                            auto file = KFCFS.open(filename.c_str(), FileOpenMode::write);
-                            if (file) {
-                                int n = list.size();
-                                file.print('[');
-                                for(auto iterator = list.begin(); iterator != list.end(); ++iterator) {
-                                    const auto &entity = *iterator;
-                                    file.print(entity->getPayload());
-                                    if (--n != 0) {
-                                        file.println(',');
-                                    }
-                                }
-                                file.println(']');
-                            }
-                        }
-                        else {
-                            FormatType format = args.equalsIgnoreCase(1, F("full")) ? FormatType::JSON : FormatType::TOPIC;
-                            auto &stream = args.getStream();
-                            stream.printf_P(PSTR("Prefix: %s\n"), Plugins::MqttClient::getAutoDiscoveryPrefix());
-                            stream.printf_P(PSTR("Base topic: %s\n"), client._getBaseTopic().c_str());
-                            auto list = client.getAutoDiscoveryList(format);
-                            if (list.empty()) {
-                                args.printf_P(PSTR("No components available"));
-                            }
-                            else {
-                                for(auto iterator = list.begin(); iterator != list.end(); ++iterator) {
-                                    const auto &entity = *iterator;
-                                    if (entity) {
-                                        if (format == FormatType::TOPIC) {
-                                            stream.println(entity->getTopic());
-                                            delay(2);
-                                        }
-                                        else {
-                                            stream.print(entity->getTopic());
-                                            delay(2);
-                                            stream.print(':');
-                                            stream.println(entity->getPayload());
-                                            delay(10);
-                                        }
-                                    }
-                                    else {
-                                        __DBG_panic("entity=nullptr");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    break;
-                default:
-                    args.invalidArgument(0, FPSTR(actionsStr), '|');
-                    break;
-            }
-        }
+    if (!args.isCommand(PROGMEM_AT_MODE_HELP_COMMAND(MQTT))) {
+        return false;
+    }
+    auto clientPtr = Client::getClient();
+    if (!clientPtr) {
+        args.print(FSPGM(disabled));
         return true;
     }
-    return false;
+    auto &client = *clientPtr;
+    if (args.isQueryMode()) {
+        client.printDebug(args.getStream());
+        return true;
+    }
+    if (!args.requireArgs(1, 2)) {
+        return true;
+    }
+    auto actionsStr = PSTR(COMMANDS);
+    switch(static_cast<Command>(stringlist_find_P_P(actionsStr, args.get(0), '|'))) {
+        case Command::CONNECT:
+            client.connect();
+            args.print(F("connecting"));
+            break;
+        case Command::DISCONNECT:
+            client.disconnect(args.isTrue(1));
+            args.print(F("disconnected"));
+            break;
+        case Command::SET:
+            if (args.isTrue(1)) {
+                System::Flags::getWriteableConfig().is_mqtt_enabled = true;
+                config.write();
+                args.print(F("enabled"));
+            }
+            else {
+                client.disconnect(false);
+                System::Flags::getWriteableConfig().is_mqtt_enabled = false;
+                config.write();
+                args.print(F("disconnected and disabled"));
+            }
+            break;
+        case Command::TOPICS:
+            for (const auto &subscription : client.getSubscriptions()) {
+                args.print(F("topic=%s component=%p name=%s"), subscription.topic.c_str(), subscription.component, subscription.component->getName());
+            }
+            break;
+        #if MQTT_AUTO_DISCOVERY
+            case Command::AUTO_DISCOVERY:
+                if (client.publishAutoDiscovery()) {
+                    args.print(F("auto discovery starts in %u ms"), MQTT_DISCOVERY_REQUEST_DELAY_MS);
+                }
+                else {
+                    args.print(F("not connected or auto discovery disabled"));
+                }
+                break;
+            case Command::LIST:
+                printAutoDiscovery(args.getStream(), args.equalsIgnoreCase(1, F("full")));
+                break;
+        #endif
+        default:
+            args.invalidArgument(0, FPSTR(actionsStr), '|');
+            break;
+    }
+    return true;
 }
 
 #endif

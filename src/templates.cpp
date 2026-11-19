@@ -159,7 +159,7 @@ void WebTemplate::printFileSystemInfo(Print &output)
         FSInfo info;
         getFSInfo(info);
 
-        auto file = LittleFS.open(String(F("/.pvt/build")), FileOpenMode::read);
+        auto file = LittleFS.open(String(F("/.pvt/build")), fs::FileOpenMode::read);
         if (file) {
             output.printf_P(PSTR("Version %s" HTML_S(br)), file.readString().c_str());
         }

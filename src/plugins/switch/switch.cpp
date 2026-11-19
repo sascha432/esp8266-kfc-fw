@@ -134,7 +134,7 @@ void SwitchPlugin::reconfigure(const String &source)
 {
     _readConfig();
     if (isConnected()) {
-        client().publishAutoDiscovery(MQTT::RunFlags::FORCE);
+        client().publishAutoDiscovery();
     }
 }
 

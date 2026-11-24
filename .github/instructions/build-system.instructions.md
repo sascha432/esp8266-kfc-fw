@@ -52,6 +52,12 @@ Details for `platformio.ini`, `conf/**` and `scripts/**`. The general build, fla
   `optimize` attribute on the function - never around a header or its includes: GCC does not inline a function
   with its own optimize options into a caller with other options, so every small accessor becomes a call.
 
+## Clean builds
+
+- **A clean build is the only proof** after a migration or flag change: PlatformIO rebuilds on content
+  signature, so stale objects in `.pio/build/<env>` can keep a broken build green.
+  `pio run -e <env> -t clean` deletes the tracked `data/webui/placeholder.txt` - restore it with git.
+
 ## ESP8266 IRAM
 
 - The instruction cache is **16 KB or 32 KB**, so IRAM is 32 KB (default) or 48 KB. More IRAM only comes from the
